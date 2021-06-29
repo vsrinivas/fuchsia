@@ -108,7 +108,7 @@ mod tests {
 
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys2::RealmRequest::CreateChild { collection: _, decl, responder } => {
+                fsys2::RealmRequest::CreateChild { collection: _, decl, args: _, responder } => {
                     assert_eq!(decl.url.unwrap(), component_url);
                     CREATE_CHILD_CALL_COUNT.inc();
                     let _ = responder.send(&mut Ok(()));

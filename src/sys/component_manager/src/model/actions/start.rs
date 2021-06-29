@@ -188,7 +188,7 @@ async fn make_execution_runtime(
     let (runtime_dir_client, runtime_dir_server) =
         zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
     let mut namespace = IncomingNamespace::new(package)?;
-    let ns = namespace.populate(component, decl).await?;
+    let ns = namespace.populate(component.clone(), decl).await?;
 
     let (controller_client, controller_server) =
         endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>()
@@ -209,12 +209,15 @@ async fn make_execution_runtime(
         runtime_dir_client,
         Some(controller),
     )?;
+    let numbered_handles =
+        component.upgrade()?.args.lock().await.take().and_then(|args| args.numbered_handles);
     let start_info = fcrunner::ComponentStartInfo {
         resolved_url: Some(url),
         program: decl.program.as_ref().map(|p| p.info.clone()),
         ns: Some(ns),
         outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
         runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
+        numbered_handles,
         ..fcrunner::ComponentStartInfo::EMPTY
     };
 

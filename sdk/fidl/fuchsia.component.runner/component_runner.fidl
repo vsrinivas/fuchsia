@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.component.runner;
 
 using fuchsia.component;
 using fuchsia.data;
 using fuchsia.diagnostics.types;
 using fuchsia.io;
+using fuchsia.process;
 using fuchsia.url;
 
 const uint32 MAX_NAMESPACE_COUNT = 32;
+const uint32 MAX_HANDLE_COUNT = 128;
 
 /// A protocol used for running components.
 ///
@@ -89,6 +90,12 @@ resource table ComponentStartInfo {
     /// The directory served by the runner to present runtime information about
     /// the component.
     5: request<fuchsia.io.Directory> runtime_dir;
+
+    /// The numbered handles that were passed to the component.
+    ///
+    /// If the component does not support numbered handles, the runner is expected
+    /// to close the handles.
+    6: vector<fuchsia.process.HandleInfo>:MAX_HANDLE_COUNT numbered_handles;
 };
 
 /// A protocol for binding and controlling the lifetime of a component instance

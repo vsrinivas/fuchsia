@@ -455,11 +455,13 @@ impl ActionsTest {
             environment: None,
         }
         .native_into_fidl();
+        let child_args =
+            fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
         let res = self
             .realm_proxy
             .as_ref()
             .expect("realm service not started")
-            .create_child(&mut collection_ref, child_decl)
+            .create_child(&mut collection_ref, child_decl, child_args)
             .await;
         res.expect("failed to create child").expect("failed to create child");
     }

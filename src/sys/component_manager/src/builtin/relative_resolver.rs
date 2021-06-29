@@ -210,6 +210,7 @@ mod tests {
             WeakModelContext::new(Weak::new()),
             WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
             Arc::new(Hooks::new(None)),
+            None,
         );
 
         let resolved = child.environment.resolve(&child.component_url, &child).await?;
@@ -254,6 +255,7 @@ mod tests {
             WeakModelContext::new(Weak::new()),
             WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
             Arc::new(Hooks::new(None)),
+            None,
         );
 
         let child_two = ComponentInstance::new(
@@ -264,6 +266,7 @@ mod tests {
             WeakModelContext::new(Weak::new()),
             WeakExtendedInstance::Component(WeakComponentInstance::from(&child_one)),
             Arc::new(Hooks::new(None)),
+            None,
         );
 
         let resolved = child_two.environment.resolve(&child_two.component_url, &child_two).await?;
@@ -308,6 +311,7 @@ mod tests {
             WeakModelContext::new(Weak::new()),
             WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
             Arc::new(Hooks::new(None)),
+            None,
         );
 
         let resolved = child.environment.resolve(&child.component_url, &child).await?;
@@ -343,6 +347,7 @@ mod tests {
             WeakModelContext::new(Weak::new()),
             WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
             Arc::new(Hooks::new(None)),
+            None,
         );
 
         let result = child.environment.resolve(&child.component_url, &child).await;

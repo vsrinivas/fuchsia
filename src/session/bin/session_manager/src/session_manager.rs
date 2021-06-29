@@ -451,7 +451,7 @@ mod tests {
                 fsys::RealmRequest::DestroyChild { child: _, responder } => {
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::CreateChild { collection: _, decl, responder } => {
+                fsys::RealmRequest::CreateChild { collection: _, decl, args: _, responder } => {
                     assert_eq!(decl.url.unwrap(), session_url);
                     let _ = responder.send(&mut Ok(()));
                 }
@@ -485,7 +485,7 @@ mod tests {
                 fsys::RealmRequest::DestroyChild { child: _, responder } => {
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::CreateChild { collection: _, decl, responder } => {
+                fsys::RealmRequest::CreateChild { collection: _, decl, args: _, responder } => {
                     assert_eq!(decl.url.unwrap(), session_url);
                     let _ = responder.send(&mut Ok(()));
                 }

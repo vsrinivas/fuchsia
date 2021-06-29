@@ -49,6 +49,7 @@ mod tests {
                 WeakModelContext::default(),
                 WeakExtendedInstance::Component(WeakComponentInstance::default()),
                 Arc::new(Hooks::new(None)),
+                None,
             )
         }
     }

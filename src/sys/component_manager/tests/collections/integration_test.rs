@@ -5,10 +5,12 @@
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints::{self, Proxy},
+    fidl::HandleBased,
     fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_process as fprocess, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client,
+    fuchsia_zircon as zx,
     io_util::{self, OPEN_RIGHT_READABLE},
     std::path::PathBuf,
 };
@@ -31,8 +33,10 @@ async fn collections() {
             environment: None,
             ..fsys::ChildDecl::EMPTY
         };
+        let child_args =
+            fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
         realm
-            .create_child(&mut collection_ref, child_decl)
+            .create_child(&mut collection_ref, child_decl, child_args)
             .await
             .expect(&format!("create_child {} failed", name))
             .expect(&format!("failed to create child {}", name));
@@ -91,8 +95,10 @@ async fn collections() {
             environment: None,
             ..fsys::ChildDecl::EMPTY
         };
+        let child_args =
+            fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
         realm
-            .create_child(&mut collection_ref, child_decl)
+            .create_child(&mut collection_ref, child_decl, child_args)
             .await
             .expect("second create_child a failed")
             .expect("failed to create second child a");
@@ -112,6 +118,68 @@ async fn collections() {
 
     let children = list_children(&realm).await.expect("failed to list children");
     assert_eq!("coll:a,coll:b", &children);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn child_args() {
+    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
+        .expect("could not connect to Realm service");
+
+    // Providing numbered handles to a component that is not in a single run collection should fail.
+    {
+        let name = "a";
+        let mut collection_ref = fsys::CollectionRef { name: "not_single_run".to_string() };
+        let child_decl = fsys::ChildDecl {
+            name: Some(name.to_string()),
+            url: Some(format!(
+                "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/trigger_{}.cm",
+                name
+            )),
+            startup: Some(fsys::StartupMode::Lazy),
+            environment: None,
+            ..fsys::ChildDecl::EMPTY
+        };
+        let (_, socket) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("Couldn't create socket");
+        let numbered_handles = vec![fprocess::HandleInfo { handle: socket.into_handle(), id: 0 }];
+        let child_args = fsys::CreateChildArgs {
+            numbered_handles: Some(numbered_handles),
+            ..fsys::CreateChildArgs::EMPTY
+        };
+        let res = realm
+            .create_child(&mut collection_ref, child_decl, child_args)
+            .await
+            .expect(&format!("create_child {} failed", name));
+        let err = res.expect_err("expected bind_child a to fail");
+        assert_eq!(err, fcomponent::Error::Unsupported);
+    }
+    // Providing numbered handles to a component that is in a single run collection should succeed.
+    {
+        let name = "a";
+        let mut collection_ref = fsys::CollectionRef { name: "single_run".to_string() };
+        let child_decl = fsys::ChildDecl {
+            name: Some(name.to_string()),
+            url: Some(format!(
+                "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/trigger_{}.cm",
+                name
+            )),
+            startup: Some(fsys::StartupMode::Lazy),
+            environment: None,
+            ..fsys::ChildDecl::EMPTY
+        };
+        let (_, socket) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("Couldn't create socket");
+        let numbered_handles = vec![fprocess::HandleInfo { handle: socket.into_handle(), id: 0 }];
+        let child_args = fsys::CreateChildArgs {
+            numbered_handles: Some(numbered_handles),
+            ..fsys::CreateChildArgs::EMPTY
+        };
+        realm
+            .create_child(&mut collection_ref, child_decl, child_args)
+            .await
+            .expect(&format!("create_child {} failed", name))
+            .expect(&format!("failed to create child {}", name));
+    }
 }
 
 fn new_child_ref(name: &str, collection: &str) -> fsys::ChildRef {

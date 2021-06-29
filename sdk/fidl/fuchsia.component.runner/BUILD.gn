@@ -12,6 +12,7 @@ fidl("fuchsia.component.runner") {
     "//sdk/fidl/fuchsia.data",
     "//sdk/fidl/fuchsia.diagnostics.types",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.url",
   ]
 

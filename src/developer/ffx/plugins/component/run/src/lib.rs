@@ -8,7 +8,9 @@ use {
     ffx_core::ffx_plugin,
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2::{ChildDecl, ChildRef, CollectionRef, RealmProxy, StartupMode},
+    fidl_fuchsia_sys2::{
+        ChildDecl, ChildRef, CollectionRef, CreateChildArgs, RealmProxy, StartupMode,
+    },
     rand::Rng,
 };
 
@@ -46,8 +48,9 @@ async fn run_component_cmd(realm_proxy: RealmProxy, run: RunComponentCommand) ->
 
     let mut child_ref = ChildRef { name, collection: Some(COLLECTION_NAME.to_string()) };
 
+    let child_args = CreateChildArgs { numbered_handles: None, ..CreateChildArgs::EMPTY };
     realm_proxy
-        .create_child(&mut collection, decl)
+        .create_child(&mut collection, decl, child_args)
         .await?
         .map_err(|e| anyhow!("Error creating child: {:?}", e))?;
 

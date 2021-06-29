@@ -293,8 +293,10 @@ async fn start(url: String) -> Result<(), Error> {
         environment: None,
         ..fsys::ChildDecl::EMPTY
     };
+    let child_args =
+        fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
     let () = realm
-        .create_child(&mut collection_ref, child_decl)
+        .create_child(&mut collection_ref, child_decl, child_args)
         .await?
         .map_err(|e| format_err!("failed to create child: {:?}", e))?;
     // The component is run in a `SingleRun` collection instance, and will be automatically

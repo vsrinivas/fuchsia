@@ -968,7 +968,7 @@ mod tests {
             let directory_request_handler = directory_request_handler.clone();
             async move {
                 match realm_request {
-                    fsys2::RealmRequest::CreateChild { collection, decl, responder } => {
+                    fsys2::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
                         assert_eq!(decl.url.unwrap(), component_url);
                         assert_eq!(decl.name.unwrap(), child_name);
                         assert_eq!(&collection.name, child_collection);
@@ -1025,7 +1025,7 @@ mod tests {
 
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys2::RealmRequest::CreateChild { collection, decl, responder } => {
+                fsys2::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
                     assert_eq!(decl.url.unwrap(), component_url);
                     assert_eq!(decl.name.unwrap(), child_name);
                     assert_eq!(&collection.name, child_collection);
@@ -1183,7 +1183,7 @@ mod tests {
         // successfully the bind should not be called.
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys2::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+                fsys2::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
                     let _ = responder.send(&mut Err(fcomponent::Error::Internal));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -1223,7 +1223,7 @@ mod tests {
         // successfully the bind should not be called.
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys2::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+                fsys2::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
                     let _ = responder.send(&mut Err(fcomponent::Error::ResourceUnavailable));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -1268,7 +1268,7 @@ mod tests {
         // successfully the bind should not be called.
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys2::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+                fsys2::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
                     let _ = responder.send(&mut Ok(()));
                 }
                 fsys2::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {

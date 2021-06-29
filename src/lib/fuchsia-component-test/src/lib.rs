@@ -452,8 +452,10 @@ impl ScopedInstanceFactory {
             startup: Some(fsys::StartupMode::Lazy),
             ..fsys::ChildDecl::EMPTY
         };
+        let child_args =
+            fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
         let () = realm
-            .create_child(&mut collection_ref, child_decl)
+            .create_child(&mut collection_ref, child_decl, child_args)
             .await
             .context("CreateChild FIDL failed.")?
             .map_err(|e| format_err!("Failed to create child: {:?}", e))?;

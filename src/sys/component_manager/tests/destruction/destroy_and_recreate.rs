@@ -36,8 +36,10 @@ async fn main() {
             environment: None,
             ..fsys::ChildDecl::EMPTY
         };
+        let child_args =
+            fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
         realm
-            .create_child(&mut collection_ref, child_decl)
+            .create_child(&mut collection_ref, child_decl, child_args)
             .await
             .expect(&format!("create_child failed"))
             .expect(&format!("failed to create child"));
@@ -83,8 +85,10 @@ async fn main() {
             environment: None,
             ..fsys::ChildDecl::EMPTY
         };
+        let child_args =
+            fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
         realm
-            .create_child(&mut collection_ref, child_decl)
+            .create_child(&mut collection_ref, child_decl, child_args)
             .await
             .expect(&format!("create_child failed"))
             .expect(&format!("failed to create child"));

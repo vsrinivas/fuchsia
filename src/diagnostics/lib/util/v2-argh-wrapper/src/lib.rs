@@ -49,13 +49,13 @@ mod test {
     #[derive(FromArgs, PartialEq, Debug)]
     #[argh(subcommand)]
     enum SubChoices {
-        Child(ChildArgs),
+        Child(CreateChildArgs),
     }
 
     /// One (the only) possible subcommmand
     #[derive(FromArgs, PartialEq, Debug)]
     #[argh(subcommand, name = "child")]
-    struct ChildArgs {
+    struct CreateChildArgs {
         /// argh requires doc commands on everything
         #[argh(option)]
         option: u32,

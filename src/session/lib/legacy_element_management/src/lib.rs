@@ -933,7 +933,7 @@ mod tests {
         };
 
         let realm = spawn_realm_server(move |realm_request| match realm_request {
-            fsys2::RealmRequest::CreateChild { collection, decl, responder } => {
+            fsys2::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
                 assert_eq!(decl.url.unwrap(), component_url);
                 assert_eq!(decl.name.unwrap(), child_name);
                 assert_eq!(&collection.name, child_collection);
@@ -981,7 +981,7 @@ mod tests {
         let child_collection = "elements";
 
         let realm = spawn_realm_server(move |realm_request| match realm_request {
-            fsys2::RealmRequest::CreateChild { collection, decl, responder } => {
+            fsys2::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
                 assert_eq!(decl.url.unwrap(), component_url);
                 assert_eq!(decl.name.unwrap(), child_name);
                 assert_eq!(&collection.name, child_collection);
@@ -1126,7 +1126,7 @@ mod tests {
         // The following match errors if it sees a bind request: since the child was not created
         // successfully the bind should not be called.
         let realm = spawn_realm_server(move |realm_request| match realm_request {
-            fsys2::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+            fsys2::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
                 let _ = responder.send(&mut Err(fcomponent::Error::Internal));
             }
             _ => {
@@ -1161,7 +1161,7 @@ mod tests {
         // The following match errors if it sees a bind request: since the child was not created
         // successfully the bind should not be called.
         let realm = spawn_realm_server(move |realm_request| match realm_request {
-            fsys2::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+            fsys2::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
                 let _ = responder.send(&mut Err(fcomponent::Error::ResourceUnavailable));
             }
             _ => {
@@ -1201,7 +1201,7 @@ mod tests {
         // The following match errors if it sees a bind request: since the child was not created
         // successfully the bind should not be called.
         let realm = spawn_realm_server(move |realm_request| match realm_request {
-            fsys2::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+            fsys2::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
                 let _ = responder.send(&mut Ok(()));
             }
             fsys2::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {

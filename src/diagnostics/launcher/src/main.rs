@@ -14,12 +14,12 @@ use {
 #[derive(FromArgs, PartialEq, Debug)]
 struct LauncherArgs {
     #[argh(subcommand)]
-    program: ChildArgs,
+    program: CreateChildArgs,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
-enum ChildArgs {
+enum CreateChildArgs {
     Detect(detect::CommandLine),
     LogStats(log_stats::CommandLine),
     Sampler(sampler::Args),
@@ -40,9 +40,9 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&[log_tag]).context("initializing logging").unwrap();
     let args = v2_argh_wrapper::load_command_line::<LauncherArgs>()?;
     match args.program {
-        ChildArgs::Detect(args) => detect::main(args).await,
-        ChildArgs::Persistence(args) => persistence::main(args).await,
-        ChildArgs::LogStats(_args) => log_stats::main().await,
-        ChildArgs::Sampler(args) => sampler::main(args).await,
+        CreateChildArgs::Detect(args) => detect::main(args).await,
+        CreateChildArgs::Persistence(args) => persistence::main(args).await,
+        CreateChildArgs::LogStats(_args) => log_stats::main().await,
+        CreateChildArgs::Sampler(args) => sampler::main(args).await,
     }
 }

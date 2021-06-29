@@ -1338,7 +1338,9 @@ pub mod capability_util {
         let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
         let mut collection_ref = fsys::CollectionRef { name: collection.to_string() };
         let child_decl = child_decl.native_into_fidl();
-        let res = realm_proxy.create_child(&mut collection_ref, child_decl).await;
+        let child_args =
+            fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
+        let res = realm_proxy.create_child(&mut collection_ref, child_decl, child_args).await;
         let _ = res.expect("failed to create child");
     }
 

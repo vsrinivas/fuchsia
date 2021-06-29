@@ -88,8 +88,10 @@ impl Hub {
 
         let mut coll_ref = fsys::CollectionRef { name: COLLECTION_NAME.to_string() };
 
+        let child_args =
+            fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
         let result = parent_realm_svc
-            .create_child(&mut coll_ref, decl)
+            .create_child(&mut coll_ref, decl, child_args)
             .await
             .context("Could not send FIDL request to create child component")?;
 

@@ -7,7 +7,8 @@ use {
     cm_rust_derive::{
         CapabilityDeclCommon, ExposeDeclCommon, FidlDecl, OfferDeclCommon, UseDeclCommon,
     },
-    cm_types, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+    cm_types, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_process as fprocess, fidl_fuchsia_sys2 as fsys,
     from_enum::FromEnum,
     lazy_static::lazy_static,
     std::collections::HashMap,
@@ -508,6 +509,12 @@ pub struct ChildDecl {
     pub environment: Option<String>,
 }
 
+#[derive(FidlDecl, Debug, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::CreateChildArgs")]
+pub struct CreateChildArgs {
+    pub numbered_handles: Option<Vec<fprocess::HandleInfo>>,
+}
+
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::CollectionDecl")]
 pub struct CollectionDecl {
@@ -608,6 +615,7 @@ fidl_translations_identical!(fdata::Dictionary);
 fidl_translations_identical!(fio2::Operations);
 fidl_translations_identical!(fsys::EnvironmentExtends);
 fidl_translations_identical!(fsys::StorageId);
+fidl_translations_identical!(Vec<fprocess::HandleInfo>);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DependencyType {

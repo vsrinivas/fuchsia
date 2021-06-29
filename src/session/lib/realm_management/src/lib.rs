@@ -31,9 +31,10 @@ pub async fn create_child_component(
         environment: None,
         ..fsys::ChildDecl::EMPTY
     };
-
+    let child_args =
+        fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
     realm
-        .create_child(&mut collection_ref, child_decl)
+        .create_child(&mut collection_ref, child_decl, child_args)
         .await
         .map_err(|_| fcomponent::Error::Internal)??;
 
@@ -139,7 +140,7 @@ mod tests {
 
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::CreateChild { collection, decl, responder } => {
+                fsys::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
                     assert_eq!(decl.name.unwrap(), child_name);
                     assert_eq!(decl.url.unwrap(), child_url);
                     assert_eq!(&collection.name, child_collection);
@@ -162,7 +163,7 @@ mod tests {
     async fn create_child_success() {
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+                fsys::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
                     let _ = responder.send(&mut Ok(()));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -179,7 +180,7 @@ mod tests {
     async fn create_child_error() {
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
+                fsys::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
                     let _ = responder.send(&mut Err(fcomponent::Error::Internal));
                 }
                 _ => panic!("Realm handler received an unexpected request"),

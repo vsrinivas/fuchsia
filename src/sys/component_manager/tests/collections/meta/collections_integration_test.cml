@@ -18,6 +18,14 @@
             name: "coll",
             durability: "transient",
         },
+        {
+            name: "single_run",
+            durability: "single_run",
+        },
+        {
+            name: "not_single_run",
+            durability: "transient",
+        },
     ],
     use: [
         // Needed to bind to and create children

@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.sys2;
 
 using fuchsia.io;
 using fuchsia.component;
+using fuchsia.process;
+
+/// The maximum number of handles that can be passed to a created component.
+const uint32 MAX_HANDLE_COUNT = 128;
 
 /// A protocol used by a component instance to manage its own realm, such as for
 /// binding to its children.
@@ -80,7 +83,7 @@ protocol Realm {
     ///   in a `SingleRun` collection.
     /// - `NO_SPACE`: Could not allocate storage for the new instance.
     /// - `INSTANCE_DIED`: This realm no longer exists.
-    CreateChild(CollectionRef collection, ChildDecl decl) -> () error fuchsia.component.Error;
+    CreateChild(CollectionRef collection, ChildDecl decl, CreateChildArgs args) -> () error fuchsia.component.Error;
 
     /// Destroys a dynamically-created component instance. When this function
     /// returns, the client should assume the instance no longer exists.
@@ -111,6 +114,18 @@ protocol Realm {
     ///   return `ACCESS_DENIED` or component manager may close `iter`.
     ListChildren(CollectionRef collection, request<ChildIterator> iter) -> ()
         error fuchsia.component.Error;
+};
+
+resource table CreateChildArgs {
+    /// The numbered handles to pass to the component instance.
+    ///
+    /// Only PA_FD and PA_USER* handles are valid arguments, and inclusion of any other
+    /// handles will result in an error. This argument is only supported for components
+    /// in a collection with `SingleRun` durability.
+    ///
+    /// If the runner for the component does not support the numbered handles it is
+    /// expected to close the handles.
+    1: vector<fuchsia.process.HandleInfo>:MAX_HANDLE_COUNT numbered_handles;
 };
 
 /// A protocol to iterate over the list of children in a realm.

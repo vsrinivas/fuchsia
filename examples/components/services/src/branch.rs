@@ -57,6 +57,8 @@ async fn read_and_write_to_multiple_service_instances() {
 
 async fn start_provider(realm: &fsys2::RealmProxy, name: &str, url: &str) -> fio::DirectoryProxy {
     info!("creating BankAccount provider \"{}\" with url={}", name, url);
+    let child_args =
+        fsys2::CreateChildArgs { numbered_handles: None, ..fsys2::CreateChildArgs::EMPTY };
     realm
         .create_child(
             &mut fsys2::CollectionRef { name: COLLECTION_NAME.to_string() },
@@ -67,6 +69,7 @@ async fn start_provider(realm: &fsys2::RealmProxy, name: &str, url: &str) -> fio
                 environment: None,
                 ..fsys2::ChildDecl::EMPTY
             },
+            child_args,
         )
         .await
         .expect("failed to make create_child FIDL call")

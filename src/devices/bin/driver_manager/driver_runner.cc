@@ -807,9 +807,10 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
   child_decl.set_name(allocator, fidl::StringView::FromExternal(name))
       .set_url(allocator, fidl::StringView::FromExternal(url))
       .set_startup(allocator, fsys::wire::StartupMode::kLazy);
+  fsys::wire::CreateChildArgs child_args(allocator);
   auto create = realm_->CreateChild(
       fsys::wire::CollectionRef{.name = fidl::StringView::FromExternal(collection)},
-      std::move(child_decl), std::move(create_callback));
+      std::move(child_decl), std::move(child_args), std::move(create_callback));
   if (!create.ok()) {
     LOGF(ERROR, "Failed to create component '%s': %s", name.data(),
          create.FormatDescription().c_str());

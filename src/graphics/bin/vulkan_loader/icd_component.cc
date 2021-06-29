@@ -119,7 +119,7 @@ void IcdComponent::Initialize(sys::ComponentContext* context, inspect::Node* par
         app_->NotifyIcdsChanged();
       });
   realm_->CreateChild(
-      collection, std::move(decl),
+      collection, std::move(decl), fuchsia::sys2::CreateChildArgs(),
       [this, failure_callback = std::move(failure_callback)](
           fit::result<void, fuchsia::component::Error> response) mutable {
         if (response.is_error()) {

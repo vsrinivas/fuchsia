@@ -82,7 +82,7 @@ class TestRealm : public fsys::testing::Realm_TestBase {
     callback(fsys::Realm_BindChild_Result(fit::ok()));
   }
 
-  void CreateChild(fsys::CollectionRef collection, fsys::ChildDecl decl,
+  void CreateChild(fsys::CollectionRef collection, fsys::ChildDecl decl, fsys::CreateChildArgs args,
                    CreateChildCallback callback) override {
     create_child_handler_(std::move(collection), std::move(decl));
     callback(fsys::Realm_CreateChild_Result(fit::ok()));

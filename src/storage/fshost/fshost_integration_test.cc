@@ -19,9 +19,9 @@ void FshostIntegrationTest::SetUp() {
   child_decl.set_name("test-fshost")
       .set_url("fuchsia-pkg://fuchsia.com/fshost-tests#meta/test-fshost.cm")
       .set_startup(fuchsia::sys2::StartupMode::LAZY);
-  status =
-      zx::make_status(realm_->CreateChild(fuchsia::sys2::CollectionRef{.name = "fshost-collection"},
-                                          std::move(child_decl), &create_result));
+  status = zx::make_status(
+      realm_->CreateChild(fuchsia::sys2::CollectionRef{.name = "fshost-collection"},
+                          std::move(child_decl), fuchsia::sys2::CreateChildArgs(), &create_result));
   ASSERT_TRUE(status.is_ok() && !create_result.is_err());
 
   fuchsia::sys2::Realm_BindChild_Result bind_result;

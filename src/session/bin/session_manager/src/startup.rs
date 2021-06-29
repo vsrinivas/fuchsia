@@ -196,7 +196,7 @@ mod tests {
 
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::CreateChild { collection, decl, responder } => {
+                fsys::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
                     assert_eq!(NUM_REALM_REQUESTS.get(), 1);
                     assert_eq!(decl.url.unwrap(), session_url);
                     assert_eq!(decl.name.unwrap(), SESSION_NAME);
