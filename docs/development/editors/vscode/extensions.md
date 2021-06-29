@@ -86,16 +86,94 @@ adds syntax highlighting for JSON5 files.
      alt="This figure shows syntax highlighting for JSON5 files in VS Code."
      src="images/extensions/json5.png"/>
 
-### C/C++
+### Rust-analyzer {#rust-analyzer}
 
-[C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools){: .external}
-provides language support for C/C++ files, including features such as IntelliSense and debugging.
+[Rust-analyzer](https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer){: .external}
+is a [Language Server Protocol][lsp-definition]{: .external} (LSP)
+implementation for the Rust language.
 
-<img class="vscode-image vscode-image-center"
-     alt="This figure shows the C/C++ language support and IntelliSense in VS Code."
-     src="images/extensions/c-cpp.png"/>
+Note: If your Fuchsia source is symlinked from another mountpoint, the
+`rust-analyzer` extension may not locate the files for analysis.
+Instead, open the actual file path to the Fuchsia source in VS Code.
+
+To use `rust-analyzer` with VS Code, Fuchsia recommends:
+
+* [Updating to the latest stable VS Code][vscode-update]{: .external}.
+* [Disabling telemetry reporting][vscode-disable-telemetry]{: .external} for confidential code.
+
+#### Configure workflow {#rust-configure-workflow}
+
+After installing `rust-analyzer`, modify your
+VS Code's `settings.json` file:
+
+1. Press `CMD/CTRL + SHIFT + P` to open **Command Palette**.
+1. Type `settings` in the search field.
+1. Click **Preferences: Open Settings (JSON)**.
+1. In `settings.json`, paste the following snippets:
+
+Note: If you use VS Code's [remote workspaces][vscode-remote-workspaces], use the `settings.json`
+for your remote environment.
+
+```json
+
+  // disable cargo check on save
+  "rust-analyzer.checkOnSave.enable": false,
+  "rust-analyzer.checkOnSave.allTargets": false,
+
+```
+
+Additionally, you may want to configure smaller tooltips and hide parameter hints to optimize your
+workspace:
+
+```json
+
+  // optional: only show summary docs for functions (keeps tooltips small)
+  "rust-analyzer.callInfo.full": false,
+  // optional: don't activate parameterHints automatically
+  "editor.parameterHints.enabled": false,
+
+```
+
+#### Enable rustfmt
+
+The `rust-analyzer` extension relies on the `rustup` installer to invoke `rustfmt`,
+a tool for formatting Rust code according to style guidelines.
+
+To configure `rustup` with your Fuchsia source code, run:
+
+Note: `HOST_OS` is `linux-x64` on Linux and `mac-x64` on macOS.
+
+```posix-terminal
+rustup toolchain link fuchsia-tools {{ '<var>' }}FUCHSIA_DIR{{ '</var>' }}/prebuilt/third_party/rust_tools/{{ '<var>' }}HOST_OS{{ '</var>' }}
+```
+
+After configuring `rustup`, the `rust-analyzer` extension supports additional configuration
+with Fuchisa's Rust style guide, [`rustfmt.toml`](/rustfmt.toml).
+
+Add the following snippet to your `settings.json` using the same steps
+from [Configuring workflow](#rust-configure-workflow):
+
+```json
+
+    // use fuchsia-tools toolchain and fuchsia's rules for rustfmt:
+    "rust-analyzer.rustfmt.extraArgs": [
+        "+fuchsia-tools",
+        "--config-path= {{ '<var>' }}FUCHSIA_DIR{{ '</var>' }}/rustfmt.toml"
+    ],
+
+```
 
 <!-- Reference links -->
 
 [set-up-env]: /docs/get-started/get_fuchsia_source.md#set-up-environment-variables
 [fidl]: /docs/development/languages/fidl/README.md
+[rust-analyzer-latest]: https://github.com/rust-analyzer/rust-analyzer/releases
+[vscode-extension-guide]: /docs/development/editors/extensions.md#rust-analyzer
+[vscode-download]: https://code.visualstudio.com/Download
+[vscode-update]:  https://vscode-docs.readthedocs.io/en/stable/supporting/howtoupdate/
+[vscode-disable-telemetry]: https://code.visualstudio.com/docs/getstarted/telemetry#_disable-telemetry-reporting
+[vscode-rust-analyzer]: https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer
+[vscode-downgrade]: https://code.visualstudio.com/updates/v1_30#_install-previous-versions
+[supported-rust-analyzer-version]: /docs/development/languages/rust/editors.md#supported-rust-analyzer-version
+[lsp-definition]: https://microsoft.github.io/language-server-protocol/
+[vscode-remote-workspaces]: /docs/development/editors/vscode/remote-workspaces.md

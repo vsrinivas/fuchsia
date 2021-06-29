@@ -22,110 +22,7 @@ Currently, use [the **latest version** of `rust-analyzer`][rust-analyzer-latest]
 
 ## Visual Studio Code {#visual-studio-code}
 
-To use `rust-analyzer` with VSCode, use the latest stable version of
-VSCode since `rust-analyzer` frequently depends on recent language server features.
-VSCode can be downloaded from the
-[official VSCode website][vscode-download].
-It is recommended to:
-
-* Keep automatic updates turned on (not available for Linux, see these
-  [update instructions][vscode-update]).
-* If you are working on confidential code,
-  [disable telemetry reporting][vscode-disable-telemetry] as a precaution.
-
-### `rust-analyzer` VSCode extension (supported workflow)
-
-Note:  This is the [`rust-analyzer`][vscode-rust-analyzer] extension, not the `rust` extension that
-VSCode may recommend for Rust files.
-
-You can install the `rust-analyzer` extension directly
-[from the VSCode marketplace][vscode-rust-analyzer].
-
-Once you have installed the rust-analyzer extension, add the following
-configurations to your Workspace `settings.json` file:
-
-Note: To access the VS Code Workspace settings, click the **View** menu, then **Command Palette**,
-and select `Preferences: Open Workspace Settings (JSON)`.
-
-```javascript
-{
-  // disable cargo check on save
-  "rust-analyzer.checkOnSave.enable": false,
-  "rust-analyzer.checkOnSave.allTargets": false,
-}
-```
-
-In addition, the following settings may provide a smoother experience:
-
-```javascript
-{
-  // optional: only show summary docs for functions (keeps tooltips small)
-  "rust-analyzer.callInfo.full": false,
-  // optional: don't activate parameterHints automatically
-  "editor.parameterHints.enabled": false,
-}
-```
-
-### Enabling rustfmt in the `rust-analyzer` extension
-
-The `rust-analyzer` extension relies on the `rustup` tool to choose the right toolchain for
-invoking rustfmt, so you need to tell `rustup` about your Fuchsia checkout and its toolchain:
-
-```shell
-$ rustup toolchain link fuchsia-tools $FUCHSIA_DIR/prebuilt/third_party/rust_tools/<host os>
-```
-
-For instance, on linux, you would use `linux-x64`, or on MacOS you would use `mac-x64` (there should
-only be one option in your Fuchsia directory, set up correctly for your host development system):
-
-```shell
-$ rustup toolchain link fuchsia-tools $FUCHSIA_DIR/prebuilt/third_party/rust_tools/linux-x64/
-```
-
-Having done that, the `rust-analyzer` extension can be configured to use this toolchain and
-the Fuchsia `rustfmt.toml`.  Open Workspace settings as above, and add:
-
-```javascript
-{
-    // use fuchsia-tools toolchain and fuchsia's rules for rustfmt:
-    "rust-analyzer.rustfmt.extraArgs": [
-        "+fuchsia-tools",
-        "--config-path=<path to $FUCHSIA_DIR>/rustfmt.toml"
-    ],
-}
-```
-
-### A note on `rust-analyzer` and symlinked Fuchsia directories
-
-If your Fuchsia workspace is symlinked from elsewhere (such as another mountpoint), the
-`rust-analyzer` extension may not be able to properly locate the files for analysis as they are
-opened in VSCode.
-
-`rust-analyzer`, and the `rust-project.json` file, contain _absolute_ paths to your source files.
-As such, if you open the Fuchsia directory via the symlink'd location, it will not match those
-absolute paths, and the `rust-analyzer` VSCode extension will not be able to align the opened files
-in VSCode with the files that the `rust-analyzer` LSP is parsing and analyzing.
-
-Instead, open the actual path to the Fuchsia source in VSCode, so that the LSP and the editor see
-the same paths to all source files.
-
-### Troubleshooting issues with `rust-analyzer`
-
-If you notice that `rust-analyzer` is not working correctly, it could be due to a breaking
-change in the `rust-project.json` file.  The first thing to try in this case is to `jiri update`,
-rebase, and re-run `fx gen`, and see if the issue goes away:
-
-```shell
-$ jiri update
-$ git rebase
-$ fx gen
-```
-
-#### Downgrading {#downgrading-rust-analyzer}
-If not, you may need to [manually downgrade rust-analyzer][vscode-downgrade] to the
-[currently-supported version](#supported-rust-analyzer-version) if it's not the latest, or to a
-previous version you were using if the currently supported version is listed as "latest".
-
+To setup `rust-analyzer` on VS Code, see the VS Code guide [Installing extensions][vscode-extension-guide].
 
 ## Vim
 
@@ -246,6 +143,7 @@ Finally, follow [these steps][cargo-toml-gen] to generate a `Cargo.toml` file fo
 Note that cargo-based workflows are more likely to break than rust-analyzer based ones.
 
 [rust-analyzer-latest]: https://github.com/rust-analyzer/rust-analyzer/releases
+[vscode-extension-guide]: /docs/development/editors/vscode/extensions.md#rust-analyzer
 [vscode-download]: https://code.visualstudio.com/Download
 [vscode-update]:  https://vscode-docs.readthedocs.io/en/stable/supporting/howtoupdate/
 [vscode-disable-telemetry]: https://code.visualstudio.com/docs/getstarted/telemetry#_disable-telemetry-reporting
