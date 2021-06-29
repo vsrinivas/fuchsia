@@ -699,6 +699,15 @@ environment to form a full SDK."
   related_guides: [""]
   area: ["Components"]
 
+- term: "In-tree"
+  short_description: "Relating to or describing an action to be performed inside a Fuchsia checkout."
+  full_description: "For instance, checking out the Fuchsia source code is a prerequisite for
+  performing any in-tree development. The `fx build` command is used to operate the in-tree build
+  system."
+  related_guides: ['<a href="/docs/get-started/get_fuchsia_source.md">Get Fuchsia source code</a>',
+                   '<a href="/docs/get-started/build_fuchsia.md">Build Fuchsia</a>']
+  area: ["Developer"]
+
 - term: "Input pipeline client library"
   short_description: "A client library available to <a href=\"/docs/glossary#session\">session</a>
   authors to simplify the consumption and routing of input events from physical hardware."
@@ -904,6 +913,15 @@ environment to form a full SDK."
   see_also: [""]
   related_guides: ["<a href=\"/docs/concepts/components/v2/opaque_test.md\">Hermetic testing using OpaqueTest</a>"]
   area: ["Components", "Testing"]
+
+- term: "Out-of-tree"
+  short_description: "Relating to or describing an action that can be done outside of a Fuchsia checkout."
+  full_description: "For instance, the IDK allows developing for Fuchsia outside the Fuchsia tree.
+  The SDK tools are available as prebuilts so developers don't need to check out Fuchsia code and build
+  the same tools from source code using Fuchsia's in-tree build system."
+  related_guides: ['<a href="/docs/development/idk/README.md">Integrator Development Kit (IDK)</a>',
+                   '<a href="https://fuchsia.dev/fuchsia-src/reference/tools/sdk">SDK tools</a>']
+  area: ["Developer"]
 
 - term: "Outgoing directory"
   short_description: "A file system directory where a <a href=\"/docs/glossary#component\">component</a>
