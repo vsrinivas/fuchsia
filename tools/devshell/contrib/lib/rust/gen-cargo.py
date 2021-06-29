@@ -49,8 +49,10 @@ def main():
     else:
         print(f"Could not find a Cargo.toml file at '{manifest_path}'")
         print("")
-        print(f"Is '{args.gn_target}' an existing Rust target?")
-        print("If so, make sure it is included in your build configuration and that you have run 'fx build'.")
+        print("Check that:")
+        print(f"  - `{args.gn_target}` is an existing Rust target")
+        print("  - You ran `fx set` with --gen-cargo-toml")
+        print("  - You have run `fx build`")
         return 1
 
 
