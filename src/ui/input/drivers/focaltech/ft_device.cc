@@ -13,7 +13,6 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/fit/defer.h>
-#include <lib/focaltech/focaltech.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
@@ -31,6 +30,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/span.h>
 
 #include "src/ui/input/drivers/focaltech/focaltech_touch_bind.h"
 
@@ -124,6 +124,11 @@ zx_status_t FtDevice::Init() {
     return ZX_ERR_INTERNAL;
   }
 
+  status = UpdateFirmwareIfNeeded(device_info);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   node_ = inspector_.GetRoot().CreateChild("Chip info");
   LogRegisterValue(FTS_REG_TYPE, "TYPE");
   LogRegisterValue(FTS_REG_FIRMID, "FIRMID");
@@ -132,6 +137,18 @@ zx_status_t FtDevice::Init() {
   LogRegisterValue(FTS_REG_RELEASE_ID_HIGH, "RELEASE_ID_HIGH");
   LogRegisterValue(FTS_REG_RELEASE_ID_LOW, "RELEASE_ID_LOW");
   LogRegisterValue(FTS_REG_IC_VERSION, "IC_VERSION");
+
+  if (device_info.needs_firmware) {
+    node_.CreateUint("Display vendor", device_info.display_vendor, &values_);
+    node_.CreateUint("DDIC version", device_info.ddic_version, &values_);
+    zxlogf(INFO, "Display vendor: %u", device_info.display_vendor);
+    zxlogf(INFO, "DDIC version:   %u", device_info.ddic_version);
+  } else {
+    node_.CreateString("Display vendor", "none", &values_);
+    node_.CreateString("DDIC version", "none", &values_);
+    zxlogf(INFO, "Display vendor: none");
+    zxlogf(INFO, "DDIC version:   none");
+  }
 
   return ZX_OK;
 }
@@ -317,6 +334,30 @@ void FtDevice::LogRegisterValue(uint8_t addr, const char* name) {
     node_.CreateString(name, "error", &values_);
     zxlogf(ERROR, "  %-16s: error %d", name, status);
   }
+}
+
+zx_status_t FtDevice::UpdateFirmwareIfNeeded(const FocaltechMetadata& metadata) {
+  if (!metadata.needs_firmware) {
+    return ZX_OK;
+  }
+
+  fbl::Span<const uint8_t> firmware;
+  const fbl::Span<const FirmwareEntry> entries(kFirmwareEntries, kNumFirmwareEntries);
+  for (const auto& entry : entries) {
+    if (entry.display_vendor == metadata.display_vendor &&
+        entry.ddic_version == metadata.ddic_version) {
+      firmware = fbl::Span(entry.firmware_data, entry.firmware_size);
+      break;
+    }
+  }
+
+  if (firmware.empty()) {
+    zxlogf(WARNING, "No firmware found for vendor %u DDIC %u", metadata.display_vendor,
+           metadata.ddic_version);
+  }
+
+  // TODO(fxbug.dev/75032): Implement the firmware update process.
+  return ZX_OK;
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {

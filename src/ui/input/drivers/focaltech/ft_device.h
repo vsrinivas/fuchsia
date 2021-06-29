@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/device-protocol/i2c-channel.h>
+#include <lib/focaltech/focaltech.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
@@ -22,6 +23,8 @@
 #include <hid/ft3x27.h>
 #include <hid/ft5726.h>
 #include <hid/ft6336.h>
+
+#include "ft_firmware.h"
 
 // clang-format off
 #define FTS_REG_CURPOINT                    0x02
@@ -61,6 +64,7 @@
 // clang-format on
 
 namespace ft {
+
 class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
                  public ddk::HidbusProtocol<FtDevice, ddk::base_protocol> {
  public:
@@ -114,6 +118,8 @@ class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
   void ParseReport(ft3x27_finger_t* rpt, uint8_t* buf);
 
   void LogRegisterValue(uint8_t addr, const char* name);
+
+  zx_status_t UpdateFirmwareIfNeeded(const FocaltechMetadata& metadata);
 
   ddk::GpioProtocolClient int_gpio_;
   ddk::GpioProtocolClient reset_gpio_;

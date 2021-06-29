@@ -15,7 +15,47 @@
 #include <hid/ft6336.h>
 #include <zxtest/zxtest.h>
 
+#include "ft_firmware.h"
+
+namespace {
+
+constexpr uint8_t kFirmware0[] = {0x00, 0xd2, 0xc8, 0x53, 0xd5, 0x6b, 0xc0, 0x60, 0x73, 0xd8};
+constexpr uint8_t kFirmware1[] = {0x10, 0x58, 0xb2, 0x12, 0xc8, 0xea, 0x5a, 0xca};
+constexpr uint8_t kFirmware2[] = {0xb7, 0xf9, 0xd1, 0x12, 0xb0, 0x10, 0x2c, 0xef, 0x98, 0x65};
+constexpr uint8_t kFirmware3[] = {0x02, 0x69, 0x96, 0x71, 0x61};
+
+}  // namespace
+
 namespace ft {
+
+const FirmwareEntry kFirmwareEntries[] = {
+    {
+        .display_vendor = 0,
+        .ddic_version = 0,
+        .firmware_data = kFirmware0,
+        .firmware_size = sizeof(kFirmware0),
+    },
+    {
+        .display_vendor = 1,
+        .ddic_version = 0,
+        .firmware_data = kFirmware1,
+        .firmware_size = sizeof(kFirmware1),
+    },
+    {
+        .display_vendor = 0,
+        .ddic_version = 1,
+        .firmware_data = kFirmware2,
+        .firmware_size = sizeof(kFirmware2),
+    },
+    {
+        .display_vendor = 1,
+        .ddic_version = 1,
+        .firmware_data = kFirmware3,
+        .firmware_size = sizeof(kFirmware3),
+    },
+};
+
+const size_t kNumFirmwareEntries = countof(kFirmwareEntries);
 
 class FakeFtDevice : public fake_i2c::FakeI2c {
  protected:
@@ -135,6 +175,19 @@ TEST_F(FocaltechTest, Metadata6336) {
   const size_t expected_size = get_ft6336_report_desc(&expected_descriptor);
   ASSERT_EQ(actual_size, expected_size);
   EXPECT_BYTES_EQ(actual_descriptor, expected_descriptor, expected_size);
+}
+
+TEST_F(FocaltechTest, Firmware5726) {
+  constexpr FocaltechMetadata kFt5726Metadata = {
+    .device_id = FOCALTECH_DEVICE_FT5726,
+    .needs_firmware = true,
+    .display_vendor = 1,
+    .ddic_version = 1,
+  };
+  ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &kFt5726Metadata, sizeof(kFt5726Metadata));
+
+  FtDevice dut(nullptr);
+  EXPECT_OK(dut.Init());
 }
 
 }  // namespace ft
