@@ -26,7 +26,7 @@ pub async fn run_component(
 async fn run_component_cmd(realm_proxy: RealmProxy, run: RunComponentCommand) -> Result<()> {
     if !run.url.ends_with(".cm") {
         return Err(anyhow!(
-            "Invalid component URL! For legacy components, use `fx component run-legacy`."
+            "Invalid component URL! For legacy components, use `ffx component run-legacy`."
         ));
     }
 
