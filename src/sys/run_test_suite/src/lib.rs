@@ -32,7 +32,7 @@ pub mod output;
 
 use {
     artifact::{Artifact, ArtifactSender},
-    output::{AnsiFilterWriter, ArtifactType, CaseId, RunReporter, SuiteId, SuiteReporter},
+    output::{AnsiFilterWriter, ArtifactType, RunReporter, SuiteReporter},
 };
 
 /// Duration after which to emit an excessive duration log.
@@ -135,9 +135,8 @@ async fn collect_results_for_suite(
     log_opts: diagnostics::LogCollectionOptions,
 ) -> Result<SuiteRunResult, anyhow::Error> {
     let mut test_cases = HashMap::new();
-    let mut test_case_reporters = HashMap::new();
     let mut test_cases_in_progress = HashMap::new();
-    let mut test_cases_executed = HashSet::new();
+    let mut test_cases_executed = HashMap::new();
     let mut test_cases_stdout = HashMap::new();
     let mut suite_log_tasks = vec![];
     let mut outcome = Outcome::Passed;
@@ -149,7 +148,7 @@ async fn collect_results_for_suite(
     loop {
         match suite_controller.get_events().await? {
             Err(e) => {
-                suite_reporter.stopped(&Outcome::Error.into())?;
+                suite_reporter.outcome(&Outcome::Error.into())?;
                 return Err(anyhow::anyhow!(convert_launch_error_to_str(e)));
             }
             Ok(events) => {
@@ -164,10 +163,7 @@ async fn collect_results_for_suite(
                             test_case_name,
                             identifier,
                         }) => {
-                            let case_reporter =
-                                suite_reporter.new_case(&test_case_name, &CaseId(identifier))?;
                             test_cases.insert(identifier, test_case_name);
-                            test_case_reporters.insert(identifier, case_reporter);
                         }
                         ftest_manager::SuiteEventPayload::CaseStarted(CaseStarted {
                             identifier,
@@ -179,7 +175,7 @@ async fn collect_results_for_suite(
                                     identifier
                                 ))?
                                 .clone();
-                            if test_cases_executed.contains(&identifier) {
+                            if test_cases_executed.contains_key(&identifier) {
                                 return Err(anyhow::anyhow!(
                                     "test case: '{}' started twice",
                                     test_case_name
@@ -190,8 +186,9 @@ async fn collect_results_for_suite(
                                 .await
                                 .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
 
+                            let case_reporter = suite_reporter.new_case(&test_case_name)?;
                             let mut sender_clone = artifact_sender.clone();
-                            test_cases_executed.insert(identifier);
+                            test_cases_executed.insert(identifier, case_reporter);
                             let excessive_time_task = fasync::Task::spawn(async move {
                                 fasync::Timer::new(EXCESSIVE_DURATION).await;
                                 sender_clone
@@ -224,7 +221,7 @@ async fn collect_results_for_suite(
                                     test_diagnostics::collect_and_send_stdout(socket, sender),
                                 );
                                 let mut writer_clone = artifact_sender.clone();
-                                let reporter = test_case_reporters.get(&identifier).unwrap();
+                                let reporter = test_cases_executed.get_mut(&identifier).unwrap();
                                 let mut stdout = reporter.new_artifact(&ArtifactType::Stdout)?;
                                 let stdout_task = fuchsia_async::Task::local(async move {
                                     while let Some(mut msg) = recv.next().await {
@@ -328,7 +325,7 @@ async fn collect_results_for_suite(
                                     ));
                                 }
                             };
-                            let reporter = test_case_reporters.get(&identifier).unwrap();
+                            let reporter = test_cases_executed.get_mut(&identifier).unwrap();
                             artifact_sender
                                 .send_test_stdout_msg(format!(
                                     "[{}]\t{}",
@@ -336,13 +333,12 @@ async fn collect_results_for_suite(
                                 ))
                                 .await
                                 .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
-                            reporter.stopped(&status.into())?;
+                            reporter.outcome(&status.into())?;
                         }
                         ftest_manager::SuiteEventPayload::CaseFinished(CaseFinished {
-                            identifier,
+                            identifier: _,
                         }) => {
-                            let reporter = test_case_reporters.remove(&identifier).unwrap();
-                            reporter.finished()?;
+                            // right now we don't have any thing to do. In future we may have artifacts to process.
                         }
                         ftest_manager::SuiteEventPayload::SuiteArtifact(SuiteArtifact {
                             artifact,
@@ -452,7 +448,7 @@ async fn collect_results_for_suite(
 
     let mut test_cases_executed = test_cases_executed
         .into_iter()
-        .map(|i| test_cases.get(&i).unwrap().clone())
+        .map(|(i, _)| test_cases.get(&i).unwrap().clone())
         .collect::<Vec<_>>();
     let mut test_cases_passed: Vec<String> = test_cases_passed.into_iter().collect();
     let mut test_cases_failed: Vec<String> = test_cases_failed.into_iter().collect();
@@ -461,7 +457,7 @@ async fn collect_results_for_suite(
     test_cases_passed.sort();
     test_cases_failed.sort();
 
-    suite_reporter.stopped(&outcome.into())?;
+    suite_reporter.outcome(&outcome.into())?;
 
     Ok(SuiteRunResult {
         outcome,
@@ -534,8 +530,7 @@ pub async fn run_test<'a, W: Write>(
         builder_proxy.build(run_server_end)?;
         let mut next_count = args.current_count + 1;
         let (sender, mut recv) = mpsc::channel(1024);
-        let reporter =
-            args.run_reporter.new_suite(&args.test_url, &SuiteId(args.current_count.into()))?;
+        let reporter = args.run_reporter.new_suite(&args.test_url)?;
         let writer = args.writer;
         let fut1 = collect_results_for_suite(
             suite_controller,
@@ -568,7 +563,7 @@ pub async fn run_test<'a, W: Write>(
         };
 
         let (result, _) = join!(fut1, fut2);
-        reporter.finished()?;
+        reporter.record()?;
         let result = result?;
 
         args.writer = writer;
@@ -708,8 +703,8 @@ pub async fn run_tests_and_get_outcome(
         println!("One or more test runs failed.");
     }
 
-    let report_result = match reporter.stopped(&test_outcome.into()) {
-        Ok(()) => reporter.finished(),
+    let report_result = match reporter.outcome(&test_outcome.into()) {
+        Ok(()) => reporter.record(),
         Err(e) => Err(e),
     };
     if let Err(e) = report_result {

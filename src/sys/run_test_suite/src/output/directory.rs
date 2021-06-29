@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::output::{ArtifactReporter, ArtifactType, EntityId, ReportedOutcome, Reporter};
+use crate::output::{
+    ArtifactReporter, ArtifactType, CaseId, EntityId, ReportedOutcome, Reporter, SuiteId,
+};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
 use std::io::Error;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use test_output_directory as directory;
 
+const TEST_RUN_ID: u64 = 0;
 const STDOUT_FILE: &str = "stdout.txt";
 const SYSLOG_FILE: &str = "syslog.txt";
 
@@ -20,7 +24,9 @@ pub(super) struct DirectoryReporter {
     /// A mapping from ID to every test run, test suite, and test case. The test run entry
     /// is always contained in ID TEST_RUN_ID. Entries are added as new test cases and suites
     /// are found, and removed once they have been persisted.
-    entries: Mutex<HashMap<EntityId, EntityEntry>>,
+    entries: Mutex<HashMap<u64, EntityEntry>>,
+    /// The next id to issue to an entity. Ids are issued in increasing order.
+    next_id: AtomicU64,
 }
 
 /// In-memory representation of either a test run, test suite, or test case.
@@ -28,7 +34,7 @@ struct EntityEntry {
     /// Name of the entity. Unused for a test run.
     name: String,
     /// A list of the children of an entity referenced by their id. Unused for a test case.
-    children: Vec<EntityId>,
+    children: Vec<u64>,
     /// Name of the artifact directory containing artifacts scoped to this entity.
     artifact_dir: PathBuf,
     /// A list of artifacts by filename.
@@ -40,13 +46,13 @@ struct EntityEntry {
 impl DirectoryReporter {
     /// Create a new `DirectoryReporter` that places results in the given `root` directory.
     pub(super) fn new(root: PathBuf) -> Result<Self, Error> {
-        let artifact_dir = artifact_dir_name(&EntityId::TestRun);
+        let artifact_dir = artifact_dir_name(TEST_RUN_ID);
 
         Self::ensure_directory_exists(root.as_path())?;
 
         let mut entries = HashMap::new();
         entries.insert(
-            EntityId::TestRun,
+            TEST_RUN_ID,
             EntityEntry {
                 name: "".to_string(),
                 artifact_dir,
@@ -55,7 +61,39 @@ impl DirectoryReporter {
                 outcome: ReportedOutcome::Inconclusive,
             },
         );
-        Ok(Self { root, entries: Mutex::new(entries) })
+        Ok(Self { root, entries: Mutex::new(entries), next_id: AtomicU64::new(TEST_RUN_ID + 1) })
+    }
+
+    /// Convert `id` into a u64 used as a key for the `entries` map.
+    fn into_entry_id(id: &EntityId) -> u64 {
+        match id {
+            EntityId::TestRun => TEST_RUN_ID,
+            EntityId::Suite(SuiteId(id)) | EntityId::Case(CaseId(id)) => *id,
+        }
+    }
+
+    /// Create a new child entity. Parent id is either an id for a suite or TEST_RUN_ID.
+    fn new_entity(&self, parent_id: u64, name: &str) -> Result<u64, Error> {
+        let new_entity_id = self.next_id.fetch_add(1, Ordering::Relaxed);
+        let artifact_dir = artifact_dir_name(new_entity_id);
+
+        let mut entries = self.entries.lock();
+        let parent = entries
+            .get_mut(&parent_id)
+            .expect("Attempting to create a child for an entity that does not exist");
+        parent.children.push(new_entity_id);
+        entries.insert(
+            new_entity_id,
+            EntityEntry {
+                name: name.to_string(),
+                artifact_dir,
+                artifacts: vec![],
+                children: vec![],
+                outcome: ReportedOutcome::Inconclusive,
+            },
+        );
+
+        Ok(new_entity_id)
     }
 
     fn ensure_directory_exists(absolute: &Path) -> Result<(), Error> {
@@ -76,7 +114,7 @@ impl ArtifactReporter for DirectoryReporter {
     ) -> Result<Self::Writer, Error> {
         let mut lock = self.entries.lock();
         let entry = lock
-            .get_mut(entity)
+            .get_mut(&Self::into_entry_id(entity))
             .expect("Attempting to create an artifact for an entity that does not exist");
         let name = filename_for_type(artifact_type);
 
@@ -91,58 +129,33 @@ impl ArtifactReporter for DirectoryReporter {
 }
 
 impl Reporter for DirectoryReporter {
-    fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error> {
-        let artifact_dir = artifact_dir_name(entity);
-
+    fn outcome(&self, entity: &EntityId, outcome: &ReportedOutcome) -> Result<(), Error> {
         let mut entries = self.entries.lock();
-        let parent_id = match entity {
-            EntityId::TestRun => panic!("Cannot create new test run"),
-            EntityId::Suite(_) => EntityId::TestRun,
-            EntityId::Case { suite, .. } => EntityId::Suite(*suite),
-        };
-        let parent = entries
-            .get_mut(&parent_id)
-            .expect("Attempting to create a child for an entity that does not exist");
-        parent.children.push(*entity);
-        entries.insert(
-            *entity,
-            EntityEntry {
-                name: name.to_string(),
-                artifact_dir,
-                artifacts: vec![],
-                children: vec![],
-                outcome: ReportedOutcome::Inconclusive,
-            },
-        );
-
-        Ok(())
-    }
-
-    fn entity_started(&self, _: &EntityId /*timestamp: zx::Time*/) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn entity_stopped(
-        &self,
-        entity: &EntityId,
-        outcome: &ReportedOutcome, /*timestamp: zx::Time*/
-    ) -> Result<(), Error> {
-        let mut entries = self.entries.lock();
-        let entry =
-            entries.get_mut(entity).expect("Outcome reported for an entity that does not exist");
+        let entry = entries
+            .get_mut(&Self::into_entry_id(entity))
+            .expect("Outcome reported for an entity that does not exist");
         entry.outcome = *outcome;
         Ok(())
     }
 
-    /// Finalize and persist the outcome and artifacts for an entity. This should only be
-    /// called once per entity.
-    fn entity_finished(&self, entity: &EntityId) -> Result<(), Error> {
+    fn new_case(&self, parent: &SuiteId, name: &str) -> Result<CaseId, Error> {
+        let case_id = self.new_entity(parent.0, name)?;
+
+        Ok(CaseId(case_id))
+    }
+
+    fn new_suite(&self, url: &str) -> Result<SuiteId, Error> {
+        let suite_id = self.new_entity(TEST_RUN_ID, url)?;
+        Ok(SuiteId(suite_id))
+    }
+
+    fn record(&self, entity: &EntityId) -> Result<(), Error> {
         match entity {
             EntityId::TestRun => {
                 let run_entry = self
                     .entries
                     .lock()
-                    .remove(&EntityId::TestRun)
+                    .remove(&TEST_RUN_ID)
                     .expect("Run entry not found, was it already recorded?");
                 let serializable_run = construct_serializable_run(run_entry);
                 let summary_path = self.root.join(directory::RUN_SUMMARY_NAME);
@@ -150,10 +163,10 @@ impl Reporter for DirectoryReporter {
                 serde_json::to_writer_pretty(&mut summary, &serializable_run)?;
                 summary.sync_all()
             }
-            EntityId::Suite(suite_id) => {
+            EntityId::Suite(SuiteId(suite_id)) => {
                 let mut entries = self.entries.lock();
                 let suite_entry = entries
-                    .remove(entity)
+                    .remove(suite_id)
                     .expect("Suite entry not found, was it already recorded?");
                 let case_entries = suite_entry
                     .children
@@ -163,26 +176,22 @@ impl Reporter for DirectoryReporter {
                     })
                     .collect();
                 let serializable_suite = construct_serializable_suite(suite_entry, case_entries);
-                let summary_path = self.root.join(suite_json_name(suite_id.0));
+                let summary_path = self.root.join(suite_json_name(*suite_id));
                 let mut summary = File::create(summary_path)?;
                 serde_json::to_writer_pretty(&mut summary, &serializable_suite)?;
                 summary.sync_all()
             }
             // Cases are saved as part of suites.
-            EntityId::Case { .. } => Ok(()),
+            EntityId::Case(_) => Ok(()),
         }
     }
 }
 
-fn artifact_dir_name(entity_id: &EntityId) -> PathBuf {
-    match entity_id {
-        EntityId::TestRun => "artifact-run".into(),
-        EntityId::Suite(suite) => format!("artifact-{:?}", suite.0).into(),
-        EntityId::Case { suite, case } => format!("artifact-{:?}-{:?}", suite.0, case.0).into(),
-    }
+fn artifact_dir_name(entity_id: u64) -> PathBuf {
+    format!("artifact-{:?}", entity_id).into()
 }
 
-fn suite_json_name(suite_id: u32) -> String {
+fn suite_json_name(suite_id: u64) -> String {
     format!("{:?}.json", suite_id)
 }
 
@@ -198,13 +207,7 @@ fn construct_serializable_run(run_entry: EntityEntry) -> directory::TestRunResul
     let suites = run_entry
         .children
         .iter()
-        .map(|suite_id| {
-            let raw_id = match suite_id {
-                EntityId::Suite(suite) => suite.0,
-                _ => panic!("Test run child should be a suite"),
-            };
-            directory::SuiteEntryV0 { summary: suite_json_name(raw_id) }
-        })
+        .map(|suite_id| directory::SuiteEntryV0 { summary: suite_json_name(*suite_id) })
         .collect();
     directory::TestRunResult::V0 {
         artifacts: run_entry
@@ -260,7 +263,7 @@ fn into_serializable_outcome(outcome: ReportedOutcome) -> directory::Outcome {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::output::{CaseId, RunReporter, SuiteId};
+    use crate::output::RunReporter;
     use tempfile::tempdir;
     use test_output_directory::testing::{
         assert_run_result, assert_suite_result, assert_suite_results, parse_json_in_output,
@@ -273,19 +276,19 @@ mod test {
         let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
         for suite_no in 0..3 {
             let suite_reporter = run_reporter
-                .new_suite(&format!("suite-{:?}", suite_no), &SuiteId(suite_no))
+                .new_suite(&format!("suite-{:?}", suite_no))
                 .expect("create suite reporter");
             for case_no in 0..3 {
                 let case_reporter = suite_reporter
-                    .new_case(&format!("case-{:?}-{:?}", suite_no, case_no), &CaseId(case_no))
+                    .new_case(&format!("case-{:?}-{:?}", suite_no, case_no))
                     .expect("create suite reporter");
-                case_reporter.stopped(&ReportedOutcome::Passed).expect("set case outcome");
+                case_reporter.outcome(&ReportedOutcome::Passed).expect("set case outcome");
             }
-            suite_reporter.stopped(&ReportedOutcome::Failed).expect("set suite outcome");
-            suite_reporter.finished().expect("record suite");
+            suite_reporter.outcome(&ReportedOutcome::Failed).expect("set suite outcome");
+            suite_reporter.record().expect("record suite");
         }
-        run_reporter.stopped(&ReportedOutcome::Timedout).expect("set run outcome");
-        run_reporter.finished().expect("record run");
+        run_reporter.outcome(&ReportedOutcome::Timedout).expect("set run outcome");
+        run_reporter.record().expect("record run");
 
         // assert on directory
         let (run_result, suite_results) = parse_json_in_output(dir.path());
@@ -318,30 +321,28 @@ mod test {
     fn artifacts_per_entity() {
         let dir = tempdir().expect("create temp directory");
         let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
-        let suite_reporter =
-            run_reporter.new_suite("suite-1", &SuiteId(0)).expect("create new suite");
+        let suite_reporter = run_reporter.new_suite("suite-1").expect("create new suite");
         for case_no in 0..3 {
-            let case_reporter = suite_reporter
-                .new_case(&format!("case-1-{:?}", case_no), &CaseId(case_no))
-                .expect("create new case");
+            let case_reporter =
+                suite_reporter.new_case(&format!("case-1-{:?}", case_no)).expect("create new case");
             let mut artifact =
                 case_reporter.new_artifact(&ArtifactType::Stdout).expect("create case artifact");
             writeln!(artifact, "stdout from case {:?}", case_no).expect("write to artifact");
-            case_reporter.stopped(&ReportedOutcome::Passed).expect("report case outcome");
+            case_reporter.outcome(&ReportedOutcome::Passed).expect("report case outcome");
         }
 
         let mut suite_artifact =
             suite_reporter.new_artifact(&ArtifactType::Stdout).expect("create suite artifact");
         writeln!(suite_artifact, "stdout from suite").expect("write to artifact");
-        suite_reporter.stopped(&ReportedOutcome::Passed).expect("report suite outcome");
-        suite_reporter.finished().expect("record suite");
+        suite_reporter.outcome(&ReportedOutcome::Passed).expect("report suite outcome");
+        suite_reporter.record().expect("record suite");
         drop(suite_artifact); // want to flush contents
 
         let mut run_artifact =
             run_reporter.new_artifact(&ArtifactType::Stdout).expect("create run artifact");
         writeln!(run_artifact, "stdout from run").expect("write to artifact");
-        run_reporter.stopped(&ReportedOutcome::Passed).expect("record run outcome");
-        run_reporter.finished().expect("record run");
+        run_reporter.outcome(&ReportedOutcome::Passed).expect("record run outcome");
+        run_reporter.record().expect("record run");
         drop(run_artifact); // want to flush contents
 
         let (run_result, suite_results) = parse_json_in_output(dir.path());
@@ -376,23 +377,21 @@ mod test {
         let dir = tempdir().expect("create temp directory");
         let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
 
-        let success_suite_reporter =
-            run_reporter.new_suite("suite", &SuiteId(0)).expect("create new suite");
-        success_suite_reporter.stopped(&ReportedOutcome::Passed).expect("report suite outcome");
+        let success_suite_reporter = run_reporter.new_suite("suite").expect("create new suite");
+        success_suite_reporter.outcome(&ReportedOutcome::Passed).expect("report suite outcome");
         success_suite_reporter
             .new_artifact(&ArtifactType::Stdout)
             .expect("create new artifact")
             .write_all(b"stdout from passed suite\n")
             .expect("write to artifact");
-        success_suite_reporter.finished().expect("record suite");
+        success_suite_reporter.record().expect("record suite");
 
-        let failed_suite_reporter =
-            run_reporter.new_suite("suite", &SuiteId(1)).expect("create new suite");
-        failed_suite_reporter.stopped(&ReportedOutcome::Failed).expect("report suite outcome");
-        failed_suite_reporter.finished().expect("record suite");
+        let failed_suite_reporter = run_reporter.new_suite("suite").expect("create new suite");
+        failed_suite_reporter.outcome(&ReportedOutcome::Failed).expect("report suite outcome");
+        failed_suite_reporter.record().expect("record suite");
 
-        run_reporter.stopped(&ReportedOutcome::Failed).expect("report run outcome");
-        run_reporter.finished().expect("record run");
+        run_reporter.outcome(&ReportedOutcome::Failed).expect("report run outcome");
+        run_reporter.record().expect("record run");
 
         let (run_result, suite_results) = parse_json_in_output(dir.path());
         assert_run_result(

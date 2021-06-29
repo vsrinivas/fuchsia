@@ -46,7 +46,7 @@ pub struct SuiteReporter<'a> {
 pub struct CaseReporter<'a> {
     reporter: &'a DynReporter,
     artifact_fn: &'a NewArtifactFn,
-    entity_id: EntityId,
+    case_id: CaseId,
 }
 
 impl RunReporter {
@@ -94,29 +94,24 @@ impl RunReporter {
         (self.artifact_fn)(&EntityId::TestRun, artifact_type)
     }
 
-    /// Record that the test run has started.
-    pub fn started(&self) -> Result<(), Error> {
-        self.reporter.entity_started(&EntityId::TestRun)
-    }
-
     /// Record the outcome of the test run.
-    pub fn stopped(&self, outcome: &ReportedOutcome) -> Result<(), Error> {
-        self.reporter.entity_stopped(&EntityId::TestRun, outcome)
+    pub fn outcome(&self, outcome: &ReportedOutcome) -> Result<(), Error> {
+        self.reporter.outcome(&EntityId::TestRun, outcome)
     }
 
     /// Record a new suite under the test run.
-    pub fn new_suite(&self, url: &str, suite_id: &SuiteId) -> Result<SuiteReporter<'_>, Error> {
-        self.reporter.new_entity(&EntityId::Suite(*suite_id), url)?;
+    pub fn new_suite(&self, url: &str) -> Result<SuiteReporter<'_>, Error> {
+        let suite_id = self.reporter.new_suite(url)?;
         Ok(SuiteReporter {
             reporter: self.reporter.as_ref(),
             artifact_fn: self.artifact_fn.as_ref(),
-            suite_id: *suite_id,
+            suite_id,
         })
     }
 
     /// Finalize and persist the test run.
-    pub fn finished(self) -> Result<(), Error> {
-        self.reporter.entity_finished(&EntityId::TestRun)
+    pub fn record(self) -> Result<(), Error> {
+        self.reporter.record(&EntityId::TestRun)
     }
 }
 
@@ -126,48 +121,32 @@ impl<'a> SuiteReporter<'a> {
         (self.artifact_fn)(&EntityId::Suite(self.suite_id), artifact_type)
     }
 
-    /// Record that the suite has started.
-    pub fn started(&self) -> Result<(), Error> {
-        self.reporter.entity_started(&EntityId::Suite(self.suite_id))
-    }
-
     /// Record the outcome of the suite.
-    pub fn stopped(&self, outcome: &ReportedOutcome) -> Result<(), Error> {
-        self.reporter.entity_stopped(&EntityId::Suite(self.suite_id), outcome)
+    pub fn outcome(&self, outcome: &ReportedOutcome) -> Result<(), Error> {
+        self.reporter.outcome(&EntityId::Suite(self.suite_id), outcome)
     }
 
     /// Record a new suite under the suite.
-    pub fn new_case(&self, name: &str, case_id: &CaseId) -> Result<CaseReporter<'_>, Error> {
-        let entity_id = EntityId::Case { suite: self.suite_id, case: *case_id };
-        self.reporter.new_entity(&entity_id, name)?;
-        Ok(CaseReporter { reporter: self.reporter, artifact_fn: self.artifact_fn, entity_id })
+    pub fn new_case(&self, name: &str) -> Result<CaseReporter<'_>, Error> {
+        let case_id = self.reporter.new_case(&self.suite_id, name)?;
+        Ok(CaseReporter { reporter: self.reporter, artifact_fn: self.artifact_fn, case_id })
     }
 
     /// Finalize and persist the test run.
-    pub fn finished(self) -> Result<(), Error> {
-        self.reporter.entity_finished(&EntityId::Suite(self.suite_id))
+    pub fn record(self) -> Result<(), Error> {
+        self.reporter.record(&EntityId::Suite(self.suite_id))
     }
 }
 
 impl<'a> CaseReporter<'a> {
     /// Create a new artifact scoped to the test case.
     pub fn new_artifact(&self, artifact_type: &ArtifactType) -> Result<Box<DynArtifact>, Error> {
-        (self.artifact_fn)(&self.entity_id, artifact_type)
-    }
-
-    /// Record that the case has started.
-    pub fn started(&self) -> Result<(), Error> {
-        self.reporter.entity_started(&self.entity_id)
+        (self.artifact_fn)(&EntityId::Case(self.case_id), artifact_type)
     }
 
     /// Record the outcome of the test case.
-    pub fn stopped(&self, outcome: &ReportedOutcome) -> Result<(), Error> {
-        self.reporter.entity_stopped(&self.entity_id, outcome)
-    }
-
-    /// Record the outcome of the test case.
-    pub fn finished(self) -> Result<(), Error> {
-        self.reporter.entity_finished(&self.entity_id)
+    pub fn outcome(&self, outcome: &ReportedOutcome) -> Result<(), Error> {
+        self.reporter.outcome(&EntityId::Case(self.case_id), outcome)
     }
 }
 
@@ -215,33 +194,29 @@ impl From<crate::Outcome> for ReportedOutcome {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SuiteId(pub u32);
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct CaseId(pub u32);
+#[derive(Clone, Copy)]
+struct SuiteId(u64);
+#[derive(Clone, Copy)]
+struct CaseId(u64);
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum EntityId {
+enum EntityId {
     TestRun,
     Suite(SuiteId),
-    Case { suite: SuiteId, case: CaseId },
+    Case(CaseId),
 }
 
-/// A trait for structs that report test results.
+/// A trait for structs that can save structured test results.
 /// Implementations of `Reporter` serve as the backend powering `RunReporter`.
 trait Reporter {
-    /// Record a new test suite or test case. This should be called once per entity.
-    fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error>;
-
-    /// Record that a test run, suite or case has started.
-    fn entity_started(&self, entity: &EntityId) -> Result<(), Error>;
-
-    /// Record that a test run, suite, or case has stopped.
-    fn entity_stopped(&self, entity: &EntityId, outcome: &ReportedOutcome) -> Result<(), Error>;
-
-    /// Record that a test run, suite, or case has stopped. After this method is called for
-    /// an entity, no additional events or artifacts may be added to the entity.
-    fn entity_finished(&self, entity: &EntityId) -> Result<(), Error>;
+    /// Record the outcome of either a test run, test suite, or test case.
+    fn outcome(&self, entity: &EntityId, outcome: &ReportedOutcome) -> Result<(), Error>;
+    /// Record a new case under the referenced parent suite.
+    fn new_case(&self, parent: &SuiteId, name: &str) -> Result<CaseId, Error>;
+    /// Record a new suite under the test run.
+    fn new_suite(&self, url: &str) -> Result<SuiteId, Error>;
+    /// Finalize and persist the outcome and artifacts for an entity. This should only be
+    /// called once per entity.
+    fn record(&self, entity: &EntityId) -> Result<(), Error>;
 }
 
 /// A trait for structs that produce writers to which artifacts may be streamed.
