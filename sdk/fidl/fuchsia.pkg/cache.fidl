@@ -207,7 +207,7 @@ protocol RetainedPackages {
     Clear() -> ();
 
     /// Atomically replace the retained package set with the [package hashes](
-    /// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url?hl=en#package-hash)
+    /// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#package-hash)
     /// provided by the given iterator.
     /// Duplicate IDs provided will be merged and processed as a single one.
     ///
