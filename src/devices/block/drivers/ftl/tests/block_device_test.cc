@@ -6,7 +6,6 @@
 
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
 #include <lib/ftl/volume.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -21,6 +20,7 @@
 #include <zxtest/zxtest.h>
 
 #include "metrics.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 namespace {
 
 constexpr uint32_t kPageSize = 1024;
@@ -168,19 +168,15 @@ TEST(BlockDeviceTest, TrivialLifetime) {
 }
 
 TEST(BlockDeviceTest, DdkLifetime) {
-  ftl::BlockDevice* device(new ftl::BlockDevice(fake_ddk::kFakeParent));
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  ftl::BlockDevice* device(new ftl::BlockDevice(fake_parent.get()));
   device->SetVolumeForTest(std::make_unique<FakeVolume>(device));
 
   FakeNand nand;
-  fake_ddk::Bind ddk;
-  ddk.SetProtocol(ZX_PROTOCOL_NAND, nand.proto());
-
+  fake_parent->AddProtocol(ZX_PROTOCOL_NAND, nand.proto()->ops, nand.proto()->ctx);
   ASSERT_OK(device->Bind());
   device->DdkAsyncRemove();
-  EXPECT_TRUE(ddk.Ok());
-
-  // This should delete the object, which means this test should not leak.
-  device->DdkRelease();
+  ASSERT_OK(mock_ddk::ReleaseFlaggedDevices(fake_parent.get()));
 }
 
 TEST(BlockDeviceTest, GetSize) {
