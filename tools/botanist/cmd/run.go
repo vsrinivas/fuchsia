@@ -294,8 +294,8 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 		if t, ok := t.(target.ConfiguredTarget); ok {
 			if addr := t.Address(); len(addr) != 0 {
 				sshAddr.IP = addr
-				subprocessEnv[constants.DeviceAddrEnvKey] = addr.String()
 				subprocessEnv[constants.IPv4AddrEnvKey] = addr.String()
+				subprocessEnv[constants.DeviceAddrEnvKey] = addr.String()
 			}
 		}
 		if sshAddr.IP == nil {
@@ -312,21 +312,19 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 
 				logger.Infof(ctx, "IPv4 address of %s found: %s", t.Nodename(), ipv4Addr)
 				subprocessEnv[constants.IPv4AddrEnvKey] = ipv4Addr.String()
-				if _, ok := subprocessEnv[constants.DeviceAddrEnvKey]; !ok {
-					subprocessEnv[constants.DeviceAddrEnvKey] = ipv4Addr.String()
-				}
+				subprocessEnv[constants.DeviceAddrEnvKey] = ipv4Addr.String()
 			} else {
 				logger.Warningf(ctx, "could not resolve IPv4 address of %s", t.Nodename())
 			}
 			if ipv6Addr.IP != nil {
+				// Prefer IPv6 if both IPv4 and IPv6 are available, overwriting
+				// the IPv4 settings.
 				sshAddr.IP = ipv6Addr.IP
 				sshAddr.Zone = ipv6Addr.Zone
 
 				logger.Infof(ctx, "IPv6 address of %s found: %s", t.Nodename(), &ipv6Addr)
 				subprocessEnv[constants.IPv6AddrEnvKey] = ipv6Addr.String()
-				if _, ok := subprocessEnv[constants.DeviceAddrEnvKey]; !ok {
-					subprocessEnv[constants.DeviceAddrEnvKey] = ipv6Addr.String()
-				}
+				subprocessEnv[constants.DeviceAddrEnvKey] = ipv6Addr.String()
 			} else {
 				logger.Warningf(ctx, "could not resolve IPv6 address of %s", t.Nodename())
 			}
