@@ -109,8 +109,18 @@ pub fn sys_pread64(
     offset: usize,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    let bytes = file.read_at(&ctx.task, offset, &[UserBuffer { address, length }])?;
-    Ok(bytes.into())
+    Ok(file.read_at(&ctx.task, offset, &[UserBuffer { address, length }])?.into())
+}
+
+pub fn sys_pwrite64(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    address: UserAddress,
+    length: usize,
+    offset: usize,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    Ok(file.write_at(&ctx.task, offset, &[UserBuffer { address, length }])?.into())
 }
 
 pub fn sys_readv(

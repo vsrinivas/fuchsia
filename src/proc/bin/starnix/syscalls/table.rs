@@ -154,6 +154,7 @@ pub fn dispatch_syscall(
         pipe2[2],
         prctl[5],
         pread64[4],
+        pwrite64[4],
         read[3],
         readlink[3],
         readlinkat[4],

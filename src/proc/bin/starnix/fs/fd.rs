@@ -259,7 +259,6 @@ impl FileObject {
         self.blocking_op(task, || self.ops().write(self, task, data), FdEvents::POLLOUT)
     }
 
-    #[allow(dead_code)]
     pub fn write_at(
         &self,
         task: &Task,
