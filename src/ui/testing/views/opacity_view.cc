@@ -4,7 +4,6 @@
 
 #include "src/ui/testing/views/opacity_view.h"
 
-#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
