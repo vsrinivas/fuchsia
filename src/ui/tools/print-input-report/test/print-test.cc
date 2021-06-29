@@ -469,4 +469,45 @@ TEST_F(PrintInputReport, PrintConsumerControlReport) {
   printer.AssertSawAllStrings();
 }
 
+TEST_F(PrintInputReport, PrintInputDescriptorWithExponents) {
+  auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
+  auto values = descriptor->mutable_sensor()->mutable_input()->mutable_values();
+
+  fuchsia::input::report::SensorAxis axis;
+  axis.axis.unit.type = fuchsia::input::report::UnitType::SI_LINEAR_VELOCITY;
+  axis.axis.unit.exponent = -1;
+  axis.axis.range.min = 0;
+  axis.axis.range.max = 1000;
+  axis.type = fuchsia::input::report::SensorType::ACCELEROMETER_X;
+
+  values->push_back(axis);
+
+  axis.axis.unit.type = fuchsia::input::report::UnitType::LUX;
+  axis.axis.unit.exponent = -2;
+  axis.type = fuchsia::input::report::SensorType::LIGHT_ILLUMINANCE;
+
+  values->push_back(axis);
+
+  fake_device_->SetDescriptor(std::move(descriptor));
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Descriptor from file: test\n",
+      "Sensor Descriptor:\n",
+      "  Value 00:\n",
+      "    SensorType: ACCELEROMETER_X\n",
+      "    Unit: SI_LINEAR_VELOCITY * 1e-1\n",
+      "    Min:         0\n",
+      "    Max:      1000\n",
+      "  Value 01:\n",
+      "    SensorType: LIGHT_ILLUMINANCE\n",
+      "    Unit:      LUX * 1e-2\n",
+      "    Min:         0\n",
+      "    Max:      1000\n",
+  });
+
+  print_input_report::PrintInputDescriptor(std::string("test"), &printer, std::move(*client_));
+  loop_->RunUntilIdle();
+}
+
 }  // namespace test

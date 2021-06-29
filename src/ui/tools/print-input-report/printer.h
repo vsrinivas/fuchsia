@@ -107,7 +107,7 @@ class Printer {
 
   // Find the string related to the unit. If we are given a value that we do not
   // recognize, the string "NONE" will be returned and printed.
-  static const char* UnitToString(fuchsia_input_report::wire::Unit unit) {
+  static const char* UnitTypeToString(fuchsia_input_report::wire::Unit unit) {
     uint32_t unit_index = static_cast<uint32_t>(unit.type);
     if (unit_index >= countof(kUnitStrings)) {
       return kUnitStrings[0];
@@ -151,14 +151,22 @@ class Printer {
   }
 
   void PrintAxis(fuchsia_input_report::wire::Axis axis) {
-    this->Print("Unit: %8s\n", UnitToString(axis.unit));
+    if (axis.unit.exponent) {
+      this->Print("Unit: %8s * 1e%d\n", UnitTypeToString(axis.unit), axis.unit.exponent);
+    } else {
+      this->Print("Unit: %8s\n", UnitTypeToString(axis.unit));
+    }
     this->Print("Min:  %8ld\n", axis.range.min);
     this->Print("Max:  %8ld\n", axis.range.max);
   }
 
   void PrintAxisIndented(fuchsia_input_report::wire::Axis axis) {
     IncreaseIndent();
-    this->Print("Unit: %8s\n", UnitToString(axis.unit));
+    if (axis.unit.exponent) {
+      this->Print("Unit: %8s * 1e%d\n", UnitTypeToString(axis.unit), axis.unit.exponent);
+    } else {
+      this->Print("Unit: %8s\n", UnitTypeToString(axis.unit));
+    }
     this->Print("Min:  %8ld\n", axis.range.min);
     this->Print("Max:  %8ld\n", axis.range.max);
     DecreaseIndent();
