@@ -163,6 +163,7 @@ type setArgs struct {
 	useCcache        bool
 	noCcache         bool
 	ccacheDir        string
+	enableRbe        bool
 	isRelease        bool
 	netboot          bool
 	cargoTOMLGen     bool
@@ -212,6 +213,7 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 	// We don't bother validating its value because the value isn't used
 	// anywhere.
 	flagSet.StringVar(&cmd.gomaDir, "goma-dir", "", "")
+	flagSet.BoolVar(&cmd.enableRbe, "rbe", false, "")
 	flagSet.BoolVar(&cmd.isRelease, "release", false, "")
 	flagSet.BoolVar(&cmd.netboot, "netboot", false, "")
 	flagSet.BoolVar(&cmd.cargoTOMLGen, "cargo-toml-gen", false, "")
@@ -358,6 +360,9 @@ func constructStaticSpec(ctx context.Context, fx fxRunner, checkoutDir string, a
 	gnArgs := args.gnArgs
 	if useCcacheFinal {
 		gnArgs = append(gnArgs, "use_ccache=true")
+	}
+	if args.enableRbe {
+		gnArgs = append(gnArgs, "enable_rbe=true")
 	}
 	if args.netboot {
 		gnArgs = append(gnArgs, "enable_netboot=true")

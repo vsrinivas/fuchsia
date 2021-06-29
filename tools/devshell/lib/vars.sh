@@ -531,6 +531,10 @@ function fx-standard-switches {
   done
 }
 
+function fx-rbe-enabled {
+  grep -q "^[ \t]*enable_rbe[ ]*=[ ]*true" "${FUCHSIA_BUILD_DIR}/args.gn"
+}
+
 function fx-choose-build-concurrency {
   if grep -q "use_goma = true" "${FUCHSIA_BUILD_DIR}/args.gn"; then
     # The recommendation from the Goma team is to use 10*cpu-count.
@@ -592,7 +596,7 @@ function fx-exit-on-failure {
 #    print_full_cmd   if true, prints the full ninja command line before
 #                     executing it
 #    ninja command    the ninja command itself. This can be used both to run
-#                     ninja directly or to run a wrapper script.
+#                     ninja directly or to run a wrapper script around ninja.
 function fx-run-ninja {
   # Separate the command from the arguments so we can prepend default -j/-l
   # switch arguments.  They need to come before the user's arguments in case
@@ -616,7 +620,7 @@ function fx-run-ninja {
     shift
   done
 
-  if ! $have_load; then
+  if ! "$have_load"; then
     if [[ "$(uname -s)" == "Darwin" ]]; then
       # Load level on Darwin is quite different from that of Linux, wherein a
       # load level of 1 per CPU is not necessarily a prohibitive load level. An
@@ -629,7 +633,7 @@ function fx-run-ninja {
     fi
   fi
 
-  if ! $have_jobs; then
+  if ! "$have_jobs"; then
     local concurrency
     concurrency="$(fx-choose-build-concurrency)"
     # macOS in particular has a low default for number of open file descriptors
@@ -682,11 +686,18 @@ function fx-run-ninja {
   # when TMPDIR="" - it is deliberately unquoted and using the ${+} expansion
   # expression). GOMA_DISABLED will forcefully disable Goma even if it's set to
   # empty.
+  #
+  # rbe_wrapper is used to auto-start/stop a proxy process for the duration of
+  # the build, so that RBE-enabled build actions can operate through the proxy.
+  #
   local newpath="${PREBUILT_PYTHON3_DIR}/bin:${PATH}"
+  local rbe_wrapper=()
+  if fx-rbe-enabled ; then rbe_wrapper=("$FUCHSIA_DIR"/build/rbe/fuchsia-reproxy-wrap.sh --) ; fi
   full_cmdline=(env -i "TERM=${TERM}" "PATH=${newpath}" \
     ${NINJA_STATUS+"NINJA_STATUS=${NINJA_STATUS}"} \
     ${GOMA_DISABLED+"GOMA_DISABLED=$GOMA_DISABLED"} \
     ${TMPDIR+"TMPDIR=$TMPDIR"} \
+    "${rbe_wrapper[@]}" \
     "$cmd" "${args[@]}")
 
   if [[ "${print_full_cmd}" = true ]]; then

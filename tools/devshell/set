@@ -57,6 +57,10 @@
 ##                         attempts to make builds faster using remote build
 ##                         servers. Defaults to detecting whether goma has been
 ##                         set up via `fx goma`.
+##   --rbe                 If set, use the remote backend (RBE) service during
+##                         the build.  RBE offloads work onto remote servers and
+##                         offers caching benefits to accelerate builds.
+##                         Default: disabled
 ##   --ide                 Pass --ide=VALUE to gn when generating to create project
 ##                         files usable with that IDE. Useful values include "vs"
 ##                         for Visual Studio or "xcode" for Xcode.
@@ -270,6 +274,7 @@ function main {
   local use_goma
   local goma_dir
   local ensure_goma=1
+  local enable_rbe=0
   local cargo_toml_gen=0
   local ccache
   while [[ $# -ne 0 ]]; do
@@ -345,6 +350,9 @@ function main {
         fi
         use_goma=1
         shift
+        ;;
+      --rbe)
+        enable_rbe=1
         ;;
       --build-dir)
         if [[ $# -lt 2 ]]; then
@@ -495,6 +503,11 @@ function main {
     if [[ "${ccache}" -eq 1 ]]; then
       gn_args+=" use_ccache=true"
     fi
+  fi
+
+  # Add rbe settings.
+  if [[ "${enable_rbe}" -eq 1 ]]; then
+    gn_args+=" enable_rbe=true"
   fi
 
   gn_args+="
