@@ -77,7 +77,7 @@ impl {{ $service.Name }}Proxy {
     {{- range $member.DocComments }}
     ///{{ . }}
     {{- end }}
-    pub fn {{ $member.SnakeName }}(&self) -> Result<{{ $member.ProtocolType }}Proxy, fidl::Error> {
+    pub fn r#{{ $member.SnakeName }}(&self) -> Result<{{ $member.ProtocolType }}Proxy, fidl::Error> {
         let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.0.open_member("{{ $member.Name }}", server)?;
         let proxy = fidl::AsyncChannel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;

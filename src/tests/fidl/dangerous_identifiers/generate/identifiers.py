@@ -25,10 +25,20 @@ RUST_KEYWORD = [
         bindings=['rust'],
         uses=[
             'method.names',
-            'table.fields',
+            'method.event.arguments',
             'method.request.arguments',
             'method.response.arguments',
-            'method.event.arguments',
+            'service.member.names',
+            'table.fields',
+        ])
+]
+
+# Deny rule to apply to FIDL primitives.
+FIDL_PRIMITIVE = [
+    Deny(
+        styles=['lower'],
+        uses=[
+            'service.member.types',  # FIDL compiler disallows primitives here.
         ])
 ]
 
@@ -50,12 +60,12 @@ IDENTIFIERS = [
     Identifier('become', RUST_KEYWORD),
     Identifier('bitand'),
     Identifier('bitor'),
-    Identifier('bool'),
+    Identifier('bool', FIDL_PRIMITIVE),
     # TODO(fxbug.dev/77561): this can be re-enabled once builtin shadowing works.
     # Identifier('box', RUST_KEYWORD),
     Identifier('break', RUST_KEYWORD),
-    Identifier('byte'),
-    Identifier('bytes'),
+    Identifier('byte', FIDL_PRIMITIVE),
+    Identifier('bytes', FIDL_PRIMITIVE),
     Identifier('case'),
     Identifier('catch'),
     Identifier('chan'),
@@ -130,10 +140,10 @@ IDENTIFIERS = [
     Identifier('index'),
     Identifier('inline'),
     Identifier('int'),
-    Identifier('int16'),
-    Identifier('int32'),
-    Identifier('int64'),
-    Identifier('int8'),
+    Identifier('int16', FIDL_PRIMITIVE),
+    Identifier('int32', FIDL_PRIMITIVE),
+    Identifier('int64', FIDL_PRIMITIVE),
+    Identifier('int8', FIDL_PRIMITIVE),
     Identifier('interface'),
     Identifier('internal_tag'),
     Identifier('is'),
@@ -213,7 +223,7 @@ IDENTIFIERS = [
     Identifier('static_assert'),
     Identifier('static_cast'),
     Identifier('stream'),
-    Identifier('string'),
+    Identifier('string', FIDL_PRIMITIVE),
     Identifier('struct', RUST_KEYWORD),
     Identifier('stub'),
     Identifier('super', RUST_KEYWORD),
@@ -232,7 +242,7 @@ IDENTIFIERS = [
     Identifier('typeid'),
     Identifier('typename'),
     Identifier('typeof', RUST_KEYWORD),
-    Identifier('uint16'),
+    Identifier('uint16', FIDL_PRIMITIVE),
     # We use uint32 as a type in some tests which makes it conflict.
     # See also: fxbug.dev/38124 fxbug.dev/8042)
     Identifier(
@@ -242,12 +252,13 @@ IDENTIFIERS = [
                 styles=['lower'],
                 uses=[
                     'constants',
+                    'service.member.types',  # FIDL compiler disallows primitives here.
                     'struct.types',
                     'table.names',  # TODO(fxbug.dev/8081) 'union.names'
                 ])
         ]),
-    Identifier('uint64'),
-    Identifier('uint8'),
+    Identifier('uint64', FIDL_PRIMITIVE),
+    Identifier('uint8', FIDL_PRIMITIVE),
     Identifier('union'),
     Identifier('unknown'),
     Identifier('unknown_bytes'),

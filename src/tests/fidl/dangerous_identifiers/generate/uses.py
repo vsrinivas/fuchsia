@@ -193,3 +193,39 @@ def method_event_arguments(f, idents: List[ScopedIdentifier]):
         f.write(ident.decl_attributes)
         f.write(f"  -> Event{i}(argtype {ident});\n")
     f.write("};\n")
+
+
+@use
+def service_names(f, idents: List[ScopedIdentifier]):
+    # a service with every dangerous name
+    f.write("protocol SampleProtocol { Method(); };\n")
+    for ident in idents:
+        f.write(ident.decl_attributes)
+        f.write(f"service {ident} {{ SampleProtocol member; }};\n")
+
+
+@use
+def service_member_types(f, idents: List[ScopedIdentifier]):
+    # protocols with every dangerous name
+    for ident in idents:
+        f.write(ident.decl_attributes)
+        f.write(f"protocol {ident} {{ JustOneMethod(); }};\n")
+
+    # a service with every dangerous name as the member type
+    f.write("service DangerousServiceMemberTypes {\n")
+    for i, ident in enumerate(idents):
+        # dangerous field type
+        f.write(ident.decl_attributes)
+        f.write(f"  {ident} f{i};\n")
+    f.write("};\n")
+
+
+@use
+def service_member_names(f, idents: List[ScopedIdentifier]):
+    # a service with every dangerous name as the member name
+    f.write("protocol SampleProtocol { Method(); };\n")
+    f.write("service DangerousServiceMemberNames {\n")
+    for ident in idents:
+        f.write(ident.decl_attributes)
+        f.write(f"  SampleProtocol {ident};\n")
+    f.write("};\n")

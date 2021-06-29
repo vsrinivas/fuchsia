@@ -818,7 +818,7 @@ impl fidl::endpoints::UnifiedServiceProxy for SingleMemberServiceProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl SingleMemberServiceProxy {
-    pub fn single_member(&self) -> Result<FirstProtocolProxy, fidl::Error> {
+    pub fn r#single_member(&self) -> Result<FirstProtocolProxy, fidl::Error> {
         let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.0.open_member("single_member", server)?;
         let proxy = fidl::AsyncChannel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
@@ -882,13 +882,13 @@ impl fidl::endpoints::UnifiedServiceProxy for MultiHeterogeneousMemberServicePro
 
 #[cfg(target_os = "fuchsia")]
 impl MultiHeterogeneousMemberServiceProxy {
-    pub fn first_member(&self) -> Result<FirstProtocolProxy, fidl::Error> {
+    pub fn r#first_member(&self) -> Result<FirstProtocolProxy, fidl::Error> {
         let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.0.open_member("first_member", server)?;
         let proxy = fidl::AsyncChannel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
         Ok(FirstProtocolProxy::new(proxy))
     }
-    pub fn second_member(&self) -> Result<SecondProtocolProxy, fidl::Error> {
+    pub fn r#second_member(&self) -> Result<SecondProtocolProxy, fidl::Error> {
         let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.0.open_member("second_member", server)?;
         let proxy = fidl::AsyncChannel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
@@ -952,13 +952,13 @@ impl fidl::endpoints::UnifiedServiceProxy for MultiHomogeneousMemberServiceProxy
 
 #[cfg(target_os = "fuchsia")]
 impl MultiHomogeneousMemberServiceProxy {
-    pub fn first_member(&self) -> Result<FirstProtocolProxy, fidl::Error> {
+    pub fn r#first_member(&self) -> Result<FirstProtocolProxy, fidl::Error> {
         let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.0.open_member("first_member", server)?;
         let proxy = fidl::AsyncChannel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
         Ok(FirstProtocolProxy::new(proxy))
     }
-    pub fn second_member(&self) -> Result<FirstProtocolProxy, fidl::Error> {
+    pub fn r#second_member(&self) -> Result<FirstProtocolProxy, fidl::Error> {
         let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.0.open_member("second_member", server)?;
         let proxy = fidl::AsyncChannel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;

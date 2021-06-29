@@ -891,7 +891,7 @@ impl ServiceProxy {
     /// member comment #1
     ///
     /// member comment #3
-    pub fn interface(&self) -> Result<InterfaceProxy, fidl::Error> {
+    pub fn r#interface(&self) -> Result<InterfaceProxy, fidl::Error> {
         let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.0.open_member("interface", server)?;
         let proxy = fidl::AsyncChannel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
