@@ -105,7 +105,6 @@ fuchsia_package("components-basic-example") {
     ":lifecycle",
     ":lifecycle-full",
     ":ls-root-pkg",
-    "//src/sys/component_manager:component-manager-for-examples-cmp",
   ]
 }
 

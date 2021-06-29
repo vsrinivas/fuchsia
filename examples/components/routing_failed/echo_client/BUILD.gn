@@ -24,11 +24,7 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("echo-client") {
+fuchsia_component("echo_client") {
   deps = [ ":bin" ]
   manifest = "meta/echo_client.cml"
-}
-
-group("echo_client") {
-  deps = [ ":echo-client" ]
 }

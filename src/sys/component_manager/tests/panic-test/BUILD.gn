@@ -27,7 +27,7 @@ fuchsia_component("component_manager") {
   manifest = "meta/component_manager.cml"
   deps = [
     "//src/sys/component_manager:bin",
-    "//src/sys/component_manager:component_manager_for_examples_config",
+    "//src/sys/component_manager:component_manager_appmgr_config",
   ]
 }
 

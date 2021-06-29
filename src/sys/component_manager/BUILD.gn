@@ -316,21 +316,6 @@ fuchsia_component("component-manager-cmp") {
   manifest = "meta/component_manager.cmx"
 }
 
-# This component is identical to `component-manager-cmp`, except the manifest
-# includes the arguments to point component_manager at the bundled config file
-fuchsia_component("component-manager-for-examples-cmp") {
-  deps = [
-    ":bin",
-    ":component_manager_for_examples_config",
-  ]
-  component_name = "component_manager_for_examples"
-  manifest = "meta/component_manager_for_examples.cmx"
-}
-
-fuchsia_package("component-manager-for-examples") {
-  deps = [ ":component-manager-for-examples-cmp" ]
-}
-
 fuchsia_package("component-manager") {
   deps = [ ":component-manager-cmp" ]
 }
@@ -418,9 +403,4 @@ component_config("component_manager_bootfs_config") {
     "configs/bootfs_config.json5",
   ]
   dest = "config/component_manager"
-}
-
-component_config("component_manager_for_examples_config") {
-  sources = [ "configs/for_examples_config.json5" ]
-  dest = "data/component_manager_config"
 }

@@ -4,15 +4,14 @@
 
 import("//build/components.gni")
 
-fuchsia_component("echo-realm") {
+fuchsia_component("echo_realm") {
   manifest = "meta/echo_realm.cml"
 }
 
 fuchsia_package("components-routing-failed-example") {
   deps = [
-    ":echo-realm",
+    ":echo_realm",
     "echo_client",
-    "echo_server",
-    "//src/sys/component_manager:component-manager-for-examples-cmp",
+    "echo_server:echo_server_components",
   ]
 }

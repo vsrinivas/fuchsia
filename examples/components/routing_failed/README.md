@@ -19,14 +19,11 @@ $ fx build
 
 ## Running
 
-Provide the `echo_realm` component's URL to `run` as an argument to `component_manager`:
+`ffx` can be used to run the `echo_realm` example:
 
 ```bash
-$ fx shell 'run fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/component_manager_for_examples.cmx fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_realm.cm'
+$ ffx component run fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_realm.cm
 ```
-
-This will run the component in an instance of component manager as a v1
-component.
 
 Make sure you have `fx serve` running in another terminal so your component can
 be installed!
@@ -34,7 +31,7 @@ be installed!
 To see component manager's log of the failed capability routing, run:
 
 ```bash
-$ fx klog
+$ fx log
 ```
 
 [capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing

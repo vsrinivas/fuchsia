@@ -21,17 +21,10 @@ $ fx build
 
 These examples are all stored in a package named `components-basic-example`.
 
-There isn't yet a convenient way to directly run a native v2 component, so these
-examples are run by launching a new component manager in a v1 component to run
-them. A component manager packaged to be a v1 component is also included in this
-package for this purpose.
-
-The component manager can be invoked with the `run` command, and given a URL for
-which test component to launch. As an example, the following will run the
-`hello_world` example.
+`ffx` can be used to run the `hello_world` example:
 
 ```bash
-$ fx shell 'run fuchsia-pkg://fuchsia.com/components-basic-example#meta/component_manager_for_examples.cmx fuchsia-pkg://fuchsia.com/components-basic-example#meta/hello-world.cm'
+$ ffx component run fuchsia-pkg://fuchsia.com/components-basic-example#meta/hello-world.cm
 ```
 
 When the above command is run, the following output can be seen in `fx log`:

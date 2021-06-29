@@ -20,20 +20,20 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("echo-server") {
+fuchsia_component("echo_server") {
   deps = [ ":bin" ]
   manifest = "meta/echo_server.cml"
 }
 
-fuchsia_component("echo-server-bad") {
+fuchsia_component("echo_server_bad") {
   deps = [ ":bin" ]
   check_references = false
   manifest = "meta/echo_server_bad.cml"
 }
 
-group("echo_server") {
+group("echo_server_components") {
   deps = [
-    ":echo-server",
-    ":echo-server-bad",
+    ":echo_server",
+    ":echo_server_bad",
   ]
 }
