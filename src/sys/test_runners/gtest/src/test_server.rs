@@ -375,7 +375,7 @@ impl TestServer {
             args.push("--gtest_also_run_disabled_tests".to_owned());
         }
 
-        let (test_logger, log_client) =
+        let (test_stdout, stdout_client) =
             zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
 
         let (case_listener_proxy, listener) =
@@ -384,16 +384,20 @@ impl TestServer {
                 .unwrap();
 
         run_listener
-            .on_test_case_started(invocation, log_client, listener)
+            .on_test_case_started(
+                invocation,
+                ftest::StdHandles { out: Some(stdout_client), ..ftest::StdHandles::EMPTY },
+                listener,
+            )
             .map_err(RunTestError::SendStart)?;
-        let test_logger =
-            fasync::Socket::from_socket(test_logger).map_err(KernelError::SocketToAsync).unwrap();
-        let mut test_logger = SocketLogWriter::new(test_logger);
+        let test_stdout =
+            fasync::Socket::from_socket(test_stdout).map_err(KernelError::SocketToAsync).unwrap();
+        let mut test_stdout = SocketLogWriter::new(test_stdout);
 
         args.extend(component.args.clone());
         if let Some(user_args) = &run_options.arguments {
             if let Err(e) = TestServer::validate_args(user_args) {
-                test_logger.write_str(&format!("{}", e)).await?;
+                test_stdout.write_str(&format!("{}", e)).await?;
                 case_listener_proxy
                     .finished(TestResult { status: Some(Status::Failed), ..TestResult::EMPTY })
                     .map_err(RunTestError::SendFinish)?;
@@ -408,7 +412,7 @@ impl TestServer {
                 Ok(s) => s,
                 Err(e) => {
                     warn!("failed to launch component process for {}: {}", component.url, e);
-                    test_logger
+                    test_stdout
                         .write_str(&format!("failed to launch component process: {}", e))
                         .await?;
                     case_listener_proxy
@@ -443,7 +447,7 @@ impl TestServer {
 
                 if !last_line_excluded {
                     let line = [line, &[NEWLINE]].concat();
-                    test_logger.write(&line).await?;
+                    test_stdout.write(&line).await?;
                 }
             }
         }
@@ -460,7 +464,7 @@ impl TestServer {
 
         // gtest returns 0 is test succeeds and 1 if test fails. This will test if test ended abnormally.
         if process_info.return_code != 0 && process_info.return_code != 1 {
-            test_logger.write_str("Test exited abnormally\n").await?;
+            test_stdout.write_str("Test exited abnormally\n").await?;
 
             case_listener_proxy
                 .finished(TestResult { status: Some(Status::Failed), ..TestResult::EMPTY })
@@ -474,7 +478,7 @@ impl TestServer {
             Ok(b) => b,
             Err(e) => {
                 // TODO(fxbug.dev/45857): Introduce Status::InternalError.
-                test_logger
+                test_stdout
                     .write_str(&format!("Error reading test result:{:?}\n", IoError::File(e)))
                     .await?;
 
@@ -493,7 +497,7 @@ impl TestServer {
         // parse test results.
         if test_list.testsuites.len() != 1 || test_list.testsuites[0].testsuite.len() != 1 {
             // TODO(fxbug.dev/45857): Introduce Status::InternalError.
-            test_logger
+            test_stdout
                 .write_str("unexpected output, should have received exactly one test result.\n")
                 .await?;
 
@@ -513,7 +517,7 @@ impl TestServer {
                         // TODO(fxbug.dev/53955): re-enable. currently we are getting these logs from test's
                         // stdout which we are printing above.
                         //for f in failures {
-                        //   test_logger.write_str(format!("failure: {}\n", f.failure)).await?;
+                        //   test_stdout.write_str(format!("failure: {}\n", f.failure)).await?;
                         // }
 
                         Status::Failed

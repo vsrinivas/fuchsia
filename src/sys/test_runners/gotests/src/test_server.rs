@@ -210,7 +210,7 @@ impl TestServer {
         debug!("Running test {}", test);
         let user_passed_args = test_args.unwrap_or(vec![]);
 
-        let (test_logger, log_client) =
+        let (test_stdout, stdout_client) =
             zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
 
         let (case_listener_proxy, listener) =
@@ -219,15 +219,19 @@ impl TestServer {
                 .unwrap();
 
         run_listener
-            .on_test_case_started(invocation, log_client, listener)
+            .on_test_case_started(
+                invocation,
+                ftest::StdHandles { out: Some(stdout_client), ..ftest::StdHandles::EMPTY },
+                listener,
+            )
             .map_err(RunTestError::SendStart)?;
 
-        let test_logger =
-            fasync::Socket::from_socket(test_logger).map_err(KernelError::SocketToAsync).unwrap();
-        let mut test_logger = SocketLogWriter::new(test_logger);
+        let test_stdout =
+            fasync::Socket::from_socket(test_stdout).map_err(KernelError::SocketToAsync).unwrap();
+        let mut test_stdout = SocketLogWriter::new(test_stdout);
 
         if let Err(e) = TestServer::validate_args(&user_passed_args) {
-            test_logger.write_str(&format!("{}", e)).await?;
+            test_stdout.write_str(&format!("{}", e)).await?;
             case_listener_proxy
                 .finished(TestResult { status: Some(Status::Failed), ..TestResult::EMPTY })
                 .map_err(RunTestError::SendFinish)?;
@@ -270,7 +274,7 @@ impl TestServer {
                     if iter.peek() != None || is_last_byte_newline {
                         buffer.push(NEWLINE)
                     }
-                    test_logger.write(&buffer).await?;
+                    test_stdout.write(&buffer).await?;
                     buffer.clear();
                     continue;
                 } else if buffer.len() < BUF_THRESHOLD
@@ -293,14 +297,14 @@ impl TestServer {
                     if iter.peek() != None || is_last_byte_newline {
                         buffer.push(NEWLINE)
                     }
-                    test_logger.write(&buffer).await?;
+                    test_stdout.write(&buffer).await?;
                 }
                 buffer.clear()
             }
         }
 
         if buffer.len() > 0 {
-            test_logger.write(&buffer).await?;
+            test_stdout.write(&buffer).await?;
         }
         buffer.clear();
         debug!("Waiting for test to finish: {}", test);
@@ -315,7 +319,7 @@ impl TestServer {
         // gotest returns 0 is test succeeds and 1 if test fails. This will check if test ended
         // abnormally.
         if process_info.return_code != 0 && process_info.return_code != 1 {
-            test_logger.write_str("Test exited abnormally\n").await?;
+            test_stdout.write_str("Test exited abnormally\n").await?;
             case_listener_proxy
                 .finished(TestResult { status: Some(Status::Failed), ..TestResult::EMPTY })
                 .map_err(RunTestError::SendFinish)?;

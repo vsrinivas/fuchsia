@@ -81,10 +81,19 @@ protocol CaseListener {
     Finished(Result result);
 };
 
+/// Standard out/err handles from test case.
+resource table StdHandles {
+    /// stdout handle.
+    1: zx.handle:SOCKET out;
+
+    /// stderr handle.
+    2: zx.handle:SOCKET err;
+};
+
 /// Listens to updates from test runs.
 protocol RunListener {
     /// Indicates that an individual test invocation has started execution.
-    OnTestCaseStarted(Invocation invocation, zx.handle:SOCKET primary_log, request<CaseListener> listener);
+    OnTestCaseStarted(Invocation invocation, StdHandles std_handles, request<CaseListener> listener);
 
     /// Indicates that the last test case that started has finished, and no more test cases will start.
     OnFinished();

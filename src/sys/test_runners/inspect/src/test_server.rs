@@ -224,7 +224,7 @@ impl TestServer {
                                 let spec = spec.clone();
                                 let proxy = proxy.clone();
                                 tasks.push(async move {
-                                    let (log_end, logger) = fuchsia_zircon::Socket::create(
+                                    let (stdout_end, stdout) = fuchsia_zircon::Socket::create(
                                         fuchsia_zircon::SocketOpts::empty(),
                                     )
                                     .expect("cannot create socket.");
@@ -235,12 +235,20 @@ impl TestServer {
                                         fidl::endpoints::create_proxy::<ftest::CaseListenerMarker>(
                                         )
                                         .expect("cannot create proxy");
+
                                     proxy
-                                        .on_test_case_started(test, log_end, case_listener)
+                                        .on_test_case_started(
+                                            test,
+                                            ftest::StdHandles {
+                                                out: Some(stdout_end),
+                                                ..ftest::StdHandles::EMPTY
+                                            },
+                                            case_listener,
+                                        )
                                         .expect("on_test_case_started failed");
 
                                     let status =
-                                        match TestServer::run_case(&spec, &name, logger).await {
+                                        match TestServer::run_case(&spec, &name, stdout).await {
                                             true => ftest::Status::Passed,
                                             false => ftest::Status::Failed,
                                         };

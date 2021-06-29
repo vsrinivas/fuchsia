@@ -408,6 +408,7 @@ enum SuiteEventPayload {
     CaseStopped(u32, CaseStatus),
     CaseFinished(u32),
     CaseStdout(u32, zx::Socket),
+    CaseStderr(u32, zx::Socket),
     SuiteSyslog(ftest_manager::Syslog),
     SuiteFinished(SuiteStatus),
 }
@@ -454,6 +455,14 @@ impl Into<FidlSuiteEvent> for SuiteEvents {
                 payload: Some(FidlSuiteEventPayload::CaseArtifact(ftest_manager::CaseArtifact {
                     identifier,
                     artifact: ftest_manager::Artifact::Stdout(socket),
+                })),
+                ..FidlSuiteEvent::EMPTY
+            },
+            SuiteEventPayload::CaseStderr(identifier, socket) => FidlSuiteEvent {
+                timestamp: Some(self.timestamp),
+                payload: Some(FidlSuiteEventPayload::CaseArtifact(ftest_manager::CaseArtifact {
+                    identifier,
+                    artifact: ftest_manager::Artifact::Stderr(socket),
                 })),
                 ..FidlSuiteEvent::EMPTY
             },
@@ -511,6 +520,13 @@ impl SuiteEvents {
         }
     }
 
+    fn case_stderr(identifier: u32, socket: zx::Socket) -> Self {
+        Self {
+            timestamp: zx::Time::get_monotonic().into_nanos(),
+            payload: SuiteEventPayload::CaseStderr(identifier, socket),
+        }
+    }
+
     fn suite_syslog(syslog: ftest_manager::Syslog) -> Self {
         Self {
             timestamp: zx::Time::get_monotonic().into_nanos(),
@@ -557,18 +573,23 @@ async fn run_invocations(
             match result_event {
                 ftest::RunListenerRequest::OnTestCaseStarted {
                     invocation,
-                    primary_log,
+                    std_handles,
                     listener,
                     control_handle: _,
                 } => {
                     let name =
                         invocation.name.ok_or(format_err!("cannot find name in invocation"))?;
                     let identifier = counter.fetch_add(1, Ordering::Relaxed);
-                    let events = vec![
+                    let mut events = vec![
                         Ok(SuiteEvents::case_found(identifier, name).into()),
                         Ok(SuiteEvents::case_started(identifier).into()),
-                        Ok(SuiteEvents::case_stdout(identifier, primary_log).into()),
                     ];
+                    if let Some(out) = std_handles.out {
+                        events.push(Ok(SuiteEvents::case_stdout(identifier, out).into()))
+                    }
+                    if let Some(err) = std_handles.err {
+                        events.push(Ok(SuiteEvents::case_stderr(identifier, err).into()))
+                    }
                     for event in events {
                         sender_clone.send(event).await.unwrap();
                     }
@@ -1587,6 +1608,17 @@ mod tests {
             Some(FidlSuiteEventPayload::CaseArtifact(ftest_manager::CaseArtifact {
                 identifier: 2,
                 artifact: ftest_manager::Artifact::Stdout(_)
+            }))
+        );
+
+        let (sock1, _sock2) = zx::Socket::create(zx::SocketOpts::empty()).unwrap();
+        let event = SuiteEvents::case_stderr(2, sock1).into_suite_run_event();
+        assert_matches!(event.timestamp, Some(_));
+        assert_matches!(
+            event.payload,
+            Some(FidlSuiteEventPayload::CaseArtifact(ftest_manager::CaseArtifact {
+                identifier: 2,
+                artifact: ftest_manager::Artifact::Stderr(_)
             }))
         );
 

@@ -138,10 +138,10 @@ pub async fn collect_listener_event(
     let mut loggers = vec![];
     while let Some(result_event) = listener.try_next().await? {
         match result_event {
-            OnTestCaseStarted { invocation, primary_log, listener, .. } => {
+            OnTestCaseStarted { invocation, std_handles, listener, .. } => {
                 let name = invocation.name.unwrap();
                 ret.push(ListenerEvent::StartTest(name.clone()));
-                loggers.push(primary_log);
+                loggers.push(std_handles);
                 let mut listener = listener.into_stream()?;
                 while let Some(result) = listener.try_next().await? {
                     match result {

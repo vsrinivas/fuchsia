@@ -63,11 +63,13 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
   ptr.Bind(std::move(run_listener));
   for (auto& test_invocation : tests) {
     const auto& test_name = test_invocation.name();
-    zx::socket log_sock;
-    zx::socket test_case_log;
-    zx::socket::create(0, &log_sock, &test_case_log);
+    zx::socket stdout_sock;
+    zx::socket case_stdout;
+    zx::socket::create(0, &stdout_sock, &case_stdout);
     fuchsia::test::CaseListenerPtr case_list_ptr;
-    ptr->OnTestCaseStarted(fidl::Clone(test_invocation), std::move(log_sock),
+    fuchsia::test::StdHandles std_handles;
+    std_handles.set_out(std::move(stdout_sock));
+    ptr->OnTestCaseStarted(fidl::Clone(test_invocation), std::move(std_handles),
                            case_list_ptr.NewRequest());
     const bool should_skip_test = ShouldSkipTest(run_options, test_name);
     if (!should_skip_test) {
@@ -75,11 +77,11 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
       std::string msg2 = "log2 for " + test_name + "\n";
       std::string msg3 = "log3 for " + test_name + "\n";
       zx_status_t status;
-      FX_CHECK(ZX_OK == (status = test_case_log.write(0, msg1.data(), msg1.length(), nullptr)))
+      FX_CHECK(ZX_OK == (status = case_stdout.write(0, msg1.data(), msg1.length(), nullptr)))
           << status;
-      FX_CHECK(ZX_OK == (status = test_case_log.write(0, msg2.data(), msg2.length(), nullptr)))
+      FX_CHECK(ZX_OK == (status = case_stdout.write(0, msg2.data(), msg2.length(), nullptr)))
           << status;
-      FX_CHECK(ZX_OK == (status = test_case_log.write(0, msg3.data(), msg3.length(), nullptr)))
+      FX_CHECK(ZX_OK == (status = case_stdout.write(0, msg3.data(), msg3.length(), nullptr)))
           << status;
     }
     Result result;

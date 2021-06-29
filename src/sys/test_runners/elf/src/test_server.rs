@@ -114,18 +114,22 @@ impl TestServer {
             return Ok(());
         }
 
-        let (test_logger, log_client) =
+        let (test_stdout, stdout_client) =
             zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
         let (case_listener_proxy, listener) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
                 .map_err(FidlError::CreateProxy)
                 .unwrap();
         run_listener
-            .on_test_case_started(invocation, log_client, listener)
+            .on_test_case_started(
+                invocation,
+                ftest::StdHandles { out: Some(stdout_client), ..ftest::StdHandles::EMPTY },
+                listener,
+            )
             .map_err(RunTestError::SendStart)?;
-        let test_logger =
-            fasync::Socket::from_socket(test_logger).map_err(KernelError::SocketToAsync).unwrap();
-        let mut test_logger = SocketLogWriter::new(test_logger);
+        let test_stdout =
+            fasync::Socket::from_socket(test_stdout).map_err(KernelError::SocketToAsync).unwrap();
+        let mut test_stdout = SocketLogWriter::new(test_stdout);
 
         let mut args = component.args.clone();
         if let Some(user_args) = &run_options.arguments {
@@ -137,7 +141,7 @@ impl TestServer {
             launch_component_process::<RunTestError>(&component, args).await?;
 
         // Drain stdout
-        let () = stdlogger.buffer_and_drain(&mut test_logger).await?;
+        let () = stdlogger.buffer_and_drain(&mut test_stdout).await?;
 
         // Wait for test to return
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)

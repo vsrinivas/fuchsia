@@ -73,12 +73,8 @@ async fn run_test_cases(
         listener.into_proxy().context("Can't convert run listener channel to proxy")?;
 
     for test in tests {
-        // The run listener expects a socket for the "primary log". This is not connected
-        // to any actual output of the test component.
-        let (log_end, _logger) =
-            fuchsia_zircon::Socket::create(fuchsia_zircon::SocketOpts::empty())?;
         let (case_listener_proxy, case_listener) = create_proxy::<ftest::CaseListenerMarker>()?;
-        run_listener_proxy.on_test_case_started(test, log_end, case_listener)?;
+        run_listener_proxy.on_test_case_started(test, ftest::StdHandles::EMPTY, case_listener)?;
 
         let (component_controller, component_controller_server_end) =
             create_proxy::<ComponentControllerMarker>()?;
@@ -230,7 +226,7 @@ mod tests {
         match run_listener_stream.try_next().await.expect("..") {
             Some(ftest::RunListenerRequest::OnTestCaseStarted {
                 invocation: _,
-                primary_log: _,
+                std_handles: _,
                 listener,
                 ..
             }) => match listener

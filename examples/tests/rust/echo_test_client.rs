@@ -73,9 +73,6 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                 assert_eq!(tests[0].name, Some("EchoTest".to_string()));
 
                 let proxy = listener.into_proxy().expect("Can't convert listener channel to proxy");
-                let (log_end, _logger) =
-                    fuchsia_zircon::Socket::create(fuchsia_zircon::SocketOpts::empty())
-                        .expect("cannot create socket.");
                 let mut result =
                     ftest::Result_ { status: Some(ftest::Status::Passed), ..ftest::Result_::EMPTY };
 
@@ -83,7 +80,11 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                     fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
                         .expect("cannot create proxy");
                 proxy
-                    .on_test_case_started(tests.pop().unwrap(), log_end, case_listener)
+                    .on_test_case_started(
+                        tests.pop().unwrap(),
+                        ftest::StdHandles::EMPTY,
+                        case_listener,
+                    )
                     .expect("on_test_case_started failed");
                 run_echo("test_string1", &mut result).await?;
                 run_echo("test_string2", &mut result).await?;

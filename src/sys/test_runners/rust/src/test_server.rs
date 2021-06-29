@@ -85,25 +85,29 @@ impl SuiteServer for TestServer {
                 let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
                 debug!("Running test {}", test);
 
-                let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::STREAM)
+                let (test_stdout, stdout_client) = zx::Socket::create(zx::SocketOpts::STREAM)
                     .map_err(KernelError::CreateSocket)
                     .unwrap();
                 let (case_listener_proxy, listener) =
                     fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
                         .map_err(FidlError::CreateProxy)
                         .unwrap();
-                let test_logger = fasync::Socket::from_socket(test_logger)
+                let test_stdout = fasync::Socket::from_socket(test_stdout)
                     .map_err(KernelError::SocketToAsync)
                     .unwrap();
 
                 run_listener
-                    .on_test_case_started(invocation, log_client, listener)
+                    .on_test_case_started(
+                        invocation,
+                        ftest::StdHandles { out: Some(stdout_client), ..ftest::StdHandles::EMPTY },
+                        listener,
+                    )
                     .map_err(RunTestError::SendStart)?;
 
-                let mut test_logger = SocketLogWriter::new(test_logger);
+                let mut test_stdout = SocketLogWriter::new(test_stdout);
 
                 match self
-                    .run_test(&test, &run_options, test_component.clone(), &mut test_logger)
+                    .run_test(&test, &run_options, test_component.clone(), &mut test_stdout)
                     .await
                 {
                     Ok(result) => {
@@ -290,7 +294,7 @@ impl TestServer {
         &self,
         _test: &str,
         _test_component: &Component,
-        _test_logger: &mut SocketLogWriter,
+        _test_stdout: &mut SocketLogWriter,
     ) -> Result<ftest::Result_, RunTestError> {
         // this will go away soon, so no use of supporting it when we can't
         // even test this code.
@@ -308,7 +312,7 @@ impl TestServer {
         test: &str,
         run_options: &ftest::RunOptions,
         test_component: Arc<Component>,
-        test_logger: &mut SocketLogWriter,
+        test_stdout: &mut SocketLogWriter,
     ) -> Result<ftest::Result_, RunTestError> {
         // Exit codes used by Rust's libtest runner.
         const TR_OK: i64 = 50;
@@ -334,7 +338,7 @@ impl TestServer {
         args.extend(test_component.args.clone());
         if let Some(user_args) = &run_options.arguments {
             if let Err(e) = Self::validate_args(&user_args) {
-                test_logger.write_str(&format!("{}", e)).await?;
+                test_stdout.write_str(&format!("{}", e)).await?;
                 return Ok(ftest::Result_ {
                     status: Some(ftest::Status::Failed),
                     ..ftest::Result_::EMPTY
@@ -360,7 +364,7 @@ impl TestServer {
             job.take().kill().unwrap();
         };
 
-        let logger_task = stdlogger.buffer_and_drain(test_logger);
+        let logger_task = stdlogger.buffer_and_drain(test_stdout);
 
         // Wait for test to exit and for the stdlogger to buffer and drain
         let (logger_result, ()) = join(logger_task, test_exit_task).await;
@@ -375,7 +379,7 @@ impl TestServer {
             TR_FAILED => {
                 // Add a preceding newline so that this does not mix with test output, as
                 // test output might not contain a newline at end.
-                test_logger.write_str("\ntest failed.\n").await?;
+                test_stdout.write_str("\ntest failed.\n").await?;
                 Ok(ftest::Result_ { status: Some(ftest::Status::Failed), ..ftest::Result_::EMPTY })
             }
             other => Err(RunTestError::UnexpectedReturnCode(other)),
