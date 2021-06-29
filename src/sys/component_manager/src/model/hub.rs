@@ -289,6 +289,19 @@ impl Hub {
         Ok(())
     }
 
+    fn add_use_directory(
+        directory: Directory,
+        component_decl: ComponentDecl,
+        target_moniker: &AbsoluteMoniker,
+        target: WeakComponentInstance,
+    ) -> Result<(), ModelError> {
+        let tree = DirTree::build_from_uses(route_use_fn, target, component_decl);
+        let mut use_dir = pfs::simple();
+        tree.install(target_moniker, &mut use_dir)?;
+        directory.add_node("use", use_dir, target_moniker)?;
+        Ok(())
+    }
+
     fn add_in_directory(
         execution_directory: Directory,
         component_decl: ComponentDecl,
@@ -415,6 +428,13 @@ impl Hub {
             resolved_directory.clone(),
             resolved_url.clone(),
             target_moniker,
+        )?;
+
+        Self::add_use_directory(
+            resolved_directory.clone(),
+            component_decl.clone(),
+            target_moniker,
+            target.clone(),
         )?;
 
         Self::add_expose_directory(
@@ -939,10 +959,65 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(vec!["expose", "resolved_url"], list_directory(&resolved_dir).await);
+        assert_eq!(vec!["expose", "resolved_url", "use"], list_directory(&resolved_dir).await);
         assert_eq!(
             format!("{}_resolved", root_component_url),
             read_file(&hub_proxy, "resolved/resolved_url").await
+        );
+    }
+
+    #[fuchsia::test]
+    async fn hub_use_directory_in_resolved() {
+        let root_component_url = "test:///root".to_string();
+        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
+            root_component_url.clone(),
+            vec![ComponentDescriptor {
+                name: "root",
+                decl: ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .use_(UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: DependencyType::Strong,
+                        source: UseSource::Framework,
+                        source_name: "hub".into(),
+                        target_path: CapabilityPath::try_from("/hub").unwrap(),
+                        rights: *rights::READ_RIGHTS,
+                        subdir: None,
+                    }))
+                    .build(),
+                host_fn: None,
+                runtime_host_fn: None,
+            }],
+        )
+        .await;
+
+        let use_dir = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("resolved/use"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+
+        assert_eq!(vec!["hub"], list_directory(&use_dir).await);
+
+        let hub_dir = io_util::open_directory(
+            &use_dir,
+            &Path::new("hub"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+
+        assert_eq!(
+            vec![
+                "children",
+                "component_type",
+                "debug",
+                "deleting",
+                "exec",
+                "id",
+                "resolved",
+                "url"
+            ],
+            list_directory(&hub_dir).await
         );
     }
 
