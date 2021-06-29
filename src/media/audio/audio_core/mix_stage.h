@@ -61,7 +61,7 @@ class MixStage : public ReadableStream {
     TimelineFunction dest_ref_clock_to_frac_dest_frame;
     bool accumulate;
     StreamUsageMask usages_mixed;
-    float applied_gain_db;
+    float total_applied_gain_db;
   };
 
   struct StreamHolder {

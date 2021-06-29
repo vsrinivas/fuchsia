@@ -212,8 +212,8 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(Fixed dest_frame,
 
     fuchsia_audio_effects_stream_info stream_info;
     stream_info.usage_mask = source_buffer->usage_mask().mask() & kSupportedUsageMask;
-    stream_info.gain_dbfs = source_buffer->gain_db();
-    stream_info.volume = volume_curve_.DbToVolume(source_buffer->gain_db());
+    stream_info.gain_dbfs = source_buffer->total_applied_gain_db();
+    stream_info.volume = volume_curve_.DbToVolume(source_buffer->total_applied_gain_db());
     effects_processor_->SetStreamInfo(stream_info);
 
     float* buf_out = nullptr;
@@ -235,7 +235,7 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(Fixed dest_frame,
     } else {
       cached_buffer_.Set(ReadableStream::Buffer(
           source_buffer->start(), source_buffer->length(), buf_out, source_buffer->is_continuous(),
-          source_buffer->usage_mask(), source_buffer->gain_db()));
+          source_buffer->usage_mask(), source_buffer->total_applied_gain_db()));
     }
     return cached_buffer_.Get();
   } else if (ringout_frames_sent_ < ringout_.total_frames) {

@@ -524,7 +524,7 @@ void MixStageTest::TestMixStageSingleInput(ClockMode clock_mode) {
   auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
   ASSERT_TRUE(buf);
   EXPECT_TRUE(buf->usage_mask().contains(kInputStreamUsage));
-  EXPECT_FLOAT_EQ(buf->gain_db(), Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), Gain::kUnityGainDb);
 
   // Upon any fail, slab_allocator asserts at exit. Clear all allocations, so testing can continue.
   mix_stage_->Trim(Fixed::Max());
@@ -565,12 +565,13 @@ TEST_F(MixStageTest, MixMultipleInputs) {
                                      StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
                                      StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION),
                                  }));
-    EXPECT_FLOAT_EQ(buf->gain_db(), -15);
+    EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), -15);
   }
 }
 
-// When mixing streams, a buffer's gain_db is set, based on the largest of its inputs. Each input's
-// gain_db is determined by ITS input's gain_db, plus its individual gain (both source and dest).
+// When mixing streams, a buffer's total_applied_gain_db is set, based on the largest of its
+// inputs. Each input's total_applied_gain_db is determined by ITS input's total_applied_gain_db,
+// plus its dest_gain.
 //
 // Validate that source_gain is appropriately incorporated and the correct (max) value is returned.
 TEST_F(MixStageTest, BufferGainDbIncludesSourceGain) {
@@ -605,12 +606,12 @@ TEST_F(MixStageTest, BufferGainDbIncludesSourceGain) {
                                      StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION),
                                  }));
     // If the source gain is included in the calculation, then input2 should be the larger value.
-    EXPECT_FLOAT_EQ(buf->gain_db(), -15.0);
+    EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), -15.0);
   }
 }
 
 // Validate that dest_gain is appropriately incorporated and the correct (max) value is returned.
-TEST_F(MixStageTest, BufferGainDbIncludesDestGain) {
+TEST_F(MixStageTest, BufferMaxAmplitudeIncludesDestGain) {
   // Set timeline rate to match our format.
   auto timeline_function = TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
@@ -642,7 +643,7 @@ TEST_F(MixStageTest, BufferGainDbIncludesDestGain) {
                                      StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION),
                                  }));
     // If destination gain is included in the calculation, then input2 should be the larger value.
-    EXPECT_FLOAT_EQ(buf->gain_db(), -15);
+    EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), -15);
   }
 }
 

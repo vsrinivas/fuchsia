@@ -493,7 +493,7 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
     auto buf = effects_stage->ReadLock(Fixed(first_frame), kRequestedFrames);
     ASSERT_TRUE(buf);
     EXPECT_TRUE(buf->usage_mask().is_empty());
-    EXPECT_FLOAT_EQ(buf->gain_db(), Gain::kUnityGainDb);
+    EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), Gain::kUnityGainDb);
     test_effects_inspect_state effect_state;
     EXPECT_EQ(ZX_OK, test_effects_.InspectInstance(
                          effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));
@@ -511,7 +511,7 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
     ASSERT_TRUE(buf);
     EXPECT_EQ(buf->usage_mask(),
               StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
-    EXPECT_FLOAT_EQ(buf->gain_db(), -20.0);
+    EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), -20.0);
     test_effects_inspect_state effect_state;
     EXPECT_EQ(ZX_OK, test_effects_.InspectInstance(
                          effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));
@@ -530,7 +530,7 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
     EXPECT_EQ(buf->usage_mask(),
               StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
                                StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION)}));
-    EXPECT_FLOAT_EQ(buf->gain_db(), -4.0);
+    EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), -4.0);
     test_effects_inspect_state effect_state;
     EXPECT_EQ(ZX_OK, test_effects_.InspectInstance(
                          effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));

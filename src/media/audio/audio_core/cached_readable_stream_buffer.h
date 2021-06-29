@@ -33,7 +33,7 @@ class CachedReadableStreamBuffer {
     has_dup_ = true;
     return ReadableStream::Buffer(cached_->start(), cached_->length(), cached_->payload(),
                                   cached_->is_continuous(), cached_->usage_mask(),
-                                  cached_->gain_db(), [this](bool fully_consumed) {
+                                  cached_->total_applied_gain_db(), [this](bool fully_consumed) {
                                     has_dup_ = false;
                                     if (fully_consumed) {
                                       Reset();

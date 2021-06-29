@@ -91,14 +91,14 @@ class ReadableStream : public BaseStream {
     using DestructorT = fit::callback<void(bool fully_consumed)>;
 
     Buffer(Fixed start_frame, Fixed length_in_frames, void* payload, bool is_continuous,
-           StreamUsageMask usage_mask, float gain_db, DestructorT dtor = nullptr)
+           StreamUsageMask usage_mask, float total_applied_gain_db, DestructorT dtor = nullptr)
         : dtor_(std::move(dtor)),
           payload_(payload),
           start_(start_frame),
           length_(length_in_frames),
           is_continuous_(is_continuous),
           usage_mask_(usage_mask),
-          gain_db_(gain_db) {}
+          total_applied_gain_db_(total_applied_gain_db) {}
 
     ~Buffer() {
       if (dtor_) {
@@ -131,8 +131,13 @@ class ReadableStream : public BaseStream {
     // By default, we assume this is true.
     void set_is_fully_consumed(bool fully_consumed) { is_fully_consumed_ = fully_consumed; }
 
+    // Returns the set of usages that have contributed to this buffer.
     StreamUsageMask usage_mask() const { return usage_mask_; }
-    float gain_db() const { return gain_db_; }
+
+    // Returns the total gain that has been applied to the source stream. For example, if
+    // total_applied_gain_db = -5.0 and the source stream started as a sine wave with unity
+    // amplitude, then payload() should contain a sine wave with amplitude -5.0dB.
+    float total_applied_gain_db() const { return total_applied_gain_db_; }
 
    private:
     DestructorT dtor_;
@@ -142,7 +147,7 @@ class ReadableStream : public BaseStream {
     bool is_continuous_;
     bool is_fully_consumed_ = true;
     StreamUsageMask usage_mask_;
-    float gain_db_;
+    float total_applied_gain_db_;
   };
 
   // ReadableStream is implemented by audio pipeline stages that consume zero or more

@@ -154,14 +154,14 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(Fixed dest_frame, int64
   cur_mix_job_.buf_frames = std::min(static_cast<int64_t>(frame_count), output_buffer_frames_);
   cur_mix_job_.dest_start_frame = dest_frame.Floor();
   cur_mix_job_.dest_ref_clock_to_frac_dest_frame = snapshot.timeline_function;
-  cur_mix_job_.applied_gain_db = fuchsia::media::audio::MUTED_GAIN_DB;
+  cur_mix_job_.total_applied_gain_db = fuchsia::media::audio::MUTED_GAIN_DB;
 
   // Fill the output buffer with silence.
   ssize_t bytes_to_zero = cur_mix_job_.buf_frames * format().bytes_per_frame();
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
   ForEachSource(TaskType::Mix, dest_frame);
 
-  if (cur_mix_job_.applied_gain_db <= fuchsia::media::audio::MUTED_GAIN_DB) {
+  if (cur_mix_job_.total_applied_gain_db <= fuchsia::media::audio::MUTED_GAIN_DB) {
     // Either we mixed no streams, or all the streams mixed were muted. Either way we can just
     // return nullopt to signify we have no audible frames.
     return std::nullopt;
@@ -170,7 +170,7 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(Fixed dest_frame, int64
   // Cache the buffer in case it is not fully read by the caller.
   cached_buffer_.Set(ReadableStream::Buffer(
       Fixed(dest_frame.Floor()), Fixed(cur_mix_job_.buf_frames), cur_mix_job_.buf, true,
-      cur_mix_job_.usages_mixed, cur_mix_job_.applied_gain_db));
+      cur_mix_job_.usages_mixed, cur_mix_job_.total_applied_gain_db));
   return cached_buffer_.Get();
 }
 
@@ -470,10 +470,12 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
                     source_buffer.length().Floor(), &source_offset, cur_mix_job_.accumulate);
       cur_mix_job_.usages_mixed.insert_all(source_buffer.usage_mask());
 
-      // total stream gain: previously applied gain, plus any gain added at this stage
-      float total_gain_db = Gain::CombineGains(source_buffer.gain_db(), local_gain_db);
-      // For gain of a MIXED stream, we use the max gain of any single source stream.
-      cur_mix_job_.applied_gain_db = std::max(cur_mix_job_.applied_gain_db, total_gain_db);
+      // Total applied gain: previously applied gain, plus any gain added at this stage.
+      float total_applied_gain_db =
+          Gain::CombineGains(source_buffer.total_applied_gain_db(), local_gain_db);
+      // Record the max applied gain of any source stream.
+      cur_mix_job_.total_applied_gain_db =
+          std::max(cur_mix_job_.total_applied_gain_db, total_applied_gain_db);
     }
 
     // If source is ramping, advance that ramp by the amount of dest that was just mixed.
