@@ -238,16 +238,18 @@ void PrintInputReports(std::string filename, Printer* printer,
 
 zx::status<fidl::Client<fuchsia_input_report::InputReportsReader>> GetReaderClient(
     fidl::Client<fuchsia_input_report::InputDevice>* client, async_dispatcher_t* dispatcher) {
-  zx::channel token_server, token_client;
-  if (zx_status_t status = zx::channel::create(0, &token_server, &token_client); status != ZX_OK) {
-    return zx::error(status);
-  }
-  auto result = (*client)->GetInputReportsReader(std::move(token_server));
+  fidl::ClientEnd<fuchsia_input_report::InputReportsReader> reader_client;
+  auto reader_server = fidl::CreateEndpoints(&reader_client);
+
+  if (!reader_server.is_ok())
+    return zx::error(reader_server.take_error());
+  auto result = (*client)->GetInputReportsReader(std::move(*reader_server));
+
   if (result.status() != ZX_OK) {
     return zx::error(result.status());
   }
-  return zx::ok(
-      fidl::Client<fuchsia_input_report::InputReportsReader>(std::move(token_client), dispatcher));
+
+  return zx::ok(fidl::Client(std::move(reader_client), dispatcher));
 }
 
 void PrintMouseInputReport(Printer* printer,

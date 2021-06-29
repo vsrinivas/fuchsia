@@ -63,7 +63,8 @@ std::optional<fidl::Client<fuchsia_input_report::InputDevice>> GetClientFromPath
     return std::nullopt;
   }
 
-  return fidl::Client<fuchsia_input_report::InputDevice>(std::move(chan), dispatcher);
+  return fidl::Client(fidl::ClientEnd<fuchsia_input_report::InputDevice>(std::move(chan)),
+                      dispatcher);
 }
 
 int ReadAllDevices(async::Loop* loop, Printer* printer) {
@@ -85,7 +86,8 @@ int ReadAllDevices(async::Loop* loop, Printer* printer) {
         }
 
         auto device =
-            fidl::Client<fuchsia_input_report::InputDevice>(std::move(chan), loop->dispatcher());
+            fidl::Client(fidl::ClientEnd<fuchsia_input_report::InputDevice>(std::move(chan)),
+                         loop->dispatcher());
 
         auto res = print_input_report::GetReaderClient(&device, loop->dispatcher());
         if (!res.is_ok()) {
@@ -120,7 +122,8 @@ int ReadAllDescriptors(async::Loop* loop, Printer* printer) {
         }
 
         auto device =
-            fidl::Client<fuchsia_input_report::InputDevice>(std::move(chan), loop->dispatcher());
+            fidl::Client(fidl::ClientEnd<fuchsia_input_report::InputDevice>(std::move(chan)),
+                         loop->dispatcher());
         status = print_input_report::PrintInputDescriptor(filename, printer, std::move(device));
         if (status != 0) {
           printer->Print("Failed to PrintInputReports\n");

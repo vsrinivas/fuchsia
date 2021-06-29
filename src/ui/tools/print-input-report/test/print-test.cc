@@ -75,8 +75,9 @@ class PrintInputReport : public testing::Test {
     fake_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>(
         fidl::InterfaceRequest<fuchsia::input::report::InputDevice>(std::move(token_server)),
         loop_->dispatcher());
-    client_ = fidl::Client<fuchsia_input_report::InputDevice>(std::move(token_client),
-                                                              loop_->dispatcher());
+
+    client_.emplace(fidl::ClientEnd<fuchsia_input_report::InputDevice>(std::move(token_client)),
+                    loop_->dispatcher());
   }
 
   virtual void TearDown() { loop_->Quit(); }
