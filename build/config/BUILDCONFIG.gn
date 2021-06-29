@@ -1500,6 +1500,135 @@ if (in_default_toolchain) {
   }
 }
 
+# Internal template used to wrap a linked binary target (i.e. executable(),
+# shared_library() or loadable_module()) definition.
+#
+# This is called from shared_library() and variant_target() and should not
+# be invoked directly.
+#
+# When building Fuchsia user binaries, this will automatically add implicit
+# dependencies to runtime or static dependencies, as needed by the Fuchsia
+# platform.
+#
+# When not building Fuchsia user binaries, this is equivalent to
+# `target(target_type, target_name) { ... }`.
+#
+# The "target_type" argument must be a GN target type (e.g. "executable",
+# "shared_library" or "loadable_module"), and all other arguments should
+# be those supported by said type.
+#
+# For example, to wrap an executable target, replace:
+#
+#    executable("myprogram") {
+#      ...  # arguments for myprogram
+#    }
+#
+# With:
+#
+#    _fuchsia_binary("myprogram") {
+#      target_type = "executable"
+#      ...  # same arguments as above
+#    }
+#
+template("_fuchsia_binary") {
+  target_type = invoker.target_type
+
+  target(target_type, target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "target_type",
+                             "testonly",
+                             "visibility",
+                           ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    if (is_fuchsia && zircon_toolchain == false) {
+      # Depend on runtime libraries provided by the sysroot and the toolchain.
+      # This ensures the libraries are packaged up with the output of this
+      # target.
+      # These dependencies need to be attached here rather than higher up in the
+      # dependency tree in order to correctly capture the active toolchain
+      # variant.
+      if (!defined(deps)) {
+        deps = []
+      }
+      if (!defined(data_deps)) {
+        data_deps = []
+      }
+
+      # NOTE: invoker.crate_root will be defined when building a Rust crate
+      # instead of a C++ binary.
+      if (defined(crate_root)) {
+        deps += [ "//zircon/public/sysroot:rust_binary_deps" ]
+      } else {
+        deps += [ "//zircon/public/sysroot:cpp_binary_deps" ]
+      }
+
+      # Add dependency to the C runtime startup object file for executables,
+      # except if the static-pie-config is used.
+      if ((target_type == "executable" || target_type == "test") &&
+          configs + [ "//build/config/fuchsia:static-pie-config" ] -
+          [ "//build/config/fuchsia:static-pie-config" ] == configs) {
+        deps += [ "//zircon/public/sysroot:crt1_deps" ]
+      }
+
+      if (target_type == "shared_library") {
+        # Add zircon dependency for the profile variant. TODO(fxbug.dev/61522): Remove this.
+        if (toolchain_variant.tags + [
+              "profile",
+              "coverage",
+            ] -
+            [
+              "profile",
+              "coverage",
+            ] != toolchain_variant.tags) {
+          deps += [ "//src/zircon/lib/zircon" ]
+        }
+      }
+
+      should_add_shared_cpp_runtime = true
+      if (defined(configs)) {
+        # Do not add runtime dependencies if compiling statically.
+        static_cpp_configs = [
+          "//build/config/fuchsia:static_cpp_standard_library",
+          "//build/config/zircon:static-libc++",
+        ]
+        if (configs + static_cpp_configs - static_cpp_configs != configs) {
+          should_add_shared_cpp_runtime = false
+        }
+      }
+      if (should_add_shared_cpp_runtime) {
+        data_deps += [ "//build/toolchain/runtime:shared-libc++-deps" ]
+      } else if (!defined(crate_root)) {
+        # Even when compiling statically, some runtime dependencies might
+        # be needed when performing instrumented builds, because the
+        # compiler-generated machine code will contain imports to
+        # instrumentation-runtime-specific libraries.
+        data_deps += [ "//build/toolchain/runtime:static-libc++-deps" ]
+      }
+      if (defined(crate_root)) {
+        should_add_shared_rust_runtime = true
+        dynamic_rust_config =
+            [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+        if (!defined(configs) ||
+            configs + dynamic_rust_config - dynamic_rust_config == configs) {
+          # For rustc, static linking is the default. So we only add a runtime if
+          # the dynamic linking config is present.
+          should_add_shared_rust_runtime = false
+        }
+        if (should_add_shared_rust_runtime) {
+          data_deps += [ "//build/toolchain/runtime:shared-rust-libstd-deps" ]
+        }
+      }
+    }
+  }
+}
+
 # This template is used internally by the Fuchsia build system to perform variant
 # toolchain selection for 'final' linkable targets, i.e. executable(), loadable_module(),
 # but not shared_library().
@@ -1573,6 +1702,7 @@ template("variant_target") {
                            [
                              "exclude_toolchain_tags",
                              "target_name",
+                             "target_type",
                              "variant_selector_target_type",
                              "visibility",
                            ])
@@ -1729,7 +1859,8 @@ template("variant_target") {
 
   if (current_toolchain == builder_toolchain) {
     # This is the toolchain selected to actually build this target.
-    target(target_type, target_name) {
+    _fuchsia_binary(target_name) {
+      target_type = target_type
       deps = []
       forward_variables_from(target_invoker, "*")
       deps += toolchain_variant.deps
@@ -1747,75 +1878,6 @@ template("variant_target") {
         # invoker constrained the visibility, make sure those
         # dependencies from other toolchains are still allowed.
         visibility += [ ":${target_name}" ]
-      }
-
-      # Depend on runtime libraries provided by the sysroot and the toolchain.
-      # This ensures the libraries are packaged up with the output of this
-      # target.
-      # These dependencies need to be attached here rather than higher up in the
-      # dependency tree in order to correctly capture the active toolchain
-      # variant.
-      if (is_fuchsia) {
-        if (!defined(deps)) {
-          deps = []
-        }
-        if (!defined(data_deps)) {
-          data_deps = []
-        }
-        if (zircon_toolchain == false) {
-          if (defined(crate_root)) {
-            deps += [ "//zircon/public/sysroot:rust_binary_deps" ]
-          } else {
-            deps += [ "//zircon/public/sysroot:cpp_binary_deps" ]
-          }
-
-          # Add dependency to the C runtime startup object file for executables,
-          # except if the static-pie-config is used.
-          if ((target_type == "executable" || target_type == "test") &&
-              configs + [ "//build/config/fuchsia:static-pie-config" ] -
-              [ "//build/config/fuchsia:static-pie-config" ] == configs) {
-            deps += [ "//zircon/public/sysroot:crt1_deps" ]
-          }
-        }
-
-        # NOTE: invoker.crate_root will be defined when building a Rust crate
-        # instead of a C++ binary.
-        if (zircon_toolchain == false) {
-          should_add_shared_cpp_runtime = true
-          if (defined(configs)) {
-            # Do not add runtime dependencies if compiling statically.
-            static_cpp_configs = [
-              "//build/config/fuchsia:static_cpp_standard_library",
-              "//build/config/zircon:static-libc++",
-            ]
-            if (configs + static_cpp_configs - static_cpp_configs != configs) {
-              should_add_shared_cpp_runtime = false
-            }
-          }
-          if (should_add_shared_cpp_runtime) {
-            data_deps += [ "//build/toolchain/runtime:shared-libc++-deps" ]
-          } else if (!defined(crate_root)) {
-            # Even when compiling statically, some runtime dependencies might
-            # be needed when performing instrumented builds, because the
-            # compiler-generated machine code will contain imports to
-            # instrumentation-runtime-specific libraries.
-            data_deps += [ "//build/toolchain/runtime:static-libc++-deps" ]
-          }
-        }
-        if (defined(crate_root)) {
-          should_add_shared_rust_runtime = true
-          dynamic_rust_config =
-              [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
-          if (!defined(configs) ||
-              configs + dynamic_rust_config - dynamic_rust_config == configs) {
-            # For rustc, static linking is the default. So we only add a runtime if
-            # the dynamic linking config is present.
-            should_add_shared_rust_runtime = false
-          }
-          if (should_add_shared_rust_runtime) {
-            data_deps += [ "//build/toolchain/runtime:shared-rust-libstd-deps" ]
-          }
-        }
       }
     }
   } else if (current_toolchain == shlib_toolchain ||
@@ -1989,7 +2051,9 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
     # but if the invoker constrained the visibility, we must make sure
     # the dependency from the main toolchain is still allowed.
     template("shared_library") {
-      shared_library(target_name) {
+      _fuchsia_binary(target_name) {
+        target_type = "shared_library"
+
         # Save the target name here as it could be overridden by the calls
         # to forward_variables_from below.
         original_target_name = target_name
@@ -2107,54 +2171,6 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
               }
             },
           ]
-        }
-
-        if (is_fuchsia) {
-          if (!defined(deps)) {
-            deps = []
-          }
-
-          if (zircon_toolchain == false) {
-            deps += [ "//zircon/public/sysroot:cpp_binary_deps" ]
-          }
-
-          # Add zircon dependency for the profile variant. TODO(fxbug.dev/61522): Remove this.
-          if (toolchain_variant.tags + [
-                "profile",
-                "coverage",
-              ] -
-              [
-                "profile",
-                "coverage",
-              ] != toolchain_variant.tags) {
-            deps += [ "//src/zircon/lib/zircon" ]
-          }
-          if (!defined(data_deps)) {
-            data_deps = []
-          }
-          if (zircon_toolchain == false) {
-            should_add_shared_cpp_runtime = true
-            if (defined(configs)) {
-              # Do not add runtime dependencies if compiling statically.
-              static_cpp_configs = [
-                "//build/config/fuchsia:static_cpp_standard_library",
-                "//build/config/zircon:static-libc++",
-              ]
-              if (configs + static_cpp_configs - static_cpp_configs !=
-                  configs) {
-                should_add_shared_cpp_runtime = false
-              }
-            }
-            if (should_add_shared_cpp_runtime) {
-              data_deps += [ "//build/toolchain/runtime:shared-libc++-deps" ]
-            } else {
-              # Even when compiling statically, some runtime dependencies might
-              # be needed when performing instrumented builds, because the
-              # compiler-generated machine code will contain imports to
-              # instrumentation-runtime-specific libraries.
-              data_deps += [ "//build/toolchain/runtime:static-libc++-deps" ]
-            }
-          }
         }
       }
     }
