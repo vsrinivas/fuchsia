@@ -126,6 +126,7 @@ pub fn dispatch_syscall(
         fcntl[3],
         fstat[2],
         fstatfs[2],
+        futex[6],
         getcwd[2],
         getegid[0],
         geteuid[0],

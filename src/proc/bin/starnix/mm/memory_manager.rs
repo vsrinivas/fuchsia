@@ -14,6 +14,7 @@ use zerocopy::{AsBytes, FromBytes};
 
 use crate::collections::*;
 use crate::logging::*;
+use crate::mm::FutexTable;
 use crate::types::*;
 
 lazy_static! {
@@ -201,6 +202,9 @@ pub struct MemoryManager {
     /// The base address of the root_vmar.
     pub base_addr: UserAddress,
 
+    /// The futexes in this address space.
+    pub futex: FutexTable,
+
     /// Mutable state for the memory manager.
     state: RwLock<MemoryManagerState>,
 
@@ -216,6 +220,7 @@ impl MemoryManager {
             process,
             root_vmar,
             base_addr: UserAddress::from_ptr(info.base),
+            futex: FutexTable::default(),
             state: RwLock::new(MemoryManagerState {
                 user_vmar,
                 brk: None,

@@ -14,6 +14,9 @@ use std::ops;
 use std::sync::{Arc, Weak};
 
 pub mod syscalls;
+mod waiter;
+
+pub use waiter::*;
 
 use crate::auth::{Credentials, ShellJobControl};
 use crate::devices::DeviceRegistry;
@@ -332,7 +335,6 @@ pub struct Task {
     pub shell_job_control: ShellJobControl,
 
     // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
-    pub set_child_tid: Mutex<UserRef<pid_t>>,
     pub clear_child_tid: Mutex<UserRef<pid_t>>,
 
     // See https://man7.org/linux/man-pages/man2/sigaltstack.2.html
@@ -341,6 +343,9 @@ pub struct Task {
     /// The signal mask of the task.
     // See https://man7.org/linux/man-pages/man2/rt_sigprocmask.2.html
     pub signal_mask: Mutex<sigset_t>,
+
+    /// The object this task sleeps upon.
+    pub waiter: Arc<Waiter>,
 
     /// The signal this task generates on exit.
     pub exit_signal: Option<Signal>,
@@ -384,10 +389,10 @@ impl Task {
                 fs,
                 creds,
                 shell_job_control: sjc,
-                set_child_tid: Mutex::new(UserRef::default()),
                 clear_child_tid: Mutex::new(UserRef::default()),
                 signal_stack: Mutex::new(None),
                 signal_mask: Mutex::new(sigset_t::default()),
+                waiter: Waiter::new(),
                 exit_signal,
                 exit_code: Mutex::new(None),
                 zombie_tasks: RwLock::new(vec![]),
@@ -566,7 +571,6 @@ impl Task {
         }
 
         if flags & (CLONE_CHILD_SETTID as u64) != 0 {
-            *child.task.set_child_tid.lock() = user_child_tid;
             child.task.mm.write_object(user_child_tid, &child.task.id)?;
         }
 

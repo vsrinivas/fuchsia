@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_zircon as zx;
 use log::info;
 use std::ffi::CString;
 
@@ -322,6 +323,41 @@ pub fn sys_getrusage(
         ctx.task.mm.write_object(user_usage, &usage)?;
     }
 
+    Ok(SUCCESS)
+}
+
+pub fn sys_futex(
+    ctx: &SyscallContext<'_>,
+    addr: UserAddress,
+    op: u32,
+    value: u32,
+    _utime: UserRef<timespec>,
+    _addr2: UserAddress,
+    _value3: u32,
+) -> Result<SyscallResult, Errno> {
+    // TODO: Distinguish between public and private futexes.
+    let _is_private = op & FUTEX_PRIVATE_FLAG != 0;
+
+    let is_realtime = op & FUTEX_CLOCK_REALTIME != 0;
+    if is_realtime {
+        not_implemented!("futex: Realtime futex are not implemented.");
+        return Err(ENOSYS);
+    }
+
+    let cmd = op & (FUTEX_CMD_MASK as u32);
+    match cmd {
+        FUTEX_WAIT => {
+            let deadline = zx::Time::INFINITE;
+            ctx.task.mm.futex.wait(&ctx.task.waiter, addr, value, deadline)?;
+        }
+        FUTEX_WAKE => {
+            ctx.task.mm.futex.wake(addr, value as usize);
+        }
+        _ => {
+            not_implemented!("futex: command 0x{:x} not implemented.", cmd);
+            return Err(ENOSYS);
+        }
+    }
     Ok(SUCCESS)
 }
 
