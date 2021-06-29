@@ -423,7 +423,6 @@ if (zircon_toolchain == false) {
     "//build/config/zircon:default_warnings",
     "//build/config/zircon:default_include_dirs",
     "//build/config/zircon:default_template_backtrace_limit",
-    "//build/config/zircon:warn-implicit-fallthrough",
     "//build/config/zircon:auto_var_init",
     "//build/config/zircon:werror",
   ]

@@ -8,7 +8,7 @@ import("//build/zircon/migrated_targets.gni")
 lz4_lib = "//third_party/lz4/lib"
 
 config("lz4_warnings") {
-  cflags = [ "-Wno-implicit-fallthrough" ]
+  configs = [ "//build/config:Wno-implicit-fallthrough" ]
 }
 
 zx_library("lz4") {

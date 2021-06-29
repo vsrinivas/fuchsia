@@ -786,6 +786,8 @@ config("Wno-implicit-fallthrough") {
     "//src/lib/fxl:third_party",
     "//third_party/rust_crates/compat/brotli",
     "//zircon/third_party/uapp/dash",
+    "//zircon/third_party/ulib/boringssl",
+    "//zircon/third_party/ulib/lz4",
   ]
 }
 

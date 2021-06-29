@@ -333,6 +333,7 @@ config("default_warnings") {
   cflags = [
     "-Wall",
     "-Wextra",
+    "-Wimplicit-fallthrough",
     "-Wno-unused-parameter",
 
     # TODO(fxbug.dev/37765): Temporarily disable this warning to unblock the GCC roll.
@@ -448,10 +449,6 @@ config("Wno-conversion") {
     "//zircon/tools/kazoo/*",
     "//zircon/tools/zbi/*",
   ]
-}
-
-config("warn-implicit-fallthrough") {
-  cflags = [ "-Wimplicit-fallthrough" ]
 }
 
 config("default_template_backtrace_limit") {
