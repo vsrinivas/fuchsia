@@ -6,7 +6,7 @@
 
 #include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/zx/channel.h>
-#include <lib/zxio/inception.h>
+#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <zircon/syscalls.h>

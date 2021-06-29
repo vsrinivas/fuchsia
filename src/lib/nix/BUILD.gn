@@ -29,6 +29,7 @@ static_library("nix") {
     "//sdk/lib/fdio",
     "//sdk/lib/zxio",
     "//zircon/public/lib/fbl",
+    "//zircon/third_party/ulib/safemath",
   ]
   defines = [ "_ALL_SOURCE" ]
   public_configs = [ ":nix_headers" ]

@@ -11,7 +11,6 @@
 #include <lib/fdio/inotify.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/zxio/inception.h>
 #include <limits.h>
 
 #include <fbl/unique_fd.h>

@@ -6,19 +6,31 @@ import("//build/cpp/library_headers.gni")
 
 library_headers("headers") {
   headers = [
-    "lib/zxio/cpp/inception.h",
     "lib/zxio/cpp/vector.h",
     "lib/zxio/extensions.h",
-    "lib/zxio/inception.h",
     "lib/zxio/null.h",
     "lib/zxio/ops.h",
     "lib/zxio/types.h",
     "lib/zxio/zxio.h",
   ]
+}
+
+# This header exposes implementation details of the zxio library in order to
+# facilitate moving logic from fdio into zxio. It should not be used outside of
+# these two libraries.
+library_headers("inception") {
+  headers = [ "lib/zxio/cpp/inception.h" ]
 
   public_deps = [
-    # <lib/zxio/inception.h> has #include <fuchsia/io/llcpp/fidl.h>.
+    ":headers",
+
+    # <lib/zxio/cpp/inception.h> has #include <fuchsia/io/llcpp/fidl.h>.
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+  ]
+
+  visibility = [
+    "//sdk/lib/fdio/*",
+    "//sdk/lib/zxio/*",
   ]
 }
 
@@ -44,6 +56,7 @@ static_library("zxio") {
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
+    "//sdk/lib/zxio:inception",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]

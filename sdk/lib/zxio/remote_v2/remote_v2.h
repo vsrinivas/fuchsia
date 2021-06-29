@@ -7,7 +7,7 @@
 
 #include <lib/zx/channel.h>
 #include <lib/zx/stream.h>
-#include <lib/zxio/inception.h>
+#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/ops.h>
 
 // C++ wrapper around zxio_remote_v2_t.

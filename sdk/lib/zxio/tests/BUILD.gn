@@ -47,6 +47,7 @@ test("zxio") {
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/zxio",
+    "//sdk/lib/zxio:inception",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

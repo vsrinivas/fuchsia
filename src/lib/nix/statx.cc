@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <cerrno>
 
+#include <safemath/safe_conversions.h>
+
 #include "private.h"
 
 int statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx *buf) {
@@ -33,8 +35,12 @@ int statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct 
   // Fill up the necessary fields for statx from stat.
   memset(buf, 0, sizeof(struct statx));
 
+  // TODO(https://fxbug.dev/76881): statx defines narrower types for several
+  // fields also defined by stat. This function casts these values blindly to
+  // the narrower types, which is probably wrong.
+
   if (mask & STATX_MODE) {
-    buf->stx_mode = s.st_mode;
+    buf->stx_mode = safemath::saturated_cast<uint16_t>(s.st_mode);
     buf->stx_mask |= STATX_MODE;
   }
 
@@ -48,7 +54,7 @@ int statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct 
     buf->stx_mask |= STATX_SIZE;
   }
 
-  buf->stx_blksize = s.st_blksize;
+  buf->stx_blksize = safemath::saturated_cast<uint32_t>(s.st_blksize);
 
   if (mask & STATX_BLOCKS) {
     // stx_blocks are blocks of size 512.
@@ -57,19 +63,19 @@ int statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct 
   }
 
   if (mask & STATX_NLINK) {
-    buf->stx_nlink = s.st_nlink;
+    buf->stx_nlink = safemath::saturated_cast<uint32_t>(s.st_nlink);
     buf->stx_mask |= STATX_NLINK;
   }
 
   if (mask & STATX_BTIME) {
     buf->stx_btime.tv_sec = s.st_ctim.tv_sec;
-    buf->stx_btime.tv_nsec = s.st_ctim.tv_nsec;
+    buf->stx_btime.tv_nsec = safemath::saturated_cast<uint32_t>(s.st_ctim.tv_nsec);
     buf->stx_mask |= STATX_BTIME;
   }
 
   if (mask & STATX_MTIME) {
     buf->stx_mtime.tv_sec = s.st_mtim.tv_sec;
-    buf->stx_mtime.tv_nsec = s.st_mtim.tv_nsec;
+    buf->stx_mtime.tv_nsec = safemath::saturated_cast<uint32_t>(s.st_mtim.tv_nsec);
     buf->stx_mask |= STATX_MTIME;
   }
 

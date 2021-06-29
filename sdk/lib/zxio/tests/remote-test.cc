@@ -7,7 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
-#include <lib/zxio/inception.h>
+#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/ops.h>
 #include <lib/zxio/zxio.h>
 

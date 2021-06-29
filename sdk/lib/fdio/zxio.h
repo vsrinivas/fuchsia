@@ -5,7 +5,7 @@
 #ifndef LIB_FDIO_ZXIO_H_
 #define LIB_FDIO_ZXIO_H_
 
-#include <lib/zxio/inception.h>
+#include <lib/zxio/cpp/inception.h>
 
 #include "internal.h"
 

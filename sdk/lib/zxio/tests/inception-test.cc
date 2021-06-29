@@ -7,7 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/vmo.h>
-#include <lib/zxio/inception.h>
+#include <lib/zxio/cpp/inception.h>
 #include <string.h>
 
 #include <zxtest/zxtest.h>

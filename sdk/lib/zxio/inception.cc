@@ -5,7 +5,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/stream.h>
 #include <lib/zx/vmo.h>
-#include <lib/zxio/inception.h>
+#include <lib/zxio/cpp/inception.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 

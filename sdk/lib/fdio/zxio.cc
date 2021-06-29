@@ -7,7 +7,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
-#include <lib/zxio/inception.h>
+#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/zxio.h>
 #include <poll.h>

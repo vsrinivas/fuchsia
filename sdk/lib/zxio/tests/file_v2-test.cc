@@ -9,7 +9,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/stream.h>
 #include <lib/zx/vmo.h>
-#include <lib/zxio/inception.h>
+#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/ops.h>
 
 #include <atomic>

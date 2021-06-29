@@ -5,7 +5,7 @@
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/zxio/inception.h>
+#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/zxio.h>
 
 #include <array>

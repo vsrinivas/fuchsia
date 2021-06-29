@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/llcpp/fidl.h>
-#include <lib/zxio/inception.h>
+#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <sys/stat.h>
