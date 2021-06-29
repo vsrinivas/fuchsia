@@ -41,6 +41,9 @@ The component manager offers a variety of framework capabilities to components.
 Components use these capabilities to interact with their environment with the
 help of the component manager.
 
+Commonly used framework capabilities include
+[`fuchsia.sys2.Realm`](#realm-protocol) and [events](#events).
+
 ## Framework extensions
 
 The component manager supports a variety of framework extensions that
@@ -59,3 +62,5 @@ components can implement to integrate new functionality with their environment.
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-topology]: /docs/concepts/components/v2/topology.md
 [doc-services]: /docs/concepts/components/v2/services.md
+[events]: /docs/concepts/components/v2/capabilities/event.md
+[realm-protocol]: /sdk/fidl/fuchsia.sys2/realm.fidl
