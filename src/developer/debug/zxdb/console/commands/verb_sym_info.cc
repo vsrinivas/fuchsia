@@ -59,19 +59,7 @@ std::optional<std::string> DemangleForSymInfo(const ParsedIdentifier& identifier
     return std::nullopt;
   }
 
-  std::optional<std::string> result;
-
-  // TODO(brettw) use "demangled = llvm::demangle() when we roll LLVM. It avoids the buffer
-  // allocation problem.
-  int demangle_status = llvm::demangle_unknown_error;
-  char* demangled_buf =
-      llvm::itaniumDemangle(full_input.c_str(), nullptr, nullptr, &demangle_status);
-  if (demangle_status == llvm::demangle_success && full_input != demangled_buf)
-    result.emplace(demangled_buf);
-  if (demangled_buf)
-    free(demangled_buf);
-
-  return result;
+  return llvm::demangle(full_input);
 }
 
 Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {

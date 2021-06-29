@@ -11,18 +11,7 @@ namespace zxdb {
 ElfSymbolRecord::ElfSymbolRecord(ElfSymbolType t, uint64_t relative_address, uint64_t size,
                                  const std::string& linkage_name)
     : type(t), relative_address(relative_address), size(size), linkage_name(linkage_name) {
-  // TODO(brettw) use "demangled = llvm::demangle() when we roll LLVM. It avoids the buffer
-  // allocation problem.
-  int demangle_status = llvm::demangle_unknown_error;
-  char* demangled_buf =
-      llvm::itaniumDemangle(linkage_name.c_str(), nullptr, nullptr, &demangle_status);
-  if (demangle_status == llvm::demangle_success) {
-    unmangled_name = demangled_buf;
-    free(demangled_buf);
-  } else {
-    // Fall back to the linkage name on error (might not be a mangled name at all).
-    unmangled_name = linkage_name;
-  }
+  unmangled_name = llvm::demangle(linkage_name);
 }
 
 }  // namespace zxdb
