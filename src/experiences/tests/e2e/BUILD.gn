@@ -28,13 +28,13 @@ host_test_data("scuba_goldens") {
 dart_test("experiences_ermine_session_shell_e2e_test") {
   sources = [
     "ermine_intl_test.dart",
-    "ermine_session_shell_ask_test.dart",
-    "ermine_session_shell_quicksettings_test.dart",
-    "ermine_session_shell_simple_browser_test.dart",
-    "ermine_shell_shortcut_test.dart",
-    "ermine_shell_test.dart",
-    "ermine_spinning_square_view_test.dart",
-    "ermine_terminal_test.dart",
+    #    "ermine_session_shell_ask_test.dart",
+    #    "ermine_session_shell_quicksettings_test.dart",
+    #    "ermine_session_shell_simple_browser_test.dart",
+    #    "ermine_shell_shortcut_test.dart",
+    #    "ermine_shell_test.dart",
+    #    "ermine_spinning_square_view_test.dart",
+    #    "ermine_terminal_test.dart",
   ]
 
   deps = [

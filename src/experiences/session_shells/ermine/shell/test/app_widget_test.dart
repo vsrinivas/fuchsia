@@ -1,40 +1,51 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-
 // ignore_for_file: implementation_imports
-import 'package:ermine/src/models/app_model.dart';
+
+import 'dart:async';
+import 'dart:ui';
+
+import 'package:ermine/src/states/app_state.dart';
+import 'package:ermine/src/states/view_state.dart';
+import 'package:ermine/src/utils/mobx_extensions.dart';
+import 'package:ermine/src/utils/themes.dart';
+import 'package:ermine/src/utils/widget_factory.dart';
 import 'package:ermine/src/widgets/app.dart';
+import 'package:ermine/src/widgets/app_view.dart';
+import 'package:ermine/src/widgets/overlays.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:intl/intl.dart';
+import 'package:mobx/mobx.dart' hide when;
 import 'package:mockito/mockito.dart';
 
 void main() async {
-  setupLogger(name: 'ermine_unittests');
-
-  TestApp app;
-  MockAppModel model;
-  StreamController<Locale> controller;
+  setupLogger(name: 'next_unittests');
+  late App app;
+  late MockAppState state;
 
   setUp(() {
-    model = MockAppModel();
-    app = TestApp(model);
+    state = MockAppState();
+    app = App(state);
 
-    controller = StreamController<Locale>();
-    when(model.localeStream).thenAnswer((_) => controller.stream);
+    when(state.theme).thenAnswer((_) => AppTheme.darkTheme.asObservable());
+    WidgetFactory.mockFactory = (type) => Container(key: ValueKey(type));
   });
 
   tearDown(() async {
-    await controller.close();
+    WidgetFactory.mockFactory = null;
   });
 
   testWidgets('Test locale change', (tester) async {
-    when(model.overviewVisibility).thenReturn(ValueNotifier<bool>(true));
-    when(model.oobeVisibility).thenReturn(ValueNotifier<bool>(false));
+    final controller = StreamController<Locale>();
+    final stream = controller.stream.asObservable();
+    when(state.localeStream).thenAnswer((_) => stream);
+    when(state.views).thenAnswer((_) => <ViewState>[].asObservable());
+    when(state.oobeVisible).thenAnswer((_) => false.asObservable());
+    when(state.overlaysVisible).thenAnswer((_) => false.asObservable());
 
     await tester.pumpWidget(app);
     // app should be OffStage until locale is pushed.
@@ -44,81 +55,39 @@ void main() async {
     final defaultLocale = Locale('en', 'US');
     controller.add(defaultLocale);
     await tester.pumpAndSettle();
+    expect(find.byType(MaterialApp), findsOneWidget);
     expect(Intl.defaultLocale, defaultLocale.toString());
 
     // Switch locale to swiss french.
     final swissFrench = Locale('fr', 'CH');
     controller.add(swissFrench);
     await tester.pumpAndSettle();
+    expect(find.byType(MaterialApp), findsOneWidget);
     expect(Intl.defaultLocale, swissFrench.toString());
+    await controller.close();
   });
 
-  testWidgets('Toggle between overview and home containers', (tester) async {
-    // Set locale to render the app.
-    controller.add(Locale('en', 'US'));
+  testWidgets('AppView with Overlays is visible', (tester) async {
+    final controller = StreamController<Locale>();
+    final stream =
+        controller.stream.asObservable(initialValue: Locale('en', 'US'));
+    when(state.localeStream).thenAnswer((_) => stream);
 
-    // Make Overview visible.
-    final overviewNotifier = ValueNotifier<bool>(true);
-    when(model.overviewVisibility).thenReturn(overviewNotifier);
-
-    // OOBE is turned off.
-    when(model.oobeVisibility).thenReturn(ValueNotifier<bool>(false));
+    // Create one view.
+    when(state.views).thenAnswer((_) => [MockViewState()].asObservable());
+    // Show overlays.
+    when(state.overlaysVisible).thenAnswer((_) => true.asObservable());
+    // Hide OObe.
+    when(state.oobeVisible).thenAnswer((_) => false.asObservable());
 
     await tester.pumpWidget(app);
-    await tester.pumpUntilVisible(app.overview);
-
-    expect(find.byWidget(app.recents), findsOneWidget);
-    expect(find.byWidget(app.overview), findsOneWidget);
-    expect(find.byWidget(app.home), findsNothing);
-    expect(find.byWidget(app.alert), findsOneWidget);
-    expect(find.byWidget(app.oobe), findsNothing);
-
-    // Home should be visible.
-    overviewNotifier.value = false;
-    await tester.pumpUntilVisible(app.home);
-
-    expect(find.byWidget(app.recents), findsOneWidget);
-    expect(find.byWidget(app.overview), findsNothing);
-    expect(find.byWidget(app.home), findsOneWidget);
-    expect(find.byWidget(app.alert), findsOneWidget);
-    expect(find.byWidget(app.oobe), findsNothing);
+    await tester.pumpAndSettle();
+    expect(find.byKey(ValueKey(AppView)), findsOneWidget);
+    expect(find.byKey(ValueKey(Overlays)), findsOneWidget);
+    await controller.close();
   });
 }
 
-class TestApp extends App {
-  final Widget overview = Container();
-  final Widget home = Container();
-  final Widget recents = Container();
-  final Widget alert = Container();
-  final Widget oobe = Container();
+class MockAppState extends Mock implements AppState {}
 
-  TestApp(AppModel model) : super(model: model);
-
-  @override
-  Widget buildRecents(AppModel model) => recents;
-
-  @override
-  Widget buildOverview(AppModel model) => overview;
-
-  @override
-  Widget buildHome(AppModel model) => home;
-
-  @override
-  Widget buildAlert(AppModel model) => alert;
-
-  @override
-  Widget buildOobe(AppModel model) => oobe;
-}
-
-class MockAppModel extends Mock implements AppModel {}
-
-extension _WidgetVisibility on WidgetTester {
-  /// Calls [pumpAndSettle] until widget finder finds a widget or the default
-  /// timeout of the surrounding test is exceeded.
-  Future<void> pumpUntilVisible(Widget widget) async {
-    var matchState = {};
-    while (findsNothing.matches(find.byWidget(widget), matchState)) {
-      await pumpAndSettle();
-    }
-  }
-}
+class MockViewState extends Mock implements ViewState {}

@@ -1,92 +1,75 @@
 {
-  "cancel": [
-    {
-      "char": "escape",
-      "chord": "Escape",
-      "exclusive": false,
-      "description": "Dismiss system overlays"
-    }
-  ],
-  "ask": [
-    {
-      "char": "space",
-      "modifier": "alt",
-      "chord": "Alt + Space bar",
-      "description": "Launch Ask"
-    },
-    {
-      "char": "f1",
-      "chord": "F1",
-      "description": "Launch Ask"
-    }
-  ],
-  "overview": [
-    {
-      "char": "escape",
-      "modifier": "meta",
-      "chord": "Meta + Escape",
-      "description": "Toggle Overview"
-    }
-  ],
-  "recents": [
-    {
-      "char": "r",
-      "modifier": "meta",
-      "chord": "Meta + r",
-      "description": "Toggle Recents"
-    }
-  ],
-  "shortcuts": [
-    {
-      "char": "slash",
-      "modifier": "meta",
-      "chord": "Meta + /",
-      "description": "Show keyboard shortcuts"
-    }
-  ],
-  "fullscreen": [
-    {
-      "char": "f",
-      "modifier": "meta",
-      "chord": "Meta + f",
-      "description": "Toggle focused story fullscreen"
-    }
-  ],
-  "close": [
-    {
-      "char": "w",
-      "modifier": "meta",
-      "chord": "Meta + w",
-      "description": "Close focused story"
-    }
-  ],
-  "status": [
-    {
-      "char": "s",
-      "modifier": "alt",
-      "chord": "Alt + s",
-      "description": "Toggle status"
-    },
-    {
-      "char": "f6",
-      "chord": "F6",
-      "description": "Toggle status"
-    }
-  ],
-  "nextCluster": [
-    {
-      "char": "right",
-      "modifier": "meta",
-      "chord": "Meta + ->",
-      "description": "Next cluster"
-    }
-  ],
-  "previousCluster": [
-    {
-      "char": "left",
-      "modifier": "meta",
-      "chord": "Meta + <-",
-      "description": "Previous cluster"
-    }
-  ]
+    "cancel": [
+        {
+            "char": "escape",
+            "chord": "Escape",
+            "description": "Dismiss system overlays"
+        }
+    ],
+    "close": [
+        {
+            "char": "w",
+            "chord": "Shift + Ctrl + w",
+            "description": "Close top view",
+            "exclusive": true,
+            "modifier": "shift + control"
+        }
+    ],
+    "launcher": [
+        {
+            "char": "leftMeta",
+            "chord": "Meta",
+            "description": "Show Launcher",
+            "exclusive": true
+        },
+        {
+            "char": "rightMeta",
+            "chord": "Meta",
+            "description": "Show Launcher",
+            "exclusive": true
+        },
+        {
+            "char": "space",
+            "chord": "Alt + Space",
+            "description": "Show Launcher",
+            "exclusive": true,
+            "modifier": "alt"
+        }
+    ],
+    "settings": [
+        {
+            "char": "s",
+            "chord": "Alt + Shift + s",
+            "description": "Show Quick Settings",
+            "exclusive": true,
+            "modifier": "alt + shift"
+        }
+    ],
+    "shortcuts": [
+        {
+            "char": "slash",
+            "chord": "Ctrl + Alt + /",
+            "description": "Show keyboard shortcuts",
+            "exclusive": true,
+            "modifier": "control + alt"
+        }
+    ],
+    "switchNext": [
+        {
+            "char": "tab",
+            "chord": "Alt + tab",
+            "description": "Switch to next app",
+            "exclusive": true,
+            "modifier": "alt"
+        }
+    ],
+    "switchPrev": [
+        {
+            "char": "tab",
+            "chord": "Shift + Alt + tab",
+            "description": "Switch to previous app",
+            "exclusive": true,
+            "modifier": "shift + alt"
+        }
+    ]
 }

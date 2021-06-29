@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/services.dart';
+import 'package:ermine/src/services/shortcuts_service.dart';
 import 'package:flutter_driver/driver_extension.dart';
 
 import 'main.dart' as entrypoint;
 
 Future<void> main() async {
-  final handler = OptionalMethodChannel('flutter_driver/handler');
   enableFlutterDriverExtension(
       enableTextEntryEmulation: false,
-      handler: (String data) async {
-        return handler.invokeMethod(data);
+      handler: (String? data) async {
+        if (data != null && ShortcutsService.flutterDriverHandler != null) {
+          return ShortcutsService.flutterDriverHandler!.call(data);
+        }
+        return '';
       });
   return entrypoint.main();
 }

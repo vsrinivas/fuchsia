@@ -32,7 +32,7 @@ const _yellowUrl = 'http://127.0.0.1:8080/yellow.html';
 // 2: Rearrange tabs
 // 3: Switch tabs
 // 4: Close tabs
-const skipTests = [false, false, true, false, false];
+const skipTests = [true, true, true, true, true];
 
 void main() {
   sl4f.Dump dump;

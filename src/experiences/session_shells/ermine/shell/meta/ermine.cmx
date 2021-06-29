@@ -12,6 +12,7 @@
         ],
         "services": [
             "fuchsia.accessibility.semantics.SemanticsManager",
+            "fuchsia.buildinfo.Provider",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.manager.Administrator",
             "fuchsia.feedback.CrashReporter",
@@ -21,6 +22,7 @@
             "fuchsia.media.Audio",
             "fuchsia.media.AudioCore",
             "fuchsia.memory.Monitor",
+            "fuchsia.net.interfaces.State",
             "fuchsia.power.BatteryManager",
             "fuchsia.session.ElementManager",
             "fuchsia.settings.Intl",
@@ -31,6 +33,7 @@
             "fuchsia.ui.focus.FocusChainListenerRegistry",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.InputDeviceRegistry",
+            "fuchsia.ui.input.PointerCaptureListenerRegistry",
             "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.policy.Presentation",
             "fuchsia.ui.policy.Presenter",

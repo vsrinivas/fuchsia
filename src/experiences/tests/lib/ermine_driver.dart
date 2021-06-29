@@ -200,6 +200,27 @@ class ErmineDriver {
     await driver.waitUntilNoTransientCallbacks();
   }
 
+  /// Invoke a three key keyboard shortcut.
+  Future<void> threeKeyShortcut(Key modifier1, Key modifier2, Key key) async {
+    const key1Press = Duration(milliseconds: 100);
+    const key2Press = Duration(milliseconds: 200);
+    const key3Press = Duration(milliseconds: 300);
+    const key3Release = Duration(milliseconds: 500);
+    const key2Release = Duration(milliseconds: 600);
+    const key1Release = Duration(milliseconds: 700);
+
+    final input = Input(sl4f);
+    await input.keyEvents([
+      KeyEvent(modifier1, key1Press, KeyEventType.pressed),
+      KeyEvent(modifier2, key2Press, KeyEventType.pressed),
+      KeyEvent(key, key3Press, KeyEventType.pressed),
+      KeyEvent(key, key3Release, KeyEventType.released),
+      KeyEvent(modifier2, key2Release, KeyEventType.released),
+      KeyEvent(modifier1, key1Release, KeyEventType.released),
+    ]);
+    await driver.waitUntilNoTransientCallbacks();
+  }
+
   /// Launches a simple browser and returns a [FlutterDriver] connected to it.
   Future<FlutterDriver> launchSimpleBrowser() async {
     expect(await launch(simpleBrowserUrl), isTrue);

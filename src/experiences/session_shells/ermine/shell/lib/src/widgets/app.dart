@@ -1,102 +1,81 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
+import 'package:ermine/src/states/app_state.dart';
+import 'package:ermine/src/utils/fuchsia_keyboard.dart';
+import 'package:ermine/src/utils/widget_factory.dart';
+import 'package:ermine/src/widgets/app_view.dart';
+import 'package:ermine/src/widgets/oobe.dart';
+import 'package:ermine/src/widgets/overlays.dart';
+import 'package:flutter/material.dart' hide AppBar;
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/localizations_delegate.dart'
     as localizations;
 import 'package:internationalization/supported_locales.dart'
     as supported_locales;
 import 'package:intl/intl.dart';
 
-import '../models/app_model.dart';
-import '../models/oobe_model.dart';
-import '../utils/styles.dart';
-import 'support/alert.dart';
-import 'support/home_container.dart';
-import 'support/oobe.dart';
-import 'support/overview.dart';
-import 'support/recents.dart';
-
-/// Builds the main display of this session shell.
+/// Builds the top level application widget that reacts to locale changes.
 class App extends StatelessWidget {
-  final AppModel model;
+  final AppState app;
 
-  const App({@required this.model});
+  const App(this.app);
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<Locale>(
-        stream: model.localeStream,
-        builder: (context, snapshot) {
-          // Check if [Locale] is loaded.
-          if (!snapshot.hasData) {
-            return Offstage();
-          }
-          final locale = snapshot.data;
-          // Needed to set the locale for anything that depends on the Intl
-          // package.
-          Intl.defaultLocale = locale.toString();
-          return MaterialApp(
-            debugShowCheckedModeBanner: false,
-            theme: ErmineStyle.kErmineTheme,
-            locale: locale,
-            localizationsDelegates: [
-              localizations.delegate(),
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-            ],
-            scrollBehavior: MaterialScrollBehavior().copyWith(
-              dragDevices: {PointerDeviceKind.mouse, PointerDeviceKind.touch},
-            ),
-            supportedLocales: supported_locales.locales,
-            home: Material(
-                color: ErmineStyle.kBackgroundColor,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: <Widget>[
-                    // Recents.
-                    buildRecents(model),
+    return Observer(builder: (_) {
+      final locale = app.localeStream.value;
+      if (locale == null) {
+        return Offstage();
+      }
+      Intl.defaultLocale = locale.toString();
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: app.theme.value,
+        locale: locale,
+        localizationsDelegates: [
+          localizations.delegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: supported_locales.locales,
+        shortcuts: FuchsiaKeyboard.defaultShortcuts,
+        scrollBehavior: MaterialScrollBehavior().copyWith(
+          dragDevices: {PointerDeviceKind.mouse, PointerDeviceKind.touch},
+        ),
+        home: Builder(builder: (context) {
+          FocusManager.instance.highlightStrategy =
+              FocusHighlightStrategy.alwaysTraditional;
+          return Material(
+            type: MaterialType.canvas,
+            child: Observer(builder: (_) {
+              return Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  // Show fullscreen top view.
+                  if (app.views.isNotEmpty)
+                    WidgetFactory.create(() => AppView(app)),
 
-                    // OOBE or Overview or Home.
-                    AnimatedBuilder(
-                      animation: Listenable.merge([
-                        model.overviewVisibility,
-                        model.oobeVisibility,
-                      ]),
-                      builder: (context, _) => model.oobeVisibility.value
-                          ? buildOobe(model)
-                          : model.overviewVisibility.value
-                              ? buildOverview(model)
-                              : buildHome(model),
-                    ),
+                  // Show scrim and overlay layers if an overlay is visible.
+                  if (app.overlaysVisible.value)
+                    WidgetFactory.create(() => Overlays(app)),
 
-                    buildAlert(model),
-                  ],
-                )),
+                  // Show OOBE view for first-time configuration.
+                  if (app.oobeVisible.value)
+                    WidgetFactory.create(() => Oobe(
+                          app.oobeState,
+                          onFinish: app.oobeFinished,
+                        )),
+                ],
+              );
+            }),
           );
-        });
-  }
-
-  @visibleForTesting
-  Widget buildRecents(AppModel model) => RecentsContainer(model: model);
-
-  @visibleForTesting
-  Widget buildOverview(AppModel model) => OverviewContainer(model: model);
-
-  @visibleForTesting
-  Widget buildHome(AppModel model) => HomeContainer(model: model);
-
-  @visibleForTesting
-  Widget buildAlert(AppModel model) => AlertContainer(model: model);
-
-  @visibleForTesting
-  Widget buildOobe(AppModel model) {
-    OobeModel oobeModel = OobeModel(onFinished: model.exitOobe)
-      ..loadOobeItems();
-    return OobeContainer(model: oobeModel);
+        }),
+      );
+    });
   }
 }

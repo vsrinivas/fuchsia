@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -17,8 +17,8 @@ import 'package:zircon/zircon.dart';
 ///
 /// Unhandled errors are reported to |fuchsia.feedback.CrashReporter| service.
 class CrashReportingRunner {
-  CrashReporter reporter;
-  SizedVmo Function(String) vmoBuilder;
+  CrashReporter? reporter;
+  SizedVmo Function(String)? vmoBuilder;
   final DateTime _startTime;
 
   CrashReportingRunner({this.reporter, this.vmoBuilder})
@@ -64,7 +64,7 @@ class CrashReportingRunner {
 
     // Convert stacktrace to VMO.
     vmoBuilder ??= _vmoFromStackTrace;
-    final vmo = vmoBuilder(details.stack.toString());
+    final vmo = vmoBuilder!(details.stack.toString());
 
     // Generate [CrashReport] from errorType, errorMessage and stackTrace.
     final report = CrashReport(
@@ -74,7 +74,7 @@ class CrashReportingRunner {
         RuntimeCrashReport(
           exceptionType: errorType,
           exceptionMessage: errorMessage,
-          exceptionStackTrace: Buffer(vmo: vmo, size: vmo.size),
+          exceptionStackTrace: Buffer(vmo: vmo, size: vmo.size!),
         ),
       ),
     );
@@ -86,7 +86,7 @@ class CrashReportingRunner {
   Future<void> _fileReport(CrashReport report) async {
     log.severe('Caught unhandled error in ermine. Generating crash report');
     if (reporter != null) {
-      await reporter.file(report);
+      await reporter!.file(report);
     } else {
       final reporterProxy = CrashReporterProxy();
       final incoming = Incoming.fromSvcPath()..connectToService(reporterProxy);

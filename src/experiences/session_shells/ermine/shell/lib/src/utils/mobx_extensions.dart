@@ -6,18 +6,22 @@ import 'package:mobx/mobx.dart';
 
 /// Turn Object into an Observable.
 extension MobxObjectExtension<T> on T {
-  Observable<T> asObservable({ReactiveContext context, String name}) =>
+  Observable<T> asObservable({ReactiveContext? context, String? name}) =>
       Observable<T>(this, context: context, name: name);
 
-  ObservableFuture asObservableFuture({ReactiveContext context, String name}) =>
+  ObservableFuture asObservableFuture(
+          {ReactiveContext? context, String? name}) =>
       ObservableFuture<T>.value(this, context: context, name: name);
 }
 
-/// Turn Function into [Action] and [Computed].
-extension MobxFunctionExtension on Function {
-  Action asAction({ReactiveContext context, String name}) =>
-      Action(this, context: context, name: name);
+/// Turn Function into [Computed].
+extension MobxComputedFunctionExtension<T> on T Function() {
+  Computed<T> asComputed({ReactiveContext? context, String? name}) =>
+      Computed<T>(this, context: context, name: name);
+}
 
-  Computed asComputed({ReactiveContext context, String name}) =>
-      Computed(this as dynamic Function(), context: context, name: name);
+/// Turns a generic Function into [Action].
+extension MobxActionFunctionExtension on Function {
+  Action asAction({ReactiveContext? context, String? name}) =>
+      Action(this, context: context, name: name);
 }

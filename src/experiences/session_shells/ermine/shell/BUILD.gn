@@ -1,107 +1,101 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/config.gni")
+import("//build/dart/dart_library.gni")
 import("//build/dart/fidl_move.gni")
 import("//build/fidl/fidl.gni")
-import("//build/flutter/flutter_app.gni")
+import("//build/flutter/flutter_component.gni")
 import("//build/flutter/test.gni")
 import("//build/testing/flutter_driver.gni")
 import("//src/lib/icu/tools/static_icu_data.gni")
 
+group("shell") {
+  public_deps = [
+    ":ermine",
+    ":images",
+  ]
+}
+
 declare_args() {
+  # Build arg that allows overriding the default set of application entries
+  # using '--args=ermine_app_entries="config/app_launch_entries.json"'
+  ermine_app_entries = "config/app_launch_entries.json"
+
   # Whether or not to launch OOBE workflow on startup.
   start_oobe = false
 }
 
-group("shell") {
-  public_deps = [
-    ":ermine",
-    ":ermine_fonts",
-  ]
-}
-
-tz_ids_path = "${target_gen_dir}/tz_ids.txt"
-
-flutter_app("ermine") {
-  if (flutter_driver_enabled) {
-    main_dart = "lib/test_main.dart"
-  } else {
-    main_dart = "lib/main.dart"
-  }
-
-  fuchsia_package_name = "ermine"
+dart_library("lib") {
   package_name = "ermine"
+  null_safe = true
 
-  meta = [
-    {
-      path = rebase_path("meta/ermine.cmx")
-      dest = "ermine.cmx"
-    },
+  services = [
+    "src/services/focus_service.dart",
+    "src/services/launch_service.dart",
+    "src/services/pointer_events_service.dart",
+    "src/services/preferences_service.dart",
+    "src/services/presenter_service.dart",
+    "src/services/shortcuts_service.dart",
+    "src/services/startup_service.dart",
+    "src/services/oobe/channel_service.dart",
+    "src/services/oobe/privacy_consent_service.dart",
+    "src/services/oobe/ssh_keys_service.dart",
+    "src/services/settings/battery_watcher_service.dart",
+    "src/services/settings/datetime_service.dart",
+    "src/services/settings/memory_watcher_service.dart",
+    "src/services/settings/network_address_service.dart",
+    "src/services/settings/task_service.dart",
+    "src/services/settings/timezone_service.dart",
   ]
 
-  manifest = "pubspec.yaml"
+  states = [
+    "src/states/app_state.dart",
+    "src/states/app_state_impl.dart",
+    "src/states/oobe_state.dart",
+    "src/states/oobe_state_impl.dart",
+    "src/states/settings_state.dart",
+    "src/states/settings_state_impl.dart",
+    "src/states/view_state.dart",
+    "src/states/view_state_impl.dart",
+  ]
+
+  utils = [
+    "src/utils/crash.dart",
+    "src/utils/fuchsia_keyboard.dart",
+    "src/utils/mobx_disposable.dart",
+    "src/utils/mobx_extensions.dart",
+    "src/utils/themes.dart",
+    "src/utils/view_handle.dart",
+    "src/utils/widget_factory.dart",
+  ]
+
+  widgets = [
+    "src/widgets/app.dart",
+    "src/widgets/app_bar.dart",
+    "src/widgets/app_chips.dart",
+    "src/widgets/app_launcher.dart",
+    "src/widgets/app_view.dart",
+    "src/widgets/launch_button.dart",
+    "src/widgets/oobe.dart",
+    "src/widgets/overlays.dart",
+    "src/widgets/quick_settings.dart",
+    "src/widgets/scrim.dart",
+    "src/widgets/oobe/channels.dart",
+    "src/widgets/oobe/data_sharing.dart",
+    "src/widgets/oobe/ssh_keys.dart",
+    "src/widgets/settings/setting_details.dart",
+    "src/widgets/settings/shortcut_settings.dart",
+    "src/widgets/settings/timezone_settings.dart",
+    "src/widgets/side_bar.dart",
+    "src/widgets/status.dart",
+  ]
 
   sources = [
-    "main.dart",
-    "src/models/alert_model.dart",
-    "src/models/app_model.dart",
-    "src/models/ask_model.dart",
-    "src/models/cluster_model.dart",
-    "src/models/ermine_shell.dart",
-    "src/models/ermine_story.dart",
-    "src/models/oobe_model.dart",
-    "src/models/status_model.dart",
-    "src/models/topbar_model.dart",
-    "src/utils/crash.dart",
-    "src/utils/elevations.dart",
-    "src/utils/focus_change_listener.dart",
-    "src/utils/mobx_extensions.dart",
-    "src/utils/pointer_events_stream.dart",
-    "src/utils/presenter.dart",
-    "src/utils/styles.dart",
-    "src/utils/suggestion.dart",
-    "src/utils/suggestions.dart",
-    "src/utils/utils.dart",
-    "src/widgets/app.dart",
-    "src/widgets/ask/ask.dart",
-    "src/widgets/ask/ask_container.dart",
-    "src/widgets/ask/ask_suggestion_list.dart",
-    "src/widgets/ask/ask_text_field.dart",
-    "src/widgets/oobe/channel.dart",
-    "src/widgets/oobe/data_sharing.dart",
-    "src/widgets/oobe/oobe_buttons.dart",
-    "src/widgets/oobe/oobe_header.dart",
-    "src/widgets/oobe/ssh_keys.dart",
-    "src/widgets/status/detail_status_entry.dart",
-    "src/widgets/status/spec_builder.dart",
-    "src/widgets/status/status.dart",
-    "src/widgets/status/status_button.dart",
-    "src/widgets/status/status_container.dart",
-    "src/widgets/status/status_entry.dart",
-    "src/widgets/status/status_graph.dart",
-    "src/widgets/status/status_progress.dart",
-    "src/widgets/story/cluster.dart",
-    "src/widgets/story/clusters.dart",
-    "src/widgets/story/fullscreen_story.dart",
-    "src/widgets/story/post_render.dart",
-    "src/widgets/story/thumbnails.dart",
-    "src/widgets/story/tile_chrome.dart",
-    "src/widgets/story/tile_sizer.dart",
-    "src/widgets/story/tile_tab.dart",
-    "src/widgets/support/alert.dart",
-    "src/widgets/support/animation_driver.dart",
-    "src/widgets/support/home.dart",
-    "src/widgets/support/home_container.dart",
-    "src/widgets/support/keyboard_help.dart",
-    "src/widgets/support/oobe.dart",
-    "src/widgets/support/overview.dart",
-    "src/widgets/support/recents.dart",
-    "src/widgets/topbar/button.dart",
-    "src/widgets/topbar/topbar.dart",
-    "test_main.dart",
-  ]
+              "main.dart",
+              "test_main.dart",
+            ] + services + states + utils + widgets
 
   deps = [
     "//sdk/dart/fidl",
@@ -112,11 +106,13 @@ flutter_app("ermine") {
     "//sdk/dart/fuchsia_scenic_flutter",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
+    "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.memory",
+    "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.power",
     "//sdk/fidl/fuchsia.session",
     "//sdk/fidl/fuchsia.settings",
@@ -130,52 +126,49 @@ flutter_app("ermine") {
     "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.update.channelcontrol",
-    "//src/experiences/lib/ermine_ui:ermine_ui",
-    "//src/experiences/lib/quickui",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//src/experiences/session_shells/ermine/settings",
-    "//src/experiences/session_shells/ermine/tiler",
-    "//src/sys/component_index/fidl:index",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/async",
     "//third_party/dart-pkg/pub/flutter_mobx",
-    "//third_party/dart-pkg/pub/flutter_svg",
-    "//third_party/dart-pkg/pub/http",
     "//third_party/dart-pkg/pub/intl",
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/mobx",
     "//third_party/dart-pkg/pub/uuid",
     "//third_party/dart-pkg/pub/vector_math",
   ]
+}
+
+flutter_component("component") {
+  if (flutter_driver_enabled) {
+    main_dart = "test_main.dart"
+  } else {
+    main_dart = "main.dart"
+  }
+  component_name = "ermine"
+  manifest = "meta/ermine.cmx"
+  deps = [
+    ":lib",
+    ":resources",
+    ":time_zone_list",
+  ]
+}
+
+fuchsia_package("ermine") {
+  deps = [ ":component" ]
 
   if (start_oobe) {
     deps += [ ":oobe_config" ]
   } else {
     deps += [ ":default_config" ]
   }
-
-  non_dart_deps = [ ":time_zone_list" ]
-
-  resources = [
-    {
-      path = rebase_path("config/keyboard_shortcuts.json")
-      dest = "keyboard_shortcuts.json"
-    },
-    {
-      path = rebase_path(tz_ids_path)
-      dest = "tz_ids.txt"
-    },
-    {
-      path = rebase_path(
-              "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf")
-      dest = "MaterialIcons-Regular.otf"
-    },
-  ]
 }
+
+tz_ids_path = "${target_gen_dir}/tz_ids.txt"
 
 static_icu_data("time_zone_list") {
   command = "tz-ids"
@@ -192,20 +185,34 @@ static_icu_data("time_zone_list") {
   command_args = [ "--fixed-order=${fixed_order}" ]
 }
 
-config_data("ermine_fonts") {
-  for_pkg = "fonts"
+resource("resources") {
+  sources = [
+    ermine_app_entries,
+    "config/keyboard_shortcuts.json",
+    "config/privacy_policy.txt",
+    rebase_path(tz_ids_path),
+    rebase_path(
+        "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf"),
+  ]
 
-  sources = [ "fonts/manifest.json" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  sources += rebase_path([
-                           "RobotoMono-Light.ttf",
-                           "RobotoMono-Medium.ttf",
-                           "RobotoMono-Regular.ttf",
-                         ],
-                         "",
-                         "//prebuilt/third_party/fonts/robotomono/")
+config_data("images") {
+  for_pkg = "ermine"
 
-  outputs = [ "fonts/{{source_file_part}}" ]
+  sources = rebase_path([
+                          "images/Chromium-icon-2x.png",
+                          "images/Default-icon-2x.png",
+                          "images/Fuchsia-logo-2x.png",
+                          "images/Linux-icon-2x.png",
+                          "images/Settings-icon-2x.png",
+                          "images/SimpleBrowser-icon-2x.png",
+                          "images/SpinningSquare-icon-2x.png",
+                          "images/Terminal-icon-2x.png",
+                        ])
+
+  outputs = [ "{{source_file_part}}" ]
 }
 
 # With the default config, Ermine will not launch the OOBE on startup.
@@ -225,59 +232,20 @@ config_data("oobe_config") {
 }
 
 flutter_test("ermine_unittests") {
-  sources = [
-    "alert_model_test.dart",
-    "alert_widget_test.dart",
-    "app_model_test.dart",
-    "app_widget_test.dart",
-    "ask_model_test.dart",
-    "ask_widget_test.dart",
-    "clusters_model_test.dart",
-    "crash_test.dart",
-    "ermine_story_test.dart",
-    "ermine_test.dart",
-    "oobe_channel_test.dart",
-    "oobe_data_sharing_test.dart",
-    "oobe_model_test.dart",
-    "oobe_ssh_keys_test.dart",
-    "oobe_widget_test.dart",
-    "overview_widget_test.dart",
-    "recents_widget_test.dart",
-    "status_model_test.dart",
-    "topbar_model_test.dart",
-  ]
+  null_safe = true
+  sources = [ "app_widget_test.dart" ]
 
   deps = [
-    ":ermine_dart_library",
-    "//sdk/dart/fidl",
-    "//sdk/dart/fuchsia_inspect",
-    "//sdk/dart/fuchsia_internationalization_flutter",
+    ":lib",
     "//sdk/dart/fuchsia_logger",
-    "//sdk/dart/fuchsia_scenic_flutter",
-    "//sdk/dart/fuchsia_services",
-    "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.device.manager",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.session",
-    "//sdk/fidl/fuchsia.settings",
-    "//sdk/fidl/fuchsia.ssh",
-    "//sdk/fidl/fuchsia.ui.focus",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/fidl/fuchsia.update.channelcontrol",
-    "//src/experiences/lib/quickui",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/http",
     "//third_party/dart-pkg/pub/intl",
+    "//third_party/dart-pkg/pub/mobx",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
   ]
-}
-
-config_data("services_config") {
-  for_pkg = "sysmgr"
-  sources = [ rebase_path("config/ermine_services.config") ]
 }
