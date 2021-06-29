@@ -101,41 +101,40 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
     return status;
   }
 
-  auto status_irq = AmlSdmmcStatus::Get().ReadFrom(&mmio_);
-  uint32_t rxd_err = status_irq.rxd_err();
+  const auto status_irq = AmlSdmmcStatus::Get().ReadFrom(&mmio_);
 
   auto complete = fit::defer([&]() { ClearStatus(); });
 
   auto on_bus_error =
       fit::defer([&]() { AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_); });
 
-  if (rxd_err) {
+  if (status_irq.rxd_err()) {
     if (req->probe_tuning_cmd) {
-      AML_SDMMC_TRACE("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d", req->cmd_idx,
-                      status_irq.reg_value(), rxd_err);
+      AML_SDMMC_TRACE("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
+                      status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d", req->cmd_idx,
-                      status_irq.reg_value(), rxd_err);
+      AML_SDMMC_ERROR("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
+                      status_irq.reg_value());
     }
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (status_irq.txd_err()) {
-    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d, status=0x%x TXD_ERR", req->cmd_idx,
+    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
                     status_irq.reg_value());
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (status_irq.desc_err()) {
-    AML_SDMMC_ERROR("Controller does not own the descriptor, cmd%d, status=0x%x", req->cmd_idx,
-                    status_irq.reg_value());
+    AML_SDMMC_ERROR("Controller does not own the descriptor, cmd%d, arg=0x%08x, status=0x%08x",
+                    req->cmd_idx, req->arg, status_irq.reg_value());
     return ZX_ERR_IO_INVALID;
   }
   if (status_irq.resp_err()) {
     if (req->probe_tuning_cmd) {
-      AML_SDMMC_TRACE("Response CRC Error, cmd%d, status=0x%x", req->cmd_idx,
-                      status_irq.reg_value());
+      AML_SDMMC_TRACE("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx,
+                      req->arg, status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("Response CRC Error, cmd%d, status=0x%x", req->cmd_idx,
-                      status_irq.reg_value());
+      AML_SDMMC_ERROR("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx,
+                      req->arg, status_irq.reg_value());
     }
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
@@ -147,22 +146,23 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
                   (SD_SEND_IF_COND_FLAGS) != (MMC_SEND_EXT_CSD_FLAGS));
     // When mmc dev_ice is being probed with SDIO command this is an expected failure.
     if (req->probe_tuning_cmd || is_sd_cmd8) {
-      AML_SDMMC_TRACE("No response received before time limit, cmd%d, status=0x%x", req->cmd_idx,
-                      status_irq.reg_value());
+      AML_SDMMC_TRACE("No response received before time limit, cmd%d, arg=0x%08x, status=0x%08x",
+                      req->cmd_idx, req->arg, status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("No response received before time limit, cmd%d, status=0x%x", req->cmd_idx,
-                      status_irq.reg_value());
+      AML_SDMMC_ERROR("No response received before time limit, cmd%d, arg=0x%08x, status=0x%08x",
+                      req->cmd_idx, req->arg, status_irq.reg_value());
     }
     return ZX_ERR_TIMED_OUT;
   }
   if (status_irq.desc_timeout()) {
-    AML_SDMMC_ERROR("Descriptor execution timed out, cmd%d, status=0x%x", req->cmd_idx,
-                    status_irq.reg_value());
+    AML_SDMMC_ERROR("Descriptor execution timed out, cmd%d, arg=0x%08x, status=0x%08x",
+                    req->cmd_idx, req->arg, status_irq.reg_value());
     return ZX_ERR_TIMED_OUT;
   }
 
   if (!(status_irq.end_of_chain())) {
-    AML_SDMMC_ERROR("END OF CHAIN bit is not set status:0x%x", status_irq.reg_value());
+    AML_SDMMC_ERROR("END OF CHAIN bit is not set, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx,
+                    req->arg, status_irq.reg_value());
     return ZX_ERR_IO_INVALID;
   }
 
@@ -205,40 +205,39 @@ zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInte
     return zx::error(status);
   }
 
-  auto status_irq = AmlSdmmcStatus::Get().ReadFrom(&mmio_);
-  uint32_t rxd_err = status_irq.rxd_err();
+  const auto status_irq = AmlSdmmcStatus::Get().ReadFrom(&mmio_);
 
   auto complete = fit::defer([&]() { ClearStatus(); });
 
   auto on_bus_error =
       fit::defer([&]() { AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_); });
 
-  if (rxd_err) {
+  if (status_irq.rxd_err()) {
     if (req.probe_tuning_cmd) {
-      AML_SDMMC_TRACE("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d", req.cmd_idx,
-                      status_irq.reg_value(), rxd_err);
+      AML_SDMMC_TRACE("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
+                      status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d", req.cmd_idx,
-                      status_irq.reg_value(), rxd_err);
+      AML_SDMMC_ERROR("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
+                      status_irq.reg_value());
     }
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
   if (status_irq.txd_err()) {
-    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d, status=0x%x TXD_ERR", req.cmd_idx,
+    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
                     status_irq.reg_value());
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
   if (status_irq.desc_err()) {
-    AML_SDMMC_ERROR("Controller does not own the descriptor, cmd%d, status=0x%x", req.cmd_idx,
-                    status_irq.reg_value());
+    AML_SDMMC_ERROR("Controller does not own the descriptor, cmd%d, arg=0x%08x, status=0x%08x",
+                    req.cmd_idx, req.arg, status_irq.reg_value());
     return zx::error(ZX_ERR_IO_INVALID);
   }
   if (status_irq.resp_err()) {
     if (req.probe_tuning_cmd) {
-      AML_SDMMC_TRACE("Response CRC Error, cmd%d, status=0x%x", req.cmd_idx,
+      AML_SDMMC_TRACE("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
                       status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("Response CRC Error, cmd%d, status=0x%x", req.cmd_idx,
+      AML_SDMMC_ERROR("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
                       status_irq.reg_value());
     }
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
@@ -251,22 +250,23 @@ zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInte
                   (SD_SEND_IF_COND_FLAGS) != (MMC_SEND_EXT_CSD_FLAGS));
     // When mmc dev_ice is being probed with SDIO command this is an expected failure.
     if (req.probe_tuning_cmd || is_sd_cmd8) {
-      AML_SDMMC_TRACE("No response received before time limit, cmd%d, status=0x%x", req.cmd_idx,
-                      status_irq.reg_value());
+      AML_SDMMC_TRACE("No response received before time limit, cmd%d, arg=0x%08x, status=0x%08x",
+                      req.cmd_idx, req.arg, status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("No response received before time limit, cmd%d, status=0x%x", req.cmd_idx,
-                      status_irq.reg_value());
+      AML_SDMMC_ERROR("No response received before time limit, cmd%d, arg=0x%08x, status=0x%08x",
+                      req.cmd_idx, req.arg, status_irq.reg_value());
     }
     return zx::error(ZX_ERR_TIMED_OUT);
   }
   if (status_irq.desc_timeout()) {
-    AML_SDMMC_ERROR("Descriptor execution timed out, cmd%d, status=0x%x", req.cmd_idx,
-                    status_irq.reg_value());
+    AML_SDMMC_ERROR("Descriptor execution timed out, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx,
+                    req.arg, status_irq.reg_value());
     return zx::error(ZX_ERR_TIMED_OUT);
   }
 
   if (!(status_irq.end_of_chain())) {
-    AML_SDMMC_ERROR("END OF CHAIN bit is not set status:0x%x", status_irq.reg_value());
+    AML_SDMMC_ERROR("END OF CHAIN bit is not set, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx,
+                    req.arg, status_irq.reg_value());
     return zx::error(ZX_ERR_IO_INVALID);
   }
 
