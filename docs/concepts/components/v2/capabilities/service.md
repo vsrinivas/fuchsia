@@ -71,6 +71,30 @@ The `from: "self"` directive means that the service capability is provided by
 this component. In this case the service must have a corresponding
 [definition](#providing-service-capability).
 
+#### Services routed from collections {#routing-service-capability-collection}
+
+A service capability can be exposed from a [dynamic collection][collection].
+
+```json5
+{
+    collections: [
+        {
+            name: "coll",
+            durability: "transient",
+        },
+    ],
+    expose: [
+        {
+            service: "fuchsia.example.ExampleService",
+            from: "#coll",
+        },
+    ],
+}
+```
+
+The exposed service capability is an [aggregate][services-collection] of the
+services exposed by each of the components in the collection.
+
 ### Offering {#routing-service-capability-offer}
 
 Offering a service capability gives a child component access to that capability.
@@ -128,6 +152,7 @@ You can also customize the namespace path:
 For more information about the open request, see
 [life of a protocol open][life-of-a-protocol-open].
 
+[collection]: /docs/concepts/components/v2/realms.md#collections
 [glossary.protocol]: /docs/glossary/README.md#protocol
 [glossary.service]: /docs/glossary/README.md#service
 [glossary.namespace]: /docs/glossary/README.md#namespace
@@ -142,4 +167,5 @@ For more information about the open request, see
 [offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [protocol-capability]: /docs/concepts/components/v2/capabilities/protocol.md
 [routing-example]: /examples/components/routing
+[services-collection]: /docs/concepts/components/v2/services.md#services-routed-from-collections
 [use]: /docs/concepts/components/v2/component_manifests.md#use
