@@ -23,8 +23,12 @@ impl Namespace {
     pub fn new(root: FsNodeHandle) -> Arc<Namespace> {
         // TODO(tbodt): We can avoid this RwLock<Option thing by using Arc::new_cyclic, but that's
         // unstable.
-        let namespace = Arc::new(Self { root_mount: RwLock::new(None), mount_points: RwLock::new(HashMap::new()) });
-        *namespace.root_mount.write() = Some(Arc::new(Mount { namespace: Arc::downgrade(&namespace), mountpoint: None, root }));
+        let namespace = Arc::new(Self {
+            root_mount: RwLock::new(None),
+            mount_points: RwLock::new(HashMap::new()),
+        });
+        *namespace.root_mount.write() =
+            Some(Arc::new(Mount { namespace: Arc::downgrade(&namespace), mountpoint: None, root }));
         namespace
     }
     pub fn root(&self) -> NamespaceNode {
