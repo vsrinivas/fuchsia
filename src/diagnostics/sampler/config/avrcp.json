@@ -1,0 +1,116 @@
+{
+    "project_id": 2322225253,
+    "poll_rate_sec": 60,
+    "metrics": [
+        {
+            "selector": "bt-avrcp:root/metrics:distinct_peers",
+            "metric_id": 12,
+            "metric_type": "Occurrence",
+            "event_codes": []
+        },
+        {
+            "selector": "bt-avrcp:root/metrics:control_connections",
+            "metric_id": 13,
+            "metric_type": "Occurrence",
+            "event_codes": [
+                0
+            ]
+        },
+        {
+            "selector": "bt-avrcp:root/metrics:browse_connections",
+            "metric_id": 13,
+            "metric_type": "Occurrence",
+            "event_codes": [
+                1
+            ]
+        },
+        {
+            "selector": "bt-avrcp:root/metrics:connection_errors",
+            "metric_id": 14,
+            "metric_type": "Occurrence",
+            "event_codes": [
+                0
+            ]
+        },
+        {
+            "selector": "bt-avrcp:root/metrics:control_channel_collisions",
+            "metric_id": 14,
+            "metric_type": "Occurrence",
+            "event_codes": [
+                1
+            ]
+        },
+        {
+            "selector": "bt-avrcp:root/metrics:target_peers_supporting_browsing",
+            "metric_id": 15,
+            "metric_type": "Occurrence",
+            "event_codes": [
+                0,
+                0
+            ]
+        },
+        {
+            "selector": "bt-avrcp:root/metrics:distinct_target_peers_supporting_browsing",
+            "metric_id": 16,
+            "metric_type": "Occurrence",
+            "event_codes": [
+                0,
+                0
+            ]
+        },
+        {
+            "selector": "bt-avrcp:root/metrics:target_peers_supporting_cover_art",
+            "metric_id": 15,
+            "metric_type": "Occurrence",
+            "event_codes": [
+                0,
+                1
+            ]
+        },
+        {
+            "selector": "bt-avrcp:root/metrics:distinct_target_peers_supporting_cover_art",
+            "metric_id": 16,
+            "metric_type": "Occurrence",
+            "event_codes": [
+                0,
+                1
+            ]
+        },
+        {
+            "selector": "bt-avrcp:root/metrics:controller_peers_supporting_browsing",
+            "metric_id": 15,
+            "metric_type": "Occurrence",
+            "event_codes": [
+                1,
+                0
+            ]
+        },
+        {
+            "selector": "bt-avrcp:root/metrics:distinct_controller_peers_supporting_browsing",
+            "metric_id": 16,
+            "metric_type": "Occurrence",
+            "event_codes": [
+                1,
+                0
+            ]
+        },
+        {
+            "selector": "bt-avrcp:root/metrics:controller_peers_supporting_cover_art",
+            "metric_id": 15,
+            "metric_type": "Occurrence",
+            "event_codes": [
+                1,
+                1
+            ]
+        },
+        {
+            "selector": "bt-avrcp:root/metrics:distinct_controller_peers_supporting_cover_art",
+            "metric_id": 16,
+            "metric_type": "Occurrence",
+            "event_codes": [
+                1,
+                1
+            ]
+        }
+    ]
+}

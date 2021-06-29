@@ -75,6 +75,7 @@ fuchsia_unittest_package("sampler-tests") {
 sampler_configuration("production_sampler") {
   configs = [
     "config/archivist.json",
+    "config/avrcp.json",
     "config/bthost.json",
     "config/file-usage-metrics.json",
     "config/ftl.json",
