@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1321
+From //build/config/BUILDCONFIG.gn:1320
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -229,7 +229,7 @@ Pass the empty string for no limit.
 
 **Current value (from the default):** `""`
 
-From //src/storage/fshost/BUILD.gn:16
+From //src/storage/fshost/BUILD.gn:17
 
 ### blobfs_page_in_metrics_recording
 Set this to true when configuring gn args to enable blobfs page-in
@@ -554,7 +554,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:562
+From //build/config/BUILDCONFIG.gn:561
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -628,7 +628,7 @@ and compare the outputs' contents for reproducibility.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:566
+From //build/config/BUILDCONFIG.gn:565
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -1004,13 +1004,20 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 From //build/images/args.gni:60
 
+### enable_rbe
+Set to true to enable distributed compilation using RBE.
+
+**Current value (from the default):** `false`
+
+From //build/toolchain/rbe.gni:9
+
 ### ermine_app_entries
 Build arg that allows overriding the default set of application entries
 using '--args=ermine_app_entries="config/app_launch_entries.json"'
 
 **Current value (from the default):** `"config/app_launch_entries.json"`
 
-From //src/experiences/session_shells/ermine/next/BUILD.gn:24
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:24
 
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
@@ -1084,7 +1091,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1078
+From //build/config/BUILDCONFIG.gn:1077
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1092,7 +1099,7 @@ corrupted. Setting this flag to true helps debugging corruptions.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/BUILD.gn:32
+From //src/storage/fshost/BUILD.gn:33
 
 ### fastboot_product
 
@@ -1215,7 +1222,7 @@ debug issues.
 
 **Current value (from the default):** `true`
 
-From //src/storage/fshost/BUILD.gn:28
+From //src/storage/fshost/BUILD.gn:29
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -1888,7 +1895,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:929
+From //build/config/BUILDCONFIG.gn:928
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1897,13 +1904,6 @@ product image.
 **Current value (from the default):** `true`
 
 From //src/modular/build/modular_config/modular_config.gni:12
-
-### launch_oobe
-Whether or not to launch OOBE workflow on startup.
-
-**Current value (from the default):** `false`
-
-From //src/experiences/session_shells/ermine/next/BUILD.gn:27
 
 ### linux_runner_extras_tests
 If `true`, adds additional testonly content to extras.img, which will be
@@ -2183,7 +2183,7 @@ Pass the empty string for no limit.
 
 **Current value (from the default):** `""`
 
-From //src/storage/fshost/BUILD.gn:23
+From //src/storage/fshost/BUILD.gn:24
 
 ### minfs_product_maximum_bytes
 
@@ -3217,7 +3217,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1311
+From //build/config/BUILDCONFIG.gn:1310
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3226,7 +3226,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1316
+From //build/config/BUILDCONFIG.gn:1315
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3270,7 +3270,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1124
+From //build/config/BUILDCONFIG.gn:1123
 
 ### size_checker_input
 The input to the size checker.
@@ -3348,7 +3348,7 @@ Whether or not to launch OOBE workflow on startup.
 
 **Current value (from the default):** `false`
 
-From //src/experiences/session_shells/ermine/shell/BUILD.gn:15
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:27
 
 ### sysmgr_golden_warn_override
 Used by config_package().
@@ -3556,7 +3556,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1108
+From //build/config/BUILDCONFIG.gn:1107
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
