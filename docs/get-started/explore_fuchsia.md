@@ -1,69 +1,82 @@
 # Explore Fuchsia {#explore-fuchsia}
 
-In Fuchsia, components are the basic unit of executable software.
-When a Fuchsia device or emulator is booted and displays the `$` prompt in the shell,
-you can run [components](/docs/concepts/components/v2). 
+In Fuchsia, [components][components] are the basic unit of executable software.
 
-To try running an example component on your Fuchsia device, see
-[Run an example component](/docs/development/run/run-examples.md).
+## Run an example component {#run-an-example-component}
 
-## Run shell commands
+To run an example component on your Fuchsia device, see the
+[Run an example component][run-examples] guide.
 
-Device commands in Fuchsia use the command `dm`. For example, to get a list
-of device commands, use the following command:
+## Run ffx commands {#run-ffx-commands}
 
-```posix-terminal
-dm help
-```
+[`ffx`][ffx-overview] is a host tool for Fuchsia target workflows that
+provides the consistent development experience across all Fuchsia environments
+and host platforms.
 
-To reboot Fuchsia, use the following command:
+See the following example `ffx` commands:
 
-```posix-terminal
-dm reboot
-```
+*   Display the list of devices:
 
-See
-[Connect to a target shell](/docs/development/build/fx.md#connect-to-a-target-shell)
-for more information on connecting to your Fuchsia device or emulator.
+    ```posix-terminal
+    ffx target list
+    ```
 
-## Write software for Fuchsia
+*   Display the device information:
 
-FIDL (Fuchsia Interface Definition Language) is the Interprocess Communication (IPC) system for
-Fuchsia. For an example of writing [FIDL](/docs/development/languages/fidl) APIs and client
-and server components, review the
-[FIDL tutorials](/docs/development/languages/fidl/tutorials/overview.md).
+    ```posix-terminal
+    ffx target show
+    ```
 
-You can also read the [FIDL concepts doc](/docs/concepts/fidl/overview.md) to get a brief
-overview of what FIDL is, including its design goals, requirements, and workflows.
+*   Print the device logs:
 
-## Run tests
+    ```posix-terminal
+    ffx target log watch
+    ```
 
-To test Fuchsia on your device, see
-[Run Fuchsia tests](/docs/development/testing/run_fuchsia_tests.md).
+*   Reboot the device:
 
-## Launch a graphical component
+    ```posix-terminal
+    ffx target reboot
+    ```
 
-Most graphical components in Fuchsia use the
-[Scenic](/docs/concepts/graphics/scenic/scenic.md) system compositor. You can
-launch such components (commonly found in `/system/apps`) using the
+## Write software for Fuchsia {#write-software-for-fuchsia}
+
+[FIDL][fidl] (Fuchsia Interface Definition Language) is the Interprocess
+Communication (IPC) system for Fuchsia.
+
+To learn more about FIDL, the following resources are available:
+
+*   To get a brief overview of what FIDL is, including its design goals,
+    requirements, and workflows, read the [FIDL concepts][fidl-concepts] guide.
+*   To learn how to write FIDL APIs and client and server components, review the
+    [FIDL tutorials][fidl-tutorials].
+
+## Run Fuchsia tests {#run-fuchsia-tests}
+
+To test Fuchsia on your device, see the [Run Fuchsia tests][run-fuchsia-tests]
+guide.
+
+## Launch a graphical component {#launch-a-graphical-component}
+
+Most graphical components in Fuchsia use the [Scenic][scenic] system compositor.
+You can launch such components (commonly found in `/system/apps`) using the
 `present_view` command, for example:
 
-```sh
-present_view fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx
+```posix-terminal
+fssh present_view fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx
 ```
 
-See [Scenic example apps](/src/ui/examples).
+For more information, see [Scenic example apps](/src/ui/examples).
 
 If you launch a component that uses Scenic or hardware-accelerated graphics,
 Fuchsia enters the graphics mode, which doesn't display the shell. To use the
-shell, press `Alt+Escape` to enter the console mode. In the console mode,
-`Alt+Tab` has the same behavior described in [Select a tab](#select-a-tab).
-Press `Alt+Escape` again to return to the graphics mode.
+shell, press `Alt+Escape` to enter the console mode. Press `Alt+Escape` again to
+return to the graphics mode.
 
-## Contribute changes
+## Contribute changes {#contribute-changes}
 
 To submit your contribution to Fuchsia, see
-[Contribute changes](/docs/development/source_code/contribute_changes.md).
+[Contribute changes][contribute-changes].
 
 ## See also
 
@@ -72,3 +85,16 @@ To submit your contribution to Fuchsia, see
 *   [Configure editors](/docs/development/editors/)
 *   [Source code layout](/docs/concepts/source_code/layout.md)
 *   [Build system](/docs/concepts/build_system/index.md)
+
+<!-- Reference links -->
+
+[components]: /docs/concepts/components/v2
+[run-examples]: /docs/development/run/run-examples.md
+[ffx-overview]: /docs/development/tools/ffx/overview.md
+[fidl]: /docs/development/languages/fidl
+[fidl-tutorials]: /docs/development/languages/fidl/tutorials/overview.md
+[fidl-concepts]: /docs/concepts/fidl/overview.md
+[run-fuchsia-tests]: /docs/development/testing/run_fuchsia_tests.md
+[scenic]: /docs/concepts/graphics/scenic/scenic.md
+[contribute-changes]: /docs/development/source_code/contribute_changes.md
+

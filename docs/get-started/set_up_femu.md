@@ -9,6 +9,7 @@ The steps are:
 1. [Build Fuchisa for FEMU](#build-fuchsia-for-femu).
 1. [Enable KVM (Optional)](#enable-kvm).
 1. [Start FEMU](#start-femu).
+1. [Discover FEMU](#discover-femu).
 
 ## Prerequisites
 
@@ -140,6 +141,25 @@ Start the Fuchsia emulator on your machine.
      * `SSH_PORT`: Use the value from the `fx vdl start` command's output in
      Step 1.
 
+## Discover FEMU {#discover-femu}
+
+To discover the Fuchsia emulator as a running Fuchsia device, run the
+following command:
+
+```posix-terminal
+ffx target list
+```
+
+This command prints output similar to the following:
+
+```none {:.devsite-disable-click-to-copy}
+$ ffx target list
+NAME                      SERIAL       TYPE                    STATE      ADDRS/IP                            RCS
+fuchsia-5254-0063-5e7a    <unknown>    workstation.qemu-x64    Product    [fe80::866a:a5ea:cd9e:69f6%qemu]    N
+```
+
+`fuchsia-5254-0063-5e7a` is the default node name of the Fuchsia emulator.
+
 ## Next steps
 
 For the next steps, check out the following resources:
@@ -229,9 +249,21 @@ for unsupported GPUs.
   </tbody>
 </table>
 
+### Reboot FEMU {#reboot-femu}
+
+To reboot FEMU, run the following `ffx` command:
+
+```posix-terminal
+ffx target reboot
+```
+
 ### Exit FEMU {#exit-femu}
 
-To exit FEMU, run `dm poweroff` in the FEMU terminal.
+To exit FEMU, run the following `ffx` command:
+
+```posix-terminal
+ffx target off
+```
 
 ### Configure IPv6 network {#configure-ipv6-network}
 
