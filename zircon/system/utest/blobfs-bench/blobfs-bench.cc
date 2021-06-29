@@ -351,7 +351,7 @@ bool RunBenchmark(int argc, char** argv) {
       fbl::String size = GetNameForSize(blob_size);
 
       TestInfo api_test;
-      api_test.name = fbl::StringPrintf("%s/%s/%luBlobs/Api", disk_format_string_[f_opts.fs_type],
+      api_test.name = fbl::StringPrintf("%s/%s/%luBlobs/Api", disk_format_string(f_opts.fs_type),
                                         size.c_str(), blob_count);
       // There should be enough space for each blob, the merkle tree nodes, and the inodes.
       api_test.required_disk_space =
@@ -366,7 +366,7 @@ bool RunBenchmark(int argc, char** argv) {
         for (auto order : orders) {
           TestInfo read_test;
           read_test.name =
-              fbl::StringPrintf("%s/%s/%luBlobs/Read%s", disk_format_string_[f_opts.fs_type],
+              fbl::StringPrintf("%s/%s/%luBlobs/Read%s", disk_format_string(f_opts.fs_type),
                                 size.c_str(), blob_count, GetNameForOrder(order).c_str());
           read_test.test_fn = [test_index, order, &blobfs_tests](perftest::RepeatState* state,
                                                                  fs_test_utils::Fixture* fixture) {

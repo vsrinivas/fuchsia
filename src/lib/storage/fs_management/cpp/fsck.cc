@@ -95,6 +95,10 @@ zx_status_t fsck(const char* device_path, disk_format_t df, const fsck_options_t
     case DISK_FORMAT_BLOBFS:
       return FsckNativeFs(device_path, options, cb, fs_management::GetBinaryPath("blobfs").c_str());
     default:
-      return ZX_ERR_NOT_SUPPORTED;
+      auto* format = fs_management::CustomDiskFormat::Get(df);
+      if (format == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      return FsckNativeFs(device_path, options, cb, format->binary_path().c_str());
   }
 }

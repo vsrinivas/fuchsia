@@ -544,8 +544,12 @@ std::vector<TestFilesystemOptions> GetTestCombinations() {
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MmapTest, testing::ValuesIn(GetTestCombinations()),
                          testing::PrintToStringParamName());
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MmapTest);
+
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MmapDeathTest, testing::ValuesIn(GetTestCombinations()),
                          testing::PrintToStringParamName());
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MmapDeathTest);
 
 }  // namespace
 }  // namespace fs_test

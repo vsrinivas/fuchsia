@@ -396,7 +396,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
         FX_LOGS(INFO) << "fsck took " << duration.to_secs() << "." << duration.to_msecs() % 1000
                       << " seconds";
       });
-      FX_LOGS(INFO) << "fsck of " << disk_format_string_[format_] << " started";
+      FX_LOGS(INFO) << "fsck of " << disk_format_string(format_) << " started";
       uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
       std::unique_ptr<block_client::BlockDevice> device;
       zx_status_t status = minfs::FdToBlockDevice(fd_, &device);
@@ -419,7 +419,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
                           "|\n"
                           "|   WARNING: fshost fsck failure!\n"
                           "|   Corrupt "
-                       << disk_format_string_[format_]
+                       << disk_format_string(format_)
                        << " filesystem\n"
                           "|\n"
                           "|   If your system was shutdown cleanly (via 'dm poweroff'\n"
@@ -429,7 +429,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
                           "--------------------------------------------------------------";
         MaybeDumpMetadata(fd_.duplicate(), {.disk_format = DISK_FORMAT_MINFS});
       } else {
-        FX_LOGS(INFO) << "fsck of " << disk_format_string_[format_] << " completed OK";
+        FX_LOGS(INFO) << "fsck of " << disk_format_string(format_) << " completed OK";
       }
       return status;
     }

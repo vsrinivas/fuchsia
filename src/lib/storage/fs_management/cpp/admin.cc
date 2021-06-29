@@ -140,7 +140,12 @@ zx::status<> FsInit(zx::channel device, disk_format_t df, const init_options_t& 
       return InitNativeFs(fs_management::GetBinaryPath("factoryfs").c_str(), std::move(device),
                           options, std::move(outgoing_directory));
     default:
-      return zx::error(ZX_ERR_NOT_SUPPORTED);
+      auto* format = CustomDiskFormat::Get(df);
+      if (format == nullptr) {
+        return zx::error(ZX_ERR_NOT_SUPPORTED);
+      }
+      return InitNativeFs(format->binary_path().c_str(), std::move(device), options,
+                          std::move(outgoing_directory));
   }
 }
 

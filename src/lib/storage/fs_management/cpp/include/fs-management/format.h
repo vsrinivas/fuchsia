@@ -26,24 +26,7 @@ typedef enum disk_format_type {
   DISK_FORMAT_COUNT_,
 } disk_format_t;
 
-static const char* disk_format_string_[DISK_FORMAT_COUNT_] = {
-    [DISK_FORMAT_UNKNOWN] = "unknown",
-    [DISK_FORMAT_GPT] = "gpt",
-    [DISK_FORMAT_MBR] = "mbr",
-    [DISK_FORMAT_MINFS] = "minfs",
-    [DISK_FORMAT_FAT] = "fat",
-    [DISK_FORMAT_BLOBFS] = "blobfs",
-    [DISK_FORMAT_FVM] = "fvm",
-    [DISK_FORMAT_ZXCRYPT] = "zxcrypt",
-    [DISK_FORMAT_FACTORYFS] = "factoryfs",
-    [DISK_FORMAT_VBMETA] = "vbmeta",
-    [DISK_FORMAT_BOOTPART] = "bootpart",
-    [DISK_FORMAT_FXFS] = "fxfs",
-};
-
-static inline const char* disk_format_string(disk_format_t fs_type) {
-  return disk_format_string_[fs_type];
-}
+const char* disk_format_string(disk_format_t fs_type);
 
 #define HEADER_SIZE 4096
 
@@ -84,5 +67,33 @@ disk_format_t detect_disk_format(int fd);
 disk_format_t detect_disk_format_log_unknown(int fd);
 
 __END_CDECLS
+
+#ifdef __cplusplus
+
+#include <memory>
+#include <string>
+
+namespace fs_management {
+
+class __EXPORT CustomDiskFormat {
+ public:
+  static disk_format_t Register(std::unique_ptr<CustomDiskFormat> format);
+  static const CustomDiskFormat* Get(disk_format_t);
+
+  CustomDiskFormat(std::string name, std::string_view binary_path)
+      : name_(std::move(name)), binary_path_(binary_path) {}
+  CustomDiskFormat(CustomDiskFormat&&) = default;
+
+  const std::string& name() const { return name_; }
+  const std::string& binary_path() const { return binary_path_; }
+
+ private:
+  std::string name_;
+  std::string binary_path_;
+};
+
+}  // namespace fs_management
+
+#endif
 
 #endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_FORMAT_H_

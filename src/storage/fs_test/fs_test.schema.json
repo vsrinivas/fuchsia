@@ -1,0 +1,48 @@
+{
+    "$id": "https://fuchsia.dev/schema/src/storage/fs_test/fs_test.schema.json",
+    "$schema": "https://json-schema.org/draft-2020-12/schema",
+    "description": "Configuration for running a suite of filesystem tests",
+    "properties": {
+        "binary_path": {
+            "description": "Path to the filesystem binary",
+            "type": "string"
+        },
+        "max_file_size": {
+            "description": "The maximum file size supported",
+            "exclusiveMinimum": 0,
+            "maximum": 9223372036854775807,
+            "type": "integer"
+        },
+        "name": {
+            "description": "Name of the filesystem",
+            "minLength": 1,
+            "type": "string"
+        },
+        "supports_hard_links": {
+            "default": false,
+            "description": "True if hard links are supported",
+            "type": "boolean"
+        },
+        "supports_mmap": {
+            "default": false,
+            "description": "True if mmap is supported",
+            "type": "boolean"
+        },
+        "supports_resize": {
+            "default": false,
+            "description": "True if the filesystem can expand in size when used within a volume manager like FVM",
+            "type": "boolean"
+        },
+        "timestamp_granularity": {
+            "description": "Timestamp granularity in nanoseconds",
+            "exclusiveMinimum": 0,
+            "type": "integer"
+        }
+    },
+    "required": [
+        "name",
+        "binary_path",
+        "timestamp_granularity"
+    ],
+    "type": "object"
+}

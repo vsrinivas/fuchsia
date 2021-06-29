@@ -182,6 +182,30 @@ test("minfs_micro_benchmark") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
+test("fs_tests") {
+  sources = [ "integration/fs_tests.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/storage/fs_test",
+    "//src/storage/fvm",
+    "//src/storage/minfs",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/fdio-caller",
+  ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+storage_isolated_devmgr_unittest_v2_component("minfs-fs-tests") {
+  deps = [ ":fs_tests" ]
+}
+
 fuzzer("minfs-fuzzer") {
   sources = [ "unit/fuzz.cc" ]
   deps = [
@@ -228,10 +252,11 @@ fuchsia_test_package("minfs-tests") {
 
   test_components = [
     ":minfs-dirty-cache-integration-test",
-    ":minfs-unit-test",
-    ":minfs-micro-benchmark-test",
+    ":minfs-fs-tests",
     ":minfs-integration-test",
+    ":minfs-micro-benchmark-test",
     ":minfs-power-test",
+    ":minfs-unit-test",
   ]
 
   deps = [ "//src/storage/bin/minfs" ]

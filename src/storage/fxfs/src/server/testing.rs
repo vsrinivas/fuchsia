@@ -7,9 +7,9 @@ use {
         object_store::{
             filesystem::{FxFilesystem, OpenFxFilesystem},
             fsck::fsck,
+            volume::{create_root_volume, root_volume},
         },
         server::volume::FxVolumeAndRoot,
-        volume::root_volume,
     },
     anyhow::Error,
     fidl::endpoints::{create_proxy, ServerEnd},
@@ -51,13 +51,14 @@ impl TestFixture {
     pub async fn open(device: DeviceHolder, format: bool) -> Self {
         let (filesystem, volume) = if format {
             let filesystem = FxFilesystem::new_empty(device).await.unwrap();
-            let root_volume = root_volume(&filesystem).await.unwrap();
+            let root_volume = create_root_volume(&filesystem).await.unwrap();
             let vol =
                 FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap()).await.unwrap();
             (filesystem, vol)
         } else {
             let filesystem = FxFilesystem::open(device).await.unwrap();
-            let root_volume = root_volume(&filesystem).await.unwrap();
+            let root_volume =
+                root_volume(&filesystem).await.unwrap().expect("root-volume not found");
             let vol = FxVolumeAndRoot::new(root_volume.volume("vol").await.unwrap()).await.unwrap();
             (filesystem, vol)
         };
@@ -98,7 +99,7 @@ impl TestFixture {
         device.ensure_unique();
         device.reopen();
         let filesystem = FxFilesystem::open(device).await.expect("open failed");
-        fsck(filesystem.as_ref()).await.expect("fsck failed");
+        fsck(&filesystem).await.expect("fsck failed");
 
         filesystem.close().await.expect("close filesystem failed");
         let device = filesystem.take_device().await;

@@ -145,6 +145,8 @@ INSTANTIATE_TEST_SUITE_P(
         })),
     testing::PrintToStringParamName());
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(CaseInsensitiveTest);
+
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, CaseSensitiveTest,
     testing::ValuesIn(MapAndFilterAllTestFilesystems(

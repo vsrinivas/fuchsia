@@ -1,0 +1,222 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dist/generated_resource.gni")
+import("//build/json/validate_json.gni")
+import("//build/test.gni")
+import("//src/storage/testing/isolated_devmgr.gni")
+
+# Instantiates a filesystem test suite.
+#
+#   config (required)
+#     Configures the test suite.  See //src/storage/fs_test/fs_test.schema.json for the schema.  The
+#     name and binary_path properties will be derived from the target name if not specified.
+#
+#   deps (required)
+#     This should include the filesystem binary.
+template("fs_test_suite") {
+  suite_name = target_name
+
+  if (defined(invoker.config)) {
+    generated_resource("${suite_name}_config") {
+      contents = invoker.config
+      if (!defined(contents.name)) {
+        contents.name = suite_name
+      }
+      if (!defined(contents.binary_path)) {
+        contents.binary_path = "/pkg/bin/${suite_name}"
+      }
+      output_conversion = "json"
+      outputs = [ "config/config.json" ]
+    }
+
+    config_outputs = get_target_outputs(":${suite_name}_config")
+
+    validate_json("${suite_name}_validate_config") {
+      data = config_outputs[0]
+      schema = "//src/storage/fs_test/fs_test.schema.json"
+      deps = [ ":${suite_name}_config" ]
+    }
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-access-tests") {
+    deps = [ "//src/storage/fs_test:access_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-append-tests") {
+    deps = [ "//src/storage/fs_test:append_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-attr-tests") {
+    deps = [ "//src/storage/fs_test:attr_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-basic-tests") {
+    deps = [ "//src/storage/fs_test:basic_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-case-sensitivity-tests") {
+    deps = [ "//src/storage/fs_test:case_sensitivity_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-clone-tests") {
+    deps = [ "//src/storage/fs_test:clone_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-corrupt-tests") {
+    deps = [ "//src/storage/fs_test:corrupt_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-directory-tests") {
+    deps = [ "//src/storage/fs_test:directory_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-dot-dot-tests") {
+    deps = [ "//src/storage/fs_test:dot_dot_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-fcntl-tests") {
+    deps = [ "//src/storage/fs_test:fcntl_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-filename-tests") {
+    deps = [ "//src/storage/fs_test:filename_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-link-tests") {
+    deps = [ "//src/storage/fs_test:link_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-lseek-tests") {
+    deps = [ "//src/storage/fs_test:lseek_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-mmap-tests") {
+    deps = [ "//src/storage/fs_test:mmap_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-open-tests") {
+    deps = [ "//src/storage/fs_test:open_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-overflow-tests") {
+    deps = [ "//src/storage/fs_test:overflow_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-persist-tests") {
+    deps = [ "//src/storage/fs_test:persist_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-random-op-tests") {
+    deps = [ "//src/storage/fs_test:random_op_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-realpath-tests") {
+    deps = [ "//src/storage/fs_test:realpath_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-rename-tests") {
+    deps = [ "//src/storage/fs_test:rename_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-resize-tests") {
+    deps = [ "//src/storage/fs_test:resize_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-rw-tests") {
+    deps = [ "//src/storage/fs_test:rw_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-rw-workers-tests") {
+    deps = [ "//src/storage/fs_test:rw_workers_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-sparse-tests") {
+    deps = [ "//src/storage/fs_test:sparse_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-sync-tests") {
+    deps = [ "//src/storage/fs_test:sync_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-threading-tests") {
+    deps = [ "//src/storage/fs_test:threading_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-truncate-tests") {
+    deps = [ "//src/storage/fs_test:truncate_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-unicode-tests") {
+    deps = [ "//src/storage/fs_test:unicode_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-unlink-tests") {
+    deps = [ "//src/storage/fs_test:unlink_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component("${suite_name}-watcher-tests") {
+    deps = [ "//src/storage/fs_test:watcher_tests" ]
+  }
+
+  fuchsia_test_package("${suite_name}-fs-tests") {
+    deps = []
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+    if (defined(invoker.config)) {
+      deps += [
+        ":${suite_name}_config",
+        ":${suite_name}_validate_config",
+      ]
+    }
+    test_specs = {
+      log_settings = {
+        max_severity = "ERROR"
+      }
+    }
+    test_components = [
+      ":${suite_name}-access-tests",
+      ":${suite_name}-append-tests",
+      ":${suite_name}-attr-tests",
+      ":${suite_name}-basic-tests",
+      ":${suite_name}-case-sensitivity-tests",
+      ":${suite_name}-clone-tests",
+      ":${suite_name}-corrupt-tests",
+      ":${suite_name}-directory-tests",
+      ":${suite_name}-dot-dot-tests",
+      ":${suite_name}-fcntl-tests",
+      ":${suite_name}-filename-tests",
+      ":${suite_name}-link-tests",
+      ":${suite_name}-lseek-tests",
+      ":${suite_name}-mmap-tests",
+      ":${suite_name}-open-tests",
+      ":${suite_name}-overflow-tests",
+      ":${suite_name}-persist-tests",
+      ":${suite_name}-random-op-tests",
+      ":${suite_name}-realpath-tests",
+      ":${suite_name}-rename-tests",
+      ":${suite_name}-resize-tests",
+      ":${suite_name}-rw-tests",
+      ":${suite_name}-rw-workers-tests",
+      ":${suite_name}-sparse-tests",
+      ":${suite_name}-sync-tests",
+      ":${suite_name}-threading-tests",
+      ":${suite_name}-truncate-tests",
+      ":${suite_name}-unicode-tests",
+      ":${suite_name}-unlink-tests",
+      ":${suite_name}-watcher-tests",
+    ]
+  }
+}

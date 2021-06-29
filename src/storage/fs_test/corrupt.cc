@@ -15,7 +15,6 @@
 #include <gtest/gtest.h>
 
 #include "src/storage/fs_test/fs_test.h"
-#include "src/storage/fs_test/fxfs.h"
 
 namespace fs_test {
 namespace {
@@ -166,11 +165,15 @@ TEST_P(CorruptTest, OutOfOrderWrites) {
 
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, CorruptTest,
-    testing::Values(
-#if 0  // Change to 1 to enable testing for Fxfs
-        DefaultFxfsTestOptions(),
-#endif
-        TestFilesystemOptions::DefaultMinfs()),
+    testing::ValuesIn(MapAndFilterAllTestFilesystems(
+        [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
+          if (options.filesystem->GetTraits().can_unmount &&
+              options.filesystem->GetTraits().is_journaled) {
+            return options;
+          } else {
+            return std::nullopt;
+          }
+        })),
     testing::PrintToStringParamName());
 
 }  // namespace

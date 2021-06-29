@@ -23,6 +23,7 @@ if (is_fuchsia) {
     configs += [ "//build/config:all_source" ]
     sources = [
       "admin.cc",
+      "format.cc",
       "fsck.cc",
       "fvm.cc",
       "launch.cc",

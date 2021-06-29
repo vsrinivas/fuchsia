@@ -115,7 +115,7 @@ class FilesystemInstance {
 class Filesystem {
  public:
   struct Traits {
-    std::string_view name;
+    std::string name;
     bool can_unmount = false;
     zx::duration timestamp_granularity = zx::nsec(1);
     bool supports_hard_links = true;
@@ -128,6 +128,7 @@ class Filesystem {
     bool is_fat = false;
     bool supports_fsck_after_every_transaction = false;
     bool has_directory_size_limit = false;
+    bool is_journaled = true;
   };
 
   virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(
@@ -211,6 +212,7 @@ class FatFilesystem : public FilesystemImpl<FatFilesystem> {
         .is_case_sensitive = false,
         .supports_sparse_files = false,
         .is_fat = true,
+        .is_journaled = false,
     };
     return traits;
   }

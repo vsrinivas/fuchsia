@@ -4,8 +4,9 @@
 
 use {
     crate::{
-        object_store::filesystem::OpenFxFilesystem, server::volume::FxVolumeAndRoot,
-        volume::root_volume,
+        errors::FxfsError,
+        object_store::{filesystem::OpenFxFilesystem, volume::root_volume},
+        server::volume::FxVolumeAndRoot,
     },
     anyhow::{Context, Error},
     fidl_fuchsia_fs::{AdminRequest, AdminRequestStream, QueryRequest, QueryRequestStream},
@@ -46,7 +47,7 @@ pub struct FxfsServer {
 impl FxfsServer {
     /// Creates a new FxfsServer by opening or creating |volume_name| in |fs|.
     pub async fn new(fs: OpenFxFilesystem, volume_name: &str) -> Result<Self, Error> {
-        let volume_dir = root_volume(&fs).await?;
+        let volume_dir = root_volume(&fs).await?.ok_or(FxfsError::Inconsistent)?;
         let volume = FxVolumeAndRoot::new(
             volume_dir
                 .open_or_create_volume(volume_name)
@@ -145,7 +146,10 @@ impl FxfsServer {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{object_store::FxFilesystem, server::FxfsServer},
+        crate::{
+            object_store::{volume::create_root_volume, FxFilesystem},
+            server::FxfsServer,
+        },
         anyhow::Error,
         fidl_fuchsia_fs::AdminMarker,
         fidl_fuchsia_io::DirectoryMarker,
@@ -157,6 +161,7 @@ mod tests {
     async fn test_lifecycle() -> Result<(), Error> {
         let device = DeviceHolder::new(FakeDevice::new(16384, 512));
         let filesystem = FxFilesystem::new_empty(device).await?;
+        create_root_volume(&filesystem).await?;
         let server = FxfsServer::new(filesystem, "root").await.expect("Create server failed");
 
         let (client_end, server_end) = fidl::endpoints::create_endpoints::<DirectoryMarker>()?;

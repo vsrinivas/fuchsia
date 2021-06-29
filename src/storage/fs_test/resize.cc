@@ -227,9 +227,13 @@ INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MaxInodeTest,
                          testing::ValuesIn(GetTestCombinationsForMaxInodeTest()),
                          GetParamDescription);
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MaxInodeTest);
+
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MaxDataTest,
                          testing::ValuesIn(GetTestCombinationsForMaxDataTest()),
                          GetParamDescription);
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MaxDataTest);
 
 }  // namespace
 }  // namespace fs_test

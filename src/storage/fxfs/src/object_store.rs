@@ -16,6 +16,7 @@ pub mod store_object_handle;
 #[cfg(test)]
 mod testing;
 pub mod transaction;
+pub mod volume;
 
 pub use directory::Directory;
 pub use filesystem::FxFilesystem;
@@ -497,22 +498,24 @@ impl ObjectStore {
                 HandleOptions::default(),
             )
             .await?;
-            let layer_object_ids = if handle.get_size() > 0 {
-                let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
-                let store_info: StoreInfo = deserialize_from(&serialized_info[..])
-                    .context("Failed to deserialize StoreInfo")?;
-                let layer_object_ids = store_info.layers.clone();
-                self.update_last_object_id(store_info.last_object_id);
-                *self.store_info.lock().unwrap() = Some(store_info);
-                layer_object_ids
-            } else {
-                let mut store_info = self.store_info.lock().unwrap();
-                // The store_info might be absent for a newly created and empty object store, since
-                // there have been no StoreInfoMutations applied to it.
-                if store_info.is_none() {
-                    *store_info = Some(StoreInfo::default());
+            let layer_object_ids = loop {
+                if let Some(store_info) = &*self.store_info.lock().unwrap() {
+                    break store_info.layers.clone();
                 }
-                store_info.as_ref().unwrap().layers.clone()
+
+                if handle.get_size() > 0 {
+                    let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
+                    let store_info: StoreInfo = deserialize_from(&serialized_info[..])
+                        .context("Failed to deserialize StoreInfo")?;
+                    let layer_object_ids = store_info.layers.clone();
+                    self.update_last_object_id(store_info.last_object_id);
+                    *self.store_info.lock().unwrap() = Some(store_info);
+                    break layer_object_ids;
+                }
+
+                // The store_info will be absent for a newly created and empty object store, since
+                // there have been no StoreInfoMutations applied to it.
+                break vec![];
             };
             let mut handles = Vec::new();
             let mut total_size = 0;
@@ -697,6 +700,8 @@ impl Mutations for ObjectStore {
             Mutation::EndFlush => {
                 if transaction.is_none() {
                     self.tree.reset_immutable_layers();
+                    // StoreInfo needs to be read from the store-info file.
+                    *self.store_info.lock().unwrap() = None;
                 } else {
                     let layers = self.tree.immutable_layer_set();
                     self.filesystem().object_manager().update_reservation(

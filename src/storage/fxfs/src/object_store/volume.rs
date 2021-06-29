@@ -84,57 +84,52 @@ impl RootVolume {
     }
 }
 
-/// Returns the root volume for the filesystem or creates it if it does not exist.
-pub async fn root_volume(fs: &Arc<FxFilesystem>) -> Result<RootVolume, Error> {
+/// Returns the root volume for the filesystem or None if it doesn't exist.
+pub async fn root_volume(fs: &Arc<FxFilesystem>) -> Result<Option<RootVolume>, Error> {
     let root_store = fs.root_store();
-
     let root_directory = Directory::open(&root_store, root_store.root_directory_object_id())
         .await
         .context("Unable to open root volume directory")?;
-
-    let mut transaction = None;
-    let volume_directory = loop {
-        match root_directory.lookup(VOLUMES_DIRECTORY).await? {
-            None => {
-                if let Some(mut transaction) = transaction {
-                    let directory = root_directory
-                        .create_child_dir(&mut transaction, VOLUMES_DIRECTORY)
-                        .await?;
-                    transaction.commit().await?;
-                    break directory;
-                } else {
-                    transaction = Some(
-                        fs.clone()
-                            .new_transaction(
-                                &[LockKey::object(
-                                    root_store.store_object_id(),
-                                    root_directory.object_id(),
-                                )],
-                                Options::default(),
-                            )
-                            .await?,
-                    );
-                }
-            }
-            Some((object_id, ObjectDescriptor::Directory)) => {
-                break Directory::open(&root_store, object_id)
-                    .await
-                    .context("unable to open volumes directory")?;
-            }
-            _ => {
-                return Err(anyhow!(FxfsError::Inconsistent)
-                    .context("Unexpected type for volumes directory"));
-            }
+    match root_directory.lookup(VOLUMES_DIRECTORY).await? {
+        None => Ok(None),
+        Some((object_id, ObjectDescriptor::Directory)) => {
+            let volume_directory = Directory::open(&root_store, object_id)
+                .await
+                .context("unable to open volumes directory")?;
+            Ok(Some(RootVolume {
+                _root_directory: root_directory,
+                volume_directory,
+                filesystem: fs.clone(),
+            }))
         }
-    };
+        _ => Err(anyhow!(FxfsError::Inconsistent).context("Unexpected type for volumes directory")),
+    }
+}
 
+/// Creates the root volume.  This is not thread-safe and does not check to see of the root volume
+/// has already been created.
+pub async fn create_root_volume(fs: &Arc<FxFilesystem>) -> Result<RootVolume, Error> {
+    let root_store = fs.root_store();
+    let root_directory = Directory::open(&root_store, root_store.root_directory_object_id())
+        .await
+        .context("Unable to open root volume directory")?;
+    let mut transaction = fs
+        .clone()
+        .new_transaction(
+            &[LockKey::object(root_store.store_object_id(), root_directory.object_id())],
+            Options::default(),
+        )
+        .await?;
+    let volume_directory =
+        root_directory.create_child_dir(&mut transaction, VOLUMES_DIRECTORY).await?;
+    transaction.commit().await?;
     Ok(RootVolume { _root_directory: root_directory, volume_directory, filesystem: fs.clone() })
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::root_volume,
+        super::{create_root_volume, root_volume},
         crate::object_store::{
             directory::Directory,
             filesystem::{Filesystem, FxFilesystem, SyncOptions},
@@ -148,7 +143,7 @@ mod tests {
     async fn test_lookup_nonexistent_volume() {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
-        let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
+        let root_volume = create_root_volume(&filesystem).await.expect("create_root_volume failed");
         root_volume.volume("vol").await.err().expect("Volume shouldn't exist");
         filesystem.close().await.expect("Close failed");
     }
@@ -158,7 +153,8 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(16384, 512));
         let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         {
-            let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
+            let root_volume =
+                create_root_volume(&filesystem).await.expect("create_root_volume failed");
             let store = root_volume.new_volume("vol").await.expect("new_volume failed");
             let mut transaction = filesystem
                 .clone()
@@ -180,7 +176,10 @@ mod tests {
             let device = filesystem.take_device().await;
             device.reopen();
             let filesystem = FxFilesystem::open(device).await.expect("open failed");
-            let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
+            let root_volume = root_volume(&filesystem)
+                .await
+                .expect("root_volume failed")
+                .expect("root-volume not found");
             let volume = root_volume.volume("vol").await.expect("volume failed");
             let root_directory = Directory::open(&volume, volume.root_directory_object_id())
                 .await

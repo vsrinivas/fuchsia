@@ -21,6 +21,7 @@
 #include <lib/zx/channel.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/errors.h>
 
@@ -35,10 +36,11 @@
 #include <fs-management/mount.h>
 
 #include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
+#include "src/lib/json_parser/json_parser.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/fs_test/blobfs_test.h"
-#include "src/storage/fs_test/fxfs.h"
+#include "src/storage/fs_test/json_filesystem.h"
 #include "src/storage/fs_test/minfs_test.h"
 #include "src/storage/testing/fvm.h"
 
@@ -461,16 +463,36 @@ std::vector<TestFilesystemOptions> AllTestMinfs() {
                                             TestFilesystemOptions::MinfsWithoutFvm()};
 }
 
-// Note: blobfs is intentionally absent, since it is not intended to run as part of the
-// fs_test suite.
 std::vector<TestFilesystemOptions> AllTestFilesystems() {
-  return std::vector<TestFilesystemOptions> {
-    TestFilesystemOptions::DefaultMinfs(), TestFilesystemOptions::MinfsWithoutFvm(),
-        TestFilesystemOptions::DefaultMemfs(), TestFilesystemOptions::DefaultFatfs(),
-#if 0  // Change to 1 to enable testing for Fxfs
-        DefaultFxfsTestOptions()
-#endif
-  };
+  static const std::vector<TestFilesystemOptions>* options = [] {
+    const char kConfigFile[] = "/pkg/config/config.json";
+    struct stat buf;
+    if (!stat(kConfigFile, &buf)) {
+      json_parser::JSONParser parser;
+      auto config = parser.ParseFromFile(std::string(kConfigFile));
+      std::string name = config["name"].GetString();
+      name[0] = toupper(name[0]);
+      return new std::vector<TestFilesystemOptions>{TestFilesystemOptions{
+          .description = name,
+          .use_fvm = false,
+          .device_block_size = 512,
+          .device_block_count = 131'072,
+          .filesystem =
+              JsonFilesystem::NewFilesystem(config).value().release(),  // Deliberate leak.
+      }};
+    } else {
+      // Note: blobfs is intentionally absent, since it is not intended to run as part of the
+      // fs_test suite.
+      return new std::vector<TestFilesystemOptions>{
+          TestFilesystemOptions::DefaultMinfs(),
+          TestFilesystemOptions::MinfsWithoutFvm(),
+          TestFilesystemOptions::DefaultMemfs(),
+          TestFilesystemOptions::DefaultFatfs(),
+      };
+    }
+  }();
+
+  return *options;
 }
 
 std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(

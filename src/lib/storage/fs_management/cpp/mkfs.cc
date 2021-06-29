@@ -118,6 +118,10 @@ zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
       return MkfsNativeFs(fs_management::GetBinaryPath("blobfs").c_str(), device_path, cb, options,
                           true);
     default:
-      return ZX_ERR_NOT_SUPPORTED;
+      auto* format = fs_management::CustomDiskFormat::Get(df);
+      if (format == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      return MkfsNativeFs(format->binary_path().c_str(), device_path, cb, options, true);
   }
 }

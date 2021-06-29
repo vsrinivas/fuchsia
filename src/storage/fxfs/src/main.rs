@@ -47,6 +47,8 @@ struct FsckSubCommand {}
 #[fasync::run(10)]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init().unwrap();
+
+    #[cfg(feature = "tracing")]
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
     let args: TopLevel = argh::from_env();
@@ -80,7 +82,7 @@ async fn main() -> Result<(), Error> {
                 BlockDevice::new(Box::new(client), true).await?,
             ))
             .await?;
-            fsck(fs.as_ref()).await
+            fsck(&fs).await
         }
     }
 }

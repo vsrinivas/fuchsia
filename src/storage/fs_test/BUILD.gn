@@ -4,12 +4,13 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
+import("//src/storage/fs_test/suite.gni")
 import("//src/storage/testing/isolated_devmgr.gni")
 
 group("tests") {
   testonly = true
   deps = [
-    ":fs-tests",
+    ":core-fs-tests",
     ":large-fs-tests",
     "//src/storage/testing:storage-isolated-devmgr",
   ]
@@ -20,8 +21,8 @@ static_library("fs_test") {
   sources = [
     "fs_test.cc",
     "fs_test_fixture.cc",
-    "fxfs.cc",
-    "fxfs.h",
+    "json_filesystem.cc",
+    "json_filesystem.h",
     "misc.cc",
   ]
   deps = [
@@ -29,13 +30,12 @@ static_library("fs_test") {
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
+    "//src/lib/json_parser",
     "//src/storage/fuchsia-fatfs:fatfs",
     "//src/storage/fvm",
-
-    # TODO(csuter): Add dependency when fxfs is ready
-    # "//src/storage/fxfs",
     "//src/storage/memfs",
     "//src/storage/testing:storage_driver_test_support",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fdio-caller",
@@ -75,10 +75,6 @@ test("access_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("access-tests") {
-  deps = [ ":access_tests" ]
-}
-
 test("append_tests") {
   sources = [ "append.cc" ]
   deps = [
@@ -86,10 +82,6 @@ test("append_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("append-tests") {
-  deps = [ ":append_tests" ]
 }
 
 test("attr_tests") {
@@ -101,20 +93,12 @@ test("attr_tests") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("attr-tests") {
-  deps = [ ":attr_tests" ]
-}
-
 test("basic_tests") {
   sources = [ "basic.cc" ]
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("basic-tests") {
-  deps = [ ":basic_tests" ]
 }
 
 test("case_sensitivity_tests") {
@@ -125,10 +109,6 @@ test("case_sensitivity_tests") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("case-sensitivity-tests") {
-  deps = [ ":case_sensitivity_tests" ]
-}
-
 test("clone_tests") {
   sources = [ "clone.cc" ]
   deps = [
@@ -136,10 +116,6 @@ test("clone_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("clone-tests") {
-  deps = [ ":clone_tests" ]
 }
 
 test("corrupt_tests") {
@@ -157,10 +133,6 @@ test("corrupt_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("corrupt-tests") {
-  deps = [ ":corrupt_tests" ]
-}
-
 test("directory_tests") {
   sources = [ "directory.cc" ]
   deps = [
@@ -168,10 +140,6 @@ test("directory_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("directory-tests") {
-  deps = [ ":directory_tests" ]
 }
 
 test("dot_dot_tests") {
@@ -190,10 +158,6 @@ test("dot_dot_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("dot-dot-tests") {
-  deps = [ ":dot_dot_tests" ]
-}
-
 test("fcntl_tests") {
   sources = [ "fcntl.cc" ]
   deps = [
@@ -201,10 +165,6 @@ test("fcntl_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("fcntl-tests") {
-  deps = [ ":fcntl_tests" ]
 }
 
 test("filename_tests") {
@@ -216,10 +176,6 @@ test("filename_tests") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("filename-tests") {
-  deps = [ ":filename_tests" ]
-}
-
 test("link_tests") {
   sources = [ "link.cc" ]
   deps = [
@@ -229,10 +185,6 @@ test("link_tests") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("link-tests") {
-  deps = [ ":link_tests" ]
-}
-
 test("lseek_tests") {
   sources = [ "lseek.cc" ]
   deps = [
@@ -240,34 +192,6 @@ test("lseek_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("lseek-tests") {
-  deps = [ ":lseek_tests" ]
-}
-
-test("minfs_tests") {
-  sources = [ "minfs.cc" ]
-  deps = [
-    ":fs_test",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
-    "//sdk/lib/fdio",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/storage/fvm",
-    "//src/storage/minfs",
-    "//third_party/googletest:gmock",
-    "//zircon/system/ulib/fdio-caller",
-  ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("minfs-tests") {
-  deps = [ ":minfs_tests" ]
 }
 
 test("mmap_tests") {
@@ -280,20 +204,12 @@ test("mmap_tests") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("mmap-tests") {
-  deps = [ ":mmap_tests" ]
-}
-
 test("open_tests") {
   sources = [ "open.cc" ]
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("open-tests") {
-  deps = [ ":open_tests" ]
 }
 
 test("overflow_tests") {
@@ -304,20 +220,12 @@ test("overflow_tests") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("overflow-tests") {
-  deps = [ ":overflow_tests" ]
-}
-
 test("persist_tests") {
   sources = [ "persist.cc" ]
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("persist-tests") {
-  deps = [ ":persist_tests" ]
 }
 
 test("random_op_tests") {
@@ -329,10 +237,6 @@ test("random_op_tests") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("random-op-tests") {
-  deps = [ ":random_op_tests" ]
-}
-
 test("realpath_tests") {
   sources = [ "realpath.cc" ]
   deps = [
@@ -340,10 +244,6 @@ test("realpath_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("realpath-tests") {
-  deps = [ ":realpath_tests" ]
 }
 
 test("rename_tests") {
@@ -360,10 +260,6 @@ test("rename_tests") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("rename-tests") {
-  deps = [ ":rename_tests" ]
 }
 
 test("resize_tests") {
@@ -384,10 +280,6 @@ test("resize_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("resize-tests") {
-  deps = [ ":resize_tests" ]
-}
-
 test("rw_tests") {
   sources = [ "rw.cc" ]
   deps = [
@@ -395,10 +287,6 @@ test("rw_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("rw-tests") {
-  deps = [ ":rw_tests" ]
 }
 
 test("rw_workers_tests") {
@@ -410,10 +298,6 @@ test("rw_workers_tests") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("rw-workers-tests") {
-  deps = [ ":rw_workers_tests" ]
-}
-
 test("sparse_tests") {
   sources = [ "sparse.cc" ]
   deps = [
@@ -421,10 +305,6 @@ test("sparse_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("sparse-tests") {
-  deps = [ ":sparse_tests" ]
 }
 
 test("sync_tests") {
@@ -436,10 +316,6 @@ test("sync_tests") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("sync-tests") {
-  deps = [ ":sync_tests" ]
-}
-
 test("threading_tests") {
   sources = [ "threading.cc" ]
   deps = [
@@ -447,10 +323,6 @@ test("threading_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("threading-tests") {
-  deps = [ ":threading_tests" ]
 }
 
 test("truncate_tests") {
@@ -465,10 +337,6 @@ test("truncate_tests") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("truncate-tests") {
-  deps = [ ":truncate_tests" ]
-}
-
 test("unicode_tests") {
   sources = [ "unicode.cc" ]
   deps = [
@@ -478,10 +346,6 @@ test("unicode_tests") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("unicode-tests") {
-  deps = [ ":unicode_tests" ]
-}
-
 test("unlink_tests") {
   sources = [ "unlink.cc" ]
   deps = [
@@ -489,10 +353,6 @@ test("unlink_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
-}
-
-storage_isolated_devmgr_unittest_v2_component("unlink-tests") {
-  deps = [ ":unlink_tests" ]
 }
 
 test("watcher_tests") {
@@ -511,49 +371,7 @@ test("watcher_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("watcher-tests") {
-  deps = [ ":watcher_tests" ]
-}
-
-fuchsia_test_package("fs-tests") {
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-  test_components = [
-    ":access-tests",
-    ":append-tests",
-    ":attr-tests",
-    ":basic-tests",
-    ":case-sensitivity-tests",
-    ":clone-tests",
-    ":corrupt-tests",
-    ":directory-tests",
-    ":dot-dot-tests",
-    ":fcntl-tests",
-    ":filename-tests",
-    ":link-tests",
-    ":lseek-tests",
-    ":minfs-tests",
-    ":mmap-tests",
-    ":open-tests",
-    ":overflow-tests",
-    ":persist-tests",
-    ":random-op-tests",
-    ":realpath-tests",
-    ":rename-tests",
-    ":resize-tests",
-    ":rw-tests",
-    ":rw-workers-tests",
-    ":sparse-tests",
-    ":sync-tests",
-    ":threading-tests",
-    ":truncate-tests",
-    ":unicode-tests",
-    ":unlink-tests",
-    ":watcher-tests",
-  ]
+fs_test_suite("core") {
   deps = [
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",

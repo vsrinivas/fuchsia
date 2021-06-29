@@ -20,6 +20,7 @@ use {
                 AttributeKey, ExtentValue, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
             },
             transaction::{LockKey, TransactionHandler},
+            volume::root_volume,
             ObjectStore,
         },
     },
@@ -49,7 +50,7 @@ use {
 //
 // TODO(csuter): This currently takes a write lock on the filesystem.  It would be nice if we could
 // take a snapshot.
-pub async fn fsck(filesystem: &FxFilesystem) -> Result<(), Error> {
+pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
     log::info!("Starting fsck");
     let _guard = debug_assert_not_too_long!(filesystem.write_lock(&[LockKey::Filesystem]));
 
@@ -72,20 +73,23 @@ pub async fn fsck(filesystem: &FxFilesystem) -> Result<(), Error> {
     ]);
     root_store_root_objects.append(&mut root_store.root_objects());
 
-    // TODO(csuter): We could maybe iterate over stores concurrently.
-    for store_id in object_manager.store_object_ids() {
-        if store_id == super_block.root_parent_store_object_id
-            || store_id == super_block.root_store_object_id
-        {
-            continue;
+    if let Some(root_volume) = root_volume(filesystem).await? {
+        let volume_directory = root_volume.volume_directory();
+        let layer_set = volume_directory.store().tree().layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = volume_directory.iter(&mut merger).await?;
+
+        // TODO(csuter): We could maybe iterate over stores concurrently.
+        while let Some((_, store_id, _)) = iter.get() {
+            let store = object_manager
+                .open_store(store_id)
+                .await
+                .context(format!("Unable to open store {}", store_id))?;
+            fsck.scan_store(&store, &store.root_objects(), &graveyard).await?;
+            let mut parent_objects = store.parent_objects();
+            root_store_root_objects.append(&mut parent_objects);
+            iter.advance().await?;
         }
-        let store = object_manager
-            .open_store(store_id)
-            .await
-            .context(format!("Unable to open store {}", store_id))?;
-        fsck.scan_store(&store, &store.root_objects(), &graveyard).await?;
-        let mut parent_objects = store.parent_objects();
-        root_store_root_objects.append(&mut parent_objects);
     }
 
     // TODO(csuter): It's a bit crude how details of SimpleAllocator are leaking here. Is there
