@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::accessibility::types::AccessibilityInfo;
-use crate::audio::types::AudioStream;
+use crate::audio::types::SetAudioStream;
 use crate::base::{SettingInfo, SettingType};
 use crate::display::types::SetDisplayInfo;
 use crate::do_not_disturb::types::DoNotDisturbInfo;
@@ -94,7 +94,7 @@ generate_inspect! {
         ScheduleClearAccounts,
 
         // Audio requests.
-        SetVolume(Vec<AudioStream>),
+        SetVolume(Vec<SetAudioStream>),
 
         // Audio in requests.
         SetMicMute(bool),

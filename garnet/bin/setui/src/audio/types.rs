@@ -35,6 +35,35 @@ impl AudioStream {
     }
 }
 
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub struct SetAudioStream {
+    pub stream_type: AudioStreamType,
+    pub source: AudioSettingSource,
+    pub user_volume_level: Option<f32>,
+    pub user_volume_muted: Option<bool>,
+}
+
+impl SetAudioStream {
+    pub(crate) fn has_finite_volume_level(&self) -> bool {
+        self.user_volume_level.map(|v| v.is_finite()).unwrap_or(true)
+    }
+
+    pub(crate) fn is_valid_payload(&self) -> bool {
+        self.user_volume_level.is_some() || self.user_volume_muted.is_some()
+    }
+}
+
+impl From<AudioStream> for SetAudioStream {
+    fn from(stream: AudioStream) -> Self {
+        Self {
+            stream_type: stream.stream_type,
+            source: stream.source,
+            user_volume_level: Some(stream.user_volume_level),
+            user_volume_muted: Some(stream.user_volume_muted),
+        }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct AudioInputInfo {
     pub mic_mute: bool,

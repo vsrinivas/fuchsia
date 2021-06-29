@@ -526,21 +526,11 @@ async_property_test!(test_missing_input_returns_failed => [
         user_volume: None,
         ..AudioStreamSettings::EMPTY
     }),
-    missing_user_volume_level(AudioStreamSettings {
+    missing_user_volume_level_and_muted(AudioStreamSettings {
         stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
         source: Some(AudioStreamSettingSource::User),
         user_volume: Some(Volume {
             level: None,
-            muted: Some(CHANGED_VOLUME_MUTED),
-            ..Volume::EMPTY
-        }),
-        ..AudioStreamSettings::EMPTY
-    }),
-    missing_user_volume_muted(AudioStreamSettings {
-        stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
-        source: Some(AudioStreamSettingSource::User),
-        user_volume: Some(Volume {
-            level: Some(CHANGED_VOLUME_LEVEL),
             muted: None,
             ..Volume::EMPTY
         }),
@@ -585,4 +575,47 @@ async fn test_missing_input_returns_failed(setting: AudioStreamSettings) {
         .await
         .expect("set completed");
     assert_eq!(result, Err(Error::Failed));
+}
+
+// Test each of the failure conditions for validating the fidl input.
+async_property_test!(test_missing_one_returns_ok => [
+    missing_user_volume_level(AudioStreamSettings {
+        stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
+        source: Some(AudioStreamSettingSource::User),
+        user_volume: Some(Volume {
+            level: None,
+            muted: Some(CHANGED_VOLUME_MUTED),
+            ..Volume::EMPTY
+        }),
+        ..AudioStreamSettings::EMPTY
+    }),
+    missing_user_volume_muted(AudioStreamSettings {
+        stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
+        source: Some(AudioStreamSettingSource::User),
+        user_volume: Some(Volume {
+            level: Some(CHANGED_VOLUME_LEVEL),
+            muted: None,
+            ..Volume::EMPTY
+        }),
+        ..AudioStreamSettings::EMPTY
+    }),
+]);
+
+async fn test_missing_one_returns_ok(setting: AudioStreamSettings) {
+    let (service_registry, _) = create_services().await;
+    let (env, _) = create_environment(service_registry).await;
+
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
+
+    let settings = audio_proxy.watch().await.expect("watch completed");
+    verify_audio_stream(
+        &settings,
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
+    );
+
+    let result = audio_proxy
+        .set(AudioSettings { streams: Some(vec![setting]), ..AudioSettings::EMPTY })
+        .await
+        .expect("set completed");
+    assert_eq!(result, Ok(()));
 }

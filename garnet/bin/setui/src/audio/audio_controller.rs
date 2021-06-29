@@ -1,7 +1,9 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::audio::types::{AudioInfo, AudioInputInfo, AudioStream, AudioStreamType};
+use crate::audio::types::{
+    AudioInfo, AudioInputInfo, AudioStream, AudioStreamType, SetAudioStream,
+};
 use crate::audio::{
     create_default_modified_counters, default_audio_info, ModifiedCounters, StreamVolumeControl,
 };
@@ -45,9 +47,9 @@ pub(crate) struct VolumeController {
     modified_counters: ModifiedCounters,
 }
 
-enum UpdateFrom<'a> {
+enum UpdateFrom {
     AudioInfo(AudioInfo),
-    NewStreams(&'a [AudioStream]),
+    NewStreams(Vec<SetAudioStream>),
 }
 
 impl VolumeController {
@@ -87,7 +89,7 @@ impl VolumeController {
         Ok(audio_info)
     }
 
-    async fn set_volume(&mut self, volume: Vec<AudioStream>) -> SettingHandlerResult {
+    async fn set_volume(&mut self, volume: Vec<SetAudioStream>) -> SettingHandlerResult {
         // Update counters for changed streams.
         for stream in &volume {
             // We don't care what the value of the counter is, just that it is different from the
@@ -100,7 +102,7 @@ impl VolumeController {
             );
         }
 
-        if !(self.update_volume_streams(UpdateFrom::NewStreams(&volume[..]), true).await?) {
+        if !(self.update_volume_streams(UpdateFrom::NewStreams(volume), true).await?) {
             let info = self.get_info().await?.into();
             self.client.notify(Event::Changed(info)).await;
         }
@@ -125,15 +127,40 @@ impl VolumeController {
     /// Returns whether the change triggered a notification.
     async fn update_volume_streams(
         &mut self,
-        update_from: UpdateFrom<'_>,
+        update_from: UpdateFrom,
         push_to_audio_core: bool,
     ) -> Result<bool, ControllerError> {
-        let new_streams = match &update_from {
-            UpdateFrom::AudioInfo(audio_info) => &audio_info.streams[..],
-            UpdateFrom::NewStreams(streams) => streams,
+        let new_vec;
+        let (stored_value, new_streams) = match &update_from {
+            UpdateFrom::AudioInfo(audio_info) => (None, audio_info.streams.iter()),
+            UpdateFrom::NewStreams(streams) => {
+                let stored_value = self.client.read_setting::<AudioInfo>().await;
+                new_vec = streams
+                    .iter()
+                    .map(|set_stream| {
+                        let stored_stream = stored_value
+                            .streams
+                            .iter()
+                            .find(|stream| stream.stream_type == set_stream.stream_type)
+                            .expect("Stored value should already exist on new set");
+                        AudioStream {
+                            stream_type: stored_stream.stream_type,
+                            source: set_stream.source,
+                            user_volume_level: set_stream
+                                .user_volume_level
+                                .unwrap_or(stored_stream.user_volume_level),
+                            user_volume_muted: set_stream
+                                .user_volume_muted
+                                .unwrap_or(stored_stream.user_volume_muted),
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                (Some(stored_value), new_vec.iter())
+            }
         };
+
         if push_to_audio_core {
-            self.check_and_bind_volume_controls(&default_audio_info().streams.to_vec()).await?;
+            self.check_and_bind_volume_controls(default_audio_info().streams.iter()).await?;
             for stream in new_streams {
                 if let Some(volume_control) =
                     self.stream_volume_controls.get_mut(&stream.stream_type)
@@ -145,20 +172,20 @@ impl VolumeController {
             self.check_and_bind_volume_controls(new_streams).await?;
         }
 
-        let mut stored_value = match update_from {
-            UpdateFrom::AudioInfo(audio_info) => audio_info,
-            _ => self.client.read_setting::<AudioInfo>().await,
-        };
-        stored_value.streams = get_streams_array_from_map(&self.stream_volume_controls);
-        stored_value.modified_counters = Some(self.modified_counters.clone());
+        if let Some(mut stored_value) = stored_value {
+            stored_value.streams = get_streams_array_from_map(&self.stream_volume_controls);
+            stored_value.modified_counters = Some(self.modified_counters.clone());
 
-        Ok(self.client.write_setting(stored_value.into(), false).await.notified())
+            Ok(self.client.write_setting(stored_value.into(), false).await.notified())
+        } else {
+            Ok(false)
+        }
     }
 
     /// Populates the local state with the given [streams] and binds it to the audio core service.
     async fn check_and_bind_volume_controls(
         &mut self,
-        streams: &[AudioStream],
+        streams: impl Iterator<Item = &AudioStream>,
     ) -> ControllerStateResult {
         if self.audio_service_connected {
             return Ok(());

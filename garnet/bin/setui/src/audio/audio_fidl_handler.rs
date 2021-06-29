@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType},
+    crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType, SetAudioStream},
     crate::base::{SettingInfo, SettingType},
     crate::fidl_common::FidlResponseErrorLogger,
     crate::fidl_hanging_get_responder,
@@ -107,10 +107,8 @@ impl From<AudioSettingSource> for AudioStreamSettingSource {
 enum Error {
     #[error("missing user_volume at stream {0}")]
     NoUserVolume(usize),
-    #[error("missing user_volume.level at stream {0}")]
-    NoUserVolumeLevel(usize),
-    #[error("missing user_volume.muted at stream {0}")]
-    NoUserVolumeMuted(usize),
+    #[error("missing user_volume.level and user_volume.muted at stream {0}")]
+    MissingVolumeAndMuted(usize),
     #[error("missing stream at stream {0}")]
     NoStreamType(usize),
     #[error("missing source at stream {0}")]
@@ -124,11 +122,17 @@ fn to_request(settings: AudioSettings) -> Option<Result<Request, Error>> {
             .enumerate()
             .map(|(i, stream)| {
                 let user_volume = stream.user_volume.ok_or(Error::NoUserVolume(i))?;
-                let user_volume_level = user_volume.level.ok_or(Error::NoUserVolumeLevel(i))?;
-                let user_volume_muted = user_volume.muted.ok_or(Error::NoUserVolumeMuted(i))?;
+                let user_volume_level = user_volume.level;
+                let user_volume_muted = user_volume.muted;
                 let stream_type = stream.stream.ok_or(Error::NoStreamType(i))?.into();
                 let source = stream.source.ok_or(Error::NoSource(i))?.into();
-                Ok(AudioStream { stream_type, source, user_volume_level, user_volume_muted })
+                let request =
+                    SetAudioStream { stream_type, source, user_volume_level, user_volume_muted };
+                if request.is_valid_payload() {
+                    Ok(request)
+                } else {
+                    Err(Error::MissingVolumeAndMuted(i))
+                }
             })
             .collect::<Result<Vec<_>, _>>()
             .map(Request::SetVolume)

@@ -11,7 +11,7 @@ use crate::audio::policy::{
     TransformFlags,
 };
 use crate::audio::types::AudioStreamType;
-use crate::audio::types::{AudioInfo, AudioSettingSource, AudioStream};
+use crate::audio::types::{AudioInfo, AudioSettingSource, AudioStream, SetAudioStream};
 use crate::audio::utils::round_volume_level;
 use crate::base::SettingType;
 use crate::handler::base::{Payload as SettingPayload, Request as SettingRequest};
@@ -357,15 +357,17 @@ async fn get_and_verify_media_volume(
 /// request matches the given stream.
 async fn set_and_verify_stream(
     env: &mut TestEnvironment,
-    request_stream: AudioStream,
-    expected_stream: AudioStream,
+    request_stream: impl Into<SetAudioStream>,
+    expected_stream: impl Into<SetAudioStream>,
 ) {
-    let request_transform =
-        env.handler.handle_setting_request(SettingRequest::SetVolume(vec![request_stream])).await;
+    let request_transform = env
+        .handler
+        .handle_setting_request(SettingRequest::SetVolume(vec![request_stream.into()]))
+        .await;
 
     assert_eq!(
         request_transform,
-        Some(RequestTransform::Request(SettingRequest::SetVolume(vec![expected_stream])))
+        Some(RequestTransform::Request(SettingRequest::SetVolume(vec![expected_stream.into()])))
     );
 }
 
@@ -386,7 +388,7 @@ async fn set_and_verify_media_volume(
 
 async fn verify_stream_set(
     receptor: &mut <MessageHub as MessageHubUtil>::Receptor,
-    stream: AudioStream,
+    stream: impl Into<SetAudioStream>,
 ) {
     while let Some(message_event) = receptor.next().await {
         if let MessageEvent::Message(incoming_payload, mut client) = message_event {
@@ -394,7 +396,7 @@ async fn verify_stream_set(
             if let TestEnvironmentPayload::Request(SettingRequest::SetVolume(streams)) =
                 incoming_payload
             {
-                assert_eq!(vec![stream], streams);
+                assert_eq!(vec![stream.into()], streams);
                 return;
             }
         }

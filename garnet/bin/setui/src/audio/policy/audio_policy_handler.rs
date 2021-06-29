@@ -61,7 +61,7 @@ use crate::audio::policy::{
     self as audio_policy, PolicyId, PropertyTarget, Request as PolicyRequest, Response, State,
     StateBuilder, Transform, TransformFlags,
 };
-use crate::audio::types::AudioInfo;
+use crate::audio::types::{AudioInfo, AudioStream, SetAudioStream};
 use crate::audio::utils::round_volume_level;
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{
@@ -147,9 +147,14 @@ impl PolicyHandler for AudioPolicyHandler {
                 // When anyone attempts to set the volume level, scale it according to the policy
                 // limits and pass it along to the setting proxy.
                 for stream in streams.iter_mut() {
-                    stream.user_volume_level = self
-                        .calculate_internal_volume(stream.stream_type, stream.user_volume_level);
-                    stream.user_volume_muted &= self.calculate_can_mute(stream.stream_type);
+                    if let Some(level) = stream.user_volume_level {
+                        stream.user_volume_level =
+                            Some(self.calculate_internal_volume(stream.stream_type, level));
+                    }
+                    if let Some(muted) = stream.user_volume_muted {
+                        stream.user_volume_muted =
+                            Some(muted && self.calculate_can_mute(stream.stream_type));
+                    }
                 }
 
                 Some(RequestTransform::Request(SettingRequest::SetVolume(streams)))
@@ -400,12 +405,11 @@ impl AudioPolicyHandler {
             .ok_or(policy_base::response::Error::Unexpected)?;
 
         // Make a copy to apply policy transforms on.
-        let mut transformed = original;
-
-        transformed.user_volume_level =
-            self.clamp_internal_volume(target, original.user_volume_level);
-        transformed.user_volume_muted =
-            original.user_volume_muted & self.calculate_can_mute(target);
+        let transformed = AudioStream {
+            user_volume_level: self.clamp_internal_volume(target, original.user_volume_level),
+            user_volume_muted: original.user_volume_muted && self.calculate_can_mute(target),
+            ..original
+        };
 
         let new_external_volume =
             self.calculate_external_volume(target, transformed.user_volume_level);
@@ -414,6 +418,7 @@ impl AudioPolicyHandler {
         if transformed != original {
             // When the internal volume level should change, send a Set request to the audio
             // controller.
+            let transformed = SetAudioStream::from(transformed);
             self.client_proxy.send_setting_request(
                 SettingType::Audio,
                 SettingRequest::SetVolume(vec![transformed]),
