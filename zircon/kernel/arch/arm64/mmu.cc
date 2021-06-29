@@ -318,7 +318,7 @@ class ArmArchVmAspace::ConsistencyManager {
     __dsb(ARM_MB_ISH);
 
     // Check if we should just be performing a full ASID invalidation.
-    if (num_pending_tlbs_ >= kMaxPendingTlbs && aspace_.asid_ != MMU_ARM64_GLOBAL_ASID) {
+    if (num_pending_tlbs_ > kMaxPendingTlbs) {
       cm_flush_all.Add(1);
       cm_flush_all_replacing.Add(num_pending_tlbs_);
       aspace_.FlushAsid();
