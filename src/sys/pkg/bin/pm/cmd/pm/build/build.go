@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/cmd/pm/seal"
@@ -139,6 +140,10 @@ func buildDepfile(cfg *build.Config) ([]byte, error) {
 		if _, ok := computedOutputs[dst]; ok {
 			continue
 		}
+
+		// Spaces are separators, so spaces in filenames must be
+		// escaped.
+		src := strings.ReplaceAll(src, " ", "\\ ")
 
 		if _, err := io.WriteString(&buf, " "+src); err != nil {
 			return nil, err

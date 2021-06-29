@@ -173,6 +173,11 @@ def _write_gn_deps_file(
     with open(depfile_path, 'w') as depfile:
         deps_list = [os.path.relpath(f, out_dir) for f in expanded_files]
         deps_list.extend(component_manifests)
+
+        # The deps file is space-delimited, so filenames containing spaces
+        # must have them escaped.
+        deps_list = [f.replace(' ','\\ ') for f in deps_list]
+
         deps_string = ' '.join(sorted(deps_list))
         depfile.write('%s: %s' % (package_manifest, deps_string))
 
