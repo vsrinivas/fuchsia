@@ -11,20 +11,47 @@
             durability: "transient",
         },
     ],
+    capabilities: [
+        // Components started in the laboratory should derive /data from /tmp.
+        // This is because the core realm only gives persistent storage to components
+        // that are registered with static instance IDs. Furthermore, components
+        // in this collection should not be using persistent storage anyway.
+        {
+            storage: "laboratory-data",
+            from: "parent",
+            subdir: "laboratory-data",
+            backing_dir: "tmp",
+            storage_id: "static_instance_id_or_moniker",
+        },
+    ],
     offer: [
         {
-            protocol: "fuchsia.logger.LogSink",
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
             from: "parent",
             to: "#ffx-laboratory",
         },
         {
-            storage: "data",
+            storage: "laboratory-data",
             from: "self",
+            as: "data",
             to: "#ffx-laboratory",
         },
         {
             storage: "tmp",
             from: "self",
+            to: "#ffx-laboratory",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            to: "#ffx-laboratory",
+        },
+        {
+            directory: "boot",
+            from: "parent",
             to: "#ffx-laboratory",
         },
     ],

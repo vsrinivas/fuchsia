@@ -258,8 +258,11 @@ Failed to connect to service: NoMatchingServices
 realm provides the following capabilities:
 
 * `fuchsia.logger.LogSink` protocol
+* `fuchsia.process.Launcher` protocol
 * `tmp` storage
 * `data` storage
+* `dev` directory: devfs filesystem containing connected devices
+* `boot` directory: bootfs filesystem containing basic userspace components
 
 CMX components are run with the `ffx component run` subcommand. These components are automatically
 destroyed when they stop.
