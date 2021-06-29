@@ -1,7 +1,6 @@
-// The only difference between test-fshost.cml and the main fshost.cml is that the main one has
-// main_process_critical, but we can't set that flag in tests.
-// TODO(fxbug.dev/73189): template the two cml files so they don't fall out of sync.
-// IMPORTANT: this means any changes made here should be made in fshost.cml
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 {
     include: [
         "//sdk/lib/diagnostics/inspect/client.shard.cml",
@@ -17,6 +16,11 @@
             directory: "pkgfs-delayed",
             rights: [ "rx*" ],
             path: "/delayed/fs/pkgfs",
+        },
+        {
+            directory: "pkgfs-packages-delayed",
+            rights: [ "rx*" ],
+            path: "/delayed/fs/pkgfs/packages",
         },
         {
             directory: "system-delayed",
@@ -65,6 +69,21 @@
             directory: "config-data",
             rights: [ "r*" ],
             path: "/delayed/fs/pkgfs/packages/config-data/0/meta/data",
+        },
+        {
+            directory: "root-ssl-certificates",
+            rights: [ "r*" ],
+            path: "/delayed/fs/pkgfs/packages/root_ssl_certificates/0/data",
+        },
+        {
+            directory: "build-info",
+            rights: [ "r*" ],
+            path: "/delayed/fs/pkgfs/packages/build-info/0/data",
+        },
+        {
+            directory: "deprecated-misc-storage",
+            rights: [ "rw*" ],
+            path: "/fs/data/misc",
         },
         {
             directory: "system",
@@ -118,7 +137,6 @@
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",
                 "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.process.Launcher",
                 "fuchsia.tracing.provider.Registry",
@@ -145,6 +163,10 @@
     expose: [
         {
             directory: "pkgfs-delayed",
+            from: "self",
+        },
+        {
+            directory: "pkgfs-packages-delayed",
             from: "self",
         },
         {
@@ -181,6 +203,18 @@
         },
         {
             directory: "config-data",
+            from: "self",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "self",
+        },
+        {
+            directory: "build-info",
+            from: "self",
+        },
+        {
+            directory: "deprecated-misc-storage",
             from: "self",
         },
         {

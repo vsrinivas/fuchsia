@@ -49,11 +49,6 @@ namespace fio = fuchsia_io;
 namespace devmgr {
 namespace {
 
-std::unique_ptr<FsHostMetrics> MakeMetrics() {
-  return std::make_unique<FsHostMetrics>(
-      std::make_unique<cobalt_client::Collector>(fs_metrics::kCobaltProjectId));
-}
-
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 
 // Get ramdisk from the boot items service.
@@ -246,7 +241,11 @@ int Main(bool disable_block_watcher) {
   // Initialize the local filesystem in isolation.
   zx::channel dir_request(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
-  std::unique_ptr<FsHostMetrics> metrics = MakeMetrics();
+
+  auto metrics = config.is_set(Config::kNoMetrics)
+                     ? std::make_unique<FsHostMetrics>(nullptr)
+                     : std::make_unique<FsHostMetrics>(std::make_unique<cobalt_client::Collector>(
+                           fs_metrics::kCobaltProjectId));
   metrics->Detach();
   FsManager fs_manager(boot_args, std::move(metrics));
 

@@ -46,6 +46,7 @@ struct Config {
   static const char kUseDefaultLoader[];
   static const char kUseSyslog[];
   static const char kWaitForData[];
+  static const char kNoMetrics[];
 
   // Reads options from the stream which consist of one option per line. "default" means include the
   // default options, and lines with a leading '-' negate the option.

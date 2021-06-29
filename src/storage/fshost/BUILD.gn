@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
 import("//src/storage/testing/isolated_devmgr.gni")
+import("//tools/cmc/build/cmc.gni")
 
 declare_args() {
   # blobfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
@@ -376,16 +377,22 @@ test("fshost_integration_test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
+cmc_merge("test-fshost.cml") {
+  sources = [
+    "meta/base_fshost.cml",
+    "meta/core_fshost.cml",
+  ]
+}
+
 # This is a test version of fshost, not a component with fshost tests.
 fuchsia_component("test-fshost") {
   testonly = true
 
-  # The only difference between test-fshost.cml and the main fshost.cml is that the main one has
-  # main_process_critical, but we can't set that flag in tests.
-  # TODO(fxbug.dev/73189): template the two cml files so they don't fall out of sync.
-  manifest = "meta/test-fshost.cml"
+  manifest_outputs = get_target_outputs(":test-fshost.cml")
+  manifest = manifest_outputs[0]
   deps = [
     ":fshost",
+    ":test-fshost.cml",
     "//src/security/policy/zxcrypt:null",
   ]
 }
@@ -423,8 +430,19 @@ fuchsia_test_package("fshost-tests") {
   ]
 }
 
+cmc_merge("fshost.cml") {
+  sources = [
+    "meta/base_fshost.cml",
+    "meta/real_fshost.cml",
+  ]
+  if (!bootfs_only) {
+    sources += [ "meta/core_fshost.cml" ]
+  }
+}
+
 component_manifest_resources("meta") {
-  sources = [ "meta/fshost.cml" ]
+  sources = get_target_outputs(":fshost.cml")
+  deps = [ ":fshost.cml" ]
 }
 
 group("bootfs") {
@@ -489,6 +507,10 @@ template("fshost_config") {
       contents += [ "apply-limits-to-ramdisk" ]
     }
 
+    if (defined(invoker.no_metrics) && invoker.no_metrics) {
+      contents += [ "no-metrics" ]
+    }
+
     output_conversion = "list lines"
     outputs = [ "config/fshost" ]
   }
@@ -506,6 +528,9 @@ fshost_config("no_minfs_zxcrypt") {
 # will only attach a driver to the first device that appears to have a GUID partition scheme.
 fshost_config("gpt_all") {
   gpt_all = true
+  if (bootfs_only) {
+    no_metrics = true
+  }
 }
 
 # Maintains the above semantics for target gpt_all while adding the blobfs decompression sandbox.

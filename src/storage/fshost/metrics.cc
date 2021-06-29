@@ -28,6 +28,9 @@ cobalt_client::MetricOptions MakeMetricOptions(fs_metrics::Event event) {
 
 FsHostMetrics::FsHostMetrics(std::unique_ptr<cobalt_client::Collector> collector)
     : collector_(std::move(collector)) {
+  if (!collector_) {
+    return;
+  }
   cobalt_client::MetricOptions options = MakeMetricOptions(fs_metrics::Event::kDataCorruption);
   options.metric_dimensions = 2;
   options.event_codes[0] = static_cast<uint32_t>(fs_metrics::CorruptionSource::kMinfs);
@@ -49,10 +52,16 @@ FsHostMetrics::~FsHostMetrics() {
   thread_.join();
 }
 
-void FsHostMetrics::Detach() { thread_.detach(); }
+void FsHostMetrics::Detach() {
+  if (thread_.joinable()) {
+    thread_.detach();
+  }
+}
 
 void FsHostMetrics::LogMinfsCorruption() {
-  counters_[fs_metrics::Event::kDataCorruption]->Increment();
+  if (collector_) {
+    counters_[fs_metrics::Event::kDataCorruption]->Increment();
+  }
 }
 
 void FsHostMetrics::Flush() {
