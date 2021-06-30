@@ -13,6 +13,8 @@ namespace fdio_internal {
 
 struct zxio : public base {
   static zx::status<fdio_ptr> create();
+  static zx::status<fdio_ptr> create_pipe(zx::socket socket);
+  static zx::status<std::pair<fdio_ptr, fdio_ptr>> create_pipe_pair(uint32_t options);
 
   zx_status_t close() override;
   zx_status_t clone(zx_handle_t* out_handle) override;
@@ -53,21 +55,6 @@ struct zxio : public base {
   void wait_end_inner(zx_signals_t signals, uint32_t* out_events, zx_signals_t* out_signals);
   zx_status_t recvmsg_inner(struct msghdr* msg, int flags, size_t* out_actual);
   zx_status_t sendmsg_inner(const struct msghdr* msg, int flags, size_t* out_actual);
-};
-
-struct pipe : public zxio {
-  static zx::status<fdio_ptr> create(zx::socket socket);
-  static zx::status<std::pair<fdio_ptr, fdio_ptr>> create_pair(uint32_t options);
-
- protected:
-  friend class fbl::internal::MakeRefCountedHelper<pipe>;
-  friend class fbl::RefPtr<pipe>;
-
-  pipe() = default;
-  ~pipe() override = default;
-
- private:
-  const zxio_pipe_t& zxio_pipe() { return *reinterpret_cast<zxio_pipe_t*>(&zxio_storage().io); }
 };
 
 struct remote : public zxio {

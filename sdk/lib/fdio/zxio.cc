@@ -35,6 +35,40 @@ zx::status<fdio_ptr> zxio::create() {
   return zx::ok(io);
 }
 
+zx::status<fdio_ptr> zxio::create_pipe(zx::socket socket) {
+  fdio_ptr io = fbl::MakeRefCounted<zxio>();
+  if (io == nullptr) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+  zx_info_socket_t info;
+  zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  status = zxio_pipe_init(&io->zxio_storage(), std::move(socket), info);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(io);
+}
+
+zx::status<std::pair<fdio_ptr, fdio_ptr>> zxio::create_pipe_pair(uint32_t options) {
+  zx::socket h0, h1;
+  zx_status_t status = zx::socket::create(options, &h0, &h1);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  zx::status a = zxio::create_pipe(std::move(h0));
+  if (a.is_error()) {
+    return a.take_error();
+  }
+  zx::status b = zxio::create_pipe(std::move(h1));
+  if (b.is_error()) {
+    return b.take_error();
+  }
+  return zx::ok(std::make_pair(a.value(), b.value()));
+}
+
 zx_status_t zxio::close() { return zxio_close(&zxio_storage().io); }
 
 zx_status_t zxio::clone(zx_handle_t* out_handle) {
@@ -365,40 +399,6 @@ zx::status<fdio_ptr> remote::create(zx::vmo vmo, zx::stream stream) {
     return zx::error(status);
   }
   return zx::ok(io);
-}
-
-zx::status<fdio_ptr> pipe::create(zx::socket socket) {
-  fdio_ptr io = fbl::MakeRefCounted<pipe>();
-  if (io == nullptr) {
-    return zx::error(ZX_ERR_NO_MEMORY);
-  }
-  zx_info_socket_t info;
-  zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  status = zxio_pipe_init(&io->zxio_storage(), std::move(socket), info);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(io);
-}
-
-zx::status<std::pair<fdio_ptr, fdio_ptr>> pipe::create_pair(uint32_t options) {
-  zx::socket h0, h1;
-  zx_status_t status = zx::socket::create(options, &h0, &h1);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  zx::status a = pipe::create(std::move(h0));
-  if (a.is_error()) {
-    return a.take_error();
-  }
-  zx::status b = pipe::create(std::move(h1));
-  if (b.is_error()) {
-    return b.take_error();
-  }
-  return zx::ok(std::make_pair(a.value(), b.value()));
 }
 
 }  // namespace fdio_internal

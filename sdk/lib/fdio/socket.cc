@@ -1763,7 +1763,7 @@ static zxio_stream_socket_t& zxio_stream_socket(zxio_t* io) {
 
 namespace fdio_internal {
 
-struct stream_socket : public pipe {
+struct stream_socket : public zxio {
   static constexpr zx_signals_t kSignalIncoming = ZX_USER_SIGNAL_0;
   static constexpr zx_signals_t kSignalConnected = ZX_USER_SIGNAL_3;
 
@@ -2051,7 +2051,7 @@ struct stream_socket : public pipe {
         if (observed & ZX_SOCKET_PEER_CLOSED) {
           return ZX_ERR_NOT_CONNECTED;
         }
-        return pipe::shutdown(how, out_code);
+        return zxio::shutdown(how, out_code);
       }
       return status;
     }

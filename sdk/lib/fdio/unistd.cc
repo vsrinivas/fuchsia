@@ -1290,7 +1290,7 @@ int futimens(int fd, const struct timespec times[2]) {
 }
 
 static int socketpair_create(int fd[2], uint32_t options) {
-  zx::status pair = fdio_internal::pipe::create_pair(options);
+  zx::status pair = fdio_internal::zxio::create_pipe_pair(options);
   if (pair.is_error()) {
     return ERROR(pair.status_value());
   }

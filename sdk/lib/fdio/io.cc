@@ -43,7 +43,7 @@ zx_status_t fdio_pipe_half(int* out_fd, zx_handle_t* out_handle) {
   if (status != ZX_OK) {
     return status;
   }
-  zx::status io = fdio_internal::pipe::create(std::move(h0));
+  zx::status io = fdio_internal::zxio::create_pipe(std::move(h0));
   if (io.is_error()) {
     return io.status_value();
   }
