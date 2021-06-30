@@ -56,6 +56,5 @@ fuchsia_package("package") {
 
 # Run with `fx test my-component-v2-rust-unittests`.
 fuchsia_unittest_package("my-component-v2-rust-unittests") {
-  v2 = true
   deps = [ ":bin_test" ]
 }

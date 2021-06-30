@@ -52,6 +52,5 @@ fuchsia_package("package") {
 
 # Run with `fx test {{PROJECT_NAME}}-unittests`.
 fuchsia_unittest_package("{{PROJECT_NAME}}-unittests") {
-  v2 = true
   deps = [ ":bin_test" ]
 }
