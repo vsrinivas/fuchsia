@@ -225,14 +225,6 @@ pub struct FvmConfig {
     #[serde(default)]
     pub reserved_slices: u64,
 
-    /// If provided, the build will fail if the sparse FVM exceeds this size.
-    #[serde(default)]
-    pub max_disk_size: Option<u64>,
-
-    /// If provided, a fastboot-supported sparse FVM will be generated.
-    #[serde(default)]
-    pub fastboot: Option<FastbootConfig>,
-
     /// The list of filesystems to add to the FVM.
     #[serde(default)]
     pub filesystems: Vec<FvmFilesystemEntry>,
@@ -240,41 +232,6 @@ pub struct FvmConfig {
 
 fn default_fvm_slice_size() -> u64 {
     8388608
-}
-
-#[derive(Deserialize, Serialize)]
-pub enum FastbootConfig {
-    /// Generate an EMMC-supported FVM for flashing.
-    Emmc {
-        /// The compression algorithm to use.
-        #[serde(default = "default_fvm_emmc_compression")]
-        compression: String,
-
-        /// The length of the FVM to generate.
-        length: u64,
-    },
-
-    /// Generate an NAND-supported FVM for flashing.
-    Nand {
-        /// The compression algorithm to use.
-        compression: Option<String>,
-
-        /// The nand page size.
-        page_size: u64,
-
-        /// The out of bound size.
-        oob_size: u64,
-
-        /// The pages per block.
-        pages_per_block: u64,
-
-        /// The number of blocks.
-        block_count: u64,
-    },
-}
-
-fn default_fvm_emmc_compression() -> String {
-    "lz4".to_string()
 }
 
 /// A filesystem to add to the FVM.

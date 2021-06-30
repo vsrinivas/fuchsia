@@ -7,7 +7,5 @@
 //! Library for constructing the FVM.
 
 mod fvm;
-mod nand;
 
-pub use fvm::{Filesystem, FilesystemAttributes, FvmBuilder, FvmType};
-pub use nand::NandFvmBuilder;
+pub use fvm::{Filesystem, FilesystemAttributes, FvmBuilder};
