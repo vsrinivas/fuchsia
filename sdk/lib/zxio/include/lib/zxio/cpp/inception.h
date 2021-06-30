@@ -6,6 +6,7 @@
 #define LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_INCEPTION_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
 #include <threads.h>
@@ -65,6 +66,35 @@ static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
               "zxio_pipe_t must fit inside zxio_storage_t.");
 
 zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_socket_t info);
+
+// datagram socket (channel backed) --------------------------------------------
+
+// A |zxio_t| backend that uses a fuchsia.posix.socket.DatagramSocket object.
+using zxio_datagram_socket_t = struct zxio_datagram_socket {
+  zxio_t io;
+  zx::eventpair event;
+  fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket> client;
+};
+
+zx_status_t zxio_datagram_socket_init(zxio_storage_t* storage, zx::eventpair event,
+                                      fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
+
+// stream socket (channel backed) --------------------------------------------
+
+// A |zxio_t| backend that uses a fuchsia.posix.socket.StreamSocket object.
+using zxio_stream_socket_t = struct zxio_stream_socket {
+  zxio_t io;
+
+  zxio_pipe_t pipe;
+
+  fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
+};
+
+zx_status_t zxio_stream_socket_init(zxio_storage_t* storage, zx::socket socket,
+                                    fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
+                                    zx_info_socket_t& info);
+
+zx_status_t zxio_is_socket(zxio_t* io, bool* out_is_socket);
 
 // generic  --------------------------------------------------------------------
 

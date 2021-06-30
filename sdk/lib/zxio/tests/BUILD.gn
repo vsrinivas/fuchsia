@@ -31,6 +31,7 @@ test("zxio") {
     "remote-test.cc",
     "remote_v2-test.cc",
     "rights-const-test.cc",
+    "socket-test.cc",
     "test_directory_server_base.h",
     "test_file_server_base.h",
     "test_node_server.h",

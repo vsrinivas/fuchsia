@@ -26,6 +26,9 @@ library_headers("inception") {
 
     # <lib/zxio/cpp/inception.h> has #include <fuchsia/io/llcpp/fidl.h>.
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+
+    # <lib/zxio/inception.h> has #include <fuchsia/posix/socket//llcpp/fidl.h>.
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
   ]
 
   visibility = [
@@ -47,6 +50,7 @@ static_library("zxio") {
     "remote_v2/common_utils.cc",
     "remote_v2/dirent_iterator.cc",
     "remote_v2/remote_v2.cc",
+    "socket.cc",
     "vmo.cc",
     "vmofile.cc",
     "zxio.cc",
