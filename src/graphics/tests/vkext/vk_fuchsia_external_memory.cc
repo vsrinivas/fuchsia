@@ -55,13 +55,11 @@ TEST(VulkanExtension, GetMemoryZirconHandlePropertiesFUCHSIA) {
       static_cast<VkStructureType>(VK_STRUCTURE_TYPE_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA);
 
   // TODO(fxbug.dev/69211): Emulator GPU devices (under device type
-  // |eVirtualGpu|, or SwiftShader under type |eCpu|) cannot import arbitrary
-  // VMOs as VkDeviceMemory since it doesn't have a unified memory architecture.
-  // Thus we skip this test case and we'll need a new test case covering FEMU
-  // cases.
+  // |eVirtualGpu|) cannot import arbitrary VMOs as VkDeviceMemory since it
+  // doesn't have a unified memory architecture. Thus we skip this test case
+  // and we'll need a new test case covering FEMU cases.
   auto phy_properties = vulkan_context->physical_device().getProperties();
-  if (phy_properties.deviceType == vk::PhysicalDeviceType::eVirtualGpu ||
-      phy_properties.deviceType == vk::PhysicalDeviceType::eCpu) {
+  if (phy_properties.deviceType == vk::PhysicalDeviceType::eVirtualGpu) {
     fprintf(stderr,
             "Emulator GPU devices cannot support arbitrary VMOs, "
             "skipping test cases importing VMOs not exported from Vulkan\n");

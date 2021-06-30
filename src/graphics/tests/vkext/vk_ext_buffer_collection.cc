@@ -78,14 +78,7 @@ class VulkanExtensionTest : public testing::Test {
 
   bool UseVirtualGpu() {
     auto properties = ctx_->physical_device().getProperties();
-    if (properties.deviceType == vk::PhysicalDeviceType::eVirtualGpu) {
-      return true;
-    }
-    auto deviceName = std::string(properties.deviceName);
-    if (deviceName.find("SwiftShader") != std::string::npos) {
-      return true;
-    }
-    return false;
+    return properties.deviceType == vk::PhysicalDeviceType::eVirtualGpu;
   }
 
   bool SupportsMultiImageBufferCollection() {
@@ -97,9 +90,6 @@ class VulkanExtensionTest : public testing::Test {
     if (deviceName.find("Intel") != std::string::npos)
       return true;
     // Emulated GPU
-    if (deviceName.find("SwiftShader") != std::string::npos) {
-      return true;
-    }
     if (physical_device_properties.deviceType == vk::PhysicalDeviceType::eVirtualGpu)
       return true;
     return false;

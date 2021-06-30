@@ -82,8 +82,7 @@ void SameTokenTwiceTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
 
   // Set the client constraints.
   std::vector<uint64_t> additional_format_modifiers;
-  if (escher::VulkanIsSupported() &&
-      (escher::test::GlobalEscherUsesVirtualGpu() || escher::test::GlobalEscherUsesSwiftShader())) {
+  if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
     additional_format_modifiers.push_back(fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
   }
   SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(client_token),
@@ -136,8 +135,7 @@ void BadImageInputTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysm
   EXPECT_TRUE(result);
 
   std::vector<uint64_t> additional_format_modifiers;
-  if (escher::VulkanIsSupported() &&
-      (escher::test::GlobalEscherUsesVirtualGpu() || escher::test::GlobalEscherUsesSwiftShader())) {
+  if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
     additional_format_modifiers.push_back(fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
   }
   SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token),
@@ -184,8 +182,7 @@ void ImportImageTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem
       {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1}));
 
   std::vector<uint64_t> additional_format_modifiers;
-  if (escher::VulkanIsSupported() &&
-      (escher::test::GlobalEscherUsesVirtualGpu() || escher::test::GlobalEscherUsesSwiftShader())) {
+  if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
     additional_format_modifiers.push_back(fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
   }
   SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token),
@@ -215,8 +212,7 @@ void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
       {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1}));
 
   std::vector<uint64_t> additional_format_modifiers;
-  if (escher::VulkanIsSupported() &&
-      (escher::test::GlobalEscherUsesVirtualGpu() || escher::test::GlobalEscherUsesSwiftShader())) {
+  if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
     additional_format_modifiers.push_back(fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
   }
   SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token),
@@ -256,8 +252,7 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
   EXPECT_TRUE(result);
 
   std::vector<uint64_t> additional_format_modifiers;
-  if (escher::VulkanIsSupported() &&
-      (escher::test::GlobalEscherUsesVirtualGpu() || escher::test::GlobalEscherUsesSwiftShader())) {
+  if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
     additional_format_modifiers.push_back(fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
   }
   const uint32_t kWidth = 64, kHeight = 32;
@@ -326,8 +321,7 @@ void MultithreadingTest(Renderer* renderer) {
     EXPECT_TRUE(result);
 
     std::vector<uint64_t> additional_format_modifiers;
-    if (escher::VulkanIsSupported() && (escher::test::GlobalEscherUsesVirtualGpu() ||
-                                        escher::test::GlobalEscherUsesSwiftShader())) {
+    if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
       additional_format_modifiers.push_back(
           fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
     }
@@ -557,7 +551,6 @@ VK_TEST_F(VulkanRendererTest, DISABLED_MultithreadingTest) {
 
 VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(SwiftShader);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
@@ -593,7 +586,6 @@ VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
 //
 VK_TEST_F(VulkanRendererTest, RenderTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(SwiftShader);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
@@ -794,7 +786,6 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
 // ----------------
 VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(SwiftShader);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
@@ -989,7 +980,6 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
 // ----------------
 VK_TEST_F(VulkanRendererTest, MultiplyColorTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(SwiftShader);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
@@ -1190,7 +1180,6 @@ class VulkanRendererParameterizedYuvTest
 // rectangle, with a fuchsia texture. The render target and the rectangle are 32x32.
 VK_TEST_P(VulkanRendererParameterizedYuvTest, YuvTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(SwiftShader);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = std::make_unique<escher::Escher>(
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
@@ -1346,7 +1335,6 @@ INSTANTIATE_TEST_SUITE_P(YuvPixelFormats, VulkanRendererParameterizedYuvTest,
 // This test actually renders a protected memory backed image using the VKRenderer.
 VK_TEST_F(VulkanRendererTest, ProtectedMemoryTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(SwiftShader);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher = escher::test::CreateEscherWithProtectedMemoryEnabled();
   if (!unique_escher) {

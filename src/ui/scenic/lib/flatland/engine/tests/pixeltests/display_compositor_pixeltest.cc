@@ -482,7 +482,6 @@ class DisplayCompositorFallbackParameterizedPixelTest
 // display's screen, so that the left half is blue and the right half is red.
 VK_TEST_P(DisplayCompositorFallbackParameterizedPixelTest, SoftwareRenderingTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(SwiftShader);
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
 
@@ -655,7 +654,6 @@ INSTANTIATE_TEST_SUITE_P(PixelFormats, DisplayCompositorFallbackParameterizedPix
 // opaque one.
 VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
-  SKIP_TEST_IF_ESCHER_USES_DEVICE(SwiftShader);
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
 
