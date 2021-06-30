@@ -12,6 +12,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/fidl/cpp/binding.h>
 
+#include <memory>
 #include <mutex>
 
 namespace wlanif {
@@ -122,7 +123,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   wlanif_query_info query_info_;
 
   async::Loop loop_;
-  fidl::Binding<::fuchsia::wlan::mlme::MLME> binding_ __TA_GUARDED(lock_);
+  std::unique_ptr<fidl::Binding<::fuchsia::wlan::mlme::MLME>> binding_ __TA_GUARDED(lock_);
 };
 
 }  // namespace wlanif

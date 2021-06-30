@@ -29,8 +29,7 @@ namespace wlan_stats = ::fuchsia::wlan::stats;
 Device::Device(zx_device_t* device, wlanif_impl_protocol_t wlanif_impl_proto)
     : parent_(device),
       wlanif_impl_(wlanif_impl_proto),
-      loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-      binding_(this) {
+      loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   debugfn();
 }
 
@@ -220,14 +219,16 @@ zx_status_t Device::Bind() {
 
 void Device::EthUnbind() {
   debugfn();
-  // Stop accepting new FIDL requests.
-  std::lock_guard<std::mutex> lock(lock_);
-  if (binding_.is_bound()) {
-    binding_.Unbind();
+  auto dispatcher = loop_.dispatcher();
+  {
+    // Stop accepting new FIDL requests.
+    std::lock_guard<std::mutex> lock(lock_);
+    if (binding_ != nullptr) {
+      ::async::PostTask(dispatcher, [binding = std::move(binding_)] { binding->Unbind(); });
+    }
   }
 
   // Ensure that all FIDL messages have been processed before removing the device
-  auto dispatcher = loop_.dispatcher();
   ::async::PostTask(dispatcher, [this] { device_unbind_reply(ethdev_); });
 }
 
@@ -239,10 +240,15 @@ void Device::EthRelease() {
 zx_status_t Device::Connect(zx::channel request) {
   debugfn();
   std::lock_guard<std::mutex> lock(lock_);
-  if (binding_.is_bound()) {
+  if (binding_ != nullptr) {
     return ZX_ERR_ALREADY_BOUND;
   }
-  return binding_.Bind(std::move(request), loop_.dispatcher());
+  auto binding = std::make_unique<fidl::Binding<::fuchsia::wlan::mlme::MLME>>(this);
+  auto status = binding->Bind(std::move(request), loop_.dispatcher());
+  if (status == ZX_OK) {
+    binding_ = std::move(binding);
+  }
+  return status;
 }
 
 void Device::StartScan(wlan_mlme::ScanRequest req) {
@@ -542,7 +548,7 @@ void Device::EapolReq(wlan_mlme::EapolRequest req) {
 void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -598,7 +604,7 @@ void Device::ListMinstrelPeers(ListMinstrelPeersCallback cb) {
   ZX_DEBUG_ASSERT(false);
 
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -610,7 +616,7 @@ void Device::GetMinstrelStats(wlan_mlme::MinstrelStatsRequest req, GetMinstrelSt
   ZX_DEBUG_ASSERT(false);
 
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -681,7 +687,7 @@ void Device::WmmStatusReq() { wlanif_impl_wmm_status_req(&wlanif_impl_); }
 
 void Device::OnScanResult(const wlanif_scan_result_t* result) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -693,12 +699,12 @@ void Device::OnScanResult(const wlanif_scan_result_t* result) {
   // bss
   ConvertBssDescription(&fidl_result.bss, result->bss);
 
-  binding_.events().OnScanResult(std::move(fidl_result));
+  binding_->events().OnScanResult(std::move(fidl_result));
 }
 
 void Device::OnScanEnd(const wlanif_scan_end_t* end) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -710,7 +716,7 @@ void Device::OnScanEnd(const wlanif_scan_end_t* end) {
   // code
   fidl_end.code = ConvertScanResultCode(end->code);
 
-  binding_.events().OnScanEnd(std::move(fidl_end));
+  binding_->events().OnScanEnd(std::move(fidl_end));
 }
 
 void Device::JoinConf(const wlanif_join_confirm_t* resp) {
@@ -718,7 +724,7 @@ void Device::JoinConf(const wlanif_join_confirm_t* resp) {
 
   SetEthernetStatusLocked(false);
 
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -727,7 +733,7 @@ void Device::JoinConf(const wlanif_join_confirm_t* resp) {
   // result_code
   fidl_resp.result_code = ConvertJoinResultCode(resp->result_code);
 
-  binding_.events().JoinConf(std::move(fidl_resp));
+  binding_->events().JoinConf(std::move(fidl_resp));
 }
 
 void Device::AuthenticateConf(const wlanif_auth_confirm_t* resp) {
@@ -735,7 +741,7 @@ void Device::AuthenticateConf(const wlanif_auth_confirm_t* resp) {
 
   SetEthernetStatusLocked(false);
 
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -750,13 +756,13 @@ void Device::AuthenticateConf(const wlanif_auth_confirm_t* resp) {
   // result_code
   fidl_resp.result_code = ConvertAuthResultCode(resp->result_code);
 
-  binding_.events().AuthenticateConf(std::move(fidl_resp));
+  binding_->events().AuthenticateConf(std::move(fidl_resp));
 }
 
 void Device::AuthenticateInd(const wlanif_auth_ind_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -768,7 +774,7 @@ void Device::AuthenticateInd(const wlanif_auth_ind_t* ind) {
   // auth_type
   fidl_ind.auth_type = ConvertAuthType(ind->auth_type);
 
-  binding_.events().AuthenticateInd(std::move(fidl_ind));
+  binding_->events().AuthenticateInd(std::move(fidl_ind));
 }
 
 void Device::DeauthenticateConf(const wlanif_deauth_confirm_t* resp) {
@@ -778,7 +784,7 @@ void Device::DeauthenticateConf(const wlanif_deauth_confirm_t* resp) {
     SetEthernetStatusLocked(false);
   }
 
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -787,7 +793,7 @@ void Device::DeauthenticateConf(const wlanif_deauth_confirm_t* resp) {
   // peer_sta_address
   std::memcpy(fidl_resp.peer_sta_address.data(), resp->peer_sta_address, ETH_ALEN);
 
-  binding_.events().DeauthenticateConf(std::move(fidl_resp));
+  binding_->events().DeauthenticateConf(std::move(fidl_resp));
 }
 
 void Device::DeauthenticateInd(const wlanif_deauth_indication_t* ind) {
@@ -797,7 +803,7 @@ void Device::DeauthenticateInd(const wlanif_deauth_indication_t* ind) {
     SetEthernetStatusLocked(false);
   }
 
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -812,7 +818,7 @@ void Device::DeauthenticateInd(const wlanif_deauth_indication_t* ind) {
   // locally_initiated
   fidl_ind.locally_initiated = ind->locally_initiated;
 
-  binding_.events().DeauthenticateInd(std::move(fidl_ind));
+  binding_->events().DeauthenticateInd(std::move(fidl_ind));
 }
 
 void Device::AssociateConf(const wlanif_assoc_confirm_t* resp) {
@@ -824,7 +830,7 @@ void Device::AssociateConf(const wlanif_assoc_confirm_t* resp) {
     SetEthernetStatusLocked(true);
   }
 
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -844,19 +850,19 @@ void Device::AssociateConf(const wlanif_assoc_confirm_t* resp) {
     fidl_resp.wmm_param = std::move(wmm_param);
   }
 
-  binding_.events().AssociateConf(std::move(fidl_resp));
+  binding_->events().AssociateConf(std::move(fidl_resp));
 }
 
 void Device::AssociateInd(const wlanif_assoc_ind_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
   wlan_mlme::AssociateIndication fidl_ind;
 
   ConvertAssocInd(&fidl_ind, *ind);
-  binding_.events().AssociateInd(std::move(fidl_ind));
+  binding_->events().AssociateInd(std::move(fidl_ind));
 }
 
 void Device::DisassociateConf(const wlanif_disassoc_confirm_t* resp) {
@@ -866,7 +872,7 @@ void Device::DisassociateConf(const wlanif_disassoc_confirm_t* resp) {
     SetEthernetStatusLocked(false);
   }
 
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -875,7 +881,7 @@ void Device::DisassociateConf(const wlanif_disassoc_confirm_t* resp) {
   // status
   fidl_resp.status = resp->status;
 
-  binding_.events().DisassociateConf(std::move(fidl_resp));
+  binding_->events().DisassociateConf(std::move(fidl_resp));
 }
 
 void Device::DisassociateInd(const wlanif_disassoc_indication_t* ind) {
@@ -885,7 +891,7 @@ void Device::DisassociateInd(const wlanif_disassoc_indication_t* ind) {
     SetEthernetStatusLocked(false);
   }
 
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -900,7 +906,7 @@ void Device::DisassociateInd(const wlanif_disassoc_indication_t* ind) {
   // locally_initiated
   fidl_ind.locally_initiated = ind->locally_initiated;
 
-  binding_.events().DisassociateInd(std::move(fidl_ind));
+  binding_->events().DisassociateInd(std::move(fidl_ind));
 }
 
 void Device::StartConf(const wlanif_start_confirm_t* resp) {
@@ -910,7 +916,7 @@ void Device::StartConf(const wlanif_start_confirm_t* resp) {
     SetEthernetStatusLocked(true);
   }
 
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -919,7 +925,7 @@ void Device::StartConf(const wlanif_start_confirm_t* resp) {
   // result_code
   fidl_resp.result_code = ConvertStartResultCode(resp->result_code);
 
-  binding_.events().StartConf(std::move(fidl_resp));
+  binding_->events().StartConf(std::move(fidl_resp));
 }
 
 void Device::StopConf(const wlanif_stop_confirm_t* resp) {
@@ -929,19 +935,19 @@ void Device::StopConf(const wlanif_stop_confirm_t* resp) {
     SetEthernetStatusLocked(false);
   }
 
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
   wlan_mlme::StopConfirm fidl_resp;
   fidl_resp.result_code = ConvertStopResultCode(resp->result_code);
 
-  binding_.events().StopConf(fidl_resp);
+  binding_->events().StopConf(fidl_resp);
 }
 
 void Device::EapolConf(const wlanif_eapol_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -949,58 +955,58 @@ void Device::EapolConf(const wlanif_eapol_confirm_t* resp) {
 
   ConvertEapolConf(&fidl_resp, *resp);
 
-  binding_.events().EapolConf(std::move(fidl_resp));
+  binding_->events().EapolConf(std::move(fidl_resp));
 }
 
 void Device::OnChannelSwitched(const wlanif_channel_switch_info_t* info) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
   wlan_mlme::ChannelSwitchInfo fidl_info;
   fidl_info.new_channel = info->new_channel;
 
-  binding_.events().OnChannelSwitched(fidl_info);
+  binding_->events().OnChannelSwitched(fidl_info);
 }
 
 void Device::SaeHandshakeInd(const wlanif_sae_handshake_ind_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
   wlan_mlme::SaeHandshakeIndication fidl_ind;
 
   memcpy(fidl_ind.peer_sta_address.data(), ind->peer_sta_address, ETH_ALEN);
-  binding_.events().OnSaeHandshakeInd(fidl_ind);
+  binding_->events().OnSaeHandshakeInd(fidl_ind);
 }
 
 void Device::SaeFrameRx(const wlanif_sae_frame_t* frame) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
   wlan_mlme::SaeFrame fidl_frame;
   ConvertSaeAuthFrame(frame, fidl_frame);
-  binding_.events().OnSaeFrameRx(std::move(fidl_frame));
+  binding_->events().OnSaeFrameRx(std::move(fidl_frame));
 }
 
 void Device::OnWmmStatusResp(const zx_status_t status, const wlan_wmm_params_t* params) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
   ::fuchsia::wlan::internal::WmmStatusResponse resp;
   ConvertWmmStatus(params, &resp);
-  binding_.events().OnWmmStatusResp(status, std::move(resp));
+  binding_->events().OnWmmStatusResp(status, std::move(resp));
 }
 
 void Device::SignalReport(const wlanif_signal_report_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -1009,12 +1015,12 @@ void Device::SignalReport(const wlanif_signal_report_indication_t* ind) {
       .snr_db = ind->snr_db,
   };
 
-  binding_.events().SignalReport(std::move(fidl_ind));
+  binding_->events().SignalReport(std::move(fidl_ind));
 }
 
 void Device::EapolInd(const wlanif_eapol_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -1030,23 +1036,23 @@ void Device::EapolInd(const wlanif_eapol_indication_t* ind) {
   fidl_ind.data.resize(ind->data_count);
   fidl_ind.data.assign(ind->data_list, ind->data_list + ind->data_count);
 
-  binding_.events().EapolInd(std::move(fidl_ind));
+  binding_->events().EapolInd(std::move(fidl_ind));
 }
 
 void Device::StatsQueryResp(const wlanif_stats_query_response_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
   wlan_mlme::StatsQueryResponse fidl_resp;
   ConvertIfaceStats(&fidl_resp.stats, resp->stats);
-  binding_.events().StatsQueryResp(std::move(fidl_resp));
+  binding_->events().StatsQueryResp(std::move(fidl_resp));
 }
 
 void Device::RelayCapturedFrame(const wlanif_captured_frame_result* result) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
@@ -1054,18 +1060,18 @@ void Device::RelayCapturedFrame(const wlanif_captured_frame_result* result) {
   fidl_result.frame.resize(result->data_count);
   fidl_result.frame.assign(result->data_list, result->data_list + result->data_count);
 
-  binding_.events().RelayCapturedFrame(std::move(fidl_result));
+  binding_->events().RelayCapturedFrame(std::move(fidl_result));
 }
 
 void Device::OnPmkAvailable(const wlanif_pmk_info_t* info) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!binding_.is_bound()) {
+  if (binding_ == nullptr) {
     return;
   }
 
   wlan_mlme::PmkInfo fidl_info;
   ConvertPmkInfo(&fidl_info, *info);
-  binding_.events().OnPmkAvailable(fidl_info);
+  binding_->events().OnPmkAvailable(fidl_info);
 }
 
 zx_status_t Device::EthStart(const ethernet_ifc_protocol_t* ifc) {
