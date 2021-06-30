@@ -37,6 +37,9 @@ class Function final : public CodeBlock {
  public:
   // Construct with fxl::MakeRefCounted().
 
+  // CodeBlock override:
+  fxl::RefPtr<CodeBlock> GetContainingBlock() const override;
+
   // Symbol overrides.
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
@@ -45,6 +48,9 @@ class Function final : public CodeBlock {
 
   // The containing block is the CodeBlock that contains an inlined function.  This will be null for
   // non-inlined functions.
+  //
+  // Use GetContainingBlock() to access this containing block while falling back to the parent which
+  // will transparently handle inlines vs. non-inlines.
   //
   // For inlined functions, Symbol::parent() will contain the lexical parent of the inlined function
   // (a class or namespace) while the containing block will be the CodeBlock (of any type) that the

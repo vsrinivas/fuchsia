@@ -18,6 +18,13 @@ CodeBlock::CodeBlock(DwarfTag tag) : Symbol(tag) {
 
 CodeBlock::~CodeBlock() = default;
 
+fxl::RefPtr<CodeBlock> CodeBlock::GetContainingBlock() const {
+  // Generic code blocks' containing block is just the parent. This is overridden by Function for
+  // more specific behavior.
+  auto owning_parent = parent().Get();
+  return RefPtrTo(owning_parent->As<CodeBlock>());
+}
+
 const CodeBlock* CodeBlock::AsCodeBlock() const { return this; }
 
 AddressRanges CodeBlock::GetAbsoluteCodeRanges(const SymbolContext& symbol_context) const {
@@ -70,15 +77,16 @@ const CodeBlock* CodeBlock::GetMostSpecificChild(const SymbolContext& symbol_con
   return this;
 }
 
-fxl::RefPtr<Function> CodeBlock::GetContainingFunction() const {
+fxl::RefPtr<Function> CodeBlock::GetContainingFunction(SearchFunction search) const {
   // Need to hold references when walking up the symbol hierarchy.
   fxl::RefPtr<CodeBlock> cur_block = RefPtrTo(this);
   while (cur_block) {
-    if (const Function* function = cur_block->As<Function>())
-      return RefPtrTo(function);
+    if (const Function* function = cur_block->As<Function>()) {
+      if (function && (search == kInlineOrPhysical || !function->is_inline()))
+        return RefPtrTo(function);
+    }
 
-    auto parent_ref = cur_block->parent().Get();
-    cur_block = RefPtrTo(parent_ref->As<CodeBlock>());
+    cur_block = cur_block->GetContainingBlock();
   }
   return fxl::RefPtr<Function>();
 }
@@ -102,8 +110,7 @@ std::vector<fxl::RefPtr<Function>> CodeBlock::GetInlineChain() const {
         break;
       }
     } else {
-      auto parent_ref = cur_block->parent().Get();
-      cur_block = RefPtrTo(parent_ref->As<CodeBlock>());
+      cur_block = cur_block->GetContainingBlock();
     }
   }
   return result;

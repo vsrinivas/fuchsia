@@ -17,6 +17,18 @@ Function::Function(DwarfTag tag) : CodeBlock(tag) {
 
 Function::~Function() = default;
 
+fxl::RefPtr<CodeBlock> Function::GetContainingBlock() const {
+  fxl::RefPtr<Symbol> containing;
+  if (containing_block()) {
+    // Use the manually set containing block if specified.
+    containing = containing_block().Get();
+  } else {
+    // Fall back on the parent if no containing block is explicitly set.
+    containing = parent().Get();
+  }
+  return RefPtrTo(containing->As<CodeBlock>());
+}
+
 const Function* Function::AsFunction() const { return this; }
 
 const Variable* Function::GetObjectPointerVariable() const {

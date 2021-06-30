@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
+#include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
 
@@ -132,6 +133,30 @@ TEST(CodeBlock, GetAmbiguousInlineChain) {
   EXPECT_EQ(inner.get(), result[0].get());
   EXPECT_EQ(middle.get(), result[1].get());
   EXPECT_EQ(outer.get(), result[2].get());
+}
+
+TEST(CodeBlock, GetContainingFunction) {
+  // Innermost scope.
+  auto lexical_block = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
+
+  // The inline function wraps the lexical block.
+  auto inline_fn = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  SymbolTestParentSetter lexical_parent_setter(lexical_block, inline_fn);
+
+  // Collection to serve as the parent for the inline function.
+  auto collection = MakeCollectionType(DwarfTag::kClassType, "Class", {});
+  SymbolTestParentSetter inline_parent_setter(inline_fn, collection);
+
+  // Physical function containing the inline. This relationship uses the "containing block" and not
+  // the parent (which is the class set above).
+  auto physical_fn = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  SymbolTestContainingBlockSetter inline_containing_setter(inline_fn, physical_fn);
+
+  EXPECT_EQ(inline_fn.get(),
+            lexical_block->GetContainingFunction(CodeBlock::kInlineOrPhysical).get());
+  EXPECT_EQ(physical_fn.get(),
+            lexical_block->GetContainingFunction(CodeBlock::kPhysicalOnly).get());
+  EXPECT_EQ(physical_fn.get(), physical_fn->GetContainingFunction().get());
 }
 
 }  // namespace zxdb

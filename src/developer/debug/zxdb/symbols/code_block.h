@@ -22,6 +22,16 @@ class CodeBlock : public Symbol {
  public:
   // Construct with fxl::MakeRefCounted().
 
+  // Returns the block (function, inline, lexical scope) that contains this one. May return null if
+  // this isn't inside another block.
+  //
+  // This is different than getting the parent() because the parent() of an inline class member
+  // function is the class it's a member of, but the containing block is the code block the inlined
+  // function was inlined into.
+  //
+  // See also Function::containing_block().
+  virtual fxl::RefPtr<CodeBlock> GetContainingBlock() const;
+
   // The valid ranges of code for this block. In many cases there will be only one range (most
   // functions specify DW_AT_low_pc and DW_AT_high_pc), but some blocks, especially inlined
   // subroutines, may be at multiple discontiguous ranges in the code (DW_AT_ranges are specified).
@@ -73,7 +83,8 @@ class CodeBlock : public Symbol {
   // Recursively searches the containing blocks until it finds a function (physical or inline). If
   // this code block is a function, returns |this| as a Function. Returns null on error, but this
   // should not happen for well-formed symbols (all code should be inside functions).
-  fxl::RefPtr<Function> GetContainingFunction() const;
+  enum SearchFunction { kInlineOrPhysical, kPhysicalOnly };
+  fxl::RefPtr<Function> GetContainingFunction(SearchFunction search = kInlineOrPhysical) const;
 
   // Returns the chain of inline functions to the current code block.
   //
