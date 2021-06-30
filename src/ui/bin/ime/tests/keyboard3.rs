@@ -426,15 +426,15 @@ fn inject_key_and_receive_keyboard_protocol_message(
             => (None, Some(ui_input3::KeyMeaning::Codepoint(0x31)));
             "only_key_meaning_numeric")]
 #[test_case(None, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Enter)
-            => (None,
+            => (Some(input::Key::Enter),
                 Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Enter)));
             "only_key_meaning_enter")]
 #[test_case(None, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Tab)
-            => (None,
+            => (Some(input::Key::Tab),
                 Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Tab)));
             "only_key_meaning_tab")]
 #[test_case(None, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Backspace)
-            => (None,
+            => (Some(input::Key::Backspace),
                 Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Backspace)));
             "only_key_meaning_backspace")]
 fn test_inject_key_yields_expected_key_and_key_meaning(

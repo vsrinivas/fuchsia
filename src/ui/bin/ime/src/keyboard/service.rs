@@ -5,8 +5,8 @@
 use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_ui_input as ui_input,
-    fidl_fuchsia_ui_input3::{self as ui_input3},
-    fuchsia_syslog::{fx_log_debug, fx_log_err},
+    fidl_fuchsia_ui_input3::{self as ui_input3, KeyMeaning, NonPrintableKey},
+    fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_warn},
     futures::{TryFutureExt, TryStreamExt},
 };
 
@@ -70,8 +70,17 @@ impl Service {
                 ))? {
                     match msg {
                         ui_input3::KeyEventInjectorRequest::Inject {
-                            key_event, responder, ..
+                            mut key_event,
+                            responder,
+                            ..
                         } => {
+                            key_event.key = key_event.key.or_else(|| match key_event.key_meaning {
+                                Some(KeyMeaning::NonPrintableKey(k)) => {
+                                    key_from_non_printable_key(k)
+                                }
+                                Some(KeyMeaning::Codepoint(_)) => None,
+                                None => None,
+                            });
                             ime_service
                                 .inject_input(KeyEvent::new(
                                     &key_event,
@@ -141,5 +150,19 @@ impl Service {
                 .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
         )
         .detach();
+    }
+}
+
+fn key_from_non_printable_key(
+    non_printable_key: NonPrintableKey,
+) -> Option<fidl_fuchsia_input::Key> {
+    match non_printable_key {
+        NonPrintableKey::Enter => Some(fidl_fuchsia_input::Key::Enter),
+        NonPrintableKey::Tab => Some(fidl_fuchsia_input::Key::Tab),
+        NonPrintableKey::Backspace => Some(fidl_fuchsia_input::Key::Backspace),
+        unrecognized => {
+            fx_log_warn!("received unrecognized NonPrintableKey {:?}", unrecognized);
+            None
+        }
     }
 }
