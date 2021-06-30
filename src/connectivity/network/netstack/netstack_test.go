@@ -919,12 +919,6 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 	}
 }
 
-func TestDefaultV6Route(t *testing.T) {
-	if got, want := defaultV6Route(6, testLinkLocalV6Addr1), (tcpip.Route{Destination: header.IPv6EmptySubnet, Gateway: testLinkLocalV6Addr1, NIC: 6}); got != want {
-		t.Fatalf("got defaultV6Route(6, %s) = %s, want = %s", testLinkLocalV6Addr1, got, want)
-	}
-}
-
 func TestOnLinkV6Route(t *testing.T) {
 	subAddr := util.Parse("abcd:1234::")
 	subMask := tcpip.AddressMask(util.Parse("ffff:ffff::"))

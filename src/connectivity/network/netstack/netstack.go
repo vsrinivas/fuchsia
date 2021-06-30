@@ -264,16 +264,6 @@ func defaultV4Route(nicid tcpip.NICID, gateway tcpip.Address) tcpip.Route {
 	}
 }
 
-// defaultV6Route returns a default IPv6 route through gateway on the specified
-// NIC.
-func defaultV6Route(nicid tcpip.NICID, gateway tcpip.Address) tcpip.Route {
-	return tcpip.Route{
-		Destination: header.IPv6EmptySubnet,
-		Gateway:     gateway,
-		NIC:         nicid,
-	}
-}
-
 // onLinkV6Route returns an on-link route to dest through the specified NIC.
 //
 // dest must be a subnet that is directly reachable by the specified NIC as

@@ -183,9 +183,9 @@ func TestInterfacesChangeEvent(t *testing.T) {
 	}
 }
 
-// Test that attempting to invalidate a default router which we do not have a
+// Test that attempting to invalidate an off-link route which we do not have a
 // route for is not an issue.
-func TestNDPInvalidateUnknownIPv6Router(t *testing.T) {
+func TestNDPInvalidateUnknownOffLinkRoute(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -199,18 +199,18 @@ func TestNDPInvalidateUnknownIPv6Router(t *testing.T) {
 		t.Fatalf("ifs.Up(): %s", err)
 	}
 
-	// Invalidate the router with IP testLinkLocalV6Addr1 from eth (even
-	// though we do not yet know about it).
-	ndpDisp.OnOffLinkRouteInvalidated(ifs.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr1)
+	// Invalidate a route we do not have in our route table.
+	rt := tcpip.Route{NIC: ifs.nicid, Destination: subnet1, Gateway: testLinkLocalV6Addr1}
+	ndpDisp.OnOffLinkRouteInvalidated(rt.NIC, rt.Destination, rt.Gateway)
 	waitForEmptyQueue(ndpDisp)
-	if rt, rts := defaultV6Route(ifs.nicid, testLinkLocalV6Addr1), ns.stack.GetRouteTable(); containsRoute(rts, rt) {
+	if rts := ns.stack.GetRouteTable(); containsRoute(rts, rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", rt, rts)
 	}
 }
 
 // Test that ndpDispatcher properly handles the discovery and invalidation of
-// default IPv6 routers.
-func TestNDPIPv6RouterDiscovery(t *testing.T) {
+// off-link routes.
+func TestNDPIPv6OffLinkRouteDiscovery(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -230,18 +230,18 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	}
 
 	// Test discovering a new default router on eth1.
-	ndpDisp.OnOffLinkRouteUpdated(ifs1.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr1, header.MediumRoutePreference)
+	nic1Rtr1Rt := tcpip.Route{Destination: header.IPv6EmptySubnet, Gateway: testLinkLocalV6Addr1, NIC: ifs1.nicid}
+	ndpDisp.OnOffLinkRouteUpdated(nic1Rtr1Rt.NIC, nic1Rtr1Rt.Destination, nic1Rtr1Rt.Gateway, header.MediumRoutePreference)
 	waitForEmptyQueue(ndpDisp)
-	nic1Rtr1Rt := defaultV6Route(ifs1.nicid, testLinkLocalV6Addr1)
 	if rts := ns.stack.GetRouteTable(); !containsRoute(rts, nic1Rtr1Rt) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic1Rtr1Rt, rts)
 	}
 
 	// Test discovering a new default router on eth2 (with the same
 	// link-local IP as the one discovered as eth1).
-	ndpDisp.OnOffLinkRouteUpdated(ifs2.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr1, header.MediumRoutePreference)
+	nic2Rtr1Rt := tcpip.Route{Destination: header.IPv6EmptySubnet, Gateway: testLinkLocalV6Addr1, NIC: ifs2.nicid}
+	ndpDisp.OnOffLinkRouteUpdated(nic2Rtr1Rt.NIC, nic2Rtr1Rt.Destination, nic2Rtr1Rt.Gateway, header.MediumRoutePreference)
 	waitForEmptyQueue(ndpDisp)
-	nic2Rtr1Rt := defaultV6Route(ifs2.nicid, testLinkLocalV6Addr1)
 	rts := ns.stack.GetRouteTable()
 	if !containsRoute(rts, nic2Rtr1Rt) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic2Rtr1Rt, rts)
@@ -252,9 +252,9 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	}
 
 	// Test discovering another default router on eth2.
-	ndpDisp.OnOffLinkRouteUpdated(ifs2.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr2, header.MediumRoutePreference)
+	nic2Rtr2Rt := tcpip.Route{Destination: header.IPv6EmptySubnet, Gateway: testLinkLocalV6Addr2, NIC: ifs2.nicid}
+	ndpDisp.OnOffLinkRouteUpdated(nic2Rtr2Rt.NIC, nic2Rtr2Rt.Destination, nic2Rtr2Rt.Gateway, header.MediumRoutePreference)
 	waitForEmptyQueue(ndpDisp)
-	nic2Rtr2Rt := defaultV6Route(ifs2.nicid, testLinkLocalV6Addr2)
 	rts = ns.stack.GetRouteTable()
 	if !containsRoute(rts, nic2Rtr2Rt) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic2Rtr2Rt, rts)
@@ -267,7 +267,27 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic1Rtr1Rt, rts)
 	}
 
-	// Invalidate the router with IP testLinkLocalV6Addr1 from eth2.
+	// Test discovering a more specific route on eth2.
+	dest := tcpip.AddressWithPrefix{Address: util.Parse("abcd:ee00::"), PrefixLen: 64}.Subnet()
+	ndpDisp.OnOffLinkRouteUpdated(ifs2.nicid, dest, testLinkLocalV6Addr1, header.MediumRoutePreference)
+	waitForEmptyQueue(ndpDisp)
+	nic2Rtr2MoreSpecificRt := tcpip.Route{Destination: dest, Gateway: testLinkLocalV6Addr1, NIC: ifs2.nicid}
+	rts = ns.stack.GetRouteTable()
+	if !containsRoute(rts, nic2Rtr2MoreSpecificRt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic2Rtr2MoreSpecificRt, rts)
+	}
+	// Should still have the routes from before.
+	if !containsRoute(rts, nic2Rtr2Rt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic2Rtr2Rt, rts)
+	}
+	if !containsRoute(rts, nic2Rtr1Rt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic2Rtr1Rt, rts)
+	}
+	if !containsRoute(rts, nic1Rtr1Rt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic1Rtr1Rt, rts)
+	}
+
+	// Invalidate the default router with IP testLinkLocalV6Addr1 from eth2.
 	ndpDisp.OnOffLinkRouteInvalidated(ifs2.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr1)
 	waitForEmptyQueue(ndpDisp)
 	rts = ns.stack.GetRouteTable()
@@ -275,7 +295,10 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Rtr1Rt, rts)
 	}
 	// Should still have default routes through the non-invalidated
-	// routers.
+	// routers and the more specific route.
+	if !containsRoute(rts, nic2Rtr2MoreSpecificRt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic2Rtr2MoreSpecificRt, rts)
+	}
 	if !containsRoute(rts, nic2Rtr2Rt) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic2Rtr2Rt, rts)
 	}
@@ -283,35 +306,41 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic1Rtr1Rt, rts)
 	}
 
-	// Invalidate the router with IP testLinkLocalV6Addr1 from eth1.
+	// Invalidate the default router with IP testLinkLocalV6Addr1 from eth1.
 	ndpDisp.OnOffLinkRouteInvalidated(ifs1.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr1)
 	waitForEmptyQueue(ndpDisp)
 	rts = ns.stack.GetRouteTable()
 	if containsRoute(rts, nic1Rtr1Rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", nic1Rtr1Rt, rts)
 	}
-	// Should still not have the other invalidated route.
-	if containsRoute(rts, nic2Rtr1Rt) {
-		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Rtr1Rt, rts)
-	}
-	// Should still have default route through the non-invalidated router.
+	// Should still have the more specific route and default routes through the
+	// non-invalidated router.
 	if !containsRoute(rts, nic2Rtr2Rt) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic2Rtr2Rt, rts)
 	}
+	if !containsRoute(rts, nic2Rtr2MoreSpecificRt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic2Rtr2MoreSpecificRt, rts)
+	}
 
-	// Invalidate the router with IP testLinkLocalV6Addr2 from eth2.
+	// Invalidate the default router with IP testLinkLocalV6Addr2 from eth2.
 	ndpDisp.OnOffLinkRouteInvalidated(ifs2.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr2)
 	waitForEmptyQueue(ndpDisp)
 	rts = ns.stack.GetRouteTable()
 	if containsRoute(rts, nic2Rtr2Rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Rtr2Rt, rts)
 	}
-	// Should still not have the other invalidated route.
-	if containsRoute(rts, nic1Rtr1Rt) {
-		t.Fatalf("should not have route = %s in the route table, got = %s", nic1Rtr1Rt, rts)
+	// Should still have the more specific route.
+	if !containsRoute(rts, nic2Rtr2MoreSpecificRt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic2Rtr2MoreSpecificRt, rts)
 	}
-	if containsRoute(rts, nic2Rtr1Rt) {
-		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Rtr1Rt, rts)
+
+	// Invalidate the more specific route.
+	ndpDisp.OnOffLinkRouteInvalidated(ifs2.nicid, dest, testLinkLocalV6Addr1)
+	waitForEmptyQueue(ndpDisp)
+	rts = ns.stack.GetRouteTable()
+	// Should not have the more specific route.
+	if containsRoute(rts, nic2Rtr2MoreSpecificRt) {
+		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Rtr2MoreSpecificRt, rts)
 	}
 }
 

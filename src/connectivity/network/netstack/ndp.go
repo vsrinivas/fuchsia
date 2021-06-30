@@ -43,37 +43,35 @@ type ndpEvent interface {
 	isNDPEvent()
 }
 
-// ndpRouterAndDADEventCommon holds the common fields for NDP default router
-// discovery and invalidation, and Duplicate Address Detection events.
-type ndpRouterAndDADEventCommon struct {
-	nicID tcpip.NICID
-	addr  tcpip.Address
-}
-
-// isNDPEvent implements ndpEvent.isNDPEvent.
-func (*ndpRouterAndDADEventCommon) isNDPEvent() {}
-
 type ndpDuplicateAddressDetectionEvent struct {
-	ndpRouterAndDADEventCommon
+	nicID  tcpip.NICID
+	addr   tcpip.Address
 	result stack.DADResult
 }
 
-type ndpDiscoveredRouterEvent struct {
-	ndpRouterAndDADEventCommon
+func (*ndpDuplicateAddressDetectionEvent) isNDPEvent() {}
+
+type ndpOffLinkRouteEventCommon struct {
+	nicID  tcpip.NICID
+	dest   tcpip.Subnet
+	router tcpip.Address
 }
 
-type ndpInvalidatedRouterEvent struct {
-	ndpRouterAndDADEventCommon
+func (*ndpOffLinkRouteEventCommon) isNDPEvent() {}
+
+type ndpDiscoveredOffLinkRouteEvent struct {
+	ndpOffLinkRouteEventCommon
 }
 
-// ndpPrefixEventCommon holds the common fields for all events related to NDP
-// on-link prefix discovery and invalidation.
+type ndpInvalidatedOffLinkRouteEvent struct {
+	ndpOffLinkRouteEventCommon
+}
+
 type ndpPrefixEventCommon struct {
 	nicID  tcpip.NICID
 	prefix tcpip.Subnet
 }
 
-// isNDPEvent implements ndpEvent.isNDPEvent.
 func (*ndpPrefixEventCommon) isNDPEvent() {}
 
 type ndpDiscoveredPrefixEvent struct {
@@ -83,14 +81,11 @@ type ndpInvalidatedPrefixEvent struct {
 	ndpPrefixEventCommon
 }
 
-// ndpAutoGenAddrEventCommon holds the common fields for all events related to
-// auto-generated address events.
 type ndpAutoGenAddrEventCommon struct {
 	nicID          tcpip.NICID
 	addrWithPrefix tcpip.AddressWithPrefix
 }
 
-// isNDPEvent implements ndpEvent.isNDPEvent.
 func (*ndpAutoGenAddrEventCommon) isNDPEvent() {}
 
 type ndpGeneratedAutoGenAddrEvent struct {
@@ -100,8 +95,6 @@ type ndpInvalidatedAutoGenAddrEvent struct {
 	ndpAutoGenAddrEventCommon
 }
 
-// ndpRecursiveDNSServerEvent holds the fields for an NDP Recursive DNS Server
-// list event.
 type ndpRecursiveDNSServerEvent struct {
 	nicID    tcpip.NICID
 	addrs    []tcpip.Address
@@ -164,43 +157,34 @@ type ndpDispatcher struct {
 func (n *ndpDispatcher) OnDuplicateAddressDetectionResult(nicID tcpip.NICID, addr tcpip.Address, result stack.DADResult) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDuplicateAddressDetectionStatus(%d, %s, %#v)", nicID, addr, result)
 	n.addEvent(&ndpDuplicateAddressDetectionEvent{
-		ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{
-			nicID: nicID,
-			addr:  addr,
-		},
+		nicID:  nicID,
+		addr:   addr,
 		result: result,
 	})
 }
 
 // OnOffLinkRouteUpdated implements ipv6.NDPDispatcher.
-//
-// Adds the event to the event queue and returns true so Stack remembers the
-// discovered default router.
 func (n *ndpDispatcher) OnOffLinkRouteUpdated(nicID tcpip.NICID, dest tcpip.Subnet, router tcpip.Address, prf header.NDPRoutePreference) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOffLinkRouteUpdated(%d, %s, %s, %d)", nicID, dest, router, prf)
-
-	if dest == header.IPv6EmptySubnet {
-		n.addEvent(&ndpDiscoveredRouterEvent{ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{nicID: nicID, addr: router}})
-	} else {
-		// TODO(https://fxbug.dev/79015): Support more specific routes.
-	}
+	// TODO(https://fxbug.dev/79015): Support route preferences.
+	n.addEvent(&ndpDiscoveredOffLinkRouteEvent{ndpOffLinkRouteEventCommon: ndpOffLinkRouteEventCommon{
+		nicID:  nicID,
+		dest:   dest,
+		router: router,
+	}})
 }
 
 // OnOffLinkRouteInvalidated implements ipv6.NDPDispatcher.
 func (n *ndpDispatcher) OnOffLinkRouteInvalidated(nicID tcpip.NICID, dest tcpip.Subnet, router tcpip.Address) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOffLinkRouteInvalidated(%d, %s, %s)", nicID, dest, router)
-
-	if dest == header.IPv6EmptySubnet {
-		n.addEvent(&ndpInvalidatedRouterEvent{ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{nicID: nicID, addr: router}})
-	} else {
-		// TODO(https://fxbug.dev/79015): Support more specific routes.
-	}
+	n.addEvent(&ndpInvalidatedOffLinkRouteEvent{ndpOffLinkRouteEventCommon: ndpOffLinkRouteEventCommon{
+		nicID:  nicID,
+		dest:   dest,
+		router: router,
+	}})
 }
 
 // OnOnLinkPrefixDiscovered implements ipv6.NDPDispatcher.
-//
-// Adds the event to the event queue and returns true so Stack remembers the
-// discovered on-link prefix.
 func (n *ndpDispatcher) OnOnLinkPrefixDiscovered(nicID tcpip.NICID, prefix tcpip.Subnet) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOnLinkPrefixDiscovered(%d, %s)", nicID, prefix)
 	n.addEvent(&ndpDiscoveredPrefixEvent{ndpPrefixEventCommon: ndpPrefixEventCommon{nicID: nicID, prefix: prefix}})
@@ -213,9 +197,6 @@ func (n *ndpDispatcher) OnOnLinkPrefixInvalidated(nicID tcpip.NICID, prefix tcpi
 }
 
 // OnAutoGenAddress implements ipv6.NDPDispatcher.
-//
-// Adds the event to the event queue and returns true so Stack adds the
-// auto-generated address.
 func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnAutoGenAddress(%d, %s)", nicID, addrWithPrefix)
 	n.addEvent(&ndpGeneratedAutoGenAddrEvent{ndpAutoGenAddrEventCommon: ndpAutoGenAddrEventCommon{nicID: nicID, addrWithPrefix: addrWithPrefix}})
@@ -467,25 +448,23 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 
 				n.ns.onPropertiesChange(event.nicID, nil)
 
-			case *ndpDiscoveredRouterEvent:
-				nicID, addr := event.nicID, event.addr
-				rt := defaultV6Route(nicID, addr)
-				_ = syslog.InfoTf(ndpSyslogTagName, "discovered a default router (%s) on nicID (%d), adding a default route to it: [%s]", addr, nicID, rt)
+			case *ndpDiscoveredOffLinkRouteEvent:
+				rt := tcpip.Route{Destination: event.dest, Gateway: event.router, NIC: event.nicID}
+				_ = syslog.InfoTf(ndpSyslogTagName, "discovered an off-link route to [%s] through [%s] on nicID (%d): [%s]", event.dest, event.router, event.nicID, rt)
 				// rt is added as a 'static' route because Netstack will remove dynamic
 				// routes on DHCPv4 changes. See
 				// staticRouteAvoidingLifeCycleHooks for more details.
 				if err := n.ns.AddRoute(rt, metricNotSet, staticRouteAvoidingLifeCycleHooks); err != nil {
-					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to add the default route [%s] for the discovered router (%s) on nicID (%d): %s", rt, addr, nicID, err)
+					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to add the route [%s] for the discovered off-link route to [%s] through [%s] on nicID (%d): %s", rt, event.dest, event.router, event.nicID, err)
 				}
 
-			case *ndpInvalidatedRouterEvent:
-				nicID, addr := event.nicID, event.addr
-				rt := defaultV6Route(nicID, addr)
-				_ = syslog.InfoTf(ndpSyslogTagName, "invalidating a default router (%s) from nicID (%d), removing the default route to it: [%s]", addr, nicID, rt)
+			case *ndpInvalidatedOffLinkRouteEvent:
+				rt := tcpip.Route{Destination: event.dest, Gateway: event.router, NIC: event.nicID}
+				_ = syslog.InfoTf(ndpSyslogTagName, "invalidating an off-link route to [%s] through [%s] on nicID (%d), removing the default route to it: [%s]", event.dest, event.router, event.nicID, rt)
 				// If the route does not exist, we do not consider that an error as it
 				// may have been removed by the user.
 				if err := n.ns.DelRoute(rt); err != nil && !errors.Is(err, routes.ErrNoSuchRoute) {
-					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to remove the default route [%s] for the invalidated router (%s) on nicID (%d): %s", rt, addr, nicID, err)
+					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to remove the route [%s] for the discovered off-link route to [%s] through [%s] on nicID (%d): %s", rt, event.dest, event.router, event.nicID, err)
 				}
 
 			case *ndpDiscoveredPrefixEvent:
