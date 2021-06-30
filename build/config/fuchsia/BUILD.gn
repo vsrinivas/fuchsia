@@ -141,6 +141,10 @@ config("cortex_a53_843419") {
 
 config("shared_library_config") {
   cflags = [ "-fPIC" ]
+
+  # Ensure assembly code can use `#ifdef __PIC__`
+  asmflags = cflags
+  ldflags = cflags
 }
 
 # NOTE: Even though this config has been moved to //build/config:BUILD.gn, it

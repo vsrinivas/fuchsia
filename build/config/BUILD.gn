@@ -850,15 +850,12 @@ config("symbol_no_undefined") {
 }
 
 config("shared_library_config") {
-  configs = []
-  cflags = []
-
   if (current_os == "fuchsia") {
-    configs += [ "//build/config/fuchsia:shared_library_config" ]
+    configs = [ "//build/config/fuchsia:shared_library_config" ]
   } else if (current_os == "linux") {
-    cflags += [ "-fPIC" ]
+    cflags = [ "-fPIC" ]
   } else if (current_os == "mac") {
-    configs += [ "//build/config/mac:mac_dynamic_flags" ]
+    configs = [ "//build/config/mac:mac_dynamic_flags" ]
   }
 }
 

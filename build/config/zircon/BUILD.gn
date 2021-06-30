@@ -485,17 +485,6 @@ config("no_maybe_uninitialized") {
   }
 }
 
-# Compile code appropriately to be linked into a shared library.
-config("shared_library_config") {
-  if (current_os != "mac") {
-    # Assembly code can use `#ifdef __PIC__`.
-    compiler_flags = [ "-fPIC" ]
-    asmflags = compiler_flags
-    cflags = compiler_flags
-    ldflags = compiler_flags
-  }
-}
-
 config("machine") {
   ldflags = []
   if (current_cpu == "arm64" && current_os != "win") {

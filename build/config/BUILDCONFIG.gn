@@ -431,7 +431,7 @@ if (zircon_toolchain == false) {
   if (!toolchain_variant.is_pic_default) {
     default_shared_library_configs += [
       "//build/config:no_undefined_symbols",
-      "//build/config/zircon:shared_library_config",
+      "//build/config:shared_library_config",
     ]
   }
 
