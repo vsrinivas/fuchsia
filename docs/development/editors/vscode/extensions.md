@@ -69,13 +69,18 @@ adds syntax highlighting for GN files.
 [GNFormat](https://marketplace.visualstudio.com/items?itemName=persidskiy.vscode-gnformat){: .external}
 provides GN file formatting.
 
-You may need to configure GNFormat with the file path to your GN binary.
+You may need to configure GNFormat with the file path to your GN binary and buildtools.
 Do the following:
 
 1. In VS Code, launch **Quick Open** by running `CMD/CTRL + P`.
 1. Type `settings` in the search field.
 1. Click **Preferences: Open Settings (JSON)**.
-1. Add the following configuration: `”gnformat.path”: “<FILE_PATH>”` and restart VS Code.
+1. Add the following configuration and restart VS Code:
+
+```json5
+"gnformat.path.gn": "{{ '<var>' }}FILE_PATH{{ '</var>' }}",
+"gnformat.path.buildtools": "{{ '<var>' }}BUILD_TOOLS_PATH{{ '</var>' }}"
+```
 
 ### JSON5
 
