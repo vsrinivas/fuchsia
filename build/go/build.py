@@ -76,9 +76,6 @@ def main():
         help='List of files describing library dependencies',
         nargs='*',
         default=[])
-    parser.add_argument(
-        '--root-build-dir',
-        help='Root build directory. Required if --go-dep-files is used.')
     parser.add_argument('--binname', help='Output file', required=True)
     parser.add_argument(
         '--output-path',
@@ -149,24 +146,25 @@ def main():
 
     dst_vendor = os.path.join(gopath_src, 'vendor')
     os.makedirs(dst_vendor)
+    # Symlink interprets path against the current working directory, so use
+    # absolute path for consistency.
+    abs_golibs_dir = os.path.abspath(args.golibs_dir)
     for src in ['go.mod', 'go.sum']:
         os.symlink(
-            os.path.join(args.golibs_dir, src), os.path.join(gopath_src, src))
-    src_vendor = os.path.join(args.golibs_dir, 'vendor')
+            os.path.join(abs_golibs_dir, src), os.path.join(gopath_src, src))
     os.symlink(
-        os.path.join(src_vendor, 'modules.txt'),
+        os.path.join(os.path.join(abs_golibs_dir, 'vendor'), 'modules.txt'),
         os.path.join(dst_vendor, 'modules.txt'))
 
     link_to_source_list = []
     if args.go_dep_files:
-        assert args.root_build_dir, (
-            '--root-build-dir is required with --go-dep-files')
-
-        root_build_dir = os.path.abspath(args.root_build_dir)
         link_to_source = {}
 
         # Create a GOPATH for the packages dependency tree.
         for dst, src in sorted(get_sources(args.go_dep_files).items()):
+            # This path is later used in go commands that run in cwd=gopath_src.
+            src = os.path.abspath(src)
+
             # If the destination is part of the "main module", strip off the
             # module path. Otherwise, put it in the vendor directory.
             if dst.startswith(FUCHSIA_MODULE):
@@ -211,7 +209,7 @@ def main():
                 if not os.path.exists(parent):
                     os.makedirs(parent)
                 os.symlink(src, dstdir)
-                link_to_source[os.path.join(root_build_dir, dstdir)] = src
+                link_to_source[dstdir] = src
             else:
                 # Map individual files since the dependency is only on the
                 # package itself, not Go subpackages. The only exception is
@@ -221,8 +219,7 @@ def main():
                     src_file = os.path.join(src, filename)
                     if filename == 'testdata' or os.path.isfile(src_file):
                         os.symlink(src_file, os.path.join(dstdir, filename))
-                        link_to_source[os.path.join(
-                            root_build_dir, dstdir, filename)] = src
+                        link_to_source[os.path.join(dstdir, filename)] = src
 
         # Create a sorted list of (link, src) pairs, with longest paths before
         # short one. This ensures that 'foobar' will appear before 'foo'.
@@ -231,7 +228,7 @@ def main():
 
     cflags = []
     if args.sysroot:
-        cflags.extend(['--sysroot', args.sysroot])
+        cflags.extend(['--sysroot', os.path.abspath(args.sysroot)])
     if args.target:
         cflags.extend(['-target', args.target])
 
@@ -246,8 +243,8 @@ def main():
             ])
 
     for dir in args.include_dir:
-        cflags.extend(['-isystem', dir])
-    ldflags.extend(['-L' + dir for dir in args.lib_dir])
+        cflags.extend(['-isystem', os.path.abspath(dir)])
+    ldflags.extend(['-L' + os.path.abspath(dir) for dir in args.lib_dir])
 
     cflags_joined = ' '.join(cflags)
     ldflags_joined = ' '.join(ldflags)
@@ -279,9 +276,11 @@ def main():
         # Some users have GOROOT set in their parent environment, which can break
         # things, so it is always set explicitly here.
         'GOROOT': build_goroot,
-        'GOCACHE': args.go_cache,
-        'CC': args.cc,
-        'CXX': args.cxx,
+        # GOCACHE, CC and CXX below may be used in different working directories
+        # so they have to be absolute.
+        'GOCACHE': os.path.abspath(args.go_cache),
+        'CC': os.path.abspath(args.cc),
+        'CXX': os.path.abspath(args.cxx),
         'CGO_CFLAGS': cflags_joined,
         'CGO_CPPFLAGS': cflags_joined,
         'CGO_CXXFLAGS': cflags_joined,

@@ -189,31 +189,32 @@ template("go_build") {
       "--output-path",
       rebase_path(output_path, root_build_dir),
       "--go-cache",
-      gocache_dir,
+      rebase_path(gocache_dir, root_build_dir),
       "--cc",
-      rebase_path("$clang_prefix/clang", "", root_build_dir),
+      "$clang_prefix/clang",
       "--cxx",
-      rebase_path("$clang_prefix/clang++", "", root_build_dir),
+      "$clang_prefix/clang++",
       "--objcopy",
-      rebase_path("$clang_prefix/llvm-objcopy", "", root_build_dir),
+      "$clang_prefix/llvm-objcopy",
       "--sysroot",
-      rebase_path(sysroot),
+      rebase_path(sysroot, root_build_dir),
       "--target",
       clang_target,
       "--golibs-dir",
-      rebase_path("//third_party/golibs"),
+      rebase_path("//third_party/golibs", root_build_dir),
     ]
 
     include_dirs = []
     if (defined(invoker.include_dirs)) {
-      include_dirs = invoker.include_dirs
+      include_dirs = rebase_path(invoker.include_dirs, root_build_dir)
     }
     lib_dirs = []
     if (defined(invoker.lib_dirs)) {
-      lib_dirs = invoker.lib_dirs
+      lib_dirs = rebase_path(invoker.lib_dirs, root_build_dir)
     }
-    lib_dirs += [ rebase_path(
-            get_label_info(":any($shlib_toolchain)", "root_out_dir")) ]
+    lib_dirs +=
+        [ rebase_path(get_label_info(":any($shlib_toolchain)", "root_out_dir"),
+                      root_build_dir) ]
 
     if (!(defined(invoker.cgo) && !invoker.cgo)) {
       args += [ "--cgo" ]
@@ -234,15 +235,18 @@ template("go_build") {
 
         if (_fdio_toolchain != current_toolchain + "-shared") {
           lib_dirs += [ rebase_path(
-                  get_label_info(_fdio_label_with_toolchain, "root_out_dir")) ]
+                  get_label_info(_fdio_label_with_toolchain, "root_out_dir"),
+                  root_build_dir) ]
         }
 
-        include_dirs += [ rebase_path("//sdk/lib/fdio/include") ]
+        include_dirs +=
+            [ rebase_path("//sdk/lib/fdio/include", root_build_dir) ]
 
         # See //build/config/fuchsia:fdio_config.
         lib_dirs +=
             [ rebase_path(get_label_info("//build/config/fuchsia:fdio_config",
-                                         "target_gen_dir")) ]
+                                         "target_gen_dir"),
+                          root_build_dir) ]
       }
     }
 
@@ -335,12 +339,13 @@ template("go_build") {
     if (use_prebuilt_go) {
       args += [
         "--go-root",
-        rebase_path("//prebuilt/third_party/go/${host_platform}"),
+        rebase_path("//prebuilt/third_party/go/${host_platform}",
+                    root_build_dir),
       ]
     } else {
       args += [
         "--go-root",
-        rebase_path("$host_tools_dir/goroot"),
+        rebase_path("$host_tools_dir/goroot", root_build_dir),
       ]
       deps += [ "//third_party/go:go_runtime" ]
     }
@@ -367,17 +372,13 @@ template("go_build") {
 
     if (defined(invoker.deps)) {
       deps += invoker.deps
-      args += [
-        "--root-build-dir",
-        rebase_path(root_build_dir),
-        "--go-dep-files",
-      ]
+      args += [ "--go-dep-files" ]
       inputs = []
       foreach(dep, invoker.deps) {
         gen_dir = get_label_info(dep, "target_gen_dir")
         name = get_label_info(dep, "name")
-        args += [ rebase_path("$gen_dir/$name.go_deps") ]
-        inputs += [ rebase_path("$gen_dir/$name.go_deps") ]
+        args += [ rebase_path("$gen_dir/$name.go_deps", root_build_dir) ]
+        inputs += [ "$gen_dir/$name.go_deps" ]
       }
     }
 

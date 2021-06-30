@@ -61,7 +61,7 @@ template("go_library") {
     # Make name_file a system-absolute path and add it to args.
     name_args = [
       "--name-file",
-      rebase_path(invoker.name_file),
+      rebase_path(invoker.name_file, root_build_dir),
     ]
   } else {
     target_name_dir = get_label_info(":$target_name", "dir")
@@ -110,11 +110,11 @@ template("go_library") {
 
     args = name_args + [
              "--source-dir",
-             rebase_path(source_dir),
+             rebase_path(source_dir, root_build_dir),
              "--output",
-             rebase_path(library_file),
+             rebase_path(library_file, root_build_dir),
              "--deps",
-           ] + rebase_path(dependent_libraries)
+           ] + rebase_path(dependent_libraries, root_build_dir)
 
     if (defined(invoker.allow_globbing) && invoker.allow_globbing) {
       assert(!defined(invoker.sources),
