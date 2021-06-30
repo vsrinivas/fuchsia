@@ -436,7 +436,7 @@ class TunTest : public gtest::RealLoopFixture {
 template <class T>
 class CapturingEventHandler : public fidl::WireAsyncEventHandler<T> {
  public:
-  virtual void Unbound(fidl::UnbindInfo info) override { info_ = info; }
+  void on_fidl_error(fidl::UnbindInfo info) override { info_ = info; }
 
   std::optional<fidl::UnbindInfo> info_;
 };
@@ -447,12 +447,12 @@ TEST_F(TunTest, InvalidConfigs) {
     if (device.is_error()) {
       return device.status_value();
     }
-    std::shared_ptr handler = std::make_shared<CapturingEventHandler<fuchsia_net_tun::Device>>();
-    fidl::Client client(std::move(device.value()), dispatcher(), handler);
-    if (!RunLoopWithTimeoutOrUntil([handler] { return handler->info_.has_value(); }, kTimeout)) {
+    CapturingEventHandler<fuchsia_net_tun::Device> handler;
+    fidl::WireClient client(std::move(device.value()), dispatcher(), &handler);
+    if (!RunLoopWithTimeoutOrUntil([&handler] { return handler.info_.has_value(); }, kTimeout)) {
       return ZX_ERR_TIMED_OUT;
     }
-    return handler->info_.value().status();
+    return handler.info_.value().status();
   };
 
   // Zero MTU
@@ -530,25 +530,23 @@ TEST_F(TunTest, Teardown) {
   fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(client_end.value()));
   ASSERT_OK(tun.ConnectProtocols(std::move(protos)).status());
 
-  std::shared_ptr device_handler =
-      std::make_shared<CapturingEventHandler<fuchsia_hardware_network::Device>>();
-  std::shared_ptr mac_handler =
-      std::make_shared<CapturingEventHandler<fuchsia_hardware_network::MacAddressing>>();
+  CapturingEventHandler<fuchsia_hardware_network::Device> device_handler;
+  CapturingEventHandler<fuchsia_hardware_network::MacAddressing> mac_handler;
 
-  fidl::Client device(std::move(device_endpoints->client), dispatcher(), device_handler);
-  fidl::Client mac(std::move(mac_endpoints->client), dispatcher(), mac_handler);
+  fidl::WireClient device(std::move(device_endpoints->client), dispatcher(), &device_handler);
+  fidl::WireClient mac(std::move(mac_endpoints->client), dispatcher(), &mac_handler);
 
   // get rid of tun.
   tun.client_end().reset();
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&device_handler, &mac_handler]() {
-        return device_handler->info_.has_value() && mac_handler->info_.has_value();
+        return device_handler.info_.has_value() && mac_handler.info_.has_value();
       },
       kTimeout, zx::duration::infinite()))
-      << "Timed out waiting for channels to close; device_dead="
-      << device_handler->info_.has_value() << ", mac_dead=" << mac_handler->info_.has_value();
-  ASSERT_STATUS(device_handler->info_.value().status(), ZX_ERR_PEER_CLOSED);
-  ASSERT_STATUS(mac_handler->info_.value().status(), ZX_ERR_PEER_CLOSED);
+      << "Timed out waiting for channels to close; device_dead=" << device_handler.info_.has_value()
+      << ", mac_dead=" << mac_handler.info_.has_value();
+  ASSERT_STATUS(device_handler.info_.value().status(), ZX_ERR_PEER_CLOSED);
+  ASSERT_STATUS(mac_handler.info_.value().status(), ZX_ERR_PEER_CLOSED);
 }
 
 TEST_F(TunTest, Status) {
@@ -751,11 +749,10 @@ TEST_P(MacSourceParamTest, NoMac) {
 
   // Mac channel should be closed because we created tun without a mac information.
   // Wait for the error handler to report that back to us.
-  std::shared_ptr mac_handler =
-      std::make_shared<CapturingEventHandler<fuchsia_hardware_network::MacAddressing>>();
-  fidl::Client mac(std::move(mac_status.value()), dispatcher(), mac_handler);
+  CapturingEventHandler<fuchsia_hardware_network::MacAddressing> mac_handler;
+  fidl::WireClient mac(std::move(mac_status.value()), dispatcher(), &mac_handler);
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&mac_handler]() { return mac_handler->info_.has_value(); },
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&mac_handler]() { return mac_handler.info_.has_value(); },
                                         kTimeout, zx::duration::infinite()));
 
   fidl::WireResult get_state_result = tun.GetState();
