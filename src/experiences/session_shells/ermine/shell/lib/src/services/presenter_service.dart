@@ -18,11 +18,13 @@ import 'package:zircon/zircon.dart';
 
 typedef ViewPresentedCallback = bool Function(ViewState viewState);
 typedef ViewDismissedCallback = void Function(ViewState viewState);
+typedef ErrorCallback = void Function(String url, String error);
 
 /// Defines a [GraphicalPresenter] to present and dismiss application views.
 class PresenterService extends GraphicalPresenter {
   late ViewPresentedCallback onViewPresented;
   late ViewDismissedCallback onViewDismissed;
+  late ErrorCallback onError;
 
   PresenterService();
 
@@ -76,7 +78,12 @@ class PresenterService extends GraphicalPresenter {
       );
       onViewPresented(viewState);
     } else {
-      viewController.close(ViewControllerEpitaph.invalidViewSpec);
+      final error = ViewControllerEpitaph.invalidViewSpec;
+      if (url != null) {
+        // TODO(fxb/79944): Handle the errors thrown by non-pre-listed apps.
+        onError(url, error.toString());
+      }
+      viewController.close(error);
     }
   }
 

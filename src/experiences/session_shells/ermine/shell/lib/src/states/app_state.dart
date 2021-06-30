@@ -37,6 +37,7 @@ abstract class AppState with Store {
   ObservableValue<bool> get oobeVisible;
   ObservableValue<ViewState> get topView;
   ObservableList<ViewState> get views;
+  ObservableMap<String, List<String>> get errors;
   ObservableStream<Locale> get localeStream;
   String get buildVersion;
   List<Map<String, String>> get appLaunchEntries;

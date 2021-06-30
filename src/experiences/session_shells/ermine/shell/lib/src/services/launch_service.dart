@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:fidl_fuchsia_session/fidl_async.dart';
-import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 
 /// Defines a service to launch applications given their [url] using the
@@ -31,12 +30,7 @@ class LaunchService {
     ]);
 
     final spec = ElementSpec(componentUrl: url, annotations: annotations);
-
-    await proxy
-        .proposeElement(spec, elementController.ctrl.request())
-        .catchError((err) {
-      log.shout('$err: Failed to propose element <$url>');
-    });
+    await proxy.proposeElement(spec, elementController.ctrl.request());
 
     proxy.ctrl.close();
     await incoming.close();

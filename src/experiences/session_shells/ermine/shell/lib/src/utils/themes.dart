@@ -22,6 +22,8 @@ class AppTheme {
         dividerColor: Colors.black,
         // Used for side bar background.
         bottomAppBarColor: Colors.grey[100],
+        // Used for error signals and messages.
+        errorColor: Colors.red[600],
         // Used by Switch
         toggleableActiveColor: Colors.pink[400],
         // Used by OutlinedButton in QuickSettings.
@@ -58,6 +60,8 @@ class AppTheme {
         dividerColor: Colors.white,
         // Used for side bar background.
         bottomAppBarColor: Colors.black,
+        // Used for error signals and messages.
+        errorColor: Colors.red[500],
         // Used by Switch.
         toggleableActiveColor: Colors.pink[400],
         // Used by OutlinedButton in QuickSettings.

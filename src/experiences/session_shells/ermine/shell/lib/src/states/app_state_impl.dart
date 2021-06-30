@@ -21,6 +21,7 @@ import 'package:ermine/src/utils/mobx_extensions.dart';
 import 'package:ermine/src/utils/themes.dart';
 import 'package:ermine/src/utils/view_handle.dart';
 import 'package:flutter/material.dart' hide Action;
+import 'package:fuchsia_logger/logger.dart';
 import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
 
@@ -53,6 +54,7 @@ class AppStateImpl with Disposable implements AppState {
     presenterService
       ..onViewPresented = _onViewPresented
       ..onViewDismissed = _onViewDismissed
+      ..onError = _onPresentError
       ..advertise(startupService.componentContext.outgoing);
 
     // Register keyboard shortcuts and then initialize SettingsState with it.
@@ -143,6 +145,9 @@ class AppStateImpl with Disposable implements AppState {
     return shellHasFocus.value &&
         (sideBarPeeking.value || overlayVisibility.value);
   }).asComputed();
+
+  @override
+  final errors = <String, List<String>>{}.asObservable();
 
   @override
   final views = <ViewState>[].asObservable();
@@ -236,21 +241,43 @@ class AppStateImpl with Disposable implements AppState {
   }.asAction();
 
   @override
-  late final launch = launchService.launch.asAction();
-
-  @override
-  late final Action launchFeedback = () {
-    launchService.launch(Strings.feedback, kFeedbackUrl);
+  late final launch = (String title, String url) async {
+    try {
+      await launchService.launch(title, url);
+      _clearError(url, 'ProposeElementError');
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e) {
+      _onLaunchError(url, e.toString());
+      log.shout('$e: Failed to propose element <$url>');
+    }
   }.asAction();
 
   @override
-  late final Action launchLicense = () {
-    launchService.launch(
-        '${Strings.openSource} ${Strings.license}', kLicenseUrl);
+  late final Action launchFeedback = () async {
+    try {
+      await launchService.launch(Strings.feedback, kFeedbackUrl);
+      _clearError(kFeedbackUrl, 'ProposeElementError');
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e) {
+      _onLaunchError(kFeedbackUrl, e.toString());
+      log.shout('$e: Failed to propose element <$kFeedbackUrl>');
+    }
   }.asAction();
 
   @override
-  late final setTheme = (bool darkTheme) {
+  late final Action launchLicense = () async {
+    try {
+      await launchService.launch(Strings.feedback, kLicenseUrl);
+      _clearError(kLicenseUrl, 'ProposeElementError');
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e) {
+      _onLaunchError(kLicenseUrl, e.toString());
+      log.shout('$e: Failed to propose element <$kLicenseUrl>');
+    }
+  }.asAction();
+
+  @override
+  late final Action setTheme = (bool darkTheme) {
     preferencesService.darkMode.value = darkTheme;
   }.asAction();
 
@@ -311,6 +338,11 @@ class AppStateImpl with Disposable implements AppState {
     runInAction(() {
       views.add(view);
       topView.value = view;
+
+      // If any, remove previously cached launch errors for the app.
+      if (viewState.url != null) {
+        _clearError(viewState.url!, 'ViewControllerEpitaph');
+      }
     });
 
     // Focus on view when it is ready.
@@ -362,6 +394,44 @@ class AppStateImpl with Disposable implements AppState {
       if (!overlayVisibility.value) {
         setFocusToChildView();
       }
+    });
+  }
+
+  void _onPresentError(String url, String error) {
+    runInAction(() {
+      final errorSpec = error.split('.').last;
+      final description = errorSpec == 'invalidViewSpec'
+          ? 'A valid ViewHolderToken is missing'
+          : errorSpec == 'rejected'
+              ? 'The request to present the view is rejected'
+              : 'Something went wrong while presenting the view';
+      errors[url] = [
+        description,
+        '$error\nhttps://fuchsia.dev/reference/fidl/fuchsia.session#ViewControllerEpitaph'
+      ];
+    });
+  }
+
+  void _onLaunchError(String url, String error) {
+    final proposeError = error.split(' ').last;
+    print('Handling launch error $proposeError for $url');
+    final errorSpec = proposeError.split('.').last;
+    final description = errorSpec == 'notFound'
+        ? 'The component URL could not be resolved'
+        : errorSpec == 'rejected'
+            ? 'The element spec is malformed'
+            : 'Something went wrong while launching';
+
+    errors[url] = [
+      description,
+      '$proposeError\nhttps://fuchsia.dev/reference/fidl/fuchsia.session#ProposeElementError'
+    ];
+  }
+
+  void _clearError(String url, String errorType) {
+    runInAction(() {
+      errors.removeWhere(
+          (key, value) => key == url && value[1].startsWith(errorType));
     });
   }
 }

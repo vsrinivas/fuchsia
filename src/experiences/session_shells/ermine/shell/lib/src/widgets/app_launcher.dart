@@ -33,13 +33,28 @@ class AppLauncher extends StatelessWidget {
                 height: 32,
               ),
               title: Text(item['title']!),
+              subtitle: !_isLoading(item) && _hasError(item['url'])
+                  ? Tooltip(
+                      message: app.errors[item['url']!]![1],
+                      child: Text(app.errors[item['url']!]![0],
+                          style: TextStyle(color: Theme.of(context).errorColor),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    )
+                  : null,
               trailing: _isLoading(item)
                   ? SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(),
                     )
-                  : null,
+                  : _hasError(item['url'])
+                      ? Icon(
+                          Icons.error,
+                          size: 24,
+                          color: Theme.of(context).errorColor,
+                        )
+                      : null,
               enabled: _isEnabled(item),
               onTap: () {
                 if (!_isLoading(item)) {
@@ -64,4 +79,11 @@ class AppLauncher extends StatelessWidget {
   }
 
   bool _isEnabled(Map<String, String> item) => item['url'] != null;
+
+  bool _hasError(String? url) {
+    if (url != null) {
+      return app.errors.containsKey(url);
+    }
+    return false;
+  }
 }
