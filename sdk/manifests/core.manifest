@@ -14,7 +14,6 @@ sdk://fidl/fuchsia.accessibility.virtualkeyboard
 sdk://fidl/fuchsia.auth.oldtokens
 sdk://fidl/fuchsia.bluetooth
 sdk://fidl/fuchsia.bluetooth.a2dp
-sdk://fidl/fuchsia.bluetooth.control
 sdk://fidl/fuchsia.bluetooth.gatt
 sdk://fidl/fuchsia.bluetooth.gatt2
 sdk://fidl/fuchsia.bluetooth.hfp

@@ -75,8 +75,9 @@ Host devices are managed by the
 [Bluetooth system service](/src/connectivity/bluetooth/).
 The service allows only one bt-host to be accessed for service requests at a given
 time. This bt-host is represented as the "active Adapter".
-[control.fidl](/sdk/fidl/fuchsia.bluetooth.control) provides a management
-interface to designate an active adapter when multiple adapters are present.
+[host_watcher.fidl](/sdk/fidl/fuchsia.bluetooth.sys/host_watcher.fidl) provides
+a management interface to designate an active adapter when multiple adapters are
+present.
 
 bt-host devices implement the [host.fidl](/src/connectivity/bluetooth/fidl/host.fidl)
 protocol to communicate with the Bluetooth system service.
@@ -91,7 +92,7 @@ TODO(armansito): child devices
 Bluetooth environment services are the primary way to implement Bluetooth
 services and applications.
 
-The [Control](/sdk/fidl/fuchsia.bluetooth.control) FIDL library is
+The [Sys](/sdk/fidl/fuchsia.bluetooth.sys) FIDL library is
 intended for privileged clients and is for device-level control/policy.
 
 TODO: describe other services
