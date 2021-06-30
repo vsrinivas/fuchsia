@@ -11,9 +11,6 @@ fidl("fuchsia.pkg.rewrite") {
     "vector-bounds-not-specified",
   ]
 
-  # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
-  experimental_api_summary = true
-
   sources = [ "rewrite.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

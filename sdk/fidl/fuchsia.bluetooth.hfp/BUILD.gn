@@ -9,9 +9,6 @@ fidl("fuchsia.bluetooth.hfp") {
 
   sdk_category = "partner"
 
-  # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
-  experimental_api_summary = true
-
   sources = [ "hfp.fidl" ]
   public_deps = [
     "//sdk/fidl/fuchsia.bluetooth",

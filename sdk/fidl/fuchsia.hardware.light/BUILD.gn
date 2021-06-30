@@ -7,8 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.hardware.light") {
   sdk_category = "partner"
 
-  # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
-  experimental_api_summary = true
-
   sources = [ "light.fidl" ]
 }

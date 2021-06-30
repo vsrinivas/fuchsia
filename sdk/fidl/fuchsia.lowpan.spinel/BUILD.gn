@@ -7,9 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.lowpan.spinel") {
   sdk_category = "internal"
 
-  # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
-  experimental_api_summary = true
-
   sources = [ "spinel.fidl" ]
 
   public_deps = [ "//zircon/vdso/zx" ]

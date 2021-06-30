@@ -5,9 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.power") {
-  # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
-  experimental_api_summary = true
-
   sources = [ "power.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

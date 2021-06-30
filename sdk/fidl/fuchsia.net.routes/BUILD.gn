@@ -7,9 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.net.routes") {
   sdk_category = "partner"
 
-  # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
-  experimental_api_summary = true
-
   api = "fuchsia.net.routes.api"
   sources = [ "routes.fidl" ]
   public_deps = [

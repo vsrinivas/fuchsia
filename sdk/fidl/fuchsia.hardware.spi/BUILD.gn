@@ -7,9 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.hardware.spi") {
   sources = [ "spi.fidl" ]
 
-  # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
-  experimental_api_summary = true
-
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.sharedmemory",
     "//zircon/vdso/zx",

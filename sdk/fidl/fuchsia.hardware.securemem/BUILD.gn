@@ -7,7 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.hardware.securemem") {
   sources = [ "securemem.fidl" ]
 
-  # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
-  experimental_api_summary = true
   public_deps = [ "//zircon/vdso/zx" ]
 }

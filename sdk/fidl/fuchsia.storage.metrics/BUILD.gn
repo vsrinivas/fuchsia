@@ -7,9 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.storage.metrics") {
   sdk_category = "partner"
 
-  # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
-  experimental_api_summary = true
-
   api = "fuchsia.storage.metrics.api"
   sources = [ "storage-metrics.fidl" ]
 }

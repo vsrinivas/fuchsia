@@ -7,8 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.device.manager") {
   sdk_category = "partner"
 
-  # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
-  experimental_api_summary = true
   api = "fuchsia.device.manager.api"
   sources = [
     "administrator.fidl",
