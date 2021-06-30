@@ -9,15 +9,15 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "bind",
-    description = "Binds to the v2 component designated by the provided relative moniker",
-    example = "To bind to the v2 component designated by the moniker:
+    description = "Binds to the component designated by the provided relative moniker",
+    example = "To bind to the component designated by the moniker:
 
     $ ffx component bind core/brightness_manager",
-    note = "Binds to the v2 component designated by the provided relative moniker
-    relative to the v2 component to which the protocol is scoped.
-    This will resolve the v2 component if it's not already resolved, and will start the v2 component
-    if it isn't already running. ",
-    error_code(1, "Failed to bind to the v2 component with moniker <moniker>.")
+    note = "Binds to the component designated by the provided moniker relative to the
+    root of the component topology.
+    This will resolve the component if it's not already resolved, and will start the
+    component if it isn't already running. ",
+    error_code(1, "Failed to bind to the component with moniker <moniker>.")
 )]
 pub struct ComponentBindCommand {
     #[argh(positional)]

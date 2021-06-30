@@ -9,7 +9,15 @@ rustc_library("ffx_component") {
   version = "0.1.0"
   edition = "2018"
 
-  deps = []
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/developer/ffx/lib/errors:lib",
+    "//src/lib/fidl/rust/fidl",
+    "//src/sys/lib/moniker",
+    "//third_party/rust_crates:anyhow",
+  ]
 
   sources = [ "src/lib.rs" ]
 }

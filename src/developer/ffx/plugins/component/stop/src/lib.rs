@@ -6,19 +6,19 @@ use {
     anyhow::{bail, format_err, Context, Result},
     cs::io::Directory,
     errors::{ffx_bail, ffx_error},
-    ffx_component::{get_lifecycle_controller_proxy, parse_moniker, COMPONENT_BIND_HELP},
-    ffx_component_bind_args::ComponentBindCommand,
+    ffx_component::{get_lifecycle_controller_proxy, parse_moniker, COMPONENT_STOP_HELP},
+    ffx_component_stop_args::ComponentStopCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
 };
 
 #[ffx_plugin()]
-pub async fn bind(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentBindCommand) -> Result<()> {
-    bind_impl(rcs_proxy, &cmd.moniker).await
+pub async fn stop(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentStopCommand) -> Result<()> {
+    stop_impl(rcs_proxy, &cmd.moniker).await
 }
 
-async fn bind_impl(rcs_proxy: rc::RemoteControlProxy, moniker: &str) -> Result<()> {
+async fn stop_impl(rcs_proxy: rc::RemoteControlProxy, moniker: &str) -> Result<()> {
     let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
         .context("creating hub root proxy")?;
     rcs_proxy
@@ -29,10 +29,10 @@ async fn bind_impl(rcs_proxy: rc::RemoteControlProxy, moniker: &str) -> Result<(
 
     let formatted_moniker = parse_moniker(moniker).map_err(|e| {
         ffx_error!(
-            "Failed to bind to the component with moniker '{}': {}\n{}",
+            "Failed to stop the component with moniker '{}': {}\n{}",
             moniker,
             e,
-            COMPONENT_BIND_HELP
+            COMPONENT_STOP_HELP
         )
     })?;
 
@@ -42,23 +42,24 @@ async fn bind_impl(rcs_proxy: rc::RemoteControlProxy, moniker: &str) -> Result<(
     }
 
     match get_lifecycle_controller_proxy(hub_dir.proxy).await {
-        Ok(proxy) => match proxy.bind(&formatted_moniker.to_string()).await {
+        // TODO(fxbug.dev/76142): Support recursively stopping all the children when the flag is_recursive is on.
+        Ok(proxy) => match proxy.stop(&formatted_moniker.to_string(), false).await {
             Ok(Ok(())) => {
-                println!("Successfully bound to the component with moniker '{}'", moniker);
+                println!("Successfully stopped the component with moniker '{}'", moniker);
             }
             Ok(Err(e)) => {
                 ffx_bail!(
-                    "Failed to bind to the component with moniker '{}': {:?}\n{}",
+                    "Failed to stop the component with moniker '{}': {:?}\n{}",
                     moniker,
                     e,
-                    COMPONENT_BIND_HELP
+                    COMPONENT_STOP_HELP
                 );
             }
             Err(e) => bail!("FIDL error: {}\n", e),
         },
         Err(e) => {
-            Err(format_err!("Failed to bind to the component with moniker '{}': {}\n", moniker, e)
-                .context(format!("binding to the component with moniker '{}'", moniker)))?
+            Err(format_err!("Failed to stop the component with moniker '{}': {}\n", moniker, e)
+                .context(format!("stopping the component with moniker '{}'", moniker)))?
         }
     }
 
