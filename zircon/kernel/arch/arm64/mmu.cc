@@ -252,19 +252,28 @@ bool is_pte_valid(pte_t pte) {
 
 void update_pte(volatile pte_t* pte, pte_t newval) { *pte = newval; }
 
-bool page_table_is_clear(const volatile pte_t* page_table, uint page_size_shift) {
+int first_used_page_table_entry(const volatile pte_t* page_table, uint page_size_shift) {
   const int count = 1U << (page_size_shift - 3);
 
   for (int i = 0; i < count; i++) {
     pte_t pte = page_table[i];
     if (pte != MMU_PTE_DESCRIPTOR_INVALID) {
-      LTRACEF("page_table at %p still in use, index %d is %#" PRIx64 "\n", page_table, i, pte);
-      return false;
+      return i;
     }
   }
+  return -1;
+}
 
-  LTRACEF("page table at %p is clear\n", page_table);
-  return true;
+bool page_table_is_clear(const volatile pte_t* page_table, uint page_size_shift) {
+  const int index = first_used_page_table_entry(page_table, page_size_shift);
+  const bool clear = index == -1;
+  if (clear) {
+    LTRACEF("page table at %p is clear\n", page_table);
+  } else {
+    LTRACEF("page_table at %p still in use, index %d is %#" PRIx64 "\n", page_table, index,
+            page_table[index]);
+  }
+  return clear;
 }
 
 }  // namespace
@@ -1527,8 +1536,9 @@ zx_status_t ArmArchVmAspace::Destroy() {
   vaddr_t vaddr_base;
   uint top_size_shift, top_index_shift, page_size_shift;
   MmuParamsFromFlags(0, nullptr, &vaddr_base, &top_size_shift, &top_index_shift, &page_size_shift);
-  if (page_table_is_clear(tt_virt_, page_size_shift) == false) {
-    panic("top level page table still in use! aspace %p tt_virt %p\n", this, tt_virt_);
+  if (const int index = first_used_page_table_entry(tt_virt_, page_size_shift); index != -1) {
+    panic("top level page table still in use! aspace %p tt_virt %p index %d entry %" PRIx64 "\n",
+          this, tt_virt_, index, tt_virt_[index]);
   }
 
   if (pt_pages_ != 1) {
