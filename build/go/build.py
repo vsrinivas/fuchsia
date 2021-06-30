@@ -332,8 +332,10 @@ def main():
         args.package,
     ]
     retcode = subprocess.call(cmd, env=env, cwd=gopath_src)
+    if retcode != 0:
+        return retcode
 
-    if retcode == 0 and args.stripped_output_path:
+    if args.stripped_output_path:
         if args.current_os == 'mac':
             retcode = subprocess.call(
                 [
@@ -348,18 +350,22 @@ def main():
                     args.stripped_output_path
                 ],
                 env=env)
+        if retcode != 0:
+            return retcode
 
     # TODO(fxbug.dev/27215): Also invoke the buildidtool in the case of linux
     # once buildidtool knows how to deal in Go's native build ID format.
     supports_build_id = args.current_os == 'fuchsia'
-    if retcode == 0 and args.dump_syms and supports_build_id:
+    if args.dump_syms and supports_build_id:
         if args.current_os == 'fuchsia':
             with open(dist + '.sym', 'w') as f:
                 retcode = subprocess.call(
                     [args.dump_syms, '-r', '-o', 'Fuchsia', args.output_path],
                     stdout=f)
+                if retcode != 0:
+                    return retcode
 
-    if retcode == 0 and args.buildidtool and supports_build_id:
+    if args.buildidtool and supports_build_id:
         if not args.build_id_dir:
             raise ValueError('Using --buildidtool requires --build-id-dir')
         retcode = subprocess.call(
@@ -374,62 +380,63 @@ def main():
                 '-entry',
                 '=' + dist,
             ])
+        if retcode != 0:
+            return retcode
 
-    if retcode == 0:
-        go_list_args = [go_tool, 'list', '-json', '-deps']
-        if args.is_test:
-            go_list_args += ['-test']
-        go_list_args += [args.package]
-        output = subprocess.check_output(
-            go_list_args, env=env, cwd=gopath_src, text=True)
-        with open(args.depfile, 'w') as into:
-            into.write(os.path.relpath(dist))
-            into.write(':')
-            while output:
-                try:
-                    package = json.loads(output)
-                    output = output[:0]
-                except json.JSONDecodeError as e:
-                    package = json.loads(output[:e.pos])
-                    output = output[e.pos:]
+    go_list_args = [go_tool, 'list', '-json', '-deps']
+    if args.is_test:
+        go_list_args += ['-test']
+    go_list_args += [args.package]
+    output = subprocess.check_output(
+        go_list_args, env=env, cwd=gopath_src, text=True)
+    with open(args.depfile, 'w') as into:
+        into.write(os.path.relpath(dist))
+        into.write(':')
+        while output:
+            try:
+                package = json.loads(output)
+                output = output[:0]
+            except json.JSONDecodeError as e:
+                package = json.loads(output[:e.pos])
+                output = output[e.pos:]
 
-                files_fields = [
-                    'GoFiles',
-                    'CgoFiles',
-                    'CompiledGoFiles',
-                    'CFiles',
-                    'CXXFiles',
-                    'MFiles',
-                    'HFiles',
-                    'FFiles',
-                    'SFiles',
-                    'SwigFiles',
-                    'SwigCXXFiles',
-                    'SysoFiles',
+            files_fields = [
+                'GoFiles',
+                'CgoFiles',
+                'CompiledGoFiles',
+                'CFiles',
+                'CXXFiles',
+                'MFiles',
+                'HFiles',
+                'FFiles',
+                'SFiles',
+                'SwigFiles',
+                'SwigCXXFiles',
+                'SysoFiles',
+            ]
+            if 'ForTest' in package:
+                files_fields += [
+                    'TestGoFiles',
+                    'XTestGoFiles',
                 ]
-                if 'ForTest' in package:
-                    files_fields += [
-                        'TestGoFiles',
-                        'XTestGoFiles',
-                    ]
 
-                src_dir = package['Dir']
-                for f, t in link_to_source_list:
-                    if src_dir.startswith(f):
-                        src_dir = t + src_dir[len(f):]
-                        break
+            src_dir = package['Dir']
+            for f, t in link_to_source_list:
+                if src_dir.startswith(f):
+                    src_dir = t + src_dir[len(f):]
+                    break
 
-                src_dir = os.path.relpath(src_dir)
-                for field in files_fields:
-                    files = package.get(field)
-                    if files:
-                        for file in files:
-                            if args.go_cache in file:
-                                continue
-                            into.write(' ')
-                            into.write(os.path.join(src_dir, file))
+            src_dir = os.path.relpath(src_dir)
+            for field in files_fields:
+                files = package.get(field)
+                if files:
+                    for file in files:
+                        if args.go_cache in file:
+                            continue
+                        into.write(' ')
+                        into.write(os.path.join(src_dir, file))
 
-    return retcode
+    return 0
 
 
 if __name__ == '__main__':
