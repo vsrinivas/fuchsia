@@ -93,6 +93,7 @@ if (toolchain.environment == "kernel") {
       "resource_tests.cc",
       "sleep_tests.cc",
       "span_tests.cc",
+      "string_file_tests.cc",
       "string_tests.cc",
       "sync_ipi_tests.cc",
       "tests.cc",

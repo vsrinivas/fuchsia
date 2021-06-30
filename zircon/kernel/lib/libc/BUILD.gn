@@ -18,6 +18,7 @@ zx_library("libc") {
     "printf.cc",
     "rand.cc",
     "snprintf.cc",
+    "string-file.cc",
     "strtol.cc",
     "strtoul.cc",
   ]
