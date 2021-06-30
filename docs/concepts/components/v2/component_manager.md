@@ -24,7 +24,7 @@ manager, filesystems, network stack, and other essential services.
 The component manager intermediates all introductions between components at
 runtime.
 
-For example, when a component connects to a [service][doc-services], the
+For example, when a component connects to a [protocol][doc-protocol], the
 component manager validates the request, uses
 [capability routing][doc-capability-routing] to find the component that exposes
 the desired service, starts it if needed, establishes a direct connection
@@ -57,10 +57,10 @@ components can implement to integrate new functionality with their environment.
 [doc-capability-routing]: /docs/concepts/components/v2/topology.md#capability-routing
 [doc-hub]: /docs/concepts/components/v2/hub.md
 [doc-lifecycle]: lifecycle.md
+[doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
 [doc-realms]: /docs/concepts/components/v2/realms.md
 [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-topology]: /docs/concepts/components/v2/topology.md
-[doc-services]: /docs/concepts/components/v2/services.md
 [events]: /docs/concepts/components/v2/capabilities/event.md
 [realm-protocol]: /sdk/fidl/fuchsia.sys2/realm.fidl
