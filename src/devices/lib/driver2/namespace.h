@@ -23,13 +23,27 @@ class Namespace {
   Namespace& operator=(Namespace&& other) noexcept;
 
   // Connect to a service within a driver's namespace.
-  zx::status<zx::channel> Connect(std::string_view path) const;
+  template <typename T>
+  zx::status<fidl::ClientEnd<T>> Connect(
+      std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>) const {
+    auto endpoints = fidl::CreateEndpoints<T>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
+    }
+    auto result = Connect(path, endpoints->server.TakeChannel());
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    return zx::ok(std::move(endpoints->client));
+  }
 
  private:
   explicit Namespace(fdio_ns_t* ns);
 
   Namespace(const Namespace& other) = delete;
   Namespace& operator=(const Namespace& other) = delete;
+
+  zx::status<> Connect(std::string_view path, zx::channel server_end) const;
 
   fdio_ns_t* ns_ = nullptr;
 };

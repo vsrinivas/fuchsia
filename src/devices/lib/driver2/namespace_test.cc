@@ -36,17 +36,17 @@ TEST(NamespaceTest, CreateAndConnect) {
     EXPECT_EQ("path-exists", path);
     server_end = std::move(object.TakeChannel());
   });
-  auto client_end = ns->Connect("/pkg/path-exists");
+  auto client_end = ns->Connect<frunner::ComponentRunner>("/pkg/path-exists");
   EXPECT_TRUE(client_end.is_ok());
   loop.RunUntilIdle();
   zx_info_handle_basic_t client_info = {}, server_info = {};
-  ASSERT_EQ(ZX_OK, client_end->get_info(ZX_INFO_HANDLE_BASIC, &client_info, sizeof(client_info),
-                                        nullptr, nullptr));
+  ASSERT_EQ(ZX_OK, client_end->channel().get_info(ZX_INFO_HANDLE_BASIC, &client_info,
+                                                  sizeof(client_info), nullptr, nullptr));
   ASSERT_EQ(ZX_OK, server_end.get_info(ZX_INFO_HANDLE_BASIC, &server_info, sizeof(server_info),
                                        nullptr, nullptr));
   EXPECT_EQ(client_info.koid, server_info.related_koid);
 
-  auto not_found_client_end = ns->Connect("/svc/path-does-not-exist");
+  auto not_found_client_end = ns->Connect<frunner::ComponentRunner>("/svc/path-does-not-exist");
   EXPECT_EQ(ZX_ERR_NOT_FOUND, not_found_client_end.error_value());
 }
 

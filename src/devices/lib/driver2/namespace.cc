@@ -41,15 +41,8 @@ Namespace& Namespace::operator=(Namespace&& other) noexcept {
   return *this;
 }
 
-zx::status<zx::channel> Namespace::Connect(std::string_view path) const {
-  zx::channel client_end, server_end;
-  zx_status_t status = zx::channel::create(0, &client_end, &server_end);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  status = fdio_ns_connect(ns_, path.data(), ZX_FS_RIGHT_READABLE, server_end.release());
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(std::move(client_end));
+zx::status<> Namespace::Connect(std::string_view path, zx::channel server_end) const {
+  zx_status_t status =
+      fdio_ns_connect(ns_, path.data(), ZX_FS_RIGHT_READABLE, server_end.release());
+  return zx::make_status(status);
 }

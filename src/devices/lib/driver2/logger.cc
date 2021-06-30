@@ -14,7 +14,7 @@ zx::status<Logger> Logger::Create(const Namespace& ns, async_dispatcher_t* dispa
     return zx::error(status);
   }
 
-  auto ns_result = ns.Connect("/svc/fuchsia.logger.LogSink");
+  auto ns_result = ns.Connect<fuchsia_logger::LogSink>();
   if (ns_result.is_error()) {
     return ns_result.take_error();
   }

@@ -22,7 +22,7 @@ template <typename T>
 fit::result<fidl::Client<T>, zx_status_t> ConnectWithResult(const Namespace& ns,
                                                             async_dispatcher_t* dispatcher,
                                                             std::string_view path) {
-  auto result = ns.Connect(path);
+  auto result = ns.Connect<T>(path);
   if (result.is_error()) {
     return fit::error(result.status_value());
   }
