@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/console/format_symbol.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
@@ -100,14 +101,14 @@ Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {
   ProcessSymbols* process_symbols = nullptr;
   FindNameContext find_context;
   if (cmd.target()->GetProcess()) {
-    // The symbol context parameter is used to prioritize symbols from the current module but since
-    // we query everything, it doesn't matter. FindNameContext will handle a null frame pointer and
-    // just skip local variables in that case.
     process_symbols = cmd.target()->GetProcess()->GetSymbols();
-    const CodeBlock* code_block =
-        cmd.frame() ? cmd.frame()->GetLocation().symbol().Get()->As<CodeBlock>() : nullptr;
-    find_context =
-        FindNameContext(process_symbols, SymbolContext::ForRelativeAddresses(), code_block);
+    if (cmd.frame()) {
+      find_context = cmd.frame()->GetEvalContext()->GetFindNameContext();
+    } else {
+      // This command can support querying symbols without a current stack frame, in which case it
+      // will do a global search of names in the current process.
+      find_context = FindNameContext(process_symbols);
+    }
   } else {
     // Non-running process. Can do some lookup for some things.
     find_context = FindNameContext(cmd.target()->GetSymbols());

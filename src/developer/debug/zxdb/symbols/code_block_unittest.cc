@@ -19,9 +19,9 @@ TEST(CodeBlock, ContainsAddress) {
 
   SymbolContext context = SymbolContext::ForRelativeAddresses();
 
-  // No code range: contains all addresses.
-  EXPECT_TRUE(block->ContainsAddress(context, 0));
-  EXPECT_TRUE(block->ContainsAddress(context, 0x2000));
+  // No code range: contains no addresses.
+  EXPECT_FALSE(block->ContainsAddress(context, 0));
+  EXPECT_FALSE(block->ContainsAddress(context, 0x2000));
 
   // Set some ranges.
   block->set_code_ranges(AddressRanges(
@@ -77,7 +77,7 @@ TEST(CodeBlock, GetMostSpecificChild) {
   child_child_inline->set_code_ranges(AddressRanges(AddressRange(0x1020, 0x1030)));
   child_child->set_inner_blocks(std::vector<LazySymbol>{child_child_inline});
 
-  // The second child has an inner child with no defined range.
+  // The second child has an inner child with no defined range. This should not get used.
   auto child_child2 = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
   std::vector<LazySymbol> inner_inner2;
   inner_inner2.emplace_back(child_child2);
@@ -93,7 +93,7 @@ TEST(CodeBlock, GetMostSpecificChild) {
 
   // Lowest level of child.
   EXPECT_EQ(child_child.get(), outer->GetMostSpecificChild(context, 0x1000));
-  EXPECT_EQ(child_child2.get(), outer->GetMostSpecificChild(context, 0x3000));
+  EXPECT_EQ(second_child.get(), outer->GetMostSpecificChild(context, 0x3000));
 
   // Querying for something in the inlined routine is controlled by the optional flag.
   EXPECT_EQ(child_child_inline.get(), outer->GetMostSpecificChild(context, 0x1020, true));

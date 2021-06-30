@@ -42,8 +42,14 @@ AddressRange CodeBlock::GetFullRange(const SymbolContext& symbol_context) const 
 
 bool CodeBlock::ContainsAddress(const SymbolContext& symbol_context,
                                 uint64_t absolute_address) const {
-  if (code_ranges_.empty())
-    return true;  // No defined code range, assume always valid.
+  // Don't consider blocks with no addresses as covering anything. Consider them empty. The DWARF
+  // spec says it will be empty when there is no corresponding machine code.
+  //
+  // Empty blocks can get generated, for example, in a abstract origin of an inlined function. Clang
+  // declares the local variables inside a nesting structure identical to the inlined code, but the
+  // abstract origin has no code associated with it. We don't want to consider these empty blocks
+  // as containing all code of the function since using them will lose the context associated with
+  // the inlined instance.
 
   for (const auto& range : code_ranges_) {
     if (absolute_address >= symbol_context.RelativeToAbsolute(range.begin()) &&
