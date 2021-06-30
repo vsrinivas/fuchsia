@@ -59,19 +59,44 @@ void ClientBase::ForgetAsyncTxn(ResponseContext* context) {
   list_delete(static_cast<list_node_t*>(context));
 }
 
-void ClientBase::ReleaseResponseContextsWithError() {
-  // Invoke OnError() on any outstanding ResponseContexts outside of locks.
+void ClientBase::ReleaseResponseContexts(fidl::UnbindInfo info) {
+  // Release ownership on any outstanding |ResponseContext|s outside of locks.
   list_node_t delete_list;
   {
     std::scoped_lock lock(lock_);
     contexts_.clear();
     list_move(&delete_list_, &delete_list);
   }
+
   list_node_t* node = nullptr;
   list_node_t* temp_node = nullptr;
   list_for_every_safe(&delete_list, node, temp_node) {
     list_delete(node);
-    static_cast<ResponseContext*>(node)->OnError();
+    auto* context = static_cast<ResponseContext*>(node);
+    // Depending on what kind of error caused teardown, we may want to propgate
+    // the error to all other outstanding contexts.
+    switch (info.reason()) {
+      case fidl::Reason::kClose:
+        // |kClose| is never used on the client side.
+        __builtin_abort();
+        break;
+      case fidl::Reason::kUnbind:
+        // The user explicitly initiated teardown. To prevent use-after-free,
+        // do not propagate the error with |OnRawResult|.
+      case fidl::Reason::kEncodeError:
+      case fidl::Reason::kDecodeError:
+        // These errors are specific to one call, whose corresponding context
+        // would have been notified during |Dispatch|.
+        context->OnCanceled();
+        break;
+      case fidl::Reason::kPeerClosed:
+      case fidl::Reason::kDispatcherError:
+      case fidl::Reason::kTransportError:
+      case fidl::Reason::kUnexpectedMessage:
+        // These errors apply to all calls.
+        context->OnError(info.ToError());
+        break;
+    }
   }
 }
 
@@ -100,12 +125,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg,
           Result::UnexpectedMessage(ZX_ERR_NOT_FOUND, fidl::internal::kErrorUnknownTxId)};
     }
   }
-  zx_status_t status = context->OnRawReply(std::move(msg));
-  if (unlikely(status != ZX_OK)) {
-    context->OnError();
-    return UnbindInfo{Result::DecodeError(msg.status())};
-  }
-  return std::nullopt;
+  return context->OnRawResult(std::move(msg));
 }
 
 void ChannelRefTracker::Init(zx::channel channel) {

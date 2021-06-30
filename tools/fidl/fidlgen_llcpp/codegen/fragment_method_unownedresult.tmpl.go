@@ -22,6 +22,17 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   {{- end }}
   explicit {{ .WireUnownedResult.Self }}({{ RenderParams $args }});
   explicit {{ .WireUnownedResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  {{- if .HasResponse }}
+  explicit {{ .WireUnownedResult.Self }}(::fidl::DecodedMessage<{{ .WireResponse }}>&& decoded)
+      : ::fidl::Result(decoded) {
+    if (decoded.ok()) {
+      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+    } else {
+      bytes_ = nullptr;
+    }
+    decoded.ReleasePrimaryObject();
+  }
+  {{- end }}
   {{ .WireUnownedResult.Self }}({{ .WireUnownedResult.Self }}&&) = delete;
   {{ .WireUnownedResult.Self }}(const {{ .WireUnownedResult.Self }}&) = delete;
   {{ .WireUnownedResult.Self }}* operator=({{ .WireUnownedResult.Self }}&&) = delete;

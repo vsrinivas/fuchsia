@@ -114,10 +114,10 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
   // Test the caller-allocating overload.
   {
     class ResponseContext final : public fidl::WireResponseContext<test::Protocol::GetResource> {
-      void OnReply(fidl::WireResponse<test::Protocol::GetResource>* r) override {
+      void OnResult(fidl::WireUnownedResult<test::Protocol::GetResource>&& r) override {
         // The handles in |r| should be closed by the bindings runtime after we return.
       }
-      void OnError() override {}
+      void OnCanceled() override {}
     };
     ResponseContext context;
     auto result = client->GetResource(&context);

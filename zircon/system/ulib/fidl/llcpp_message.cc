@@ -149,12 +149,14 @@ fidl::Result OutgoingMessage::Write(::fidl::internal::ClientBase* client,
                                     ::fidl::internal::ResponseContext* context) {
   if (auto channel = client->GetChannel()) {
     Write(channel->handle());
+    if (!ok()) {
+      client->ForgetAsyncTxn(context);
+      context->OnError(fidl::Result(*this));
+    }
   } else {
     SetResult(fidl::Result::Unbound());
-  }
-  if (!ok()) {
     client->ForgetAsyncTxn(context);
-    context->OnError();
+    context->OnCanceled();
   }
   return fidl::Result(*this);
 }

@@ -356,7 +356,7 @@ void AsyncClientBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_
   // is no longer valid past this point.
 
   // Outstanding async responses will no longer be received, so release the contexts.
-  client->ReleaseResponseContextsWithError();
+  client->ReleaseResponseContexts(info);
   client = nullptr;
 
   // Execute the error hook if specified.

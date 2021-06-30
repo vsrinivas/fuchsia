@@ -517,6 +517,18 @@ class ::fidl::WireUnownedResult<
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
+  explicit WireUnownedResult(
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>&&
+          decoded)
+      : ::fidl::Result(decoded) {
+    if (decoded.ok()) {
+      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+    } else {
+      bytes_ = nullptr;
+    }
+    decoded.ReleasePrimaryObject();
+  }
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -835,13 +847,14 @@ class ::fidl::WireResponseContext<
  public:
   WireResponseContext();
 
-  virtual void OnReply(
-      ::fidl::WireResponse<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
-          message) = 0;
+  virtual void OnResult(
+      ::fidl::WireUnownedResult<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&&
+          result) = 0;
 
  private:
-  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
+  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
+      ::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -888,9 +901,6 @@ class ::fidl::internal::WireClientImpl<
   WireClientImpl() = default;
 
  private:
-  friend class ::fidl::Client<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
-
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;

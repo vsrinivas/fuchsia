@@ -1287,6 +1287,18 @@ class ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
+  explicit WireUnownedResult(
+      ::fidl::DecodedMessage<
+          ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>&&
+          decoded)
+      : ::fidl::Result(decoded) {
+    if (decoded.ok()) {
+      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+    } else {
+      bytes_ = nullptr;
+    }
+    decoded.ReleasePrimaryObject();
+  }
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -1417,6 +1429,17 @@ class ::fidl::WireUnownedResult<
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
+  explicit WireUnownedResult(
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::fidl_test_protocolrequest::Parent::GetChildRequest>>&& decoded)
+      : ::fidl::Result(decoded) {
+    if (decoded.ok()) {
+      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+    } else {
+      bytes_ = nullptr;
+    }
+    decoded.ReleasePrimaryObject();
+  }
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -2216,12 +2239,13 @@ class ::fidl::WireResponseContext<::fidl_test_protocolrequest::Parent::GetChild>
  public:
   WireResponseContext();
 
-  virtual void OnReply(
-      ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>*
-          message) = 0;
+  virtual void OnResult(
+      ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>&&
+          result) = 0;
 
  private:
-  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
+  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
+      ::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -2234,12 +2258,13 @@ class ::fidl::WireResponseContext<
  public:
   WireResponseContext();
 
-  virtual void OnReply(
-      ::fidl::WireResponse<
-          ::fidl_test_protocolrequest::Parent::GetChildRequest>* message) = 0;
+  virtual void OnResult(
+      ::fidl::WireUnownedResult<
+          ::fidl_test_protocolrequest::Parent::GetChildRequest>&& result) = 0;
 
  private:
-  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
+  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
+      ::fidl::IncomingMessage&& msg) override;
 };
 #endif  // __Fuchsia__
 
@@ -2331,8 +2356,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
   WireClientImpl() = default;
 
  private:
-  friend class ::fidl::Client<::fidl_test_protocolrequest::Parent>;
-
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;
@@ -2399,8 +2422,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Child> final
   WireClientImpl() = default;
 
  private:
-  friend class ::fidl::Client<::fidl_test_protocolrequest::Child>;
-
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;

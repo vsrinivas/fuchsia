@@ -1199,9 +1199,6 @@ class ::fidl::internal::WireClientImpl<
   WireClientImpl() = default;
 
  private:
-  friend class ::fidl::Client<
-      ::fidl_test_placementofattributes::ExampleProtocol>;
-
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;

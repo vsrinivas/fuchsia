@@ -7,6 +7,8 @@
 #include <lib/async/cpp/time.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/fit/defer.h>
+#include <lib/stdcompat/type_traits.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
@@ -69,12 +71,13 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
     ResponseContext(sync_completion_t* done, const char* data, size_t size)
         : done_(done), data_(data), size_(size) {}
 
-    void OnError() override {
+    void OnCanceled() override {
       sync_completion_signal(done_);
       FAIL();
     }
 
-    void OnReply(fidl::WireResponse<Example::TwoWay>* message) override {
+    void OnResult(fidl::WireUnownedResult<Example::TwoWay>&& message) override {
+      ASSERT_TRUE(message.ok());
       auto& out = message->out;
       ASSERT_EQ(size_, out.size());
       EXPECT_EQ(0, strncmp(out.data(), data_, size_));
@@ -382,9 +385,14 @@ TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
    public:
     explicit TestResponseContext(sync_completion_t* error) : error_(error) {}
 
-    void OnError() override { sync_completion_signal(error_); }
+    void OnCanceled() override { FAIL(); }
 
-    void OnReply(fidl::WireResponse<Example::TwoWay>* message) override { FAIL(); }
+    void OnResult(fidl::WireUnownedResult<Example::TwoWay>&& result) override {
+      ASSERT_FALSE(result.ok());
+      EXPECT_EQ(fidl::Reason::kTransportError, result.reason());
+      EXPECT_EQ(ZX_ERR_ACCESS_DENIED, result.status());
+      sync_completion_signal(error_);
+    }
 
    private:
     sync_completion_t* error_;
@@ -397,6 +405,40 @@ TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
   fidl::Result result = client->TwoWay(buffer.view(), "foo", &context);
   ASSERT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());
   ASSERT_OK(sync_completion_wait(&error, ZX_TIME_INFINITE));
+}
+
+// An integration-style test that verifies that user-supplied async callbacks
+// are not invoked when the binding is torn down by the user (i.e. explicit
+// cancellation) instead of due to errors.
+TEST(GenAPITestCase, SkipCallingInFlightCallbacksDuringCancellation) {
+  auto do_test = [](auto&& client_instance_indicator) {
+    using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
+    auto endpoints = fidl::CreateEndpoints<Example>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = std::move(*endpoints);
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ClientType client(std::move(local), loop.dispatcher());
+    bool destroyed = false;
+    auto callback_destruction_observer = fit::defer([&] { destroyed = true; });
+
+    // TODO(fxbug.dev/75324): Test overload that takes a
+    // |void(fidl::WireUnownedResult<T>&)| callback.
+    fidl::Result result =
+        client->TwoWay("foo", [observer = std::move(callback_destruction_observer)](
+                                  fidl::WireResponse<Example::TwoWay>* response) {
+          ADD_FATAL_FAILURE("Should not be invoked");
+        });
+    // Immediately start cancellation.
+    client = {};
+    loop.RunUntilIdle();
+
+    // The callback should be destroyed without being called.
+    ASSERT_TRUE(destroyed);
+  };
+
+  // TODO(fxbug.dev/75485): Test |WireLocalClient|.
+  do_test(fidl::WireSharedClient<Example>{});
 }
 
 // The client should not notify the user of teardown completion until all

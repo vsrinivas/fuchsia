@@ -1625,8 +1625,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface> final
   WireClientImpl() = default;
 
  private:
-  friend class ::fidl::Client<::fidl_test_doccomments::Interface>;
-
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;

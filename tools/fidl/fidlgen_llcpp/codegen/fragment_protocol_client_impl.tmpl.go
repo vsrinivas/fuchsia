@@ -97,8 +97,6 @@ class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
   {{ .WireClientImpl.Self }}() = default;
 
  private:
-  friend class ::fidl::Client<{{ . }}>;
-
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;

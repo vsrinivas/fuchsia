@@ -15,10 +15,10 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
  public:
   {{ .WireResponseContext.Self }}();
 
-  virtual void OnReply({{ .WireResponse }}* message) = 0;
+  virtual void OnResult({{ .WireUnownedResult }}&& result) = 0;
 
  private:
-  zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) override;
+  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(::fidl::IncomingMessage&& msg) override;
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -31,13 +31,19 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
 {{ .WireResponseContext }}::{{ .WireResponseContext.Self }}()
     : ::fidl::internal::ResponseContext({{ .OrdinalName }}) {}
 
-zx_status_t {{ .WireResponseContext.NoLeading }}::OnRawReply(::fidl::IncomingMessage&& msg) {
-  ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+::cpp17::optional<::fidl::UnbindInfo>
+{{ .WireResponseContext.NoLeading }}::OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult({{ .WireUnownedResult }}(msg.error()));
+    return cpp17::nullopt;
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{std::move(msg)};
+  ::fidl::Result maybe_error = decoded;
+  OnResult({{ .WireUnownedResult }}(std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
+  }
+  return cpp17::nullopt;
 }
 {{- EndifFuchsia }}
 {{- end }}

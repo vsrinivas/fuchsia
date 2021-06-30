@@ -420,6 +420,15 @@ class DecodedMessageBase : public ::fidl::Result {
     SetResult(msg);
   }
 
+  // Creates an empty decoded message representing an error (e.g. failed to read
+  // from a channel).
+  //
+  // |failure| must contain an error result.
+  explicit DecodedMessageBase(const ::fidl::Result& failure) {
+    ZX_DEBUG_ASSERT(!failure.ok());
+    SetResult(failure);
+  }
+
  protected:
   DecodedMessageBase(const DecodedMessageBase&) = delete;
   DecodedMessageBase(DecodedMessageBase&&) = delete;

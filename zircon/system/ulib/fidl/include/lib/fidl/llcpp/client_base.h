@@ -11,6 +11,7 @@
 #include <lib/fidl/llcpp/internal/client_details.h>
 #include <lib/fidl/llcpp/internal/intrusive_container/wavl_tree.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 #include <zircon/listnode.h>
@@ -37,15 +38,15 @@ namespace internal {
 // The bindings runtime has no opinions about how |ResponseContext|s are
 // allocated.
 //
-// Once a |ResponseContext| is passed to the bindings runtime, ownership
-// is transferred to the bindings (in particular, the |ClientBase| object).
-// Ownership is returned back to the caller when either |OnReply| or |OnError|
-// is invoked. This means that the user or generated code must keep the
-// response context object alive for the duration of the async method call.
+// Once a |ResponseContext| is passed to the bindings runtime, ownership is
+// transferred to the bindings (in particular, the |ClientBase| object).
+// Ownership is returned back to the caller when either |OnRawReply| or
+// |OnCanceled| is invoked. This means that the user or generated code must keep
+// the response context object alive for the duration of the async method call.
 //
 // NOTE: |ResponseContext| are additionally referenced with a |list_node_t|
 // in order to safely iterate over outstanding transactions on |ClientBase|
-// destruction, invoking |OnError| on each outstanding response context.
+// destruction, releasing each outstanding response context.
 class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<ResponseContext*>,
                         private list_node_t {
  public:
@@ -64,32 +65,55 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   uint64_t ordinal() const { return ordinal_; }
   zx_txid_t Txid() const { return txid_; }
 
-  // Invoked if a response has been received for this context.
+  // Invoked when a response has been received or an error was detected for this
+  // context. |OnRawResult| is allowed to consume the current object.
   //
-  // |msg| references the incoming message in encoded form.
+  // ## If |result| respresents a success
   //
-  // Ownership of bytes referenced by |msg| stays with the caller.
-  // The callee should not access the bytes in |msg| once this method returns.
+  // |result| references the incoming message in encoded form.
   //
-  // Ownership of handles referenced by |msg| is transferred to the callee.
+  // Ownership of bytes referenced by |result| stays with the caller.
+  // The callee should not access the bytes in |result| once this method returns.
   //
-  // If |OnRawReply| returns |ZX_OK|, that indicates decoding was successful,
-  // and |OnRawReply| has invoked the user response handler. Ownership of this
-  // object has been transferred to the user.
+  // Ownership of handles referenced by |result| is transferred to the callee.
   //
-  // If |OnRawReply| returns an error, that indicates decoding failure, and
-  // the caller should invoke |OnError| to propagate the error and give up
-  // ownership.
-  virtual zx_status_t OnRawReply(::fidl::IncomingMessage&& msg) = 0;
+  // If there was an error decoding |result|, the implementation should return
+  // that error as a present |fidl::UnbindInfo|. Otherwise, the implementation
+  // should return |cpp17::nullopt|.
+  //
+  // ## If |result| represents an error
+  //
+  // An error occurred while processing this FIDL call:
+  //
+  // - Failed to encode the outgoing request specific to this call.
+  // - Failed to decode the incoming response specific to this call.
+  // - The peer endpoint was closed.
+  // - Error from the |async_dispatcher_t|.
+  // - Error from the underlying transport.
+  // - The server sent a malformed message.
+  //
+  // Note that |OnRawResult| may be invoked synchronously if there was a
+  // synchronous error (e.g. writing the request). In the error path, the user
+  // must not re-take locks that are already acquired when making the FIDL call.
+  virtual cpp17::optional<fidl::UnbindInfo> OnRawResult(::fidl::IncomingMessage&& result) = 0;
 
-  // Invoked if an error occurs handling the response message prior to invoking
-  // the user-specified callback or if the ClientBase is destroyed with the
-  // transaction outstanding. Note that |OnError| may be invoked within
-  // ~ClientBase(), so the user must ensure that a FIDL client is not
-  // destroyed while holding any locks which |OnError| would take.
+  // Invoked when the FIDL call was canceled while outstanding:
   //
-  // |OnError| is allowed to consume the current object.
-  virtual void OnError() = 0;
+  // - The user explicitly initiated binding teardown.
+  // - The call raced with an external error in the meantime that caused binding
+  //   teardown.
+  //
+  // Different from |OnRawResult|, this method is only used to free up resources
+  // without notifying the user of any error. Since this method could be called
+  // as a result of the user destroying a FIDL client, it is quite possible that
+  // relevant user business objects have already been destroyed. Generated
+  // messaging layers should not forward this call to user callbacks.
+  //
+  // |OnCanceled| is allowed to consume the current object.
+  virtual void OnCanceled() = 0;
+
+  // A helper around |OnRawResult| to directly notify an error to the context.
+  void OnError(::fidl::Result error) { OnRawResult(::fidl::IncomingMessage(error)); }
 
  private:
   friend class ClientBase;
@@ -188,8 +212,13 @@ class ClientBase {
   // Forget the transaction associated with the given context. Used when zx_channel_write() fails.
   void ForgetAsyncTxn(ResponseContext* context);
 
-  // Releases all outstanding `ResponseContext`s. Invoked after the ClientBase is unbound.
-  void ReleaseResponseContextsWithError();
+  // Releases all outstanding |ResponseContext|s. Invoked when binding has torn
+  // down.
+  //
+  // |info| is the cause of the binding teardown. If |info| represents an error
+  // that is not specific to any single call (e.g. peer closed), all response
+  // contexts would be notified of that error.
+  void ReleaseResponseContexts(fidl::UnbindInfo info);
 
   // Returns a strong reference to the channel to prevent its destruction during a |zx_channel_call|
   // or |zx_channel_write|. The caller must release the reference after making the call/write,

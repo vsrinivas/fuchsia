@@ -1171,8 +1171,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>
   WireClientImpl() = default;
 
  private:
-  friend class ::fidl::Client<::fidl_test_service::SecondProtocol>;
-
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;
@@ -1245,8 +1243,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol> final
   WireClientImpl() = default;
 
  private:
-  friend class ::fidl::Client<::fidl_test_service::FirstProtocol>;
-
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;

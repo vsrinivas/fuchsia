@@ -345,15 +345,16 @@ TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
       zx_object_get_info(channel->handle(), ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 }
 
-class ReleaseTestResponseContext : public internal::ResponseContext {
+class OnCanceledTestResponseContext : public internal::ResponseContext {
  public:
-  explicit ReleaseTestResponseContext(sync_completion_t* done)
+  explicit OnCanceledTestResponseContext(sync_completion_t* done)
       : internal::ResponseContext(0), done_(done) {}
-  zx_status_t OnRawReply(fidl::IncomingMessage&& msg) override {
+  cpp17::optional<fidl::UnbindInfo> OnRawResult(fidl::IncomingMessage&& msg) override {
+    ADD_FAILURE("Should not be reached");
     delete this;
-    return ZX_OK;
+    return std::nullopt;
   }
-  void OnError() override {
+  void OnCanceled() override {
     sync_completion_signal(done_);
     delete this;
   }
@@ -372,14 +373,33 @@ TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnDestroy) {
 
   // Create and register a response context which will signal when deleted.
   sync_completion_t done;
-  (*client)->PrepareAsyncTxn(new ReleaseTestResponseContext(&done));
+  (*client)->PrepareAsyncTxn(new OnCanceledTestResponseContext(&done));
 
   // Delete the client and ensure that the response context is deleted.
   delete client;
   EXPECT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }
 
-TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnUnbound) {
+class OnErrorTestResponseContext : public internal::ResponseContext {
+ public:
+  explicit OnErrorTestResponseContext(sync_completion_t* done, fidl::Reason expected_reason)
+      : internal::ResponseContext(0), done_(done), expected_reason_(expected_reason) {}
+  cpp17::optional<fidl::UnbindInfo> OnRawResult(fidl::IncomingMessage&& msg) override {
+    EXPECT_TRUE(!msg.ok());
+    EXPECT_EQ(expected_reason_, msg.error().reason());
+    sync_completion_signal(done_);
+    delete this;
+    return std::nullopt;
+  }
+  void OnCanceled() override {
+    ADD_FAILURE("Should not be reached");
+    delete this;
+  }
+  sync_completion_t* done_;
+  fidl::Reason expected_reason_;
+};
+
+TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnPeerClosed) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
@@ -391,9 +411,9 @@ TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnUnbound) {
 
   // Create and register a response context which will signal when deleted.
   sync_completion_t done;
-  client->PrepareAsyncTxn(new ReleaseTestResponseContext(&done));
+  client->PrepareAsyncTxn(new OnErrorTestResponseContext(&done, fidl::Reason::kPeerClosed));
 
-  // Trigger unbinding and wait for the transaction context to be released.
+  // Close the server end and wait for the transaction context to be released.
   remote.reset();
   EXPECT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }

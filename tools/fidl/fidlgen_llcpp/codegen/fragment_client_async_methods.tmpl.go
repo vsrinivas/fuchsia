@@ -25,12 +25,14 @@ The request and callback are allocated on the heap.
     ResponseContext(::fit::callback<void ({{ .WireResponse }}* response)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply({{ .WireResponse }}* response) override {
-      cb_(response);
+    void OnResult({{ .WireUnownedResult }}&& result) override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override {
+    void OnCanceled() override {
       delete this;
     }
 

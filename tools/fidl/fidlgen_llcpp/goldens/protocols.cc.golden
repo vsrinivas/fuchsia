@@ -242,17 +242,26 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
           ::fidl_test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal) {
 }
 
-zx_status_t fidl::WireResponseContext<
+::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
-    OnRawReply(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>(
+        msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>(
+      std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -275,14 +284,16 @@ zx_status_t fidl::WireResponseContext<
             cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::WireResponse<
-                 ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>*
-                     response) override {
-      cb_(response);
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>&&
+                      result) override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(
@@ -1016,18 +1027,27 @@ fidl::internal::WireClientImpl<
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal) {}
 
-zx_status_t fidl::WireResponseContext<
+::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        NoRequestEmptyResponse>::OnRawReply(::fidl::IncomingMessage&& msg) {
+        NoRequestEmptyResponse>::OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                 NoRequestEmptyResponse>(msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           NoRequestEmptyResponse>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::WithAndWithoutRequestResponse::
+               NoRequestEmptyResponse>(std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -1052,14 +1072,16 @@ zx_status_t fidl::WireResponseContext<
                         cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::WireResponse<
-                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                     NoRequestEmptyResponse>* response) override {
-      cb_(response);
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                      NoRequestEmptyResponse>&& result) override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(::fidl::WireResponse<
@@ -1141,18 +1163,27 @@ fidl::internal::WireClientImpl<
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal) {}
 
-zx_status_t fidl::WireResponseContext<
+::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        NoRequestWithResponse>::OnRawReply(::fidl::IncomingMessage&& msg) {
+        NoRequestWithResponse>::OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                 NoRequestWithResponse>(msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           NoRequestWithResponse>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::WithAndWithoutRequestResponse::
+               NoRequestWithResponse>(std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -1177,14 +1208,16 @@ zx_status_t fidl::WireResponseContext<
                         cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::WireResponse<
-                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                     NoRequestWithResponse>* response) override {
-      cb_(response);
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                      NoRequestWithResponse>&& result) override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(::fidl::WireResponse<
@@ -1307,18 +1340,27 @@ fidl::internal::WireClientImpl<
               kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal) {
 }
 
-zx_status_t fidl::WireResponseContext<
+::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        WithRequestEmptyResponse>::OnRawReply(::fidl::IncomingMessage&& msg) {
+        WithRequestEmptyResponse>::OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                 WithRequestEmptyResponse>(msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           WithRequestEmptyResponse>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::WithAndWithoutRequestResponse::
+               WithRequestEmptyResponse>(std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -1344,14 +1386,16 @@ zx_status_t fidl::WireResponseContext<
                         cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::WireResponse<
-                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                     WithRequestEmptyResponse>* response) override {
-      cb_(response);
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                      WithRequestEmptyResponse>&& result) override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(::fidl::WireResponse<
@@ -1439,18 +1483,27 @@ fidl::internal::WireClientImpl<
           ::fidl_test_protocols::
               kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal) {}
 
-zx_status_t fidl::WireResponseContext<
+::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        WithRequestWithResponse>::OnRawReply(::fidl::IncomingMessage&& msg) {
+        WithRequestWithResponse>::OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                 WithRequestWithResponse>(msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           WithRequestWithResponse>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::WithAndWithoutRequestResponse::
+               WithRequestWithResponse>(std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -1476,14 +1529,16 @@ zx_status_t fidl::WireResponseContext<
                         cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::WireResponse<
-                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                     WithRequestWithResponse>* response) override {
-      cb_(response);
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                      WithRequestWithResponse>&& result) override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(::fidl::WireResponse<
@@ -2159,17 +2214,26 @@ fidl::internal::WireClientImpl<
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::kTransitional_Request_Ordinal) {}
 
-zx_status_t
+::cpp17::optional<::fidl::UnbindInfo>
 fidl::WireResponseContext<::fidl_test_protocols::Transitional::Request>::
-    OnRawReply(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(
+        ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::Request>(
+            msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<
       ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(
+      ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::Request>(
+          std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -2192,14 +2256,16 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request(
             cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(
-        ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>*
-            response) override {
-      cb_(response);
+    void OnResult(
+        ::fidl::WireUnownedResult<
+            ::fidl_test_protocols::Transitional::Request>&& result) override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(
@@ -2781,17 +2847,26 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal) {}
 
-zx_status_t fidl::WireResponseContext<
+::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::
-    OnRawReply(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>(
+        msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>(
+      std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -2813,14 +2888,16 @@ zx_status_t fidl::WireResponseContext<
             cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::WireResponse<
-                 ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*
-                     response) override {
-      cb_(response);
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>&&
+                      result) override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(
@@ -2894,17 +2971,26 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal) {}
 
-zx_status_t fidl::WireResponseContext<
+::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
-    OnRawReply(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
+        msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
+      std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -2926,14 +3012,16 @@ zx_status_t fidl::WireResponseContext<
             cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::WireResponse<
-                 ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*
-                     response) override {
-      cb_(response);
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>&&
+                      result) override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(
@@ -3006,17 +3094,25 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal) {}
 
-zx_status_t
+::cpp17::optional<::fidl::UnbindInfo>
 fidl::WireResponseContext<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
-    OnRawReply(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>(msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<
       ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>(
+      std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -3038,14 +3134,16 @@ fidl::WireResponseContext<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
             cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::WireResponse<
-                 ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>* response)
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>&& result)
         override {
-      cb_(response);
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(
@@ -3116,17 +3214,26 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::kWithErrorSyntax_HandleInResult_Ordinal) {}
 
-zx_status_t fidl::WireResponseContext<
+::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_protocols::WithErrorSyntax::HandleInResult>::
-    OnRawReply(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::WithErrorSyntax::HandleInResult>(
+        msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::WithErrorSyntax::HandleInResult>(
+      std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -3148,14 +3255,16 @@ zx_status_t fidl::WireResponseContext<
             cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::WireResponse<
-                 ::fidl_test_protocols::WithErrorSyntax::HandleInResult>*
-                     response) override {
-      cb_(response);
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::WithErrorSyntax::HandleInResult>&&
+                      result) override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(
@@ -4025,17 +4134,25 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::kChannelProtocol_MethodB_Ordinal) {}
 
-zx_status_t
+::cpp17::optional<::fidl::UnbindInfo>
 fidl::WireResponseContext<::fidl_test_protocols::ChannelProtocol::MethodB>::
-    OnRawReply(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::ChannelProtocol::MethodB>(msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<
       ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(
+      ::fidl::WireUnownedResult<
+          ::fidl_test_protocols::ChannelProtocol::MethodB>(std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -4058,14 +4175,16 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodB(
             cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(
-        ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>*
-            response) override {
-      cb_(response);
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::ChannelProtocol::MethodB>&& result)
+        override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(
@@ -4139,17 +4258,25 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::kChannelProtocol_TakeHandle_Ordinal) {}
 
-zx_status_t
+::cpp17::optional<::fidl::UnbindInfo>
 fidl::WireResponseContext<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
-    OnRawReply(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::ChannelProtocol::TakeHandle>(msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<
       ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::ChannelProtocol::TakeHandle>(
+      std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -4172,14 +4299,16 @@ fidl::WireResponseContext<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
             cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::WireResponse<
-                 ::fidl_test_protocols::ChannelProtocol::TakeHandle>* response)
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::ChannelProtocol::TakeHandle>&& result)
         override {
-      cb_(response);
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(
@@ -4254,17 +4383,26 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::kChannelProtocol_MutateSocket_Ordinal) {}
 
-zx_status_t fidl::WireResponseContext<
+::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_protocols::ChannelProtocol::MutateSocket>::
-    OnRawReply(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(
+        ::fidl::WireUnownedResult<
+            ::fidl_test_protocols::ChannelProtocol::MutateSocket>(msg.error()));
+    return cpp17::nullopt;
+  }
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_protocols::ChannelProtocol::MutateSocket>>
       decoded{std::move(msg)};
-  if (unlikely(!decoded.ok())) {
-    return decoded.status();
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::ChannelProtocol::MutateSocket>(
+      std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
   }
-  OnReply(decoded.PrimaryObject());
-  return ZX_OK;
+  return cpp17::nullopt;
 }
 #endif  // __Fuchsia__
 
@@ -4287,14 +4425,16 @@ zx_status_t fidl::WireResponseContext<
                         cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::WireResponse<
-                 ::fidl_test_protocols::ChannelProtocol::MutateSocket>*
-                     response) override {
-      cb_(response);
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::ChannelProtocol::MutateSocket>&&
+                      result) override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnCanceled() override { delete this; }
 
    private:
     ::fit::callback<void(

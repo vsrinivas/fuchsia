@@ -391,6 +391,9 @@ class UnbindInfo : private Result {
     }
   }
 
+  // Reinterprets the |UnbindInfo| as the cause of an operation failure.
+  fidl::Result ToError() const { return Result(*this); }
+
  private:
   friend std::ostream& operator<<(std::ostream& ostream, const UnbindInfo& info);
 };

@@ -98,11 +98,11 @@ class TestResponseContext : public fidl::internal::ResponseContext {
  public:
   explicit TestResponseContext(fidl::internal::WireClientImpl<TestProtocol>* client)
       : fidl::internal::ResponseContext(0), client_(client) {}
-  zx_status_t OnRawReply(fidl::IncomingMessage&& msg) override {
+  cpp17::optional<fidl::UnbindInfo> OnRawResult(fidl::IncomingMessage&& msg) override {
     client_->EraseTxid(this);
-    return ZX_OK;
+    return cpp17::nullopt;
   }
-  void OnError() override {}
+  void OnCanceled() override {}
 
  private:
   fidl::internal::WireClientImpl<TestProtocol>* client_;
