@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//tools/fidl/measure-tape/measure_tape.gni")
 
 fidl("fuchsia.bluetooth.gatt2") {
   # RemoteService fails this check intentionally ("service" refers to a GATT
@@ -18,4 +19,10 @@ fidl("fuchsia.bluetooth.gatt2") {
   ]
 
   public_deps = [ "//sdk/fidl/fuchsia.bluetooth" ]
+}
+
+measure_tape("hlcpp_measure_tape_for_read_by_type_result") {
+  target_binding = "hlcpp"
+  target_type = "fuchsia.bluetooth.gatt2/ReadByTypeResult"
+  fidls = [ "//sdk/fidl/fuchsia.bluetooth.gatt2" ]
 }
