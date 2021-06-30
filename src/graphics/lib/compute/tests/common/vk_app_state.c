@@ -967,7 +967,6 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
   vk_device_config_t device_config = config->device_config;
   if (config->device_config_callback != NULL)
     {
-      bool found = false;
       for (uint32_t nn = 0; nn < gpus.count; ++nn)
         {
           device_config = (const vk_device_config_t){
@@ -982,7 +981,6 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
                                              &device_config))
             {
               device_config.physical_device = gpus.devices[nn];
-              found                         = true;
               break;
             }
         }
