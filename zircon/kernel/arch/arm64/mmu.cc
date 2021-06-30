@@ -139,45 +139,48 @@ pte_t mmu_flags_to_s1_pte_attr(uint flags) {
   return attr;
 }
 
-void s1_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
+uint s1_pte_attr_to_mmu_flags(pte_t pte) {
+  uint mmu_flags = 0;
   switch (pte & MMU_PTE_ATTR_ATTR_INDEX_MASK) {
     case MMU_PTE_ATTR_STRONGLY_ORDERED:
-      *mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
+      mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
       break;
     case MMU_PTE_ATTR_DEVICE:
-      *mmu_flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
+      mmu_flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
       break;
     case MMU_PTE_ATTR_NORMAL_UNCACHED:
-      *mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
+      mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
       break;
     case MMU_PTE_ATTR_NORMAL_MEMORY:
-      *mmu_flags |= ARCH_MMU_FLAG_CACHED;
+      mmu_flags |= ARCH_MMU_FLAG_CACHED;
       break;
     default:
       PANIC_UNIMPLEMENTED;
   }
 
-  *mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
+  mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
   switch (pte & MMU_PTE_ATTR_AP_MASK) {
     case MMU_PTE_ATTR_AP_P_RW_U_NA:
-      *mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
+      mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
       break;
     case MMU_PTE_ATTR_AP_P_RW_U_RW:
-      *mmu_flags |= ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE;
+      mmu_flags |= ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_WRITE;
       break;
     case MMU_PTE_ATTR_AP_P_RO_U_NA:
       break;
     case MMU_PTE_ATTR_AP_P_RO_U_RO:
-      *mmu_flags |= ARCH_MMU_FLAG_PERM_USER;
+      mmu_flags |= ARCH_MMU_FLAG_PERM_USER;
       break;
   }
 
   if (!((pte & MMU_PTE_ATTR_UXN) && (pte & MMU_PTE_ATTR_PXN))) {
-    *mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+    mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
   }
   if (pte & MMU_PTE_ATTR_NON_SECURE) {
-    *mmu_flags |= ARCH_MMU_FLAG_NS;
+    mmu_flags |= ARCH_MMU_FLAG_NS;
   }
+
+  return mmu_flags;
 }
 
 pte_t mmu_flags_to_s2_pte_attr(uint flags) {
@@ -212,38 +215,42 @@ pte_t mmu_flags_to_s2_pte_attr(uint flags) {
   return attr;
 }
 
-void s2_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
+uint s2_pte_attr_to_mmu_flags(pte_t pte) {
+  uint mmu_flags = 0;
+
   switch (pte & MMU_S2_PTE_ATTR_ATTR_INDEX_MASK) {
     case MMU_S2_PTE_ATTR_STRONGLY_ORDERED:
-      *mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
+      mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
       break;
     case MMU_S2_PTE_ATTR_DEVICE:
-      *mmu_flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
+      mmu_flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
       break;
     case MMU_S2_PTE_ATTR_NORMAL_UNCACHED:
-      *mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
+      mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
       break;
     case MMU_S2_PTE_ATTR_NORMAL_MEMORY:
-      *mmu_flags |= ARCH_MMU_FLAG_CACHED;
+      mmu_flags |= ARCH_MMU_FLAG_CACHED;
       break;
     default:
       PANIC_UNIMPLEMENTED;
   }
 
-  *mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
+  mmu_flags |= ARCH_MMU_FLAG_PERM_READ;
   switch (pte & MMU_PTE_ATTR_AP_MASK) {
     case MMU_S2_PTE_ATTR_S2AP_RO:
       break;
     case MMU_S2_PTE_ATTR_S2AP_RW:
-      *mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
+      mmu_flags |= ARCH_MMU_FLAG_PERM_WRITE;
       break;
     default:
       PANIC_UNIMPLEMENTED;
   }
 
   if (pte & MMU_S2_PTE_ATTR_XN) {
-    *mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+    mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
   }
+
+  return mmu_flags;
 }
 
 bool is_pte_valid(pte_t pte) {
@@ -274,6 +281,32 @@ bool page_table_is_clear(const volatile pte_t* page_table, uint page_size_shift)
             page_table[index]);
   }
   return clear;
+}
+
+ArmAspaceType AspaceTypeFromFlags(uint mmu_flags) {
+  // Kernel/Guest flags are mutually exclusive. Ensure at most 1 is set.
+  DEBUG_ASSERT(((mmu_flags & ARCH_ASPACE_FLAG_KERNEL) != 0) +
+                   ((mmu_flags & ARCH_ASPACE_FLAG_GUEST) != 0) <=
+               1);
+  if (mmu_flags & ARCH_ASPACE_FLAG_KERNEL) {
+    return ArmAspaceType::kKernel;
+  }
+  if (mmu_flags & ARCH_ASPACE_FLAG_GUEST) {
+    return ArmAspaceType::kGuest;
+  }
+  return ArmAspaceType::kUser;
+}
+
+ktl::string_view ArmAspaceTypeName(ArmAspaceType type) {
+  switch (type) {
+    case ArmAspaceType::kKernel:
+      return "kernel";
+    case ArmAspaceType::kUser:
+      return "user";
+    case ArmAspaceType::kGuest:
+      return "guest";
+  }
+  __UNREACHABLE;
 }
 
 }  // namespace
@@ -370,13 +403,14 @@ class ArmArchVmAspace::ConsistencyManager {
 };
 
 uint ArmArchVmAspace::MmuFlagsFromPte(pte_t pte) {
-  uint mmu_flags = 0;
-  if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-    s2_pte_attr_to_mmu_flags(pte, &mmu_flags);
-  } else {
-    s1_pte_attr_to_mmu_flags(pte, &mmu_flags);
+  switch (type_) {
+    case ArmAspaceType::kUser:
+    case ArmAspaceType::kKernel:
+      return s1_pte_attr_to_mmu_flags(pte);
+    case ArmAspaceType::kGuest:
+      return s2_pte_attr_to_mmu_flags(pte);
   }
-  return mmu_flags;
+  __UNREACHABLE;
 }
 
 zx_status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
@@ -399,30 +433,39 @@ zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mm
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  // Compute shift values based on if this address space is for kernel or user space.
-  if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
-    index_shift = MMU_KERNEL_TOP_SHIFT;
-    page_size_shift = MMU_KERNEL_PAGE_SIZE_SHIFT;
+  // Compute shift values based on the address space type.
+  switch (type_) {
+    case ArmAspaceType::kUser: {
+      index_shift = MMU_USER_TOP_SHIFT;
+      page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
 
-    vaddr_t kernel_base = ~0UL << MMU_KERNEL_SIZE_SHIFT;
-    vaddr_rem = vaddr - kernel_base;
+      vaddr_rem = vaddr;
+      ulong __UNUSED index = vaddr_rem >> index_shift;
+      ASSERT(index < MMU_USER_PAGE_TABLE_ENTRIES_TOP);
+      break;
+    }
+    case ArmAspaceType::kKernel: {
+      index_shift = MMU_KERNEL_TOP_SHIFT;
+      page_size_shift = MMU_KERNEL_PAGE_SIZE_SHIFT;
 
-    ulong __UNUSED index = vaddr_rem >> index_shift;
-    ASSERT(index < MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP);
-  } else if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-    index_shift = MMU_GUEST_TOP_SHIFT;
-    page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
+      vaddr_t kernel_base = ~0UL << MMU_KERNEL_SIZE_SHIFT;
+      vaddr_rem = vaddr - kernel_base;
 
-    vaddr_rem = vaddr;
-    ulong __UNUSED index = vaddr_rem >> index_shift;
-    ASSERT(index < MMU_GUEST_PAGE_TABLE_ENTRIES_TOP);
-  } else {
-    index_shift = MMU_USER_TOP_SHIFT;
-    page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
+      ulong __UNUSED index = vaddr_rem >> index_shift;
+      ASSERT(index < MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP);
+      break;
+    }
+    case ArmAspaceType::kGuest: {
+      index_shift = MMU_GUEST_TOP_SHIFT;
+      page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
 
-    vaddr_rem = vaddr;
-    ulong __UNUSED index = vaddr_rem >> index_shift;
-    ASSERT(index < MMU_USER_PAGE_TABLE_ENTRIES_TOP);
+      vaddr_rem = vaddr;
+      ulong __UNUSED index = vaddr_rem >> index_shift;
+      ASSERT(index < MMU_GUEST_PAGE_TABLE_ENTRIES_TOP);
+      break;
+    }
+    default:
+      PANIC("Unknown address space type.");
   }
 
   const volatile pte_t* page_table = tt_virt_;
@@ -558,38 +601,56 @@ zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, uint index_shift, uin
 // use the appropriate TLB flush instruction to globally flush the modified entry
 // terminal is set when flushing at the final level of the page table.
 void ArmArchVmAspace::FlushTLBEntry(vaddr_t vaddr, bool terminal) const {
-  if (unlikely(flags_ & ARCH_ASPACE_FLAG_GUEST)) {
-    paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
-    __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vttbr, vaddr, terminal);
-    DEBUG_ASSERT(status == ZX_OK);
-  } else if (unlikely(asid_ == MMU_ARM64_GLOBAL_ASID)) {
-    // flush this address on all ASIDs
-    if (terminal) {
-      ARM64_TLBI(vaale1is, vaddr >> 12);
-    } else {
-      ARM64_TLBI(vaae1is, vaddr >> 12);
+  switch (type_) {
+    case ArmAspaceType::kUser: {
+      // flush this address for the specific asid
+      if (terminal) {
+        ARM64_TLBI(vale1is, vaddr >> 12 | (vaddr_t)asid_ << 48);
+      } else {
+        ARM64_TLBI(vae1is, vaddr >> 12 | (vaddr_t)asid_ << 48);
+      }
+      return;
     }
-  } else {
-    // flush this address for the specific asid
-    if (terminal) {
-      ARM64_TLBI(vale1is, vaddr >> 12 | (vaddr_t)asid_ << 48);
-    } else {
-      ARM64_TLBI(vae1is, vaddr >> 12 | (vaddr_t)asid_ << 48);
+    case ArmAspaceType::kKernel: {
+      DEBUG_ASSERT(asid_ == MMU_ARM64_GLOBAL_ASID);
+      // flush this address on all ASIDs
+      if (terminal) {
+        ARM64_TLBI(vaale1is, vaddr >> 12);
+      } else {
+        ARM64_TLBI(vaae1is, vaddr >> 12);
+      }
+      return;
+    }
+    case ArmAspaceType::kGuest: {
+      paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
+      __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vttbr, vaddr, terminal);
+      DEBUG_ASSERT(status == ZX_OK);
+      return;
     }
   }
+  __UNREACHABLE;
 }
 
 void ArmArchVmAspace::FlushAsid() const {
-  if (unlikely(flags_ & ARCH_ASPACE_FLAG_GUEST)) {
-    paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
-    __UNUSED zx_status_t status = arm64_el2_tlbi_vmid(vttbr);
-    DEBUG_ASSERT(status == ZX_OK);
-  } else if (unlikely(asid_ == MMU_ARM64_GLOBAL_ASID)) {
-    ARM64_TLBI_NOADDR(alle1is);
-  } else {
-    // flush this address for the specific asid
-    ARM64_TLBI_ASID(aside1is, asid_);
+  switch (type_) {
+    case ArmAspaceType::kUser: {
+      DEBUG_ASSERT(asid_ != MMU_ARM64_GLOBAL_ASID);
+      ARM64_TLBI_ASID(aside1is, asid_);
+      return;
+    }
+    case ArmAspaceType::kKernel: {
+      DEBUG_ASSERT(asid_ == MMU_ARM64_GLOBAL_ASID);
+      ARM64_TLBI_NOADDR(alle1is);
+      return;
+    }
+    case ArmAspaceType::kGuest: {
+      paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
+      zx_status_t status = arm64_el2_tlbi_vmid(vttbr);
+      DEBUG_ASSERT(status == ZX_OK);
+      return;
+    }
   }
+  __UNREACHABLE;
 }
 
 ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
@@ -1079,33 +1140,41 @@ zx_status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attr
 void ArmArchVmAspace::MmuParamsFromFlags(uint mmu_flags, pte_t* attrs, vaddr_t* vaddr_base,
                                          uint* top_size_shift, uint* top_index_shift,
                                          uint* page_size_shift) {
-  if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
-    if (attrs) {
-      *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
+  switch (type_) {
+    case ArmAspaceType::kUser: {
+      if (attrs) {
+        *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
+        // User pages are marked non global
+        *attrs |= MMU_PTE_ATTR_NON_GLOBAL;
+      }
+      *vaddr_base = 0;
+      *top_size_shift = MMU_USER_SIZE_SHIFT;
+      *top_index_shift = MMU_USER_TOP_SHIFT;
+      *page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
+      return;
     }
-    *vaddr_base = ~0UL << MMU_KERNEL_SIZE_SHIFT;
-    *top_size_shift = MMU_KERNEL_SIZE_SHIFT;
-    *top_index_shift = MMU_KERNEL_TOP_SHIFT;
-    *page_size_shift = MMU_KERNEL_PAGE_SIZE_SHIFT;
-  } else if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-    if (attrs) {
-      *attrs = mmu_flags_to_s2_pte_attr(mmu_flags);
+    case ArmAspaceType::kKernel: {
+      if (attrs) {
+        *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
+      }
+      *vaddr_base = ~0UL << MMU_KERNEL_SIZE_SHIFT;
+      *top_size_shift = MMU_KERNEL_SIZE_SHIFT;
+      *top_index_shift = MMU_KERNEL_TOP_SHIFT;
+      *page_size_shift = MMU_KERNEL_PAGE_SIZE_SHIFT;
+      return;
     }
-    *vaddr_base = 0;
-    *top_size_shift = MMU_GUEST_SIZE_SHIFT;
-    *top_index_shift = MMU_GUEST_TOP_SHIFT;
-    *page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
-  } else {
-    if (attrs) {
-      *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
-      // User pages are marked non global
-      *attrs |= MMU_PTE_ATTR_NON_GLOBAL;
+    case ArmAspaceType::kGuest: {
+      if (attrs) {
+        *attrs = mmu_flags_to_s2_pte_attr(mmu_flags);
+      }
+      *vaddr_base = 0;
+      *top_size_shift = MMU_GUEST_SIZE_SHIFT;
+      *top_index_shift = MMU_GUEST_TOP_SHIFT;
+      *page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
+      return;
     }
-    *vaddr_base = 0;
-    *top_size_shift = MMU_USER_SIZE_SHIFT;
-    *top_index_shift = MMU_USER_TOP_SHIFT;
-    *page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
   }
+  __UNREACHABLE;
 }
 
 zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
@@ -1160,7 +1229,7 @@ zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
   }
 
 #if __has_feature(address_sanitizer)
-  if (ret >= 0 && flags_ & ARCH_ASPACE_FLAG_KERNEL) {
+  if (ret >= 0 && type_ == ArmAspaceType::kKernel) {
     asan_map_shadow_for(vaddr, ret);
   }
 #endif  // __has_feature(address_sanitizer)
@@ -1250,7 +1319,7 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
   }
 
 #if __has_feature(address_sanitizer)
-  if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
+  if (type_ == ArmAspaceType::kKernel) {
     asan_map_shadow_for(vaddr, total_mapped * PAGE_SIZE);
   }
 #endif  // __has_feature(address_sanitizer)
@@ -1467,7 +1536,8 @@ zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
 
 zx_status_t ArmArchVmAspace::Init() {
   canary_.Assert();
-  LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, flags 0x%x\n", this, base_, size_, flags_);
+  LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, type %*s\n", this, base_, size_,
+          static_cast<int>(ArmAspaceTypeName(type_).size()), ArmAspaceTypeName(type_).data());
 
   Guard<Mutex> a{&lock_};
 
@@ -1475,7 +1545,7 @@ zx_status_t ArmArchVmAspace::Init() {
   DEBUG_ASSERT(size_ > PAGE_SIZE);
   DEBUG_ASSERT(base_ + size_ - 1 > base_);
 
-  if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
+  if (type_ == ArmAspaceType::kKernel) {
     // At the moment we can only deal with address spaces as globally defined.
     DEBUG_ASSERT(base_ == ~0UL << MMU_KERNEL_SIZE_SHIFT);
     DEBUG_ASSERT(size_ == 1UL << MMU_KERNEL_SIZE_SHIFT);
@@ -1485,10 +1555,7 @@ zx_status_t ArmArchVmAspace::Init() {
     asid_ = (uint16_t)MMU_ARM64_GLOBAL_ASID;
   } else {
     uint page_size_shift;
-    if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-      DEBUG_ASSERT(base_ + size_ <= 1UL << MMU_GUEST_SIZE_SHIFT);
-      page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
-    } else {
+    if (type_ == ArmAspaceType::kUser) {
       DEBUG_ASSERT(base_ + size_ <= 1UL << MMU_USER_SIZE_SHIFT);
       page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
       auto status = asid->Alloc();
@@ -1497,6 +1564,10 @@ zx_status_t ArmArchVmAspace::Init() {
         return status.status_value();
       }
       asid_ = status.value();
+    } else {
+      DEBUG_ASSERT(type_ == ArmAspaceType::kGuest);
+      DEBUG_ASSERT(base_ + size_ <= 1UL << MMU_GUEST_SIZE_SHIFT);
+      page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
     }
 
     paddr_t pa;
@@ -1529,7 +1600,7 @@ zx_status_t ArmArchVmAspace::Destroy() {
   Guard<Mutex> a{&lock_};
 
   // Not okay to destroy the kernel address space
-  DEBUG_ASSERT((flags_ & ARCH_ASPACE_FLAG_KERNEL) == 0);
+  DEBUG_ASSERT(type_ != ArmAspaceType::kKernel);
 
   // Check to see if the top level page table is empty. If not the user didn't
   // properly unmap everything before destroying the aspace
@@ -1550,7 +1621,7 @@ zx_status_t ArmArchVmAspace::Destroy() {
   FlushAsid();
 
   // Free any ASID.
-  if (!(flags_ & ARCH_ASPACE_FLAG_GUEST)) {
+  if (type_ == ArmAspaceType::kUser) {
     auto status = asid->Free(asid_);
     ASSERT(status.is_ok());
     asid_ = MMU_ARM64_UNUSED_ASID;
@@ -1575,7 +1646,7 @@ void ArmArchVmAspace::ContextSwitch(ArmArchVmAspace* old_aspace, ArmArchVmAspace
   uint64_t ttbr;
   if (likely(aspace)) {
     aspace->canary_.Assert();
-    DEBUG_ASSERT((aspace->flags_ & (ARCH_ASPACE_FLAG_KERNEL | ARCH_ASPACE_FLAG_GUEST)) == 0);
+    DEBUG_ASSERT(aspace->type_ == ArmAspaceType::kUser);
 
     // Load the user space TTBR with the translation table and user space ASID.
     ttbr = ((uint64_t)aspace->asid_ << 48) | aspace->tt_phys_;
@@ -1651,8 +1722,11 @@ zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write) 
   return ZX_OK;
 }
 
+ArmArchVmAspace::ArmArchVmAspace(vaddr_t base, size_t size, ArmAspaceType type, page_alloc_fn_t paf)
+    : test_page_alloc_func_(paf), type_(type), base_(base), size_(size) {}
+
 ArmArchVmAspace::ArmArchVmAspace(vaddr_t base, size_t size, uint mmu_flags, page_alloc_fn_t paf)
-    : test_page_alloc_func_(paf), flags_(mmu_flags), base_(base), size_(size) {}
+    : ArmArchVmAspace(base, size, AspaceTypeFromFlags(mmu_flags), paf) {}
 
 ArmArchVmAspace::~ArmArchVmAspace() {
   // Destroy() will have freed the final page table if it ran correctly, and further validated that

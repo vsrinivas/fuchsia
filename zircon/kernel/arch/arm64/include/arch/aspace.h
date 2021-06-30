@@ -16,8 +16,15 @@
 #include <kernel/mutex.h>
 #include <vm/arch_vm_aspace.h>
 
+enum class ArmAspaceType {
+  kUser,    // Userspace address space.
+  kKernel,  // Kernel address space.
+  kGuest,   // Second-stage address space.
+};
+
 class ArmArchVmAspace final : public ArchVmAspaceInterface {
  public:
+  ArmArchVmAspace(vaddr_t base, size_t size, ArmAspaceType type, page_alloc_fn_t paf = nullptr);
   ArmArchVmAspace(vaddr_t base, size_t size, uint mmu_flags, page_alloc_fn_t paf = nullptr);
   virtual ~ArmArchVmAspace();
 
@@ -147,7 +154,8 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   // table.
   size_t pt_pages_ = 0;
 
-  const uint flags_ = 0;
+  // Type of address space.
+  const ArmAspaceType type_;
 
   // Range of address space.
   const vaddr_t base_ = 0;
