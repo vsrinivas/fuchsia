@@ -225,11 +225,11 @@ SystemProfile::BuildType LookupBuildType(const std::string& build_type_dir) {
   auto build_type_path = files::JoinPath(build_type_dir, kBuildTypeFile);
   std::string build_type;
   if (!files::ReadFileToString(build_type_path, &build_type)) {
-    FX_LOGS(ERROR) << "Failed to read build type " << build_type_path
-                   << ". Falling back to default type: " << SystemProfile::UNKNOWN_TYPE;
+    // The build type file is not populated for all devices.
+    FX_LOGS(WARNING) << "No build type found at " << build_type_path
+                     << ". Falling back to default type: " << SystemProfile::UNKNOWN_TYPE;
     return SystemProfile::UNKNOWN_TYPE;
   }
-  //
   // Trim trailing whitespace.
   size_t end = build_type.find_last_not_of(" \n\r\t\f\v");
   build_type = (end == std::string::npos) ? "" : build_type.substr(0, end + 1);
