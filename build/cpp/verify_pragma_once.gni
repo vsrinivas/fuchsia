@@ -23,8 +23,8 @@ template("verify_pragma_once") {
 
     args = [
              "--stamp",
-             rebase_path(stamp_file),
+             rebase_path(stamp_file, root_build_dir),
              "--headers",
-           ] + rebase_path(invoker.headers)
+           ] + rebase_path(invoker.headers, root_build_dir)
   }
 }

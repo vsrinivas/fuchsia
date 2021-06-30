@@ -165,7 +165,7 @@ template("sdk_shared_library") {
   foreach(sdk_dep, sdk_deps) {
     gen_dir = get_label_info(sdk_dep, "target_gen_dir")
     name = get_label_info(sdk_dep, "name")
-    sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+    sdk_metas += [ "$gen_dir/$name.meta.json" ]
   }
 
   # Process headers.
@@ -239,32 +239,31 @@ template("sdk_shared_library") {
     ]
 
     args = [
-             "--out",
-             rebase_path(metadata_file),
-             "--name",
-             atom_name,
-             "--format",
-             "shared",
-             "--root",
-             file_base,
-             "--include-dir",
-             "$file_base/include",
-             "--dist-path",
-             "lib/$lib_name",
-             "--deps",
-           ] + sdk_metas + [ "--headers" ] + sdk_metadata_headers +
-           [
-             "--arch",
-             target_cpu,
-             "--lib-link",
-             link_lib,
-             "--lib-dist",
-             dist_lib,
-             "--lib-debug-file",
-             rebase_path(debug_lib_file),
-             "--debug-mapping",
-             rebase_path(debug_mapping_file),
-           ]
+      "--out",
+      rebase_path(metadata_file, root_build_dir),
+      "--name",
+      atom_name,
+      "--format",
+      "shared",
+      "--root",
+      file_base,
+      "--include-dir",
+      "$file_base/include",
+      "--dist-path",
+      "lib/$lib_name",
+      "--arch",
+      target_cpu,
+      "--lib-link",
+      link_lib,
+      "--lib-dist",
+      dist_lib,
+      "--lib-debug-file",
+      rebase_path(debug_lib_file, root_build_dir),
+      "--debug-mapping",
+      rebase_path(debug_mapping_file, root_build_dir),
+    ]
+    args += [ "--deps" ] + rebase_path(sdk_metas, root_build_dir)
+    args += [ "--headers" ] + sdk_metadata_headers
 
     deps = sdk_deps + [ shared_lib_target ]
   }
@@ -354,13 +353,11 @@ template("sdk_shared_library") {
 
     args = [
       "--stamp",
-      rebase_path(stamp_file),
+      rebase_path(stamp_file, root_build_dir),
       "--manifest",
-      rebase_path(sdk_manifest_file),
+      rebase_path(sdk_manifest_file, root_build_dir),
       "--runtime-deps-file",
-      rebase_path(runtime_deps_file),
-      "--root-build-dir",
-      rebase_path(root_build_dir),
+      rebase_path(runtime_deps_file, root_build_dir),
     ]
 
     deps = [

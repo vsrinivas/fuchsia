@@ -109,7 +109,7 @@ template("sdk_source_set") {
 
     gen_dir = get_label_info(sdk_dep, "target_gen_dir")
     name = get_label_info(sdk_dep, "name")
-    sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+    sdk_metas += [ "$gen_dir/$name.meta.json" ]
     dep_names += [ get_label_info(dep, "name") ]
   }
 
@@ -188,7 +188,7 @@ template("sdk_source_set") {
 
     args = [
       "--out",
-      rebase_path(metadata_file),
+      rebase_path(metadata_file, root_build_dir),
       "--name",
       invoker.sdk_name,
       "--root",
@@ -196,7 +196,7 @@ template("sdk_source_set") {
       "--include-dir",
       "$file_base/include",
     ]
-    args += [ "--deps" ] + sdk_metas
+    args += [ "--deps" ] + rebase_path(sdk_metas, root_build_dir)
     args += [ "--dep_names" ] + dep_names
     args += [ "--sources" ] + sdk_metadata_sources
     args += [ "--headers" ] + sdk_metadata_headers

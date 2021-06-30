@@ -43,9 +43,9 @@ template("verify_public_symbols") {
     args = [
       "$clang_prefix/llvm-cxxfilt",
       invoker.library_name,
-      rebase_path(invoker.current),
-      rebase_path(invoker.reference),
-      rebase_path(stamp_file),
+      rebase_path(invoker.current, root_build_dir),
+      rebase_path(invoker.reference, root_build_dir),
+      rebase_path(stamp_file, root_build_dir),
     ]
 
     if (warn_on_sdk_changes) {
