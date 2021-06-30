@@ -18,6 +18,7 @@
 #include <thread>
 #include <vector>
 
+#include <sanitizer/lsan_interface.h>
 #include <zxtest/zxtest.h>
 
 #include "mock_client_impl.h"
@@ -544,6 +545,93 @@ TEST(ChannelRefTrackerTestCase, WaitForChannelWithRefs) {
 
   // Ensure that no new references can be created.
   EXPECT_FALSE(channel_tracker.Get());
+}
+
+TEST(WireClient, UseOnDispatcherThread) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  std::optional<fidl::UnbindInfo> error;
+  std::thread::id error_handling_thread;
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
+   public:
+    explicit EventHandler(std::optional<fidl::UnbindInfo>& error,
+                          std::thread::id& error_handling_thread)
+        : error_(error), error_handling_thread_(error_handling_thread) {}
+    void on_fidl_error(fidl::UnbindInfo info) override {
+      error_handling_thread_ = std::this_thread::get_id();
+      error_ = info;
+    }
+
+   private:
+    std::optional<fidl::UnbindInfo>& error_;
+    std::thread::id& error_handling_thread_;
+  };
+  EventHandler handler(error, error_handling_thread);
+
+  // Create the client on the current thread.
+  fidl::WireClient client(std::move(local), loop.dispatcher(), &handler);
+
+  // Dispatch messages on the current thread.
+  ASSERT_OK(loop.RunUntilIdle());
+
+  // Trigger an error; receive |on_fidl_error| on the same thread.
+  ASSERT_FALSE(error.has_value());
+  remote.reset();
+  ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_TRUE(error.has_value());
+  ASSERT_EQ(std::this_thread::get_id(), error_handling_thread);
+
+  // Destroy the client on the same thread.
+  client = {};
+}
+
+TEST(WireClient, CannotDestroyOnAnotherThread) {
+  // Run our test in a thread with LSAN disabled.
+  std::thread([&] {
+#if __has_feature(address_sanitizer) || __has_feature(leak_sanitizer)
+    // Disable LSAN for this thread. It is expected to leak by way of a crash.
+    __lsan::ScopedDisabler _;
+#endif
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = std::move(*endpoints);
+
+    fidl::WireClient client(std::move(local), loop.dispatcher());
+    remote.reset();
+
+    // Panics when a foreign thread attempts to destroy the client.
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+    std::thread foreign_thread([&] { ASSERT_DEATH([&] { client = {}; }); });
+    foreign_thread.join();
+#endif
+  }).join();
+}
+
+TEST(WireClient, CannotDispatchOnAnotherThread) {
+  // Run our test in a thread with LSAN disabled.
+  std::thread([&] {
+#if __has_feature(address_sanitizer) || __has_feature(leak_sanitizer)
+    // Disable LSAN for this thread. It is expected to leak by way of a crash.
+    __lsan::ScopedDisabler _;
+#endif
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = std::move(*endpoints);
+
+    fidl::WireClient client(std::move(local), loop.dispatcher());
+    remote.reset();
+
+    // Panics when a different thread attempts to dispatch the error.
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+    std::thread foreign_thread([&] { ASSERT_DEATH([&] { loop.RunUntilIdle(); }); });
+    foreign_thread.join();
+#endif
+  }).join();
 }
 
 }  // namespace

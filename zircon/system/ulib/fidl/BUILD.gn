@@ -88,6 +88,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/fidl_allocator.h",
                     "lib/fidl/llcpp/internal/client_details.h",
                     "lib/fidl/llcpp/internal/server_details.h",
+                    "lib/fidl/llcpp/internal/thread_checker.h",
                     "lib/fidl/llcpp/message_storage.h",
                     "lib/fidl/llcpp/message.h",
                     "lib/fidl/llcpp/object_view.h",

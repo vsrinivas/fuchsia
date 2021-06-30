@@ -16,12 +16,13 @@ constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
 
 void ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
                       async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
-                      AnyTeardownObserver&& teardown_observer) {
+                      AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy) {
   ZX_DEBUG_ASSERT(!binding_.lock());
   ZX_DEBUG_ASSERT(client.get() == this);
   channel_tracker_.Init(std::move(channel));
-  auto binding = AsyncClientBinding::Create(dispatcher, channel_tracker_.Get(), std::move(client),
-                                            event_handler, std::move(teardown_observer));
+  auto binding =
+      AsyncClientBinding::Create(dispatcher, channel_tracker_.Get(), std::move(client),
+                                 event_handler, std::move(teardown_observer), threading_policy);
   binding_ = binding;
   binding->BeginFirstWait();
 }
@@ -153,11 +154,12 @@ zx::channel ChannelRefTracker::WaitForChannel() {
 
 void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl, zx::channel client_end,
                             async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
-                            AnyTeardownObserver&& teardown_observer) {
+                            AnyTeardownObserver&& teardown_observer,
+                            ThreadingPolicy threading_policy) {
   ZX_ASSERT(!client_impl_);
   client_impl_ = std::move(client_impl);
   client_impl_->Bind(client_impl_, std::move(client_end), dispatcher, event_handler,
-                     std::move(teardown_observer));
+                     std::move(teardown_observer), threading_policy);
   control_ = std::make_shared<ControlBlock>(client_impl_);
 }
 

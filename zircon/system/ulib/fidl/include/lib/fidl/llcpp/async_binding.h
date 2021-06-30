@@ -11,13 +11,13 @@
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/extract_resource_on_destruction.h>
 #include <lib/fidl/llcpp/internal/client_details.h>
+#include <lib/fidl/llcpp/internal/thread_checker.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
 #include <lib/stdcompat/variant.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -70,7 +70,8 @@ class AsyncBinding : private async_wait_t {
   // perform teardown when this method returns an error.
   zx_status_t CheckForTeardownAndBeginNextWait() __TA_EXCLUDES(lock_);
 
-  void StartTeardown(std::shared_ptr<AsyncBinding>&& calling_ref) __TA_EXCLUDES(lock_) {
+  void StartTeardown(std::shared_ptr<AsyncBinding>&& calling_ref) __TA_EXCLUDES(thread_checker_)
+      __TA_EXCLUDES(lock_) {
     StartTeardownWithInfo(std::move(calling_ref), ::fidl::UnbindInfo::Unbind());
   }
 
@@ -78,7 +79,8 @@ class AsyncBinding : private async_wait_t {
   zx_handle_t handle() const { return async_wait_t::object; }
 
  protected:
-  AsyncBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& borrowed_channel);
+  AsyncBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& borrowed_channel,
+               ThreadingPolicy threading_policy);
 
   static void OnMessage(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
                         const zx_packet_signal_t* signal) {
@@ -86,7 +88,8 @@ class AsyncBinding : private async_wait_t {
   }
 
   // Common message handling entrypoint shared by both client and server bindings.
-  void MessageHandler(zx_status_t status, const zx_packet_signal_t* signal) __TA_EXCLUDES(lock_);
+  void MessageHandler(zx_status_t status, const zx_packet_signal_t* signal)
+      __TA_EXCLUDES(thread_checker_) __TA_EXCLUDES(lock_);
 
   // Dispatches a generic incoming message.
   //
@@ -112,8 +115,8 @@ class AsyncBinding : private async_wait_t {
   //
   // If `*binding_released` is set, the calling code no longer has ownership of
   // this |AsyncBinding| object and so must not access its state.
-  virtual std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
-                                             bool* binding_released) = 0;
+  virtual std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released)
+      __TA_REQUIRES(thread_checker_) = 0;
 
   // |StartTeardownWithInfo| attempts to post exactly one task to drive the
   // teardown process. This enum reflects the result of posting the task.
@@ -143,7 +146,11 @@ class AsyncBinding : private async_wait_t {
 
   // Initiates teardown with the provided |info| as reason.
   TeardownTaskPostingResult StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling_ref,
-                                                  UnbindInfo info) __TA_EXCLUDES(lock_);
+                                                  UnbindInfo info) __TA_EXCLUDES(thread_checker_)
+      __TA_EXCLUDES(lock_);
+
+  // TODO(fxbug.dev/75485): Only needed during migration to |WireClient|.
+  ThreadingPolicy threading_policy() const { return threading_policy_; }
 
   async_dispatcher_t* dispatcher_ = nullptr;
 
@@ -158,7 +165,8 @@ class AsyncBinding : private async_wait_t {
   //
   // If |lifecycle_| is not yet in |MustTeardown|, |info| must be present to
   // specify the teardown reason.
-  void PerformTeardown(cpp17::optional<UnbindInfo> info) __TA_EXCLUDES(lock_);
+  void PerformTeardown(cpp17::optional<UnbindInfo> info) __TA_REQUIRES(thread_checker_)
+      __TA_EXCLUDES(lock_);
 
   // Override |FinishTeardown| to perform cleanup work at the final stage of
   // binding teardown.
@@ -187,7 +195,19 @@ class AsyncBinding : private async_wait_t {
   // |FinishTeardown| will be invoked on a dispatcher thread if the dispatcher is
   // running, and will be invoked on the thread that is calling shutdown if the
   // dispatcher is shutting down.
-  virtual void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) = 0;
+  virtual void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info)
+      __TA_REQUIRES(thread_checker_) = 0;
+
+  // TODO(fxbug.dev/75485): Only needed during migration to |WireClient|.
+  const ThreadingPolicy threading_policy_;
+
+  // |thread_checker_| records the thread ID of constructing thread and checks
+  // that required operations run on that thread when the threading policy calls
+  // for it.
+  //
+  // |thread_checker_| is no-op in release builds, and may be completely
+  // optimized out.
+  [[no_unique_address]] ThreadChecker thread_checker_;
 
   // A lock protecting the binding |lifecycle|.
   std::mutex lock_;
@@ -287,7 +307,9 @@ class AnyAsyncServerBinding : public AsyncBinding {
  protected:
   AnyAsyncServerBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& borrowed_channel,
                         IncomingMessageDispatcher* interface)
-      : AsyncBinding(dispatcher, borrowed_channel), interface_(interface) {}
+      : AsyncBinding(dispatcher, borrowed_channel,
+                     ThreadingPolicy::kCreateAndTeardownFromAnyThread),
+        interface_(interface) {}
 
   IncomingMessageDispatcher* interface() const { return interface_; }
 
@@ -391,7 +413,8 @@ class AsyncClientBinding final : public AsyncBinding {
                                                     std::shared_ptr<ChannelRef> channel,
                                                     std::shared_ptr<ClientBase> client,
                                                     AsyncEventHandler* event_handler,
-                                                    AnyTeardownObserver&& teardown_observer);
+                                                    AnyTeardownObserver&& teardown_observer,
+                                                    ThreadingPolicy threading_policy);
 
   virtual ~AsyncClientBinding() = default;
 
@@ -400,7 +423,7 @@ class AsyncClientBinding final : public AsyncBinding {
  private:
   AsyncClientBinding(async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
                      std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
-                     AnyTeardownObserver&& teardown_observer);
+                     AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
   std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released) override;
 

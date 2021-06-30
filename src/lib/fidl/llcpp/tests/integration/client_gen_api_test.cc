@@ -437,7 +437,7 @@ TEST(GenAPITestCase, SkipCallingInFlightCallbacksDuringCancellation) {
     ASSERT_TRUE(destroyed);
   };
 
-  // TODO(fxbug.dev/75485): Test |WireLocalClient|.
+  do_test(fidl::WireClient<Example>{});
   do_test(fidl::WireSharedClient<Example>{});
 }
 

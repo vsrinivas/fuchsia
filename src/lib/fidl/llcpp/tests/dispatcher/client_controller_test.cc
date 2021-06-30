@@ -14,17 +14,18 @@
 
 using ::fidl_testing::TestProtocol;
 
-TEST(ClientController, BindingTwicePanics) {
-  using ::fidl::internal::ClientController;
-  using ::fidl::internal::WireClientImpl;
+namespace fidl {
+namespace internal {
 
+TEST(ClientController, BindingTwicePanics) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx::channel h1, h2;
   ASSERT_OK(zx::channel::create(0, &h1, &h2));
   ClientController controller;
 
   controller.Bind(std::make_shared<WireClientImpl<TestProtocol>>(), std::move(h1),
-                  loop.dispatcher(), nullptr, fidl::internal::AnyTeardownObserver::Noop());
+                  loop.dispatcher(), nullptr, fidl::internal::AnyTeardownObserver::Noop(),
+                  fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
 
   ASSERT_DEATH([&] {
 #if __has_feature(address_sanitizer) || __has_feature(leak_sanitizer)
@@ -32,6 +33,10 @@ TEST(ClientController, BindingTwicePanics) {
     __lsan::ScopedDisabler _;
 #endif
     controller.Bind(std::make_shared<WireClientImpl<TestProtocol>>(), std::move(h2),
-                    loop.dispatcher(), nullptr, fidl::internal::AnyTeardownObserver::Noop());
+                    loop.dispatcher(), nullptr, fidl::internal::AnyTeardownObserver::Noop(),
+                    fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
   });
 }
+
+}  // namespace internal
+}  // namespace fidl
