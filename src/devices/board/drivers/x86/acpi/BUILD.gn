@@ -24,6 +24,7 @@ shared_deps = [
   "//src/devices/lib/iommu",
   "//src/lib/ddk:ddk-deprecated-binding-headers",
   "//third_party/acpica",
+  "//zircon/public/lib/fbl",
   "//zircon/system/ulib/zxc",
 ]
 
@@ -38,10 +39,7 @@ source_set("acpi") {
     "resources.cc",
   ]
   public_deps = shared_public_deps
-  deps = shared_deps + [
-           "//src/lib/ddk",
-           "//zircon/public/lib/fbl",
-         ]
+  deps = shared_deps + [ "//src/lib/ddk" ]
 }
 
 test("acpi-test") {
@@ -60,6 +58,8 @@ test("acpi-test") {
            "//src/devices/testing/fake_ddk",
            "test:mock-acpi",
          ]
+
+  defines = [ "IS_TEST" ]
 }
 
 fuchsia_unittest_package("x86-acpi-tests") {

@@ -16,6 +16,19 @@
 #include "src/devices/lib/iommu/iommu.h"
 
 namespace acpi {
+const char* BusTypeToString(BusType t) {
+  switch (t) {
+    case kPci:
+      return "pci";
+    case kSpi:
+      return "spi";
+    case kI2c:
+      return "i2c";
+    case kUnknown:
+      return "unknown";
+  }
+}
+
 ACPI_STATUS Device::AddResource(ACPI_RESOURCE* res) {
   if (resource_is_memory(res)) {
     resource_memory_t mem;

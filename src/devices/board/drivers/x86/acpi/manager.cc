@@ -42,16 +42,17 @@ acpi::status<> Manager::DiscoverDevices() {
 acpi::status<> Manager::ConfigureDiscoveredDevices() {
   for (auto& kv : devices_) {
     auto result = kv.second.InferBusTypes(
-        acpi_, allocator_, [this](ACPI_HANDLE bus, BusType type, DeviceChildEntry child) {
+        acpi_, allocator_, this,
+        [this](ACPI_HANDLE bus, BusType type, DeviceChildEntry child) -> size_t {
           DeviceBuilder* b = LookupDevice(bus);
           if (b == nullptr) {
             // Silently ignore.
-            return UINT32_MAX;
+            return -1;
           }
           b->SetBusType(type);
-          b->AddBusChild(child);
+          size_t child_index = b->AddBusChild(child);
           if (b->HasBusId()) {
-            return b->GetBusId();
+            return child_index;
           }
 
           // If this device is a bus, figure out its bus id.
@@ -68,13 +69,13 @@ acpi::status<> Manager::ConfigureDiscoveredDevices() {
               bus_id = bbn_result.value();
             } else {
               zxlogf(ERROR, "Failed to get BBN for PCI bus '%s'", b->name());
-              return UINT32_MAX;
+              return -1;
             }
           } else {
             bus_id = next_bus_ids_.emplace(type, 0).first->second++;
           }
           b->SetBusId(bus_id);
-          return bus_id;
+          return child_index;
         });
     if (result.is_error()) {
       zxlogf(WARNING, "Failed to InferBusTypes for %s: %d", kv.second.name(), result.error_value());

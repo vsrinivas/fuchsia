@@ -25,6 +25,8 @@ enum BusType {
   kI2c = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_I2C,
 };
 
+const char* BusTypeToString(BusType t);
+
 struct DevicePioResource {
   explicit DevicePioResource(const resource_io& io)
       : base_address{io.minimum}, alignment{io.alignment}, address_length{io.address_length} {}

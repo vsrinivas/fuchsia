@@ -14,6 +14,8 @@
 
 namespace acpi {
 
+class Manager;
+
 // A helper class that takes ownership of the string value of a |zx_device_str_prop_t|.
 struct OwnedStringProp : zx_device_str_prop_t {
   OwnedStringProp(const char* key, const char* value) : value_(value) {
@@ -95,8 +97,9 @@ class DeviceBuilder {
     bus_id_ = id;
   }
 
-  void AddBusChild(DeviceChildEntry d) {
-    std::visit(
+  // Returns the index of the newly added device in the children array.
+  size_t AddBusChild(DeviceChildEntry d) {
+    return std::visit(
         [this](auto&& arg) {
           using T = std::decay_t<decltype(arg)>;
           // If we haven't initialised the vector yet, populate it.
@@ -109,6 +112,7 @@ class DeviceBuilder {
           auto pval = std::get_if<std::vector<T>>(&bus_children_);
           ZX_ASSERT_MSG(pval, "Bus %s had unexpected child type vector", name());
           pval->emplace_back(arg);
+          return pval->size() - 1;
         },
         d);
   }
@@ -121,10 +125,11 @@ class DeviceBuilder {
 
   // Walk this device's resources, checking to see if any are a SerialBus type.
   // If they are, calls |callback| with the handle to the bus, and the type of the bus, and a
-  // "DeviceChildEntry" representing this child. |callback| returns the bus ID of the bus device.
-  using InferBusTypeCallback = std::function<uint32_t(ACPI_HANDLE, BusType, DeviceChildEntry)>;
+  // "DeviceChildEntry" representing this child. |callback| the index of the child device on the
+  // bus.
+  using InferBusTypeCallback = std::function<size_t(ACPI_HANDLE, BusType, DeviceChildEntry)>;
   acpi::status<> InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator& allocator,
-                               InferBusTypeCallback callback);
+                               acpi::Manager* manager, InferBusTypeCallback callback);
 
   BusType GetBusType() { return bus_type_; }
   uint32_t GetBusId() { return bus_id_.value_or(UINT32_MAX); }
@@ -136,6 +141,10 @@ class DeviceBuilder {
 
  private:
   zx::status<std::vector<uint8_t>> FidlEncodeMetadata(fidl::AnyAllocator& allocator);
+  zx::status<> BuildComposite(zx_device_t* platform_bus,
+                              std::vector<zx_device_str_prop_t>& str_props);
+  std::vector<zx_bind_inst_t> GetFragmentBindInsnsForChild(size_t child_index);
+  std::vector<zx_bind_inst_t> GetFragmentBindInsnsForSelf();
   // Information about the device to be published.
   std::string name_;
   ACPI_HANDLE handle_;
@@ -150,6 +159,15 @@ class DeviceBuilder {
   DeviceChildData bus_children_;
   std::vector<OwnedStringProp> str_props_;
   std::vector<zx_device_prop_t> dev_props_;
+
+  // Resources this device uses. "Buses" is a fairly loosely used term here and could
+  // refer to things like GPIOs as well.
+  // The first element in the pair is the bus, and the second is the index this device has on that
+  // bus. This list is used when publishing the composite version of this device.
+  std::vector<std::pair<DeviceBuilder*, size_t>> buses_;
+  // True if we have an address on our bus.
+  // Used to determine whether or not a composite should be published.
+  bool has_address_ = false;
 };
 
 }  // namespace acpi

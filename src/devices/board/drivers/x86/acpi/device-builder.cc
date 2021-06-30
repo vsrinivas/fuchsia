@@ -4,9 +4,14 @@
 
 #include "src/devices/board/drivers/x86/acpi/device-builder.h"
 
+#include <fuchsia/hardware/spi/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 
+#include <fbl/string_printf.h>
+
 #include "src/devices/board/drivers/x86/acpi/acpi.h"
+#include "src/devices/board/drivers/x86/acpi/manager.h"
+
 namespace acpi {
 namespace {
 
@@ -25,29 +30,39 @@ zx::status<std::vector<uint8_t>> DoFidlEncode(T data) {
 }  // namespace
 
 acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator& allocator,
-                                            InferBusTypeCallback callback) {
+                                            acpi::Manager* manager, InferBusTypeCallback callback) {
   if (!handle_ || !parent_) {
     // Skip the root device.
     return acpi::ok();
   }
 
-  bool has_address = false;
   // TODO(fxbug.dev/78565): Handle other resources like serial buses.
   auto result = acpi->WalkResources(
       handle_, "_CRS",
-      [this, acpi, &has_address, &allocator, &callback](ACPI_RESOURCE* res) -> acpi::status<> {
+      [this, acpi, manager, &allocator, &callback](ACPI_RESOURCE* res) -> acpi::status<> {
+        ACPI_HANDLE bus_parent = nullptr;
+        BusType type = BusType::kUnknown;
+        DeviceChildEntry entry;
+        uint16_t bus_id_prop;
         if (resource_is_spi(res)) {
-          ACPI_HANDLE bus_parent;
+          type = BusType::kSpi;
           auto result = resource_parse_spi(acpi, handle_, res, allocator, &bus_parent);
           if (result.is_error()) {
             zxlogf(WARNING, "Failed to parse SPI resource: %d", result.error_value());
             return result.take_error();
           }
-          uint32_t bus_id = callback(bus_parent, BusType::kSpi, result.value());
-          dev_props_.emplace_back(zx_device_prop_t{.id = BIND_SPI_BUS_ID, .value = bus_id});
+          entry = result.value();
+          bus_id_prop = BIND_SPI_BUS_ID;
           dev_props_.emplace_back(
-              zx_device_prop_t{.id = BIND_SPI_CHIP_SELECT, .value = result->cs()});
-          has_address = true;
+              zx_device_prop_t{.id = BIND_SPI_CHIP_SELECT, .value = result.value().cs()});
+        }
+
+        if (bus_parent) {
+          size_t bus_index = callback(bus_parent, type, entry);
+          DeviceBuilder* b = manager->LookupDevice(bus_parent);
+          buses_.emplace_back(b, bus_index);
+          dev_props_.emplace_back(zx_device_prop_t{.id = bus_id_prop, .value = b->GetBusId()});
+          has_address_ = true;
         }
         return acpi::ok();
       });
@@ -75,7 +90,11 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator
           .id = BIND_PCI_TOPO,
           .value = BIND_PCI_TOPO_PACK(bus_id, device, func),
       });
-      has_address = true;
+      // Should we buses_.emplace_back() here? The PCI bus driver currently publishes PCI
+      // composites, so having a device on a PCI bus that uses other buses resources can't be
+      // represented. Such devices don't seem to exist, but if we ever encounter one, it will need
+      // to be handled somehow.
+      has_address_ = true;
     }
   }
 
@@ -114,7 +133,7 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator
 
   // If our parent has a bus type, and we have an address on that bus, then we'll expose it in our
   // bind properties.
-  if (parent_->GetBusType() != BusType::kUnknown && has_address) {
+  if (parent_->GetBusType() != BusType::kUnknown && has_address_) {
     dev_props_.emplace_back(zx_device_prop_t{
         .id = BIND_ACPI_BUS_TYPE,
         .value = parent_->GetBusType(),
@@ -171,6 +190,12 @@ zx::status<zx_device_t*> DeviceBuilder::Build(zx_device_t* platform_bus,
     return zx::error(result);
   }
   zx_device_ = device.release()->zxdev();
+  auto status = BuildComposite(platform_bus, str_props_for_ddkadd);
+  if (status.is_error()) {
+    zxlogf(WARNING, "failed to publish composite acpi device '%s-composite': %d", name(),
+           status.error_value());
+    return status.take_error();
+  }
 
   return zx::ok(zx_device_);
 }
@@ -196,5 +221,142 @@ zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata(fidl::AnyAllo
         }
       },
       bus_children_);
+}
+
+zx::status<> DeviceBuilder::BuildComposite(zx_device_t* platform_bus,
+                                           std::vector<zx_device_str_prop_t>& str_props) {
+  if (!has_address_ || buses_.empty()) {
+    // If a device doesn't have any bus resources or doesn't have an address on any of its buses,
+    // don't try to publish a composite.
+    return zx::ok();
+  }
+
+  size_t fragment_count = buses_.size() + 1;
+  // Bookkeeping.
+  // We use fixed-size arrays here rather than std::vector because we don't want
+  // pointers to array members to become invalidated when the vector resizes.
+  // While we could use vector.reserve(), there's no way to guarantee that future bugs won't be
+  // caused by someone adding an extra fragment without first updating the reserve() call.
+  auto bind_insns = std::make_unique<std::vector<zx_bind_inst_t>[]>(fragment_count);
+  auto fragment_names = std::make_unique<fbl::String[]>(fragment_count);
+  auto fragment_parts = std::make_unique<device_fragment_part_t[]>(fragment_count);
+  auto fragments = std::make_unique<device_fragment_t[]>(fragment_count);
+  std::unordered_map<BusType, uint32_t> parent_types;
+
+  size_t bus_index = 0;
+  // Generate fragments for every device we use.
+  for (auto& pair : buses_) {
+    DeviceBuilder* parent = pair.first;
+    size_t child_index = pair.second;
+    BusType type = parent->GetBusType();
+    // Fragments are named <protocol>NNN, e.g. "i2c000", "i2c001".
+    fragment_names[bus_index] = fbl::StringPrintf("%s%03u", BusTypeToString(type),
+                                                  parent_types.emplace(type, 0).first->second++);
+
+    std::vector<zx_bind_inst_t> insns = parent->GetFragmentBindInsnsForChild(child_index);
+    bind_insns[bus_index] = std::move(insns);
+    fragment_parts[bus_index] = device_fragment_part_t{
+        .instruction_count = static_cast<uint32_t>(bind_insns[bus_index].size()),
+        .match_program = bind_insns[bus_index].data(),
+    };
+    fragments[bus_index] = device_fragment_t{
+        .name = fragment_names[bus_index].data(),
+        .parts_count = 1,
+        .parts = &fragment_parts[bus_index],
+    };
+
+    bus_index++;
+  }
+
+  // Generate the ACPI fragment.
+  std::vector<zx_bind_inst_t> insns = GetFragmentBindInsnsForSelf();
+  bind_insns[bus_index] = std::move(insns);
+  fragment_parts[bus_index] = device_fragment_part_t{
+      .instruction_count = static_cast<uint32_t>(bind_insns[bus_index].size()),
+      .match_program = bind_insns[bus_index].data(),
+  };
+  fragments[bus_index] = device_fragment_t{
+      .name = "acpi",
+      .parts_count = 1,
+      .parts = &fragment_parts[bus_index],
+  };
+
+  composite_device_desc_t composite_desc = {
+      .props = dev_props_.data(),
+      .props_count = dev_props_.size(),
+      .str_props = str_props.data(),
+      .str_props_count = str_props.size(),
+      .fragments = fragments.get(),
+      .fragments_count = fragment_count,
+      .coresident_device_index = 0,
+  };
+
+  auto composite_name = fbl::StringPrintf("%s-composite", name());
+  // Don't worry about any metadata, since it's present in the "acpi" parent.
+  auto composite_device = std::make_unique<Device>(parent_->zx_device_, handle_, platform_bus);
+  zx_status_t status = composite_device->DdkAddComposite(composite_name.data(), &composite_desc);
+
+#ifndef IS_TEST
+  // TODO(fxbug.dev/79923): fake_ddk leaks composite devices, so we should migrate to mock_ddk
+  // once it supports composites.
+  if (status == ZX_OK) {
+    // The DDK takes ownership of the device, but only if DdkAddComposite succeeded.
+    __UNUSED auto unused = composite_device.release();
+  }
+#endif
+
+  return zx::make_status(status);
+}
+
+std::vector<zx_bind_inst_t> DeviceBuilder::GetFragmentBindInsnsForChild(size_t child_index) {
+  std::vector<zx_bind_inst_t> ret;
+  uint32_t protocol = UINT32_MAX;
+  switch (bus_type_) {
+    case BusType::kPci:
+      protocol = ZX_PROTOCOL_PCI;
+      break;
+    case BusType::kI2c:
+      protocol = ZX_PROTOCOL_I2C;
+      break;
+    case BusType::kSpi:
+      protocol = ZX_PROTOCOL_SPI;
+      break;
+    case BusType::kUnknown:
+      ZX_ASSERT(bus_type_ != BusType::kUnknown);
+  }
+
+  ret.push_back(BI_ABORT_IF(NE, BIND_PROTOCOL, protocol));
+
+  std::visit(
+      [&ret, child_index](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+        using SpiChannel = fuchsia_hardware_spi::wire::SpiChannel;
+        if constexpr (std::is_same_v<T, std::monostate>) {
+          ZX_ASSERT_MSG(false, "bus should have children");
+        } else if constexpr (std::is_same_v<T, std::vector<SpiChannel>>) {
+          SpiChannel& chan = arg[child_index];
+          ret.push_back(BI_ABORT_IF(NE, BIND_SPI_BUS_ID, chan.bus_id()));
+          ret.push_back(BI_ABORT_IF(NE, BIND_SPI_CHIP_SELECT, chan.cs()));
+        }
+      },
+      bus_children_);
+
+  // Only bind to the non-composite device.
+  ret.push_back(BI_ABORT_IF(NE, BIND_COMPOSITE, 0));
+  ret.push_back(BI_MATCH());
+
+  return ret;
+}
+
+std::vector<zx_bind_inst_t> DeviceBuilder::GetFragmentBindInsnsForSelf() {
+  std::vector<zx_bind_inst_t> ret;
+  ret.push_back(BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ACPI));
+  for (auto& prop : dev_props_) {
+    ret.push_back(BI_ABORT_IF(NE, static_cast<uint32_t>(prop.id), prop.value));
+  }
+  // Only bind to the non-composite device.
+  ret.push_back(BI_ABORT_IF(NE, BIND_COMPOSITE, 0));
+  ret.push_back(BI_MATCH());
+  return ret;
 }
 }  // namespace acpi
