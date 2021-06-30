@@ -74,88 +74,15 @@ The following kinds of changes must use the RFC process:
    decision can be escalated to the RFC process either by one of the disagreeing
    parties or by another contributor.
 
-In addition to the general considerations outlined above, **Zircon** changes in
-the source directories:
+In addition to the general considerations outlined above, some areas declare
+additional criteria. Please consult these documents when relevant:
 
- * /zircon
- * /src/zircon
- * /src/bringup
-
-that meet the following criteria must use RFC process:
-
- * *Adding or removing Zircon system interfaces.* The syscall interface, associated
-   structures and constants is the ground truth for the entire system and has broad
-   impact beyond Zircon itself and needs broad consensus before implementation.
-
- * *Changing resource handling behaviors.*  How the system handles partitioning or
-   virtualizing resources such as memory, I/O, processor time or energy consumption
-   and what it does when they are oversubscribed or scarce.
-
- * *Modifying isolation guarantees.* How and what is private and isolated among
-    equal tasks and what privileged tasks can observe and modify. Changes here need to
-    be approved via this process in consultation with the security team.
-
- * *Significant changes of performance or memory use.* Sometimes when additional
-    security, monitoring or features are added, there is a corresponding decrease in
-    performance or higher memory use that need to be vetted via this process.
-
- * *Favoring a single platform.* Zircon strives to have an equal baseline of features
-    and services across all supported architectures and boards. Changes that leverage
-    one platform capabilities but are not feasible or practical on other supported
-    platforms need to use this process.
-
- * *Adding or Downgrading support for a platform.* Adding new boards or architectures,
-    or deprecating/reducing support for an existing platform needs to be vetted via
-    this process.
-
- * *New build configurations.* Adding new build configurations increases the development
-   and testing burden across the entire project and needs to be vetted beforehand.
-
- * *Significant increases on the dependency graph.* Zircon dependencies affect the
-   entire project and significant changes, for example a new dependency on a package
-   that itself has significant dependencies or that is large by itself, should use
-   the RFC process.
-
-In addition to the general considerations outlined above, **FIDL** changes that
-meet the following criteria must use RFC process:
-
-1. The **solution space is large**, i.e. the change is one of many possibly good
-   other solutions and there is a difficult design tradeoff to make;
-
-2. The **change has a large impact**, i.e. The change modifies the behavior of
-   FIDL in a substantial way such that it may introduce risk to many-or-all
-   users of FIDL;
-
-3. The **change has a large scope**, i.e. The change touches enough pieces of
-   FIDL such that careful attention is required to determine whether it may or
-   may not have a large impact.
-
-For instance, changes to the following FIDL areas will likely require an RFC:
-
-* FIDL governance
-* Design principles
-* Language grammar
-* Type system
-* Protocol semantics
-* Wire format
-* Bindings specification
-
-Additional details are provided in [RFC-0049: FIDL Tuning Process
-Evolution](/docs/contribute/governance/rfcs/0049_fidl_tuning_process_evolution.md).
-
-In addition to the general considerations outlined above, changes to the
-**Software Delivery** area that are of the following types will generally
-require RFCs:
-
-* System update process restrictions
-* Changes to package repository format
-* Changes to package format
-* Changes to requirements to support OTAs
-* Changes to security or privacy enforcement.
-* Resource usage increases
-
-More details on SWD changes are provided in [RFC-0103: Software Delivery RFC
-Criteria][swd].
+| Area                | Criteria RFC |
+|---------------------|--------------|
+| Component Framework | [RFC-0098](0098_component_framework_rfc_criteria.md)
+| FIDL                | [RFC-0049](0049_fidl_tuning_process_evolution.md)
+| Software Delivery   | [RFC-0103](0103_software_delivery_rfc_criteria.md)
+| Zircon              | [RFC-0006](0006_addendum_to_rfc_process_for_zircon.md)
 
 Other changes that might benefit of the RFC process are ones that require manual
 or automated large scale changes of the codebase. For example how logs are
