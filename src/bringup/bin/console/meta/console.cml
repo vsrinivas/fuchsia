@@ -23,6 +23,8 @@
             "blobfs",
             "--allow-log-tag",
             "minfs",
+            "--allow-log-tag",
+            "wlan",
 
             // LogListener has a maxmimum number of tags that can be filtered, so adding
             // more here may not work.

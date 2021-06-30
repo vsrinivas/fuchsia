@@ -330,7 +330,8 @@ async fn run_all_futures() -> Result<(), Error> {
 // use this simple wrapper to ensure that any errors from run_all_futures() are printed to the log.
 #[fasync::run_singlethreaded]
 async fn main() {
-    syslog::init().expect("Syslog init should not fail");
+    // Initialize logging with a tag that can be used to select these logs for forwarding to console
+    syslog::init_with_tags(&["wlan"]).expect("Syslog init should not fail");
     if let Err(e) = run_all_futures().await {
         error!("{:?}", e);
     }

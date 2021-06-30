@@ -68,7 +68,8 @@ impl From<ServiceCfg> for wlan_sme::Config {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    syslog::init().expect("Syslog init should not fail");
+    // Initialize logging with a tag that can be used to select these logs for forwarding to console
+    syslog::init_with_tags(&["wlan"]).expect("Syslog init should not fail");
 
     info!("Starting");
     let cfg: ServiceCfg = argh::from_env();
