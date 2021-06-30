@@ -264,7 +264,8 @@ struct Header {
   // GetSliceEntryOffset().
   size_t GetSliceDataOffset(size_t pslice) const;
 
-  // Returns a stringified representation of the header, useful for debugging.
+  // Returns a multi-line stringified representation of the header, useful for debugging. See also
+  // "operator<<" for a more compact representation.
   std::string ToString() const;
 
   // Data ------------------------------------------------------------------------------------------
@@ -329,6 +330,10 @@ struct Header {
   // Fill remainder of the block.
   uint8_t reserved[0];
 };
+
+// Outputs a compact, single-line description of the header (useful for syslog). See
+// Header.ToString() for a more verbose multiline version.
+std::ostream& operator<<(std::ostream& out, const Header& header);
 
 static_assert(std::is_standard_layout_v<Header> && sizeof(Header) <= kBlockSize,
               "fvm::Header must fit within one block and match standard layout.");

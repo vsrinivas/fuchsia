@@ -96,7 +96,7 @@ zx_status_t VPartitionManager::Bind(void* /*unused*/, zx_device_t* dev) {
 
 fvm::Header VPartitionManager::GetHeader() const {
   fbl::AutoLock lock(&const_cast<VPartitionManager*>(this)->lock_);
-  return *GetFvmLocked();
+  return *GetHeaderLocked();
 }
 
 void VPartitionManager::DdkInit(ddk::InitTxn txn) {
@@ -289,7 +289,7 @@ zx_status_t VPartitionManager::Load() {
   slice_size_ = metadata_.GetHeader().slice_size;
 
   // See if we need to grow the metadata to cover more of the underlying disk.
-  Header* header = GetFvmLocked();
+  Header* header = GetHeaderLocked();
   size_t slices_for_disk = header->GetMaxAllocationTableEntriesForDiskSize(DiskSize());
   if (slices_for_disk > header->GetAllocationTableUsedEntryCount()) {
     header->SetSliceCount(slices_for_disk);
@@ -346,7 +346,7 @@ zx_status_t VPartitionManager::Load() {
 
   // Iterate through the Slice Allocation table, filling the slice maps
   // of VPartitions.
-  for (uint32_t i = 1; i <= GetFvmLocked()->pslice_count; i++) {
+  for (uint32_t i = 1; i <= GetHeaderLocked()->pslice_count; i++) {
     const SliceEntry* entry = GetSliceEntryLocked(i);
     if (entry->IsFree()) {
       continue;
@@ -361,7 +361,7 @@ zx_status_t VPartitionManager::Load() {
     pslice_allocated_count_++;
   }
 
-  LogPartitionsLocked();
+  LogPartitionInfoLocked();
 
   lock.release();
 
@@ -408,7 +408,7 @@ zx_status_t VPartitionManager::Load() {
 }
 
 zx_status_t VPartitionManager::WriteFvmLocked() {
-  fvm::Header* header = GetFvmLocked();
+  fvm::Header* header = GetHeaderLocked();
   header->generation++;
 
   // Track the oldest minor version of the driver that has written to this FVM metadata.
@@ -447,7 +447,7 @@ zx_status_t VPartitionManager::FindFreeVPartEntryLocked(size_t* out) const {
 
 zx_status_t VPartitionManager::FindFreeSliceLocked(size_t* out, size_t hint) const {
   hint = std::max(hint, 1lu);
-  size_t slice_count = GetFvmLocked()->GetAllocationTableUsedEntryCount();
+  size_t slice_count = GetHeaderLocked()->GetAllocationTableUsedEntryCount();
   for (size_t i = hint; i <= slice_count; i++) {
     if (GetSliceEntryLocked(i)->IsFree()) {
       *out = i;
@@ -646,7 +646,7 @@ void VPartitionManager::QueryInternal(VolumeInfo* info) {
   info->vslice_count = VSliceMax();
   {
     fbl::AutoLock lock(&lock_);
-    info->pslice_total_count = GetFvmLocked()->pslice_count;
+    info->pslice_total_count = GetHeaderLocked()->pslice_count;
     info->pslice_allocated_count = pslice_allocated_count_;
   }
 }
@@ -678,10 +678,10 @@ zx_status_t VPartitionManager::SetPartitionLimitInternal(const uint8_t* guid, ui
 
   // The partition GUID will already have been logged by GetPartitionNumberLocked().
   zxlogf(ERROR, "Unable set partition limit to %" PRIu64 ", partition not found.", byte_count);
-  // This additional logging by LogPartitionsLocked() about each partition was added due to reports
-  // of failures of this function. In the future it can be removed if we find this function fails in
-  // expected cases and the logging is excessive.
-  LogPartitionsLocked();
+  // This additional logging by LogPartitionInfoLocked() about each partition was added due to
+  // reports of failures of this function. In the future it can be removed if we find this function
+  // fails in expected cases and the logging is excessive.
+  LogPartitionInfoLocked();
 
   return ZX_ERR_NOT_FOUND;
 }
@@ -706,7 +706,7 @@ void VPartitionManager::AllocatePhysicalSlice(VPartition* vp, uint64_t pslice, u
 }
 
 SliceEntry* VPartitionManager::GetSliceEntryLocked(size_t index) const {
-  const Header* header = GetFvmLocked();
+  const Header* header = GetHeaderLocked();
   ZX_DEBUG_ASSERT(index >= 1);
   ZX_DEBUG_ASSERT(index <= header->GetAllocationTableUsedEntryCount());
 
@@ -714,7 +714,7 @@ SliceEntry* VPartitionManager::GetSliceEntryLocked(size_t index) const {
 }
 
 VPartitionEntry* VPartitionManager::GetVPartEntryLocked(size_t index) const {
-  Header* header = GetFvmLocked();
+  Header* header = GetHeaderLocked();
   ZX_DEBUG_ASSERT(index >= 1);
   ZX_DEBUG_ASSERT(index <= header->GetPartitionTableEntryCount());
 
@@ -732,11 +732,27 @@ size_t VPartitionManager::GetPartitionNumberLocked(const uint8_t* guid) const {
   return 0;
 }
 
-void VPartitionManager::LogPartitionsLocked() const {
+void VPartitionManager::LogPartitionInfoLocked() const {
+  std::stringstream out;
+  const Header* header = GetHeaderLocked();
+  out << "FVM INFO: Header ";
+  out << (metadata_.active_header() == SuperblockType::kPrimary ? "A " : "B ");
+  out << *header;
+
+  // Additionally log the unallocated slices so we know how much we can grow the partitions.
+  size_t free_slices = 0;
+  for (size_t i = 1; i <= header->GetAllocationTableUsedEntryCount(); i++) {
+    if (GetSliceEntryLocked(i)->IsFree())
+      ++free_slices;
+  }
+  out << " free_slices:" << free_slices;
+
+  zxlogf(INFO, "%s", out.str().c_str());
+
   for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
     if (auto* entry = GetVPartEntryLocked(i); entry->IsAllocated()) {
       std::stringstream out;
-      out << "Partition " << i << ":" << entry << "limit:" << max_partition_sizes_[i];
+      out << " #" << i << ": " << *entry << " limit:" << max_partition_sizes_[i];
       zxlogf(INFO, "%s", out.str().c_str());
     }
   }
@@ -821,8 +837,9 @@ void VPartitionManager::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sy
   {
     fbl::AutoLock lock(&lock_);
     info->slice_size = slice_size_;
-    info->current_slice_count = GetFvmLocked()->GetMaxAllocationTableEntriesForDiskSize(DiskSize());
-    info->maximum_slice_count = GetFvmLocked()->GetAllocationTableAllocatedEntryCount();
+    info->current_slice_count =
+        GetHeaderLocked()->GetMaxAllocationTableEntriesForDiskSize(DiskSize());
+    info->maximum_slice_count = GetHeaderLocked()->GetAllocationTableAllocatedEntryCount();
   }
   completer.Reply(ZX_OK, info);
 }

@@ -242,6 +242,15 @@ std::string Header::ToString() const {
   return ss.str();
 }
 
+// This is compact so it can fit in a single syslog line.
+std::ostream& operator<<(std::ostream& out, const Header& header) {
+  return out << "v" << header.major_version << "." << header.oldest_minor_version
+             << " slices:" << header.pslice_count << " slice_size:" << header.slice_size
+             << " total_part:" << header.fvm_partition_size
+             << " ptab:" << header.vpartition_table_size << " atab:" << header.allocation_table_size
+             << " gen:" << header.generation;
+}
+
 VPartitionEntry::VPartitionEntry(const uint8_t in_type[kGuidSize], const uint8_t in_guid[kGuidSize],
                                  uint32_t in_slices, std::string in_name, uint32_t in_flags)
     : slices(in_slices), flags(MaskInvalidFlags(in_flags)) {

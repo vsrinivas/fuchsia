@@ -88,7 +88,8 @@ class VPartitionManager : public ManagerDeviceType {
   uint64_t VSliceMax() const { return fvm::kMaxVSlices; }
   const block_info_t& Info() const { return info_; }
 
-  // Returns a copy of the current header.
+  // Returns a copy of the current header. See also GetHeaderLocked for a mutable version of the
+  // header from inside the lock.
   fvm::Header GetHeader() const;
 
   void DdkInit(ddk::InitTxn txn);
@@ -145,7 +146,8 @@ class VPartitionManager : public ManagerDeviceType {
   zx_status_t FindFreeVPartEntryLocked(size_t* out) const TA_REQ(lock_);
   zx_status_t FindFreeSliceLocked(size_t* out, size_t hint) const TA_REQ(lock_);
 
-  Header* GetFvmLocked() const TA_REQ(lock_) { return &metadata_.GetHeader(); }
+  // See also GetHeader() for unlocked access.
+  Header* GetHeaderLocked() const TA_REQ(lock_) { return &metadata_.GetHeader(); }
 
   // Mark a slice as free in the metadata structure.
   // Update free slice accounting.
@@ -171,7 +173,7 @@ class VPartitionManager : public ManagerDeviceType {
   zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command) const;
 
   // Writes the current partition information out to the system log.
-  void LogPartitionsLocked() const TA_REQ(lock_);
+  void LogPartitionInfoLocked() const TA_REQ(lock_);
 
   thrd_t initialization_thread_;
   std::atomic_bool initialization_thread_started_ = false;
