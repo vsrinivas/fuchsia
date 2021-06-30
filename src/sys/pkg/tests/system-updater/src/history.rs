@@ -58,6 +58,7 @@ async fn succeeds_without_writable_data() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {

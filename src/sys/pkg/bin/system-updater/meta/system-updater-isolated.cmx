@@ -12,6 +12,7 @@
             "fuchsia.paver.Paver",
             "fuchsia.pkg.PackageCache",
             "fuchsia.pkg.PackageResolver",
+            "fuchsia.pkg.RetainedPackages",
             "fuchsia.space.Manager"
         ]
     }

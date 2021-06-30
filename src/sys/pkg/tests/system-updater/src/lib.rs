@@ -4,10 +4,10 @@
 
 #![cfg(test)]
 use {
-    self::SystemUpdaterInteraction::{BlobfsSync, Gc, PackageResolve, Paver, Reboot},
+    self::SystemUpdaterInteraction::*,
     anyhow::{anyhow, Context as _, Error},
     cobalt_sw_delivery_registry as metrics, fidl_fuchsia_io2 as fio2, fidl_fuchsia_paver as paver,
-    fidl_fuchsia_pkg::PackageResolverRequestStream,
+    fidl_fuchsia_pkg::{BlobIdIteratorProxy, PackageResolverRequestStream},
     fidl_fuchsia_update_installer::{InstallerMarker, InstallerProxy},
     fidl_fuchsia_update_installer_ext::{
         start_update, Initiator, Options, UpdateAttempt, UpdateAttemptError,
@@ -48,6 +48,7 @@ mod mode_force_recovery;
 mod mode_normal;
 mod progress_reporting;
 mod reboot_controller;
+mod retained_packages;
 mod update_package;
 mod writes_firmware;
 mod writes_images;
@@ -62,6 +63,8 @@ enum SystemUpdaterInteraction {
     PackageResolve(String),
     Paver(PaverEvent),
     Reboot,
+    ClearRetainedPackages,
+    ReplaceRetainedPackages(Vec<fidl_fuchsia_pkg_ext::BlobId>),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -72,6 +75,7 @@ enum Protocol {
     Paver,
     Reboot,
     Cobalt,
+    RetainedPackages,
 }
 
 type SystemUpdaterInteractions = Arc<Mutex<Vec<SystemUpdaterInteraction>>>;
@@ -190,6 +194,8 @@ impl TestEnvBuilder {
         let cache_service = Arc::new(MockCacheService::new(Arc::clone(&interactions)));
         let logger_factory = Arc::new(MockLoggerFactory::new());
         let space_service = Arc::new(MockSpaceService::new(Arc::clone(&interactions)));
+        let retained_packages_service =
+            Arc::new(MockRetainedPackagesService::new(Arc::clone(&interactions)));
 
         // Register the mock services with the test environment service provider.
         {
@@ -199,6 +205,7 @@ impl TestEnvBuilder {
             let cache_service = Arc::clone(&cache_service);
             let logger_factory = Arc::clone(&logger_factory);
             let space_service = Arc::clone(&space_service);
+            let retained_packages_service = Arc::clone(&retained_packages_service);
 
             let should_register = |protocol: Protocol| !blocked_protocols.contains(&protocol);
 
@@ -262,6 +269,18 @@ impl TestEnvBuilder {
                     .detach()
                 });
             }
+            if should_register(Protocol::RetainedPackages) {
+                fs.dir("svc").add_fidl_service(move |stream| {
+                    fasync::Task::spawn(
+                        Arc::clone(&retained_packages_service)
+                            .run_retained_packages_service(stream)
+                            .unwrap_or_else(|e| {
+                                panic!("error running retained packages service: {:?}", e)
+                            }),
+                    )
+                    .detach()
+                });
+            }
         }
 
         let fs_holder = Mutex::new(Some(fs));
@@ -305,6 +324,11 @@ impl TestEnvBuilder {
             }).unwrap()
             .add_route(CapabilityRoute {
                 capability: Capability::protocol("fuchsia.pkg.PackageResolver"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_updater") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.RetainedPackages"),
                 source: RouteEndpoint::component("fake_capabilities"),
                 targets: vec![ RouteEndpoint::component("system_updater") ],
             }).unwrap()
@@ -541,6 +565,51 @@ impl MockSpaceService {
     }
 }
 
+struct MockRetainedPackagesService {
+    interactions: SystemUpdaterInteractions,
+}
+impl MockRetainedPackagesService {
+    fn new(interactions: SystemUpdaterInteractions) -> Self {
+        Self { interactions }
+    }
+
+    async fn run_retained_packages_service(
+        self: Arc<Self>,
+        mut stream: fidl_fuchsia_pkg::RetainedPackagesRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(event) = stream.try_next().await? {
+            match event {
+                fidl_fuchsia_pkg::RetainedPackagesRequest::Clear { responder } => {
+                    self.interactions.lock().push(ClearRetainedPackages);
+                    responder.send().unwrap();
+                }
+                fidl_fuchsia_pkg::RetainedPackagesRequest::Replace { iterator, responder } => {
+                    let blobs =
+                        Self::collect_blob_id_iterator(iterator.into_proxy().unwrap()).await;
+                    self.interactions.lock().push(ReplaceRetainedPackages(blobs));
+                    responder.send().unwrap();
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn collect_blob_id_iterator(
+        iterator: BlobIdIteratorProxy,
+    ) -> Vec<fidl_fuchsia_pkg_ext::BlobId> {
+        let mut blobs = vec![];
+        loop {
+            let new_blobs = iterator.next().await.unwrap();
+            if new_blobs.is_empty() {
+                break;
+            }
+            blobs.extend(new_blobs.into_iter().map(fidl_fuchsia_pkg_ext::BlobId::from));
+        }
+        blobs
+    }
+}
+
 #[derive(Clone)]
 struct CustomEvent {
     metric_id: u32,
@@ -714,6 +783,7 @@ const UPDATE_HASH: &str = "00112233445566778899aabbccddeeffffeeddccbbaa998877665
 const SYSTEM_IMAGE_HASH: &str = "42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296";
 const SYSTEM_IMAGE_URL: &str = "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296";
 const UPDATE_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/update";
+const UPDATE_PKG_URL_PINNED: &str = "fuchsia-pkg://fuchsia.com/update?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100";
 
 // We specifically make the integration tests dependent on this (rather than e.g. u64::MAX) so that
 // when we bump the epoch, most of the integration tests will fail. To fix this, simply bump this

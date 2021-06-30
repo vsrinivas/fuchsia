@@ -105,6 +105,7 @@ async fn succeeds_even_if_metrics_fail_to_send() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {

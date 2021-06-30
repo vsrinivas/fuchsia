@@ -50,6 +50,7 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/epoch",
     "//src/sys/pkg/lib/event-queue",
     "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext",
+    "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/pkgfs",
     "//src/sys/pkg/lib/update-package",

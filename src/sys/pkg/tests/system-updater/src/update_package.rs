@@ -129,6 +129,7 @@ async fn uses_custom_update_package() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve("fuchsia-pkg://fuchsia.com/another-update/4".to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {
@@ -185,6 +186,7 @@ async fn retry_update_package_resolve_once() {
             Gc,
             // Second resolve should succeed!
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {
@@ -240,11 +242,14 @@ async fn retry_update_package_resolve_twice() {
             // First resolve should fail with NoSpace, so we GC and try the resolve again.
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
-            // Second resolve should fail with NoSpace, so we GC and try the resolve again.
+            // Second resolve should fail with NoSpace, so we clear the retained packages set then
+            // GC and try the resolve again.
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ClearRetainedPackages,
             Gc,
             // Third resolve should succeed!
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {
@@ -300,8 +305,10 @@ async fn retry_update_package_resolve_thrice_fails_update_attempt() {
             // First resolve should fail with out of space, so we GC and try the resolve again.
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
-            // Second resolve should fail with out of space, so we GC and try the resolve again.
+            // Second resolve should fail with out of space, so we clear retained packages set then
+            // GC and try the resolve again.
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ClearRetainedPackages,
             Gc,
             // Third resolve should fail with out of space, so the update fails.
             PackageResolve(UPDATE_PKG_URL.to_string()),

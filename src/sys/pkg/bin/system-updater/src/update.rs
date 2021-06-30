@@ -8,7 +8,7 @@ use {
     epoch::EpochFile,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_paver::DataSinkProxy,
-    fidl_fuchsia_pkg::{PackageCacheProxy, PackageResolverProxy},
+    fidl_fuchsia_pkg::{PackageCacheProxy, PackageResolverProxy, RetainedPackagesProxy},
     fidl_fuchsia_space::ManagerProxy as SpaceManagerProxy,
     fidl_fuchsia_update_installer_ext::{
         FetchFailureReason, Options, PrepareFailureReason, State, UpdateInfo,
@@ -416,16 +416,13 @@ impl<'a> Attempt<'a> {
             &self.env.pkg_resolver,
             &self.config.update_url,
             &self.env.space_manager,
+            &self.env.retained_packages,
         )
         .await
         .map_err(PrepareError::ResolveUpdate)?;
 
         *target_version = history::Version::for_update_package(&update_pkg).await;
         let () = update_pkg.verify_name().await.map_err(PrepareError::VerifyName)?;
-
-        if let Err(e) = gc(&self.env.space_manager).await {
-            fx_log_err!("unable to gc packages: {:#}", anyhow!(e));
-        }
 
         let mode = update_mode(&update_pkg).await.map_err(PrepareError::ParseUpdateMode)?;
         match mode {
@@ -447,6 +444,26 @@ impl<'a> Attempt<'a> {
         };
 
         let () = validate_epoch(SOURCE_EPOCH_RAW, &update_pkg).await?;
+
+        let () = replace_retained_packages(
+            packages_to_fetch
+                .iter()
+                .filter_map(|url| url.package_hash().cloned())
+                .chain(self.config.update_url.package_hash().cloned()),
+            &self.env.retained_packages,
+        )
+        .await
+        .unwrap_or_else(|e| {
+            fx_log_err!(
+                "unable to replace retained packages set before gc in preparation \
+                 for fetching packages listed in update package: {:#}",
+                anyhow!(e)
+            )
+        });
+
+        if let Err(e) = gc(&self.env.space_manager).await {
+            fx_log_err!("unable to gc packages: {:#}", anyhow!(e));
+        }
 
         Ok((update_pkg, mode, packages_to_fetch, current_config))
     }
@@ -593,6 +610,7 @@ async fn resolve_update_package(
     pkg_resolver: &PackageResolverProxy,
     update_url: &PkgUrl,
     space_manager: &SpaceManagerProxy,
+    retained_packages: &RetainedPackagesProxy,
 ) -> Result<UpdatePackage, ResolveError> {
     // First, attempt to resolve the update package.
     match resolver::resolve_update_package(pkg_resolver, update_url).await {
@@ -611,9 +629,28 @@ async fn resolve_update_package(
         Err(e) => return Err(e),
     }
 
-    // If the second attempt fails with NoSpace, perform a GC and retry. If the third attempt fails,
+    // If the second attempt fails with NoSpace, remove packages we aren't sure we need from the
+    // retained packages set, perform a GC and retry. If the third attempt fails,
     // return the error regardless of type.
-    // TODO(fxbug.dev/77367) try harder by releasing retained packages.
+    let () = async {
+        if let Some(hash) = update_url.package_hash() {
+            let () = replace_retained_packages(std::iter::once(*hash), retained_packages)
+                .await
+                .context("serve_blob_id_iterator")?;
+        } else {
+            let () = retained_packages.clear().await.context("calling RetainedPackages.Clear")?;
+        }
+        Ok(())
+    }
+    .await
+    .unwrap_or_else(|e: anyhow::Error| {
+        fx_log_err!(
+            "while resolving update package, unable to minimize retained packages set before \
+             second gc attempt: {:#}",
+            anyhow!(e)
+        )
+    });
+
     if let Err(e) = gc(space_manager).await {
         fx_log_err!("unable to gc packages before second resolve retry: {:#}", anyhow!(e));
     }
@@ -660,6 +697,24 @@ async fn validate_epoch(source_epoch_raw: &str, pkg: &UpdatePackage) -> Result<(
         return Err(PrepareError::UnsupportedDowngrade { src, target });
     }
     Ok(())
+}
+
+async fn replace_retained_packages(
+    hashes: impl IntoIterator<Item = fuchsia_hash::Hash>,
+    retained_packages: &RetainedPackagesProxy,
+) -> Result<(), anyhow::Error> {
+    let (client_end, stream) =
+        fidl::endpoints::create_request_stream().context("creating request stream")?;
+    let replace_resp = retained_packages.replace(client_end);
+    let () = fidl_fuchsia_pkg_ext::serve_fidl_iterator(
+        hashes
+            .into_iter()
+            .map(|hash| fidl_fuchsia_pkg_ext::BlobId::from(hash).into())
+            .collect::<Vec<_>>(),
+        stream,
+    )
+    .await;
+    replace_resp.await.context("calling RetainedPackages.Replace")
 }
 
 #[cfg(test)]

@@ -81,6 +81,7 @@ async fn fails_on_image_write_error() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {
@@ -130,6 +131,7 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {
@@ -175,6 +177,7 @@ async fn writes_to_both_configs_if_abr_not_supported() {
         env.take_interactions(),
         vec![
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {
@@ -351,6 +354,7 @@ async fn writes_recovery_called_legacy_zedboot() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {
@@ -404,6 +408,7 @@ async fn writes_recovery() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {
@@ -457,6 +462,7 @@ async fn writes_recovery_vbmeta() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {
@@ -514,6 +520,7 @@ async fn writes_fuchsia_vbmeta() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {
@@ -588,6 +595,7 @@ async fn assert_writes_for_current_and_target(
             Paver(PaverEvent::SetConfigurationUnbootable { configuration: target_config }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {

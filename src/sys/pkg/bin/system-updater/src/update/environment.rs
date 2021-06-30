@@ -10,7 +10,7 @@ use {
         AdminMarker as PowerStateControlMarker, AdminProxy as PowerStateControlProxy,
     },
     fidl_fuchsia_paver::{BootManagerProxy, DataSinkProxy},
-    fidl_fuchsia_pkg::{PackageCacheProxy, PackageResolverProxy},
+    fidl_fuchsia_pkg::{PackageCacheProxy, PackageResolverProxy, RetainedPackagesProxy},
     fidl_fuchsia_space::ManagerProxy as SpaceManagerProxy,
     fuchsia_component::client::connect_to_protocol,
     futures::{future::BoxFuture, prelude::*},
@@ -50,6 +50,7 @@ pub struct Environment<B = NamespaceBuildInfo, C = NamespaceCobaltConnector> {
     pub boot_manager: BootManagerProxy,
     pub pkg_resolver: PackageResolverProxy,
     pub pkg_cache: PackageCacheProxy,
+    pub retained_packages: RetainedPackagesProxy,
     pub space_manager: SpaceManagerProxy,
     pub power_state_control: PowerStateControlProxy,
     pub build_info: B,
@@ -71,6 +72,8 @@ impl Environment {
                 .context("connect to fuchsia.pkg.PackageResolver")?,
             pkg_cache: connect_to_protocol::<fidl_fuchsia_pkg::PackageCacheMarker>()
                 .context("connect to fuchsia.pkg.PackageCache")?,
+            retained_packages: connect_to_protocol::<fidl_fuchsia_pkg::RetainedPackagesMarker>()
+                .context("connect to fuchsia.pkg.RetainedPackages")?,
             space_manager: connect_to_protocol::<fidl_fuchsia_space::ManagerMarker>()
                 .context("connect to fuchsia.space.Manager")?,
             power_state_control: connect_to_protocol::<PowerStateControlMarker>()

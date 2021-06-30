@@ -321,7 +321,7 @@ mod tests {
         event_queue::ClosedClient,
         fidl_fuchsia_hardware_power_statecontrol::AdminMarker as PowerStateControlMarker,
         fidl_fuchsia_paver::{BootManagerMarker, DataSinkMarker},
-        fidl_fuchsia_pkg::{PackageCacheMarker, PackageResolverMarker},
+        fidl_fuchsia_pkg::{PackageCacheMarker, PackageResolverMarker, RetainedPackagesMarker},
         fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
         fidl_fuchsia_update_installer_ext::{
             PrepareFailureReason, Progress, UpdateInfo, UpdateInfoAndProgress,
@@ -360,6 +360,8 @@ mod tests {
             let (pkg_resolver, _) =
                 fidl::endpoints::create_proxy::<PackageResolverMarker>().unwrap();
             let (pkg_cache, _) = fidl::endpoints::create_proxy::<PackageCacheMarker>().unwrap();
+            let (retained_packages, _) =
+                fidl::endpoints::create_proxy::<RetainedPackagesMarker>().unwrap();
             let (space_manager, _) = fidl::endpoints::create_proxy::<SpaceManagerMarker>().unwrap();
             let (power_state_control, _) =
                 fidl::endpoints::create_proxy::<PowerStateControlMarker>().unwrap();
@@ -369,6 +371,7 @@ mod tests {
                 boot_manager,
                 pkg_resolver,
                 pkg_cache,
+                retained_packages,
                 space_manager,
                 power_state_control,
                 build_info: NamespaceBuildInfo,

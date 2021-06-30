@@ -36,6 +36,7 @@ async fn writes_bootloader() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteFirmware {
@@ -88,6 +89,7 @@ async fn writes_firmware() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteFirmware {
@@ -143,6 +145,7 @@ async fn writes_multiple_firmware_types() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteFirmware {
@@ -208,6 +211,7 @@ async fn skips_unsupported_firmware_type() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
             Gc,
             BlobfsSync,
             Paver(PaverEvent::WriteFirmware {
