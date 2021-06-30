@@ -471,9 +471,10 @@ resource("static_sheds") {
 
 resource("static_rives") {
   sources = [
-    "examples/static/fuchsia.riv",
+    "examples/static/dark.riv",
     "examples/static/juice.riv",
     "examples/static/knight.riv",
+    "examples/static/light.riv",
   ]
   outputs = [ "data/static/{{source_file_part}}" ]
 }

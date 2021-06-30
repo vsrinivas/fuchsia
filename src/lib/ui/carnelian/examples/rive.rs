@@ -9,14 +9,13 @@ use {
         color::Color,
         drawing::DisplayRotation,
         input::{self},
-        make_app_assistant,
         render::{rive::load_rive, Context as RenderContext},
         scene::{
             facets::{FacetId, RiveFacet, SetSizeMessage},
             scene::{Scene, SceneBuilder},
         },
-        App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
-        ViewAssistantPtr, ViewKey,
+        App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture,
+        RenderOptions, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     fuchsia_trace_provider,
     fuchsia_zircon::{Event, Time},
@@ -40,6 +39,10 @@ struct Args {
     #[argh(option, default = "String::from(\"juice.riv\")")]
     file: String,
 
+    /// playback speed (default is 1.0)
+    #[argh(option, default = "1.0")]
+    playback_speed: f32,
+
     /// background color (default is white)
     #[argh(option, from_str_fn(color_from_str))]
     background: Option<Color>,
@@ -54,23 +57,34 @@ fn color_from_str(value: &str) -> Result<Color, String> {
 }
 
 struct RiveAppAssistant {
+    app_context: AppContext,
     use_spinel: bool,
     display_rotation: DisplayRotation,
     filename: String,
+    playback_speed: f32,
     background: Color,
     artboard: Option<String>,
 }
 
-impl Default for RiveAppAssistant {
-    fn default() -> Self {
+impl RiveAppAssistant {
+    fn new(app_context: &AppContext) -> Self {
         let args: Args = argh::from_env();
         let use_spinel = args.use_spinel;
         let display_rotation = args.rotation.unwrap_or(DisplayRotation::Deg0);
         let filename = args.file;
+        let playback_speed = args.playback_speed;
         let background = args.background.unwrap_or(Color::white());
         let artboard = args.artboard;
 
-        Self { use_spinel, display_rotation, filename, background, artboard }
+        Self {
+            app_context: app_context.clone(),
+            use_spinel,
+            display_rotation,
+            filename,
+            playback_speed,
+            background,
+            artboard,
+        }
     }
 }
 
@@ -79,12 +93,20 @@ impl AppAssistant for RiveAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
         let file = load_rive(Path::new("/pkg/data/static").join(self.filename.clone()))?;
+        let playback_speed = self.playback_speed;
         let background = self.background;
         let artboard = self.artboard.clone();
 
-        Ok(Box::new(RiveViewAssistant::new(file, background, artboard)))
+        Ok(Box::new(RiveViewAssistant::new(
+            &self.app_context,
+            view_key,
+            file,
+            playback_speed,
+            background,
+            artboard,
+        )))
     }
 
     fn get_render_options(&self) -> RenderOptions {
@@ -104,7 +126,10 @@ struct SceneDetails {
 }
 
 struct RiveViewAssistant {
+    app_context: AppContext,
+    view_key: ViewKey,
     file: rive::File,
+    playback_speed: f32,
     background: Color,
     artboard: Option<String>,
     last_presentation_time: Option<Time>,
@@ -112,11 +137,21 @@ struct RiveViewAssistant {
 }
 
 impl RiveViewAssistant {
-    fn new(file: rive::File, background: Color, artboard: Option<String>) -> RiveViewAssistant {
+    fn new(
+        app_context: &AppContext,
+        view_key: ViewKey,
+        file: rive::File,
+        playback_speed: f32,
+        background: Color,
+        artboard: Option<String>,
+    ) -> RiveViewAssistant {
         let background = Color { r: background.r, g: background.g, b: background.b, a: 255 };
 
         RiveViewAssistant {
+            app_context: app_context.clone(),
+            view_key,
             file,
+            playback_speed,
             background,
             artboard,
             last_presentation_time: None,
@@ -136,8 +171,14 @@ impl RiveViewAssistant {
         if let Some(scene_details) = self.scene_details.as_mut() {
             if index < scene_details.animations.len() {
                 scene_details.animations[index].1 = !scene_details.animations[index].1;
+                self.app_context.request_render(self.view_key);
             }
         }
+    }
+
+    fn adjust_playback_speed(&mut self, factor: f32) {
+        self.playback_speed *= factor;
+        self.app_context.request_render(self.view_key);
     }
 }
 
@@ -201,7 +242,8 @@ impl ViewAssistant for RiveViewAssistant {
         };
         self.last_presentation_time = Some(presentation_time);
 
-        let artboard_ref = scene_details.artboard.as_ref();
+        // Apply playback speed to elapsed time.
+        let elapsed = elapsed * self.playback_speed;
 
         let mut request_render = false;
         for (animation_instance, is_animating) in scene_details.animations.iter_mut() {
@@ -216,6 +258,7 @@ impl ViewAssistant for RiveViewAssistant {
                 request_render = true;
             }
         }
+        let artboard_ref = scene_details.artboard.as_ref();
         artboard_ref.advance(elapsed);
 
         scene_details.scene.render(render_context, ready_event, context)?;
@@ -234,10 +277,18 @@ impl ViewAssistant for RiveViewAssistant {
     ) -> Result<(), Error> {
         const ZERO: u32 = '0' as u32;
         const NINE: u32 = '9' as u32;
+        const MINUS: u32 = '-' as u32;
+        const EQUAL: u32 = '=' as u32;
         if let Some(code_point) = keyboard_event.code_point {
             if keyboard_event.phase == input::keyboard::Phase::Pressed {
-                if (ZERO..=NINE).contains(&code_point) {
-                    self.toggle_animation((code_point - ZERO) as usize);
+                match code_point {
+                    // "0-9" can be used to toggle animations on/off.
+                    ZERO..=NINE => self.toggle_animation((code_point - ZERO) as usize),
+                    // "-" can be used to decrease playback speed.
+                    MINUS => self.adjust_playback_speed(0.5),
+                    // "=" can be used to increase playback speed.
+                    EQUAL => self.adjust_playback_speed(2.0),
+                    _ => {}
                 }
             }
         }
@@ -245,7 +296,21 @@ impl ViewAssistant for RiveViewAssistant {
     }
 }
 
+fn make_app_assistant_fut(
+    app_context: &AppContext,
+) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
+    let f = async move {
+        let assistant = Box::new(RiveAppAssistant::new(app_context));
+        Ok::<AppAssistantPtr, Error>(assistant)
+    };
+    Box::pin(f)
+}
+
+fn make_app_assistant() -> AssistantCreatorFunc {
+    Box::new(make_app_assistant_fut)
+}
+
 fn main() -> Result<(), Error> {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
-    App::run(make_app_assistant::<RiveAppAssistant>())
+    App::run(make_app_assistant())
 }
