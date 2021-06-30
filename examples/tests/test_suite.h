@@ -33,6 +33,8 @@ struct TestInput {
   bool incomplete_test = false;
   // will not set status if false.
   bool set_result_status = true;
+  // will not write to stderr if false.
+  bool write_stderr_logs = false;
 };
 
 class CaseIterator : public fuchsia::test::CaseIterator {

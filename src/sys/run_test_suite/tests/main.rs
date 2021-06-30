@@ -21,15 +21,16 @@ macro_rules! assert_output {
     ($output:expr, $expected_output:expr) => {
         let mut expected_output = $expected_output.split("\n").collect::<Vec<_>>();
 
-        // no need to check for lines starting with "[output - ". We just want to make sure that
-        // we are printing important details.
+        // no need to check for lines starting with "[stdout - " and "[stderr - ". We just want to
+        // make sure that we are printing important details.
         let mut output = from_utf8(&$output)
             .expect("we should not get utf8 error.")
             .split("\n")
             .filter(|x| {
-                let is_output = x.starts_with("[output - ");
+                let is_stdout = x.starts_with("[stdout - ");
+                let is_stderr = x.starts_with("[stderr - ");
                 let is_debug_data_warn = is_debug_data_warning(x);
-                !(is_output || is_debug_data_warn)
+                !(is_stdout || is_stderr || is_debug_data_warn)
             })
             .map(sanitize_log_for_comparison)
             .collect::<Vec<_>>();
@@ -138,16 +139,24 @@ log3 for Example.Test3
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_passing_v2_test() {
+    let output_dir = tempfile::tempdir().expect("create temp directory");
     let mut output: Vec<u8> = vec![];
-    let run_result = run_test_once(
-            new_test_params(
-                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
-                ),
-            diagnostics::LogCollectionOptions::default(),
-            &mut output
-        )
+    let mut reporter = output::RunReporter::new(output_dir.path().to_path_buf()).unwrap();
+    let streams = run_test_suite_lib::run_test(
+        new_test_params(
+            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+        ),
+        1,
+        diagnostics::LogCollectionOptions::default(),
+        &mut output,
+        &mut reporter,
+    )
     .await
-    .expect("Running test should not fail");
+    .expect("run test");
+    let run_result = streams.collect::<Vec<_>>().await.pop().unwrap().unwrap();
+
+    reporter.stopped(&output::ReportedOutcome::Passed).unwrap();
+    reporter.finished().unwrap();
 
     let expected_output = "[RUNNING]	Example.Test1
 log1 for Example.Test1
@@ -174,6 +183,135 @@ log3 for Example.Test3
 
     assert_eq!(run_result.executed, expected);
     assert!(run_result.successful_completion);
+
+    let expected_test_suites = vec![ExpectedSuite::new(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+        directory::Outcome::Passed,
+    )
+    .with_artifact("syslog.txt", "")
+    .with_case(
+        ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed)
+            .with_artifact(
+                "stdout.txt",
+                "log1 for Example.Test1\nlog2 for Example.Test1\nlog3 for Example.Test1\n",
+            )
+            .with_artifact("stderr.txt", ""),
+    )
+    .with_case(
+        ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed)
+            .with_artifact(
+                "stdout.txt",
+                "log1 for Example.Test2\nlog2 for Example.Test2\nlog3 for Example.Test2\n",
+            )
+            .with_artifact("stderr.txt", ""),
+    )
+    .with_case(
+        ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)
+            .with_artifact(
+                "stdout.txt",
+                "log1 for Example.Test3\nlog2 for Example.Test3\nlog3 for Example.Test3\n",
+            )
+            .with_artifact("stderr.txt", ""),
+    )];
+
+    let (_run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &expected_test_suites,
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_stderr_test() {
+    let output_dir = tempfile::tempdir().expect("create temp directory");
+    let mut output: Vec<u8> = vec![];
+    let mut reporter = output::RunReporter::new(output_dir.path().to_path_buf()).unwrap();
+    let streams = run_test_suite_lib::run_test(
+        new_test_params(
+            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
+        ),
+        1,
+        diagnostics::LogCollectionOptions::default(),
+        &mut output,
+        &mut reporter,
+    )
+    .await
+    .expect("run test");
+    let run_result = streams.collect::<Vec<_>>().await.pop().unwrap().unwrap();
+
+    reporter.stopped(&output::ReportedOutcome::Passed).unwrap();
+    reporter.finished().unwrap();
+
+    let expected_output = "[RUNNING]	Example.Test1
+log1 for Example.Test1
+log2 for Example.Test1
+log3 for Example.Test1
+stderr msg1 for Example.Test1
+stderr msg2 for Example.Test1
+[PASSED]	Example.Test1
+[RUNNING]	Example.Test2
+log1 for Example.Test2
+log2 for Example.Test2
+log3 for Example.Test2
+[PASSED]	Example.Test2
+[RUNNING]	Example.Test3
+log1 for Example.Test3
+log2 for Example.Test3
+log3 for Example.Test3
+stderr msg1 for Example.Test3
+stderr msg2 for Example.Test3
+[PASSED]	Example.Test3
+";
+    assert_output!(output, expected_output);
+
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert_eq!(run_result.executed, run_result.passed);
+
+    let expected_test_suites = vec![ExpectedSuite::new(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
+        directory::Outcome::Passed,
+    )
+    .with_artifact("syslog.txt", "")
+    .with_case(
+        ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed)
+            .with_artifact(
+                "stdout.txt",
+                "log1 for Example.Test1\nlog2 for Example.Test1\nlog3 for Example.Test1\n",
+            )
+            .with_artifact(
+                "stderr.txt",
+                "stderr msg1 for Example.Test1\nstderr msg2 for Example.Test1\n",
+            ),
+    )
+    .with_case(
+        ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed)
+            .with_artifact(
+                "stdout.txt",
+                "log1 for Example.Test2\nlog2 for Example.Test2\nlog3 for Example.Test2\n",
+            )
+            .with_artifact("stderr.txt", ""),
+    )
+    .with_case(
+        ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)
+            .with_artifact(
+                "stdout.txt",
+                "log1 for Example.Test3\nlog2 for Example.Test3\nlog3 for Example.Test3\n",
+            )
+            .with_artifact(
+                "stderr.txt",
+                "stderr msg1 for Example.Test3\nstderr msg2 for Example.Test3\n",
+            ),
+    )];
+
+    let (_run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &expected_test_suites,
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

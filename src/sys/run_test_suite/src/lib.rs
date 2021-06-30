@@ -138,7 +138,7 @@ async fn collect_results_for_suite(
     let mut test_case_reporters = HashMap::new();
     let mut test_cases_in_progress = HashMap::new();
     let mut test_cases_executed = HashSet::new();
-    let mut test_cases_stdout = HashMap::new();
+    let mut test_cases_output = HashMap::new();
     let mut suite_log_tasks = vec![];
     let mut outcome = Outcome::Passed;
     let mut test_cases_passed = HashSet::new();
@@ -220,20 +220,22 @@ async fn collect_results_for_suite(
                                     ))?
                                     .clone();
                                 let (sender, mut recv) = mpsc::channel(1024);
-                                let t = fuchsia_async::Task::local(
-                                    test_diagnostics::collect_and_send_stdout(socket, sender),
+                                let t = fuchsia_async::Task::spawn(
+                                    test_diagnostics::collect_and_send_string_output(
+                                        socket, sender,
+                                    ),
                                 );
                                 let mut writer_clone = artifact_sender.clone();
                                 let reporter = test_case_reporters.get(&identifier).unwrap();
                                 let mut stdout = reporter.new_artifact(&ArtifactType::Stdout)?;
-                                let stdout_task = fuchsia_async::Task::local(async move {
+                                let stdout_task = fuchsia_async::Task::spawn(async move {
                                     while let Some(mut msg) = recv.next().await {
                                         if msg.ends_with("\n") {
                                             msg.truncate(msg.len() - 1)
                                         }
                                         writer_clone
                                             .send_test_stdout_msg(format!(
-                                                "[output - {}]:\n{}",
+                                                "[stdout - {}]:\n{}",
                                                 test_case_name, msg
                                             ))
                                             .await
@@ -248,15 +250,54 @@ async fn collect_results_for_suite(
                                     t.await?;
                                     Result::Ok::<(), anyhow::Error>(())
                                 });
-                                test_cases_stdout.insert(identifier, stdout_task);
+                                test_cases_output
+                                    .entry(identifier)
+                                    .or_insert(vec![])
+                                    .push(stdout_task);
                             }
-                            ftest_manager::Artifact::Stderr(_) => {
-                                artifact_sender
-                                    .send_test_stdout_msg(
-                                        "WARN: per test case stderr not supported yet",
-                                    )
-                                    .await
-                                    .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
+                            ftest_manager::Artifact::Stderr(socket) => {
+                                let test_case_name = test_cases
+                                    .get(&identifier)
+                                    .ok_or(anyhow::anyhow!(
+                                        "test case with identifier {} not found",
+                                        identifier
+                                    ))?
+                                    .clone();
+                                let (sender, mut recv) = mpsc::channel(1024);
+                                let t = fuchsia_async::Task::spawn(
+                                    test_diagnostics::collect_and_send_string_output(
+                                        socket, sender,
+                                    ),
+                                );
+                                let mut writer_clone = artifact_sender.clone();
+                                let reporter = test_case_reporters.get_mut(&identifier).unwrap();
+                                let mut stderr = reporter.new_artifact(&ArtifactType::Stderr)?;
+                                let stderr_task = fuchsia_async::Task::spawn(async move {
+                                    while let Some(mut msg) = recv.next().await {
+                                        if msg.ends_with("\n") {
+                                            msg.truncate(msg.len() - 1)
+                                        }
+                                        writer_clone
+                                            .send_test_stderr_msg(format!(
+                                                "[stderr - {}]:\n{}",
+                                                test_case_name, msg
+                                            ))
+                                            .await
+                                            .unwrap_or_else(|e| {
+                                                error!(
+                                                    "Cannot write stderr for {}: {:?}",
+                                                    test_case_name, e
+                                                )
+                                            });
+                                        writeln!(stderr, "{}", msg)?;
+                                    }
+                                    t.await?;
+                                    Result::Ok::<(), anyhow::Error>(())
+                                });
+                                test_cases_output
+                                    .entry(identifier)
+                                    .or_insert(vec![])
+                                    .push(stderr_task);
                             }
                             ftest_manager::Artifact::Log(_) => {
                                 artifact_sender
@@ -280,16 +321,25 @@ async fn collect_results_for_suite(
                                     identifier
                                 ))?;
 
-                            if let Some(t) = test_cases_stdout.remove(&identifier) {
+                            if let Some(tasks) = test_cases_output.remove(&identifier) {
                                 if status == ftest_manager::CaseStatus::TimedOut {
-                                    if let Some(Err(e)) = t.now_or_never() {
-                                        error!(
-                                            "Cannot write stdout for {}: {:?}",
-                                            test_case_name, e
-                                        );
+                                    for t in tasks {
+                                        if let Some(Err(e)) = t.now_or_never() {
+                                            error!(
+                                                "Cannot write output for {}: {:?}",
+                                                test_case_name, e
+                                            );
+                                        }
                                     }
-                                } else if let Err(e) = t.await {
-                                    error!("Cannot write stdout for {}: {:?}", test_case_name, e)
+                                } else {
+                                    for t in tasks {
+                                        if let Err(e) = t.await {
+                                            error!(
+                                                "Cannot write output for {}: {:?}",
+                                                test_case_name, e
+                                            )
+                                        }
+                                    }
                                 }
                             }
                             // the test did not finish.
@@ -476,11 +526,11 @@ async fn collect_results_for_suite(
 type SuiteResults<'a> = LocalBoxStream<'a, Result<SuiteRunResult, anyhow::Error>>;
 
 /// Runs the test `count` number of times, and writes logs to writer.
-pub async fn run_test<'a, W: Write>(
+pub async fn run_test<'a, Out: Write>(
     test_params: TestParams,
     count: u16,
     log_opts: diagnostics::LogCollectionOptions,
-    writer: &'a mut W,
+    stdout_writer: &'a mut Out,
     run_reporter: &'a mut RunReporter,
 ) -> Result<SuiteResults<'a>, anyhow::Error> {
     let timeout: Option<i64> = match test_params.timeout {
@@ -496,13 +546,13 @@ pub async fn run_test<'a, W: Write>(
         log_iterator: Some(diagnostics::get_type()),
     };
 
-    struct FoldArgs<'a, W: Write> {
+    struct FoldArgs<'a, Out: Write> {
         current_count: u16,
         count: u16,
         builder: Box<dyn BuilderConnector>,
         run_options: SuiteRunOptions,
         test_url: String,
-        writer: &'a mut W,
+        stdout_writer: &'a mut Out,
         run_reporter: &'a mut RunReporter,
         log_opts: diagnostics::LogCollectionOptions,
     }
@@ -512,7 +562,7 @@ pub async fn run_test<'a, W: Write>(
         count,
         builder: test_params.builder_connector,
         run_options,
-        writer,
+        stdout_writer,
         run_reporter,
         test_url: test_params.test_url,
         log_opts,
@@ -536,7 +586,8 @@ pub async fn run_test<'a, W: Write>(
         let (sender, mut recv) = mpsc::channel(1024);
         let reporter =
             args.run_reporter.new_suite(&args.test_url, &SuiteId(args.current_count.into()))?;
-        let writer = args.writer;
+
+        let stdout_writer = args.stdout_writer;
         let fut1 = collect_results_for_suite(
             suite_controller,
             sender.into(),
@@ -552,13 +603,14 @@ pub async fn run_test<'a, W: Write>(
             };
             while let Some(artifact) = recv.next().await {
                 match artifact {
-                    Artifact::SuiteStdoutMessage(msg) => {
-                        writeln!(writer, "{}", msg)
-                            .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
+                    Artifact::SuiteStdoutMessage(msg) | Artifact::SuiteStderrMessage(msg) => {
+                        writeln!(stdout_writer, "{}", msg)
+                            .unwrap_or_else(|e| error!("Cannot write stdout: {:?}", e));
                     }
+
                     Artifact::SuiteLogMessage(log) => {
-                        writeln!(writer, "{}", log)
-                            .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
+                        writeln!(stdout_writer, "{}", log)
+                            .unwrap_or_else(|e| error!("Cannot write logs to stdout: {:?}", e));
                         writeln!(syslog_writer, "{}", log)
                             .unwrap_or_else(|e| error!("Cannot write logs to reporter: {:?}", e));
                     }
@@ -571,8 +623,7 @@ pub async fn run_test<'a, W: Write>(
         reporter.finished()?;
         let result = result?;
 
-        args.writer = writer;
-
+        args.stdout_writer = stdout_writer;
         loop {
             let events = run_controller.get_events().await?;
             if events.len() == 0 {

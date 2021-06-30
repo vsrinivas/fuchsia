@@ -69,7 +69,7 @@ impl RunReporter {
         let artifact_fn = Box::new(move |entity: &EntityId, artifact_type: &ArtifactType| {
             let unfiltered = reporter.new_artifact(entity, artifact_type)?;
             Ok(match artifact_type {
-                ArtifactType::Stdout => {
+                ArtifactType::Stdout | ArtifactType::Stderr => {
                     Box::new(AnsiFilterWriter::new(unfiltered)) as Box<DynArtifact>
                 }
                 ArtifactType::Syslog => Box::new(unfiltered) as Box<DynArtifact>,
@@ -174,6 +174,7 @@ impl<'a> CaseReporter<'a> {
 /// An enumeration of different known artifact types.
 pub enum ArtifactType {
     Stdout,
+    Stderr,
     Syslog,
 }
 

@@ -33,6 +33,12 @@ executable("passing-test-example-bin") {
   sources = [ "passing_test_example.cc" ]
 }
 
+executable("test-with-stderr-bin") {
+  output_name = "test-with-stderr"
+  deps = [ ":test_suite_lib" ]
+  sources = [ "test_with_stderr.cc" ]
+}
+
 executable("no-onfinished-after-test-example-bin") {
   output_name = "no-onfinished-after-test-example"
   deps = [ ":test_suite_lib" ]
@@ -149,6 +155,11 @@ fuchsia_component("passing-test-example") {
   manifest = "meta/passing-test-example.cml"
 }
 
+fuchsia_component("test-with-stderr") {
+  deps = [ ":test-with-stderr-bin" ]
+  manifest = "meta/test-with-stderr.cml"
+}
+
 fuchsia_component("passing-test-example-v1") {
   deps = [ ":passing-test-example-bin" ]
   manifest = "meta/passing-test-example.cmx"
@@ -190,6 +201,7 @@ fuchsia_test_package("example-tests") {
     ":passing-test-example-v1",
     ":run-closes-channel-example",
     ":run-hangs-example",
+    ":test-with-stderr",
     "//examples/components/routing/echo_server:echo_server_component",
   ]
 }

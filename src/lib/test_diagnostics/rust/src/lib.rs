@@ -82,11 +82,11 @@ struct LogOpt {
     buffer_size: usize,
 }
 
-pub async fn collect_and_send_stdout(
+pub async fn collect_and_send_string_output(
     socket: fidl::Socket,
     sender: mpsc::Sender<String>,
 ) -> Result<(), anyhow::Error> {
-    collect_and_send_stdout_internal(LogOpt {
+    collect_and_send_string_output_internal(LogOpt {
         stdout_socket: socket,
         sender,
         buffering_duration: LOG_BUFFERING_DURATION,
@@ -97,7 +97,7 @@ pub async fn collect_and_send_stdout(
 /// Internal method that put a listener on `stdout_socket`, process and send test stdout logs
 /// asynchronously in the background. Returns immediately if the provided socket is an invalid
 /// handle.
-async fn collect_and_send_stdout_internal(log_opt: LogOpt) -> Result<(), anyhow::Error> {
+async fn collect_and_send_string_output_internal(log_opt: LogOpt) -> Result<(), anyhow::Error> {
     if log_opt.stdout_socket.as_handle_ref().is_invalid() {
         return Ok(());
     }
@@ -264,7 +264,7 @@ mod tests {
 
         let (sender, mut recv) = mpsc::channel(1);
 
-        let fut = fuchsia_async::Task::spawn(collect_and_send_stdout_internal(LogOpt {
+        let fut = fuchsia_async::Task::spawn(collect_and_send_string_output_internal(LogOpt {
             stdout_socket: sock_client,
             sender: sender.into(),
             buffering_duration: std::time::Duration::from_millis(1),
@@ -425,7 +425,7 @@ mod tests {
                 .expect("Failed while creating socket");
 
             let (sender, mut recv) = mpsc::channel(1);
-            let mut fut = collect_and_send_stdout_internal(LogOpt {
+            let mut fut = collect_and_send_string_output_internal(LogOpt {
                 stdout_socket: sock_client,
                 sender: sender.into(),
                 buffering_duration: std::time::Duration::from_secs(10),

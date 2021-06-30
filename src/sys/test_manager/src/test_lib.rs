@@ -15,7 +15,7 @@ use {
     linked_hash_map::LinkedHashMap,
     log::*,
     std::{collections::HashMap, sync::Arc},
-    test_diagnostics::{collect_and_send_stdout, LogStream},
+    test_diagnostics::{collect_and_send_string_output, LogStream},
 };
 
 /// Builds and runs test suite(s).
@@ -88,6 +88,20 @@ impl SuiteEvent {
         }
     }
 
+    pub fn case_stderr<N, L>(timestamp: Option<i64>, name: N, stderr_message: L) -> Self
+    where
+        N: Into<String>,
+        L: Into<String>,
+    {
+        SuiteEvent {
+            timestamp,
+            payload: SuiteEventPayload::RunEvent(RunEvent::case_stderr(
+                name.into(),
+                stderr_message.into(),
+            )),
+        }
+    }
+
     pub fn case_stopped(
         timestamp: Option<i64>,
         name: String,
@@ -138,6 +152,7 @@ pub enum RunEvent {
     CaseFound { name: String },
     CaseStarted { name: String },
     CaseStdout { name: String, stdout_message: String },
+    CaseStderr { name: String, stderr_message: String },
     CaseStopped { name: String, status: ftest_manager::CaseStatus },
     CaseFinished { name: String },
     SuiteFinished { status: ftest_manager::SuiteStatus },
@@ -166,6 +181,14 @@ impl RunEvent {
         Self::CaseStdout { name: name.into(), stdout_message: stdout_message.into() }
     }
 
+    pub fn case_stderr<S, L>(name: S, stderr_message: L) -> Self
+    where
+        S: Into<String>,
+        L: Into<String>,
+    {
+        Self::CaseStderr { name: name.into(), stderr_message: stderr_message.into() }
+    }
+
     pub fn case_stopped<S>(name: S, status: ftest_manager::CaseStatus) -> Self
     where
         S: Into<String>,
@@ -189,6 +212,7 @@ impl RunEvent {
             RunEvent::CaseFound { name }
             | RunEvent::CaseStarted { name }
             | RunEvent::CaseStdout { name, .. }
+            | RunEvent::CaseStderr { name, .. }
             | RunEvent::CaseStopped { name, .. }
             | RunEvent::CaseFinished { name } => Some(name),
             RunEvent::SuiteFinished { .. } => None,
@@ -250,7 +274,7 @@ impl<T> GroupRunEventByTestCase for T where T: Iterator<Item = RunEvent> + Sized
 #[derive(Default)]
 struct FidlSuiteEventProcessor {
     case_map: HashMap<u32, String>,
-    stdout_map: HashMap<u32, Vec<fasync::Task<Result<(), Error>>>>,
+    std_output_map: HashMap<u32, Vec<fasync::Task<Result<(), Error>>>>,
 }
 
 impl FidlSuiteEventProcessor {
@@ -282,10 +306,12 @@ impl FidlSuiteEventProcessor {
             }
             FidlSuiteEventPayload::CaseStopped(cs) => {
                 let test_case_name = self.get_test_case_name(cs.identifier);
-                if let Some(stdouts) = self.stdout_map.remove(&cs.identifier) {
-                    for s in stdouts {
-                        s.await
-                            .context(format!("error collecting stdout of {}", test_case_name))?;
+                if let Some(outputs) = self.std_output_map.remove(&cs.identifier) {
+                    for s in outputs {
+                        s.await.context(format!(
+                            "error collecting stdout/stderr of {}",
+                            test_case_name
+                        ))?;
                     }
                 }
                 SuiteEvent::case_stopped(timestamp, test_case_name, cs.status).into()
@@ -299,7 +325,8 @@ impl FidlSuiteEventProcessor {
                 match ca.artifact {
                     ftest_manager::Artifact::Stdout(stdout) => {
                         let (s, mut r) = mpsc::channel(1024);
-                        let stdout_task = fasync::Task::spawn(collect_and_send_stdout(stdout, s));
+                        let stdout_task =
+                            fasync::Task::spawn(collect_and_send_string_output(stdout, s));
                         let mut sender_clone = sender.clone();
                         let send_stdout_task = fasync::Task::spawn(async move {
                             while let Some(msg) = r.next().await {
@@ -310,20 +337,43 @@ impl FidlSuiteEventProcessor {
                             }
                             Ok(())
                         });
-                        match self.stdout_map.get_mut(&ca.identifier) {
+                        match self.std_output_map.get_mut(&ca.identifier) {
                             Some(v) => {
                                 v.push(stdout_task);
                                 v.push(send_stdout_task);
                             }
                             None => {
-                                self.stdout_map
+                                self.std_output_map
                                     .insert(ca.identifier, vec![stdout_task, send_stdout_task]);
                             }
                         }
                         None
                     }
-                    ftest_manager::Artifact::Stderr(_) => {
-                        panic!("not supported")
+                    ftest_manager::Artifact::Stderr(stderr) => {
+                        let (s, mut r) = mpsc::channel(1024);
+                        let stderr_task =
+                            fasync::Task::spawn(collect_and_send_string_output(stderr, s));
+                        let mut sender_clone = sender.clone();
+                        let send_stderr_task = fasync::Task::spawn(async move {
+                            while let Some(msg) = r.next().await {
+                                sender_clone
+                                    .send(SuiteEvent::case_stderr(None, &name, msg))
+                                    .await
+                                    .context(format!("cannot send logs for {}", name))?;
+                            }
+                            Ok(())
+                        });
+                        match self.std_output_map.get_mut(&ca.identifier) {
+                            Some(v) => {
+                                v.push(stderr_task);
+                                v.push(send_stderr_task);
+                            }
+                            None => {
+                                self.std_output_map
+                                    .insert(ca.identifier, vec![stderr_task, send_stderr_task]);
+                            }
+                        }
+                        None
                     }
                     ftest_manager::Artifact::Log(log) => match LogStream::from_syslog(log) {
                         Ok(log_stream) => {

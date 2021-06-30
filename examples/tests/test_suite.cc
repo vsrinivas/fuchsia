@@ -63,12 +63,13 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
   ptr.Bind(std::move(run_listener));
   for (auto& test_invocation : tests) {
     const auto& test_name = test_invocation.name();
-    zx::socket stdout_sock;
-    zx::socket case_stdout;
+    zx::socket stdout_sock, stderr_sock, case_stdout, case_stderr;
     zx::socket::create(0, &stdout_sock, &case_stdout);
+    zx::socket::create(0, &stderr_sock, &case_stderr);
     fuchsia::test::CaseListenerPtr case_list_ptr;
     fuchsia::test::StdHandles std_handles;
     std_handles.set_out(std::move(stdout_sock));
+    std_handles.set_err(std::move(stderr_sock));
     ptr->OnTestCaseStarted(fidl::Clone(test_invocation), std::move(std_handles),
                            case_list_ptr.NewRequest());
     const bool should_skip_test = ShouldSkipTest(run_options, test_name);
@@ -83,6 +84,18 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
           << status;
       FX_CHECK(ZX_OK == (status = case_stdout.write(0, msg3.data(), msg3.length(), nullptr)))
           << status;
+      for (auto& test_input : test_inputs_) {
+        if (test_input.name == test_name) {
+          if (test_input.write_stderr_logs) {
+            std::string msg1 = "stderr msg1 for " + test_name + "\n";
+            std::string msg2 = "stderr msg2 for " + test_name + "\n";
+            FX_CHECK(ZX_OK == (status = case_stderr.write(0, msg1.data(), msg1.length(), nullptr)))
+                << status;
+            FX_CHECK(ZX_OK == (status = case_stderr.write(0, msg2.data(), msg2.length(), nullptr)))
+                << status;
+          }
+        }
+      }
     }
     Result result;
 
