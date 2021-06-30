@@ -32,6 +32,8 @@ using WithErrorSyntax_ErrorAsPrimitive_Result =
 using WithErrorSyntax_ErrorAsEnum_Response =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response;
 
+using ProtocolEnds = ::fidl::test::protocols::ProtocolEnds;
+
 using ErrorEnum = ::fidl::test::protocols::ErrorEnum;
 
 using WithErrorSyntax_ErrorAsEnum_Result =

@@ -237,43 +237,114 @@ protocol UseOfProtocol {
   EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type1_message->elements.at(1)).mask));
 }
 
-TEST(CodedTypesGeneratorTests, GoodCodedTypesOfRequestOfProtocol) {
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfProtocolEnds) {
   TestLibrary library(R"FIDL(
 library example;
 
 protocol SomeProtocol {};
 
-protocol UseOfRequestOfProtocol {
-    Call(request<SomeProtocol> arg);
+protocol UseOfProtocolEnds {
+  ClientEnds(SomeProtocol in) -> (SomeProtocol? out);
+  ServerEnds(request<SomeProtocol>? in) -> (request<SomeProtocol> out);
 };
 )FIDL");
   ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
-  ASSERT_EQ(2, gen.coded_types().size());
+  ASSERT_EQ(8, gen.coded_types().size());
 
+  // ClientEnd request payload
   auto type0 = gen.coded_types().at(0).get();
-  EXPECT_STR_EQ("Request20example_SomeProtocolnonnullable", type0->coded_name.c_str());
+  EXPECT_STR_EQ("Protocol20example_SomeProtocolnonnullable", type0->coded_name.c_str());
   EXPECT_TRUE(type0->is_coding_needed);
   EXPECT_EQ(4, type0->size);
-  ASSERT_EQ(fidl::coded::Type::Kind::kRequestHandle, type0->kind);
-  auto type0_ihandle = static_cast<const fidl::coded::RequestHandleType*>(type0);
+  ASSERT_EQ(fidl::coded::Type::Kind::kProtocolHandle, type0->kind);
+  auto type0_ihandle = static_cast<const fidl::coded::ProtocolHandleType*>(type0);
   EXPECT_EQ(fidl::types::Nullability::kNonnullable, type0_ihandle->nullability);
 
+  // ClientEnd request message
   auto type1 = gen.coded_types().at(1).get();
-  EXPECT_STR_EQ("example_UseOfRequestOfProtocolCallRequest", type1->coded_name.c_str());
+  EXPECT_STR_EQ("example_UseOfProtocolEndsClientEndsRequest", type1->coded_name.c_str());
   EXPECT_TRUE(type1->is_coding_needed);
   EXPECT_EQ(24, type1->size);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
   auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
-  EXPECT_STR_EQ("example/UseOfRequestOfProtocolCallRequest", type1_message->qname.c_str());
+  EXPECT_STR_EQ("example/UseOfProtocolEndsClientEndsRequest", type1_message->qname.c_str());
   EXPECT_EQ(2, type1_message->elements.size());
-
   EXPECT_EQ(16, field(type1_message->elements.at(0)).offset);
   EXPECT_EQ(type0, field(type1_message->elements.at(0)).type);
   EXPECT_EQ(20, padding(type1_message->elements.at(1)).offset);
   EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type1_message->elements.at(1)).mask));
+
+  // ClientEnd response payload
+  auto type2 = gen.coded_types().at(2).get();
+  EXPECT_STR_EQ("Protocol20example_SomeProtocolnullable", type2->coded_name.c_str());
+  EXPECT_TRUE(type2->is_coding_needed);
+  EXPECT_EQ(4, type2->size);
+  ASSERT_EQ(fidl::coded::Type::Kind::kProtocolHandle, type2->kind);
+  auto type2_ihandle = static_cast<const fidl::coded::ProtocolHandleType*>(type2);
+  EXPECT_EQ(fidl::types::Nullability::kNullable, type2_ihandle->nullability);
+
+  // ClientEnd response message
+  auto type3 = gen.coded_types().at(3).get();
+  EXPECT_STR_EQ("example_UseOfProtocolEndsClientEndsResponse", type3->coded_name.c_str());
+  EXPECT_TRUE(type3->is_coding_needed);
+  EXPECT_EQ(24, type3->size);
+  ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type3->kind);
+  auto type3_message = static_cast<const fidl::coded::MessageType*>(type3);
+  EXPECT_STR_EQ("example/UseOfProtocolEndsClientEndsResponse", type3_message->qname.c_str());
+  EXPECT_EQ(2, type3_message->elements.size());
+  EXPECT_EQ(16, field(type3_message->elements.at(0)).offset);
+  EXPECT_EQ(type2, field(type3_message->elements.at(0)).type);
+  EXPECT_EQ(20, padding(type3_message->elements.at(1)).offset);
+  EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type3_message->elements.at(1)).mask));
+
+  // ServerEnd request payload
+  auto type4 = gen.coded_types().at(4).get();
+  EXPECT_STR_EQ("Request20example_SomeProtocolnullable", type4->coded_name.c_str());
+  EXPECT_TRUE(type4->is_coding_needed);
+  EXPECT_EQ(4, type4->size);
+  ASSERT_EQ(fidl::coded::Type::Kind::kRequestHandle, type4->kind);
+  auto type4_ihandle = static_cast<const fidl::coded::RequestHandleType*>(type4);
+  EXPECT_EQ(fidl::types::Nullability::kNullable, type4_ihandle->nullability);
+
+  // ServerEnd request message
+  auto type5 = gen.coded_types().at(5).get();
+  EXPECT_STR_EQ("example_UseOfProtocolEndsServerEndsRequest", type5->coded_name.c_str());
+  EXPECT_TRUE(type5->is_coding_needed);
+  EXPECT_EQ(24, type5->size);
+  ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type5->kind);
+  auto type5_message = static_cast<const fidl::coded::MessageType*>(type5);
+  EXPECT_STR_EQ("example/UseOfProtocolEndsServerEndsRequest", type5_message->qname.c_str());
+  EXPECT_EQ(2, type5_message->elements.size());
+  EXPECT_EQ(16, field(type5_message->elements.at(0)).offset);
+  EXPECT_EQ(type4, field(type5_message->elements.at(0)).type);
+  EXPECT_EQ(20, padding(type5_message->elements.at(1)).offset);
+  EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type5_message->elements.at(1)).mask));
+
+  // ServerEnd response payload
+  auto type6 = gen.coded_types().at(6).get();
+  EXPECT_STR_EQ("Request20example_SomeProtocolnonnullable", type6->coded_name.c_str());
+  EXPECT_TRUE(type6->is_coding_needed);
+  EXPECT_EQ(4, type6->size);
+  ASSERT_EQ(fidl::coded::Type::Kind::kRequestHandle, type6->kind);
+  auto type6_ihandle = static_cast<const fidl::coded::RequestHandleType*>(type6);
+  EXPECT_EQ(fidl::types::Nullability::kNonnullable, type6_ihandle->nullability);
+
+  // ServerEnd response message
+  auto type7 = gen.coded_types().at(7).get();
+  EXPECT_STR_EQ("example_UseOfProtocolEndsServerEndsResponse", type7->coded_name.c_str());
+  EXPECT_TRUE(type7->is_coding_needed);
+  EXPECT_EQ(24, type7->size);
+  ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type7->kind);
+  auto type7_message = static_cast<const fidl::coded::MessageType*>(type7);
+  EXPECT_STR_EQ("example/UseOfProtocolEndsServerEndsResponse", type7_message->qname.c_str());
+  EXPECT_EQ(2, type7_message->elements.size());
+  EXPECT_EQ(16, field(type7_message->elements.at(0)).offset);
+  EXPECT_EQ(type6, field(type7_message->elements.at(0)).type);
+  EXPECT_EQ(20, padding(type7_message->elements.at(1)).offset);
+  EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type7_message->elements.at(1)).mask));
 }
 
 // The code between |CodedTypesOfUnions| and |CodedTypesOfNullableUnions| is now very similar

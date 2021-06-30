@@ -79,3 +79,16 @@ protocol HandleRightsProtocol {
     ResponseMethod(handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE> h) -> (handle:<SOCKET, rights.TRANSFER> h);
     -> AnEvent(handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE> h);
 };
+
+resource struct ProtocolEnds {
+    DiscoverableProtocol client;
+    request<DiscoverableProtocol> server;
+    DiscoverableProtocol? client_opt;
+    request<DiscoverableProtocol>? server_opt;
+};
+
+protocol WithProtocolEnds {
+    ClientEnds(DiscoverableProtocol in) -> (DiscoverableProtocol? out);
+    ServerEnds(request<DiscoverableProtocol>? in) -> (request<DiscoverableProtocol> out);
+    StructContainingEnds(ProtocolEnds in) -> (ProtocolEnds out);
+};

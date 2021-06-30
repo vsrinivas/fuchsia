@@ -183,6 +183,20 @@ func (msg *WithErrorSyntaxHandleInResultResponse) Marshaler() _bindings.Marshale
 	return _mWithErrorSyntaxHandleInResultResponse
 }
 
+type ProtocolEnds struct {
+	_         struct{}                                    `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"4"`
+	Client    DiscoverableProtocolWithCtxInterface        `fidl_offset_v1:"0" fidl_handle_subtype:"4"`
+	Server    DiscoverableProtocolWithCtxInterfaceRequest `fidl_offset_v1:"4" fidl_handle_subtype:"4" fidl_bounds:"0"`
+	ClientOpt DiscoverableProtocolWithCtxInterface        `fidl_offset_v1:"8" fidl_handle_subtype:"4"`
+	ServerOpt DiscoverableProtocolWithCtxInterfaceRequest `fidl_offset_v1:"12" fidl_handle_subtype:"4" fidl_bounds:"1"`
+}
+
+var _mProtocolEnds = _bindings.CreateLazyMarshaler(ProtocolEnds{})
+
+func (msg *ProtocolEnds) Marshaler() _bindings.Marshaler {
+	return _mProtocolEnds
+}
+
 type withAndWithoutRequestResponseWithCtxNoRequestWithResponseResponse struct {
 	_   struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
 	Ret string   `fidl_offset_v1:"0" fidl_bounds:""`
@@ -471,6 +485,72 @@ var _mhandleRightsProtocolWithCtxAnEventResponse = _bindings.CreateLazyMarshaler
 
 func (msg *handleRightsProtocolWithCtxAnEventResponse) Marshaler() _bindings.Marshaler {
 	return _mhandleRightsProtocolWithCtxAnEventResponse
+}
+
+type withProtocolEndsWithCtxClientEndsRequest struct {
+	_  struct{}                             `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	In DiscoverableProtocolWithCtxInterface `fidl_offset_v1:"0" fidl_handle_subtype:"4"`
+}
+
+var _mwithProtocolEndsWithCtxClientEndsRequest = _bindings.CreateLazyMarshaler(withProtocolEndsWithCtxClientEndsRequest{})
+
+func (msg *withProtocolEndsWithCtxClientEndsRequest) Marshaler() _bindings.Marshaler {
+	return _mwithProtocolEndsWithCtxClientEndsRequest
+}
+
+type withProtocolEndsWithCtxClientEndsResponse struct {
+	_   struct{}                             `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	Out DiscoverableProtocolWithCtxInterface `fidl_offset_v1:"0" fidl_handle_subtype:"4"`
+}
+
+var _mwithProtocolEndsWithCtxClientEndsResponse = _bindings.CreateLazyMarshaler(withProtocolEndsWithCtxClientEndsResponse{})
+
+func (msg *withProtocolEndsWithCtxClientEndsResponse) Marshaler() _bindings.Marshaler {
+	return _mwithProtocolEndsWithCtxClientEndsResponse
+}
+
+type withProtocolEndsWithCtxServerEndsRequest struct {
+	_  struct{}                                    `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	In DiscoverableProtocolWithCtxInterfaceRequest `fidl_offset_v1:"0" fidl_handle_subtype:"4" fidl_bounds:"1"`
+}
+
+var _mwithProtocolEndsWithCtxServerEndsRequest = _bindings.CreateLazyMarshaler(withProtocolEndsWithCtxServerEndsRequest{})
+
+func (msg *withProtocolEndsWithCtxServerEndsRequest) Marshaler() _bindings.Marshaler {
+	return _mwithProtocolEndsWithCtxServerEndsRequest
+}
+
+type withProtocolEndsWithCtxServerEndsResponse struct {
+	_   struct{}                                    `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	Out DiscoverableProtocolWithCtxInterfaceRequest `fidl_offset_v1:"0" fidl_handle_subtype:"4" fidl_bounds:"0"`
+}
+
+var _mwithProtocolEndsWithCtxServerEndsResponse = _bindings.CreateLazyMarshaler(withProtocolEndsWithCtxServerEndsResponse{})
+
+func (msg *withProtocolEndsWithCtxServerEndsResponse) Marshaler() _bindings.Marshaler {
+	return _mwithProtocolEndsWithCtxServerEndsResponse
+}
+
+type withProtocolEndsWithCtxStructContainingEndsRequest struct {
+	_  struct{}     `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	In ProtocolEnds `fidl_offset_v1:"0"`
+}
+
+var _mwithProtocolEndsWithCtxStructContainingEndsRequest = _bindings.CreateLazyMarshaler(withProtocolEndsWithCtxStructContainingEndsRequest{})
+
+func (msg *withProtocolEndsWithCtxStructContainingEndsRequest) Marshaler() _bindings.Marshaler {
+	return _mwithProtocolEndsWithCtxStructContainingEndsRequest
+}
+
+type withProtocolEndsWithCtxStructContainingEndsResponse struct {
+	_   struct{}     `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	Out ProtocolEnds `fidl_offset_v1:"0"`
+}
+
+var _mwithProtocolEndsWithCtxStructContainingEndsResponse = _bindings.CreateLazyMarshaler(withProtocolEndsWithCtxStructContainingEndsResponse{})
+
+func (msg *withProtocolEndsWithCtxStructContainingEndsResponse) Marshaler() _bindings.Marshaler {
+	return _mwithProtocolEndsWithCtxStructContainingEndsResponse
 }
 
 type I_withErrorSyntaxResponseAsStructResultTag uint64
@@ -1309,3 +1389,104 @@ func (p *HandleRightsProtocolEventProxy) AnEvent(h _zx.Socket) error {
 	}
 	return ((*_bindings.ChannelProxy)(p)).Send(HandleRightsProtocolAnEventOrdinal, event_)
 }
+
+const (
+	WithProtocolEndsClientEndsOrdinal           uint64 = 0x60b18491ac8062ad
+	WithProtocolEndsServerEndsOrdinal           uint64 = 0x3e5b3b503a05a17c
+	WithProtocolEndsStructContainingEndsOrdinal uint64 = 0x26f2c10b743415c
+)
+
+type WithProtocolEndsWithCtxInterface _bindings.ChannelProxy
+
+func (p *WithProtocolEndsWithCtxInterface) ClientEnds(ctx_ _bindings.Context, in DiscoverableProtocolWithCtxInterface) (DiscoverableProtocolWithCtxInterface, error) {
+	req_ := &withProtocolEndsWithCtxClientEndsRequest{
+		In: in,
+	}
+	resp_ := &withProtocolEndsWithCtxClientEndsResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithProtocolEndsClientEndsOrdinal, req_, resp_)
+	return resp_.Out, err_
+}
+
+func (p *WithProtocolEndsWithCtxInterface) ServerEnds(ctx_ _bindings.Context, in DiscoverableProtocolWithCtxInterfaceRequest) (DiscoverableProtocolWithCtxInterfaceRequest, error) {
+	req_ := &withProtocolEndsWithCtxServerEndsRequest{
+		In: in,
+	}
+	resp_ := &withProtocolEndsWithCtxServerEndsResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithProtocolEndsServerEndsOrdinal, req_, resp_)
+	return resp_.Out, err_
+}
+
+func (p *WithProtocolEndsWithCtxInterface) StructContainingEnds(ctx_ _bindings.Context, in ProtocolEnds) (ProtocolEnds, error) {
+	req_ := &withProtocolEndsWithCtxStructContainingEndsRequest{
+		In: in,
+	}
+	resp_ := &withProtocolEndsWithCtxStructContainingEndsResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(WithProtocolEndsStructContainingEndsOrdinal, req_, resp_)
+	return resp_.Out, err_
+}
+
+type WithProtocolEndsWithCtx interface {
+	ClientEnds(ctx_ _bindings.Context, in DiscoverableProtocolWithCtxInterface) (DiscoverableProtocolWithCtxInterface, error)
+	ServerEnds(ctx_ _bindings.Context, in DiscoverableProtocolWithCtxInterfaceRequest) (DiscoverableProtocolWithCtxInterfaceRequest, error)
+	StructContainingEnds(ctx_ _bindings.Context, in ProtocolEnds) (ProtocolEnds, error)
+}
+
+type WithProtocolEndsWithCtxTransitionalBase struct{}
+
+type WithProtocolEndsWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewWithProtocolEndsWithCtxInterfaceRequest() (WithProtocolEndsWithCtxInterfaceRequest, *WithProtocolEndsWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return WithProtocolEndsWithCtxInterfaceRequest(req), (*WithProtocolEndsWithCtxInterface)(cli), err
+}
+
+type WithProtocolEndsWithCtxStub struct {
+	Impl WithProtocolEndsWithCtx
+}
+
+func (s_ *WithProtocolEndsWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case WithProtocolEndsClientEndsOrdinal:
+		in_ := withProtocolEndsWithCtxClientEndsRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		out, err_ := s_.Impl.ClientEnds(args_.Ctx, in_.In)
+		out_ := withProtocolEndsWithCtxClientEndsResponse{}
+		out_.Out = out
+		return &out_, true, err_
+	case WithProtocolEndsServerEndsOrdinal:
+		in_ := withProtocolEndsWithCtxServerEndsRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		out, err_ := s_.Impl.ServerEnds(args_.Ctx, in_.In)
+		out_ := withProtocolEndsWithCtxServerEndsResponse{}
+		out_.Out = out
+		return &out_, true, err_
+	case WithProtocolEndsStructContainingEndsOrdinal:
+		in_ := withProtocolEndsWithCtxStructContainingEndsRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		out, err_ := s_.Impl.StructContainingEnds(args_.Ctx, in_.In)
+		out_ := withProtocolEndsWithCtxStructContainingEndsResponse{}
+		out_.Out = out
+		return &out_, true, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+type WithProtocolEndsEventProxy _bindings.ChannelProxy

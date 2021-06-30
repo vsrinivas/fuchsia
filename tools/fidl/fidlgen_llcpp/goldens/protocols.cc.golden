@@ -2552,6 +2552,891 @@ zx_status_t fidl::WireEventSender<::fidl_test_protocols::Transitional>::Event(
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+void ::fidl_test_protocols::wire::ProtocolEnds::_CloseHandles() {
+  client.reset();
+  server.reset();
+  client_opt.reset();
+  server_opt.reset();
+}
+#endif  // __Fuchsia__
+
+namespace fidl_test_protocols {
+[[maybe_unused]] constexpr uint64_t kWithProtocolEnds_ClientEnds_Ordinal =
+    6967495859718087341lu;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsClientEndsRequestTable;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsClientEndsResponseTable;
+
+[[maybe_unused]] constexpr uint64_t kWithProtocolEnds_ServerEnds_Ordinal =
+    4493250268989071740lu;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsServerEndsRequestTable;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsServerEndsResponseTable;
+
+[[maybe_unused]] constexpr uint64_t
+    kWithProtocolEnds_StructContainingEnds_Ordinal = 175407360796475740lu;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseTable;
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireResult<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
+    WireResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
+            _client,
+        ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in) {
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>>
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
+               std::move(in));
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_protocols::WithProtocolEnds::ClientEnds>>(
+      _client, bytes_.data(), bytes_.size());
+  SetResult(_outgoing);
+}
+
+::fidl::WireResult<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
+    WireResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
+            _client,
+        ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
+        zx_time_t _deadline) {
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>>
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
+               std::move(in));
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_protocols::WithProtocolEnds::ClientEnds>>(
+      _client, bytes_.data(), bytes_.size(), _deadline);
+  SetResult(_outgoing);
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireUnownedResult<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
+            _client,
+        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+        ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
+        uint8_t* _response_bytes, uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>>
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0),
+               std::move(in));
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_protocols::WithProtocolEnds::ClientEnds>>(
+      _client, _response_bytes, _response_byte_capacity);
+  ::fidl::Result::operator=(_outgoing);
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireResult<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
+    WireResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
+            _client,
+        ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in) {
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>>
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
+               std::move(in));
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_protocols::WithProtocolEnds::ServerEnds>>(
+      _client, bytes_.data(), bytes_.size());
+  SetResult(_outgoing);
+}
+
+::fidl::WireResult<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
+    WireResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
+            _client,
+        ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
+        zx_time_t _deadline) {
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>>
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
+               std::move(in));
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_protocols::WithProtocolEnds::ServerEnds>>(
+      _client, bytes_.data(), bytes_.size(), _deadline);
+  SetResult(_outgoing);
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireUnownedResult<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
+            _client,
+        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+        ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
+        uint8_t* _response_bytes, uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>>
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0),
+               std::move(in));
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_protocols::WithProtocolEnds::ServerEnds>>(
+      _client, _response_bytes, _response_byte_capacity);
+  ::fidl::Result::operator=(_outgoing);
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireResult<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
+    WireResult(::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
+                   _client,
+               ::fidl_test_protocols::wire::ProtocolEnds&& in) {
+  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
+               std::move(in));
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>(
+      _client, bytes_.data(), bytes_.size());
+  SetResult(_outgoing);
+}
+
+::fidl::WireResult<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
+    WireResult(::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
+                   _client,
+               ::fidl_test_protocols::wire::ProtocolEnds&& in,
+               zx_time_t _deadline) {
+  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
+               std::move(in));
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>(
+      _client, bytes_.data(), bytes_.size(), _deadline);
+  SetResult(_outgoing);
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireUnownedResult<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
+            _client,
+        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+        ::fidl_test_protocols::wire::ProtocolEnds&& in,
+        uint8_t* _response_bytes, uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0),
+               std::move(in));
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>(
+      _client, _response_bytes, _response_byte_capacity);
+  ::fidl::Result::operator=(_outgoing);
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+::fidl::WireResult<::fidl_test_protocols::WithProtocolEnds::ClientEnds>
+fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    ClientEnds_Sync(
+        ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::WithProtocolEnds::ClientEnds>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
+            _channel->handle()),
+        std::move(in));
+  }
+  return ::fidl::WireResult<
+      ::fidl_test_protocols::WithProtocolEnds::ClientEnds>(
+      ::fidl::Result::Unbound());
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::WireUnownedResult<::fidl_test_protocols::WithProtocolEnds::ClientEnds>
+fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    ClientEnds_Sync(
+        ::fidl::BufferSpan _request_buffer,
+        ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
+        ::fidl::BufferSpan _response_buffer) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::WithProtocolEnds::ClientEnds>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, std::move(in),
+        _response_buffer.data, _response_buffer.capacity);
+  }
+  return ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::WithProtocolEnds::ClientEnds>(
+      ::fidl::Result::Unbound());
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithProtocolEnds::ClientEnds>::WireResponseContext()
+    : ::fidl::internal::ResponseContext(
+          ::fidl_test_protocols::kWithProtocolEnds_ClientEnds_Ordinal) {}
+
+::cpp17::optional<::fidl::UnbindInfo>
+fidl::WireResponseContext<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
+    OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::WithProtocolEnds::ClientEnds>(msg.error()));
+    return cpp17::nullopt;
+  }
+  ::fidl::DecodedMessage<
+      ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ClientEnds>>
+      decoded{std::move(msg)};
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::WithProtocolEnds::ClientEnds>(
+      std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
+  }
+  return cpp17::nullopt;
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::Result fidl::internal::
+    WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::ClientEnds(
+        ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
+        ::fit::callback<void(
+            ::fidl::WireResponse<
+                ::fidl_test_protocols::WithProtocolEnds::ClientEnds>* response)>
+            _cb) {
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithProtocolEnds::ClientEnds> {
+   public:
+    ResponseContext(
+        ::fit::callback<void(
+            ::fidl::WireResponse<
+                ::fidl_test_protocols::WithProtocolEnds::ClientEnds>* response)>
+            cb)
+        : cb_(std::move(cb)) {}
+
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::WithProtocolEnds::ClientEnds>&& result)
+        override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
+      delete this;
+    }
+
+    void OnCanceled() override { delete this; }
+
+   private:
+    ::fit::callback<void(
+        ::fidl::WireResponse<
+            ::fidl_test_protocols::WithProtocolEnds::ClientEnds>* response)>
+        cb_;
+  };
+
+  auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
+      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
+                                   _context->Txid(), std::move(in));
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+
+::fidl::Result fidl::internal::
+    WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::ClientEnds(
+        ::fidl::BufferSpan _request_buffer,
+        ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithProtocolEnds::ClientEnds>* _context) {
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+
+  ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
+      UnownedEncodedMessage _request(_request_buffer.data,
+                                     _request_buffer.capacity, _context->Txid(),
+                                     std::move(in));
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::WireResult<::fidl_test_protocols::WithProtocolEnds::ServerEnds>
+fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    ServerEnds_Sync(
+        ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::WithProtocolEnds::ServerEnds>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
+            _channel->handle()),
+        std::move(in));
+  }
+  return ::fidl::WireResult<
+      ::fidl_test_protocols::WithProtocolEnds::ServerEnds>(
+      ::fidl::Result::Unbound());
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::WireUnownedResult<::fidl_test_protocols::WithProtocolEnds::ServerEnds>
+fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    ServerEnds_Sync(
+        ::fidl::BufferSpan _request_buffer,
+        ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
+        ::fidl::BufferSpan _response_buffer) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::WithProtocolEnds::ServerEnds>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, std::move(in),
+        _response_buffer.data, _response_buffer.capacity);
+  }
+  return ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::WithProtocolEnds::ServerEnds>(
+      ::fidl::Result::Unbound());
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::WireResponseContext<
+    ::fidl_test_protocols::WithProtocolEnds::ServerEnds>::WireResponseContext()
+    : ::fidl::internal::ResponseContext(
+          ::fidl_test_protocols::kWithProtocolEnds_ServerEnds_Ordinal) {}
+
+::cpp17::optional<::fidl::UnbindInfo>
+fidl::WireResponseContext<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
+    OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::WithProtocolEnds::ServerEnds>(msg.error()));
+    return cpp17::nullopt;
+  }
+  ::fidl::DecodedMessage<
+      ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ServerEnds>>
+      decoded{std::move(msg)};
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::WithProtocolEnds::ServerEnds>(
+      std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
+  }
+  return cpp17::nullopt;
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::Result fidl::internal::
+    WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::ServerEnds(
+        ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
+        ::fit::callback<void(
+            ::fidl::WireResponse<
+                ::fidl_test_protocols::WithProtocolEnds::ServerEnds>* response)>
+            _cb) {
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithProtocolEnds::ServerEnds> {
+   public:
+    ResponseContext(
+        ::fit::callback<void(
+            ::fidl::WireResponse<
+                ::fidl_test_protocols::WithProtocolEnds::ServerEnds>* response)>
+            cb)
+        : cb_(std::move(cb)) {}
+
+    void OnResult(::fidl::WireUnownedResult<
+                  ::fidl_test_protocols::WithProtocolEnds::ServerEnds>&& result)
+        override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
+      delete this;
+    }
+
+    void OnCanceled() override { delete this; }
+
+   private:
+    ::fit::callback<void(
+        ::fidl::WireResponse<
+            ::fidl_test_protocols::WithProtocolEnds::ServerEnds>* response)>
+        cb_;
+  };
+
+  auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
+      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
+                                   _context->Txid(), std::move(in));
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+
+::fidl::Result fidl::internal::
+    WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::ServerEnds(
+        ::fidl::BufferSpan _request_buffer,
+        ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithProtocolEnds::ServerEnds>* _context) {
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+
+  ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
+      UnownedEncodedMessage _request(_request_buffer.data,
+                                     _request_buffer.capacity, _context->Txid(),
+                                     std::move(in));
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::WireResult<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>
+fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    StructContainingEnds_Sync(::fidl_test_protocols::wire::ProtocolEnds&& in) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
+            _channel->handle()),
+        std::move(in));
+  }
+  return ::fidl::WireResult<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>(
+      ::fidl::Result::Unbound());
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::WireUnownedResult<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>
+fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    StructContainingEnds_Sync(::fidl::BufferSpan _request_buffer,
+                              ::fidl_test_protocols::wire::ProtocolEnds&& in,
+                              ::fidl::BufferSpan _response_buffer) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, std::move(in),
+        _response_buffer.data, _response_buffer.capacity);
+  }
+  return ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>(
+      ::fidl::Result::Unbound());
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::WireResponseContext<::fidl_test_protocols::WithProtocolEnds::
+                                StructContainingEnds>::WireResponseContext()
+    : ::fidl::internal::ResponseContext(
+          ::fidl_test_protocols::
+              kWithProtocolEnds_StructContainingEnds_Ordinal) {}
+
+::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
+    OnRawResult(::fidl::IncomingMessage&& msg) {
+  if (unlikely(!msg.ok())) {
+    OnResult(::fidl::WireUnownedResult<
+             ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>(
+        msg.error()));
+    return cpp17::nullopt;
+  }
+  ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>
+      decoded{std::move(msg)};
+  ::fidl::Result maybe_error = decoded;
+  OnResult(::fidl::WireUnownedResult<
+           ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>(
+      std::move(decoded)));
+  if (unlikely(!maybe_error.ok())) {
+    return ::fidl::UnbindInfo(maybe_error);
+  }
+  return cpp17::nullopt;
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    StructContainingEnds(
+        ::fidl_test_protocols::wire::ProtocolEnds&& in,
+        ::fit::callback<
+            void(::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::
+                                          StructContainingEnds>* response)>
+            _cb) {
+  class ResponseContext final
+      : public ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds> {
+   public:
+    ResponseContext(
+        ::fit::callback<
+            void(::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::
+                                          StructContainingEnds>* response)>
+            cb)
+        : cb_(std::move(cb)) {}
+
+    void OnResult(
+        ::fidl::WireUnownedResult<
+            ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>&&
+            result) override {
+      if (result.ok()) {
+        cb_(result.Unwrap());
+      }
+      delete this;
+    }
+
+    void OnCanceled() override { delete this; }
+
+   private:
+    ::fit::callback<void(
+        ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::
+                                 StructContainingEnds>* response)>
+        cb_;
+  };
+
+  auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  ::fidl::WireRequest<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
+      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
+                                   _context->Txid(), std::move(in));
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    StructContainingEnds(
+        ::fidl::BufferSpan _request_buffer,
+        ::fidl_test_protocols::wire::ProtocolEnds&& in,
+        ::fidl::WireResponseContext<
+            ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>*
+            _context) {
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+
+  ::fidl::WireRequest<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
+      UnownedEncodedMessage _request(_request_buffer.data,
+                                     _request_buffer.capacity, _context->Txid(),
+                                     std::move(in));
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::DispatchEvent(
+        fidl::IncomingMessage& msg,
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::DispatchResult fidl::internal::
+    WireServerDispatcher<::fidl_test_protocols::WithProtocolEnds>::TryDispatch(
+        ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>* impl,
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_protocols::kWithProtocolEnds_ClientEnds_Ordinal,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
+             ::fidl::Transaction* txn) {
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_protocols::WithProtocolEnds::ClientEnds>>
+                decoded{std::move(msg)};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
+            }
+            auto* primary = decoded.PrimaryObject();
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_protocols::WithProtocolEnds::ClientEnds>::Sync
+                completer(txn);
+            reinterpret_cast<
+                ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>*>(
+                interface)
+                ->ClientEnds(primary, completer);
+            return ZX_OK;
+          },
+      },
+      {
+          ::fidl_test_protocols::kWithProtocolEnds_ServerEnds_Ordinal,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
+             ::fidl::Transaction* txn) {
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_protocols::WithProtocolEnds::ServerEnds>>
+                decoded{std::move(msg)};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
+            }
+            auto* primary = decoded.PrimaryObject();
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_protocols::WithProtocolEnds::ServerEnds>::Sync
+                completer(txn);
+            reinterpret_cast<
+                ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>*>(
+                interface)
+                ->ServerEnds(primary, completer);
+            return ZX_OK;
+          },
+      },
+      {
+          ::fidl_test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
+             ::fidl::Transaction* txn) {
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>
+                decoded{std::move(msg)};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
+            }
+            auto* primary = decoded.PrimaryObject();
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
+                Sync completer(txn);
+            reinterpret_cast<
+                ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>*>(
+                interface)
+                ->StructContainingEnds(primary, completer);
+            return ZX_OK;
+          },
+      },
+  };
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+}
+
+::fidl::DispatchResult fidl::internal::
+    WireServerDispatcher<::fidl_test_protocols::WithProtocolEnds>::Dispatch(
+        ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>* impl,
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
+    std::move(msg).CloseHandles();
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
+  }
+  return dispatch_result;
+}
+::fidl::DispatchResult
+fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>::dispatch_message(
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireServerDispatcher<
+      ::fidl_test_protocols::WithProtocolEnds>::Dispatch(this, std::move(msg),
+                                                         txn);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
+    Reply(
+        ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& out) {
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ClientEnds>>
+      _response{::fidl::internal::AllowUnownedInputRef{}, std::move(out)};
+  return ::fidl::internal::WireCompleterBase<
+      ::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
+      SendReply(&_response.GetOutgoingMessage());
+}
+
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
+    Reply(
+        ::fidl::BufferSpan _buffer,
+        ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& out) {
+  ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
+      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
+                                      std::move(out));
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
+    Reply(
+        ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& out) {
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ServerEnds>>
+      _response{::fidl::internal::AllowUnownedInputRef{}, std::move(out)};
+  return ::fidl::internal::WireCompleterBase<
+      ::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
+      SendReply(&_response.GetOutgoingMessage());
+}
+
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
+    Reply(
+        ::fidl::BufferSpan _buffer,
+        ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& out) {
+  ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
+      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
+                                      std::move(out));
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
+    Reply(::fidl_test_protocols::wire::ProtocolEnds&& out) {
+  ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>
+      _response{::fidl::internal::AllowUnownedInputRef{}, std::move(out)};
+  return ::fidl::internal::WireCompleterBase<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
+      SendReply(&_response.GetOutgoingMessage());
+}
+
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
+    Reply(::fidl::BufferSpan _buffer,
+          ::fidl_test_protocols::wire::ProtocolEnds&& out) {
+  ::fidl::WireResponse<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
+      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
+                                      std::move(out));
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+void ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
+    _InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(
+      &_hdr, _txid,
+      ::fidl_test_protocols::kWithProtocolEnds_ClientEnds_Ordinal);
+}
+
+void ::fidl::WireRequest<
+    ::fidl_test_protocols::WithProtocolEnds::ClientEnds>::_CloseHandles() {
+  in.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+void ::fidl::WireResponse<
+    ::fidl_test_protocols::WithProtocolEnds::ClientEnds>::_InitHeader() {
+  fidl_init_txn_header(
+      &_hdr, 0, ::fidl_test_protocols::kWithProtocolEnds_ClientEnds_Ordinal);
+}
+
+void ::fidl::WireResponse<
+    ::fidl_test_protocols::WithProtocolEnds::ClientEnds>::_CloseHandles() {
+  out.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+void ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
+    _InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(
+      &_hdr, _txid,
+      ::fidl_test_protocols::kWithProtocolEnds_ServerEnds_Ordinal);
+}
+
+void ::fidl::WireRequest<
+    ::fidl_test_protocols::WithProtocolEnds::ServerEnds>::_CloseHandles() {
+  in.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+void ::fidl::WireResponse<
+    ::fidl_test_protocols::WithProtocolEnds::ServerEnds>::_InitHeader() {
+  fidl_init_txn_header(
+      &_hdr, 0, ::fidl_test_protocols::kWithProtocolEnds_ServerEnds_Ordinal);
+}
+
+void ::fidl::WireResponse<
+    ::fidl_test_protocols::WithProtocolEnds::ServerEnds>::_CloseHandles() {
+  out.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+void ::fidl::WireRequest<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
+    _InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(
+      &_hdr, _txid,
+      ::fidl_test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal);
+}
+
+void ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::
+                             StructContainingEnds>::_CloseHandles() {
+  in._CloseHandles();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+void ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::
+                              StructContainingEnds>::_InitHeader() {
+  fidl_init_txn_header(
+      &_hdr, 0,
+      ::fidl_test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal);
+}
+
+void ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::
+                              StructContainingEnds>::_CloseHandles() {
+  out._CloseHandles();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 void ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntaxErrorAsEnumResult) ==

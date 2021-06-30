@@ -485,9 +485,122 @@
             </td>
         </tr></table>
 
+## WithProtocolEnds {#WithProtocolEnds}
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=90)*
+
+
+### ClientEnds {#WithProtocolEnds.ClientEnds}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>in</code></td>
+            <td>
+                <code><a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a></code>
+            </td>
+        </tr></table>
+
+
+#### Response
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>out</code></td>
+            <td>
+                <code><a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>?</code>
+            </td>
+        </tr></table>
+
+### ServerEnds {#WithProtocolEnds.ServerEnds}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>in</code></td>
+            <td>
+                <code>request&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;?</code>
+            </td>
+        </tr></table>
+
+
+#### Response
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>out</code></td>
+            <td>
+                <code>request&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;</code>
+            </td>
+        </tr></table>
+
+### StructContainingEnds {#WithProtocolEnds.StructContainingEnds}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>in</code></td>
+            <td>
+                <code><a class='link' href='#ProtocolEnds'>ProtocolEnds</a></code>
+            </td>
+        </tr></table>
+
+
+#### Response
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>out</code></td>
+            <td>
+                <code><a class='link' href='#ProtocolEnds'>ProtocolEnds</a></code>
+            </td>
+        </tr></table>
+
 
 
 ## **STRUCTS**
+
+### ProtocolEnds {#ProtocolEnds}
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=83)*
+
+
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ProtocolEnds.client">
+            <td><code>client</code></td>
+            <td>
+                <code><a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a></code>
+            </td>
+            <td></td>
+            <td>No default</td>
+        </tr><tr id="ProtocolEnds.server">
+            <td><code>server</code></td>
+            <td>
+                <code>request&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;</code>
+            </td>
+            <td></td>
+            <td>No default</td>
+        </tr><tr id="ProtocolEnds.client_opt">
+            <td><code>client_opt</code></td>
+            <td>
+                <code><a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>?</code>
+            </td>
+            <td></td>
+            <td>No default</td>
+        </tr><tr id="ProtocolEnds.server_opt">
+            <td><code>server_opt</code></td>
+            <td>
+                <code>request&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;?</code>
+            </td>
+            <td></td>
+            <td>No default</td>
+        </tr>
+</table>
 
 ### WithErrorSyntax_ErrorAsEnum_Response {#WithErrorSyntax_ErrorAsEnum_Response}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=43)*

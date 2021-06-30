@@ -186,8 +186,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         // protocol decl, so the code in this if statement is copied from the
         // kIdentifier > kProtocol code path below in order to maintain the same
         // behavior.
-        auto name =
-            NameCodedProtocolHandle(NameCodedName(channel_end->name), channel_end->nullability);
+        auto name = NameCodedProtocolHandle(NameCodedName(channel_end->protocol_decl->name),
+                                            channel_end->nullability);
         auto coded_protocol_type =
             std::make_unique<coded::ProtocolHandleType>(std::move(name), channel_end->nullability);
         channel_end_map_[channel_end] = coded_protocol_type.get();
@@ -198,8 +198,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         // so the code in this if statement is copied from the
         // kRequestHandle code path below in order to maintain the same
         // behavior.
-        auto name =
-            NameCodedRequestHandle(NameCodedName(channel_end->name), channel_end->nullability);
+        auto name = NameCodedRequestHandle(NameCodedName(channel_end->protocol_decl->name),
+                                           channel_end->nullability);
         auto coded_request_type =
             std::make_unique<coded::RequestHandleType>(std::move(name), channel_end->nullability);
         channel_end_map_[channel_end] = coded_request_type.get();

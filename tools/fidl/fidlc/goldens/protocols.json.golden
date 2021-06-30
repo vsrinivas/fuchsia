@@ -1703,6 +1703,237 @@
           "is_composed": false
         }
       ]
+    },
+    {
+      "name": "fidl.test.protocols/WithProtocolEnds",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 90,
+        "column": 10,
+        "length": 16
+      },
+      "composed_protocols": [],
+      "methods": [
+        {
+          "ordinal": 6967495859718087341,
+          "name": "ClientEnds",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 91,
+            "column": 5,
+            "length": 10
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.protocols/DiscoverableProtocol",
+                "nullable": false
+              },
+              "name": "in",
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+                "line": 91,
+                "column": 37,
+                "length": 2
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              }
+            }
+          ],
+          "maybe_request_payload": "fidl.test.protocols/WithProtocolEndsClientEndsRequest",
+          "maybe_request_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.protocols/DiscoverableProtocol",
+                "nullable": true
+              },
+              "name": "out",
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+                "line": 91,
+                "column": 67,
+                "length": 3
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              }
+            }
+          ],
+          "maybe_response_payload": "fidl.test.protocols/WithProtocolEndsClientEndsTopResponse",
+          "maybe_response_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "is_composed": false
+        },
+        {
+          "ordinal": 4493250268989071740,
+          "name": "ServerEnds",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 92,
+            "column": 5,
+            "length": 10
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "request",
+                "subtype": "fidl.test.protocols/DiscoverableProtocol",
+                "nullable": true
+              },
+              "name": "in",
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+                "line": 92,
+                "column": 47,
+                "length": 2
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              }
+            }
+          ],
+          "maybe_request_payload": "fidl.test.protocols/WithProtocolEndsServerEndsRequest",
+          "maybe_request_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "request",
+                "subtype": "fidl.test.protocols/DiscoverableProtocol",
+                "nullable": false
+              },
+              "name": "out",
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+                "line": 92,
+                "column": 85,
+                "length": 3
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              }
+            }
+          ],
+          "maybe_response_payload": "fidl.test.protocols/WithProtocolEndsServerEndsTopResponse",
+          "maybe_response_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "is_composed": false
+        },
+        {
+          "ordinal": 175407360796475740,
+          "name": "StructContainingEnds",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 93,
+            "column": 5,
+            "length": 20
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.protocols/ProtocolEnds",
+                "nullable": false
+              },
+              "name": "in",
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+                "line": 93,
+                "column": 39,
+                "length": 2
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              }
+            }
+          ],
+          "maybe_request_payload": "fidl.test.protocols/WithProtocolEndsStructContainingEndsRequest",
+          "maybe_request_type_shape_v1": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 4,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.protocols/ProtocolEnds",
+                "nullable": false
+              },
+              "name": "out",
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+                "line": 93,
+                "column": 60,
+                "length": 3
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              }
+            }
+          ],
+          "maybe_response_payload": "fidl.test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
+          "maybe_response_type_shape_v1": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 4,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "is_composed": false
+        }
+      ]
     }
   ],
   "service_declarations": [],
@@ -3098,6 +3329,364 @@
         "has_padding": true,
         "has_flexible_envelope": false
       }
+    },
+    {
+      "name": "fidl.test.protocols/WithProtocolEndsClientEndsRequest",
+      "maybe_naming_context": [
+        "WithProtocolEnds",
+        "ClientEnds"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 91,
+        "column": 15,
+        "length": 25
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/DiscoverableProtocol",
+            "nullable": false
+          },
+          "name": "in",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 91,
+            "column": 37,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          }
+        }
+      ],
+      "resource": true,
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "fidl.test.protocols/WithProtocolEndsClientEndsTopResponse",
+      "maybe_naming_context": [
+        "WithProtocolEnds",
+        "ClientEnds"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 91,
+        "column": 44,
+        "length": 27
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/DiscoverableProtocol",
+            "nullable": true
+          },
+          "name": "out",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 91,
+            "column": 67,
+            "length": 3
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          }
+        }
+      ],
+      "resource": true,
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "fidl.test.protocols/WithProtocolEndsServerEndsRequest",
+      "maybe_naming_context": [
+        "WithProtocolEnds",
+        "ServerEnds"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 92,
+        "column": 15,
+        "length": 35
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "request",
+            "subtype": "fidl.test.protocols/DiscoverableProtocol",
+            "nullable": true
+          },
+          "name": "in",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 92,
+            "column": 47,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          }
+        }
+      ],
+      "resource": true,
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "fidl.test.protocols/WithProtocolEndsServerEndsTopResponse",
+      "maybe_naming_context": [
+        "WithProtocolEnds",
+        "ServerEnds"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 92,
+        "column": 54,
+        "length": 35
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "request",
+            "subtype": "fidl.test.protocols/DiscoverableProtocol",
+            "nullable": false
+          },
+          "name": "out",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 92,
+            "column": 85,
+            "length": 3
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          }
+        }
+      ],
+      "resource": true,
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "fidl.test.protocols/WithProtocolEndsStructContainingEndsRequest",
+      "maybe_naming_context": [
+        "WithProtocolEnds",
+        "StructContainingEnds"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 93,
+        "column": 25,
+        "length": 17
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/ProtocolEnds",
+            "nullable": false
+          },
+          "name": "in",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 93,
+            "column": 39,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": true,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 4,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "fidl.test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
+      "maybe_naming_context": [
+        "WithProtocolEnds",
+        "StructContainingEnds"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 93,
+        "column": 46,
+        "length": 18
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/ProtocolEnds",
+            "nullable": false
+          },
+          "name": "out",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 93,
+            "column": 60,
+            "length": 3
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": true,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 4,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "fidl.test.protocols/ProtocolEnds",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 83,
+        "column": 17,
+        "length": 12
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/DiscoverableProtocol",
+            "nullable": false
+          },
+          "name": "client",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 84,
+            "column": 26,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "request",
+            "subtype": "fidl.test.protocols/DiscoverableProtocol",
+            "nullable": false
+          },
+          "name": "server",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 85,
+            "column": 35,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 4,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/DiscoverableProtocol",
+            "nullable": true
+          },
+          "name": "client_opt",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 86,
+            "column": 27,
+            "length": 10
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "request",
+            "subtype": "fidl.test.protocols/DiscoverableProtocol",
+            "nullable": true
+          },
+          "name": "server_opt",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 87,
+            "column": 36,
+            "length": 10
+          },
+          "field_shape_v1": {
+            "offset": 12,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": true,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 4,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "table_declarations": [],
@@ -3380,6 +3969,8 @@
     "fidl.test.protocols/WithAndWithoutRequestResponse",
     "fidl.test.protocols/Transitional",
     "fidl.test.protocols/SyscallProtocol",
+    "fidl.test.protocols/ProtocolEnds",
+    "fidl.test.protocols/WithProtocolEnds",
     "fidl.test.protocols/ErrorEnum",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
     "fidl.test.protocols/WithErrorSyntax",
@@ -3398,6 +3989,7 @@
     "fidl.test.protocols/Transitional": "interface",
     "fidl.test.protocols/DiscoverableProtocol": "interface",
     "fidl.test.protocols/HandleRightsProtocol": "interface",
+    "fidl.test.protocols/WithProtocolEnds": "interface",
     "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse": "struct",
     "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest": "struct",
     "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest": "struct",
@@ -3428,6 +4020,13 @@
     "fidl.test.protocols/HandleRightsProtocolResponseMethodRequest": "struct",
     "fidl.test.protocols/HandleRightsProtocolResponseMethodTopResponse": "struct",
     "fidl.test.protocols/HandleRightsProtocolAnEventRequest": "struct",
+    "fidl.test.protocols/WithProtocolEndsClientEndsRequest": "struct",
+    "fidl.test.protocols/WithProtocolEndsClientEndsTopResponse": "struct",
+    "fidl.test.protocols/WithProtocolEndsServerEndsRequest": "struct",
+    "fidl.test.protocols/WithProtocolEndsServerEndsTopResponse": "struct",
+    "fidl.test.protocols/WithProtocolEndsStructContainingEndsRequest": "struct",
+    "fidl.test.protocols/WithProtocolEndsStructContainingEndsTopResponse": "struct",
+    "fidl.test.protocols/ProtocolEnds": "struct",
     "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result": "union",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result": "union",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result": "union",

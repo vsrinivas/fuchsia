@@ -59,6 +59,28 @@ class Transitional_TestBase : public ::fidl::test::protocols::Transitional {
   void OneWay(int64_t x) override { NotImplemented_("OneWay"); }
 };
 
+class WithProtocolEnds_TestBase
+    : public ::fidl::test::protocols::WithProtocolEnds {
+ public:
+  virtual ~WithProtocolEnds_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void ClientEnds(
+      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol> in,
+      ClientEndsCallback callback) override {
+    NotImplemented_("ClientEnds");
+  }
+  void ServerEnds(
+      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
+          in,
+      ServerEndsCallback callback) override {
+    NotImplemented_("ServerEnds");
+  }
+  void StructContainingEnds(::fidl::test::protocols::ProtocolEnds in,
+                            StructContainingEndsCallback callback) override {
+    NotImplemented_("StructContainingEnds");
+  }
+};
+
 class WithErrorSyntax_TestBase
     : public ::fidl::test::protocols::WithErrorSyntax {
  public:

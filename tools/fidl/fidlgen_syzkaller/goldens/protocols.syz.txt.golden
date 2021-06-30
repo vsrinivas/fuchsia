@@ -45,6 +45,21 @@ fidl_test_protocols_WithErrorSyntax_HandleInResult_ResponseOutOfLine {
 fidl_test_protocols_WithErrorSyntax_HandleInResult_ResponseHandles {
        h zx_handle
 } [packed]
+fidl_test_protocols_ProtocolEndsInLine {
+       client flags[fidl_handle_presence, int32]
+       server flags[fidl_handle_presence, int32]
+       client_opt flags[fidl_handle_presence, int32]
+       server_opt flags[fidl_handle_presence, int32]
+} [packed]
+fidl_test_protocols_ProtocolEndsOutOfLine {
+       void void
+} [packed]
+fidl_test_protocols_ProtocolEndsHandles {
+       client zx_chan_fidl_test_protocols_DiscoverableProtocol_client
+       server zx_chan_fidl_test_protocols_DiscoverableProtocol_server
+       client_opt zx_chan_fidl_test_protocols_DiscoverableProtocol_client
+       server_opt zx_chan_fidl_test_protocols_DiscoverableProtocol_server
+} [packed]
 fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultInLine [
        responseInLine fidl_union_member[1, fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseInLine]
        err fidl_union_member[2, int32]
@@ -434,4 +449,59 @@ fdio_service_connect$fidl_test_protocols_HandleRightsProtocol(path ptr[in, strin
 zx_channel_write$fidl_test_protocols_HandleRightsProtocolNoResponseMethod(handle zx_chan_fidl_test_protocols_HandleRightsProtocol_client, options const[0], bytes ptr[in, fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequest], num_bytes bytesize[bytes], handles ptr[in, fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestHandles], num_handles bytesize[handles])
 zx_channel_call$fidl_test_protocols_HandleRightsProtocolResponseMethod(handle zx_chan_fidl_test_protocols_HandleRightsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_HandleRightsProtocolResponseMethodRequest, fidl_test_protocols_HandleRightsProtocolResponseMethodRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_HandleRightsProtocolResponseMethodResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_read$fidl_test_protocols_HandleRightsProtocolAnEvent(handle zx_chan_fidl_test_protocols_HandleRightsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, fidl_test_protocols_HandleRightsProtocolAnEventEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+
+
+fidl_test_protocols_WithProtocolEndsClientEndsRequest {
+       hdr fidl_message_header[6967495859718087341]
+       in_ flags[fidl_handle_presence, int32]
+} [packed]
+fidl_test_protocols_WithProtocolEndsClientEndsRequestHandles {
+       in_ zx_chan_fidl_test_protocols_DiscoverableProtocol_client
+} [packed]
+fidl_test_protocols_WithProtocolEndsClientEndsResponse {
+       hdr fidl_message_header[6967495859718087341]
+       out_ flags[fidl_handle_presence, int32]
+} [packed]
+fidl_test_protocols_WithProtocolEndsClientEndsResponseHandles {
+       out_ zx_chan_fidl_test_protocols_DiscoverableProtocol_client
+} [packed]
+fidl_test_protocols_WithProtocolEndsServerEndsRequest {
+       hdr fidl_message_header[4493250268989071740]
+       in_ flags[fidl_handle_presence, int32]
+} [packed]
+fidl_test_protocols_WithProtocolEndsServerEndsRequestHandles {
+       in_ zx_chan_fidl_test_protocols_DiscoverableProtocol_server
+} [packed]
+fidl_test_protocols_WithProtocolEndsServerEndsResponse {
+       hdr fidl_message_header[4493250268989071740]
+       out_ flags[fidl_handle_presence, int32]
+} [packed]
+fidl_test_protocols_WithProtocolEndsServerEndsResponseHandles {
+       out_ zx_chan_fidl_test_protocols_DiscoverableProtocol_server
+} [packed]
+fidl_test_protocols_WithProtocolEndsStructContainingEndsRequest {
+       hdr fidl_message_header[175407360796475740]
+       inInLine fidl_test_protocols_ProtocolEndsInLine
+       inOutOfLine fidl_test_protocols_ProtocolEndsOutOfLine
+} [packed]
+fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestHandles {
+       in_ fidl_test_protocols_ProtocolEndsHandles
+} [packed]
+fidl_test_protocols_WithProtocolEndsStructContainingEndsResponse {
+       hdr fidl_message_header[175407360796475740]
+       outInLine fidl_test_protocols_ProtocolEndsInLine
+       outOutOfLine fidl_test_protocols_ProtocolEndsOutOfLine
+} [packed]
+fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseHandles {
+       out_ fidl_test_protocols_ProtocolEndsHandles
+} [packed]
+
+resource zx_chan_fidl_test_protocols_WithProtocolEnds_client[zx_chan]
+resource zx_chan_fidl_test_protocols_WithProtocolEnds_server[zx_chan]
+
+zx_channel_create$fidl_test_protocols_WithProtocolEnds(options const[0], out0 ptr[out, zx_chan_fidl_test_protocols_WithProtocolEnds_client], out1 ptr[out, zx_chan_fidl_test_protocols_WithProtocolEnds_server])
+fdio_service_connect$fidl_test_protocols_WithProtocolEnds(path ptr[in, string["/svc/"]], handle zx_chan_fidl_test_protocols_WithProtocolEnds_server)
+zx_channel_call$fidl_test_protocols_WithProtocolEndsClientEnds(handle zx_chan_fidl_test_protocols_WithProtocolEnds_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_WithProtocolEndsClientEndsRequest, fidl_test_protocols_WithProtocolEndsClientEndsRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_WithProtocolEndsClientEndsResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$fidl_test_protocols_WithProtocolEndsServerEnds(handle zx_chan_fidl_test_protocols_WithProtocolEnds_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_WithProtocolEndsServerEndsRequest, fidl_test_protocols_WithProtocolEndsServerEndsRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_WithProtocolEndsServerEndsResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$fidl_test_protocols_WithProtocolEndsStructContainingEnds(handle zx_chan_fidl_test_protocols_WithProtocolEnds_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_WithProtocolEndsStructContainingEndsRequest, fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 

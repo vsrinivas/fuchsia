@@ -226,3 +226,31 @@ class HandleRightsProtocol$TestBase extends HandleRightsProtocol {
         StackTrace.current));
   }
 }
+
+class WithProtocolEnds$TestBase extends WithProtocolEnds {
+  @override
+  $async.Future<$fidl.InterfaceHandle<DiscoverableProtocol>?> clientEnds(
+      $fidl.InterfaceHandle<DiscoverableProtocol> in$) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'clientEnds not implemented on WithProtocolEnds test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<$fidl.InterfaceRequest<DiscoverableProtocol>> serverEnds(
+      $fidl.InterfaceRequest<DiscoverableProtocol>? in$) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'serverEnds not implemented on WithProtocolEnds test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<ProtocolEnds> structContainingEnds(ProtocolEnds in$) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'structContainingEnds not implemented on WithProtocolEnds test base. Please implement.'),
+        StackTrace.current);
+  }
+}

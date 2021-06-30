@@ -29,6 +29,7 @@ using WithErrorSyntax_ErrorAsPrimitive_Result =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result;
 using WithErrorSyntax_ErrorAsEnum_Response =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response;
+using ProtocolEnds = ::fidl::test::protocols::ProtocolEnds;
 using ErrorEnum = ::fidl::test::protocols::ErrorEnum;
 using WithErrorSyntax_ErrorAsEnum_Result =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result;
@@ -267,6 +268,49 @@ struct Allocate<WithErrorSyntax_ErrorAsEnum_Response> {
     size_t out_size;
     out_size = MinSize<uint8_t>() + slack_per_member;
     out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<ProtocolEnds> {
+  operator size_t() {
+    return MinSize<::fidl::InterfaceHandle<
+               ::fidl::test::protocols::DiscoverableProtocol>>() +
+           MinSize<::fidl::InterfaceRequest<
+               ::fidl::test::protocols::DiscoverableProtocol>>() +
+           MinSize<::fidl::InterfaceHandle<
+               ::fidl::test::protocols::DiscoverableProtocol>>() +
+           MinSize<::fidl::InterfaceRequest<
+               ::fidl::test::protocols::DiscoverableProtocol>>();
+  }
+};
+template <>
+struct Allocate<ProtocolEnds> {
+  ProtocolEnds operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ProtocolEnds>());
+    ProtocolEnds out;
+    const size_t slack_per_member = (*size - MinSize<ProtocolEnds>()) / 4;
+    size_t out_size;
+    out_size = MinSize<::fidl::InterfaceHandle<
+                   ::fidl::test::protocols::DiscoverableProtocol>>() +
+               slack_per_member;
+    out.client = Allocate<::fidl::InterfaceHandle<
+        ::fidl::test::protocols::DiscoverableProtocol>>{}(src, &out_size);
+    out_size = MinSize<::fidl::InterfaceRequest<
+                   ::fidl::test::protocols::DiscoverableProtocol>>() +
+               slack_per_member;
+    out.server = Allocate<::fidl::InterfaceRequest<
+        ::fidl::test::protocols::DiscoverableProtocol>>{}(src, &out_size);
+    out_size = MinSize<::fidl::InterfaceHandle<
+                   ::fidl::test::protocols::DiscoverableProtocol>>() +
+               slack_per_member;
+    out.client_opt = Allocate<::fidl::InterfaceHandle<
+        ::fidl::test::protocols::DiscoverableProtocol>>{}(src, &out_size);
+    out_size = MinSize<::fidl::InterfaceRequest<
+                   ::fidl::test::protocols::DiscoverableProtocol>>() +
+               slack_per_member;
+    out.server_opt = Allocate<::fidl::InterfaceRequest<
+        ::fidl::test::protocols::DiscoverableProtocol>>{}(src, &out_size);
     return out;
   }
 };

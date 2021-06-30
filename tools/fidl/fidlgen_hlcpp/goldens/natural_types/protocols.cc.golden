@@ -880,6 +880,71 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Response::Clone(
   return ZX_OK;
 }
 
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t fidl_test_protocols_ProtocolEndsTable;
+const fidl_type_t* ProtocolEnds::FidlType =
+    &fidl_test_protocols_ProtocolEndsTable;
+
+void ProtocolEnds::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ProtocolEnds>::value) {
+    memcpy(_encoder->template GetPtr<ProtocolEnds>(_offset), this,
+           sizeof(ProtocolEnds));
+  } else {
+    ::fidl::Encode(_encoder, &client, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+
+    ::fidl::Encode(_encoder, &server, _offset + 4,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+
+    ::fidl::Encode(_encoder, &client_opt, _offset + 8,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+
+    ::fidl::Encode(_encoder, &server_opt, _offset + 12,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
+}
+
+void ProtocolEnds::Decode(::fidl::Decoder* _decoder, ProtocolEnds* _value,
+                          size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ProtocolEnds>::value) {
+    memcpy(_value, _decoder->template GetPtr<ProtocolEnds>(_offset),
+           sizeof(ProtocolEnds));
+  } else {
+    ::fidl::Decode(_decoder, &_value->client, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->server, _offset + 4);
+    ::fidl::Decode(_decoder, &_value->client_opt, _offset + 8);
+    ::fidl::Decode(_decoder, &_value->server_opt, _offset + 12);
+  }
+}
+
+zx_status_t ProtocolEnds::Clone(ProtocolEnds* _result) const {
+  zx_status_t _status = ::fidl::Clone(client, &_result->client);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(server, &_result->server);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(client_opt, &_result->client_opt);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(server_opt, &_result->server_opt);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
+
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 const fidl_type_t* WithErrorSyntax_ErrorAsEnum_Result::FidlType =

@@ -79,6 +79,27 @@ class Transitional_TestBase
   }
 };
 
+class WithProtocolEnds_TestBase
+    : public ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds> {
+ public:
+  virtual ~WithProtocolEnds_TestBase() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+  virtual void ClientEnds(ClientEndsRequestView request,
+                          ClientEndsCompleter::Sync& _completer) override {
+    NotImplemented_("ClientEnds", _completer);
+  }
+  virtual void ServerEnds(ServerEndsRequestView request,
+                          ServerEndsCompleter::Sync& _completer) override {
+    NotImplemented_("ServerEnds", _completer);
+  }
+  virtual void StructContainingEnds(
+      StructContainingEndsRequestView request,
+      StructContainingEndsCompleter::Sync& _completer) override {
+    NotImplemented_("StructContainingEnds", _completer);
+  }
+};
+
 class WithErrorSyntax_TestBase
     : public ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax> {
  public:

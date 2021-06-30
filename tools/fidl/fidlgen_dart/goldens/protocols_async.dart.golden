@@ -870,6 +870,98 @@ const $fidl.StructType<WithErrorSyntaxHandleInResultResponse>
   structDecode: WithErrorSyntaxHandleInResultResponse._structDecode,
 );
 
+class ProtocolEnds extends $fidl.Struct {
+  const ProtocolEnds({
+    required this.client,
+    required this.server,
+    this.clientOpt,
+    this.serverOpt,
+  });
+  ProtocolEnds.clone(
+    ProtocolEnds $orig, {
+    $fidl.InterfaceHandle<DiscoverableProtocol>? client,
+    $fidl.InterfaceRequest<DiscoverableProtocol>? server,
+    $fidl.InterfaceHandle<DiscoverableProtocol>? clientOpt,
+    $fidl.InterfaceRequest<DiscoverableProtocol>? serverOpt,
+  }) : this(
+          client: client ?? $orig.client,
+          server: server ?? $orig.server,
+          clientOpt: clientOpt ?? $orig.clientOpt,
+          serverOpt: serverOpt ?? $orig.serverOpt,
+        );
+
+  ProtocolEnds.cloneWithout(
+    ProtocolEnds $orig, {
+    bool clientOpt = false,
+    bool serverOpt = false,
+  }) : this(
+          client: $orig.client,
+          server: $orig.server,
+          clientOpt: clientOpt ? null : $orig.clientOpt,
+          serverOpt: serverOpt ? null : $orig.serverOpt,
+        );
+
+  final $fidl.InterfaceHandle<DiscoverableProtocol> client;
+  final $fidl.InterfaceRequest<DiscoverableProtocol> server;
+  final $fidl.InterfaceHandle<DiscoverableProtocol>? clientOpt;
+  final $fidl.InterfaceRequest<DiscoverableProtocol>? serverOpt;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      client,
+      server,
+      clientOpt,
+      serverOpt,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.InterfaceHandleType<DiscoverableProtocol>();
+  static const $fieldType1 = $fidl.InterfaceRequestType<DiscoverableProtocol>();
+  static const $fieldType2 =
+      $fidl.NullableInterfaceHandleType<DiscoverableProtocol>();
+  static const $fieldType3 =
+      $fidl.NullableInterfaceRequestType<DiscoverableProtocol>();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, client, $offset + 0, $depth);
+    $fieldType1.encode($encoder, server, $offset + 4, $depth);
+    $fieldType2.encode($encoder, clientOpt, $offset + 8, $depth);
+    $fieldType3.encode($encoder, serverOpt, $offset + 12, $depth);
+  }
+
+  @override
+  String toString() {
+    return r'ProtocolEnds' r'(client: ' +
+        client.toString() +
+        r', server: ' +
+        server.toString() +
+        r', clientOpt: ' +
+        clientOpt.toString() +
+        r', serverOpt: ' +
+        serverOpt.toString() +
+        r')';
+  }
+
+  static ProtocolEnds _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    return ProtocolEnds(
+        client: $fieldType0.decode($decoder, $offset + 0, $depth),
+        server: $fieldType1.decode($decoder, $offset + 4, $depth),
+        clientOpt: $fieldType2.decode($decoder, $offset + 8, $depth),
+        serverOpt: $fieldType3.decode($decoder, $offset + 12, $depth));
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<ProtocolEnds> kProtocolEnds_Type =
+    $fidl.StructType<ProtocolEnds>(
+  inlineSize: 16,
+  structDecode: ProtocolEnds._structDecode,
+);
+
 // noRequestNoResponse: ()
 const int _kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
     0x6ad894147d0c6ba4;
@@ -3060,6 +3152,347 @@ class HandleRightsProtocolBinding
       default:
         throw $fidl.FidlError(
             r'Unexpected message name for HandleRightsProtocolBinding');
+    }
+  }
+}
+
+// clientEnds: ($fidl.InterfaceHandle<DiscoverableProtocol> in$) -> ($fidl.InterfaceHandle<DiscoverableProtocol>? out)
+const int _kWithProtocolEnds_ClientEnds_Ordinal = 0x60b18491ac8062ad;
+const $fidl.MethodType _kWithProtocolEnds_ClientEnds_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<$fidl.InterfaceHandle<DiscoverableProtocol>>(
+        type: $fidl.InterfaceHandleType<DiscoverableProtocol>(), offset: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<$fidl.InterfaceHandle<DiscoverableProtocol>?>(
+        type: $fidl.NullableInterfaceHandleType<DiscoverableProtocol>(),
+        offset: 0),
+  ],
+  name: r"WithProtocolEnds.ClientEnds",
+  requestInlineSize: 8,
+  responseInlineSize: 8,
+);
+// serverEnds: ($fidl.InterfaceRequest<DiscoverableProtocol>? in$) -> ($fidl.InterfaceRequest<DiscoverableProtocol> out)
+const int _kWithProtocolEnds_ServerEnds_Ordinal = 0x3e5b3b503a05a17c;
+const $fidl.MethodType _kWithProtocolEnds_ServerEnds_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<$fidl.InterfaceRequest<DiscoverableProtocol>?>(
+        type: $fidl.NullableInterfaceRequestType<DiscoverableProtocol>(),
+        offset: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<$fidl.InterfaceRequest<DiscoverableProtocol>>(
+        type: $fidl.InterfaceRequestType<DiscoverableProtocol>(), offset: 0),
+  ],
+  name: r"WithProtocolEnds.ServerEnds",
+  requestInlineSize: 8,
+  responseInlineSize: 8,
+);
+// structContainingEnds: (ProtocolEnds in$) -> (ProtocolEnds out)
+const int _kWithProtocolEnds_StructContainingEnds_Ordinal = 0x26f2c10b743415c;
+const $fidl.MethodType _kWithProtocolEnds_StructContainingEnds_Type =
+    $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<ProtocolEnds>(type: kProtocolEnds_Type, offset: 0),
+  ],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<ProtocolEnds>(type: kProtocolEnds_Type, offset: 0),
+  ],
+  name: r"WithProtocolEnds.StructContainingEnds",
+  requestInlineSize: 16,
+  responseInlineSize: 16,
+);
+
+abstract class WithProtocolEnds {
+  $fidl.ServiceData? get $serviceData => WithProtocolEndsData();
+  $async.Future<$fidl.InterfaceHandle<DiscoverableProtocol>?> clientEnds(
+      $fidl.InterfaceHandle<DiscoverableProtocol> in$);
+  $async.Future<$fidl.InterfaceRequest<DiscoverableProtocol>> serverEnds(
+      $fidl.InterfaceRequest<DiscoverableProtocol>? in$);
+  $async.Future<ProtocolEnds> structContainingEnds(ProtocolEnds in$);
+}
+
+// TODO: Remove ServiceData for non-service
+class WithProtocolEndsData implements $fidl.ServiceData<WithProtocolEnds> {
+  const WithProtocolEndsData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return WithProtocolEndsBinding();
+  }
+}
+
+class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
+    implements WithProtocolEnds {
+  WithProtocolEndsProxy()
+      : super($fidl.AsyncProxyController<WithProtocolEnds>(
+            $interfaceName: r'WithProtocolEnds')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      case _kWithProtocolEnds_ClientEnds_Ordinal:
+        final String _name = _kWithProtocolEnds_ClientEnds_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kWithProtocolEnds_ClientEnds_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kWithProtocolEnds_ClientEnds_Type.decodeResponseInlineSize(),
+              $types[0]);
+
+          $completer.complete($response);
+        }, 'method response');
+        break;
+      case _kWithProtocolEnds_ServerEnds_Ordinal:
+        final String _name = _kWithProtocolEnds_ServerEnds_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kWithProtocolEnds_ServerEnds_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kWithProtocolEnds_ServerEnds_Type.decodeResponseInlineSize(),
+              $types[0]);
+
+          $completer.complete($response);
+        }, 'method response');
+        break;
+      case _kWithProtocolEnds_StructContainingEnds_Ordinal:
+        final String _name = _kWithProtocolEnds_StructContainingEnds_Type.name;
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+          final List<$fidl.MemberType> $types =
+              _kWithProtocolEnds_StructContainingEnds_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kWithProtocolEnds_StructContainingEnds_Type
+                  .decodeResponseInlineSize(),
+              $types[0]);
+
+          $completer.complete($response);
+        }, 'method response');
+        break;
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+
+  @override
+  $async.Future<$fidl.InterfaceHandle<DiscoverableProtocol>?> clientEnds(
+      $fidl.InterfaceHandle<DiscoverableProtocol> in$) async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder();
+    $encoder.encodeMessageHeader(_kWithProtocolEnds_ClientEnds_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kWithProtocolEnds_ClientEnds_Type.request!;
+    $fidl.encodeMessageWithCallback($encoder,
+        _kWithProtocolEnds_ClientEnds_Type.encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, in$, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer =
+        $async.Completer<$fidl.InterfaceHandle<DiscoverableProtocol>?>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<$fidl.InterfaceRequest<DiscoverableProtocol>> serverEnds(
+      $fidl.InterfaceRequest<DiscoverableProtocol>? in$) async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder();
+    $encoder.encodeMessageHeader(_kWithProtocolEnds_ServerEnds_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kWithProtocolEnds_ServerEnds_Type.request!;
+    $fidl.encodeMessageWithCallback($encoder,
+        _kWithProtocolEnds_ServerEnds_Type.encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, in$, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer =
+        $async.Completer<$fidl.InterfaceRequest<DiscoverableProtocol>>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<ProtocolEnds> structContainingEnds(ProtocolEnds in$) async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder();
+    $encoder.encodeMessageHeader(
+        _kWithProtocolEnds_StructContainingEnds_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kWithProtocolEnds_StructContainingEnds_Type.request!;
+    $fidl.encodeMessageWithCallback(
+        $encoder,
+        _kWithProtocolEnds_StructContainingEnds_Type
+            .encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, in$, $fidl.kMessageHeaderSize, 1);
+    });
+    final $completer = $async.Completer<ProtocolEnds>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+}
+
+class WithProtocolEndsBinding extends $fidl.AsyncBinding<WithProtocolEnds> {
+  WithProtocolEndsBinding() : super(r"WithProtocolEnds");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kWithProtocolEnds_ClientEnds_Ordinal:
+        final String _name = _kWithProtocolEnds_ClientEnds_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kWithProtocolEnds_ClientEnds_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<$fidl.InterfaceHandle<DiscoverableProtocol>?>
+              $future = $fidl.decodeMessageWithCallback<
+                      $async.Future<
+                          $fidl.InterfaceHandle<DiscoverableProtocol>?>>(
+                  $message,
+                  _kWithProtocolEnds_ClientEnds_Type.decodeRequestInlineSize(),
+                  ($fidl.Decoder decoder) {
+            return _impl.clientEnds(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder = $fidl.Encoder();
+            $encoder.encodeMessageHeader(
+                _kWithProtocolEnds_ClientEnds_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kWithProtocolEnds_ClientEnds_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kWithProtocolEnds_ClientEnds_Type.encodingResponseInlineSize(),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kWithProtocolEnds_ServerEnds_Ordinal:
+        final String _name = _kWithProtocolEnds_ServerEnds_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kWithProtocolEnds_ServerEnds_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<$fidl.InterfaceRequest<DiscoverableProtocol>>
+              $future = $fidl.decodeMessageWithCallback<
+                      $async.Future<
+                          $fidl.InterfaceRequest<DiscoverableProtocol>>>(
+                  $message,
+                  _kWithProtocolEnds_ServerEnds_Type.decodeRequestInlineSize(),
+                  ($fidl.Decoder decoder) {
+            return _impl.serverEnds(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder = $fidl.Encoder();
+            $encoder.encodeMessageHeader(
+                _kWithProtocolEnds_ServerEnds_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kWithProtocolEnds_ServerEnds_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kWithProtocolEnds_ServerEnds_Type.encodingResponseInlineSize(),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      case _kWithProtocolEnds_StructContainingEnds_Ordinal:
+        final String _name = _kWithProtocolEnds_StructContainingEnds_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kWithProtocolEnds_StructContainingEnds_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<ProtocolEnds> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<ProtocolEnds>>(
+                  $message,
+                  _kWithProtocolEnds_StructContainingEnds_Type
+                      .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
+            return _impl.structContainingEnds(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+          $future.then(($response) {
+            final $fidl.Encoder $encoder = $fidl.Encoder();
+            $encoder.encodeMessageHeader(
+                _kWithProtocolEnds_StructContainingEnds_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kWithProtocolEnds_StructContainingEnds_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kWithProtocolEnds_StructContainingEnds_Type
+                    .encodingResponseInlineSize(),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            $fidl.handleException(_name, _e, close);
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for WithProtocolEndsBinding');
     }
   }
 }

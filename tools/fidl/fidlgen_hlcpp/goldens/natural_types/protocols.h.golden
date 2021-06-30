@@ -121,6 +121,14 @@ class Transitional;
 using TransitionalHandle = ::fidl::InterfaceHandle<Transitional>;
 #endif  // __Fuchsia__
 
+class ProtocolEnds;
+
+#ifdef __Fuchsia__
+
+class WithProtocolEnds;
+using WithProtocolEndsHandle = ::fidl::InterfaceHandle<WithProtocolEnds>;
+#endif  // __Fuchsia__
+
 enum class ErrorEnum : uint32_t {
 
   ERR_FOO = 1u,
@@ -1124,6 +1132,183 @@ class Transitional_ResponseEncoder {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+class ProtocolEnds final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
+      client{};
+
+  ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
+      server{};
+
+  ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
+      client_opt{};
+
+  ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
+      server_opt{};
+
+  static inline ::std::unique_ptr<ProtocolEnds> New() {
+    return ::std::make_unique<ProtocolEnds>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ProtocolEnds* value,
+                     size_t _offset);
+  zx_status_t Clone(ProtocolEnds* result) const;
+};
+
+inline zx_status_t Clone(const ::fidl::test::protocols::ProtocolEnds& _value,
+                         ::fidl::test::protocols::ProtocolEnds* _result) {
+  return _value.Clone(_result);
+}
+
+using ProtocolEndsPtr = ::std::unique_ptr<ProtocolEnds>;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsClientEndsRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsServerEndsRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
+
+}  // namespace _internal
+class WithProtocolEnds_RequestEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage ClientEnds(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>*
+          in) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, in, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_WithProtocolEndsClientEndsRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage ServerEnds(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>*
+          in) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, in, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_WithProtocolEndsServerEndsRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage StructContainingEnds(
+      ::fidl::Encoder* _encoder, ::fidl::test::protocols::ProtocolEnds* in) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, in, 16);
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &::fidl::test::protocols::_internal::
+            fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsClientEndsResponseTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsServerEndsResponseTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseTable;
+
+}  // namespace _internal
+class WithProtocolEnds_ResponseEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage ClientEnds(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>*
+          out) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, out, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_WithProtocolEndsClientEndsResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage ServerEnds(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>*
+          out) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, out, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_WithProtocolEndsServerEndsResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage StructContainingEnds(
+      ::fidl::Encoder* _encoder, ::fidl::test::protocols::ProtocolEnds* out) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, out, 16);
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &::fidl::test::protocols::_internal::
+            fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+};
+#endif  // __Fuchsia__
+
 class WithErrorSyntax_ErrorAsEnum_Result final {
  public:
   static const fidl_type_t* FidlType;
@@ -2084,6 +2269,48 @@ struct Equality<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response> {
     return true;
   }
 };
+#ifdef __Fuchsia__
+
+template <>
+struct CodingTraits<::fidl::test::protocols::ProtocolEnds>
+    : public EncodableCodingTraits<::fidl::test::protocols::ProtocolEnds, 16> {
+};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::protocols::ProtocolEnds>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::protocols::ProtocolEnds>::value &&
+          IsMemcpyCompatible<::fidl::InterfaceHandle<
+              ::fidl::test::protocols::DiscoverableProtocol>>::value &&
+          IsMemcpyCompatible<::fidl::InterfaceRequest<
+              ::fidl::test::protocols::DiscoverableProtocol>>::value> {};
+
+inline zx_status_t Clone(const ::fidl::test::protocols::ProtocolEnds& value,
+                         ::fidl::test::protocols::ProtocolEnds* result) {
+  return ::fidl::test::protocols::Clone(value, result);
+}
+
+template <>
+struct Equality<::fidl::test::protocols::ProtocolEnds> {
+  bool operator()(const ::fidl::test::protocols::ProtocolEnds& _lhs,
+                  const ::fidl::test::protocols::ProtocolEnds& _rhs) const {
+    if (!::fidl::Equals(_lhs.client, _rhs.client)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.server, _rhs.server)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.client_opt, _rhs.client_opt)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.server_opt, _rhs.server_opt)) {
+      return false;
+    }
+    return true;
+  }
+};
+#endif  // __Fuchsia__
+
 template <>
 struct CodingTraits<::fidl::test::protocols::ErrorEnum> {
   static constexpr size_t inline_size_old =

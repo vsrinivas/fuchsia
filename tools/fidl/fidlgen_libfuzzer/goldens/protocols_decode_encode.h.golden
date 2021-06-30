@@ -9,7 +9,7 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 42>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 49>
     fidl_test_protocols_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl_test_protocols::wire::"
@@ -228,6 +228,61 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 42>
             .decoder_encoder =
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
                     ::fidl_test_protocols::Transitional::Event>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl_test_protocols::wire::ProtocolEnds",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl_test_protocols::wire::ProtocolEnds>,
+        },
+
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
+                              "WithProtocolEnds::ClientEnds>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
+                    ::fidl_test_protocols::WithProtocolEnds::ClientEnds>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireResponse<::fidl_test_protocols::"
+                              "WithProtocolEnds::ClientEnds>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
+                    ::fidl_test_protocols::WithProtocolEnds::ClientEnds>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
+                              "WithProtocolEnds::ServerEnds>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
+                    ::fidl_test_protocols::WithProtocolEnds::ServerEnds>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireResponse<::fidl_test_protocols::"
+                              "WithProtocolEnds::ServerEnds>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
+                    ::fidl_test_protocols::WithProtocolEnds::ServerEnds>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
+                              "WithProtocolEnds::StructContainingEnds>",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::
+                                        StructContainingEnds>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireResponse<::fidl_test_protocols::"
+                              "WithProtocolEnds::StructContainingEnds>",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::
+                                         StructContainingEnds>>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
