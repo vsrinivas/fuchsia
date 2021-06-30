@@ -10,3 +10,5 @@ toc:
   path: /docs/contribute/governance/apis
 - title: "Scenic Allocator"
   path: /docs/contribute/governance/apis/scenic_allocator.md
+- title: "Flatland"
+  path: /docs/contribute/governance/apis/flatland.md
