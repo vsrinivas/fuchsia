@@ -400,6 +400,12 @@ zx_status_t zxio_remote_release(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_OK;
 }
 
+zx_status_t zxio_remote_borrow(zxio_t* io, zx_handle_t* out_handle) {
+  Remote rio(io);
+  *out_handle = rio.control()->get();
+  return ZX_OK;
+}
+
 zx_status_t zxio_remote_clone(zxio_t* io, zx_handle_t* out_handle) {
   Remote rio(io);
   return zxio_raw_remote_clone(rio.control(), out_handle);
@@ -931,6 +937,7 @@ static constexpr zxio_ops_t zxio_remote_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
+  ops.borrow = zxio_remote_borrow;
   ops.clone = zxio_remote_clone;
   ops.wait_begin = zxio_remote_wait_begin;
   ops.wait_end = zxio_remote_wait_end;
@@ -1009,6 +1016,7 @@ static constexpr zxio_ops_t zxio_dir_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
+  ops.borrow = zxio_remote_borrow;
   ops.clone = zxio_remote_clone;
   ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_dir_attr_get;
@@ -1084,6 +1092,7 @@ static constexpr zxio_ops_t zxio_file_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
+  ops.borrow = zxio_remote_borrow;
   ops.clone = zxio_remote_clone;
   ops.wait_begin = zxio_file_wait_begin;
   ops.wait_end = zxio_file_wait_end;

@@ -78,6 +78,16 @@ zx_status_t zxio_close(zxio_t* io);
 // object are guaranteed to return |ZX_ERR_BAD_HANDLE|.
 zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_handle);
 
+// Access the primary |zx_handle_t| for |io| if one exists.
+//
+// Does not block.
+//
+// Does not consume |io| and does not release ownership of |*out_handle|.
+//
+// The caller is responsible for ensuring that any interactions with
+// |*out_handle| are safe with any concurrent operations on |io|.
+zx_status_t zxio_borrow(zxio_t* io, zx_handle_t* out_handle);
+
 // Attempt to create a |zx_handle_t| that represents another session with |io|.
 //
 // The returned |zx_handle_t| is suitable for transfer to another process or for

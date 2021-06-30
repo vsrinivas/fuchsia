@@ -1475,11 +1475,6 @@ struct datagram_socket : public zxio {
   static constexpr zx_signals_t kSignalShutdownRead = ZX_USER_SIGNAL_4;
   static constexpr zx_signals_t kSignalShutdownWrite = ZX_USER_SIGNAL_5;
 
-  zx_status_t borrow_channel(zx_handle_t* h) override {
-    *h = zxio_datagram_socket().client.channel().get();
-    return ZX_OK;
-  }
-
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) override {
     *handle = zxio_datagram_socket().event.get();
 
@@ -1723,6 +1718,10 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
     *out_handle = zxio_datagram_socket(io).client.mutable_channel()->release();
     return ZX_OK;
   };
+  ops.borrow = [](zxio_t* io, zx_handle_t* out_handle) {
+    *out_handle = zxio_datagram_socket(io).client.channel().get();
+    return ZX_OK;
+  };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
     return BaseSocket(zxio_datagram_socket(io).client).clone(out_handle);
   };
@@ -1773,11 +1772,6 @@ struct stream_socket : public zxio {
     kConnecting,
     kConnected,
   };
-
-  zx_status_t borrow_channel(zx_handle_t* h) override {
-    *h = zxio_stream_socket().client.channel().get();
-    return ZX_OK;
-  }
 
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) override {
     zxio_signals_t signals = ZXIO_SIGNAL_PEER_CLOSED;
@@ -2163,6 +2157,10 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   };
   ops.release = [](zxio_t* io, zx_handle_t* out_handle) {
     *out_handle = zxio_stream_socket(io).client.mutable_channel()->release();
+    return ZX_OK;
+  };
+  ops.borrow = [](zxio_t* io, zx_handle_t* out_handle) {
+    *out_handle = zxio_stream_socket(io).client.channel().get();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {

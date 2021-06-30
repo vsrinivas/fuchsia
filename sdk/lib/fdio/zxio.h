@@ -17,6 +17,7 @@ struct zxio : public base {
   static zx::status<std::pair<fdio_ptr, fdio_ptr>> create_pipe_pair(uint32_t options);
 
   zx_status_t close() override;
+  zx_status_t borrow_channel(zx_handle_t* out_borrowed) final;
   zx_status_t clone(zx_handle_t* out_handle) override;
   zx_status_t unwrap(zx_handle_t* out_handle) override;
   void wait_begin(uint32_t events, zx_handle_t* out_handle, zx_signals_t* out_signals) override;
@@ -62,7 +63,6 @@ struct remote : public zxio {
   static zx::status<fdio_ptr> create(zx::vmo vmo, zx::stream stream);
 
   zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode) override;
-  zx_status_t borrow_channel(zx_handle_t* out_borrowed) override;
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* signals) override;
   void wait_end(zx_signals_t signals, uint32_t* events) override;
 
@@ -72,10 +72,6 @@ struct remote : public zxio {
 
   remote() = default;
   ~remote() override = default;
-
-  const zxio_remote_t& zxio_remote() {
-    return *reinterpret_cast<zxio_remote_t*>(&zxio_storage().io);
-  }
 };
 
 }  // namespace fdio_internal

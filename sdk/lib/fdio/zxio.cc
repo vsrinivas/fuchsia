@@ -71,6 +71,10 @@ zx::status<std::pair<fdio_ptr, fdio_ptr>> zxio::create_pipe_pair(uint32_t option
 
 zx_status_t zxio::close() { return zxio_close(&zxio_storage().io); }
 
+zx_status_t zxio::borrow_channel(zx_handle_t* out_borrowed) {
+  return zxio_borrow(&zxio_storage().io, out_borrowed);
+}
+
 zx_status_t zxio::clone(zx_handle_t* out_handle) {
   return zxio_clone(&zxio_storage().io, out_handle);
 }
@@ -317,11 +321,6 @@ zx::status<fdio_ptr> remote::open(const char* path, uint32_t flags, uint32_t mod
   }
 
   return remote::create(std::move(endpoints->client), zx::eventpair{});
-}
-
-zx_status_t remote::borrow_channel(zx_handle_t* out_borrowed) {
-  *out_borrowed = zxio_remote().control;
-  return ZX_OK;
 }
 
 void remote::wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) {

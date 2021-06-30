@@ -93,6 +93,14 @@ zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_handle) {
   return zio->ops->release(io, out_handle);
 }
 
+zx_status_t zxio_borrow(zxio_t* io, zx_handle_t* out_handle) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+  zxio_internal_t* zio = to_internal(io);
+  return zio->ops->borrow(io, out_handle);
+}
+
 zx_status_t zxio_clone(zxio_t* io, zx_handle_t* out_handle) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;

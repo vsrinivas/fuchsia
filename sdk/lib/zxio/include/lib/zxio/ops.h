@@ -26,6 +26,8 @@ typedef struct zxio_ops {
   // except |close|.
   zx_status_t (*release)(zxio_t* io, zx_handle_t* out_handle);
 
+  zx_status_t (*borrow)(zxio_t* io, zx_handle_t* out_handle);
+
   // TODO(tamird/abarth): clarify the semantics of this operation. fdio currently relies on this to
   // implement POSIX-style dup() which expects the seek pointer to be preserved, but zxio_vmo_clone
   // does not currently produce those semantics.

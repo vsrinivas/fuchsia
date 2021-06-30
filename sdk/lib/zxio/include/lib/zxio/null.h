@@ -23,6 +23,7 @@ __BEGIN_CDECLS
 // * |zxio_default_wait_end| returns no signals.
 
 zx_status_t zxio_default_release(zxio_t* io, zx_handle_t* out_handle);
+zx_status_t zxio_default_borrow(zxio_t* io, zx_handle_t* out_handle);
 zx_status_t zxio_default_close(zxio_t* io);
 zx_status_t zxio_default_clone(zxio_t* io, zx_handle_t* out_handle);
 void zxio_default_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
@@ -77,6 +78,7 @@ zx_status_t zxio_default_set_window_size(zxio_t* io, uint32_t width, uint32_t he
 static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .close = zxio_default_close,
     .release = zxio_default_release,
+    .borrow = zxio_default_borrow,
     .clone = zxio_default_clone,
     .wait_begin = zxio_default_wait_begin,
     .wait_end = zxio_default_wait_end,

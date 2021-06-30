@@ -120,4 +120,12 @@ TEST_F(Remote, ServiceGetAttributes) {
   EXPECT_EQ(ZXIO_NODE_PROTOCOL_FILE, attr.protocols);
 }
 
+TEST_F(Remote, Borrow) {
+  ASSERT_NO_FAILURES(StartServer<TestServerBase>());
+
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  EXPECT_OK(zxio_borrow(&remote_.io, &handle));
+  EXPECT_NE(handle, ZX_HANDLE_INVALID);
+}
+
 }  // namespace
