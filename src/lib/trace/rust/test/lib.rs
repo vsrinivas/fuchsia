@@ -81,3 +81,12 @@ pub extern "C" fn rs_test_arglimit() {
         "14" => 14,
         "15" => 15);
 }
+
+#[no_mangle]
+pub extern "C" fn rs_test_async_event_with_scope() {
+    // N.B. The ordering here is intentional. The async_enter! macro emits a trace event when the
+    // scoped object is instantiated and when it is dropped. From an output perspective, that means
+    // we are looking to see that the instant event occurs sandwiched between the two.
+    let _guard = trace::async_enter!(1u64, "+enabled", "name", "x" => 5, "y" => 10);
+    trace::instant!("+enabled", "name", trace::Scope::Process, "arg" => 10);
+}

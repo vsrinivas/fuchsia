@@ -41,6 +41,12 @@ pub fn category_enabled(category: &'static CStr) -> bool {
     unsafe { sys::trace_is_category_enabled(category.as_ptr()) }
 }
 
+/// Generate a u64 nonce for use as an identifier for flows and async spans.
+pub fn generate_nonce() -> u64 {
+    // Trivial no-argument function that cannot race.
+    unsafe { sys::trace_generate_nonce() }
+}
+
 /// `Arg` holds an argument to a tracing function, which can be one of many types.
 #[repr(transparent)]
 pub struct Arg<'a>(sys::trace_arg_t, PhantomData<&'a ()>);
@@ -459,6 +465,146 @@ duration_event!(
     /// the trace; it is not necessary to repeat them.
     duration_end,
     sys::trace_context_write_duration_end_event_record,
+);
+
+/// AsyncScope maintains state around the context of async events generated via the
+/// async_enter! macro.
+#[must_use = "AsyncScope must be dropped for event parity"]
+pub struct AsyncScope {
+    id: u64,
+    category: &'static CStr,
+    name: &'static CStr,
+}
+impl AsyncScope {
+    /// Starts a new async event scope, generating a begin event now, and ended when the
+    /// object is dropped.
+    pub fn begin(id: u64, category: &'static CStr, name: &'static CStr, args: &[Arg<'_>]) -> Self {
+        async_begin(id, category, name, args);
+        Self { id, category, name }
+    }
+}
+
+impl Drop for AsyncScope {
+    fn drop(&mut self) {
+        async_end(self.id, self.category, self.name, &[]);
+    }
+}
+
+/// Writes an async event which ends when the current scope exits, or the `end` method is is
+/// manually called.
+///
+/// Async events describe concurrently-scheduled work items that may migrate between threads. They
+/// may be nested by sharing id, and are otherwise differentiated by their id.
+///
+/// 0 to 15 arguments can be associated with the event, each of which is used to annotate the
+/// duration with additional information.
+pub fn async_enter(
+    id: u64,
+    category: &'static CStr,
+    name: &'static CStr,
+    args: &[Arg<'_>],
+) -> AsyncScope {
+    assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
+    AsyncScope::begin(id, category, name, args)
+}
+
+/// Convenience macro for the `async_enter` function, which can be used to trace the duration of a
+/// scope containing async code. This macro returns the drop guard, which the caller may then
+/// choose to manage.
+///
+/// Example:
+///
+/// ```rust
+/// {
+///     let id = generate_nonce();
+///     let _guard = async_enter!(id, "foo", "bar", "x" => 5, "y" => 10);
+///     ...
+///     ...
+///     // event recorded on drop
+/// }
+/// ```
+///
+/// is equivalent to
+///
+/// ```rust
+/// {
+///     let id = generate_nonce();
+///     let _guard = AsyncScope::begin(id, cstr!("foo"), cstr!("bar"), &[ArgValue::of("x", 5),
+///         ArgValue::of("y", 10)]);
+///     ...
+///     ...
+///     // event recorded on drop
+/// }
+/// ```
+///
+/// Calls to async_enter! may be nested.
+#[macro_export]
+macro_rules! async_enter {
+    ($id:expr, $category:expr, $name:expr $(, $key:expr => $val:expr)*) => {
+        $crate::AsyncScope::begin($id, $crate::cstr!($category), $crate::cstr!($name), &[$($crate::ArgValue::of($key, $val)),*]);
+    }
+}
+
+macro_rules! async_proto {
+    ($( #[$docs:meta] )* $name:ident, $sys_method:path $(,)*) => {
+        $( #[$docs] )*
+        pub fn $name(id: u64, category: &'static CStr, name: &'static CStr, args: &[Arg<'_>]) {
+            assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
+            // See justification in `instant`
+            unsafe {
+                let mut category_ref = mem::MaybeUninit::<sys::trace_string_ref_t>::uninit();
+                let context = sys::trace_acquire_context_for_category(
+                    category.as_ptr(), category_ref.as_mut_ptr()
+                );
+                if context != ptr::null() {
+                    let helper = EventHelper::new(context, name);
+                    $sys_method(
+                        context,
+                        helper.ticks,
+                        &helper.thread_ref,
+                        category_ref.as_ptr(),
+                        &helper.name_ref,
+                        id,
+                        args.as_ptr() as *const sys::trace_arg_t,
+                        args.len(),
+                    );
+                    sys::trace_release_context(context);
+                }
+            }
+        }
+    };
+}
+
+async_proto!(
+    /// Writes an async begin event. This event must be matched by an async end event with the same
+    /// id, category, and name. This function is intended to be called through use of the
+    /// `async_enter!` macro.
+    ///
+    /// Async events describe concurrent work that may or may not migrate threads, or be otherwise
+    /// interleaved with other work on the same thread. They can be nested to represent a control
+    /// flow stack.
+    ///
+    /// 0 to 15 arguments can be associated with the event, each of which is used to annotate the
+    /// async event with additional information. Arguments provided in matching async begin and end
+    /// events are combined together in the trace; it is not necessary to repeat them.
+    async_begin,
+    sys::trace_context_write_async_begin_event_record,
+);
+
+async_proto!(
+    /// Writes an async end event. This event must be associated with a prior async begin event
+    /// with the same id, category, and name. This function is intended to be called implicitly
+    /// when the `AsyncScope` object created through use of the `async_enter!` macro is dropped.
+    ///
+    /// Async events describe concurrent work that may or may not migrate threads, or be otherwise
+    /// interleaved with other work on the same thread. They can be nested to represent a control
+    /// flow stack.
+    ///
+    /// 0 to 15 arguments can be associated with the event, each of which is used to annotate the
+    /// async event with additional information. Arguments provided in matching async begin and end
+    /// events are combined together in the trace; it is not necessary to repeat them.
+    async_end,
+    sys::trace_context_write_async_end_event_record,
 );
 
 #[macro_export]
@@ -1127,7 +1273,7 @@ mod sys {
 
 #[cfg(test)]
 mod test {
-    use crate::trim_to_last_char_boundary;
+    use crate::{generate_nonce, trim_to_last_char_boundary};
 
     #[test]
     fn trim_to_last_char_boundary_trims_to_last_character_boundary() {
@@ -1141,5 +1287,13 @@ mod test {
         assert_eq!("💩".as_bytes(), trim_to_last_char_boundary("💩", 5));
         assert_eq!("💩".as_bytes(), trim_to_last_char_boundary("💩", 4));
         assert_eq!(b"", trim_to_last_char_boundary("💩", 3));
+    }
+
+    // Here, we're looking to make sure that successive calls to the function generate distinct
+    // values. How those values are distinct is not particularly meaningful; the current
+    // implementation yields sequential values, but that's not a behavior to rely on.
+    #[test]
+    fn test_generate_nonce() {
+        assert_ne!(generate_nonce(), generate_nonce());
     }
 }

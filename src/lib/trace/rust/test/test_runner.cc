@@ -184,3 +184,23 @@ TEST(TEST_SUITE, test_arglimit) {
       "8: int32(8), 9: int32(9), 10: int32(10), 11: int32(11), 12: int32(12), 13: int32(13), 14: "
       "int32(14), 15: int32(15)})\n");
 }
+
+TEST(TEST_SUITE, test_async_event) {
+  BEGIN_TRACE_TEST;
+
+  fixture_initialize_and_start_tracing();
+
+  rs_test_async_event_with_scope();
+
+  ASSERT_RECORDS(
+      "String(index: 1, \"+enabled\")\n"
+      "String(index: 2, \"process\")\n"
+      "KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n"
+      "Thread(index: 1, <>)\n"
+      "String(index: 3, \"name\")\n"
+      "Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", AsyncBegin(id: 1), {x: "
+      "int32(5), y: int32(10)})\n"
+      "Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Instant(scope: process)"
+      ", {arg: int32(10)})\n"
+      "Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", AsyncEnd(id: 1), {})\n");
+}

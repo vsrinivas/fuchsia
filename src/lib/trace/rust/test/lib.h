@@ -19,4 +19,6 @@ extern "C" {
   void rs_test_flow_begin_step_end_macros(void);
 
   void rs_test_arglimit(void);
+
+  void rs_test_async_event_with_scope(void);
 }
