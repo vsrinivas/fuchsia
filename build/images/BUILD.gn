@@ -15,6 +15,7 @@ import("//build/images/custom_signing.gni")
 import("//build/images/filesystem_limits.gni")
 import("//build/images/fvm.gni")
 import("//build/images/manifest.gni")
+import("//build/images/max_fvm_size.gni")
 import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
 import("//build/images/system_image_fuchsia_packages.gni")
@@ -1065,6 +1066,12 @@ compiled_action("data.blk") {
 }
 
 default_image_deps += [ ":data.blk" ]
+
+# If the user set max_fvm_size instead of fvm_max_disk_size, then copy it over.
+# TODO(awolter): Remove after all clients have migrated to fvm_max_disk_size.
+if (fvm_max_disk_size == false && max_fvm_size != "0") {
+  fvm_max_disk_size = max_fvm_size
+}
 
 # Create a default value of zero for calculating filesystem sizes.
 fvm_max_disk_size_default_zero = 0
