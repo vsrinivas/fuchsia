@@ -4,6 +4,7 @@
 
 #include "src/devices/board/drivers/x86/acpi/resources.h"
 
+#include <fuchsia/hardware/i2c/llcpp/fidl.h>
 #include <fuchsia/hardware/spi/llcpp/fidl.h>
 
 #include "src/devices/board/drivers/x86/acpi/acpi.h"
@@ -31,6 +32,11 @@ bool resource_is_irq(ACPI_RESOURCE* res) {
 bool resource_is_spi(ACPI_RESOURCE* res) {
   return res->Type == ACPI_RESOURCE_TYPE_SERIAL_BUS &&
          res->Data.CommonSerialBus.Type == ACPI_RESOURCE_SERIAL_TYPE_SPI;
+}
+
+bool resource_is_i2c(ACPI_RESOURCE* res) {
+  return res->Type == ACPI_RESOURCE_TYPE_SERIAL_BUS &&
+         res->Data.CommonSerialBus.Type == ACPI_RESOURCE_SERIAL_TYPE_I2C;
 }
 
 zx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out) {
@@ -217,6 +223,26 @@ acpi::status<fuchsia_hardware_spi::wire::SpiChannel> resource_parse_spi(
                          spi_bus.ClockPhase == ACPI_SPI_FIRST_PHASE
                              ? fuchsia_hardware_spi::wire::SpiClockPhase::kClockPhaseFirst
                              : fuchsia_hardware_spi::wire::SpiClockPhase::kClockPhaseSecond);
+
+  return zx::ok(result);
+}
+
+acpi::status<fuchsia_hardware_i2c::wire::I2CChannel> resource_parse_i2c(
+    acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyAllocator& allocator,
+    ACPI_HANDLE* resource_source) {
+  auto& i2c_bus = res->Data.I2cSerialBus;
+  fuchsia_hardware_i2c::wire::I2CChannel result(allocator);
+
+  // Figure out which bus the I2C device belongs to.
+  auto found_result = acpi->GetHandle(device, i2c_bus.ResourceSource.StringPtr);
+  if (!found_result.is_ok()) {
+    return found_result.take_error();
+  }
+  *resource_source = found_result.value();
+  result.set_address(allocator, i2c_bus.SlaveAddress);
+  result.set_is_bus_controller(allocator, i2c_bus.SlaveMode == ACPI_CONTROLLER_INITIATED);
+  result.set_bus_speed(allocator, i2c_bus.ConnectionSpeed);
+  result.set_is_ten_bit(allocator, i2c_bus.AccessMode == ACPI_I2C_10BIT_MODE);
 
   return zx::ok(result);
 }

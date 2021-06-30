@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_RESOURCES_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_RESOURCES_H_
 
+#include <fuchsia/hardware/i2c/llcpp/fidl.h>
 #include <fuchsia/hardware/spi/llcpp/fidl.h>
 #include <zircon/types.h>
 
@@ -69,6 +70,7 @@ bool resource_is_address(ACPI_RESOURCE* res);
 bool resource_is_io(ACPI_RESOURCE* res);
 bool resource_is_irq(ACPI_RESOURCE* res);
 bool resource_is_spi(ACPI_RESOURCE* res);
+bool resource_is_i2c(ACPI_RESOURCE* res);
 
 zx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out);
 zx_status_t resource_parse_address(ACPI_RESOURCE* res, resource_address_t* out);
@@ -83,6 +85,17 @@ zx_status_t resource_parse_irq(ACPI_RESOURCE* res, resource_irq_t* out);
 // |allocator| - FIDL allocator to allocate returned SpiChannel with.
 // |resource_source| - Pointer which will have the ResourceSource's handle put into it.
 acpi::status<fuchsia_hardware_spi::wire::SpiChannel> resource_parse_spi(
+    acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyAllocator& allocator,
+    ACPI_HANDLE* resource_source);
+
+// Parse the given I2C resource.
+// Arguments:
+// |acpi| - ACPI implementation.
+// |device| - Device to which this resource belongs.
+// |res| - Resource to parse.
+// |allocator| - FIDL allocator to allocate returned I2CChannel with.
+// |resource_source| - Pointer which will have the ResourceSource's handle put into it.
+acpi::status<fuchsia_hardware_i2c::wire::I2CChannel> resource_parse_i2c(
     acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyAllocator& allocator,
     ACPI_HANDLE* resource_source);
 #endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_RESOURCES_H_

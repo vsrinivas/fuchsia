@@ -237,3 +237,42 @@ TEST_F(AcpiManagerTest, TestSpiDevice) {
                   },
                   {}));
 }
+
+TEST_F(AcpiManagerTest, TestI2cDevice) {
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("I2C0")));
+  auto device = std::make_unique<Device>("H084");
+  ACPI_RESOURCE i2c_resource = {
+      .Type = ACPI_RESOURCE_TYPE_SERIAL_BUS,
+      .Data =
+          {
+              .I2cSerialBus =
+                  {
+                      .Type = ACPI_RESOURCE_SERIAL_TYPE_I2C,
+                      .SlaveMode = ACPI_CONTROLLER_INITIATED,
+                      .ResourceSource =
+                          {
+                              .Index = 0,
+                              .StringLength = sizeof("\\_SB_.I2C0") - 1,
+                              .StringPtr = const_cast<char*>("\\_SB_.I2C0"),
+                          },
+                      .AccessMode = ACPI_I2C_7BIT_MODE,
+                      .SlaveAddress = 0x84,
+                  },
+          },
+  };
+  device->AddResource(i2c_resource);
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.I2C0", std::move(device)));
+  ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
+
+  Device* test = acpi_.GetDeviceRoot()->FindByPath("\\_SB_.I2C0.H084");
+  acpi::DeviceBuilder* builder = manager_.LookupDevice(test);
+  ASSERT_NO_FATAL_FAILURES(
+      ExpectProps(builder,
+                  {
+                      zx_device_prop_t{.id = BIND_I2C_BUS_ID, .value = 0},
+                      zx_device_prop_t{.id = BIND_I2C_ADDRESS, .value = 0x84},
+                      zx_device_prop_t{.id = BIND_ACPI_BUS_TYPE, .value = acpi::BusType::kI2c},
+                  },
+                  {}));
+}

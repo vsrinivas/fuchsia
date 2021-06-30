@@ -55,6 +55,17 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator
           bus_id_prop = BIND_SPI_BUS_ID;
           dev_props_.emplace_back(
               zx_device_prop_t{.id = BIND_SPI_CHIP_SELECT, .value = result.value().cs()});
+        } else if (resource_is_i2c(res)) {
+          type = BusType::kI2c;
+          auto result = resource_parse_i2c(acpi, handle_, res, allocator, &bus_parent);
+          if (result.is_error()) {
+            zxlogf(WARNING, "Failed to parse I2C resource: %d", result.error_value());
+            return result.take_error();
+          }
+          entry = result.value();
+          bus_id_prop = BIND_I2C_BUS_ID;
+          dev_props_.emplace_back(
+              zx_device_prop_t{.id = BIND_I2C_ADDRESS, .value = result.value().address()});
         }
 
         if (bus_parent) {
@@ -202,6 +213,7 @@ zx::status<zx_device_t*> DeviceBuilder::Build(zx_device_t* platform_bus,
 
 zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata(fidl::AnyAllocator& allocator) {
   using SpiChannel = fuchsia_hardware_spi::wire::SpiChannel;
+  using I2CChannel = fuchsia_hardware_i2c::wire::I2CChannel;
   return std::visit(
       [this, &allocator](auto&& arg) -> zx::status<std::vector<uint8_t>> {
         using T = std::decay_t<decltype(arg)>;
@@ -216,6 +228,16 @@ zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata(fidl::AnyAllo
           auto channels = fidl::VectorView<SpiChannel>::FromExternal(arg);
           metadata.set_channels(allocator, channels);
           return DoFidlEncode(metadata);
+        } else if constexpr (std::is_same_v<T, std::vector<I2CChannel>>) {
+          ZX_ASSERT(HasBusId());  // Bus ID should get set when a child device is added.
+          fuchsia_hardware_i2c::wire::I2CBusMetadata metadata(allocator);
+          for (auto& chan : arg) {
+            chan.set_bus_id(allocator, GetBusId());
+          }
+          auto channels = fidl::VectorView<I2CChannel>::FromExternal(arg);
+          metadata.set_channels(allocator, channels);
+          return DoFidlEncode(metadata);
+
         } else {
           return zx::error(ZX_ERR_NOT_SUPPORTED);
         }
@@ -249,6 +271,10 @@ zx::status<> DeviceBuilder::BuildComposite(zx_device_t* platform_bus,
     DeviceBuilder* parent = pair.first;
     size_t child_index = pair.second;
     BusType type = parent->GetBusType();
+    if (type == BusType::kI2c) {
+      // TODO(fxbug.dev/78833): delete this and publish composites for devices which are i2c.
+      return zx::ok();
+    }
     // Fragments are named <protocol>NNN, e.g. "i2c000", "i2c001".
     fragment_names[bus_index] = fbl::StringPrintf("%s%03u", BusTypeToString(type),
                                                   parent_types.emplace(type, 0).first->second++);
@@ -331,12 +357,17 @@ std::vector<zx_bind_inst_t> DeviceBuilder::GetFragmentBindInsnsForChild(size_t c
       [&ret, child_index](auto&& arg) {
         using T = std::decay_t<decltype(arg)>;
         using SpiChannel = fuchsia_hardware_spi::wire::SpiChannel;
+        using I2CChannel = fuchsia_hardware_i2c::wire::I2CChannel;
         if constexpr (std::is_same_v<T, std::monostate>) {
           ZX_ASSERT_MSG(false, "bus should have children");
         } else if constexpr (std::is_same_v<T, std::vector<SpiChannel>>) {
           SpiChannel& chan = arg[child_index];
           ret.push_back(BI_ABORT_IF(NE, BIND_SPI_BUS_ID, chan.bus_id()));
           ret.push_back(BI_ABORT_IF(NE, BIND_SPI_CHIP_SELECT, chan.cs()));
+        } else if constexpr (std::is_same_v<T, std::vector<I2CChannel>>) {
+          I2CChannel& chan = arg[child_index];
+          ret.push_back(BI_ABORT_IF(NE, BIND_I2C_BUS_ID, chan.bus_id()));
+          ret.push_back(BI_ABORT_IF(NE, BIND_I2C_ADDRESS, chan.address()));
         }
       },
       bus_children_);

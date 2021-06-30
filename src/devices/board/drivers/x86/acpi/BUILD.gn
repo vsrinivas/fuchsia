@@ -13,6 +13,7 @@ group("tests") {
 }
 
 shared_public_deps = [
+  "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
   "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
   "//src/devices/bind/fuchsia.acpi:bind.fuchsia.acpi",
 ]
