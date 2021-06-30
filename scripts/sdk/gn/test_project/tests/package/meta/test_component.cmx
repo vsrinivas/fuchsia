@@ -1,4 +1,7 @@
 {
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "hello_bin"
     }

@@ -1,3 +1,4 @@
+sdk://component_manifest/syslog
 sdk://device/generic-arm64
 sdk://device/generic-x64
 sdk://device/qemu-arm64

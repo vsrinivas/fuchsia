@@ -1,5 +1,6 @@
 // This is a v2 component manifest.
 {
+    include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "hello_bin",
