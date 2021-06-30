@@ -248,7 +248,7 @@ func toIrHandleDispositionEncodings(v []encodingData) []ir.HandleDispositionEnco
 
 type body struct {
 	Type                     string
-	Value                    ir.Value
+	Value                    ir.Record
 	Encodings                []encodingData
 	HandleDefs               []ir.HandleDef
 	Err                      ir.ErrorCode
@@ -554,7 +554,11 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct
 		if err != nil {
 			return err
 		}
-		result.Value = val
+		record, ok := val.(ir.Record)
+		if !ok {
+			return fmt.Errorf("top-level value must be a struct; got %T", val)
+		}
+		result.Value = record
 		kind = isValue
 	case "bytes":
 		encodings, err := p.parseByteSection()

@@ -20,7 +20,7 @@ type All struct {
 
 type EncodeSuccess struct {
 	Name              string
-	Value             interface{}
+	Value             Record
 	Encodings         []HandleDispositionEncoding
 	HandleDefs        []HandleDef
 	BindingsAllowlist *LanguageList
@@ -33,7 +33,7 @@ type EncodeSuccess struct {
 
 type DecodeSuccess struct {
 	Name              string
-	Value             interface{}
+	Value             Record
 	Encodings         []Encoding
 	HandleDefs        []HandleDef
 	BindingsAllowlist *LanguageList
@@ -42,7 +42,7 @@ type DecodeSuccess struct {
 
 type EncodeFailure struct {
 	Name              string
-	Value             interface{}
+	Value             Record
 	HandleDefs        []HandleDef
 	WireFormats       []WireFormat
 	Err               ErrorCode
@@ -62,7 +62,7 @@ type DecodeFailure struct {
 
 type Benchmark struct {
 	Name                     string
-	Value                    interface{}
+	Value                    Record
 	HandleDefs               []HandleDef
 	BindingsAllowlist        *LanguageList
 	BindingsDenylist         *LanguageList
