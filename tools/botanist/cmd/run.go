@@ -270,6 +270,126 @@ func (r *RunCommand) stopTargets(ctx context.Context, targets []target.Target) {
 	_ = eg.Wait()
 }
 
+// setupSSHEnvironment connects to the target over SSH, starts some background
+// processes using the SSH connection (notably the package server and syslog
+// streamer), and returns the necessary environment variables for a subprocess
+// to be able to connect to the target via SSH.
+//
+// It returns a slice of "cleanup" functions that should be deferred in order
+// (therefore called in reverse order) after the caller finishes running its
+// command against the target device.
+func (r *RunCommand) setupSSHEnvironment(ctx context.Context, t target.Target, socketPath string) (map[string]string, []func(), error) {
+	var cleanups []func()
+	env := make(map[string]string)
+	p, err := ioutil.ReadFile(t.SSHKey())
+	if err != nil {
+		return nil, cleanups, err
+	}
+	config, err := sshutil.DefaultSSHConfig(p)
+	if err != nil {
+		return nil, cleanups, err
+	}
+
+	var addr net.IPAddr
+	if configuredIP, ok := r.getConfiguredTargetIP(t); ok {
+		addr.IP = configuredIP
+		env[constants.IPv4AddrEnvKey] = addr.String()
+	} else {
+		ipv4Addr, ipv6Addr, err := r.resolveTargetIP(ctx, t, socketPath)
+		if err != nil {
+			return nil, cleanups, err
+		} else if ipv4Addr == nil && ipv6Addr.IP == nil {
+			return nil, cleanups, fmt.Errorf("failed to resolve an IP address for %s", t.Nodename())
+		}
+		if ipv4Addr != nil {
+			addr.IP = ipv4Addr
+			logger.Debugf(ctx, "IPv4 address of %s found: %s", t.Nodename(), ipv4Addr)
+			env[constants.IPv4AddrEnvKey] = ipv4Addr.String()
+		}
+		if ipv6Addr.IP != nil {
+			// Prefer IPv6 if both IPv4 and IPv6 are available.
+			addr = ipv6Addr
+			logger.Debugf(ctx, "IPv6 address of %s found: %s", t.Nodename(), ipv6Addr)
+			env[constants.IPv6AddrEnvKey] = ipv6Addr.String()
+		}
+	}
+	env[constants.DeviceAddrEnvKey] = addr.String()
+
+	client, err := sshutil.NewClient(
+		ctx,
+		sshutil.ConstantAddrResolver{Addr: &net.TCPAddr{
+			IP:   addr.IP,
+			Zone: addr.Zone,
+			Port: sshutil.SSHPort,
+		}},
+		config,
+		sshutil.DefaultConnectBackoff(),
+	)
+	if err != nil {
+		if err := r.dumpSyslogOverSerial(ctx, socketPath); err != nil {
+			logger.Errorf(ctx, err.Error())
+		}
+		return nil, cleanups, err
+	}
+	cleanups = append(cleanups, client.Close)
+
+	if r.repoURL != "" {
+		if err := botanist.AddPackageRepository(ctx, client, r.repoURL, r.blobURL); err != nil {
+			if err := r.dumpSyslogOverSerial(ctx, socketPath); err != nil {
+				logger.Errorf(ctx, err.Error())
+			}
+			return nil, cleanups, fmt.Errorf("%s: %w", constants.PackageRepoSetupErrorMsg, err)
+		}
+	}
+
+	if r.syslogFile != "" {
+		stopStreaming, err := r.startSyslogStream(ctx, client)
+		if err != nil {
+			if err := r.dumpSyslogOverSerial(ctx, socketPath); err != nil {
+				logger.Errorf(ctx, err.Error())
+			}
+			return nil, cleanups, err
+		}
+		// Stop streaming syslogs after we've finished running the command.
+		cleanups = append(cleanups, stopStreaming)
+	}
+
+	env[constants.SSHKeyEnvKey] = t.SSHKey()
+	return env, cleanups, nil
+}
+
+func (r *RunCommand) getConfiguredTargetIP(t target.Target) (net.IP, bool) {
+	if t, ok := t.(target.ConfiguredTarget); ok {
+		if ip := t.Address(); len(ip) != 0 {
+			return ip, true
+		}
+	}
+	return nil, false
+}
+
+// dumpSyslogOverSerial runs log_listener over serial to collect logs that may
+// help with debugging. This is intended to be used when SSH connection fails to
+// get some information about the failure mode prior to exiting.
+func (r *RunCommand) dumpSyslogOverSerial(ctx context.Context, socketPath string) error {
+	socket, err := serial.NewSocket(ctx, socketPath)
+	if err != nil {
+		return fmt.Errorf("newSerialSocket failed: %w", err)
+	}
+	defer socket.Close()
+	if err := serial.RunDiagnostics(ctx, socket); err != nil {
+		return fmt.Errorf("failed to run serial diagnostics: %w", err)
+	}
+	// Dump the existing syslog buffer. This may not work if pkg-resolver is not
+	// up yet, in which case it will just print nothing.
+	cmds := []serial.Command{
+		{Cmd: []string{syslog.LogListener, "--dump_logs", "yes"}, SleepDuration: 5 * time.Second},
+	}
+	if err := serial.RunCommands(ctx, socket, cmds); err != nil {
+		return fmt.Errorf("failed to dump syslog over serial: %w", err)
+	}
+	return nil
+}
+
 func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args []string, socketPath string) error {
 	subprocessEnv := map[string]string{
 		constants.NodenameEnvKey:     t.Nodename(),
@@ -279,120 +399,16 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 	// If |netboot| is true, then we assume that fuchsia is not provisioned
 	// with a netstack; in this case, do not try to establish a connection.
 	if !r.netboot {
-		p, err := ioutil.ReadFile(t.SSHKey())
+		sshEnv, cleanups, err := r.setupSSHEnvironment(ctx, t, socketPath)
+		for _, cleanup := range cleanups {
+			defer cleanup()
+		}
 		if err != nil {
 			return err
 		}
-		config, err := sshutil.DefaultSSHConfig(p)
-		if err != nil {
-			return err
+		for k, v := range sshEnv {
+			subprocessEnv[k] = v
 		}
-
-		sshAddr := net.TCPAddr{
-			Port: sshutil.SSHPort,
-		}
-		if t, ok := t.(target.ConfiguredTarget); ok {
-			if addr := t.Address(); len(addr) != 0 {
-				sshAddr.IP = addr
-				subprocessEnv[constants.IPv4AddrEnvKey] = addr.String()
-				subprocessEnv[constants.DeviceAddrEnvKey] = addr.String()
-			}
-		}
-		if sshAddr.IP == nil {
-			ipv4Addr, ipv6Addr, err := func() (net.IP, net.IPAddr, error) {
-				ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-				defer cancel()
-				return botanist.ResolveIP(ctx, t.Nodename())
-			}()
-			if err != nil {
-				return fmt.Errorf("could not resolve IP address of %s: %w", t.Nodename(), err)
-			}
-			if ipv4Addr != nil {
-				sshAddr.IP = ipv4Addr
-
-				logger.Infof(ctx, "IPv4 address of %s found: %s", t.Nodename(), ipv4Addr)
-				subprocessEnv[constants.IPv4AddrEnvKey] = ipv4Addr.String()
-				subprocessEnv[constants.DeviceAddrEnvKey] = ipv4Addr.String()
-			} else {
-				logger.Warningf(ctx, "could not resolve IPv4 address of %s", t.Nodename())
-			}
-			if ipv6Addr.IP != nil {
-				// Prefer IPv6 if both IPv4 and IPv6 are available, overwriting
-				// the IPv4 settings.
-				sshAddr.IP = ipv6Addr.IP
-				sshAddr.Zone = ipv6Addr.Zone
-
-				logger.Infof(ctx, "IPv6 address of %s found: %s", t.Nodename(), &ipv6Addr)
-				subprocessEnv[constants.IPv6AddrEnvKey] = ipv6Addr.String()
-				subprocessEnv[constants.DeviceAddrEnvKey] = ipv6Addr.String()
-			} else {
-				logger.Warningf(ctx, "could not resolve IPv6 address of %s", t.Nodename())
-			}
-		}
-
-		if sshAddr.IP == nil {
-			// Reachable when ResolveIP times out because no error is returned.
-			// Invoke `threads` over serial if possible to dump process state to logs.
-			socket, err := serial.NewSocket(ctx, socketPath)
-			if err != nil {
-				logger.Errorf(ctx, "newSerialSocket failed: %v", err)
-			} else {
-				defer socket.Close()
-				if err := serial.RunDiagnostics(ctx, socket); err != nil {
-					logger.Errorf(ctx, "failed to run diagnostics over serial socket: %v", err)
-				}
-			}
-			return fmt.Errorf("%s for %s", constants.FailedToResolveIPErrorMsg, t.Nodename())
-		}
-
-		dumpSyslogOverSerial := func() {
-			socket, err := serial.NewSocket(ctx, socketPath)
-			if err != nil {
-				logger.Errorf(ctx, "newSerialSocket failed: %v", err)
-				return
-			}
-			defer socket.Close()
-			if err := serial.RunDiagnostics(ctx, socket); err != nil {
-				logger.Errorf(ctx, "failed to run serial diagnostics: %v", err)
-			}
-			// Dump the existing syslog buffer. This may not work if pkg-resolver is not
-			// up yet, in which case it will just print nothing.
-			if err := serial.RunCommands(ctx, socket, []serial.Command{{[]string{syslog.LogListener, "--dump_logs", "yes"}, 5 * time.Second}}); err != nil {
-				logger.Errorf(ctx, "failed to dump syslog over serial: %w", err)
-			}
-		}
-		client, err := sshutil.NewClient(
-			ctx,
-			sshutil.ConstantAddrResolver{
-				Addr: &sshAddr,
-			},
-			config,
-			sshutil.DefaultConnectBackoff(),
-		)
-		if err != nil {
-			dumpSyslogOverSerial()
-			return err
-		}
-		defer client.Close()
-
-		if r.repoURL != "" {
-			if err := botanist.AddPackageRepository(ctx, client, r.repoURL, r.blobURL); err != nil {
-				dumpSyslogOverSerial()
-				return fmt.Errorf("%s: %w", constants.PackageRepoSetupErrorMsg, err)
-			}
-		}
-
-		if r.syslogFile != "" {
-			stopStreaming, err := r.startSyslogStream(ctx, client)
-			if err != nil {
-				dumpSyslogOverSerial()
-				return err
-			}
-			// Stop streaming syslogs after we've finished running the command.
-			defer stopStreaming()
-		}
-
-		subprocessEnv[constants.SSHKeyEnvKey] = t.SSHKey()
 	}
 
 	// Run the provided command against t0, adding |subprocessEnv| into
@@ -412,6 +428,27 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 		return fmt.Errorf("command %s with timeout %s failed: %w", args, r.timeout, err)
 	}
 	return nil
+}
+
+func (r *RunCommand) resolveTargetIP(ctx context.Context, t target.Target, socketPath string) (net.IP, net.IPAddr, error) {
+	ipv4Addr, ipv6Addr, err := func() (net.IP, net.IPAddr, error) {
+		ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+		return botanist.ResolveIP(ctx, t.Nodename())
+	}()
+	if err != nil {
+		// Invoke `threads` over serial if possible to dump process state to logs.
+		if socket, err := serial.NewSocket(ctx, socketPath); err != nil {
+			logger.Errorf(ctx, "newSerialSocket failed: %s", err)
+		} else {
+			defer socket.Close()
+			if err := serial.RunDiagnostics(ctx, socket); err != nil {
+				logger.Errorf(ctx, "failed to run diagnostics over serial socket: %s", err)
+			}
+		}
+		return nil, net.IPAddr{}, fmt.Errorf("%s for %s: %w", constants.FailedToResolveIPErrorMsg, t.Nodename(), err)
+	}
+	return ipv4Addr, ipv6Addr, nil
 }
 
 // startSyslogStream uses the SSH client to start streaming syslogs from the
@@ -438,7 +475,7 @@ func (r *RunCommand) startSyslogStream(ctx context.Context, client *sshutil.Clie
 	// The caller should call this function when they want to stop streaming syslogs.
 	return func() {
 		// Signal syslogger.Stream to stop and wait for it to finish before
-		// return. This makes sure syslogger.Stream finish necessary clean-up
+		// return. This makes sure syslogger.Stream finishes necessary cleanup
 		// (e.g. closing any open SSH sessions) before SSH client is closed.
 		cancel()
 		wg.Wait()

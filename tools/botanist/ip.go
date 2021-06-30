@@ -6,7 +6,9 @@ package botanist
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"net"
 	"time"
 
@@ -25,10 +27,15 @@ func getLocalDomain(nodename string) string {
 	return nodename + ".local"
 }
 
-// ResolveIP returns an IP address of a fuchsia node via mDNS.
+// ResolveIP returns the IPv4 and IPv6 addresses of a fuchsia node via mDNS.
 //
-// TODO(joshuaseaton): Refactor dev_finder to share 'resolve' logic with botanist.
+// It makes a best effort at returning *both* the IPv4 and IPv6 addresses, but if
+// both interfaces do not come up within a reasonable amount of time, it returns
+// only the first one that it finds (and no error).
 func ResolveIP(ctx context.Context, nodename string) (net.IP, net.IPAddr, error) {
+	// Keep track of the start time to log the duration after which a timeout
+	// occurred.
+	startTime := time.Now()
 	m := mdns.NewMDNS()
 	defer m.Close()
 	m.EnableIPv4()
@@ -88,16 +95,31 @@ func ResolveIP(ctx context.Context, nodename string) (net.IP, net.IPAddr, error)
 		for {
 			select {
 			case <-ctx.Done():
+				// A timeout/cancelation is only considered an error if we
+				// failed to resolve either address in the allotted time.
+				// If we've already resolved at least one address, then we can
+				// proceed since it's not the end of the world if we haven't
+				// resolved both.
+				if ipv4Addr == nil && ipv6Addr.IP == nil {
+					err := ctx.Err()
+					if errors.Is(err, context.DeadlineExceeded) {
+						err = fmt.Errorf("%w after %s", err, time.Since(startTime))
+					}
+					return nil, net.IPAddr{}, err
+				}
 				return ipv4Addr, ipv6Addr, nil
 			case err := <-errs:
 				return ipv4Addr, ipv6Addr, err
 			case addr := <-out:
-				switch len(addr.IP) {
-				case net.IPv4len:
+				if addr.IP.To4() != nil {
 					ipv4Addr = addr.IP
-				case net.IPv6len:
+				} else if addr.IP.To16() != nil {
 					ipv6Addr = addr
+				} else {
+					log.Panicf("IP address %q is neither IPv4 nor IPv6", addr)
 				}
+
+				// Got both addresses, so we're done.
 				if ipv4Addr != nil && ipv6Addr.IP != nil {
 					return ipv4Addr, ipv6Addr, nil
 				}
