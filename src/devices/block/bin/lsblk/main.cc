@@ -179,6 +179,8 @@ static int cmd_list_skip_blk(void) {
     }
     fdio_cpp::FdioCaller caller(std::move(fd));
 
+    populate_topo_path(caller.borrow_as<fuchsia_device::Controller>(), &info);
+
     std::string type;
     auto result =
         fidl::WireCall(caller.borrow_as<fuchsia_skipblock::SkipBlock>()).GetPartitionInfo();
