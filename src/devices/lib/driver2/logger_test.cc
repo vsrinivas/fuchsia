@@ -90,7 +90,7 @@ TEST(LoggerTest, CreateAndLog) {
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
   svc_binding.Bind(svc->server.TakeChannel(), loop.dispatcher());
 
-  auto logger = Logger::Create(ns.value(), loop.dispatcher(), kName);
+  auto logger = Logger::Create(*ns, loop.dispatcher(), kName);
   ASSERT_TRUE(logger.is_ok());
   loop.RunUntilIdle();
 
@@ -127,6 +127,6 @@ TEST(LoggerTest, Create_NoLogSink) {
   ASSERT_TRUE(ns.is_ok());
 
   // Setup logger.
-  auto logger = Logger::Create(ns.value(), loop.dispatcher(), kName);
+  auto logger = Logger::Create(*ns, loop.dispatcher(), kName);
   ASSERT_TRUE(logger.is_error());
 }

@@ -16,7 +16,7 @@ TEST(StartArgsTest, SymbolValue) {
   symbol_entries[0].Allocate(allocator);
   symbol_entries[0].set_name(allocator, "sym").set_address(allocator, 0xfeed);
 
-  EXPECT_EQ(0xfeedu, start_args::SymbolValue<zx_vaddr_t>(symbol_entries, "sym").value());
+  EXPECT_EQ(0xfeedu, *start_args::SymbolValue<zx_vaddr_t>(symbol_entries, "sym"));
   EXPECT_EQ(ZX_ERR_NOT_FOUND,
             start_args::SymbolValue<zx_vaddr_t>(symbol_entries, "unknown").error_value());
 }
@@ -31,7 +31,7 @@ TEST(StartArgsTest, ProgramValue) {
   fdata::wire::Dictionary program(allocator);
   program.set_entries(allocator, std::move(program_entries));
 
-  EXPECT_EQ("value-for-str", start_args::ProgramValue(program, "key-for-str").value());
+  EXPECT_EQ("value-for-str", *start_args::ProgramValue(program, "key-for-str"));
   EXPECT_EQ(ZX_ERR_WRONG_TYPE, start_args::ProgramValue(program, "key-for-strvec").error_value());
   EXPECT_EQ(ZX_ERR_NOT_FOUND, start_args::ProgramValue(program, "key-unkown").error_value());
 
@@ -49,8 +49,8 @@ TEST(StartArgsTest, NsValue) {
 
   auto svc = start_args::NsValue(ns_entries, "/svc");
   zx_info_handle_basic_t client_info = {}, server_info = {};
-  ASSERT_EQ(ZX_OK, svc.value().channel()->get_info(ZX_INFO_HANDLE_BASIC, &client_info,
-                                                   sizeof(client_info), nullptr, nullptr));
+  ASSERT_EQ(ZX_OK, svc->channel()->get_info(ZX_INFO_HANDLE_BASIC, &client_info, sizeof(client_info),
+                                            nullptr, nullptr));
   ASSERT_EQ(ZX_OK, endpoints->server.channel().get_info(ZX_INFO_HANDLE_BASIC, &server_info,
                                                         sizeof(server_info), nullptr, nullptr));
   EXPECT_EQ(client_info.koid, server_info.related_koid);

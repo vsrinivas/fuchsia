@@ -26,7 +26,7 @@ fit::result<fidl::Client<T>, zx_status_t> ConnectWithResult(const Namespace& ns,
   if (result.is_error()) {
     return fit::error(result.status_value());
   }
-  return fit::ok(fidl::Client<T>(std::move(result.value()), dispatcher));
+  return fit::ok(fidl::Client<T>(std::move(*result), dispatcher));
 }
 
 // Helps to call a fit::promise lambda function.
