@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//src/graphics/lib/gbm/gbm.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
+import("//third_party/Vulkan-Loader/arg.gni")
 
 extras_image = "$target_out_dir/linux/extras.img"
 resource("extras_img") {
@@ -121,10 +122,16 @@ romfs_image("extras") {
     "//src/lib/vulkan:vulkan_headers_and_loader(${linux_lib_toolchain})",
   ]
 
-  inputs = [
-    "${icd_manifest}",
-    "${linux_lib_path}/libvulkan.so",  # Vulkan Loader
-  ]
+  inputs = [ "${icd_manifest}" ]
+  if (output_libvulkan_so_1) {
+    inputs += [
+      "${linux_lib_path}/libvulkan.so.1",  # Vulkan Loader
+    ]
+  } else {
+    inputs += [
+      "${linux_lib_path}/libvulkan.so",  # Vulkan Loader
+    ]
+  }
 
   if (linux_runner_extras_tests) {
     testonly = true
