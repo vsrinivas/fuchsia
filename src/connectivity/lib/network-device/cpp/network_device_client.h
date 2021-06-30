@@ -64,8 +64,31 @@ struct DeviceInfo {
   std::vector<fuchsia_hardware_network::wire::TxAcceleration> tx_accel;
 };
 
+namespace internal {
+
+// Forwards FIDL errors in the |netdev::Device| client to |NetworkDeviceClient|,
+// which handles FIDL errors for both |Device| and |Session|.
+template <typename Derived>
+class DeviceEventHandlerProxy : public fidl::WireAsyncEventHandler<netdev::Device> {
+  void on_fidl_error(fidl::UnbindInfo info) final {
+    static_cast<Derived*>(this)->OnDeviceError(info);
+  }
+};
+
+// Forwards FIDL errors in the |netdev::Session| client to |NetworkDeviceClient|,
+// which handles FIDL errors for both |Device| and |Session|.
+template <typename Derived>
+class SessionEventHandlerProxy : public fidl::WireAsyncEventHandler<netdev::Session> {
+  void on_fidl_error(fidl::UnbindInfo info) final {
+    static_cast<Derived*>(this)->OnSessionError(info);
+  }
+};
+
+}  // namespace internal
+
 // A client for `fuchsia.hardware.network/Device`.
-class NetworkDeviceClient {
+class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDeviceClient>,
+                            public internal::SessionEventHandlerProxy<NetworkDeviceClient> {
  public:
   class Buffer;
   class BufferData;
@@ -297,23 +320,14 @@ class NetworkDeviceClient {
 
    private:
     void Watch();
-    fidl::Client<netdev::StatusWatcher> watcher_;
+    fidl::WireClient<netdev::StatusWatcher> watcher_;
     StatusCallback callback_;
   };
 
+  void OnDeviceError(fidl::UnbindInfo info);
+  void OnSessionError(fidl::UnbindInfo info);
+
  private:
-  template <class T>
-  class EventHandler : public fidl::WireAsyncEventHandler<T> {
-   public:
-    explicit EventHandler(fit::callback<void(fidl::UnbindInfo)>);
-
-    void Unbound(fidl::UnbindInfo) override;
-    void Cancel();
-
-   private:
-    fit::callback<void(fidl::UnbindInfo)> callback_;
-  };
-
   zx_status_t PrepareSession();
   zx::status<netdev::wire::SessionInfo> MakeSessionInfo(fidl::AnyAllocator& alloc);
   zx_status_t PrepareDescriptors();
@@ -346,10 +360,8 @@ class NetworkDeviceClient {
   fzl::VmoMapper descriptors_;
   zx::fifo rx_fifo_;
   zx::fifo tx_fifo_;
-  const std::shared_ptr<EventHandler<netdev::Device>> device_handler_;
-  fidl::Client<netdev::Device> device_;
-  const std::shared_ptr<EventHandler<netdev::Session>> session_handler_;
-  fidl::Client<netdev::Session> session_;
+  const fidl::WireClient<netdev::Device> device_;
+  fidl::WireClient<netdev::Session> session_;
   DeviceInfo device_info_;
   // rx descriptors ready to be sent back to the device.
   std::vector<uint16_t> rx_out_queue_;

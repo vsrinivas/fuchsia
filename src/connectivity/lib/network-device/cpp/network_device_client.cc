@@ -70,28 +70,20 @@ NetworkDeviceClient::NetworkDeviceClient(fidl::ClientEnd<netdev::Device> handle,
         }
         return async_get_default_dispatcher();
       }()),
-      device_handler_(std::make_shared<EventHandler<netdev::Device>>([this](fidl::UnbindInfo info) {
-        if (!info.ok()) {
-          FX_LOGS(ERROR) << "device handler error: " << info;
-          ErrorTeardown(info.status());
-        }
-      })),
-      device_(std::move(handle), dispatcher_, device_handler_),
-      session_handler_(
-          std::make_shared<EventHandler<netdev::Session>>([this](fidl::UnbindInfo info) {
-            if (!info.ok()) {
-              FX_LOGS(ERROR) << "session handler error: " << info;
-              ErrorTeardown(info.status());
-            }
-          })),
+      device_(std::move(handle), dispatcher_, this),
       executor_(std::make_unique<async::Executor>(dispatcher_)) {}
 
-NetworkDeviceClient::~NetworkDeviceClient() {
-  device_handler_->Cancel();
-  device_ = {};
-  session_handler_->Cancel();
-  session_ = {};
+void NetworkDeviceClient::OnDeviceError(fidl::UnbindInfo info) {
+  FX_LOGS(ERROR) << "device handler error: " << info;
+  ErrorTeardown(info.status());
 }
+
+void NetworkDeviceClient::OnSessionError(fidl::UnbindInfo info) {
+  FX_LOGS(ERROR) << "session handler error: " << info;
+  ErrorTeardown(info.status());
+}
+
+NetworkDeviceClient::~NetworkDeviceClient() = default;
 
 SessionConfig NetworkDeviceClient::DefaultSessionConfig(const DeviceInfo& dev_info) {
   const uint32_t buffer_length = std::min(kDefaultBufferLength, dev_info.max_buffer_length);
@@ -166,7 +158,7 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
               break;
             case netdev::wire::DeviceOpenSessionResult::Tag::kResponse:
               netdev::wire::DeviceOpenSessionResponse& response = result.mutable_response();
-              session_.Bind(std::move(response.session), dispatcher_, session_handler_);
+              session_.Bind(std::move(response.session), dispatcher_, this);
               rx_fifo_ = std::move(response.fifos.rx);
               tx_fifo_ = std::move(response.fifos.tx);
               res.complete_ok();
@@ -200,22 +192,6 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
                   .and_then(std::move(prepare_descriptors))
                   .then(std::move(fire_callback));
   fit::schedule_for_consumer(executor_.get(), std::move(prom));
-}
-
-template <class T>
-NetworkDeviceClient::EventHandler<T>::EventHandler(fit::callback<void(fidl::UnbindInfo)> callback)
-    : callback_(std::move(callback)) {}
-
-template <class T>
-void NetworkDeviceClient::EventHandler<T>::Unbound(fidl::UnbindInfo info) {
-  if (callback_) {
-    callback_(info);
-  }
-}
-
-template <class T>
-void NetworkDeviceClient::EventHandler<T>::Cancel() {
-  callback_ = nullptr;
 }
 
 zx_status_t NetworkDeviceClient::PrepareSession() {
