@@ -11,9 +11,7 @@
         // This protocol needs to be defined here so it can be exposed from self below.
         { protocol: "fuchsia.test.Suite" },
     ],
-    use: [
-        // Use test runner which will expose `fuchsia.test.Suite` on test's behalf.
-    ],
+    use: [],
     expose: [
         // The Test Runner Framework expects this protocol to be exposed
         // from the test component. The Rust test adapter provides this protocol.

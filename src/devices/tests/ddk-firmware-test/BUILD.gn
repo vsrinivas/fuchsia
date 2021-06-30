@@ -5,6 +5,8 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/driver_manifest.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test.gni")
@@ -22,6 +24,14 @@ fidl("fuchsia.device.firmware.test") {
 bind_rules("ddk-firmware-test-bind") {
   rules = "test-driver.bind"
   output = "test-driver-bind.h"
+
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+bind_rules("ddk-firmware-test-bind-file") {
+  rules = "test-driver.bind"
+  output = "ddk-firmware-test.bindbc"
+  output_bytecode = true
 
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
@@ -44,6 +54,15 @@ driver_module("ddk-firmware-test") {
     "//src/lib/ddktl",
     "//src/lib/files",
     "//zircon/public/lib/sync",
+  ]
+}
+
+fuchsia_driver_component("ddk-firmware-test-driver") {
+  bind_path = "bind/ddk-firmware-test.bindbc"
+  driver_path = "driver/ddk-firmware-test.so"
+  deps = [
+    ":ddk-firmware-test",
+    ":ddk-firmware-test-bind-file",
   ]
 }
 
@@ -95,9 +114,10 @@ fuchsia_test_package("ddk-firmware-test-package") {
   package_name = "ddk-firmware-test"
   test_components = [ ":ddk-firmware-test-component" ]
   deps = [
-    ":ddk-firmware-test",
+    ":ddk-firmware-test-driver",
     ":driver-manager-realm",
     ":test-firmware-file",
+    "//src/devices/bin/driver-index:component",
     "//src/devices/bus/drivers/platform",
     "//src/lib/isolated_devmgr/v2_component:driver-manager-support",
     "//src/lib/isolated_devmgr/v2_component:driver-manager-test",

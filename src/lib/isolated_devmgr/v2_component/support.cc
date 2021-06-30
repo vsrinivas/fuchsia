@@ -7,6 +7,7 @@
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
+#include <fuchsia/driver/framework/llcpp/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
 #include <fuchsia/kernel/llcpp/fidl.h>
 #include <fuchsia/power/manager/llcpp/fidl.h>
@@ -160,6 +161,18 @@ zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) 
 constexpr fuchsia_boot_Items_ops kItemsOps = {
     .Get = ItemsGet,
 };
+
+class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::DriverIndex> {
+  void MatchDriver(MatchDriverRequestView request, MatchDriverCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+  }
+
+  void WaitForBaseDrivers(WaitForBaseDriversRequestView request,
+                          WaitForBaseDriversCompleter::Sync& completer) override {
+    completer.Reply();
+  }
+};
+
 }  // namespace
 
 static zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
@@ -208,6 +221,16 @@ int main(void) {
         fidl_bind(dispatcher, request.release(), root_job_dispatch, nullptr, &kRootJobOps);
       }),
       fidl::DiscoverableProtocolName<fuchsia_kernel::RootJob>);
+
+  FakeDriverIndex driver_index;
+  context->outgoing()->AddPublicService(
+      std::make_unique<vfs::Service>([&driver_index](zx::channel request,
+                                                     async_dispatcher_t* dispatcher) {
+        fidl::BindServer(dispatcher,
+                         fidl::ServerEnd<fuchsia_driver_framework::DriverIndex>(std::move(request)),
+                         &driver_index);
+      }),
+      fidl::DiscoverableProtocolName<fuchsia_driver_framework::DriverIndex>);
 
   context->outgoing()->root_dir()->AddEntry("system", std::make_unique<vfs::PseudoDir>());
   context->outgoing()->root_dir()->AddEntry("pkgfs", std::make_unique<vfs::PseudoDir>());

@@ -28,6 +28,8 @@ class DriverLoader {
   // `coordinator->dispatcher()` thread.
   void StartLoadingThread(Coordinator* coordinator);
 
+  internal::BasePackageResolver& base_resolver() { return base_resolver_; }
+
  private:
   // Search through the filesystem for drivers, load the drivers, then pass them to Coordinator
   // so they can be found. This needs to be called from its own thread because I/O operations are

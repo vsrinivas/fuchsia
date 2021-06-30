@@ -11,6 +11,10 @@
             name: "driver-manager-support",
             url: "fuchsia-pkg://fuchsia.com/ddk-firmware-test#meta/driver-manager-support.cm",
         },
+        {
+            name: "driver-index",
+            url: "#meta/driver-index.cm",
+        },
     ],
     offer: [
         {
@@ -31,6 +35,21 @@
             ],
             from: "#driver-manager-support",
             to: "#driver-manager",
+        },
+        {
+            protocol: [ "fuchsia.driver.framework.DriverIndex" ],
+            from: "#driver-index",
+            to: "#driver-manager",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#driver-index",
+        },
+        {
+            directory: "pkgfs-packages-delayed",
+            from: "parent",
+            to: [ "#driver-index" ],
         },
         {
             directory: "pkgfs-delayed",

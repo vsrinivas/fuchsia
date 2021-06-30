@@ -40,6 +40,7 @@
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",
+                "fuchsia.driver.framework.DriverIndex",
                 "fuchsia.kernel.RootJob",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Launcher",

@@ -14,10 +14,12 @@
             protocol: [ "fuchsia.driver.framework.DriverIndex" ],
         },
     ],
-
-    // Capabilities used by this component.
     use: [
-        // Use the built-in ELF runner to run native binaries.
+        {
+            directory: "pkgfs-packages-delayed",
+            rights: [ "r*" ],
+            path: "/pkgfs/packages",
+        },
     ],
     expose: [
         {

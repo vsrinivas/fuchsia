@@ -40,6 +40,7 @@
 #include "driver_loader.h"
 #include "fbl/auto_lock.h"
 #include "fuchsia/device/manager/llcpp/fidl.h"
+#include "fuchsia/driver/framework/llcpp/fidl.h"
 #include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
 #include "init_task.h"
 #include "inspect.h"
@@ -56,6 +57,7 @@ namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 using statecontrol_fidl::wire::SystemPowerState;
 namespace device_manager_fidl = fuchsia_device_manager;
 namespace power_manager_fidl = fuchsia_power_manager;
+namespace fdf = fuchsia_driver_framework;
 
 class DriverHostLoaderService;
 class FsProvider;
@@ -125,6 +127,8 @@ struct CoordinatorConfig {
   zx::event oom_event;
   // Client for the Arguments service.
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args;
+  // Client for the DriverIndex.
+  fidl::Client<fdf::DriverIndex> driver_index;
   // Whether we require /system.
   bool require_system = false;
   // Whether we require ASan drivers.
@@ -335,6 +339,7 @@ class Coordinator : public fidl::WireServer<device_manager_fidl::BindDebugger>,
   zx_status_t RegisterWithPowerManager(zx::channel power_manager_client,
                                        zx::channel system_state_transition_client,
                                        zx::channel devfs_handle);
+  void ScheduleBaseDriverLoading();
 
  private:
   CoordinatorConfig config_;
@@ -348,6 +353,9 @@ class Coordinator : public fidl::WireServer<device_manager_fidl::BindDebugger>,
 
   // All Drivers
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;
+
+  // Drivers we cached from the DriverIndex.
+  fbl::DoublyLinkedList<std::unique_ptr<Driver>> driver_index_drivers_;
 
   // Drivers to try last
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> fallback_drivers_;
@@ -372,6 +380,9 @@ class Coordinator : public fidl::WireServer<device_manager_fidl::BindDebugger>,
   InspectManager* const inspect_manager_;
   std::unique_ptr<SystemStateManager> system_state_manager_;
   SystemPowerState shutdown_system_state_;
+
+  zx_status_t MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>& dev);
+  const Driver* MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev);
 
   // Given a device, return all of the Drivers whose bind programs match with the device.
   // The returned vector is organized by priority, so if only one driver is being bound it

@@ -311,9 +311,16 @@ int main(int argc, char** argv) {
     }
   }
 
+  auto driver_index_client = service::Connect<fuchsia_driver_framework::DriverIndex>();
+  if (driver_index_client.is_error()) {
+    return driver_index_client.error_value();
+  }
+
   CoordinatorConfig config;
   SystemInstance system_instance;
   config.boot_args = &boot_args;
+  config.driver_index =
+      fidl::Client<fdf::DriverIndex>(std::move(driver_index_client.value()), loop.dispatcher());
   config.require_system = driver_manager_params.require_system;
   config.asan_drivers = driver_manager_params.driver_host_asan;
   config.suspend_fallback = driver_manager_params.suspend_timeout_fallback;
@@ -487,6 +494,7 @@ int main(int argc, char** argv) {
   outgoing.ServeFromStartupInfo();
 
   coordinator.set_running(true);
+  coordinator.ScheduleBaseDriverLoading();
   status = loop.Run();
   LOGF(ERROR, "Coordinator exited unexpectedly: %s", zx_status_get_string(status));
   return status;

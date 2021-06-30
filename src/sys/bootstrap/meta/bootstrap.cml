@@ -767,6 +767,12 @@
             from: "#fshost",
             to: "#base_resolver",
         },
+        {
+            directory: "pkgfs-packages-delayed",
+            from: "#fshost",
+            to: "#driver_index",
+            dependency: "weak_for_migration",
+        },
     ],
     expose: [
         // This handle is used by base_resolver to resolve packages from the base package set.

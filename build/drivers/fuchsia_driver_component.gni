@@ -1,0 +1,63 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_component.gni")
+import("//build/drivers/driver_manifest.gni")
+
+# Defines a Fuchsia driver component.
+# A driver component is a normal component that launches a driver.
+# For more information on components see:
+# https://fuchsia.dev/fuchsia-src/development/components/build
+#
+# At the moment this template will generate the Component Manifest
+# at build time. If you'd like to write your own Component Manifest,
+# simply use the fuchsia_component build template.
+#
+# Parameters
+#
+#   bind_path (required)
+#     The path to the driver's bind file.
+#     Type: path
+#
+#   driver_path (required)
+#     The path to the driver's library file (.so).
+#     Type: path
+#
+#   deps
+#   testonly
+#   visibility
+template("fuchsia_driver_component") {
+  assert(defined(invoker.bind_path), "Must declare a bind_path")
+  assert(defined(invoker.driver_path), "Must declare a driver_path")
+
+  manifest_target = "${target_name}_manifest"
+  manifest_path = "${target_gen_dir}/meta/${target_name}.cml"
+  generated_file(manifest_target) {
+    contents = {
+      include = [
+        "syslog/client.shard.cml",
+        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+      ]
+      program = {
+        runner = "driver"
+        program = "${invoker.driver_path}"
+        bind = "${invoker.bind_path}"
+      }
+    }
+    outputs = [ "$manifest_path" ]
+    output_conversion = "json"
+    visibility = [ ":*" ]
+  }
+
+  fuchsia_component(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "component_name",
+                             "testonly",
+                             "deps",
+                           ])
+    deps += [ ":${manifest_target}" ]
+    manifest = manifest_path
+  }
+}

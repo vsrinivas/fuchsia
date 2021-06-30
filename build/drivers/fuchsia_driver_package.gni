@@ -22,6 +22,10 @@ import("//build/drivers/driver_manifest.gni")
 #
 # Parameters:
 #
+#   driver_components (required)
+#     A list of driver components to include in the package.
+#     Type: list(labels)
+#
 #   package_name (optional)
 #     The name of the package.
 #     Type: string
@@ -38,6 +42,10 @@ import("//build/drivers/driver_manifest.gni")
 #   testonly
 #   visibility
 template("fuchsia_driver_package") {
+  assert(
+      defined(invoker.driver_components) && invoker.driver_components != [],
+      "`driver_components` must be specified when calling fuchsia_driver_package($target_name)")
+
   package_name = target_name
   if (defined(invoker.package_name)) {
     package_name = invoker.package_name
@@ -45,12 +53,9 @@ template("fuchsia_driver_package") {
 
   driver_manifest_target = "${target_name}_driver_manifest"
   driver_manifest(driver_manifest_target) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "deps",
-                           ])
+    forward_variables_from(invoker, [ "testonly" ])
     package_url = "fuchsia-pkg://fuchsia.com/${package_name}"
+    deps = invoker.driver_components
 
     # We don't want individual package's driver manifests to end up in the image.
     # Instead these files will be collected by one `combined_driver_manifest` target.
@@ -63,5 +68,6 @@ template("fuchsia_driver_package") {
       deps = []
     }
     deps += [ ":${driver_manifest_target}" ]
+    deps += invoker.driver_components
   }
 }

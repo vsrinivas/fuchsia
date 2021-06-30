@@ -60,6 +60,13 @@
             to: [ "#driver_manager" ],
         },
         {
+            directory: "pkgfs-delayed",
+            from: "#driver-manager-support",
+            as: "pkgfs-packages-delayed",
+            to: [ "#driver_index" ],
+            subdir: "packages",
+        },
+        {
             directory: "system-delayed",
             from: "#driver-manager-support",
             to: [ "#driver_manager" ],

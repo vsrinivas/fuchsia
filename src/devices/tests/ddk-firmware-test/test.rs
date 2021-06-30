@@ -142,6 +142,15 @@ async fn create_realm(
         targets: vec![driver_manager.clone()],
     })?;
     builder.add_route(CapabilityRoute {
+        capability: Capability::directory(
+            "pkgfs-packages-delayed",
+            "/pkgfs/packages",
+            fio2::R_STAR_DIR,
+        ),
+        source: fake_filesystem.clone(),
+        targets: vec![driver_manager.clone()],
+    })?;
+    builder.add_route(CapabilityRoute {
         capability: Capability::directory("system-delayed", "/system", fio2::R_STAR_DIR),
         source: fake_filesystem.clone(),
         targets: vec![driver_manager.clone()],
@@ -192,8 +201,14 @@ async fn load_package_firmware_test() -> Result<(), Error> {
     let driver_dir = directory_broker::DirectoryBroker::from_directory_proxy(
         io_util::open_directory_in_namespace("/pkg/driver/test", io_util::OPEN_RIGHT_READABLE)?,
     );
+    let meta_dir = directory_broker::DirectoryBroker::from_directory_proxy(
+        io_util::open_directory_in_namespace("/pkg/meta", io_util::OPEN_RIGHT_READABLE)?,
+    );
+    let bind_dir = directory_broker::DirectoryBroker::from_directory_proxy(
+        io_util::open_directory_in_namespace("/pkg/bind", io_util::OPEN_RIGHT_READABLE)?,
+    );
     let base_manifest = vfs::file::vmo::asynchronous::read_only_static(
-        r#"[{"driver_url": "fuchsia-pkg://fuchsia.com/my-package#driver/ddk-firmware-test.so"}]"#,
+        r#"[{"driver_url": "fuchsia-pkg://fuchsia.com/my-package#meta/ddk-firmware-test-driver.cm"}]"#,
     );
     let pkgfs = vfs::pseudo_directory! {
         "packages" => vfs::pseudo_directory! {
@@ -207,6 +222,8 @@ async fn load_package_firmware_test() -> Result<(), Error> {
             "my-package" => vfs::pseudo_directory! {
                 "0" => vfs::pseudo_directory! {
                     "driver" => driver_dir,
+                    "meta" => meta_dir,
+                    "bind" => bind_dir,
                         "lib" => vfs::pseudo_directory! {
                             "firmware" => vfs::pseudo_directory! {
                                 "package-firmware" => firmware_file,

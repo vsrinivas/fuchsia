@@ -50,6 +50,11 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
     completer.ReplySuccess(driver);
   }
 
+  void WaitForBaseDrivers(WaitForBaseDriversRequestView request,
+                          WaitForBaseDriversCompleter::Sync& completer) override {
+    completer.Reply();
+  }
+
  private:
   async_dispatcher_t* dispatcher_;
   MatchCallback match_callback_;

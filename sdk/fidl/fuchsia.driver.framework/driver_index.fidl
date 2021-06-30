@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.driver.framework;
 
 using fuchsia.url;
@@ -11,7 +10,7 @@ using zx;
 
 /// Driver matched by the driver index.
 table MatchedDriver {
-    /// URL of the driver.
+    /// URL of the driver component.
     1: string:fuchsia.url.MAX_URL_LENGTH url;
 
     /// Node index for a composite driver (optional).
@@ -19,6 +18,10 @@ table MatchedDriver {
 
     /// Total number of nodes for a composite driver (optional).
     3: uint32 num_nodes;
+
+    /// URL of the driver library.
+    /// This should only be used by DriverManager before Drivers-As-Components.
+    4: string:fuchsia.url.MAX_URL_LENGTH driver_url;
 };
 
 /// Protocol through which the driver index can be queried.
@@ -26,4 +29,7 @@ table MatchedDriver {
 protocol DriverIndex {
     /// Match a set of device arguments to a driver package URL.
     MatchDriver(NodeAddArgs args) -> (MatchedDriver driver) error zx.status;
+
+    /// This function will block until base drivers are loaded.
+    WaitForBaseDrivers() -> ();
 };
