@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/bf78a2e5319319fc84583f305d0ce7136e163a39/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/f7e97ad5381faacd1f80cc36e150497d300d2d9e/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/bf78a2e5319319fc84583f305d0ce7136e163a39/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/f7e97ad5381faacd1f80cc36e150497d300d2d9e/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -3633,11 +3633,10 @@ From //src/graphics/lib/gbm/gbm.gni:6
 
 ### use_cxx_relative_vtables
 Controls if we enable relative-vtables for C++ targets.
-TODO(fxbug.dev/45314): Set this to true in a followup one-line CL.
 
 **Current value (from the default):** `true`
 
-From //build/config/clang/clang.gni:20
+From //build/config/clang/clang.gni:19
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
@@ -3813,12 +3812,11 @@ Whether libraries under //vendor should be linted.
 
 From //build/fidl/fidl_library.gni:13
 
-### virtcon_animation_path
-Path to file to use for animation
+### virtcon_boot_animation_path
 
-**Current value (from the default):** `"//src/bringup/bin/virtcon2/data/animation.riv"`
+**Current value (from the default):** `"//src/bringup/bin/virtcon2/data/boot-animation-dark.riv"`
 
-From //src/bringup/bin/virtcon2/virtcon_args.gni:11
+From //src/bringup/bin/virtcon2/virtcon_args.gni:12
 
 ### virtcon_font_path
 
@@ -3975,7 +3973,7 @@ From //build/images/args.gni:80
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:168
+From //build/config/fuchsia/BUILD.gn:177
 
 ### zircon_b_partition
 
