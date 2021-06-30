@@ -137,64 +137,68 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
     callback(result.status());
     return;
   }
-  auto prom =
-      bridge.consumer.promise()
-          .and_then([this, cfg = std::move(config_factory)](
-                        DeviceInfo& info) -> fit::result<void, zx_status_t> {
-            session_config_ = cfg(info);
-            device_info_ = std::move(info);
-            zx_status_t status;
-            if ((status = PrepareSession()) != ZX_OK) {
-              return fit::error(status);
-            }
-            return fit::ok();
-          })
-          .and_then([this, name]() -> fit::promise<void, zx_status_t> {
-            fit::bridge<void, zx_status_t> bridge;
-            fidl::FidlAllocator alloc;
-            zx::status session_info = MakeSessionInfo(alloc);
-            if (session_info.is_error()) {
-              return fit::make_error_promise(session_info.error_value());
-            }
-            fidl::Result result = device_->OpenSession(
-                fidl::StringView::FromExternal(name), std::move(session_info.value()),
-                [this, res = std::move(bridge.completer)](
-                    fidl::WireResponse<netdev::Device::OpenSession>* response) mutable {
-                  netdev::wire::DeviceOpenSessionResult& result = response->result;
-                  switch (result.which()) {
-                    case netdev::wire::DeviceOpenSessionResult::Tag::kErr:
-                      res.complete_error(result.err());
-                      break;
-                    case netdev::wire::DeviceOpenSessionResult::Tag::kResponse:
-                      netdev::wire::DeviceOpenSessionResponse& response = result.mutable_response();
-                      session_.Bind(std::move(response.session), dispatcher_, session_handler_);
-                      rx_fifo_ = std::move(response.fifos.rx);
-                      tx_fifo_ = std::move(response.fifos.tx);
-                      res.complete_ok();
-                      break;
-                  }
-                });
-            if (!result.ok()) {
-              return fit::make_error_promise(result.status());
-            }
-            return bridge.consumer.promise();
-          })
-          .and_then([this]() -> fit::result<void, zx_status_t> {
-            zx_status_t status;
-            if ((status = PrepareDescriptors()) != ZX_OK) {
-              return fit::error(status);
-            } else {
-              return fit::ok();
-            }
-          })
-          .then([this, cb = std::move(callback)](fit::result<void, zx_status_t>& result) {
-            if (result.is_ok()) {
-              cb(ZX_OK);
-            } else {
-              session_running_ = false;
-              cb(result.error());
-            }
-          });
+
+  auto prepare_session =
+      [this, cfg = std::move(config_factory)](DeviceInfo& info) -> fit::result<void, zx_status_t> {
+    session_config_ = cfg(info);
+    device_info_ = std::move(info);
+    zx_status_t status;
+    if ((status = PrepareSession()) != ZX_OK) {
+      return fit::error(status);
+    }
+    return fit::ok();
+  };
+  auto open_session = [this, name]() -> fit::promise<void, zx_status_t> {
+    fit::bridge<void, zx_status_t> bridge;
+    fidl::FidlAllocator alloc;
+    zx::status session_info = MakeSessionInfo(alloc);
+    if (session_info.is_error()) {
+      return fit::make_error_promise(session_info.error_value());
+    }
+    fidl::Result result = device_->OpenSession(
+        fidl::StringView::FromExternal(name), session_info.value(),
+        [this, res = std::move(bridge.completer)](
+            fidl::WireResponse<netdev::Device::OpenSession>* response) mutable {
+          netdev::wire::DeviceOpenSessionResult& result = response->result;
+          switch (result.which()) {
+            case netdev::wire::DeviceOpenSessionResult::Tag::kErr:
+              res.complete_error(result.err());
+              break;
+            case netdev::wire::DeviceOpenSessionResult::Tag::kResponse:
+              netdev::wire::DeviceOpenSessionResponse& response = result.mutable_response();
+              session_.Bind(std::move(response.session), dispatcher_, session_handler_);
+              rx_fifo_ = std::move(response.fifos.rx);
+              tx_fifo_ = std::move(response.fifos.tx);
+              res.complete_ok();
+              break;
+          }
+        });
+    if (!result.ok()) {
+      return fit::make_error_promise(result.status());
+    }
+    return bridge.consumer.promise();
+  };
+  auto prepare_descriptors = [this]() -> fit::result<void, zx_status_t> {
+    zx_status_t status;
+    if ((status = PrepareDescriptors()) != ZX_OK) {
+      return fit::error(status);
+    } else {
+      return fit::ok();
+    }
+  };
+  auto fire_callback = [this, cb = std::move(callback)](fit::result<void, zx_status_t>& result) {
+    if (result.is_ok()) {
+      cb(ZX_OK);
+    } else {
+      session_running_ = false;
+      cb(result.error());
+    }
+  };
+  auto prom = bridge.consumer.promise()
+                  .and_then(std::move(prepare_session))
+                  .and_then(std::move(open_session))
+                  .and_then(std::move(prepare_descriptors))
+                  .then(std::move(fire_callback));
   fit::schedule_for_consumer(executor_.get(), std::move(prom));
 }
 
