@@ -31,14 +31,10 @@ type sdkProvider interface {
 		verbose bool, sshArgs []string) error
 }
 
+var osExit = os.Exit
+
 func main() {
 	var err error
-
-	sdk, err := sdkcommon.New()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not initialize SDK %v", err)
-		os.Exit(1)
-	}
 
 	helpFlag := flag.Bool("help", false, "Show the usage message")
 	verboseFlag := flag.Bool("verbose", false, "Print informational messages.")
@@ -50,6 +46,7 @@ func main() {
 	deviceIPFlag := flag.String("device-ip", "", `Serves packages to a device with the given device ip address. Cannot be used with --device-name."
 		  If neither --device-name nor --device-ip are specified, the device-name configured using fconfig is used.`)
 	sshConfigFlag := flag.String("sshconfig", "", "Use the specified sshconfig file instead of fssh's version.")
+	dataPathFlag := flag.String("data-path", "", "Specifies the data path for SDK tools. Defaults to $HOME/.fuchsia")
 	flag.Var(&level, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
 
 	flag.Parse()
@@ -59,7 +56,12 @@ func main() {
 
 	if *helpFlag {
 		usage()
-		os.Exit(0)
+		osExit(0)
+	}
+	sdk, err := sdkcommon.NewWithDataPath(*dataPathFlag)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not initialize SDK %v", err)
+		osExit(1)
 	}
 
 	deviceConfig, err := sdk.ResolveTargetAddress(*deviceIPFlag, *deviceNameFlag)
@@ -73,7 +75,7 @@ func main() {
 	// device name which is needed to look up the property.
 	sshPort := ""
 	if *deviceIPFlag == "" {
-		sshPort := deviceConfig.SSHPort
+		sshPort = deviceConfig.SSHPort
 		if err != nil {
 			log.Fatalf("Error reading SSH port configuration: %v", err)
 		}
@@ -88,12 +90,12 @@ func main() {
 	if err := ssh(sdk, *verboseFlag, deviceConfig.DeviceIP, *sshConfigFlag, *privateKeyFlag, sshPort, flag.Args()); err != nil {
 		var exitError *exec.ExitError
 		if errors.As(err, &exitError) {
-			os.Exit(exitError.ExitCode())
+			osExit(exitError.ExitCode())
 		} else {
 			log.Fatalf("Error running ssh: %v", err)
 		}
 	}
-	os.Exit(0)
+	osExit(0)
 }
 
 func usage() {
