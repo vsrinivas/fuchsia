@@ -1392,3 +1392,16 @@
   reviewers: ['geb@google.com', 'ypomortsev@google.com', 'abdulla@google.com', 'surajmalhotra@google.com', 'bryanhenry@google.com', 'abarth@google.com', 'jsankey@google.com']
   submitted: '2021-05-24'
   reviewed: '2021-06-24'
+
+- name: 'RFC-0108'
+  title: 'Component binder protocol'
+  short_description: 'Framework-provided protocol that allows components to start other components.'
+  authors: ['yaneury@google.com']
+  file: '0108_component_binder_protocol.md'
+  area: ['Component Framework']
+  issue: ['']
+  gerrit_change_id: ['533701']
+  status: 'Accepted'
+  reviewers: ['geb@google.com', 'thatguy@google.com', 'hjfreyer@google.com', 'shayba@google.com']
+  submitted: '2021-05-21'
+  reviewed: '2021-06-30'

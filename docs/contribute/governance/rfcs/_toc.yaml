@@ -227,3 +227,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0106_manifest_includes_in_sdk.md
 - title: "RFC-0107: Dynamic Offers"
   path: /docs/contribute/governance/rfcs/0107_dynamic_offers.md
+- title: "RFC-0108: Component binder protocol"
+  path: /docs/contribute/governance/rfcs/0108_component_binder_protocol.md
