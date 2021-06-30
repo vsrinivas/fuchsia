@@ -31,10 +31,7 @@ is `/published-data`, and whose maximum usable
 
 ## Routing directory capabilities
 
-Components route directory capabilities by either:
-
--   [exposing](#routing-directory-capability-expose) them,
--   or [offering](#routing-directory-capability-offer) them.
+Components route directory capabilities by either [exposing](#routing-directory-capability-expose) them or [offering](#routing-directory-capability-offer) them.
 
 When a component wants to make one of its directories available to other
 components, it specifies the path of that directory in its
@@ -56,8 +53,11 @@ To [expose][expose] the directory to a parent:
 }
 ```
 
-You may optionally specify [`rights`](#directory-capability-rights) and
-optionally specify a [`subdir`](#subdirectories).
+You may optionally specify:
+
+* [`as`](#renaming)
+* [`rights`](#directory-capability-rights)
+* [`subdir`](#subdirectories)
 
 ### Offering {#routing-directory-capability-offer}
 
@@ -75,8 +75,11 @@ To [offer][offer] a directory to a child:
 }
 ```
 
-You may optionally specify [`rights`](#directory-capability-rights) and
-optionally specify a [`subdir`](#subdirectories).
+You may optionally specify:
+
+* [`as`](#renaming)
+* [`rights`](#directory-capability-rights)
+* [`subdir`](#subdirectories)
 
 ## Consuming directory capabilities
 
@@ -104,7 +107,7 @@ this provider.
 ```
 
 You must specify [`rights`](#directory-capability-rights).
-You may optionally specify a [`subdir`](#subdirectories).
+You may optionally specify [`subdir`](#subdirectories)
 
 See [`//examples/components/routing`][routing-example] for a working example of
 routing a directory capability from one component to another.
@@ -189,6 +192,23 @@ You may `expose`, `offer`, or `use` a subdirectory of a directory capability:
             from: "parent",
             to: [ "#child-a", "#child-b" ],
             subdir: "children",
+        },
+    ],
+}
+```
+
+## Renaming directories {#renaming}
+
+You may `expose` or `offer` a directory capability by a different name:
+
+```json5
+{
+    offer: [
+        {
+            directory: "data",
+            from: "#child-a",
+            to: [ "#child-b" ],
+            as: "a-data",
         },
     ],
 }
