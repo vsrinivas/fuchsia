@@ -779,3 +779,66 @@ async fn assert_rewind_no_overflow(dir: &DirectoryProxy) {
     // returned buffers are the same length.
     assert_eq!(buf0.len(), buf1.len());
 }
+
+#[fuchsia::test]
+async fn unsupported() {
+    for dir in dirs_to_test().await {
+        unsupported_per_package_source(dir).await
+    }
+}
+
+async fn unsupported_per_package_source(root_dir: DirectoryProxy) {
+    // Test unsupported APIs for root directory and subdirectory.
+    assert_unsupported_directory_calls(&root_dir, ".", "file").await;
+    assert_unsupported_directory_calls(&root_dir, ".", "dir").await;
+    assert_unsupported_directory_calls(&root_dir, ".", "meta").await;
+    assert_unsupported_directory_calls(&root_dir, "dir", "file").await;
+    assert_unsupported_directory_calls(&root_dir, "dir", "dir").await;
+
+    // Test unsupported APIs for meta directory and subdirectory.
+    assert_unsupported_directory_calls(&root_dir, "meta", "file").await;
+    assert_unsupported_directory_calls(&root_dir, "meta", "dir").await;
+    assert_unsupported_directory_calls(&root_dir, "meta/dir", "file").await;
+    assert_unsupported_directory_calls(&root_dir, "meta/dir", "dir").await;
+}
+
+async fn assert_unsupported_directory_calls(
+    package_root: &DirectoryProxy,
+    parent_path: &str,
+    child_base_path: &str,
+) {
+    let parent = io_util::directory::open_directory(package_root, parent_path, 0)
+        .await
+        .expect("open parent directory");
+
+    // Verify unlink() is not supported.
+    assert_eq!(
+        zx::Status::from_raw(parent.unlink(child_base_path).await.unwrap()),
+        zx::Status::NOT_SUPPORTED
+    );
+
+    // Verify link() is not supported.
+    let (status, token) = parent.get_token().await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert_eq!(
+        zx::Status::from_raw(parent.link(child_base_path, token.unwrap(), "link").await.unwrap()),
+        zx::Status::NOT_SUPPORTED
+    );
+
+    // Verify rename() is not supported.
+    let (status, token) = parent.get_token().await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert_eq!(
+        zx::Status::from_raw(
+            parent.rename(child_base_path, token.unwrap(), "renamed").await.unwrap()
+        ),
+        zx::Status::NOT_SUPPORTED
+    );
+
+    // Verify watch() is not supported.
+    let (h0, _h1) = zx::Channel::create().unwrap();
+    assert_eq!(
+        zx::Status::from_raw(parent.watch(0, 0, h0).await.unwrap()),
+        zx::Status::NOT_SUPPORTED
+    );
+}
