@@ -41,7 +41,11 @@ class AppLauncher extends StatelessWidget {
                     )
                   : null,
               enabled: _isEnabled(item),
-              onTap: () => app.launch([item['title']!, item['url']!]),
+              onTap: () {
+                if (!_isLoading(item)) {
+                  app.launch([item['title']!, item['url']!]);
+                }
+              },
             );
           });
         },
@@ -59,7 +63,5 @@ class AppLauncher extends StatelessWidget {
     return false;
   }
 
-  bool _isEnabled(Map<String, String> item) {
-    return item['url'] != null && !_isLoading(item);
-  }
+  bool _isEnabled(Map<String, String> item) => item['url'] != null;
 }
