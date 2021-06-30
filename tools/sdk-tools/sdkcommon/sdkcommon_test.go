@@ -548,11 +548,12 @@ func TestGetFuchsiaProperty(t *testing.T) {
 		device, property, expected, errString string
 	}{
 		{"", "device-name", "fake-target-device-name", ""},
-		{"some-other-device", "device-name", "", ""},
+		{"some-other-device", "device-name", "some-other-device", ""},
 		{"some-other-device", "random-property", "", "Could not find property some-other-device.random-property"},
 		{"", "random-property", "", "Could not find property fake-target-device-name.random-property"},
 		{"", PackageRepoKey, "fake-target-device-name/packages/amber-files", ""},
 		{"another-target-device-name", PackageRepoKey, "another-target-device-name/packages/amber-files", ""},
+		{"unknown-device-name", PackageRepoKey, "unknown-device-name/packages/amber-files", ""},
 	}
 
 	for i, data := range testData {
@@ -615,21 +616,41 @@ func TestGetDeviceConfiguration(t *testing.T) {
 	ExecCommand = helperCommandForGetFuchsiaProperty
 	defer func() { ExecCommand = exec.Command }()
 
-	const deviceName string = "another-target-device-name"
-	val, err := sdk.GetDeviceConfiguration(deviceName)
-	if err != nil {
-		t.Fatalf("unexpected err %v", err)
+	tests := []struct {
+		deviceName           string
+		expectedDeviceConfig DeviceConfig
+	}{
+		{
+			deviceName: "another-target-device-name",
+			expectedDeviceConfig: DeviceConfig{
+				DeviceName:  "another-target-device-name",
+				Bucket:      "fuchsia-bucket",
+				Image:       "release",
+				SSHPort:     "22",
+				PackageRepo: "another-target-device-name/packages/amber-files",
+				PackagePort: "8083",
+			},
+		},
+		{
+			deviceName: "unknown-device",
+			expectedDeviceConfig: DeviceConfig{
+				DeviceName:  "unknown-device",
+				Bucket:      "fuchsia",
+				Image:       "",
+				SSHPort:     "22",
+				PackageRepo: "unknown-device/packages/amber-files",
+				PackagePort: "8083",
+			},
+		},
 	}
-	if val.DeviceName != deviceName {
-		t.Errorf("TestGetDeviceConfiguration failed. Expected configuration for %v:  %v", deviceName, val)
-	}
-
-	val, err = sdk.GetDeviceConfiguration("unknown-device")
-	if err != nil {
-		t.Fatalf("unexpected err %v", err)
-	}
-	if val.DeviceName != "" {
-		t.Errorf("TestGetDeviceConfiguration failed. Expected empty configuration for %v:  %v", "unknown-device", val)
+	for _, test := range tests {
+		deviceConfig, err := sdk.GetDeviceConfiguration(test.deviceName)
+		if err != nil {
+			t.Fatalf("unexpected err %v", err)
+		}
+		if deviceConfig != test.expectedDeviceConfig {
+			t.Fatalf("TestGetDeviceConfiguration failed. Wanted configuration %v: got %v", test.expectedDeviceConfig, deviceConfig)
+		}
 	}
 }
 

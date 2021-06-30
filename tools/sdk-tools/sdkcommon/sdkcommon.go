@@ -946,6 +946,9 @@ func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, erro
 		return deviceConfig, fmt.Errorf("Could not read configuration data : %v", err)
 	}
 	if len(configData) == 0 {
+		deviceConfig = DeviceConfig{
+			DeviceName: name,
+		}
 		sdk.setDeviceDefaults(&deviceConfig)
 		return deviceConfig, nil
 	}
