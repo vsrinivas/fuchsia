@@ -86,6 +86,17 @@ template("clang_toolchain") {
           rebase_path("//build/rbe/rustc-remote-wrapper.sh", root_build_dir)
     }
 
+    # Configure Rust remote builds.
+    _rust_wrapper = ""
+    _rust_concurrent_jobs = concurrent_jobs.local
+    if (enable_rbe && (!defined(invoker.use_rbe) || invoker.use_rbe)) {
+      # TODO(fxb/79963): allow targets to pass additional inputs to this wrapper
+      _rust_wrapper = _rustc_remote_wrapper + " -- "
+
+      # Use remote-worker parallelism
+      _rust_concurrent_jobs = concurrent_jobs.goma
+    }
+
     # Set all tools to defaults
     cc = "${prefix}/clang"
     cxx = "${prefix}/clang++"
@@ -201,7 +212,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_bin") {
-      forward_variables_from(concurrent_jobs.local, "*")
+      forward_variables_from(_rust_concurrent_jobs, "*")
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       depfile = "$outfile.d"
@@ -213,6 +224,7 @@ template("clang_toolchain") {
         # TODO: see the comment below
         command += "mkdir -p {{output_dir}}/exe.unstripped && "
       }
+
       if (invoker.toolchain_cpu == "wasm32") {
         # default_output_extension doesn't work on binaries
         unstripped_outfile = "$unstripped_outfile.wasm"
@@ -231,13 +243,7 @@ template("clang_toolchain") {
         link_map_args = ""
       }
 
-      use_rbe = enable_rbe
-      if (defined(invoker.use_rbe) && enable_rbe) {
-        use_rbe = invoker.use_rbe
-      }
-      if (use_rbe) {
-        command += _rustc_remote_wrapper + " -- "
-      }
+      command += _rust_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
@@ -279,18 +285,11 @@ template("clang_toolchain") {
     }
 
     tool("rust_rlib") {
-      forward_variables_from(concurrent_jobs.local, "*")
       depfile = "{{output}}.d"
 
-      command = ""
+      forward_variables_from(_rust_concurrent_jobs, "*")
 
-      use_rbe = enable_rbe
-      if (defined(invoker.use_rbe) && enable_rbe) {
-        use_rbe = invoker.use_rbe
-      }
-      if (use_rbe) {
-        command += _rustc_remote_wrapper + " -- "
-      }
+      command = _rust_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
@@ -305,17 +304,10 @@ template("clang_toolchain") {
     }
 
     tool("rust_staticlib") {
-      forward_variables_from(concurrent_jobs.local, "*")
+      forward_variables_from(_rust_concurrent_jobs, "*")
       depfile = "{{output}}.d"
 
-      command = ""
-      use_rbe = enable_rbe
-      if (defined(invoker.use_rbe) && enable_rbe) {
-        use_rbe = invoker.use_rbe
-      }
-      if (use_rbe) {
-        command += _rustc_remote_wrapper + " -- "
-      }
+      command = _rust_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
@@ -331,7 +323,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_cdylib") {
-      forward_variables_from(concurrent_jobs.local, "*")
+      forward_variables_from(_rust_concurrent_jobs, "*")
       depfile = "{{output}}.d"
 
       ld_location_env = ""
@@ -364,14 +356,7 @@ template("clang_toolchain") {
         link_map_args = ""
       }
 
-      command = ""
-      use_rbe = enable_rbe
-      if (defined(invoker.use_rbe) && enable_rbe) {
-        use_rbe = invoker.use_rbe
-      }
-      if (use_rbe) {
-        command += _rustc_remote_wrapper + " -- "
-      }
+      command = _rust_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} $ld_location_env RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
@@ -391,7 +376,8 @@ template("clang_toolchain") {
     }
 
     tool("rust_dylib") {
-      forward_variables_from(concurrent_jobs.local, "*")
+      forward_variables_from(_rust_concurrent_jobs, "*")
+
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       depfile = "$outfile.d"
@@ -418,14 +404,7 @@ template("clang_toolchain") {
         link_map_args = ""
       }
 
-      use_rbe = enable_rbe
-      if (defined(invoker.use_rbe) && enable_rbe) {
-        use_rbe = invoker.use_rbe
-      }
-      if (use_rbe) {
-        command += _rustc_remote_wrapper + " -- "
-      }
-
+      command += _rust_wrapper
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
@@ -470,17 +449,10 @@ template("clang_toolchain") {
     }
 
     tool("rust_macro") {
-      forward_variables_from(concurrent_jobs.local, "*")
+      forward_variables_from(_rust_concurrent_jobs, "*")
       depfile = "{{output}}.d"
 
-      command = ""
-      use_rbe = enable_rbe
-      if (defined(invoker.use_rbe) && enable_rbe) {
-        use_rbe = invoker.use_rbe
-      }
-      if (use_rbe) {
-        command += _rustc_remote_wrapper + " -- "
-      }
+      command = _rust_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} --extern proc_macro {{rustdeps}} {{externs}}"

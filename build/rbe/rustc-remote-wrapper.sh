@@ -73,6 +73,7 @@ do
     --source) prev_opt=top_source ;;
     --depfile=*) depfile="$optarg" ;;
     --depfile) prev_opt=depfile ;;
+    # TODO(fxb/79963): accept additional inputs to upload
     # stop option processing
     --) shift; break ;;
     *) echo "Unknown option: $opt"; usage; exit 1 ;;
@@ -259,6 +260,7 @@ EOF
     --*=* ) ;;  # forward
 
     # Find files referenced in prefix environment variables.
+    # TODO(fxb/79963): un-hardcode these and pass them in through another flag
     *=*)
         envvar=$(expr "X$opt" : '\([^=]*\)=.*')
         case "envvar" in
