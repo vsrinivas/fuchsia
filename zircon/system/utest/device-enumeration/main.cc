@@ -567,7 +567,7 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
   static const char* kDevicePaths[] = {
       "class/sysmem/000",
 
-      "sys/platform/pci/00:00.0",
+      "pci-00:00.0",
       "pci-00:1f.2/ahci",
 
       "sys/platform/acpi",
