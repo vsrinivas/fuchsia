@@ -41,6 +41,18 @@ impl Waiter {
         }
     }
 
+    /// Establish an asynchronous wait for the signals on the given handle.
+    pub fn wait_async(
+        &self,
+        handle: &dyn zx::AsHandleRef,
+        signals: zx::Signals,
+    ) -> Result<(), zx::Status> {
+        // TODO: Figure out what to do with the key. Presumably we'll need the
+        // key to cancel the wait (e.g., for epoll).
+        let key = 0;
+        handle.wait_async_handle(&self.port, key, signals, zx::WaitAsyncOpts::empty())
+    }
+
     /// Wake up the waiter.
     ///
     /// This function is called before the waiter goes to sleep, the waiter

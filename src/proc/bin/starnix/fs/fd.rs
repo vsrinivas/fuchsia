@@ -104,6 +104,11 @@ pub trait FileOps: Send + Sync {
         Err(ENODEV)
     }
 
+    /// Establish a one-shot, asynchronous wait for the given FdEvents for the given file and task.
+    fn wait_async(&self, file: &FileObject, waiter: &Arc<Waiter>, events: FdEvents) {
+        file.node.observers.wait_async(waiter, events)
+    }
+
     fn ioctl(
         &self,
         _file: &FileObject,
@@ -240,7 +245,8 @@ impl FileObject {
         loop {
             match op() {
                 Err(EAGAIN) if !self.has_file_flag(O_NONBLOCK) => {
-                    self.node.observers.wait_once(&task.waiter, events)?;
+                    self.ops().wait_async(self, &task.waiter, events);
+                    task.waiter.wait()?;
                 }
                 result => return result,
             }
