@@ -172,6 +172,7 @@ impl ObjectRef<'_, Stroke> {
         if let Some(effect) = self.effect.get() {
             stroke_effect::as_ref(effect.as_ref()).invalidate_effect();
         }
+        self.metrics_path.set(None);
         self.outlined_stroke.set(None);
     }
 
