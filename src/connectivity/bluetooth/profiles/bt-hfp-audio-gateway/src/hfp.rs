@@ -9,12 +9,13 @@ use {
     fidl_fuchsia_bluetooth_hfp::{CallManagerProxy, PeerHandlerMarker},
     fidl_fuchsia_bluetooth_hfp_test as hfp_test,
     fuchsia_bluetooth::types::PeerId,
-    futures::{channel::mpsc::Receiver, select, stream::StreamExt},
+    futures::{channel::mpsc::Receiver, lock::Mutex, select, stream::StreamExt},
     profile_client::{ProfileClient, ProfileEvent},
-    std::{collections::hash_map::Entry, matches},
+    std::{collections::hash_map::Entry, matches, sync::Arc},
 };
 
 use crate::{
+    audio::AudioControl,
     config::AudioGatewayFeatureSupport,
     error::Error,
     peer::{ConnectionBehavior, Peer, PeerImpl},
@@ -35,13 +36,16 @@ pub struct Hfp {
     peers: FutureMap<PeerId, Box<dyn Peer>>,
     test_requests: Receiver<hfp_test::HfpTestRequest>,
     connection_behavior: ConnectionBehavior,
+    /// A shared audio controller, to start and route audio devices for peers.
+    audio: Arc<Mutex<Box<dyn AudioControl>>>,
 }
 
 impl Hfp {
-    /// Create a new `Hfp` with the provided `profile`.
+    /// Create a new `Hfp` with the provided `profile`, and `audio`
     pub fn new(
         profile_client: ProfileClient,
         profile_svc: bredr::ProfileProxy,
+        audio: impl AudioControl + 'static,
         call_manager_registration: Receiver<CallManagerProxy>,
         config: AudioGatewayFeatureSupport,
         test_requests: Receiver<hfp_test::HfpTestRequest>,
@@ -55,6 +59,7 @@ impl Hfp {
             config,
             test_requests,
             connection_behavior: ConnectionBehavior::default(),
+            audio: Arc::new(Mutex::new(Box::new(audio))),
         }
     }
 
@@ -121,6 +126,7 @@ impl Hfp {
                 let mut peer = Box::new(PeerImpl::new(
                     id,
                     self.profile_svc.clone(),
+                    self.audio.clone(),
                     self.config,
                     self.connection_behavior,
                 )?);
@@ -192,6 +198,8 @@ mod tests {
         futures::{channel::mpsc, SinkExt, TryStreamExt},
     };
 
+    use crate::audio::TestAudioControl;
+
     #[fasync::run_until_stalled(test)]
     async fn profile_error_propagates_error_from_hfp_run() {
         let (profile, profile_svc, server) = setup_profile_and_test_server();
@@ -201,7 +209,14 @@ mod tests {
         let (_tx, rx1) = mpsc::channel(1);
         let (_, rx2) = mpsc::channel(1);
 
-        let hfp = Hfp::new(profile, profile_svc, rx1, AudioGatewayFeatureSupport::default(), rx2);
+        let hfp = Hfp::new(
+            profile,
+            profile_svc,
+            TestAudioControl::default(),
+            rx1,
+            AudioGatewayFeatureSupport::default(),
+            rx2,
+        );
         let result = hfp.run().await;
         assert!(result.is_err());
     }
@@ -222,8 +237,14 @@ mod tests {
 
         // Run hfp in a background task since we are testing that the profile server observes the
         // expected behavior when interacting with hfp.
-        let hfp =
-            Hfp::new(profile, profile_svc, receiver, AudioGatewayFeatureSupport::default(), rx);
+        let hfp = Hfp::new(
+            profile,
+            profile_svc,
+            TestAudioControl::default(),
+            receiver,
+            AudioGatewayFeatureSupport::default(),
+            rx,
+        );
         let _hfp_task = fasync::Task::local(hfp.run());
 
         // Drive both services to expected steady states without any errors.
@@ -285,6 +306,7 @@ mod tests {
         let mut hfp = Hfp::new(
             profile,
             profile_svc,
+            TestAudioControl::default(),
             call_mgr_rx,
             AudioGatewayFeatureSupport::default(),
             test_rx,
@@ -324,6 +346,7 @@ mod tests {
         let mut hfp = Hfp::new(
             profile,
             profile_svc,
+            TestAudioControl::default(),
             call_mgr_rx,
             AudioGatewayFeatureSupport::default(),
             test_rx,

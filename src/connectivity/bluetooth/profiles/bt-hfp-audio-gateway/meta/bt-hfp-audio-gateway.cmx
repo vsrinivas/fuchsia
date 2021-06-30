@@ -6,11 +6,15 @@
         "binary": "bin/bt_hfp_audio_gateway"
     },
     "sandbox": {
+        "dev": [
+            "class/dai"
+        ],
         "features": [
             "config-data"
         ],
         "services": [
-            "fuchsia.bluetooth.bredr.Profile"
+            "fuchsia.bluetooth.bredr.Profile",
+            "fuchsia.media.AudioDeviceEnumerator"
         ]
     }
 }

@@ -17,13 +17,14 @@ use {
     futures::{
         channel::mpsc,
         future::Either,
+        lock::Mutex,
         select,
         stream::{empty, Empty},
         FutureExt, StreamExt,
     },
     log::{debug, info, warn},
     profile_client::ProfileEvent,
-    std::{convert::TryInto, fmt},
+    std::{convert::TryInto, fmt, sync::Arc},
 };
 
 use super::{
@@ -39,6 +40,7 @@ use super::{
 };
 
 use crate::{
+    audio::AudioControl,
     config::AudioGatewayFeatureSupport,
     error::Error,
     features::CodecId,
@@ -63,12 +65,14 @@ pub(super) struct PeerTask {
     sco_connector: ScoConnector,
     sco_connection: Option<ScoConnection>,
     ringer: Ringer,
+    audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
 }
 
 impl PeerTask {
     pub fn new(
         id: PeerId,
         profile_proxy: bredr::ProfileProxy,
+        audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
         local_config: AudioGatewayFeatureSupport,
         connection_behavior: ConnectionBehavior,
     ) -> Result<Self, Error> {
@@ -89,17 +93,19 @@ impl PeerTask {
             sco_connector,
             sco_connection: None,
             ringer: Ringer::default(),
+            audio_control,
         })
     }
 
     pub fn spawn(
         id: PeerId,
         profile_proxy: bredr::ProfileProxy,
+        audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
         local_config: AudioGatewayFeatureSupport,
         connection_behavior: ConnectionBehavior,
     ) -> Result<(Task<()>, mpsc::Sender<PeerRequest>), Error> {
         let (sender, receiver) = mpsc::channel(0);
-        let peer = Self::new(id, profile_proxy, local_config, connection_behavior)?;
+        let peer = Self::new(id, profile_proxy, audio_control, local_config, connection_behavior)?;
         let task = Task::local(peer.run(receiver).map(|_| ()));
         Ok((task, sender))
     }
@@ -451,9 +457,27 @@ impl PeerTask {
             .await;
     }
 
+    /// Setup the SCO audio connection and start sending audio to the peer.
     async fn setup_audio_connection(&mut self, codec_id: Option<CodecId>) -> Result<(), Error> {
+        if self.sco_connection.is_some() {
+            return Err(Error::OutOfRange);
+        }
         let try_codecs = codec_id.map_or(vec![CodecId::MSBC, CodecId::CVSD], |c| vec![c]);
-        self.sco_connection = Some(self.sco_connector.connect(self.id.clone(), try_codecs).await?);
+        let connection = self.sco_connector.connect(self.id.clone(), try_codecs).await?;
+
+        let params = connection.params.clone();
+
+        let mut audio = self.audio_control.lock().await;
+        // Start the DAI with the given parameters
+        if let Err(e) = audio.start(self.id.clone(), params) {
+            // Cancel the SCO connection, we can't send audio.
+            // TODO(fxbug.dev/79784): this probably means we should just cancel out of HFP and
+            // this peer's connection entirely.
+            warn!("Couldn't start Audio DAI ({:?}) - dropping audio connection", e);
+            return Err(Error::system(format!("Couldn't start audio DAI"), e));
+        }
+
+        self.sco_connection = Some(connection);
         Ok(())
     }
 
@@ -538,7 +562,7 @@ mod tests {
         at_commands::{self as at, SerDe},
         bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel},
         core::task::Poll,
-        fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
+        fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream, ScoErrorCode},
         fidl_fuchsia_bluetooth_hfp::{
             CallDirection, CallState, NextCall, PeerHandlerMarker, PeerHandlerRequest,
             PeerHandlerRequestStream, PeerHandlerWatchNextCallResponder, SignalStrength,
@@ -557,6 +581,7 @@ mod tests {
     };
 
     use crate::{
+        audio::TestAudioControl,
         features::HfFeatures,
         peer::{
             calls::Number,
@@ -603,9 +628,12 @@ mod tests {
     {
         let (sender, receiver) = mpsc::channel(1);
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<ProfileMarker>().unwrap();
+        let audio: Arc<Mutex<Box<dyn AudioControl>>> =
+            Arc::new(Mutex::new(Box::new(TestAudioControl::default())));
         let mut task = PeerTask::new(
             PeerId(1),
             proxy,
+            audio,
             AudioGatewayFeatureSupport::default(),
             ConnectionBehavior::default(),
         )
@@ -1266,5 +1294,71 @@ mod tests {
         assert_matches!(result, Poll::Ready(None));
         // new_remote is open
         assert!(exec.run_until_stalled(&mut new_remote.next()).is_pending());
+    }
+
+    async fn expect_sco_connection(
+        profile_requests: &mut ProfileRequestStream,
+        result: Result<(), ScoErrorCode>,
+    ) -> Option<zx::Socket> {
+        let proxy = match profile_requests.next().await.expect("request").unwrap() {
+            bredr::ProfileRequest::ConnectSco { receiver, .. } => receiver.into_proxy().unwrap(),
+            x => panic!("Unexpected request to profile stream: {:?}", x),
+        };
+        match result {
+            Ok(()) => {
+                let (local, remote) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+                let connection =
+                    bredr::ScoConnection { socket: Some(local), ..bredr::ScoConnection::EMPTY };
+                proxy.connected(connection).unwrap();
+                Some(remote)
+            }
+            Err(code) => {
+                proxy.error(code).unwrap();
+                None
+            }
+        }
+    }
+
+    #[test]
+    fn setup_audio_connection_connects_and_starts_audio() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        // SLC is connected at the start of the test.
+        let (connection, _old_remote) = create_and_connect_slc();
+        let (mut peer, _sender, _receiver, mut profile_requests) =
+            setup_peer_task(Some(connection));
+
+        assert!(peer.connection.connected());
+
+        let audio_control = peer.audio_control.clone();
+
+        let _remote_sco = {
+            let audio_connection_fut = peer.setup_audio_connection(None);
+            pin_mut!(audio_connection_fut);
+
+            exec.run_until_stalled(&mut audio_connection_fut)
+                .expect_pending("shouldn't be done yet");
+
+            // Expect a sco connection, and have it succeed.
+            let remote_sco =
+                exec.run_singlethreaded(expect_sco_connection(&mut profile_requests, Ok(())));
+
+            let res = exec.run_until_stalled(&mut audio_connection_fut).expect("should be done");
+            res.expect("should have started up okay");
+
+            // Should start up the test audio control.
+            {
+                let mut lock = exec.run_singlethreaded(&mut audio_control.lock());
+                lock.start(PeerId(0), bredr::ScoConnectionParameters::EMPTY)
+                    .expect_err("shouldn't be able to start, already started");
+            }
+
+            remote_sco
+        };
+
+        // Trying to start when a connection exists should be an error.
+        let audio_connection_fut = peer.setup_audio_connection(None);
+        pin_mut!(audio_connection_fut);
+        let res = exec.run_until_stalled(&mut audio_connection_fut).expect("should be done");
+        res.expect_err("can't start when already started");
     }
 }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use self::task::PeerTask;
-use crate::{config::AudioGatewayFeatureSupport, error::Error};
+use crate::{audio::AudioControl, config::AudioGatewayFeatureSupport, error::Error};
 use {
     async_trait::async_trait,
     async_utils::channel::TrySend,
@@ -16,8 +16,9 @@ use {
     fidl_fuchsia_bluetooth_hfp::{PeerHandlerMarker, PeerHandlerProxy},
     fuchsia_async::Task,
     fuchsia_bluetooth::types::PeerId,
-    futures::{channel::mpsc, Future, FutureExt, SinkExt},
+    futures::{channel::mpsc, lock::Mutex, Future, FutureExt, SinkExt, TryFutureExt},
     profile_client::ProfileEvent,
+    std::sync::Arc,
 };
 
 #[cfg(test)]
@@ -95,18 +96,34 @@ pub struct PeerImpl {
     // Under the hood, a queue is used to send these messages to the `task` which represents the
     // Peer.
     queue: mpsc::Sender<PeerRequest>,
+    /// A handle to the audio control interface.
+    audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
 }
 
 impl PeerImpl {
     pub fn new(
         id: PeerId,
         profile_proxy: ProfileProxy,
+        audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
         local_config: AudioGatewayFeatureSupport,
         connection_behavior: ConnectionBehavior,
-    ) -> Result<PeerImpl, Error> {
-        let (task, queue) =
-            PeerTask::spawn(id, profile_proxy.clone(), local_config, connection_behavior)?;
-        Ok(Self { id, local_config, profile_proxy, task, queue, connection_behavior })
+    ) -> Result<Self, Error> {
+        let (task, queue) = PeerTask::spawn(
+            id,
+            profile_proxy.clone(),
+            audio_control.clone(),
+            local_config,
+            connection_behavior,
+        )?;
+        Ok(Self {
+            id,
+            local_config,
+            profile_proxy,
+            task,
+            audio_control,
+            queue,
+            connection_behavior,
+        })
     }
 
     /// Spawn a new peer task.
@@ -114,6 +131,7 @@ impl PeerImpl {
         let (task, queue) = PeerTask::spawn(
             self.id,
             self.profile_proxy.clone(),
+            self.audio_control.clone(),
             self.local_config,
             self.connection_behavior,
         )?;
@@ -127,11 +145,10 @@ impl PeerImpl {
     /// Panics if the PeerTask was not able to receive the request.
     /// This should only be used when it is expected that the peer can receive the request and
     /// it is a critical failure when it does not receive the request.
-    async fn expect_send_request(&mut self, request: PeerRequest) {
+    fn expect_send_request(&mut self, request: PeerRequest) -> impl Future<Output = ()> + '_ {
         self.queue
             .send(request)
-            .await
-            .expect("PeerTask to be running and able to process requests");
+            .unwrap_or_else(|e| panic!("PeerTask should be running and processing: got {:?}", e))
     }
 }
 
@@ -258,6 +275,12 @@ mod tests {
         fuchsia_async as fasync, futures::pin_mut, matches::assert_matches,
     };
 
+    use crate::audio::TestAudioControl;
+
+    fn new_audio_control() -> Arc<Mutex<Box<dyn AudioControl>>> {
+        Arc::new(Mutex::new(Box::new(TestAudioControl::default())))
+    }
+
     #[test]
     fn peer_id_returns_expected_id() {
         // TestExecutor must exist in order to create fidl endpoints
@@ -268,6 +291,7 @@ mod tests {
         let peer = PeerImpl::new(
             id,
             proxy,
+            new_audio_control(),
             AudioGatewayFeatureSupport::default(),
             ConnectionBehavior::default(),
         )
@@ -284,6 +308,7 @@ mod tests {
         let mut peer = PeerImpl::new(
             id,
             proxy,
+            new_audio_control(),
             AudioGatewayFeatureSupport::default(),
             ConnectionBehavior::default(),
         )
@@ -322,6 +347,7 @@ mod tests {
         let mut peer = PeerImpl::new(
             id,
             proxy,
+            new_audio_control(),
             AudioGatewayFeatureSupport::default(),
             ConnectionBehavior::default(),
         )

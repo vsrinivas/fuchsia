@@ -77,8 +77,12 @@ impl SawWaveStream {
 
 pub struct AudioOutStream {}
 
+/// Generate a unique ID to use with audio_core for an input, given the `peer_id` and whether it
+/// will be an input device.  Current format is:
+/// [{PeerId in big endian, 8 bytes}, 2, 2, 2, 2, 2, 2, 2, 2]
+// TODO(fxbug.dev/78139): centralize format and generation
 fn unique_id_from_peer(peer_id: &PeerId) -> [u8; 16] {
-    let mut unique_id: [u8; 16] = [2; 16];
+    let mut unique_id = [2; 16];
     unique_id[0..8].copy_from_slice(&(peer_id.0.to_be_bytes()));
     unique_id
 }

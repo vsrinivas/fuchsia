@@ -44,7 +44,8 @@ const SCO_PARAMS_FALLBACK: bredr::ScoConnectionParameters = bredr::ScoConnection
     ..COMMON_SCO_PARAMS
 };
 
-fn parameters_for_codec(codec_id: CodecId) -> bredr::ScoConnectionParameters {
+// pub in this crate for tests
+pub(crate) fn parameters_for_codec(codec_id: CodecId) -> bredr::ScoConnectionParameters {
     match codec_id {
         CodecId::MSBC => bredr::ScoConnectionParameters {
             parameter_set: Some(bredr::HfpParameterSet::MsbcT2),

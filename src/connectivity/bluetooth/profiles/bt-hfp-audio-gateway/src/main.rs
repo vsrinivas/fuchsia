@@ -4,7 +4,7 @@
 #![recursion_limit = "1024"]
 
 use {
-    anyhow::{Context, Error},
+    anyhow::{format_err, Context, Error},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{channel::mpsc, future, pin_mut},
@@ -16,6 +16,7 @@ use crate::{
     profile::register_audio_gateway,
 };
 
+mod audio;
 mod config;
 mod error;
 mod features;
@@ -36,9 +37,18 @@ async fn main() -> Result<(), Error> {
     let (call_manager_sender, call_manager_receiver) = mpsc::channel(1);
     let (test_request_sender, test_request_receiver) = mpsc::channel(1);
 
+    let audio = match audio::DaiAudioControl::discover().await {
+        Err(e) => {
+            warn!("Couldn't setup DAI audio: {:?}", e);
+            return Err(format_err!("DAI failed"));
+        }
+        Ok(audio) => audio,
+    };
+
     let hfp = Hfp::new(
         profile_client,
         profile_svc,
+        audio,
         call_manager_receiver,
         feature_support,
         test_request_receiver,
