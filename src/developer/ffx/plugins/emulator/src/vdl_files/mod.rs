@@ -609,20 +609,30 @@ impl VDLFiles {
         }
     }
 
+    // Shuts down emulator and local services.
     pub fn stop_vdl(&self, kill_command: &KillCommand) -> Result<()> {
+        // If user specified vdl_path in arg, use that. If not, check if environment variable
+        // PREBUILD_VDL_DIR is set, if set use that. If not, check if self.host_tools has found
+        // default path for device_launcher, when running in-tree this will be read from
+        // tool_paths.json, when running in sdk, this will be empty; if found, use that.
+        // If empty (i.e from sdk), look for the tool in sdk_data_dir.
         let vdl: PathBuf = match &kill_command.vdl_path {
             Some(vdl_path) => PathBuf::from(vdl_path),
             None => match read_env_path("PREBUILT_VDL_DIR") {
                 Ok(default_path) => default_path.join("device_launcher"),
                 _ => {
-                    let label = self
-                        .host_tools
-                        .read_prebuild_version("device_launcher.version")
-                        .unwrap_or(String::from("latest"));
-                    get_sdk_data_dir()?
-                        .join("femu")
-                        .join(format!("vdl-{}", label.replace(":", "-")))
-                        .join("device_launcher")
+                    if self.host_tools.vdl.as_os_str().is_empty() {
+                        let label = self
+                            .host_tools
+                            .read_prebuild_version("device_launcher.version")
+                            .unwrap_or(String::from("latest"));
+                        get_sdk_data_dir()?
+                            .join("femu")
+                            .join(format!("vdl-{}", label.replace(":", "-")))
+                            .join("device_launcher")
+                    } else {
+                        self.host_tools.vdl.clone()
+                    }
                 }
             },
         };
