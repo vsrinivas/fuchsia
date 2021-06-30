@@ -13,7 +13,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-func BuildEqualityCheck(actualExpr string, expectedValue interface{}, decl gidlmixer.Declaration, handleKoidVectorName string) string {
+func BuildEqualityCheck(actualExpr string, expectedValue gidlir.Value, decl gidlmixer.Declaration, handleKoidVectorName string) string {
 	builder := equalityCheckBuilder{
 		handleKoidVectorName: handleKoidVectorName,
 	}
@@ -70,7 +70,7 @@ func (b *equalityCheckBuilder) assertNull(value string) {
 	b.write("ASSERT_NULL(%s);\n", value)
 }
 
-func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue interface{}, decl gidlmixer.Declaration) {
+func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue gidlir.Value, decl gidlmixer.Declaration) {
 	switch expectedValue := expectedValue.(type) {
 	case bool:
 		b.assertEquals(actualExpr, b.construct(typeName(decl), "%t", expectedValue))
@@ -115,7 +115,7 @@ func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue interface{
 			b.visitUnion(actualExpr, expectedValue, decl)
 			return
 		}
-	case []interface{}:
+	case []gidlir.Value:
 		b.visitList(actualExpr, expectedValue, decl.(gidlmixer.ListDeclaration))
 		return
 	case nil:
@@ -244,7 +244,7 @@ func (b *equalityCheckBuilder) visitUnion(actualExpr string, expectedValue gidli
 	b.visit(actualFieldExpr, field.Value, fieldDecl)
 }
 
-func (b *equalityCheckBuilder) visitList(actualExpr string, expectedValue []interface{}, decl gidlmixer.ListDeclaration) {
+func (b *equalityCheckBuilder) visitList(actualExpr string, expectedValue []gidlir.Value, decl gidlmixer.ListDeclaration) {
 	actualVar := b.createAndAssignVar(actualExpr)
 	if _, ok := decl.(*gidlmixer.VectorDecl); ok {
 		b.assertEquals(fmt.Sprintf("%s.size()", actualVar), fmt.Sprintf("%d", len(expectedValue)))
@@ -280,7 +280,7 @@ func (b *equalityCheckBuilder) visitUnknownHandles(actualExpr string, expectedVa
 	`, b.varSeq.next(), BuildRawHandlesFromHandleInfos(expectedValue), actualExpr)
 }
 
-func formatPrimitive(value interface{}) string {
+func formatPrimitive(value gidlir.Value) string {
 	switch value := value.(type) {
 	case int64:
 		if value == -9223372036854775808 {

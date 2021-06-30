@@ -13,7 +13,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-func BuildEqualityCheck(actualExpr string, expectedValue interface{}, decl gidlmixer.Declaration, koidArrayVar string) string {
+func BuildEqualityCheck(actualExpr string, expectedValue gidlir.Value, decl gidlmixer.Declaration, koidArrayVar string) string {
 	builder := equalityCheckBuilder{
 		koidArrayVar: koidArrayVar,
 	}
@@ -116,7 +116,7 @@ func (b *equalityCheckBuilder) expectKoidEquals(actual string, expectedHandle gi
 	b.write("}\n")
 }
 
-func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue interface{}, decl gidlmixer.Declaration) {
+func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue gidlir.Value, decl gidlmixer.Declaration) {
 	switch expectedValue := expectedValue.(type) {
 	case bool, int64, uint64, float64:
 		b.expectEquals(actualExpr, fmt.Sprintf("%v", expectedValue))
@@ -151,7 +151,7 @@ func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue interface{
 			b.visitUnion(actualExpr, expectedValue, decl)
 			return
 		}
-	case []interface{}:
+	case []gidlir.Value:
 		b.visitList(actualExpr, expectedValue, decl.(gidlmixer.ListDeclaration))
 		return
 	case nil:
@@ -274,7 +274,7 @@ func (b *equalityCheckBuilder) visitUnion(actualExpr string, expectedValue gidli
 	b.visit(fieldVar, field.Value, fieldDecl)
 }
 
-func (b *equalityCheckBuilder) visitList(actualExpr string, expectedValue []interface{}, decl gidlmixer.ListDeclaration) {
+func (b *equalityCheckBuilder) visitList(actualExpr string, expectedValue []gidlir.Value, decl gidlmixer.ListDeclaration) {
 	if decl.IsNullable() {
 		actualExpr = fmt.Sprintf("*(%s)", actualExpr)
 	}

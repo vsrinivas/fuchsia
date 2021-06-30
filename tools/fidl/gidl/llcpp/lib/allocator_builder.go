@@ -14,7 +14,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-func BuildValueAllocator(allocatorVar string, value interface{}, decl gidlmixer.Declaration, handleRepr HandleRepr) (string, string) {
+func BuildValueAllocator(allocatorVar string, value gidlir.Value, decl gidlmixer.Declaration, handleRepr HandleRepr) (string, string) {
 	var builder allocatorBuilder
 	builder.allocatorVar = allocatorVar
 	builder.handleRepr = handleRepr
@@ -54,7 +54,7 @@ func (a *allocatorBuilder) construct(typename string, isPointer bool, fmtStr str
 	return fmt.Sprintf("fidl::ObjectView<%s>(%s, %s)", typename, a.allocatorVar, val)
 }
 
-func formatPrimitive(value interface{}) string {
+func formatPrimitive(value gidlir.Value) string {
 	switch value := value.(type) {
 	case int64:
 		if value == -9223372036854775808 {
@@ -69,7 +69,7 @@ func formatPrimitive(value interface{}) string {
 	panic("Unreachable")
 }
 
-func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration) string {
+func (a *allocatorBuilder) visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 	// Unions, StringView and VectorView in LLCPP represent nullability within the object rather than as
 	// as pointer to the object.
 	_, isUnion := decl.(*gidlmixer.UnionDecl)
@@ -114,7 +114,7 @@ func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration) 
 		case *gidlmixer.UnionDecl:
 			return a.visitUnion(value, decl, isPointer)
 		}
-	case []interface{}:
+	case []gidlir.Value:
 		switch decl := decl.(type) {
 		case *gidlmixer.ArrayDecl:
 			return a.visitArray(value, decl, isPointer)
@@ -190,7 +190,7 @@ func (a *allocatorBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.Union
 	return fmt.Sprintf("std::move(%s)", union)
 }
 
-func (a *allocatorBuilder) visitArray(value []interface{}, decl *gidlmixer.ArrayDecl, isPointer bool) string {
+func (a *allocatorBuilder) visitArray(value []gidlir.Value, decl *gidlmixer.ArrayDecl, isPointer bool) string {
 	array := a.assignNew(typeNameIgnoreNullable(decl), isPointer, "")
 	op := ""
 	if isPointer {
@@ -230,7 +230,7 @@ func findRepeatingPeriod(value []uint64) (int, bool) {
 	return period, true
 }
 
-func (a *allocatorBuilder) visitVector(value []interface{}, decl *gidlmixer.VectorDecl, isPointer bool) string {
+func (a *allocatorBuilder) visitVector(value []gidlir.Value, decl *gidlmixer.VectorDecl, isPointer bool) string {
 	vector := a.assignNew(typeName(decl), isPointer, "%s, %d", a.allocatorVar, len(value))
 	if len(value) == 0 {
 		return fmt.Sprintf("std::move(%s)", vector)

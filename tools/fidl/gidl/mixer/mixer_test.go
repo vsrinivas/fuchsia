@@ -235,19 +235,19 @@ func TestExtractDeclarationByNameSuccess(t *testing.T) {
 
 // conformTest describes a test case for the Declaration.conforms method.
 type conformTest interface {
-	value() interface{}
+	value() gidlir.Value
 }
 
 type conformOk struct {
-	val interface{}
+	val gidlir.Value
 }
 type conformFail struct {
-	val          interface{}
+	val          gidlir.Value
 	errSubstring string
 }
 
-func (c conformOk) value() interface{}   { return c.val }
-func (c conformFail) value() interface{} { return c.val }
+func (c conformOk) value() gidlir.Value   { return c.val }
+func (c conformFail) value() gidlir.Value { return c.val }
 
 // checkConforms is a helper function to test the Declaration.conforms method.
 func checkConforms(t *testing.T, ctx context, decl Declaration, tests []conformTest) {
@@ -810,12 +810,12 @@ func TestArrayDeclConforms(t *testing.T) {
 			},
 		},
 		[]conformTest{
-			conformOk{[]interface{}{uint64(1), uint64(2)}},
-			conformFail{[]interface{}{}, "expecting 2 elements"},
-			conformFail{[]interface{}{uint64(1)}, "expecting 2 elements"},
-			conformFail{[]interface{}{uint64(1), uint64(1), uint64(1)}, "expecting 2 elements"},
-			conformFail{[]interface{}{"a", "b"}, "[0]: expecting int64 or uint64"},
-			conformFail{[]interface{}{nil, nil}, "[0]: expecting int64 or uint64"},
+			conformOk{[]gidlir.Value{uint64(1), uint64(2)}},
+			conformFail{[]gidlir.Value{}, "expecting 2 elements"},
+			conformFail{[]gidlir.Value{uint64(1)}, "expecting 2 elements"},
+			conformFail{[]gidlir.Value{uint64(1), uint64(1), uint64(1)}, "expecting 2 elements"},
+			conformFail{[]gidlir.Value{"a", "b"}, "[0]: expecting int64 or uint64"},
+			conformFail{[]gidlir.Value{nil, nil}, "[0]: expecting int64 or uint64"},
 		},
 	)
 }
@@ -836,12 +836,12 @@ func TestVectorDeclConforms(t *testing.T) {
 			},
 		},
 		[]conformTest{
-			conformOk{[]interface{}{}},
-			conformOk{[]interface{}{uint64(1)}},
-			conformOk{[]interface{}{uint64(1), uint64(2)}},
-			conformFail{[]interface{}{uint64(1), uint64(1), uint64(1)}, "expecting at most 2 elements"},
-			conformFail{[]interface{}{"a", "b"}, "[0]: expecting int64 or uint64"},
-			conformFail{[]interface{}{nil, nil}, "[0]: expecting int64 or uint64"},
+			conformOk{[]gidlir.Value{}},
+			conformOk{[]gidlir.Value{uint64(1)}},
+			conformOk{[]gidlir.Value{uint64(1), uint64(2)}},
+			conformFail{[]gidlir.Value{uint64(1), uint64(1), uint64(1)}, "expecting at most 2 elements"},
+			conformFail{[]gidlir.Value{"a", "b"}, "[0]: expecting int64 or uint64"},
+			conformFail{[]gidlir.Value{nil, nil}, "[0]: expecting int64 or uint64"},
 		},
 	)
 }
@@ -865,24 +865,24 @@ func TestVectorDeclConformsWithHandles(t *testing.T) {
 			},
 		},
 		[]conformTest{
-			conformOk{[]interface{}{}},
-			conformOk{[]interface{}{defaultMetadataForHandle(0)}},
-			conformOk{[]interface{}{
+			conformOk{[]gidlir.Value{}},
+			conformOk{[]gidlir.Value{defaultMetadataForHandle(0)}},
+			conformOk{[]gidlir.Value{
 				defaultMetadataForHandle(0),
 				defaultMetadataForHandle(1),
 			}},
-			conformOk{[]interface{}{
+			conformOk{[]gidlir.Value{
 				defaultMetadataForHandle(1),
 				defaultMetadataForHandle(0),
 			}},
 			// The parser is responsible for ensuring handles are used exactly
 			// once, not the mixer, so this passes.
-			conformOk{[]interface{}{
+			conformOk{[]gidlir.Value{
 				defaultMetadataForHandle(0),
 				defaultMetadataForHandle(0),
 			}},
-			conformFail{[]interface{}{uint64(0)}, "[0]: expecting handle"},
-			conformFail{[]interface{}{nil}, "[0]: expecting non-null handle"},
+			conformFail{[]gidlir.Value{uint64(0)}, "[0]: expecting handle"},
+			conformFail{[]gidlir.Value{nil}, "[0]: expecting non-null handle"},
 		},
 	)
 }
@@ -897,18 +897,18 @@ func (v *visitor) OnUint64(uint64, fidlgen.PrimitiveSubtype)   { v.visited = "Ui
 func (v *visitor) OnFloat64(float64, fidlgen.PrimitiveSubtype) { v.visited = "Float64" }
 func (v *visitor) OnString(string, *StringDecl)                { v.visited = "String" }
 func (v *visitor) OnHandle(gidlir.Handle, *HandleDecl)         { v.visited = "Handle" }
-func (v *visitor) OnBits(interface{}, *BitsDecl)               { v.visited = "Bits" }
-func (v *visitor) OnEnum(interface{}, *EnumDecl)               { v.visited = "Enum" }
+func (v *visitor) OnBits(gidlir.Value, *BitsDecl)              { v.visited = "Bits" }
+func (v *visitor) OnEnum(gidlir.Value, *EnumDecl)              { v.visited = "Enum" }
 func (v *visitor) OnStruct(gidlir.Record, *StructDecl)         { v.visited = "Struct" }
 func (v *visitor) OnTable(gidlir.Record, *TableDecl)           { v.visited = "Table" }
 func (v *visitor) OnUnion(gidlir.Record, *UnionDecl)           { v.visited = "Union" }
-func (v *visitor) OnArray([]interface{}, *ArrayDecl)           { v.visited = "Array" }
-func (v *visitor) OnVector([]interface{}, *VectorDecl)         { v.visited = "Vector" }
+func (v *visitor) OnArray([]gidlir.Value, *ArrayDecl)          { v.visited = "Array" }
+func (v *visitor) OnVector([]gidlir.Value, *VectorDecl)        { v.visited = "Vector" }
 func (v *visitor) OnNull(Declaration)                          { v.visited = "Null" }
 
 func TestVisit(t *testing.T) {
 	tests := []struct {
-		value    interface{}
+		value    gidlir.Value
 		decl     Declaration
 		expected string
 	}{

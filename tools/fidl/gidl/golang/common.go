@@ -140,7 +140,7 @@ func buildUnknownDataMap(fields []gidlir.Field) string {
 	return builder.String()
 }
 
-func visit(value interface{}, decl gidlmixer.Declaration) string {
+func visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool, int64, uint64, float64:
 		switch decl := decl.(type) {
@@ -180,7 +180,7 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		if decl, ok := decl.(gidlmixer.RecordDeclaration); ok {
 			return onRecord(value, decl)
 		}
-	case []interface{}:
+	case []gidlir.Value:
 		if decl, ok := decl.(gidlmixer.ListDeclaration); ok {
 			return onList(value, decl)
 		}
@@ -249,7 +249,7 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 	return fmt.Sprintf("%s{\n%s,\n}", typeLiteral(decl), strings.Join(fields, ",\n"))
 }
 
-func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
+func onList(value []gidlir.Value, decl gidlmixer.ListDeclaration) string {
 	elemDecl := decl.Elem()
 	var elements []string
 	for _, item := range value {

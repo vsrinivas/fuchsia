@@ -14,7 +14,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-func BuildValueUnowned(value interface{}, decl gidlmixer.Declaration, handleRepr HandleRepr) (string, string) {
+func BuildValueUnowned(value gidlir.Value, decl gidlmixer.Declaration, handleRepr HandleRepr) (string, string) {
 	var builder unownedBuilder
 	builder.handleRepr = handleRepr
 	valueVar := builder.visit(value, decl)
@@ -53,7 +53,7 @@ func primitiveTypeName(subtype fidlgen.PrimitiveSubtype) string {
 	}
 }
 
-func (b *unownedBuilder) visit(value interface{}, decl gidlmixer.Declaration) string {
+func (b *unownedBuilder) visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool:
 		return fmt.Sprintf("%t", value)
@@ -101,7 +101,7 @@ func (b *unownedBuilder) visit(value interface{}, decl gidlmixer.Declaration) st
 		case *gidlmixer.UnionDecl:
 			return b.visitUnion(value, decl)
 		}
-	case []interface{}:
+	case []gidlir.Value:
 		switch decl := decl.(type) {
 		case *gidlmixer.ArrayDecl:
 			return b.visitArray(value, decl)
@@ -199,7 +199,7 @@ func (b *unownedBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.UnionDe
 	return fmt.Sprintf("std::move(%s)", containerVar)
 }
 
-func (b *unownedBuilder) buildListItems(value []interface{}, decl gidlmixer.ListDeclaration) []string {
+func (b *unownedBuilder) buildListItems(value []gidlir.Value, decl gidlmixer.ListDeclaration) []string {
 	var elements []string
 	elemDecl := decl.Elem()
 	for _, item := range value {
@@ -208,7 +208,7 @@ func (b *unownedBuilder) buildListItems(value []interface{}, decl gidlmixer.List
 	return elements
 }
 
-func (b *unownedBuilder) visitArray(value []interface{}, decl *gidlmixer.ArrayDecl) string {
+func (b *unownedBuilder) visitArray(value []gidlir.Value, decl *gidlmixer.ArrayDecl) string {
 	elements := b.buildListItems(value, decl)
 	sliceVar := b.newVar()
 	b.write("FIDL_ALIGNDECL auto %s = %s{%s};\n",
@@ -216,7 +216,7 @@ func (b *unownedBuilder) visitArray(value []interface{}, decl *gidlmixer.ArrayDe
 	return sliceVar
 }
 
-func (b *unownedBuilder) visitVector(value []interface{}, decl *gidlmixer.VectorDecl) string {
+func (b *unownedBuilder) visitVector(value []gidlir.Value, decl *gidlmixer.VectorDecl) string {
 	if len(value) == 0 {
 		sliceVar := b.newVar()
 		b.write("auto %s = %s();\n",

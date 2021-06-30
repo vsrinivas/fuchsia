@@ -13,7 +13,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-func BuildEqualityCheck(actualExpr string, expectedValue interface{}, decl gidlmixer.Declaration, handleKoidVectorName string) (string, string) {
+func BuildEqualityCheck(actualExpr string, expectedValue gidlir.Value, decl gidlmixer.Declaration, handleKoidVectorName string) (string, string) {
 	builder := equalityCheckBuilder{
 		handleKoidVectorName: handleKoidVectorName,
 	}
@@ -93,7 +93,7 @@ func (b *equalityCheckBuilder) equals(actual, expected fidlExpr) boolExpr {
 	return boolSprintf("(%s == %s)", actual, expected)
 }
 
-func (b *equalityCheckBuilder) visit(actualExpr fidlExpr, expectedValue interface{}, decl gidlmixer.Declaration) boolExpr {
+func (b *equalityCheckBuilder) visit(actualExpr fidlExpr, expectedValue gidlir.Value, decl gidlmixer.Declaration) boolExpr {
 	switch expectedValue := expectedValue.(type) {
 	case bool:
 		return b.equals(actualExpr, b.construct(typeName(decl), "%t", expectedValue))
@@ -124,7 +124,7 @@ func (b *equalityCheckBuilder) visit(actualExpr fidlExpr, expectedValue interfac
 		case *gidlmixer.UnionDecl:
 			return b.visitUnion(actualExpr, expectedValue, decl)
 		}
-	case []interface{}:
+	case []gidlir.Value:
 		return b.visitList(actualExpr, expectedValue, decl.(gidlmixer.ListDeclaration))
 	case nil:
 		switch decl.(type) {
@@ -224,7 +224,7 @@ func (b *equalityCheckBuilder) visitUnion(actualExpr fidlExpr, expectedValue gid
 		actualVar, declName(decl), fidlgen.ConstNameToKCamelCase(field.Key.Name), fieldEquality)
 }
 
-func (b *equalityCheckBuilder) visitList(actualExpr fidlExpr, expectedValue []interface{}, decl gidlmixer.ListDeclaration) boolExpr {
+func (b *equalityCheckBuilder) visitList(actualExpr fidlExpr, expectedValue []gidlir.Value, decl gidlmixer.ListDeclaration) boolExpr {
 	actualVar := b.createAndAssignVar(actualExpr)
 	var equalityChecks []boolExpr
 	if _, ok := decl.(*gidlmixer.VectorDecl); ok {

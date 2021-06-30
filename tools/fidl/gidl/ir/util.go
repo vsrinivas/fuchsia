@@ -108,7 +108,7 @@ func ContainsUnknownField(value Value) bool {
 			}
 		}
 		return false
-	case []interface{}:
+	case []Value:
 		for _, v := range value {
 			if ContainsUnknownField(v) {
 				return true
@@ -163,7 +163,7 @@ func populateUsedHandles(value Value, seen map[Handle]struct{}) {
 		for _, handle := range value.Handles {
 			seen[handle] = struct{}{}
 		}
-	case []interface{}:
+	case []Value:
 		for _, item := range value {
 			populateUsedHandles(item, seen)
 		}

@@ -98,7 +98,7 @@ func escapeStr(value string) string {
 	return buf.String()
 }
 
-func visit(value interface{}, decl gidlmixer.Declaration) string {
+func visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool:
 		return strconv.FormatBool(value)
@@ -151,7 +151,7 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		case *gidlmixer.UnionDecl:
 			return onUnion(value, decl)
 		}
-	case []interface{}:
+	case []gidlir.Value:
 		switch decl := decl.(type) {
 		case *gidlmixer.ArrayDecl:
 			return onList(value, decl)
@@ -331,7 +331,7 @@ func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 	return wrapNullable(decl, valueStr)
 }
 
-func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
+func onList(value []gidlir.Value, decl gidlmixer.ListDeclaration) string {
 	var elements []string
 	elemDecl := decl.Elem()
 	for _, item := range value {

@@ -111,7 +111,7 @@ func (b *cppValueBuilder) newVar() string {
 	return fmt.Sprintf("v%d", b.varidx)
 }
 
-func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) string {
+func (b *cppValueBuilder) visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool:
 		return fmt.Sprintf("%t", value)
@@ -165,7 +165,7 @@ func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) s
 		return fmt.Sprintf("%s(handle_defs[%d]%s)", typeName(decl), value.Handle, b.handleExtractOp)
 	case gidlir.Record:
 		return b.visitRecord(value, decl.(gidlmixer.RecordDeclaration))
-	case []interface{}:
+	case []gidlir.Value:
 		switch decl := decl.(type) {
 		case *gidlmixer.ArrayDecl:
 			return b.visitArray(value, decl)
@@ -245,7 +245,7 @@ func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.Record
 	return fmt.Sprintf("std::move(%s)", containerVar)
 }
 
-func (b *cppValueBuilder) visitArray(value []interface{}, decl *gidlmixer.ArrayDecl) string {
+func (b *cppValueBuilder) visitArray(value []gidlir.Value, decl *gidlmixer.ArrayDecl) string {
 	var elements []string
 	elemDecl := decl.Elem()
 	for _, item := range value {
@@ -256,7 +256,7 @@ func (b *cppValueBuilder) visitArray(value []interface{}, decl *gidlmixer.ArrayD
 		typeName(decl), strings.Join(elements, ", "))
 }
 
-func (b *cppValueBuilder) visitVector(value []interface{}, decl *gidlmixer.VectorDecl) string {
+func (b *cppValueBuilder) visitVector(value []gidlir.Value, decl *gidlmixer.VectorDecl) string {
 	elemDecl := decl.Elem()
 	var elements []string
 	for _, item := range value {

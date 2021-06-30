@@ -17,7 +17,7 @@ import (
 // - `bool` for booleans
 // - `Handle` for handles
 // - `Record` for structs, tables, and unions
-// - `[]interface{}` for slices of values
+// - `[]Value` for slices of values
 // - `nil` for null values (only allowed for nullable types)
 // - `UnknownData` for unknown variants of unions
 type Value interface{}

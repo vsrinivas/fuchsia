@@ -17,7 +17,7 @@ import (
 func TestParseValues(t *testing.T) {
 	type testCase struct {
 		gidl          string
-		expectedValue interface{}
+		expectedValue ir.Value
 	}
 	testCases := []testCase{
 		{gidl: `1`, expectedValue: uint64(1)},
@@ -136,10 +136,10 @@ func TestParseValues(t *testing.T) {
 				},
 			},
 		}},
-		{gidl: `[]`, expectedValue: []interface{}(nil)},
-		{gidl: `[1,]`, expectedValue: []interface{}{uint64(1)}},
-		{gidl: `[1,"hello",true,]`, expectedValue: []interface{}{uint64(1), "hello", true}},
-		{gidl: `[null,]`, expectedValue: []interface{}{nil}},
+		{gidl: `[]`, expectedValue: []ir.Value(nil)},
+		{gidl: `[1,]`, expectedValue: []ir.Value{uint64(1)}},
+		{gidl: `[1,"hello",true,]`, expectedValue: []ir.Value{uint64(1), "hello", true}},
+		{gidl: `[null,]`, expectedValue: []ir.Value{nil}},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.gidl, func(t *testing.T) {

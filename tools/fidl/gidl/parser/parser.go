@@ -915,8 +915,8 @@ func (p *Parser) parseErrorCode() (ir.ErrorCode, error) {
 	return code, nil
 }
 
-func (p *Parser) parseSlice(rightsConfiguration rightsConfiguration) ([]interface{}, error) {
-	var result []interface{}
+func (p *Parser) parseSlice(rightsConfiguration rightsConfiguration) ([]ir.Value, error) {
+	var result []ir.Value
 	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
 		val, err := p.parseValue(rightsConfiguration)
 		if err != nil {
