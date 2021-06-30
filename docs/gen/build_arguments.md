@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1320
+From //build/config/BUILDCONFIG.gn:1417
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -554,7 +554,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:561
+From //build/config/BUILDCONFIG.gn:651
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -628,7 +628,7 @@ and compare the outputs' contents for reproducibility.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:565
+From //build/config/BUILDCONFIG.gn:655
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -1091,7 +1091,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1077
+From //build/config/BUILDCONFIG.gn:1174
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1814,6 +1814,8 @@ Each element of the list is one variant, which is a scope defining:
   configs = ["//build/config/lto:thinlto"]
   tags = ["lto"]
 }, {
+  name = "novariant"
+}, {
   configs = ["//build/config/profile:coverage"]
   tags = ["instrumented", "coverage"]
 }, {
@@ -1895,7 +1897,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:928
+From //build/config/BUILDCONFIG.gn:1018
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1911,13 +1913,13 @@ built and mounted inside the container at /mnt/chromeos.
 
 **Current value (from the default):** `true`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:29
+From //src/virtualization/bin/linux_runner/BUILD.gn:30
 
 ### linux_runner_gateway
 
 **Current value (from the default):** `"10.0.0.1"`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:24
+From //src/virtualization/bin/linux_runner/BUILD.gn:25
 
 ### linux_runner_ip
 Default values for the guest network configuration.
@@ -1929,27 +1931,27 @@ See //src/virtualization/bin/vmm/device/virtio_net.cc for more details.
 
 **Current value (from the default):** `"10.0.0.2"`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:23
+From //src/virtualization/bin/linux_runner/BUILD.gn:24
 
 ### linux_runner_netmask
 
 **Current value (from the default):** `"255.255.255.0"`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:25
+From //src/virtualization/bin/linux_runner/BUILD.gn:26
 
 ### linux_runner_stateful_image_path
 Point this to the location of a prebuilt stateful image
 
 **Current value (from the default):** `""`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:40
+From //src/virtualization/bin/linux_runner/BUILD.gn:41
 
 ### linux_runner_user_extras
 Point this to the location of external files to be included as extras
 
 **Current value (from the default):** `[]`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:37
+From //src/virtualization/bin/linux_runner/BUILD.gn:38
 
 ### linux_runner_volatile_block
 If `true`, all block devices that would normally load as READ_WRITE will
@@ -1958,7 +1960,7 @@ the linux kernel as crashes and panics can sometimes corrupt the images.
 
 **Current value (from the default):** `false`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:34
+From //src/virtualization/bin/linux_runner/BUILD.gn:35
 
 ### local_bench
 Used to enable local benchmarking/fine-tuning when running benchmarks
@@ -2090,6 +2092,14 @@ From //boards/common/x64-common.gni:75
 **Overridden from the default:** `"0"`
 
 From //build/images/filesystem_limits.gni:31
+
+### max_fvm_size
+Maximum allowable size for the FVM in a release mode build
+Zero means no limit
+
+**Current value (from the default):** `"0"`
+
+From //build/images/max_fvm_size.gni:8
 
 ### max_log_disk_usage
 Controls how many bytes of space on disk are used to persist device logs.
@@ -3217,7 +3227,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1310
+From //build/config/BUILDCONFIG.gn:1407
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3226,7 +3236,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1315
+From //build/config/BUILDCONFIG.gn:1412
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3270,7 +3280,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1123
+From //build/config/BUILDCONFIG.gn:1220
 
 ### size_checker_input
 The input to the size checker.
@@ -3556,7 +3566,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1107
+From //build/config/BUILDCONFIG.gn:1204
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3729,7 +3739,7 @@ git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
 
 **Current value (from the default):** `true`
 
-From //src/media/lib/ffmpeg/BUILD.gn:39
+From //src/media/lib/ffmpeg/BUILD.gn:40
 
 ### use_swiftshader_vulkan_icd_on_host
 
@@ -3973,7 +3983,7 @@ From //build/images/args.gni:80
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:177
+From //build/config/fuchsia/BUILD.gn:181
 
 ### zircon_b_partition
 
