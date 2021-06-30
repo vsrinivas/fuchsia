@@ -22,6 +22,8 @@ static_library("symbols") {
     "array_type.h",
     "base_type.h",
     "build_id_index.h",
+    "call_site.h",
+    "call_site_parameter.h",
     "code_block.h",
     "collection.h",
     "compile_unit.h",

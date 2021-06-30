@@ -198,7 +198,7 @@ TEST(Index, FindFileMatches) {
   std::string full_path = result[0];
 
   // Simple filename-only query that fails.
-  result = index.FindFileMatches("nonexistant.cc");
+  result = index.FindFileMatches("nonexistent.cc");
   EXPECT_EQ(0u, result.size());
 
   // Multiple path components.

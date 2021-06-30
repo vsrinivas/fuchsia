@@ -17,6 +17,8 @@
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/resolve_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/call_site.h"
+#include "src/developer/debug/zxdb/symbols/call_site_parameter.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
@@ -437,6 +439,48 @@ OutputBuffer FormatOtherSymbol(const Symbol* symbol) {
   return out;
 }
 
+OutputBuffer FormatCallSiteParameter(const SymbolContext& symbol_context,
+                                     const CallSiteParameter* param,
+                                     const FormatSymbolOptions& opts, int indent) {
+  OutputBuffer out;
+  std::string indent_str = GetIndentStr(indent);
+
+  out.Append(Syntax::kHeading,
+             indent_str + "Call site parameter:\n  " + indent_str + "DWARF register #: ");
+  if (param->location_register_num()) {
+    out.Append(std::to_string(*param->location_register_num()));
+  } else {
+    out.Append(Syntax::kComment, "<unspecified>");
+  }
+
+  out.Append(Syntax::kHeading, "\n" + indent_str + "  Value expression: ");
+  out.Append(FormatDwarfExpr(opts.arch, opts.dwarf_expr, symbol_context, param->value_expr()));
+  out.Append("\n");
+
+  return out;
+}
+
+OutputBuffer FormatCallSite(const SymbolContext& symbol_context, const CallSite* call_site,
+                            const FormatSymbolOptions& opts) {
+  OutputBuffer out;
+  out.Append(Syntax::kHeading, "Call Site\n  Return to: ");
+  if (call_site->return_pc()) {
+    out.Append(to_hex_string(symbol_context.RelativeToAbsolute(*call_site->return_pc())));
+  } else {
+    out.Append(Syntax::kComment, "<not specified>");
+  }
+
+  out.Append(Syntax::kHeading, "\n  Parameters:\n");
+  for (const auto& lazy : call_site->parameters()) {
+    if (const CallSiteParameter* param = lazy.Get()->As<CallSiteParameter>())
+      out.Append(FormatCallSiteParameter(symbol_context, param, opts, 2));
+  }
+  if (call_site->parameters().empty())
+    out.Append(Syntax::kComment, "    <no parameters>");
+
+  return out;
+}
+
 }  // namespace
 
 OutputBuffer FormatSymbol(const ProcessSymbols* process_symbols, const Symbol* symbol,
@@ -445,6 +489,10 @@ OutputBuffer FormatSymbol(const ProcessSymbols* process_symbols, const Symbol* s
 
   if (const Type* type = symbol->As<Type>())
     return FormatType(process_symbols, type);
+  if (const CallSite* call_site = symbol->As<CallSite>())
+    return FormatCallSite(symbol_context, call_site, opts);
+  if (const CallSiteParameter* call_site_param = symbol->As<CallSiteParameter>())
+    return FormatCallSiteParameter(symbol_context, call_site_param, opts, 0);
   if (const Function* function = symbol->As<Function>())
     return FormatFunction(symbol_context, function, opts);
   if (const Variable* variable = symbol->As<Variable>())

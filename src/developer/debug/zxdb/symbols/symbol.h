@@ -22,6 +22,8 @@ namespace zxdb {
 
 class ArrayType;
 class BaseType;
+class CallSite;
+class CallSiteParameter;
 class CodeBlock;
 class Collection;
 class CompileUnit;
@@ -176,6 +178,8 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
 
   IMPLEMENT_TEMPLATIZED_AS(ArrayType);
   IMPLEMENT_TEMPLATIZED_AS(BaseType);
+  IMPLEMENT_TEMPLATIZED_AS(CallSite);
+  IMPLEMENT_TEMPLATIZED_AS(CallSiteParameter);
   IMPLEMENT_TEMPLATIZED_AS(CodeBlock);
   IMPLEMENT_TEMPLATIZED_AS(Collection);
   IMPLEMENT_TEMPLATIZED_AS(CompileUnit);
@@ -210,6 +214,8 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // so callers are consistent).
   virtual const ArrayType* AsArrayType() const;
   virtual const BaseType* AsBaseType() const;
+  virtual const CallSite* AsCallSite() const;
+  virtual const CallSiteParameter* AsCallSiteParameter() const;
   virtual const CodeBlock* AsCodeBlock() const;
   virtual const Collection* AsCollection() const;
   virtual const CompileUnit* AsCompileUnit() const;

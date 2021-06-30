@@ -6,6 +6,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/zxdb/symbols/call_site.h"
+#include "src/developer/debug/zxdb/symbols/call_site_parameter.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
@@ -130,6 +132,29 @@ TEST(FormatSymbol, Collection) {
       "  Underlying type: MyStruct\n";
   out = FormatSymbol(nullptr, coll_typedef.get(), FormatSymbolOptions());
   EXPECT_EQ(std::string(kTypedefHeader) + std::string(kMembers), out.AsString());
+}
+
+TEST(FormatSymbol, CallSite) {
+  DwarfExpr value_expr({0x30,  // DW_OP_lit0
+                        0x71,  // DW_OP_breg1
+                        1});   // 1 (param for breg).
+  auto param1 = fxl::MakeRefCounted<CallSiteParameter>(5, value_expr);
+  auto param2 = fxl::MakeRefCounted<CallSiteParameter>(6, value_expr);
+
+  auto call = fxl::MakeRefCounted<CallSite>(0x1000, std::vector<LazySymbol>{param1, param2});
+
+  OutputBuffer out = FormatSymbol(nullptr, call.get(), FormatSymbolOptions());
+  EXPECT_EQ(
+      "Call Site\n"
+      "  Return to: 0x1000\n"
+      "  Parameters:\n"
+      "    Call site parameter:\n"
+      "      DWARF register #: 5\n"
+      "      Value expression: push(0), dwarf_register(1) + 1\n"
+      "    Call site parameter:\n"
+      "      DWARF register #: 6\n"
+      "      Value expression: push(0), dwarf_register(1) + 1\n",
+      out.AsString());
 }
 
 }  // namespace zxdb

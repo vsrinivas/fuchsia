@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/developer/debug/zxdb/symbols/call_site.h"
+#include "src/developer/debug/zxdb/symbols/call_site_parameter.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 
@@ -75,6 +77,41 @@ const CodeBlock* CodeBlock::GetMostSpecificChild(const SymbolContext& symbol_con
 
   // This block covers the address but no children do.
   return this;
+}
+
+const CallSite* CodeBlock::GetCallSiteForReturnTo(const SymbolContext& symbol_context,
+                                                  TargetPointer absolute_return_address) const {
+  // Generally this will be called on a symbol from a Location so |this| could be an inline
+  // function. Because of the difference between return addresses and where the call site
+  // definitions are (see below), the call site may be on our parent. So always go to the physical
+  // function the address is in.
+  fxl::RefPtr<CodeBlock> containing = GetContainingFunction(kPhysicalOnly);
+  if (!containing)
+    containing = RefPtrTo(this);  // No function, call back on just using |this|.
+
+  // We assume the call site will always be in the innermost code block containing the address.
+  // This requirement isn't specified by DWARF but is true due to language semantics.
+  //
+  // We're looking up by return address which might be the instruction after the call for inlines
+  // or lexical blocks that end in a function call. Therefore, look up the code block by the
+  // previous address because the call sites will be assigned to blocks by their call address.
+  const CodeBlock* inner_block =
+      containing->GetMostSpecificChild(symbol_context, absolute_return_address - 1, true);
+  if (!inner_block)
+    return nullptr;
+
+  TargetPointer relative_return_address =
+      symbol_context.AbsoluteToRelative(absolute_return_address);
+
+  for (const LazySymbol& lazy : inner_block->call_sites()) {
+    const CallSite* call_site = lazy.Get()->As<CallSite>();
+    if (!call_site)
+      continue;
+
+    if (call_site->return_pc() && *call_site->return_pc() == relative_return_address)
+      return call_site;
+  }
+  return nullptr;
 }
 
 fxl::RefPtr<Function> CodeBlock::GetContainingFunction(SearchFunction search) const {

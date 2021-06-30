@@ -18,6 +18,7 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
+#include "src/developer/debug/zxdb/symbols/call_site.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_unit.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/line_table.h"
@@ -30,11 +31,12 @@ namespace zxdb {
 
 namespace {
 
-constexpr int kFunctionSwitch = 1;
-constexpr int kInlineSwitch = 2;
-constexpr int kInlineTreeSwitch = 3;
-constexpr int kLineSwitch = 4;
-constexpr int kDwarfExprSwitch = 5;
+constexpr int kCallReturnSwitch = 1;
+constexpr int kFunctionSwitch = 2;
+constexpr int kInlineSwitch = 3;
+constexpr int kInlineTreeSwitch = 4;
+constexpr int kLineSwitch = 5;
+constexpr int kDwarfExprSwitch = 6;
 
 const char kSymDebugShortHelp[] = "sym-debug: Print debug symbol information.";
 const char kSymDebugHelp[] =
@@ -45,6 +47,10 @@ const char kSymDebugHelp[] =
   used.
 
 Printing modes
+
+  --call-return | -r
+      Prints the call site information for the call returning to the given
+      address.
 
   --function | -f
       Prints the information about the function symbol covering the address.
@@ -116,6 +122,25 @@ void AppendFunctionAndRanges(const SymbolContext& context, const Function* funct
   out.Append(": ");
   out.Append(Syntax::kComment, function->GetAbsoluteCodeRanges(context).ToString());
   out.Append("\n");
+}
+
+OutputBuffer DumpCallReturn(ProcessSymbols* process_symbols, uint64_t address,
+                            const FormatSymbolOptions& opts) {
+  auto func_or = GetFunctionAtAddress(process_symbols, address);
+  if (!func_or) {
+    OutputBuffer out;
+    out.Append(func_or.err());
+    return out;
+  }
+  const Function* func = func_or.value().get();
+
+  SymbolContext symbol_context = func->GetSymbolContext(process_symbols);
+
+  const CallSite* call_site = func->GetCallSiteForReturnTo(symbol_context, address);
+  if (call_site)
+    return FormatSymbol(process_symbols, call_site, opts);
+
+  return OutputBuffer("No call site information for return to " + to_hex_string(address));
 }
 
 OutputBuffer DumpFunction(ProcessSymbols* process_symbols, uint64_t address,
@@ -286,11 +311,13 @@ Err RunVerbSymDebug(ConsoleContext* context, const Command& cmd) {
     return opts.err();
 
   OutputBuffer (*dumper)(ProcessSymbols*, uint64_t, const FormatSymbolOptions&) = nullptr;
-  if (cmd.HasSwitch(kFunctionSwitch)) {
+  if (cmd.HasSwitch(kCallReturnSwitch)) {
+    dumper = &DumpCallReturn;
+  } else if (cmd.HasSwitch(kFunctionSwitch)) {
     if (cmd.args().empty()) {
       // When no address is given, use the function symbol from the current frame. This will handle
-      // the case of ambiguous inlines wher just looking up the address won't get what the user sees
-      // as the current function.
+      // the case of ambiguous inlines where just looking up the address won't get what the user
+      // sees as the current function.
       if (const Frame* frame = cmd.frame()) {
         if (!frame->GetLocation().symbol())
           return Err("No function symbol for current location.");
@@ -353,13 +380,14 @@ VerbRecord GetSymDebugVerbRecord() {
                        CommandGroup::kSymbol);
   sym_debug.param_type = VerbRecord::kOneParam;
 
+  SwitchRecord call_return_switch(kCallReturnSwitch, false, "call-return", 'r');
   SwitchRecord func_switch(kFunctionSwitch, false, "function", 'f');
   SwitchRecord inline_switch(kInlineSwitch, false, "inlines", 'i');
   SwitchRecord inline_tree_switch(kInlineTreeSwitch, false, "inline-tree", 't');
   SwitchRecord line_switch(kLineSwitch, false, "line", 'l');
   SwitchRecord dwarf_expr_switch(kDwarfExprSwitch, true, "dwarf-expr");
-  sym_debug.switches = {func_switch, inline_switch, inline_tree_switch, line_switch,
-                        dwarf_expr_switch};
+  sym_debug.switches = {call_return_switch, func_switch, inline_switch,
+                        inline_tree_switch, line_switch, dwarf_expr_switch};
 
   return sym_debug;
 }

@@ -38,7 +38,7 @@ class ScopedUnlink {
 
 }  // namespace
 
-// Trying to load a nonexistant file should error.
+// Trying to load a nonexistent file should error.
 TEST(ModuleSymbols, NonExistantFile) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName() + "_NONEXISTANT", "");
   // Should fail to load.

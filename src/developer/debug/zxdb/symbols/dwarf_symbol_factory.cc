@@ -14,6 +14,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/call_site.h"
+#include "src/developer/debug/zxdb/symbols/call_site_parameter.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
@@ -39,6 +41,14 @@
 namespace zxdb {
 
 namespace {
+
+// Converts an llvm::Optional to a std::optional.
+template <typename T>
+std::optional<T> ToStdOptional(const llvm::Optional<T>& o) {
+  if (!o)
+    return std::nullopt;
+  return *o;
+}
 
 // Generates ranges for a CodeBlock. The attributes may be not present, this function will compute
 // what it can given the information (which may be an empty vector).
@@ -128,6 +138,12 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(const llvm::DWARFDie& die) 
       break;
     case DwarfTag::kBaseType:
       symbol = DecodeBaseType(die);
+      break;
+    case DwarfTag::kCallSite:
+      symbol = DecodeCallSite(die);
+      break;
+    case DwarfTag::kCallSiteParameter:
+      symbol = DecodeCallSiteParameter(die);
       break;
     case DwarfTag::kCompileUnit:
       symbol = DecodeCompileUnit(die);
@@ -295,10 +311,13 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
     function->set_object_pointer(MakeLazy(object_ptr));
 
   // Handle sub-DIEs: parameters, child blocks, and variables.
+  //
+  // Note: this partially duplicates a similar loop in DecodeLexicalBlock().
   std::vector<LazySymbol> parameters;
   std::vector<LazySymbol> inner_blocks;
   std::vector<LazySymbol> variables;
   std::vector<LazySymbol> template_params;
+  std::vector<LazySymbol> call_sites;
   for (const llvm::DWARFDie& child : DwarfAbstractChildIterator(die)) {
     switch (child.getTag()) {
       case llvm::dwarf::DW_TAG_formal_parameter:
@@ -315,6 +334,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
       case llvm::dwarf::DW_TAG_template_value_parameter:
         template_params.push_back(MakeLazy(child));
         break;
+      case llvm::dwarf::DW_TAG_call_site:
+        call_sites.push_back(MakeLazy(child));
+        break;
       default:
         break;  // Skip everything else.
     }
@@ -323,6 +345,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
   function->set_inner_blocks(std::move(inner_blocks));
   function->set_variables(std::move(variables));
   function->set_template_params(std::move(template_params));
+  function->set_call_sites(std::move(call_sites));
 
   if (parent && !function->parent()) {
     // Set the parent symbol when it hasn't already been set. We always want the specification's
@@ -429,6 +452,59 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeBaseType(const llvm::DWARFDie& die
     base_type->set_parent(MakeUncachedLazy(parent));
 
   return base_type;
+}
+
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCallSite(const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(GetLLVMContext());
+
+  llvm::Optional<uint64_t> return_pc;
+  decoder.AddAddress(llvm::dwarf::DW_AT_call_return_pc, &return_pc);
+
+  if (!decoder.Decode(die))
+    return fxl::MakeRefCounted<Symbol>();
+
+  // Decode parameters.
+  std::vector<LazySymbol> parameters;
+  for (const llvm::DWARFDie& child : die) {
+    if (child.getTag() == llvm::dwarf::DW_TAG_call_site_parameter)
+      parameters.push_back(MakeLazy(child));
+  }
+
+  return fxl::MakeRefCounted<CallSite>(ToStdOptional(return_pc), std::move(parameters));
+}
+
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCallSiteParameter(const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(GetLLVMContext());
+
+  // We currently assume that the location and value for call site parameters are always blocks
+  // having inline location expressions. Technically, these are location expressions that could
+  // be an offset to a location list, but our current supported compilers don't express it this way,
+  // and there would seem to no point in doing so for this case.
+
+  llvm::Optional<std::vector<uint8_t>> location;
+  decoder.AddBlock(llvm::dwarf::DW_AT_location, &location);
+
+  llvm::Optional<std::vector<uint8_t>> value;
+  decoder.AddBlock(llvm::dwarf::DW_AT_call_value, &value);
+
+  if (!decoder.Decode(die))
+    return fxl::MakeRefCounted<Symbol>();
+
+  // Decode the register number. We currently expect the location to be exactly one DWARF opcode
+  // indicating the register (see call_site_parameter.h for more).
+  std::optional<int> register_num;
+  if (location && location->size() == 1) {
+    uint8_t location_op = location->at(0);
+    if (location_op >= llvm::dwarf::DW_OP_reg0 && location_op <= llvm::dwarf::DW_OP_reg31)
+      register_num = location_op - llvm::dwarf::DW_OP_reg0;
+  }
+
+  // Convert a nonexistent value to one with an empty block. These are equivalent for our needs.
+  if (!value)
+    value.emplace();
+
+  return fxl::MakeRefCounted<CallSiteParameter>(
+      register_num, DwarfExpr(std::move(*value), MakeUncachedLazy(die)));
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(const llvm::DWARFDie& die) {
@@ -776,8 +852,11 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeLexicalBlock(const llvm::DWARFDie&
   block->set_code_ranges(GetCodeRanges(die));
 
   // Handle sub-DIEs: child blocks and variables.
+  //
+  // Note: this partially duplicates a similar loop in DecodeFunction().
   std::vector<LazySymbol> inner_blocks;
   std::vector<LazySymbol> variables;
+  std::vector<LazySymbol> call_sites;
   for (const llvm::DWARFDie& child : die) {
     switch (child.getTag()) {
       case llvm::dwarf::DW_TAG_variable:
@@ -787,12 +866,16 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeLexicalBlock(const llvm::DWARFDie&
       case llvm::dwarf::DW_TAG_lexical_block:
         inner_blocks.push_back(MakeLazy(child));
         break;
+      case llvm::dwarf::DW_TAG_call_site:
+        call_sites.push_back(MakeLazy(child));
+        break;
       default:
         break;  // Skip everything else.
     }
   }
   block->set_inner_blocks(std::move(inner_blocks));
   block->set_variables(std::move(variables));
+  block->set_call_sites(std::move(call_sites));
 
   return block;
 }

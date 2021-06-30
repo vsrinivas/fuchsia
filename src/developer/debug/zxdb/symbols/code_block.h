@@ -65,6 +65,10 @@ class CodeBlock : public Symbol {
   const std::vector<LazySymbol>& variables() const { return variables_; }
   void set_variables(std::vector<LazySymbol> v) { variables_ = std::move(v); }
 
+  // All call sites contained within this block. In no specific order.
+  const std::vector<LazySymbol>& call_sites() const { return call_sites_; }
+  void set_call_sites(std::vector<LazySymbol> v) { call_sites_ = std::move(v); }
+
   // Returns true if the block's code ranges contain the given address. A block with no specified
   // range will always return true.
   bool ContainsAddress(const SymbolContext& symbol_context, uint64_t absolute_address) const;
@@ -85,6 +89,11 @@ class CodeBlock : public Symbol {
   // should not happen for well-formed symbols (all code should be inside functions).
   enum SearchFunction { kInlineOrPhysical, kPhysicalOnly };
   fxl::RefPtr<Function> GetContainingFunction(SearchFunction search = kInlineOrPhysical) const;
+
+  // Searches this code block and all descendents for a call site annotation matching the given
+  // return address. Returns null if there is no call site record for this return address.
+  const CallSite* GetCallSiteForReturnTo(const SymbolContext& symbol_context,
+                                         TargetPointer absolute_return_address) const;
 
   // Returns the chain of inline functions to the current code block.
   //
@@ -129,6 +138,7 @@ class CodeBlock : public Symbol {
   AddressRanges code_ranges_;
   std::vector<LazySymbol> inner_blocks_;
   std::vector<LazySymbol> variables_;
+  std::vector<LazySymbol> call_sites_;
 };
 
 }  // namespace zxdb

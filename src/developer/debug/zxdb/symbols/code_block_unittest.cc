@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/zxdb/symbols/call_site.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
@@ -157,6 +158,62 @@ TEST(CodeBlock, GetContainingFunction) {
   EXPECT_EQ(physical_fn.get(),
             lexical_block->GetContainingFunction(CodeBlock::kPhysicalOnly).get());
   EXPECT_EQ(physical_fn.get(), physical_fn->GetContainingFunction().get());
+}
+
+TEST(CodeBlock, GetCallSiteForReturnTo) {
+  auto outer = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
+
+  // Outer has two ranges.
+  outer->set_code_ranges(AddressRanges(
+      AddressRanges::kCanonical, {AddressRange(0x1000, 0x2000), AddressRange(0x3000, 0x3001)}));
+
+  // There are two inner blocks, one covers partially the first range, the other covers exactly the
+  // second range.
+  auto first_child = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
+  first_child->set_code_ranges(AddressRanges(AddressRange(0x1000, 0x2000)));
+
+  auto second_child = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
+  second_child->set_code_ranges(AddressRanges(AddressRange(0x3000, 0x3001)));
+
+  // Append the child ranges.
+  std::vector<LazySymbol> outer_inner;
+  outer_inner.emplace_back(first_child);
+  outer_inner.emplace_back(second_child);
+  outer->set_inner_blocks(outer_inner);
+
+  // The first child has two call sites. These are added in backwards order since DWARF doesn't
+  // guarantee any ordering.
+  constexpr uint64_t kFirstChildReturnAddress1 = 0x1011;
+  auto first_child_cs1 =
+      fxl::MakeRefCounted<CallSite>(kFirstChildReturnAddress1, std::vector<LazySymbol>{});
+  constexpr uint64_t kFirstChildReturnAddress2 = 0x1021;
+  auto first_child_cs2 =
+      fxl::MakeRefCounted<CallSite>(kFirstChildReturnAddress2, std::vector<LazySymbol>{});
+  first_child->set_call_sites({LazySymbol(first_child_cs2), LazySymbol(first_child_cs1)});
+
+  // The second child has one call site at the end returning to the instruction following it.
+  constexpr uint64_t kSecondChildReturnAddress = 0x3001;
+  auto second_child_cs =
+      fxl::MakeRefCounted<CallSite>(kSecondChildReturnAddress, std::vector<LazySymbol>{});
+  second_child->set_call_sites({LazySymbol(second_child_cs)});
+
+  constexpr uint64_t kLoadAddress = 0x100000000;
+  SymbolContext symbol_context(kLoadAddress);
+
+  // Outside of any range.
+  EXPECT_EQ(nullptr, outer->GetCallSiteForReturnTo(symbol_context, 0x9999999999));
+  EXPECT_EQ(nullptr, outer->GetCallSiteForReturnTo(symbol_context, 0));
+
+  // Inside a code block but no matching call site.
+  EXPECT_EQ(nullptr, outer->GetCallSiteForReturnTo(symbol_context, kLoadAddress + 0x1001));
+
+  // Check all the call site addresses for matches.
+  EXPECT_EQ(first_child_cs1.get(), outer->GetCallSiteForReturnTo(
+                                       symbol_context, kLoadAddress + kFirstChildReturnAddress1));
+  EXPECT_EQ(first_child_cs2.get(), outer->GetCallSiteForReturnTo(
+                                       symbol_context, kLoadAddress + kFirstChildReturnAddress2));
+  EXPECT_EQ(second_child_cs.get(), outer->GetCallSiteForReturnTo(
+                                       symbol_context, kLoadAddress + kSecondChildReturnAddress));
 }
 
 }  // namespace zxdb

@@ -86,6 +86,8 @@ DwarfLang Symbol::GetLanguage() const {
 
 const ArrayType* Symbol::AsArrayType() const { return nullptr; }
 const BaseType* Symbol::AsBaseType() const { return nullptr; }
+const CallSite* Symbol::AsCallSite() const { return nullptr; }
+const CallSiteParameter* Symbol::AsCallSiteParameter() const { return nullptr; }
 const CodeBlock* Symbol::AsCodeBlock() const { return nullptr; }
 const CompileUnit* Symbol::AsCompileUnit() const { return nullptr; }
 const Collection* Symbol::AsCollection() const { return nullptr; }

@@ -132,6 +132,17 @@ void DwarfDieDecoder::AddSectionOffset(llvm::dwarf::Attribute attribute,
   });
 }
 
+void DwarfDieDecoder::AddBlock(llvm::dwarf::Attribute attribute,
+                               llvm::Optional<std::vector<uint8_t>>* dest) {
+  attrs_.emplace_back(attribute, [dest](llvm::DWARFUnit*, const llvm::DWARFFormValue& form) {
+    if (form.isFormClass(llvm::DWARFFormValue::FC_Block) ||
+        form.isFormClass(llvm::DWARFFormValue::FC_Exprloc)) {
+      llvm::ArrayRef<uint8_t> block = *form.getAsBlock();
+      *dest = std::vector<uint8_t>(block.begin(), block.end());
+    }
+  });
+}
+
 void DwarfDieDecoder::AddReference(llvm::dwarf::Attribute attribute, llvm::DWARFDie* output) {
   attrs_.emplace_back(attribute,
                       [this, output](llvm::DWARFUnit* unit, const llvm::DWARFFormValue& form) {
