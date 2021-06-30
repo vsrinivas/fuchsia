@@ -376,7 +376,6 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
   // against cycles and excessive memory usage.
   size_t remaining_length = std::min(
       snapshot_.size(), PropertyBlockPayload::TotalLength::Get<size_t>(block->payload.u64));
-  size_t current_offset = 0;
   std::vector<uint8_t> buf;
 
   BlockIndex cur_extent = PropertyBlockPayload::ExtentIndex::Get<BlockIndex>(block->payload.u64);
@@ -388,7 +387,6 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
     size_t len = std::min(remaining_length, PayloadCapacity(GetOrder(extent)));
     buf.insert(buf.end(), extent->payload_ptr(), extent->payload_ptr() + len);
     remaining_length -= len;
-    current_offset += len;
 
     BlockIndex next_extent = ExtentBlockFields::NextExtentIndex::Get<BlockIndex>(extent->header);
 

@@ -463,15 +463,12 @@ int main(int argc, char** argv) {
   size_t slice_size = DEFAULT_SLICE_SIZE;
   size_t disk_size = 0;
 
-  size_t max_bad_blocks = 0;
   size_t max_disk_size = 0;
   bool is_max_bad_blocks_set = false;
   DiskType disk_type = DiskType::File;
 
-  bool should_unlink = true;
   bool resize_image_file_to_fit = false;
   bool length_is_lower_bound = false;
-  bool convert_to_android_sparse_format = false;
   uint32_t flags = 0;
   size_t block_count = 0;
   storage::volume_image::RawNandOptions options;
@@ -488,7 +485,6 @@ int main(int argc, char** argv) {
         return -1;
       }
     } else if (!strcmp(argv[i], "--offset") && i + 1 < argc) {
-      should_unlink = false;
       if (parse_size(argv[++i], &offset) < 0) {
         return -1;
       }
@@ -508,7 +504,6 @@ int main(int argc, char** argv) {
         return -1;
       }
     } else if (!strcmp(argv[i], "--max-bad-blocks")) {
-      max_bad_blocks = std::stoul(argv[++i], nullptr, 10);
       is_max_bad_blocks_set = true;
     } else if (!strcmp(argv[i], "--disk")) {
       if (parse_size(argv[++i], &disk_size) < 0) {
@@ -523,7 +518,7 @@ int main(int argc, char** argv) {
     } else if (!strcmp(argv[i], "--length-is-lowerbound")) {
       length_is_lower_bound = true;
     } else if (!strcmp(argv[i], "--android-sparse-format")) {
-      convert_to_android_sparse_format = true;
+      // This flag does not do anything.
     } else if (!strcmp(argv[i], "--nand-page-size")) {
       size_t page_size = 0;
       if (parse_size(argv[++i], &page_size) < 0) {

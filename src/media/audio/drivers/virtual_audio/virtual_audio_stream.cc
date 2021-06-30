@@ -374,14 +374,13 @@ void VirtualAudioStream::HandlePositionRequests() {
   audio::ScopedToken t(domain_token());
   while (true) {
     zx::time start_time;
-    uint32_t num_rb_frames, frame_size, frame_rate;
+    uint32_t num_rb_frames, frame_size;
     fuchsia::virtualaudio::Device::GetPositionCallback position_callback;
 
     if (fbl::AutoLock lock(&wakeup_queue_lock_); !position_queue_.empty()) {
       start_time = ref_start_time_;
       num_rb_frames = num_ring_buffer_frames_;
       frame_size = frame_size_;
-      frame_rate = frame_rate_;
 
       position_callback = std::move(position_queue_.front());
       position_queue_.pop_front();

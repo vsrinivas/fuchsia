@@ -30,6 +30,10 @@ zx_status_t MagmaDependencyInjection::Initialize() {
         }
         status = fdio_service_connect_at(dir_handle, filename.c_str(),
                                          dependency_injection.NewRequest().TakeChannel().release());
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "Failed to connect to " << filename;
+          return;
+        }
         fdio_unsafe_release(dir_fdio);
 
         dependency_injection->SetMemoryPressureProvider(

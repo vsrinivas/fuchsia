@@ -142,8 +142,6 @@ void InstanceRequestor::EndOfMessage() {
 }
 
 void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
-  bool updates_happened = false;
-
   for (auto& [_, instance_info] : instance_infos_by_full_name_) {
     if (instance_info.target_.empty()) {
       // We haven't yet seen an SRV record for this instance.
@@ -159,7 +157,6 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
       continue;
     }
 
-    updates_happened = true;
     subscriber->InstanceDiscovered(
         service_name_, instance_info.instance_name_,
         inet::SocketAddress(target_info.v4_address_, instance_info.port_),

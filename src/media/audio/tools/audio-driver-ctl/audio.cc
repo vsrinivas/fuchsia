@@ -528,7 +528,6 @@ int main(int argc, const char** argv) {
 
   float tone_freq = 440.0;
   float duration;
-  bool play_loop = false;
   float amplitude = DEFAULT_PLAY_AMPLITUDE;
   const char* play_wav_filename = nullptr;
   const char* record_wav_filename = nullptr;
@@ -634,7 +633,6 @@ int main(int argc, const char** argv) {
       if (arg >= argc)
         return -1;
       play_wav_filename = argv[arg];
-      play_loop = true;
       arg++;
 
       break;

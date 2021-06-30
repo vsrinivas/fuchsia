@@ -31,14 +31,12 @@ namespace fidl_dsi = fuchsia_hardware_dsi;
 }  // namespace
 int main(int argc, char* argv[]) {
   const char* path = "/dev/class/dsi-base/000";
-  const char* on_off = "on";
   zx::channel local, remote;
   if (argc == 1 || argc > 3) {
     usage(argv);
     return -1;
   }
 
-  on_off = argv[1];
   if (strcmp(argv[1], "on") != 0 && strcmp(argv[1], "off") != 0) {
     usage(argv);
     return -1;

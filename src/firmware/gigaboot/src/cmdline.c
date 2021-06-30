@@ -151,7 +151,6 @@ void cmdline_append_load_options(void) {
   efi_status status;
   size_t options_len;
   void* options;
-  char16_t* wptr;
   uint8_t* args;
   uint8_t* ptr;
 
@@ -169,7 +168,6 @@ void cmdline_append_load_options(void) {
     goto alloc_fail;
   }
 
-  wptr = options;
   ptr = args;
   zx_status_t result;
   size_t converted_args_len = args_len;
