@@ -904,6 +904,10 @@ config("werror") {
 
     asmflags = [ "-Wa,--fatal-warnings" ]
     cflags += asmflags
+
+    if (current_os == "win") {
+      ldflags = [ "-Wl,/WX" ]
+    }
   }
   rustflags = [ "-Dwarnings" ]
 }
