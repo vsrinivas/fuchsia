@@ -229,6 +229,13 @@ function main {
     exec "$exe_path" "$@"
   fi
 
+  ################################## LEGACY CODE #################################
+  # Everything below is no longer used by default. If you need to make a change
+  # to the behavior of `fx set`, make the change both here and in
+  # //tools/build/fx-set/cmd to ensure consistency between the two.
+  # TODO(fxbug.dev/68465): Delete all the below code and use the Go
+  # implementation unconditionally on 2021-09-14.
+
   if [[ $# -lt 1 ]]; then
       fx-error Missing an explicit PRODUCT.BOARD goal.
       explain-goal-argument
