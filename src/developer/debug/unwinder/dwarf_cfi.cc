@@ -436,7 +436,8 @@ Error DwarfCfi::DecodeCie(uint8_t version, uint64_t cie_ptr, DwarfCie& cie) {
     // because the augmentation string is mainly useful for unwinding during an exception.
     // For now, we don't support it.
     if (version == 4) {
-      return Error("unsupported augmentation string in .debug_frame");
+      return Error("unsupported augmentation string in .debug_frame: %s",
+                   augmentation_string.c_str());
     }
     if (augmentation_string[0] != 'z') {
       return Error("invalid augmentation string: %s", augmentation_string.c_str());

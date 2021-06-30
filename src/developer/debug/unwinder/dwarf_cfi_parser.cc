@@ -15,6 +15,27 @@
 
 namespace unwinder {
 
+namespace {
+
+// Read a RegisterID in ULEB128 encoding.
+//
+// Unwind tables could encode rules for registers that we don't support, e.g. float point or vector
+// registers. It's safe to just set them to some invalid RegisterID (but don't overflow them),
+// as Registers::Set will deny any unknown registers.
+Error ReadRegisterID(Memory* elf, uint64_t& p, RegisterID& reg) {
+  uint64_t reg_id;
+  if (auto err = elf->ReadULEB128(p, reg_id); err.has_err()) {
+    return err;
+  }
+  if (reg_id > static_cast<uint64_t>(RegisterID::kInvalid)) {
+    return Error("register_id out of range");
+  }
+  reg = static_cast<RegisterID>(reg_id);
+  return Success();
+}
+
+}  // namespace
+
 DwarfCfiParser::DwarfCfiParser(Registers::Arch arch) {
   // Initialize those callee-preserved registers as kSameValue.
   static RegisterID kX64Preserved[] = {
@@ -141,44 +162,66 @@ Error DwarfCfiParser::ParseInstructions(Memory* elf, uint64_t code_alignment_fac
         pc += delta * code_alignment_factor;
         continue;
       }
-      case 0x7: {  // DW_CFA_undefined
-        uint64_t reg;
-        if (auto err = elf->ReadULEB128(instructions_begin, reg); err.has_err()) {
+      case 0x5: {  // DW_CFA_offset_extended
+        RegisterID reg;
+        if (auto err = ReadRegisterID(elf, instructions_begin, reg); err.has_err()) {
           return err;
         }
-        LOG_DEBUG("DW_CFA_undefined %" PRIu64 "\n", reg);
-        register_locations_[static_cast<RegisterID>(reg)].type = RegisterLocation::Type::kUndefined;
+        uint64_t offset;
+        if (auto err = elf->ReadULEB128(instructions_begin, offset); err.has_err()) {
+          return err;
+        }
+        int64_t real_offset = static_cast<int64_t>(offset) * data_alignment_factor;
+        LOG_DEBUG("DW_CFA_offset_extended %hhu %" PRId64 "\n", reg, real_offset);
+        register_locations_[reg].type = RegisterLocation::Type::kOffset;
+        register_locations_[reg].offset = real_offset;
+        continue;
+      }
+      case 0x6: {  // DW_CFA_restore_extended
+        RegisterID reg;
+        if (auto err = ReadRegisterID(elf, instructions_begin, reg); err.has_err()) {
+          return err;
+        }
+        LOG_DEBUG("DW_CFA_restore_extended %hhu\n", reg);
+        register_locations_[reg] = initial_register_locations_[reg];
+        continue;
+      }
+      case 0x7: {  // DW_CFA_undefined
+        RegisterID reg;
+        if (auto err = ReadRegisterID(elf, instructions_begin, reg); err.has_err()) {
+          return err;
+        }
+        LOG_DEBUG("DW_CFA_undefined %hhu\n", reg);
+        register_locations_[reg].type = RegisterLocation::Type::kUndefined;
         continue;
       }
       case 0x8: {  // DW_CFA_same_value
-        uint64_t reg;
-        if (auto err = elf->ReadULEB128(instructions_begin, reg); err.has_err()) {
+        RegisterID reg;
+        if (auto err = ReadRegisterID(elf, instructions_begin, reg); err.has_err()) {
           return err;
         }
-        LOG_DEBUG("DW_CFA_same_value %" PRIu64 "\n", reg);
-        register_locations_[static_cast<RegisterID>(reg)].type = RegisterLocation::Type::kSameValue;
+        LOG_DEBUG("DW_CFA_same_value %hhu\n", reg);
+        register_locations_[reg].type = RegisterLocation::Type::kSameValue;
         continue;
       }
       case 0x9: {  // DW_CFA_register
-        uint64_t reg1;
-        if (auto err = elf->ReadULEB128(instructions_begin, reg1); err.has_err()) {
+        RegisterID reg1;
+        if (auto err = ReadRegisterID(elf, instructions_begin, reg1); err.has_err()) {
           return err;
         }
-        uint64_t reg2;
-        if (auto err = elf->ReadULEB128(instructions_begin, reg2); err.has_err()) {
+        RegisterID reg2;
+        if (auto err = ReadRegisterID(elf, instructions_begin, reg2); err.has_err()) {
           return err;
         }
-        LOG_DEBUG("DW_CFA_register %" PRIu64 " %" PRIu64 "\n", reg1, reg2);
-        register_locations_[static_cast<RegisterID>(reg1)].type = RegisterLocation::Type::kRegister;
-        register_locations_[static_cast<RegisterID>(reg1)].reg_id = static_cast<RegisterID>(reg2);
+        LOG_DEBUG("DW_CFA_register %hhu %hhu\n", reg1, reg2);
+        register_locations_[reg1].type = RegisterLocation::Type::kRegister;
+        register_locations_[reg1].reg_id = reg2;
         continue;
       }
       case 0xC: {  // DW_CFA_def_cfa
-        uint64_t reg;
-        if (auto err = elf->ReadULEB128(instructions_begin, reg); err.has_err()) {
+        if (auto err = ReadRegisterID(elf, instructions_begin, cfa_register_); err.has_err()) {
           return err;
         }
-        cfa_register_ = static_cast<RegisterID>(reg);
         if (auto err = elf->ReadULEB128(instructions_begin, cfa_register_offset_); err.has_err()) {
           return err;
         }
@@ -186,11 +229,9 @@ Error DwarfCfiParser::ParseInstructions(Memory* elf, uint64_t code_alignment_fac
         continue;
       }
       case 0xD: {  // DW_CFA_def_cfa_register
-        uint64_t reg;
-        if (auto err = elf->ReadULEB128(instructions_begin, reg); err.has_err()) {
+        if (auto err = ReadRegisterID(elf, instructions_begin, cfa_register_); err.has_err()) {
           return err;
         }
-        cfa_register_ = static_cast<RegisterID>(reg);
         LOG_DEBUG("DW_CFA_def_cfa_register %hhu\n", cfa_register_);
         continue;
       }
@@ -202,8 +243,8 @@ Error DwarfCfiParser::ParseInstructions(Memory* elf, uint64_t code_alignment_fac
         continue;
       }
       case 0x10: {  // DW_CFA_expression
-        uint64_t reg;
-        if (auto err = elf->ReadULEB128(instructions_begin, reg); err.has_err()) {
+        RegisterID reg;
+        if (auto err = ReadRegisterID(elf, instructions_begin, reg); err.has_err()) {
           return err;
         }
         uint64_t length;
@@ -211,8 +252,7 @@ Error DwarfCfiParser::ParseInstructions(Memory* elf, uint64_t code_alignment_fac
           return err;
         }
         LOG_DEBUG("DW_CFA_expression length=%" PRIu64 "\n", length);
-        register_locations_[static_cast<RegisterID>(reg)].type =
-            RegisterLocation::Type::kExpression;
+        register_locations_[reg].type = RegisterLocation::Type::kExpression;
         // TODO(dangyi): add DWARF expression support.
         instructions_begin += length;
         continue;
