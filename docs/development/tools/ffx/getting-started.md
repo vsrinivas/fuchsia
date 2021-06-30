@@ -266,7 +266,7 @@ device tree of the system
 * [`boot` directory](/docs/concepts/process/namespaces.md#typical_directory_structure): the full
 bootfs filesystem used by the system during bootup
 
-CMX components are run with the `ffx component run` subcommand. These components are automatically
+CML components are run with the `ffx component run` subcommand. These components are automatically
 destroyed when they stop.
 
 Note: `fx serve` must be running in order to run a package that is not
@@ -278,12 +278,12 @@ the hello-world package in your universe:
 ```
 $ fx set <product>.<board> --with //examples/hello_world/rust:hello-world-rust && fx build
 ...
-$ fx ffx component run fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cm
-Created component instance: C1234
+$ fx ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
+Created component instance: hello-world-rust
 ...
-$ fx ffx component show C1234
-Moniker: ./core/ffx-laboratory:C1234
-URL: fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cm
+$ fx ffx component show hello-world-rust
+Moniker: ./core/ffx-laboratory:hello-world-rust
+URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
 Type: v2 dynamic component
 Execution State: Running
 Job ID: 50775

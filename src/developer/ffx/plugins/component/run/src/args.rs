@@ -12,7 +12,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
     example = "To run the 'hello_world_rust' component:
 
     $ ffx component run \\
-    fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cm",
+    fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm",
     description = "Create and run a v2 component instance in an isolated realm",
     note = "The <url> must follow the format:
 
@@ -23,6 +23,11 @@ pub struct RunComponentCommand {
     #[argh(positional)]
     /// url of component to run
     pub url: String,
+
+    #[argh(option, short = 'n')]
+    /// name of this instance. If not specified, the component name will be chosen
+    /// as the instance name.
+    pub name: Option<String>,
 }
 
 #[cfg(test)]
@@ -33,10 +38,11 @@ mod tests {
     #[test]
     fn test_command() {
         let url = "http://test.com";
-        let args = &[url];
+        let name = "test_instance";
+        let args = &[url, "--name", name];
         assert_eq!(
             RunComponentCommand::from_args(CMD_NAME, args),
-            Ok(RunComponentCommand { url: url.to_string() })
+            Ok(RunComponentCommand { url: url.to_string(), name: Some(name.to_string()) })
         )
     }
 }
