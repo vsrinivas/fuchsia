@@ -366,10 +366,8 @@ public:
     }
 
     ApiProtocolClient(zx_device_t* parent, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
         api_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_API, &proto) == ZX_OK) {
+        if (device_get_fragment_protocol(parent, fragment_name, ZX_PROTOCOL_API, &proto) == ZX_OK) {
             ops_ = proto.ops;
             ctx_ = proto.ctx;
         } else {
@@ -398,12 +396,14 @@ public:
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
                                         ApiProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
+        api_protocol_t proto;
+        zx_status_t status = device_get_fragment_protocol(
+                parent, fragment_name, ZX_PROTOCOL_API, &proto);
+        if (status != ZX_OK) {
+            return status;
         }
-        return CreateFromDevice(fragment, result);
+        *result = ApiProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(api_protocol_t* proto) const {

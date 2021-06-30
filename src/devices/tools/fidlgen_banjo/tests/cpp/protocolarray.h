@@ -254,10 +254,8 @@ public:
     }
 
     ArrayofArraysProtocolClient(zx_device_t* parent, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
         arrayof_arrays_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ARRAYOF_ARRAYS, &proto) == ZX_OK) {
+        if (device_get_fragment_protocol(parent, fragment_name, ZX_PROTOCOL_ARRAYOF_ARRAYS, &proto) == ZX_OK) {
             ops_ = proto.ops;
             ctx_ = proto.ctx;
         } else {
@@ -286,12 +284,14 @@ public:
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
                                         ArrayofArraysProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
+        arrayof_arrays_protocol_t proto;
+        zx_status_t status = device_get_fragment_protocol(parent, fragment_name,
+                                 ZX_PROTOCOL_ARRAYOF_ARRAYS, &proto);
+        if (status != ZX_OK) {
+            return status;
         }
-        return CreateFromDevice(fragment, result);
+        *result = ArrayofArraysProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(arrayof_arrays_protocol_t* proto) const {
@@ -447,10 +447,8 @@ public:
     }
 
     ArrayProtocolClient(zx_device_t* parent, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
         array_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ARRAY, &proto) == ZX_OK) {
+        if (device_get_fragment_protocol(parent, fragment_name, ZX_PROTOCOL_ARRAY, &proto) == ZX_OK) {
             ops_ = proto.ops;
             ctx_ = proto.ctx;
         } else {
@@ -479,12 +477,14 @@ public:
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
                                         ArrayProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
+        array_protocol_t proto;
+        zx_status_t status = device_get_fragment_protocol(parent, fragment_name,
+                                 ZX_PROTOCOL_ARRAY, &proto);
+        if (status != ZX_OK) {
+            return status;
         }
-        return CreateFromDevice(fragment, result);
+        *result = ArrayProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(array_protocol_t* proto) const {
@@ -640,10 +640,8 @@ public:
     }
 
     Array2ProtocolClient(zx_device_t* parent, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
         array2_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ARRAY2, &proto) == ZX_OK) {
+        if (device_get_fragment_protocol(parent, fragment_name, ZX_PROTOCOL_ARRAY2, &proto) == ZX_OK) {
             ops_ = proto.ops;
             ctx_ = proto.ctx;
         } else {
@@ -672,12 +670,14 @@ public:
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
                                         Array2ProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
+        array2_protocol_t proto;
+        zx_status_t status = device_get_fragment_protocol(parent, fragment_name,
+                                 ZX_PROTOCOL_ARRAY2, &proto);
+        if (status != ZX_OK) {
+            return status;
         }
-        return CreateFromDevice(fragment, result);
+        *result = Array2ProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(array2_protocol_t* proto) const {

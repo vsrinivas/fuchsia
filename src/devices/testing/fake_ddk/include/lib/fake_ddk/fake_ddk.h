@@ -197,6 +197,11 @@ class Bind {
   friend void(::device_get_fragments)(zx_device_t* dev, composite_device_fragment_t* comp_list,
                                       size_t comp_count, size_t* comp_actual);
   friend bool(::device_get_fragment)(zx_device_t* dev, const char* name, zx_device_t** out);
+  friend zx_status_t(::device_get_fragment_metadata)(zx_device_t* device, const char* name,
+                                                     uint32_t type, void* buf, size_t buflen,
+                                                     size_t* actual);
+  friend zx_status_t(::device_get_fragment_protocol)(zx_device_t* device, const char* name,
+                                                     uint32_t proto_id, void* protocol);
 
   // These fields should be private, but are currently referenced extensively
   // by tests inheriting from us.

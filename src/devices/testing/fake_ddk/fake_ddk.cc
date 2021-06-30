@@ -239,11 +239,13 @@ zx_status_t Bind::DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* buf, 
   if (itr != get_metadata_.end()) {
     auto [metadata, size] = itr->second;
     *actual = size;
-    if (buflen < size) {
-      return ZX_ERR_BUFFER_TOO_SMALL;
-    }
+    if (buf != nullptr) {
+      if (buflen < size) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
 
-    memcpy(buf, metadata, size);
+      memcpy(buf, metadata, size);
+    }
     return ZX_OK;
   }
 
@@ -597,6 +599,31 @@ __EXPORT bool device_get_fragment(zx_device_t* dev, const char* name, zx_device_
     return false;
   }
   return fake_ddk::Bind::Instance()->DeviceGetFragment(dev, name, out);
+}
+
+__EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* device, const char* name,
+                                                  uint32_t proto_id, void* protocol) {
+  if (!fake_ddk::Bind::Instance()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_device_t* fragment;
+  if (!fake_ddk::Bind::Instance()->DeviceGetFragment(fake_ddk::kFakeParent, name, &fragment)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return device_get_protocol(fragment, proto_id, protocol);
+}
+
+__EXPORT
+zx_status_t device_get_fragment_metadata(zx_device_t* device, const char* name, uint32_t type,
+                                         void* buf, size_t buflen, size_t* actual) {
+  if (!fake_ddk::Bind::Instance()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_device_t* fragment;
+  if (!fake_ddk::Bind::Instance()->DeviceGetFragment(fake_ddk::kFakeParent, name, &fragment)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return fake_ddk::Bind::Instance()->DeviceGetMetadata(fragment, type, buf, buflen, actual);
 }
 
 // Please do not use get_root_resource() in new code. See fxbug.dev/31358.

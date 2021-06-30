@@ -136,6 +136,23 @@ zx_status_t device_get_metadata_size(zx_device_t* device, uint32_t type, size_t*
   return device->GetMetadataSize(type, out_size);
 }
 
+__EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* device, const char* name,
+                                                  uint32_t proto_id, void* protocol) {
+  if (!device) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return device_get_protocol(device, proto_id, protocol);
+}
+
+__EXPORT
+zx_status_t device_get_fragment_metadata(zx_device_t* device, const char* name, uint32_t type,
+                                         void* buf, size_t buflen, size_t* actual) {
+  if (!device) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return device_get_metadata(device, type, buf, buflen, actual);
+}
+
 // Unsupported calls:
 __EXPORT
 void device_make_visible(zx_device_t* device, const device_make_visible_args_t* args) {}

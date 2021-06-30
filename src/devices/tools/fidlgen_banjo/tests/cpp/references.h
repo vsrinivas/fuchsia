@@ -104,10 +104,8 @@ public:
     }
 
     InOutProtocolProtocolClient(zx_device_t* parent, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
         in_out_protocol_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_IN_OUT_PROTOCOL, &proto) == ZX_OK) {
+        if (device_get_fragment_protocol(parent, fragment_name, ZX_PROTOCOL_IN_OUT_PROTOCOL, &proto) == ZX_OK) {
             ops_ = proto.ops;
             ctx_ = proto.ctx;
         } else {
@@ -136,12 +134,14 @@ public:
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
                                         InOutProtocolProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
+        in_out_protocol_protocol_t proto;
+        zx_status_t status = device_get_fragment_protocol(parent, fragment_name,
+                                 ZX_PROTOCOL_IN_OUT_PROTOCOL, &proto);
+        if (status != ZX_OK) {
+            return status;
         }
-        return CreateFromDevice(fragment, result);
+        *result = InOutProtocolProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(in_out_protocol_protocol_t* proto) const {

@@ -485,6 +485,17 @@ void device_get_fragments(zx_device_t* dev, composite_device_fragment_t* comp_li
 // `device_add_composite`. Returns false if no fragment exists.
 bool device_get_fragment(zx_device_t* dev, const char* name, zx_device_t** out);
 
+// Returns the specific protocol from the named fragment, identified by the name
+// provided when it was created via`device_add_composite`. Returns ZX_ERR_NOT_FOUND if
+// no fragment exists.
+zx_status_t device_get_fragment_protocol(zx_device_t* dev, const char* name, uint32_t proto_id,
+                                         void* protocol);
+
+// retrieves metadata for a specific device
+// searches parent devices to find a match
+zx_status_t device_get_fragment_metadata(zx_device_t* dev, const char* name, uint32_t type,
+                                         void* buf, size_t buflen, size_t* actual);
+
 // Device State Change Functions.  These match up with the signals defined in
 // the fuchsia.device.Controller interface.
 //

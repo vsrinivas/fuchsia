@@ -461,3 +461,27 @@ __EXPORT bool device_get_fragment(zx_device_t* dev, const char* name, zx_device_
   }
   return dev->composite()->GetFragment(name, out);
 }
+
+__EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* dev, const char* name,
+                                                  uint32_t proto_id, void* out) {
+  if (!dev->is_composite()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_device_t* fragment;
+  if (!dev->composite()->GetFragment(name, &fragment)) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  return device_get_protocol(fragment, proto_id, out);
+}
+
+__EXPORT zx_status_t device_get_fragment_metadata(zx_device_t* dev, const char* name, uint32_t type,
+                                                  void* buf, size_t buflen, size_t* actual) {
+  if (!dev->is_composite()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_device_t* fragment;
+  if (!dev->composite()->GetFragment(name, &fragment)) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  return device_get_metadata(fragment, type, buf, buflen, actual);
+}

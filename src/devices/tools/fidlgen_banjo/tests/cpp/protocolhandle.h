@@ -357,10 +357,8 @@ public:
     }
 
     SynchronousHandleProtocolClient(zx_device_t* parent, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
         synchronous_handle_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_SYNCHRONOUS_HANDLE, &proto) == ZX_OK) {
+        if (device_get_fragment_protocol(parent, fragment_name, ZX_PROTOCOL_SYNCHRONOUS_HANDLE, &proto) == ZX_OK) {
             ops_ = proto.ops;
             ctx_ = proto.ctx;
         } else {
@@ -389,12 +387,14 @@ public:
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
                                         SynchronousHandleProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
+        synchronous_handle_protocol_t proto;
+        zx_status_t status = device_get_fragment_protocol(parent, fragment_name,
+                                 ZX_PROTOCOL_SYNCHRONOUS_HANDLE, &proto);
+        if (status != ZX_OK) {
+            return status;
         }
-        return CreateFromDevice(fragment, result);
+        *result = SynchronousHandleProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(synchronous_handle_protocol_t* proto) const {
@@ -590,10 +590,8 @@ public:
     }
 
     AsyncHandleProtocolClient(zx_device_t* parent, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
         async_handle_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ASYNC_HANDLE, &proto) == ZX_OK) {
+        if (device_get_fragment_protocol(parent, fragment_name, ZX_PROTOCOL_ASYNC_HANDLE, &proto) == ZX_OK) {
             ops_ = proto.ops;
             ctx_ = proto.ctx;
         } else {
@@ -622,12 +620,14 @@ public:
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
                                         AsyncHandleProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
+        async_handle_protocol_t proto;
+        zx_status_t status = device_get_fragment_protocol(parent, fragment_name,
+                                 ZX_PROTOCOL_ASYNC_HANDLE, &proto);
+        if (status != ZX_OK) {
+            return status;
         }
-        return CreateFromDevice(fragment, result);
+        *result = AsyncHandleProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(async_handle_protocol_t* proto) const {
@@ -763,10 +763,8 @@ public:
     }
 
     AnotherSynchronousHandleProtocolClient(zx_device_t* parent, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
         another_synchronous_handle_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ANOTHER_SYNCHRONOUS_HANDLE, &proto) == ZX_OK) {
+        if (device_get_fragment_protocol(parent, fragment_name, ZX_PROTOCOL_ANOTHER_SYNCHRONOUS_HANDLE, &proto) == ZX_OK) {
             ops_ = proto.ops;
             ctx_ = proto.ctx;
         } else {
@@ -795,12 +793,14 @@ public:
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
                                         AnotherSynchronousHandleProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
+        another_synchronous_handle_protocol_t proto;
+        zx_status_t status = device_get_fragment_protocol(parent, fragment_name,
+                                 ZX_PROTOCOL_ANOTHER_SYNCHRONOUS_HANDLE, &proto);
+        if (status != ZX_OK) {
+            return status;
         }
-        return CreateFromDevice(fragment, result);
+        *result = AnotherSynchronousHandleProtocolClient(&proto);
+        return ZX_OK;
     }
 
     void GetProto(another_synchronous_handle_protocol_t* proto) const {
