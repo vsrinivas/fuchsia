@@ -86,7 +86,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     return config;
   }
 
-  zx::status<fidl::Client<tun::Device>> OpenTunDevice(tun::wire::DeviceConfig config) {
+  zx::status<fidl::WireSharedClient<tun::Device>> OpenTunDevice(tun::wire::DeviceConfig config) {
     zx::status device_endpoints = fidl::CreateEndpoints<tun::Device>();
     if (device_endpoints.is_error()) {
       return device_endpoints.take_error();
@@ -101,15 +101,17 @@ class NetDeviceTest : public gtest::RealLoopFixture {
         status != ZX_OK) {
       return zx::error(status);
     }
-    return zx::ok(fidl::Client(std::move(device_endpoints->client), dispatcher(),
-                               std::make_shared<TestEventHandler<tun::Device>>("tun device")));
+    return zx::ok(
+        fidl::WireSharedClient(std::move(device_endpoints->client), dispatcher(),
+                               std::make_unique<TestEventHandler<tun::Device>>("tun device")));
   }
 
-  zx::status<fidl::Client<tun::Device>> OpenTunDevice() {
+  zx::status<fidl::WireSharedClient<tun::Device>> OpenTunDevice() {
     return OpenTunDevice(DefaultDeviceConfig());
   }
 
-  zx::status<fidl::Client<tun::DevicePair>> OpenTunPair(tun::wire::DevicePairConfig config) {
+  zx::status<fidl::WireSharedClient<tun::DevicePair>> OpenTunPair(
+      tun::wire::DevicePairConfig config) {
     zx::status device_pair_endpoints = fidl::CreateEndpoints<tun::DevicePair>();
     if (device_pair_endpoints.is_error()) {
       return device_pair_endpoints.take_error();
@@ -124,16 +126,16 @@ class NetDeviceTest : public gtest::RealLoopFixture {
         status != ZX_OK) {
       return zx::error(status);
     }
-    return zx::ok(
-        fidl::Client(std::move(device_pair_endpoints->client), dispatcher(),
-                     std::make_shared<TestEventHandler<tun::DevicePair>>("tun device pair")));
+    return zx::ok(fidl::WireSharedClient(
+        std::move(device_pair_endpoints->client), dispatcher(),
+        std::make_unique<TestEventHandler<tun::DevicePair>>("tun device pair")));
   }
 
-  zx::status<fidl::Client<tun::DevicePair>> OpenTunPair() {
+  zx::status<fidl::WireSharedClient<tun::DevicePair>> OpenTunPair() {
     return OpenTunPair(DefaultPairConfig());
   }
 
-  static void WaitTapOnlineInner(fidl::Client<tun::Device>& tun_device,
+  static void WaitTapOnlineInner(fidl::WireSharedClient<tun::Device>& tun_device,
                                  fit::callback<void()> complete) {
     tun_device->WatchState([&tun_device, complete = std::move(complete)](
                                fidl::WireResponse<tun::Device::WatchState>* response) mutable {
@@ -145,13 +147,10 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     });
   }
 
-  bool WaitTapOnline(fidl::Client<tun::Device>& tun_device) {
+  bool WaitTapOnline(fidl::WireSharedClient<tun::Device>& tun_device) {
     bool online = false;
     WaitTapOnlineInner(tun_device, [&online]() { online = true; });
-    if (!RunLoopUntilOrFailure([&online]() { return online; })) {
-      return false;
-    }
-    return true;
+    return RunLoopUntilOrFailure([&online]() { return online; });
   }
 
   tun::wire::Protocols CreateClientRequest(std::unique_ptr<NetworkDeviceClient>* out_client) {
