@@ -6,7 +6,6 @@
 
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl/cpp/decoder.h>
 #include <lib/fidl/cpp/message.h>
 
@@ -18,6 +17,8 @@
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <gtest/gtest.h>
 #include <wlan/mlme/dispatcher.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
@@ -155,11 +156,10 @@ TEST(SmeChannel, Bound) {
       .ctx = &ctx,
   };
 
-  fake_ddk::Bind ddk;
-  // Unsafe cast, however, parent is never used as fake_ddk replaces default device manager.
-  auto parent = reinterpret_cast<zx_device_t*>(&ctx);
-  auto device = wlanif::Device{parent, proto};
-  auto status = device.Bind();
+  auto parent = MockDevice::FakeRootParent();
+  // The parent calls release on this pointer which will delete it so don't delete it or manage it.
+  auto device = new wlanif::Device{parent.get(), proto};
+  auto status = device->Bind();
   ASSERT_EQ(status, ZX_OK);
 
   // Send scan request to device.
@@ -177,7 +177,7 @@ TEST(SmeChannel, Bound) {
   ASSERT_EQ(ctx.scan_req->bss_type, WLAN_BSS_TYPE_INFRASTRUCTURE);
   ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
 
-  device.EthUnbind();
+  device->EthUnbind();
 }
 
 // Tests that the device will be unbound following a failed device bind.
@@ -195,19 +195,20 @@ TEST(SmeChannel, FailedBind) {
       .ctx = &ctx,
   };
 
-  fake_ddk::Bind ddk;
-  auto device = wlanif::Device{fake_ddk::kFakeParent, proto};
+  auto parent = MockDevice::FakeRootParent();
+  // The parent calls release on this pointer which will delete it so don't delete it or manage it.
+  auto device = new wlanif::Device{parent.get(), proto};
 
   // Connect a mock channel so that the next device bind will fail.
   zx::channel local, remote;
   ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
-  ASSERT_EQ(device.Connect(std::move(remote)), ZX_OK);
+  ASSERT_EQ(device->Connect(std::move(remote)), ZX_OK);
 
   // This should fail and request the device be unbound.
-  auto status = device.Bind();
+  auto status = device->Bind();
   ASSERT_NE(status, ZX_OK);
-  ASSERT_EQ(ddk.WaitUntilRemove(), ZX_OK);
-  ASSERT_TRUE(ddk.Ok());
+  mock_ddk::ReleaseFlaggedDevices(parent.get());
+  ASSERT_EQ(0u, parent->descendant_count());
 }
 
 struct AssocReqTestContext {
@@ -266,11 +267,10 @@ TEST(AssocReqHandling, MultipleAssocReq) {
       .ctx = &ctx,
   };
 
-  fake_ddk::Bind ddk;
-  // Unsafe cast, however, parent is never used as fake_ddk replaces default device manager.
-  auto parent = reinterpret_cast<zx_device_t*>(&ctx);
-  auto device = wlanif::Device{parent, proto};
-  auto status = device.Bind();
+  auto parent = MockDevice::FakeRootParent();
+  // The parent calls release on this pointer which will delete it so don't delete it or manage it.
+  auto device = new wlanif::Device{parent.get(), proto};
+  auto status = device->Bind();
   ASSERT_EQ(status, ZX_OK);
 
   // Send assoc request to device, ignore this one.
@@ -300,24 +300,24 @@ TEST(AssocReqHandling, MultipleAssocReq) {
   ASSERT_TRUE(ctx.assoc_req.has_value());
   ASSERT_EQ(ctx.assoc_confirmed, true);
 
-  device.EthUnbind();
+  device->EthUnbind();
 }
 
 struct EthernetTestFixture : public ::testing::Test {
   void TestEthernetAgainstRole(wlan_info_mac_role_t role);
   void InitDeviceWithRole(wlan_info_mac_role_t role);
   void SetEthernetOnline(uint32_t expected_status = ETHERNET_STATUS_ONLINE) {
-    device_.SetControlledPort(::fuchsia::wlan::mlme::SetControlledPortRequest{
+    device_->SetControlledPort(::fuchsia::wlan::mlme::SetControlledPortRequest{
         .state = ::fuchsia::wlan::mlme::ControlledPortState::OPEN});
     ASSERT_EQ(ethernet_status_, expected_status);
   }
-  void TearDown() override { device_.EthUnbind(); }
+  void TearDown() override { device_->EthUnbind(); }
 
-  fake_ddk::Bind fake_ddk_;
+  std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
   wlanif_impl_protocol_ops_t proto_ops_ = EmptyProtoOps();
   wlanif_impl_protocol_t proto_{.ops = &proto_ops_, .ctx = this};
-  // Unsafe cast, however, parent is never used as fake_ddk replaces default device manager.
-  wlanif::Device device_{reinterpret_cast<zx_device_t*>(&fake_ddk_), proto_};
+  // The parent calls release on this pointer which will delete it so don't delete it or manage it.
+  wlanif::Device* device_{new wlanif::Device(parent_.get(), proto_)};
   ethernet_ifc_protocol_ops_t eth_ops_{};
   ethernet_ifc_protocol_t eth_proto_ = {.ops = &eth_ops_, .ctx = this};
   wlan_info_mac_role_t role_ = WLAN_INFO_MAC_ROLE_CLIENT;
@@ -343,31 +343,31 @@ void EthernetTestFixture::InitDeviceWithRole(wlan_info_mac_role_t role) {
   proto_ops_.start = hook_start;
   proto_ops_.query = hook_query;
   eth_proto_.ops->status = hook_eth_status;
-  ASSERT_EQ(device_.Bind(), ZX_OK);
+  ASSERT_EQ(device_->Bind(), ZX_OK);
 }
 
 void EthernetTestFixture::TestEthernetAgainstRole(wlan_info_mac_role_t role) {
   InitDeviceWithRole(role);
-  device_.EthStart(&eth_proto_);
+  device_->EthStart(&eth_proto_);
 
   SetEthernetOnline();
   wlanif_deauth_indication_t deauth_ind{.reason_code = REASON_CODE_AP_INITIATED};
-  device_.DeauthenticateInd(&deauth_ind);
+  device_->DeauthenticateInd(&deauth_ind);
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
   SetEthernetOnline();
   wlanif_deauth_confirm_t deauth_conf{};
-  device_.DeauthenticateConf(&deauth_conf);
+  device_->DeauthenticateConf(&deauth_conf);
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
   SetEthernetOnline();
   wlanif_disassoc_indication_t disassoc_ind{.reason_code = REASON_CODE_AP_INITIATED};
-  device_.DisassociateInd(&disassoc_ind);
+  device_->DisassociateInd(&disassoc_ind);
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
   SetEthernetOnline();
   wlanif_disassoc_confirm_t disassoc_conf{};
-  device_.DisassociateConf(&disassoc_conf);
+  device_->DisassociateConf(&disassoc_conf);
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 }
 
@@ -381,7 +381,7 @@ TEST_F(EthernetTestFixture, ApIfaceDoesNotAffectEthernetOnClientDisconnect) {
 
 TEST_F(EthernetTestFixture, StartThenSetOnline) {
   InitDeviceWithRole(WLAN_INFO_MAC_ROLE_AP);  // role doesn't matter
-  device_.EthStart(&eth_proto_);
+  device_->EthStart(&eth_proto_);
   ASSERT_EQ(ethernet_status_, 0u);
   SetEthernetOnline();
   ASSERT_EQ(ethernet_status_, ETHERNET_STATUS_ONLINE);
@@ -391,6 +391,6 @@ TEST_F(EthernetTestFixture, OnlineThenStart) {
   InitDeviceWithRole(WLAN_INFO_MAC_ROLE_AP);  // role doesn't matter
   SetEthernetOnline(0);
   ASSERT_EQ(ethernet_status_, 0u);
-  device_.EthStart(&eth_proto_);
+  device_->EthStart(&eth_proto_);
   ASSERT_EQ(ethernet_status_, ETHERNET_STATUS_ONLINE);
 }
