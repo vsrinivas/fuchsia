@@ -409,11 +409,17 @@ enum class dap_regs {
 };
 
 // some pre-canned arm instructions
-constexpr uint32_t arm64_nop = 0xd503201f;         // nop
-constexpr uint32_t arm64_msr_dbgdtr = 0xd5130400;  // msr dbgdtr_el0, x0 -- write x0 to dbgdtr
-constexpr uint32_t arm64_mrs_dlr = 0xd53b4520;     // mrs x0, dlr_el0    -- write dlr to x0
-constexpr uint32_t arm64_mrs_dspsr = 0xd53b4500;   // mrs x0, dspsr_el0  -- write dspsr to x0
-constexpr uint32_t arm64_mov_sp = 0x910003e0;      // mov x0, sp
+constexpr uint32_t arm64_nop = 0xd503201f;          // nop
+constexpr uint32_t arm64_msr_dbgdtr = 0xd5130400;   // msr dbgdtr_el0, x0 -- write x0 to dbgdtr
+constexpr uint32_t arm64_mov_sp = 0x910003e0;       // mov x0, sp
+constexpr uint32_t arm64_mrs_dlr = 0xd53b4520;      // mrs x0, dlr_el0    -- write dlr to x0
+constexpr uint32_t arm64_mrs_dspsr = 0xd53b4500;    // mrs x0, dspsr_el0  -- write dspsr to x0
+constexpr uint32_t arm64_mrs_esr_el1 = 0xd5385200;  // mrs x0, esr_el1    -- write esr_el1 to x0
+constexpr uint32_t arm64_mrs_esr_el2 = 0xd53c5200;  // mrs x0, esr_el2    -- write esr_el2 to x0
+constexpr uint32_t arm64_mrs_far_el1 = 0xd5386000;  // mrs x0, far_el1    -- write far_el1 to x0
+constexpr uint32_t arm64_mrs_far_el2 = 0xd53c6000;  // mrs x0, far_el2    -- write far_el2 to x0
+constexpr uint32_t arm64_mrs_elr_el1 = 0xd5384020;  // mrs x0, elr_el1    -- write elr_el1 to x0
+constexpr uint32_t arm64_mrs_elr_el2 = 0xd53c4020;  // mrs x0, elr_el2    -- write elr_el2 to x0
 
 zx_status_t run_instruction(RegBlock<dap_regs> &dap, uint32_t instruction, bool trace = false) {
   zx_status_t err;
@@ -452,8 +458,43 @@ zx_status_t read_dcc(RegBlock<dap_regs> &dap, uint64_t *val) {
   return ZX_OK;
 }
 
+// Fetch a register from the target processor.
+//
+// We do this by executing on the remote processor a given instruction that
+// is expected to write the target register into x0. This register is then
+// written to DBGDTR on the remote processor, and then read locally.
+zx_status_t fetch_remote_register(RegBlock<dap_regs> &dap, uint32_t reg_read_instruction,
+                                  uint64_t *result) {
+  // Fetch register to x0.
+  zx_status_t err = run_instruction(dap, reg_read_instruction);
+  if (err != ZX_OK) {
+    return err;
+  }
+
+  // Write to DBGDTR.
+  err = run_instruction(dap, arm64_msr_dbgdtr);
+  if (err != ZX_OK) {
+    return err;
+  }
+
+  // Read the result.
+  err = read_dcc(dap, result);
+  if (err != ZX_OK) {
+    return err;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t read_processor_state(RegBlock<dap_regs> &dap, arm64_dap_processor_state *state) {
   zx_status_t err;
+
+  // Clear out state.
+  *state = arm64_dap_processor_state{};
+
+  // save a copy of the EDSCR which has EL level and other things
+  state->edscr = dap.Read(dap_regs::EDSCR);
+  uint8_t el_level = state->get_el_level();
 
   // read x0 - x30
   // mov xN -> dbgdtr, read out of our end of the DCC
@@ -467,44 +508,49 @@ zx_status_t read_processor_state(RegBlock<dap_regs> &dap, arm64_dap_processor_st
       return err;
   }
 
-  // read the PC (saved in the DLR_EL0 register)
-  // mov dlr -> x0, mov x0 -> dbgdtr, read DCC
-  err = run_instruction(dap, arm64_mrs_dlr);
-  if (err != ZX_OK)
-    return err;
-  err = run_instruction(dap, arm64_msr_dbgdtr);
-  if (err != ZX_OK)
-    return err;
-  err = read_dcc(dap, &state->pc);
-  if (err != ZX_OK)
-    return err;
+  // Read the PC (saved in the DLR_EL0 register), SP, and CPSR (saved in DSPSR_EL0).
+  struct Register {
+    uint32_t instruction;
+    uint64_t *dest;
+  };
+  for (const auto &reg : {
+           Register{.instruction = arm64_mrs_dlr, .dest = &state->pc},
+           Register{.instruction = arm64_mov_sp, .dest = &state->sp},
+           Register{.instruction = arm64_mrs_dspsr, .dest = &state->cpsr},
+       }) {
+    err = fetch_remote_register(dap, reg.instruction, reg.dest);
+    if (err != ZX_OK) {
+      return err;
+    }
+  }
 
-  // save the cpsr of the cpu (saved in DSPSR_EL0)
-  // mov dspsr -> x0, mov x0 -> dbgdtr, read DCC
-  err = run_instruction(dap, arm64_mrs_dspsr);
-  if (err != ZX_OK)
-    return err;
-  err = run_instruction(dap, arm64_msr_dbgdtr);
-  if (err != ZX_OK)
-    return err;
-  err = read_dcc(dap, &state->cpsr);
-  if (err != ZX_OK)
-    return err;
+  // If running in EL1 or above, fetch EL1 exception state.
+  if (el_level >= 1) {
+    for (const auto &reg : {
+             Register{.instruction = arm64_mrs_esr_el1, .dest = &state->esr_el1},
+             Register{.instruction = arm64_mrs_far_el1, .dest = &state->far_el1},
+             Register{.instruction = arm64_mrs_elr_el1, .dest = &state->elr_el1},
+         }) {
+      err = fetch_remote_register(dap, reg.instruction, reg.dest);
+      if (err != ZX_OK) {
+        return err;
+      }
+    }
+  }
 
-  // save the sp of the cpu
-  // mov sp -> x0, mov x0 -> dbgdtr, read DCC
-  err = run_instruction(dap, arm64_mov_sp);
-  if (err != ZX_OK)
-    return err;
-  err = run_instruction(dap, arm64_msr_dbgdtr);
-  if (err != ZX_OK)
-    return err;
-  err = read_dcc(dap, &state->sp);
-  if (err != ZX_OK)
-    return err;
-
-  // save a copy of the EDSCR which has EL level and other things
-  state->edscr = dap.Read(dap_regs::EDSCR);
+  // If running in EL2 or above, fetch EL2 exception state.
+  if (el_level >= 2) {
+    for (const auto &reg : {
+             Register{.instruction = arm64_mrs_esr_el2, .dest = &state->esr_el2},
+             Register{.instruction = arm64_mrs_far_el2, .dest = &state->far_el2},
+             Register{.instruction = arm64_mrs_elr_el2, .dest = &state->elr_el2},
+         }) {
+      err = fetch_remote_register(dap, reg.instruction, reg.dest);
+      if (err != ZX_OK) {
+        return err;
+      }
+    }
+  }
 
   // TODO: put x0 back so the cpu could be restarted
 
@@ -702,23 +748,33 @@ bool arm64_dap_is_enabled() {
 }
 
 void arm64_dap_processor_state::Dump(FILE *fp) {
-  fprintf(fp, "x0  %#18" PRIx64 " x1  %#18" PRIx64 " x2  %#18" PRIx64 " x3  %#18" PRIx64 "\n", r[0],
-          r[1], r[2], r[3]);
-  fprintf(fp, "x4  %#18" PRIx64 " x5  %#18" PRIx64 " x6  %#18" PRIx64 " x7  %#18" PRIx64 "\n", r[4],
-          r[5], r[6], r[7]);
-  fprintf(fp, "x8  %#18" PRIx64 " x9  %#18" PRIx64 " x10 %#18" PRIx64 " x11 %#18" PRIx64 "\n", r[8],
-          r[9], r[10], r[11]);
-  fprintf(fp, "x12 %#18" PRIx64 " x13 %#18" PRIx64 " x14 %#18" PRIx64 " x15 %#18" PRIx64 "\n",
+  fprintf(fp, "x0  %#18" PRIx64 " x1  %#18" PRIx64 " x2  %#18" PRIx64 " x3  %#18" PRIx64 "\n",  //
+          r[0], r[1], r[2], r[3]);
+  fprintf(fp, "x4  %#18" PRIx64 " x5  %#18" PRIx64 " x6  %#18" PRIx64 " x7  %#18" PRIx64 "\n",  //
+          r[4], r[5], r[6], r[7]);
+  fprintf(fp, "x8  %#18" PRIx64 " x9  %#18" PRIx64 " x10 %#18" PRIx64 " x11 %#18" PRIx64 "\n",  //
+          r[8], r[9], r[10], r[11]);
+  fprintf(fp, "x12 %#18" PRIx64 " x13 %#18" PRIx64 " x14 %#18" PRIx64 " x15 %#18" PRIx64 "\n",  //
           r[12], r[13], r[14], r[15]);
-  fprintf(fp, "x16 %#18" PRIx64 " x17 %#18" PRIx64 " x18 %#18" PRIx64 " x19 %#18" PRIx64 "\n",
+  fprintf(fp, "x16 %#18" PRIx64 " x17 %#18" PRIx64 " x18 %#18" PRIx64 " x19 %#18" PRIx64 "\n",  //
           r[16], r[17], r[18], r[19]);
-  fprintf(fp, "x20 %#18" PRIx64 " x21 %#18" PRIx64 " x22 %#18" PRIx64 " x23 %#18" PRIx64 "\n",
+  fprintf(fp, "x20 %#18" PRIx64 " x21 %#18" PRIx64 " x22 %#18" PRIx64 " x23 %#18" PRIx64 "\n",  //
           r[20], r[21], r[22], r[23]);
-  fprintf(fp, "x24 %#18" PRIx64 " x25 %#18" PRIx64 " x26 %#18" PRIx64 " x27 %#18" PRIx64 "\n",
+  fprintf(fp, "x24 %#18" PRIx64 " x25 %#18" PRIx64 " x26 %#18" PRIx64 " x27 %#18" PRIx64 "\n",  //
           r[24], r[25], r[26], r[27]);
-  fprintf(fp, "x28 %#18" PRIx64 " x29 %#18" PRIx64 " lr  %#18" PRIx64 " sp  %#18" PRIx64 "\n",
+  fprintf(fp, "x28 %#18" PRIx64 " x29 %#18" PRIx64 " lr  %#18" PRIx64 " sp  %#18" PRIx64 "\n",  //
           r[28], r[29], r[30], sp);
-  fprintf(fp, "pc   %#18" PRIx64 "\n", pc);
-  fprintf(fp, "cpsr %#18" PRIx64 "\n", cpsr);
-  fprintf(fp, "edscr %#10" PRIx32 ": EL %u\n", edscr, get_el_level());
+  fprintf(fp, "\n");
+  fprintf(fp, "pc      %#18" PRIx64 "\n", pc);
+  fprintf(fp, "cpsr    %#18" PRIx64 "\n", cpsr);
+  fprintf(fp, "edscr   %#18" PRIx32 ": EL %u\n", edscr, get_el_level());
+  fprintf(fp, "\n");
+  if (get_el_level() >= 1) {
+    fprintf(fp, "elr_el1 %#18" PRIx64 " far_el1 %#18" PRIx64 " esr_el1 %#18" PRIx64 "\n",  //
+            elr_el1, far_el1, esr_el1);
+  }
+  if (get_el_level() >= 2) {
+    fprintf(fp, "elr_el2 %#18" PRIx64 " far_el2 %#18" PRIx64 " esr_el2 %#18" PRIx64 "\n",  //
+            elr_el2, far_el2, esr_el2);
+  }
 }

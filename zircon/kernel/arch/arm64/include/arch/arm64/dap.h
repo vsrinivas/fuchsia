@@ -18,10 +18,18 @@ struct arm64_dap_processor_state {
   uint64_t cpsr;
   uint32_t edscr;
 
-  void Dump(FILE *fp = stdout);
+  uint64_t esr_el1;
+  uint64_t far_el1;
+  uint64_t elr_el1;
+
+  uint64_t esr_el2;
+  uint64_t far_el2;
+  uint64_t elr_el2;
 
   // bits [9:8] of EDSCR is the EL level of the cpu
   uint8_t get_el_level() const { return (edscr >> 8) & 0x3; }
+
+  void Dump(FILE *fp = stdout);
 };
 
 bool arm64_dap_is_enabled();
