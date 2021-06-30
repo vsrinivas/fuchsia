@@ -31,7 +31,7 @@ fidl("fuchsia.ui.gfx") {
   public_deps = [
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.mem",
-    "//sdk/fidl/fuchsia.scenic.allocation",
+    "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.views",
     "//zircon/vdso/zx",
   ]

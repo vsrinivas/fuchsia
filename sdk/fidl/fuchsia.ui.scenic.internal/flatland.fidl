@@ -5,7 +5,7 @@ deprecated_syntax;
 library fuchsia.ui.scenic.internal;
 
 using fuchsia.math;
-using fuchsia.scenic.allocation;
+using fuchsia.ui.composition;
 using fuchsia.scenic.scheduling;
 using zx;
 
@@ -450,7 +450,7 @@ protocol Flatland {
     /// Zero is not a valid Image id. All other values are valid, assuming they are not already in
     /// use for another piece of Content (see [`ReleaseImage`] for more details).
     CreateImage(ContentId image_id,
-                fuchsia.scenic.allocation.BufferCollectionImportToken import_token,
+                fuchsia.ui.composition.BufferCollectionImportToken import_token,
                 uint32 vmo_index,
                 ImageProperties properties);
 

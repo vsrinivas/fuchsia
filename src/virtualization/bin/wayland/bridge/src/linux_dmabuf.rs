@@ -4,7 +4,7 @@
 
 use anyhow::Error;
 use fidl_fuchsia_math::Size;
-use fidl_fuchsia_scenic_allocation as composition;
+use fidl_fuchsia_ui_composition as composition;
 use fuchsia_wayland_core as wl;
 use fuchsia_zircon as zx;
 use fuchsia_zircon::{EventPair, Handle, HandleBased};

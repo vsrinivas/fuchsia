@@ -36,7 +36,7 @@
 namespace integration_tests {
 
 const std::map<std::string, std::string> LocalServices() {
-  return {{"fuchsia.scenic.allocation.Allocator",
+  return {{"fuchsia.ui.composition.Allocator",
            "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
           {"fuchsia.ui.scenic.Scenic",
            "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},

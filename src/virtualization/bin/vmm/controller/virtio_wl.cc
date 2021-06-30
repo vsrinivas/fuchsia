@@ -19,7 +19,7 @@ zx_status_t VirtioWl::Start(
     const zx::guest& guest, zx::vmar vmar,
     fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatch_handle,
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::scenic::allocation::Allocator> scenic_allocator,
+    fidl::InterfaceHandle<fuchsia::ui::composition::Allocator> scenic_allocator,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kVirtioWlUrl;

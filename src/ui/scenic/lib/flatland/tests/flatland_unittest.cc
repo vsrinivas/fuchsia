@@ -51,9 +51,9 @@ using flatland::TransformHandle;
 using flatland::UberStruct;
 using flatland::UberStructSystem;
 using fuchsia::math::SizeU;
-using fuchsia::scenic::allocation::Allocator_RegisterBufferCollection_Result;
-using fuchsia::scenic::allocation::BufferCollectionExportToken;
-using fuchsia::scenic::allocation::BufferCollectionImportToken;
+using fuchsia::ui::composition::Allocator_RegisterBufferCollection_Result;
+using fuchsia::ui::composition::BufferCollectionExportToken;
+using fuchsia::ui::composition::BufferCollectionImportToken;
 using fuchsia::ui::scenic::internal::ContentId;
 using fuchsia::ui::scenic::internal::ContentLink;
 using fuchsia::ui::scenic::internal::ContentLinkStatus;
@@ -161,7 +161,7 @@ struct GlobalIdPair {
                fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>) { return true; })); \
   }                                                                                               \
   bool processed_callback = false;                                                                \
-  fuchsia::scenic::allocation::RegisterBufferCollectionArgs args;                                 \
+  fuchsia::ui::composition::RegisterBufferCollectionArgs args;                                    \
   args.set_export_token(std::move(export_token));                                                 \
   args.set_buffer_collection_token(token);                                                        \
   allocator->RegisterBufferCollection(                                                            \

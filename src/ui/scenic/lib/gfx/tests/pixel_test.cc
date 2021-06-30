@@ -36,18 +36,17 @@ constexpr zx::duration kScreenshotTimeout = zx::sec(15), kPresentTimeout = zx::s
 // the binary, making each test not hermetic wrt. the others. A trade-off is
 // that the |sys::testing::TestWithEnvironment| method is more verbose.
 const std::map<std::string, std::string> LocalServices() {
-  return {
-      {"fuchsia.hardware.display.Provider",
-       "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
-      {"fuchsia.scenic.allocation.Allocator", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-      {"fuchsia.tracing.provider.Registry",
-       "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
-      {"fuchsia.ui.policy.Presenter",
-       "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
-      {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-      {"fuchsia.ui.annotation.Registry", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-      {"fuchsia.ui.shortcut.Manager",
-       "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx"}};
+  return {{"fuchsia.hardware.display.Provider",
+           "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
+          {"fuchsia.tracing.provider.Registry",
+           "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
+          {"fuchsia.ui.policy.Presenter",
+           "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
+          {"fuchsia.ui.composition.Allocator", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+          {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+          {"fuchsia.ui.annotation.Registry", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+          {"fuchsia.ui.shortcut.Manager",
+           "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx"}};
 }
 
 // Allow these global services.

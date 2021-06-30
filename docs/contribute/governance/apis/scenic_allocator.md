@@ -30,7 +30,7 @@ Our suggestion is mostly a move of buffer registration and deregistration functi
 out of Scenic::Session into a new protocol. See below for the proposed protocol.
 
 ```
-library fuchsia.scenic.allocation;
+library fuchsia.ui.composition;
 
 /// A typed wrapper for an eventpair, representing the registry endpoint of a buffer collection.
 resource struct BufferCollectionExportToken {
@@ -106,7 +106,7 @@ from the clients perspective.
 See below for an example usage pattern from Scenic::Session.
 
 ```
-fuchsia::scenic::allocation::AllocatorPtr scenic_allocator;
+fuchsia::ui::composition::AllocatorPtr scenic_allocator;
 fuchsia::sysmem::BufferCollectionTokenSyncPtr token;
 auto ref_pair = allocation::BufferCollectionImportExportTokens::New();
 scenic::SessionPtr session;

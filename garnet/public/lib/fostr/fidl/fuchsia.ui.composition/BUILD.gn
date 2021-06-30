@@ -4,8 +4,8 @@
 
 import("//garnet/public/build/fostr/fostr_fidl.gni")
 
-fostr_fidl("fuchsia.scenic.allocation") {
-  fidl_target = "//sdk/fidl/fuchsia.scenic.allocation"
+fostr_fidl("fuchsia.ui.composition") {
+  fidl_target = "//sdk/fidl/fuchsia.ui.composition"
 
   deps = [ "//garnet/public/lib/fostr/fidl/fuchsia.sysmem" ]
 }

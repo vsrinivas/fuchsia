@@ -7,8 +7,8 @@
 // clang-format on
 
 #include <fuchsia/images/cpp/fidl.h>
-#include <fuchsia/scenic/allocation/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/images/cpp/images.h>
 #include <lib/syslog/cpp/macros.h>
@@ -90,10 +90,10 @@ inline SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_a
   return {std::move(local_token), std::move(dup_token)};
 }
 
-fuchsia::scenic::allocation::RegisterBufferCollectionArgs CreateArgs(
+fuchsia::ui::composition::RegisterBufferCollectionArgs CreateArgs(
     allocation::BufferCollectionExportToken export_token,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> buffer_collection_token) {
-  fuchsia::scenic::allocation::RegisterBufferCollectionArgs args;
+  fuchsia::ui::composition::RegisterBufferCollectionArgs args;
 
   args.set_export_token(std::move(export_token));
   args.set_buffer_collection_token(std::move(buffer_collection_token));
@@ -2397,7 +2397,7 @@ TEST_P(ParameterizedImage3PixelTest, Image3PixelTest) {
   auto [local_token, dup_token] = CreateSysmemTokens(sysmem_allocator.get());
 
   // Create Scenic Allocator channel.
-  fuchsia::scenic::allocation::AllocatorPtr scenic_allocator;
+  fuchsia::ui::composition::AllocatorPtr scenic_allocator;
   environment_->ConnectToService(scenic_allocator.NewRequest());
   EXPECT_TRUE(scenic_allocator.is_bound());
   scenic_allocator.set_error_handler(
@@ -2606,7 +2606,7 @@ TEST_F(ScenicPixelTest, CreateImage3FromMultipleSessions) {
   auto [local_token, dup_token] = CreateSysmemTokens(sysmem_allocator.get());
 
   // Create Scenic Allocator channel.
-  fuchsia::scenic::allocation::AllocatorPtr scenic_allocator;
+  fuchsia::ui::composition::AllocatorPtr scenic_allocator;
   environment_->ConnectToService(scenic_allocator.NewRequest());
   EXPECT_TRUE(scenic_allocator.is_bound());
   scenic_allocator.set_error_handler(

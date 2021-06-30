@@ -582,7 +582,7 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
 }
 
 void Flatland::CreateImage(ContentId image_id,
-                           fuchsia::scenic::allocation::BufferCollectionImportToken import_token,
+                           fuchsia::ui::composition::BufferCollectionImportToken import_token,
                            uint32_t vmo_index, ImageProperties properties) {
   if (image_id.value == kInvalidId) {
     error_reporter_->ERROR() << "CreateImage called with image_id 0";

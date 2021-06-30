@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_math as fmath, fidl_fuchsia_scenic_allocation as scenic_alloc,
+    fidl_fuchsia_math as fmath, fidl_fuchsia_ui_composition as scenic_alloc,
     fidl_fuchsia_ui_scenic_internal as fland, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol, fuchsia_syslog as syslog, fuchsia_zircon as zx,
     log::*,
@@ -111,10 +111,10 @@ async fn main() {
     // "Gfx" and "Flatland" APIs, the latter being used in this example.  See below:
     // flatland.create_image().
     let mut buffer_tokens = BufferCollectionTokenPair::new();
-    let args = fidl_fuchsia_scenic_allocation::RegisterBufferCollectionArgs {
+    let args = fidl_fuchsia_ui_composition::RegisterBufferCollectionArgs {
         export_token: Some(buffer_tokens.export_token),
         buffer_collection_token: Some(sysmem_buffer_collection_token),
-        ..fidl_fuchsia_scenic_allocation::RegisterBufferCollectionArgs::EMPTY
+        ..fidl_fuchsia_ui_composition::RegisterBufferCollectionArgs::EMPTY
     };
 
     allocator

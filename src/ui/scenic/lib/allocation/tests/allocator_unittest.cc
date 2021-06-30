@@ -18,11 +18,11 @@
 using ::testing::_;
 using ::testing::Return;
 
-using fuchsia::scenic::allocation::Allocator_RegisterBufferCollection_Result;
-using fuchsia::scenic::allocation::BufferCollectionExportToken;
-using fuchsia::scenic::allocation::BufferCollectionImportToken;
-using fuchsia::scenic::allocation::RegisterBufferCollectionArgs;
-using fuchsia::scenic::allocation::RegisterBufferCollectionUsage;
+using fuchsia::ui::composition::Allocator_RegisterBufferCollection_Result;
+using fuchsia::ui::composition::BufferCollectionExportToken;
+using fuchsia::ui::composition::BufferCollectionImportToken;
+using fuchsia::ui::composition::RegisterBufferCollectionArgs;
+using fuchsia::ui::composition::RegisterBufferCollectionUsage;
 
 namespace allocation {
 namespace test {
@@ -120,7 +120,7 @@ INSTANTIATE_TEST_SUITE_P(, AllocatorTestParameterized,
 TEST_P(AllocatorTestParameterized, CreateAndDestroyAllocatorChannel) {
   const auto usage = GetParam();
   std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
-  fuchsia::scenic::allocation::AllocatorPtr allocator_ptr;
+  fuchsia::ui::composition::AllocatorPtr allocator_ptr;
   context_provider_.ConnectToPublicService(allocator_ptr.NewRequest());
   RunLoopUntilIdle();
 
@@ -130,9 +130,9 @@ TEST_P(AllocatorTestParameterized, CreateAndDestroyAllocatorChannel) {
 TEST_P(AllocatorTestParameterized, CreateAndDestroyMultipleAllocatorChannels) {
   const auto usage = GetParam();
   std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
-  fuchsia::scenic::allocation::AllocatorPtr allocator_ptr1;
+  fuchsia::ui::composition::AllocatorPtr allocator_ptr1;
   context_provider_.ConnectToPublicService(allocator_ptr1.NewRequest());
-  fuchsia::scenic::allocation::AllocatorPtr allocator_ptr2;
+  fuchsia::ui::composition::AllocatorPtr allocator_ptr2;
   context_provider_.ConnectToPublicService(allocator_ptr2.NewRequest());
   RunLoopUntilIdle();
 
@@ -144,7 +144,7 @@ TEST_P(AllocatorTestParameterized, RegisterBufferCollectionThroughAllocatorChann
   const auto usage = GetParam();
   std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
 
-  fuchsia::scenic::allocation::AllocatorPtr allocator_ptr;
+  fuchsia::ui::composition::AllocatorPtr allocator_ptr;
   context_provider_.ConnectToPublicService(allocator_ptr.NewRequest());
 
   bool processed_callback = false;
@@ -179,9 +179,9 @@ TEST_P(AllocatorTestParameterized, RegisterBufferCollectionThroughMultipleAlloca
   std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
 
   const int kNumAllocators = 3;
-  std::vector<fuchsia::scenic::allocation::AllocatorPtr> allocator_ptrs;
+  std::vector<fuchsia::ui::composition::AllocatorPtr> allocator_ptrs;
   for (int i = 0; i < kNumAllocators; ++i) {
-    fuchsia::scenic::allocation::AllocatorPtr allocator_ptr;
+    fuchsia::ui::composition::AllocatorPtr allocator_ptr;
     context_provider_.ConnectToPublicService(allocator_ptr.NewRequest());
     allocator_ptrs.push_back(std::move(allocator_ptr));
   }

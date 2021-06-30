@@ -5,7 +5,7 @@
 use anyhow::Error;
 use fidl_fuchsia_images as images;
 use fidl_fuchsia_math::Size;
-use fidl_fuchsia_scenic_allocation as composition;
+use fidl_fuchsia_ui_composition as composition;
 use fuchsia_scenic as scenic;
 use fuchsia_trace as ftrace;
 use fuchsia_zircon::{self as zx, HandleBased};
