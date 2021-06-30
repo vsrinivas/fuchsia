@@ -99,8 +99,8 @@ kernel_cmdline("virtcon.display-rotation--90") {
   args = [ "virtcon.display_rotation=90" ]
 }
 
-kernel_cmdline("virtcon.animation--true") {
-  args = [ "virtcon.animation=true" ]
+kernel_cmdline("virtcon.boot-animation--true") {
+  args = [ "virtcon.boot_animation=true" ]
 }
 
 kernel_cmdline("virtcon.dpi--240-360-480") {

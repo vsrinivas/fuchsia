@@ -69,7 +69,7 @@ product_bootfs_labels += [
   "//products/kernel_cmdline:virtcon.hide-on-boot",
 
   # enable boot animation
-  "//products/kernel_cmdline:virtcon.animation--true",
+  "//products/kernel_cmdline:virtcon.boot-animation--true",
 
   # enable DPI based scale factors, 2x above 240 DPI, 3x above 360, etc.
   "//products/kernel_cmdline:virtcon.dpi--240-360-480",

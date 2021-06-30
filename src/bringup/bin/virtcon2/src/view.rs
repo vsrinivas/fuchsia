@@ -108,7 +108,7 @@ const CELL_PADDING_FACTOR: f32 = 1.0 / 15.0;
 
 struct Animation {
     // Artboard has weak references to data owned by file.
-    _logo: rive::File,
+    _animation: rive::File,
     artboard: rive::Object<rive::Artboard>,
     instance: rive::animation::LinearAnimationInstance,
     last_presentation_time: Option<zx::Time>,
@@ -136,7 +136,7 @@ pub struct VirtualConsoleViewAssistant {
     owns_display: bool,
 }
 
-const ANIMATION: &'static str = "/pkg/data/animation.riv";
+const BOOT_ANIMATION: &'static str = "/pkg/data/boot-animation.riv";
 const FONT: &'static str = "/pkg/data/font.ttf";
 
 impl VirtualConsoleViewAssistant {
@@ -147,16 +147,16 @@ impl VirtualConsoleViewAssistant {
         round_scene_corners: bool,
         font_size: f32,
         dpi: BTreeSet<u32>,
-        animation: bool,
+        boot_animation: bool,
     ) -> Result<ViewAssistantPtr, Error> {
         let scene_details = None;
         let terminals = BTreeMap::new();
         let active_terminal_id = 0;
         let font = load_font(PathBuf::from(FONT))?;
         let virtcon_mode = VirtconMode::Forced; // We always start out in forced mode.
-        let (animation, desired_virtcon_mode) = if animation {
-            let logo = load_rive(PathBuf::from(ANIMATION))?;
-            let artboard = logo.artboard().ok_or_else(|| anyhow!("missing artboard"))?;
+        let (animation, desired_virtcon_mode) = if boot_animation {
+            let animation = load_rive(PathBuf::from(BOOT_ANIMATION))?;
+            let artboard = animation.artboard().ok_or_else(|| anyhow!("missing artboard"))?;
             let first_animation = artboard
                 .as_ref()
                 .animations()
@@ -164,8 +164,12 @@ impl VirtualConsoleViewAssistant {
                 .ok_or_else(|| anyhow!("missing animation"))?;
             let instance = rive::animation::LinearAnimationInstance::new(first_animation);
             let last_presentation_time = None;
-            let animation =
-                Some(Animation { _logo: logo, artboard, instance, last_presentation_time });
+            let animation = Some(Animation {
+                _animation: animation,
+                artboard,
+                instance,
+                last_presentation_time,
+            });
 
             (animation, VirtconMode::Forced)
         } else {

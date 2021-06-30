@@ -17,7 +17,7 @@ pub const MAX_FONT_SIZE: f32 = 150.0;
 pub struct VirtualConsoleArgs {
     pub disable: bool,
     pub rounded_corners: bool,
-    pub animation: bool,
+    pub boot_animation: bool,
     pub color_scheme: ColorScheme,
     pub display_rotation: DisplayRotation,
     pub font_size: f32,
@@ -29,16 +29,16 @@ impl VirtualConsoleArgs {
         let mut bool_keys = [
             BoolPair { key: "virtcon.disable".to_string(), defaultval: false },
             BoolPair { key: "virtcon.rounded_corners".to_string(), defaultval: false },
-            BoolPair { key: "virtcon.animation".to_string(), defaultval: false },
+            BoolPair { key: "virtcon.boot_animation".to_string(), defaultval: false },
         ];
         let bool_key_refs: Vec<_> = bool_keys.iter_mut().collect();
         let mut disable = false;
         let mut rounded_corners = false;
-        let mut animation = false;
+        let mut boot_animation = false;
         if let Ok(values) = boot_args.get_bools(&mut bool_key_refs.into_iter()).await {
             disable = values[0];
             rounded_corners = values[1];
-            animation = values[2];
+            boot_animation = values[2];
         }
 
         let string_keys = vec![
@@ -71,7 +71,7 @@ impl VirtualConsoleArgs {
         Ok(VirtualConsoleArgs {
             disable,
             rounded_corners,
-            animation,
+            boot_animation,
             color_scheme,
             display_rotation,
             font_size,
@@ -172,22 +172,22 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn check_animation() -> Result<(), Error> {
-        let vars: HashMap<String, String> = [("virtcon.animation", "true")]
+    async fn check_boot_animation() -> Result<(), Error> {
+        let vars: HashMap<String, String> = [("virtcon.boot_animation", "true")]
             .iter()
             .map(|(a, b)| (a.to_string(), b.to_string()))
             .collect();
         let proxy = serve_bootargs(vars)?;
         let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
-        assert_eq!(args.animation, true);
+        assert_eq!(args.boot_animation, true);
 
-        let vars: HashMap<String, String> = [("virtcon.animation", "false")]
+        let vars: HashMap<String, String> = [("virtcon.boot_animation", "false")]
             .iter()
             .map(|(a, b)| (a.to_string(), b.to_string()))
             .collect();
         let proxy = serve_bootargs(vars)?;
         let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
-        assert_eq!(args.animation, false);
+        assert_eq!(args.boot_animation, false);
 
         Ok(())
     }

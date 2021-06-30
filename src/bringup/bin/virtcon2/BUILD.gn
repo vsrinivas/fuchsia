@@ -67,9 +67,9 @@ resource("font") {
   outputs = [ "data/font.ttf" ]
 }
 
-resource("animation") {
-  sources = [ virtcon_animation_path ]
-  outputs = [ "data/animation.riv" ]
+resource("boot_animation") {
+  sources = [ virtcon_boot_animation_path ]
+  outputs = [ "data/boot-animation.riv" ]
 }
 
 rustc_binary("bin") {
@@ -78,7 +78,7 @@ rustc_binary("bin") {
   source_root = "src/main.rs"
   sources = [ "src/main.rs" ]
   deps = [
-    ":animation",
+    ":boot_animation",
     ":font",
     ":lib",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
@@ -97,14 +97,14 @@ resource("font_test") {
   outputs = [ "data/font.ttf" ]
 }
 
-resource("animation_test") {
+resource("boot_animation_test") {
   sources = [ "data/test.riv" ]
-  outputs = [ "data/animation.riv" ]
+  outputs = [ "data/boot-animation.riv" ]
 }
 
 fuchsia_test_component("virtual_console_tests_component") {
   deps = [
-    ":animation_test",
+    ":boot_animation_test",
     ":font_test",
     ":lib_test",
   ]
