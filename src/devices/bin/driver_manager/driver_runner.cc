@@ -595,7 +595,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   // Bind the Node associated with the driver.
   auto endpoints = fidl::CreateEndpoints<fdf::Node>();
   if (endpoints.is_error()) {
-    completer.Close(endpoints.status_value());
+    completer.Close(endpoints.error_value());
     return;
   }
   auto bind_node = fidl::BindServer<fidl::WireServer<fdf::Node>>(

@@ -165,7 +165,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   uint64_t next_driver_host_id_ = 0;
   fidl::Client<fuchsia_sys2::Realm> realm_;
   fidl::Client<fuchsia_driver_framework::DriverIndex> driver_index_;
-  async_dispatcher_t* dispatcher_;
+  async_dispatcher_t* const dispatcher_;
   std::shared_ptr<Node> root_node_;
 
   std::unordered_map<DriverUrl, Node&> driver_args_;

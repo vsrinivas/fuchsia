@@ -155,7 +155,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
   // Open the driver's binary within the driver's package.
   auto endpoints = fidl::CreateEndpoints<fio::File>();
   if (endpoints.is_error()) {
-    completer.Close(endpoints.status_value());
+    completer.Close(endpoints.error_value());
     return;
   }
   zx_status_t status = fdio_open_at(pkg->handle(), binary->data(),
