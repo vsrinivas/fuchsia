@@ -56,20 +56,8 @@ To [expose][expose] the directory to a parent:
 }
 ```
 
-Optionally, you may narrow the [rights](#directory-capability-rights) on the
-directory:
-
-```json5
-{
-    expose: [
-        {
-            directory: "data",
-            from: "#child-a",
-            rights: ["r*"],
-        },
-    ],
-}
-```
+You may optionally specify [`rights`](#directory-capability-rights) and
+optionally specify a [`subdir`](#subdirectories).
 
 ### Offering {#routing-directory-capability-offer}
 
@@ -80,28 +68,15 @@ To [offer][offer] a directory to a child:
     offer: [
         {
             directory: "data",
-            from: "self",
+            from: "parent",
             to: [ "#child-a", "#child-b" ],
         },
     ],
 }
 ```
 
-Optionally, you may narrow the [rights](#directory-capability-rights) on the
-directory:
-
-```json5
-{
-    offer: [
-        {
-            directory: "data",
-            from: "self",
-            rights: ["rw*"],
-            to: [ "#child-a", "#child-b" ],
-        },
-    ],
-}
-```
+You may optionally specify [`rights`](#directory-capability-rights) and
+optionally specify a [`subdir`](#subdirectories).
 
 ## Consuming directory capabilities
 
@@ -128,8 +103,8 @@ this provider.
 }
 ```
 
-`rights` must be a subset of the [rights](#directory-capability-rights) attached
-to the directory.
+You must specify [`rights`](#directory-capability-rights).
+You may optionally specify a [`subdir`](#subdirectories).
 
 See [`//examples/components/routing`][routing-example] for a working example of
 routing a directory capability from one component to another.
@@ -145,7 +120,6 @@ as read-only.
 [Directory rights][directory-rights] enable any directory declaration, as well
 as mentions of it in [offer][offer], [expose][expose], and [use][use], to
 include a rights field that restricts the set of rights for that directory.
-
 
 ### Example
 
@@ -203,7 +177,24 @@ will inherit the rights from the source of the expose or offer. Rights specified
 in a `use`, `offer`, or `expose` declaration must be a subset of the rights set
 on the capability's source.
 
-### Framework directory capabilities
+## Subdirectories {#subdirectories}
+
+You may `expose`, `offer`, or `use` a subdirectory of a directory capability:
+
+```json5
+{
+    offer: [
+        {
+            directory: "data",
+            from: "parent",
+            to: [ "#child-a", "#child-b" ],
+            subdir: "children",
+        },
+    ],
+}
+```
+
+## Framework directory capabilities
 
 Some directory capabilities are available to all components through the
 framework. When a component wants to use one of these directories, it does so by
