@@ -13,7 +13,10 @@ golden_go_proto("proto") {
 
 go_library("proto_lib") {
   source_dir = "proto"
-  sources = [ "emulator_controller.pb.go" ]
+  sources = [
+    "emulator_controller.pb.go",
+    "emulator_controller_grpc.pb.go",
+  ]
   deps = [
     "//third_party/golibs:google.golang.org/grpc",
     "//third_party/golibs:google.golang.org/protobuf",

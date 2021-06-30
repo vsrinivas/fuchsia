@@ -28,7 +28,7 @@ option java_package = "com.android.emulator.control";
 option objc_class_prefix = "AEC";
 
 package android.emulation.control;
-option go_package = "android_emulator_control_proto";
+option go_package = "./android_emulator_control_proto";
 import "google/protobuf/empty.proto";
 
 // An EmulatorController service lets you control the emulator.
@@ -54,7 +54,8 @@ service EmulatorController {
   // looking for when you wish to modify the device state.
   rpc setPhysicalModel(PhysicalModelValue) returns (google.protobuf.Empty) {}
   rpc getPhysicalModel(PhysicalModelValue) returns (PhysicalModelValue) {}
-  rpc streamPhysicalModel(PhysicalModelValue) returns (stream PhysicalModelValue) {}
+  rpc streamPhysicalModel(PhysicalModelValue)
+      returns (stream PhysicalModelValue) {}
 
   // Atomically set/get the current primary clipboard data.
   rpc setClipboard(ClipData) returns (google.protobuf.Empty) {}
@@ -139,8 +140,26 @@ service EmulatorController {
 
   // Streams a series of audio packets in the desired format.
   // A new frame will be delivered whenever the emulated device
-  // produces a new audio frame.
+  // produces a new audio frame. You can expect packets to be
+  // delivered in intervals of 20-30ms.
+  //
+  // Be aware that this can block when the emulator does not
+  // produce any audio whatsoever!
   rpc streamAudio(AudioFormat) returns (stream AudioPacket) {}
+
+
+  // Injects a series of audio packets to the android microphone.
+  // A new frame will be delivered whenever the emulated device
+  // requests a new audio frame. Audio is usually delivered at a rate
+  // that the emulator is requesting frames. Audio will be stored in a
+  // temporary buffer that can hold 500ms of audio.
+  //
+  // Note: Currently the emulator will downsample to 16khz.
+  //
+  // -  INVALID_ARGUMENT (code 3) The sampling rate was too high
+  // -  INVALID_ARGUMENT (code 3) The audio packet was too large to handle.
+  // -  FAILED_PRECONDITION (code 9) If there was a microphone registered already.
+  rpc injectAudio(stream AudioPacket) returns (google.protobuf.Empty) {}
 
   // Returns the last 128Kb of logcat output from the emulator
   // Note that parsed logcat messages are only available after L (Api >23).
@@ -160,6 +179,47 @@ service EmulatorController {
 
   // Gets the state of the virtual machine.
   rpc getVmState(google.protobuf.Empty) returns (VmRunState) {}
+
+  // Atomically changes the current multi-display configuration.
+  // After this call the given display configurations will be activated. You
+  // can only update secondary displays. Displays with id 0 will be ignored.
+  //
+  // This call can result in the removal or addition of secondary displays, the final
+  // display state can be observed by the returned configuration.
+  //
+  // The following gRPC error codes can be returned:
+  // -  FAILED_PRECONDITION (code 9) if the AVD does not support a configurable
+  //    secondary display.
+  // -  INVALID_ARGUMENT (code 3) if:
+  //     - The same display id is defined multiple times.
+  //     - The display configurations are outside valid ranges
+  //       (see DisplayConfiguration)
+  // -  INTERNAL (code 13) if there was an internal emulator failure.
+  rpc setDisplayConfigurations(DisplayConfigurations)
+      returns (DisplayConfigurations) {}
+
+  // Returns all currently valid logical displays.
+  // The gRPC error code FAILED_PRECONDITION (code 9) is returned if the AVD
+  // does not support a configurable secondary display.
+  rpc getDisplayConfigurations(google.protobuf.Empty)
+      returns (DisplayConfigurations) {}
+
+  // Notifies client of the following changes:
+  //
+  // - Virtual scene camera status change.
+  // - Display configuration changes from extended ui. This will only be fired
+  //   if the user makes modifications the extended displays through the extended
+  //   control tab.
+  //
+  // Note that this method will send the initial virtual scene state immediately.
+  rpc streamNotification(google.protobuf.Empty) returns (stream Notification) {}
+
+  // RotationRadian is relative to the camera's current orientation.
+  rpc rotateVirtualSceneCamera(RotationRadian) returns (google.protobuf.Empty) {
+  }
+  // Velocity is absolute
+  rpc setVirtualSceneCameraVelocity(Velocity)
+          returns (google.protobuf.Empty) {}
 }
 
 // A Run State that describes the state of the Virtual Machine.
@@ -196,20 +256,19 @@ message VmRunState {
   RunState state = 1;
 }
 
-message ParameterValue {
-  repeated float data = 1 [packed = true];
-}
+message ParameterValue { repeated float data = 1 [ packed = true ]; }
 
 message PhysicalModelValue {
   enum State {
     OK = 0;
-    NO_SERVICE = -3;  // qemud service is not available/initiated.
-    DISABLED = -2;    // Sensor is disabled.
-    UNKNOWN = -1;     // Unknown sensor (should not happen)
+    NO_SERVICE = -3; // qemud service is not available/initiated.
+    DISABLED = -2;   // Sensor is disabled.
+    UNKNOWN = -1;    // Unknown sensor (should not happen)
   }
 
   // Details on the sensors documentation can be found here:
   // https://developer.android.com/reference/android/hardware/Sensor.html#TYPE_
+  // The types must follow the order defined in "external/qemu/android/hw-sensors.h"
   enum PhysicalType {
     POSITION = 0;
 
@@ -236,6 +295,15 @@ message PhysicalModelValue {
 
     VELOCITY = 8;
     AMBIENT_MOTION = 9;
+
+    // Describing a hinge angle sensor in degrees.
+    HINGE_ANGLE0 = 10;
+    HINGE_ANGLE1 = 11;
+    HINGE_ANGLE2 = 12;
+
+    ROLLABLE0 = 13;
+    ROLLABLE1 = 14;
+    ROLLABLE2 = 15;
   }
   PhysicalType target = 1;
 
@@ -250,9 +318,9 @@ message PhysicalModelValue {
 message SensorValue {
   enum State {
     OK = 0;
-    NO_SERVICE = -3;  // qemud service is not available/initiated.
-    DISABLED = -2;    // Sensor is disabled.
-    UNKNOWN = -1;     // Unknown sensor (should not happen)
+    NO_SERVICE = -3; // qemud service is not available/initiated.
+    DISABLED = -2;   // Sensor is disabled.
+    UNKNOWN = -1;    // Unknown sensor (should not happen)
   }
 
   // These are the various sensors that can be available in an emulated
@@ -339,7 +407,7 @@ message LogcatEntry {
     ERR = 6;
     FATAL = 7;
     SILENT = 8;
-  };
+  }
 
   // A Unix timestamps in  milliseconds (The number of milliseconds that
   // have elapsed since January 1, 1970 (midnight UTC/GMT), not counting
@@ -384,7 +452,7 @@ message VmConfiguration {
     WHPX = 5;
 
     GVM = 6;
-  };
+  }
 
   VmHypervisorType hypervisorType = 1;
   int32 numberOfCpuCores = 2;
@@ -417,7 +485,8 @@ message Touch {
   // when their associated tools move out of range.
   //
   // The emulator currently supports up to 10 concurrent touch events. The
-  // identifier should be a value from the set [0, 10]
+  // identifier can be any uninque value and will be mapped to the next
+  // available internal identifier.
   int32 identifier = 3;
 
   // Reports the physical pressure applied to the tip of the tool or the
@@ -440,6 +509,21 @@ message Touch {
   // contact. This axis will be ignored if touch_major is reporting an
   // area measurement greater than 0.
   int32 touch_minor = 6;
+
+  enum EventExpiration {
+    // The system will use the default time of 120s to track
+    // the touch event with the given identifier. If no update happens
+    // within this timeframe the identifier is considered expired
+    // and can be made available for re-use. This means that a touch event
+    // with pressure 0 for this identifier will be send to the emulator.
+    EVENT_EXPIRATION_UNSPECIFIED = 0;
+
+    // Never expire the given slot. You must *ALWAYS* close the identifier
+    // by sending a touch event with 0 pressure.
+    NEVER_EXPIRE = 1;
+  }
+
+  EventExpiration expiration = 7;
 }
 
 // A TouchEvent contains a list of Touch objects that are in contact with
@@ -456,9 +540,9 @@ message TouchEvent {
   // The display device where the touch event occurred.
   // Omitting or using the value 0 indicates the main display.
   //
-  // Touch events cannot be send to devices other than 0, due to
+  // Touch events cannot be send to displays other than 0, due to
   // https://issuetracker.google.com/issues/150699691
-  int32 device = 2;
+  int32 display = 2;
 }
 
 // The MouseEvent interface represents events that occur due to the user
@@ -480,7 +564,7 @@ message MouseEvent {
 
   // The display device where the mouse event occurred.
   // Omitting or using the value 0 indicates the main display.
-  int32 device = 4;
+  int32 display = 4;
 }
 
 // KeyboardEvent objects describe a user interaction with the keyboard; each
@@ -504,7 +588,7 @@ message KeyboardEvent {
     XKB = 2;
     Win = 3;
     Mac = 4;
-  };
+  }
 
   enum KeyEventType {
     // Indicates that this keyevent should be send to the emulator
@@ -522,7 +606,7 @@ message KeyboardEvent {
     // Indicates that the keyevent will be send to the emulator
     // as e key down event and immediately followed by a keyup event.
     keypress = 2;
-  };
+  }
 
   // Type of keycode contained in the keyCode field.
   KeyCodeType codeType = 1;
@@ -572,6 +656,10 @@ message KeyboardEvent {
   // Note that most printable ASCII characters (range [32-127) can be send
   // individually with the "key" param. Do not expect arbitrary UTF symbols to
   // arrive in the emulator (most will be ignored).
+  //
+  // Note that it is possible to overrun the keyboard buffer by slamming this
+  // endpoint with large quantities of text (>1kb). The clipboard api is better
+  // suited for transferring large quantities of text.
   string text = 5;
 }
 
@@ -623,13 +711,14 @@ message BatteryState {
     DISCHARGING = 2;
     NOT_CHARGING = 3;
     FULL = 4;
-  };
+  }
+
   enum BatteryCharger {
     NONE = 0;
     AC = 1;
     USB = 2;
     WIRELESS = 3;
-  };
+  }
 
   enum BatteryHealth {
     GOOD = 0;
@@ -637,7 +726,8 @@ message BatteryState {
     DEAD = 2;
     OVERVOLTAGE = 3;
     OVERHEATED = 4;
-  };
+  }
+
   bool hasBattery = 1;
   bool isPresent = 2;
   BatteryCharger charger = 3;
@@ -667,6 +757,18 @@ message ImageTransport {
   // should be a url that starts with `file:///`
   // Note: the mmap can result in tearing.
   string handle = 2;
+}
+
+// The aspect ratio (width/height) will be different from the one
+// where the device is unfolded.
+message FoldedDisplay {
+    uint32 width = 1;
+    uint32 height = 2;
+    // It is possible for the screen to be folded in different ways depending
+    // on which surface is shown to the user. So xOffset and yOffset indicate
+    // the top left corner of the folded screen within the original unfolded screen.
+    uint32 xOffset = 3;
+    uint32 yOffset = 4;
 }
 
 message ImageFormat {
@@ -714,13 +816,17 @@ message ImageFormat {
   // Set this if you wish to use a different transport channel to deliver image
   // frames.
   ImageTransport transport = 6;
+
+  // [Output Only] Display configuration when screen is folded. The value is the
+  // original configuration before scaling.
+  FoldedDisplay foldedDisplay = 7;
 }
 
 message Image {
   ImageFormat format = 1;
 
-  uint32 width = 2 [deprecated = true];   // width is contained in format.
-  uint32 height = 3 [deprecated = true];  // height is contained in format.
+  uint32 width = 2 [ deprecated = true ];  // width is contained in format.
+  uint32 height = 3 [ deprecated = true ]; // height is contained in format.
 
   // The organization of the pixels in the image buffer is from left to
   // right and bottom up. This will be empty if an alternative image transport
@@ -734,16 +840,26 @@ message Image {
   // necessarily contiguous, and can be used to detect how many frames were
   // dropped. An example sequence could be: [0, 3, 5, 7, 9, 11].
   uint32 seq = 5;
+
+  // [Output Only] Unix timestamp in microseconds when the emulator estimates
+  // the frame was generated. The timestamp is before the actual frame is
+  // copied and transformed. This can be used to calculate variance between
+  // frame production time, and frame depiction time.
+  uint64 timestampUs = 6;
 }
 
 message Rotation {
   enum SkinRotation {
-    PORTRAIT = 0;           // 0 degrees
-    LANDSCAPE = 1;          // 90 degrees
-    REVERSE_PORTRAIT = 2;   // -180 degrees
-    REVERSE_LANDSCAPE = 3;  // -90 degrees
+    PORTRAIT = 0;          // 0 degrees
+    LANDSCAPE = 1;         // 90 degrees
+    REVERSE_PORTRAIT = 2;  // -180 degrees
+    REVERSE_LANDSCAPE = 3; // -90 degrees
   }
-  SkinRotation rotation = 1;  // Can be inferred from z-axis as well.
+
+  // The rotation of the device, derived from the sensor state
+  // of the emulator. The derivation reflects how android observes
+  // the rotation state.
+  SkinRotation rotation = 1;
 
   // Specifies the angle of rotation, in degrees [-180, 180]
   double xAxis = 2;
@@ -768,11 +884,11 @@ message PhoneCall {
 message PhoneResponse {
   enum Response {
     OK = 0;
-    BadOperation = 1;   // Enum out of range
-    BadNumber = 2;      // Mal-formed telephone number
-    InvalidAction = 3;  // E.g., disconnect when no call is in progress
-    ActionFailed = 4;   // Internal error
-    RadioOff = 5;       // Radio power off
+    BadOperation = 1;  // Enum out of range
+    BadNumber = 2;     // Mal-formed telephone number
+    InvalidAction = 3; // E.g., disconnect when no call is in progress
+    ActionFailed = 4;  // Internal error
+    RadioOff = 5;      // Radio power off
   }
   Response response = 1;
 }
@@ -782,9 +898,7 @@ message Entry {
   string value = 2;
 }
 
-message EntryList {
-  repeated Entry entry = 1;
-}
+message EntryList { repeated Entry entry = 1; }
 
 message EmulatorStatus {
   // The emulator version string.
@@ -804,18 +918,18 @@ message EmulatorStatus {
   // The hardware configuration of the running emulator as
   // key valure pairs.
   EntryList hardwareConfig = 5;
-};
+}
 
 message AudioFormat {
   enum SampleFormat {
-    AUD_FMT_U8 = 0;   // Unsigned 8 bit
-    AUD_FMT_S16 = 1;  // Signed 16 bit (little endian)
-  };
+    AUD_FMT_U8 = 0;  // Unsigned 8 bit
+    AUD_FMT_S16 = 1; // Signed 16 bit (little endian)
+  }
 
   enum Channels {
     Mono = 0;
     Stereo = 1;
-  };
+  }
 
   // Sampling rate to use, defaulting to 44100 if this is not set.
   // Note, that android devices typically will not use a sampling
@@ -823,7 +937,7 @@ message AudioFormat {
   uint64 samplingRate = 1;
   Channels channels = 2;
   SampleFormat format = 3;
-};
+}
 
 message AudioPacket {
   AudioFormat format = 1;
@@ -846,4 +960,129 @@ message SmsMessage {
 
   // A utf8 encoded text message that should be delivered.
   string text = 2;
+}
+
+// A DisplayConfiguration describes a primary or secondary
+// display available to the emulator. The screen aspect ratio
+// cannot be longer (or wider) than 21:9 (or 9:21). Screen sizes
+// larger than 4k will be rejected.
+//
+// Common configurations (w x h) are:
+// - 480p  (480x720)   142 dpi
+// - 720p  (720x1280)  213 dpi
+// - 1080p (1080x1920) 320 dpi
+// - 4K  (2160x3840) 320 dpi
+// - 4K  (2160x3840) 640 dpi (upscaled)
+//
+// The behavior of the virtual display depends on the flags that are provided to
+// this method. By default, virtual displays are created to be private,
+// non-presentation and unsecure.
+message DisplayConfiguration {
+
+  // These are the set of known android flags and their respective values.
+  // you can combine the int values to (de)construct the flags field below.
+  enum DisplayFlags {
+    DISPLAYFLAGS_UNSPECIFIED = 0;
+
+    // When this flag is set, the virtual display is public.
+    // A public virtual display behaves just like most any other display
+    // that is connected to the system such as an external or wireless
+    // display. Applications can open windows on the display and the system
+    // may mirror the contents of other displays onto it. see:
+    // https://developer.android.com/reference/android/hardware/display/DisplayManager#VIRTUAL_DISPLAY_FLAG_PUBLIC
+    VIRTUAL_DISPLAY_FLAG_PUBLIC = 1;
+
+    // When this flag is set, the virtual display is registered as a
+    // presentation display in the presentation display category.
+    // Applications may automatically project their content to presentation
+    // displays to provide richer second screen experiences.
+    // https://developer.android.com/reference/android/hardware/display/DisplayManager#VIRTUAL_DISPLAY_FLAG_PRESENTATION
+    VIRTUAL_DISPLAY_FLAG_PRESENTATION = 2;
+
+    // When this flag is set, the virtual display is considered secure as
+    // defined by the Display#FLAG_SECURE display flag. The caller promises
+    // to take reasonable measures, such as over-the-air encryption, to
+    // prevent the contents of the display from being intercepted or
+    // recorded on a persistent medium.
+    // see:
+    // https://developer.android.com/reference/android/hardware/display/DisplayManager#VIRTUAL_DISPLAY_FLAG_SECURE
+    VIRTUAL_DISPLAY_FLAG_SECURE = 4;
+
+    // This flag is used in conjunction with VIRTUAL_DISPLAY_FLAG_PUBLIC.
+    // Ordinarily public virtual displays will automatically mirror the
+    // content of the default display if they have no windows of their own.
+    // When this flag is specified, the virtual display will only ever show
+    // its own content and will be blanked instead if it has no windows. See
+    // https://developer.android.com/reference/android/hardware/display/DisplayManager#VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
+    VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY = 8;
+
+    // Allows content to be mirrored on private displays when no content is
+    // being shown.
+    // This flag is mutually exclusive with
+    // VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY. If both flags are specified
+    // then the own-content only behavior will be applied.
+    // see:
+    // https://developer.android.com/reference/android/hardware/display/DisplayManager#VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR)
+    VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR = 16;
+  }
+
+  // The width of the display, restricted to:
+  // 320 * (dpi / 160) <= width
+  uint32 width = 1;
+
+  // The heigh of the display, restricted to:
+  // * 320 * (dpi / 160) <= height
+  uint32 height = 2;
+
+  // The pixel density (dpi).
+  // See https://developer.android.com/training/multiscreen/screendensities
+  // for details. This value should be in the range [120, ..., 640]
+  uint32 dpi = 3;
+
+  // A combination of virtual display flags. These flags can be constructed
+  // by combining the DisplayFlags enum described above.
+  //
+  // The behavior of the virtual display depends on the flags. By default
+  // virtual displays are created to be private, non-presentation and
+  // unsecure.
+  uint32 flags = 4;
+
+  // The id of the display.
+  // The primary (default) display has the display ID of 0.
+  // A secondary display has a display ID not 0.
+  //
+  // The id can be used to get or stream a screenshot.
+  uint32 display = 5;
+}
+
+message DisplayConfigurations {
+  repeated DisplayConfiguration displays = 1;
+}
+
+message Notification {
+  enum EventType {
+    VIRTUAL_SCENE_CAMERA_INACTIVE = 0;
+    VIRTUAL_SCENE_CAMERA_ACTIVE = 1;
+
+    // Fired when an update to a display event has been fired through
+    // the extended ui. This does not fire events when the display
+    // is changed through the console or gRPC endpoint.
+    DISPLAY_CONFIGURATIONS_CHANGED_UI = 2;
+    // Keep adding more for other event types
+  }
+
+  EventType event = 1;
+}
+
+message RotationRadian {
+    float x = 1;  // x axis is horizontal and orthogonal to the view direction.
+    float y = 2;  // y axis points up and is perpendicular to the floor.
+    float z = 3;  // z axis is the view direction and is set to 0.0 in
+                  // rotateVirtualSceneCamera call.
+}
+
+message Velocity {
+    float x = 1;  // x axis is horizontal and orthogonal to the view direction.
+    float y = 2;  // y axis points up and is perpendicular to the floor.
+    float z = 3;  // z axis is the view direction
 }
