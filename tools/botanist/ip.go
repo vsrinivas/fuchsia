@@ -16,8 +16,10 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/mdns"
 )
 
-// Interval at which ResolveIP will wait for a response to a question packet.
-const mDNSTimeout time.Duration = 2 * time.Second
+// Interval at which ResolveIP will send a question packet as long as it doesn't
+// receive a response. If it receives a response it may send packets more
+// quickly.
+const mDNSQuestionInterval = 2 * time.Second
 
 func getLocalDomain(nodename string) string {
 	return nodename + ".local"
@@ -69,16 +71,14 @@ func ResolveIP(ctx context.Context, nodename string) (net.IP, net.IPAddr, error)
 	})
 
 	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
+	defer cancel() // Clean up any goroutines launched by the mDNS client.
 	if err := m.Start(ctx, mdns.DefaultPort); err != nil {
 		return nil, net.IPAddr{}, fmt.Errorf("could not start mDNS client: %w", err)
 	}
 
 	var ipv4Addr net.IP
 	var ipv6Addr net.IPAddr
-	var earlyStop <-chan time.Time
-	t := time.NewTicker(mDNSTimeout)
+	t := time.NewTicker(mDNSQuestionInterval)
 	defer t.Stop()
 	for {
 		if err := m.Send(ctx, mdns.QuestionPacket(domain)); err != nil {
@@ -101,14 +101,18 @@ func ResolveIP(ctx context.Context, nodename string) (net.IP, net.IPAddr, error)
 				if ipv4Addr != nil && ipv6Addr.IP != nil {
 					return ipv4Addr, ipv6Addr, nil
 				}
-				if earlyStop == nil {
-					earlyStop = time.After(mDNSTimeout / 2)
-				}
+				// `select` again to see if we can get the other IP address
+				// without resending the question.
 				continue
-			case <-earlyStop:
-				return ipv4Addr, ipv6Addr, nil
 			case <-t.C:
-				// Resend question.
+				// If we already have one IP address and one more attempt didn't
+				// get us the second one, we'll assume that it's not going to
+				// come up (or at least not any time soon) and exit early with
+				// just the first IP we resolved.
+				if ipv4Addr != nil || ipv6Addr.IP != nil {
+					return ipv4Addr, ipv6Addr, nil
+				}
+				// Fallthrough to resend the question.
 			}
 			break
 		}
