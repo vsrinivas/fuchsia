@@ -30,13 +30,9 @@ group("tests") {
       ":appmgr-cpu-stats-tests",
       ":archivist-feedback-health-tests",
       ":archivist-pipeline-metrics-tests",
-
-      # TODO(fxbug.dev/75733): Reenable
-      # ":component-manager-cpu-stats-tests",
+      ":component-manager-cpu-stats-tests",
       ":component-manager-status-tests",
-
-      # TODO(fxbug.dev/75733): Reenable
-      # ":fshost-stats-tests",
+      ":fshost-stats-tests",
       ":legacy-metrics-tests",
       ":log-stats-inspect-tests",
     ]
