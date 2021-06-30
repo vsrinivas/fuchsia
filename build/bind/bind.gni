@@ -426,6 +426,111 @@ template("bind_rules") {
   }
 }
 
+# Declares a driver's bind rules.
+#
+# Generates both a C header and a bytecode file withe the necessary bind rules.
+# For more details refer to //tools/bindc/README.md.
+#
+# Parameters
+#
+#   rules (required)
+#     [path]: Path to the bind rules source file.
+#     Note: This becomes optional when disable_autobind is true. See below.
+#
+#   deps (optional)
+#     [lib of labels]: List of bind_library targets included by the bind rules.
+#
+#   header_output (optional)
+#     |string|: Name of the bind header file.
+#     Defaults to bind_name + ".h"
+#
+#   bind_output (optional)
+#     |string|: Name of the bind binary file
+#     Defaults to target_name + ".bindbc"
+#
+#   tests (optional)
+#     [path]: Path to a test specification. If this parameter is set then the template will
+#     create an additional bind_test target with the name "${target_name}_test". This allows you
+#     to define tests without specifying the bind library dependencies and rules file twice.
+#
+#   disable_autobind (optional)
+#     [bool]: Configure the bind compiler to disable autobind, so that the driver must be bound on
+#     a user's request. If this is set to true, then the rules parameter becomes optional and when
+#     it's omitted the driver will bind unconditionally (but must be bound manually.) Defaults to
+#     false.
+#     TODO(fxbug.dev/43400): Eventually this option should be removed when we can define this
+#     configuration in the driver's component manifest.
+#
+#   testonly, visibility
+#     Forwarded from invoker.
+#
+template("driver_bind_rules") {
+  assert(defined(invoker.rules) || (defined(invoker.disable_autobind) &&
+                                        invoker.disable_autobind == true),
+         "Need a bind rules source")
+  header_output = "$target_name.h"
+  if (defined(invoker.header_output)) {
+    header_output = invoker.header_output
+  }
+
+  bind_output = "$target_name.bindbc"
+  if (defined(invoker.bind_output)) {
+    bind_output = invoker.bind_output
+  }
+
+  header_file_target = "${target_name}_header"
+  bind_rules(header_file_target) {
+    forward_variables_from(invoker,
+                           [
+                             "rules",
+                             "deps",
+                             "testonly",
+                             "disable_autobind",
+                             "disable_new_bytecode",
+                             "visibility",
+                           ])
+    output = header_output
+  }
+
+  bytecode_file_target = "${target_name}_bytecode"
+  bind_rules(bytecode_file_target) {
+    forward_variables_from(invoker,
+                           [
+                             "rules",
+                             "deps",
+                             "testonly",
+                             "disable_autobind",
+                             "disable_new_bytecode",
+                             "visibility",
+                           ])
+    output = bind_output
+    output_bytecode = true
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    public_deps = [
+      ":${bytecode_file_target}",
+      ":${header_file_target}",
+    ]
+  }
+
+  if (defined(invoker.tests)) {
+    bind_test("${target_name}_test") {
+      forward_variables_from(invoker,
+                             [
+                               "rules",
+                               "deps",
+                               "tests",
+                             ])
+    }
+  }
+}
+
 # Declares a bind library.
 #
 # Declare a bind library that may be included by other libraries or bind rules. For more details,

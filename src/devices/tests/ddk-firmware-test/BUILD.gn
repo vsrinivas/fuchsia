@@ -21,18 +21,10 @@ fidl("fuchsia.device.firmware.test") {
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
-bind_rules("ddk-firmware-test-bind") {
+driver_bind_rules("ddk-firmware-test-bind") {
+  header_output = "test-driver-bind.h"
+  bind_output = "test-driver-bind.bindbc"
   rules = "test-driver.bind"
-  output = "test-driver-bind.h"
-
-  deps = [ "//src/devices/bind/fuchsia.test" ]
-}
-
-bind_rules("ddk-firmware-test-bind-file") {
-  rules = "test-driver.bind"
-  output = "ddk-firmware-test.bindbc"
-  output_bytecode = true
-
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
@@ -58,12 +50,9 @@ driver_module("ddk-firmware-test") {
 }
 
 fuchsia_driver_component("ddk-firmware-test-driver") {
-  bind_path = "bind/ddk-firmware-test.bindbc"
+  bind_path = "bind/test-driver-bind.bindbc"
   driver_path = "driver/ddk-firmware-test.so"
-  deps = [
-    ":ddk-firmware-test",
-    ":ddk-firmware-test-bind-file",
-  ]
+  deps = [ ":ddk-firmware-test" ]
 }
 
 resource("test-firmware-file") {
