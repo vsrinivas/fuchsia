@@ -94,6 +94,7 @@ template("magma_vulkan_icd") {
                              "imported_symbols_allowlist",
                              "configs",
                            ])
+
     if (defined(invoker.configs)) {
       configs += invoker.configs
     }
@@ -109,10 +110,15 @@ template("magma_vulkan_icd") {
       }
       ldflags += [ "-Wl,--version-script=$version_script" ]
     }
+
+    # Do not build ICDs with instrumented build variants, otherwise
+    # they will become very slow and many parts of the graphics
+    # stack will timeout, resulting in failed and flaky tests!!
+    exclude_toolchain_tags = [ "instrumented" ]
   }
 
   if (has_allowlist) {
-    lib_name = "${invoker.output_name}.so"
+    lib_name = "lib${invoker.output_name}.so"
     extract_imported_symbols_target_name =
         "${target_name}__extract_imported_symbols"
     verify_imported_symbols_target_name =
@@ -123,10 +129,13 @@ template("magma_vulkan_icd") {
     generated_imported_symbols_file =
         "$target_gen_dir/${invoker.output_name}.imported_symbols.list"
     extract_imported_symbols(extract_imported_symbols_target_name) {
-      library_target = ":${shared_library_target_name}"
+      # IMPORTANT: Always use the shared library built in the "base" toolchain
+      # to extract imported symbols. Because when the build is configured to
+      # enable an instrumented build variant (e.g. `asan`), then the compiler
+      # will generate extra symbols in the library that will fail the
+      # verify action below.
+      library_target = ":${shared_library_target_name}($shlib_toolchain_no_default_variant_redirect)"
       symbols = generated_imported_symbols_file
-
-      deps = [ ":$shared_library_target_name" ]
     }
 
     verify_imported_symbols(verify_imported_symbols_target_name) {
@@ -138,10 +147,19 @@ template("magma_vulkan_icd") {
   }
 
   group(target_name) {
-    public_deps = [ ":$shared_library_target_name" ]
+    public_deps = [ ":${shared_library_target_name}" ]
 
     if (has_allowlist) {
       public_deps += [ ":$verify_imported_symbols_target_name" ]
+
+      metadata = {
+        # Ensure that the runtime dependencies of the version of
+        # the library used for verification are not picked up
+        # into final containers (mainifest or bootfs images).
+        distribution_entries_barrier = [ ":${shared_library_target_name}" ]
+        zbi_input_barrier = distribution_entries_barrier
+        runtime_deps_manifest_barrier = distribution_entries_barrier
+      }
     }
   }
 }

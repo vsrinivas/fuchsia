@@ -201,7 +201,13 @@ template("sdk_shared_library") {
   }
 
   # Add binaries.
-  shared_out_dir = get_label_info(":bogus($shlib_toolchain)", "root_out_dir")
+  #
+  # Select shared library binary from the proper toolchain.
+  # See shlib_toolchain_no_default_variant_redirect documentation comment
+  # in //build/config/BUILDCONFIG.gn to understand why this is needed.
+  shared_lib_target =
+      ":$main_target_name($shlib_toolchain_no_default_variant_redirect)"
+  shared_out_dir = get_label_info(shared_lib_target, "root_out_dir")
   lib_name = "lib$output_name.so"
   link_lib = "$prebuilt_base/lib/$lib_name"
   dist_lib = "$prebuilt_base/dist/$lib_name"
@@ -260,7 +266,7 @@ template("sdk_shared_library") {
              rebase_path(debug_mapping_file),
            ]
 
-    deps = sdk_deps + [ ":$main_target_name" ]
+    deps = sdk_deps + [ shared_lib_target ]
   }
 
   verify_pragma_once(verify_pragma_target_name) {
@@ -275,7 +281,7 @@ template("sdk_shared_library") {
   generated_symbols_file = "$target_gen_dir/${output_name}.symbols.api"
   extract_public_symbols(extract_public_symbols_target_name) {
     library = "$shared_out_dir/$lib_name"
-    deps = [ ":$main_target_name" ]
+    deps = [ shared_lib_target ]
     symbols = generated_symbols_file
   }
 
@@ -312,10 +318,10 @@ template("sdk_shared_library") {
     deps = sdk_deps
 
     non_sdk_deps = [
-      ":$main_target_name",
       ":$metadata_target_name",
       ":$verify_pragma_target_name",
       ":$verify_public_symbols_target_name",
+      shared_lib_target,
     ]
 
     # Explicitly add non-public dependencies, in case some of the source files
@@ -325,7 +331,7 @@ template("sdk_shared_library") {
     }
   }
 
-  shared_gen_dir = get_label_info(":bogus($shlib_toolchain)", "target_out_dir")
+  shared_gen_dir = get_label_info(shared_lib_target, "target_out_dir")
   runtime_deps_file = "$shared_gen_dir/$target_name.runtime_deps"
   sdk_manifest_file = "$target_gen_dir/$manifest_target_name.sdk"
   verify_target_name = "${target_name}_verify"
@@ -358,8 +364,8 @@ template("sdk_shared_library") {
     ]
 
     deps = [
-      ":$main_target_name",
       ":$manifest_target_name",
+      shared_lib_target,
     ]
   }
 

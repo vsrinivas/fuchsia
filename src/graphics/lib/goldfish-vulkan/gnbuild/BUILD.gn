@@ -35,7 +35,7 @@ if (have_libvulkan) {
   variant_shared_library_redirect("libvulkan_goldfish") {
     library = build_libvulkan_goldfish
 
-    # libvolkan_goldfish.so doesn't build with instrumented variants.
+    # libvulkan_goldfish.so doesn't build with instrumented variants.
     exclude_toolchain_tags = [ "instrumented" ]
   }
 

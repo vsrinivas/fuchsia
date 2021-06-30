@@ -294,6 +294,96 @@ in_default_toolchain =
 # `"label(${target_toolchain}-shared)"` or anything else.
 shlib_toolchain = "${toolchain_variant.base}${toolchain_variant.suffix}-shared"
 
+# The build system now implements build variant toolchain redirection for
+# shared_library() targets that are defined in the default toolchain.
+#
+# What this means is that if //src:foo is defined as a shared_library()
+# target, then:
+#
+#  - If no build variant is selected in args.gn, then `//src:foo` will
+#    always be a group() redirecting to `//src:foo($shlib_toolchain)`,
+#    independent of the current toolchain instance (except in shlib_toolchain
+#    itself, of course).
+#
+#  - If a build variant is selected, but in a toolchain context that is
+#    not the default one, `//src:foo` will still redirect to
+#    `//src:foo(shlib_toolchain)`.
+#
+#  - If a build variant is selected, and if in the default toolchain
+#    context, however, `//src:foo`, will redirect to a variant-specific
+#    '//src:foo(<VARIANT_SHLIB_TOOLCHAIN>)` label, where
+#    `<VARIANT_SHLIB_TOOLCHAIN>` is a toolchain label that *cannot* be
+#    computed easily in the current GN context, but which matches the
+#    current build variant configuration (e.g.
+#    `//build/toolchain/fuchsia:x64-asan-shared` if the `asan` variant
+#    is selected).
+#
+#    More precisely, it is computed in variant_target() below, but
+#    this logic is very complex and cannot be used in targets that
+#    depend on the library, only when defining the shared_library()
+#    target itself.
+#
+# For most cases, this will just work as expected for everyone, i.e.:
+#
+#  - An executable() or loadable_module() target performs variant
+#    toolchain selection, then all its shared_library dependencies
+#    will be picked up in the corresponding shlib_toolchain if
+#    necessary.
+#
+#  - A component that depends directly on a shared_library() target,
+#    will actually depend on the variant-specific binary, which avoids
+#    subtle packaging conflicts, especially with thinlto builds.
+#
+# There are however a few cases where a dependent needs to access
+# the location of the built shared library, typically to extract
+# and verify the symbols it imports or exports. Before, such code
+# did something like this:
+#
+#    shared_library("foo") { ... }
+#
+#    # Locate where the library was built.
+#    shared_out_dir = get_label_info(":foo($shlib_toolchain"), "root_out_dir")
+#
+#    # Process it
+#    action("process-library") {
+#      ...
+#      inputs = [ "$shared_out_dir/libfoo.so" ]
+#      deps = [ ":foo" ]
+#    }
+#
+# This cannot work when a build variant is enabled though, because
+# ":foo($shlib_toolchain)" does not correspond to the right label for
+# the library that is actually buily by ":foo" here. And the right
+# label *cannot* be computed easily.
+#
+# To work around this problem, it is possible to use
+# shlib_toolchain_no_default_variant_redirect, which always matches
+# the shlib_toolchain of the current toolchain instance, without
+# any build variant redirection applied when in the default toolchain.
+# The code above then becomes:
+#
+#   shared_library("foo") { ... }
+#
+#   # Locate a version of the library that can be accessed from here.
+#   shared_lib_target = ":foo($shlib_toolchain_no_default_variant_redirect)"
+#   shared_out_dir = get_label_info(shared_lib_target, "root_out_dir")
+#
+#   # Process it
+#   action("process-library") {
+#     ...
+#     inputs = [ "$shared_out_dir/libfoo.so" ]
+#     deps = [ shared_lib_target ]
+#   }
+#
+# This should be very seldom needed though.
+#
+if (in_default_toolchain) {
+  shlib_toolchain_no_default_variant_redirect =
+      "${toolchain_variant.base}-shared"
+} else {
+  shlib_toolchain_no_default_variant_redirect = shlib_toolchain
+}
+
 # Prepend the prefix configs, if any, before the default ones.
 default_common_binary_configs =
     toolchain_variant.prefix_configs + [
@@ -935,6 +1025,13 @@ declare_args() {
       tags = [ "lto" ]
     },
 
+    # A special variant definition that corresponds to the compilation
+    # settings of the base toolchain, without new configs or dependencies.
+    # Only used internally for variant_target() below.
+    {
+      name = "novariant"
+    },
+
     {
       configs = [ "//build/config/profile:coverage" ]
       tags = [
@@ -1386,6 +1483,16 @@ if (in_default_toolchain) {
     }
   }
 
+  # Add the "novariant" variant, necessary to handle excluded variant toolchains
+  # properly. See comments in variant_target() for details.
+  if (select_variant != [] && select_variant != [ "clang" ]) {
+    select_variant_canonical += [
+      {
+        variant = "novariant"
+      },
+    ]
+  }
+
   # Expand the list of all variants, based on the values of known_variants,
   # extra_variants, and universal_variants. Note that the items in the list
   # are not in their full canonical format because they don't have a 'base'
@@ -1630,8 +1737,8 @@ template("_fuchsia_binary") {
 }
 
 # This template is used internally by the Fuchsia build system to perform variant
-# toolchain selection for 'final' linkable targets, i.e. executable(), loadable_module(),
-# but not shared_library().
+# toolchain selection for 'final' linkable targets, i.e. executable(), loadable_module()
+# and shared_library().
 #
 # Its purpose is to redirect to a specific GN toolchain() instance based on the current
 # variant selectors list (see documentation for `select_variant` above). For example,
@@ -1667,11 +1774,8 @@ template("_fuchsia_binary") {
 #    associated with the current one. In practice, this should only be true for
 #    loadable_module(), or equivalent, which require to be built in that toolchain.
 #
-#    In the examples above, this would redirect to //foo:bar(//toolchain:zoo-shlib)
-#    and //foo:bar(//toolchain:zoo-asan-shlib) respectively.
-#
-#    Note that shared_library() does not use variant_target() and does its own
-#    redirection to the shlib companion toolchain by itself.
+#    In the examples above, this would redirect to //foo:bar(//toolchain:zoo-shared))
+#    and //foo:bar(//toolchain:zoo-asan-shared) respectively.
 #
 # NOTE: This template assumes that `target_name` will be the name of a final target type,
 # like "executable", and that invoker.target_name is the name of the real final target that
@@ -1682,7 +1786,7 @@ template("_fuchsia_binary") {
 #       variant_target("executable") {
 #         forward_variables_from*invoker, "*", ....)
 #         ...
-#         selector_target_type = "my_executable"
+#         variant_selector_target_type = "my_executable"
 #       }
 #     }
 #
@@ -1745,6 +1849,7 @@ template("variant_target") {
   #   //build/toolchain/variant_shared_library_redirect.gni
   #   //zircon/system/ulib/c/libc_toolchain.gni
   target_variant = false
+  excluded_toolchain = false
   if (select_variant_canonical != []) {
     # See if there is a selector that matches this target.
     # IMPORTANT: The selection logic below is replicated in
@@ -1839,6 +1944,7 @@ template("variant_target") {
           if (exclude_toolchain_tags + select.variant_tags -
               select.variant_tags != exclude_toolchain_tags) {
             selected = false
+            excluded_toolchain = true
           }
         }
 
@@ -1849,8 +1955,71 @@ template("variant_target") {
     }
   }
   if (target_variant == false) {
-    target_variant = ""
+    # This happens when a toolchain descriptor was excluded
+    # due to the use of `exclude_toolchain_tags` in the
+    # target's invoker. When this happens, redirect to the "novariant"
+    # variant in order to ensure that all dependent shared libraries
+    # are also built in the base toolchain.
+    #
+    # For example, consider the following target definitions:
+    #
+    #   executable("prog") {
+    #     ...
+    #     deps = [ ":lib" ]
+    #     exclude_toolchain_tags = [ "ubsan" ]
+    #   }
+    #
+    #   shared_library("lib") {
+    #     ...
+    #   }
+    #
+    # And a build configured with:
+    #
+    #   select_variants = [ "ubsan" ]
+    #
+    # When variant_target() processes "prog", it will find that
+    # the executable should be built in the default toolchain,
+    # due to the exclude_toolchain_tags in its definition.
+    #
+    # But because build variant redirection always happen in the
+    # default toolchain, its dependency is redirected to
+    # `:lib(tc-ubsan-shared)`. Which will build a version of
+    # the library that will be installed under 'lib/ubsan' instead.
+    #
+    #   //src:prog  -->  //src:lib  -->  //src:lib(tc-ubsan-shared)
+    #
+    #        |                                 |
+    #        v                                 v
+    #    expects runtime lib               installs library
+    #    in lib/.                          into lib/ubsan/
+    #
+    # This cannot work, and our build actually later complains when
+    # inspecting the content of the final Fuchsia package, claiming
+    # that the program is missing its dependencies.
+    #
+    # To work around this, the "novariant" variant is defined to
+    # build executables and shared libraries with the same set of
+    # configs as the default toolchain, but without any explicit
+    # shared library redirection.
+    #
+    # With the following special case below, both the program
+    # and its shared library will be built without instrumentation,
+    # and will run properly at runtime.
+    #
+    #   //src:prog --> //src:prog(novariant) --> //src:lib(novariant-shared)
+    #
+    #                          |                         |
+    #                          v                         v
+    #                     expects runtime libs     installs library
+    #                     in lib/                  into lib/
+    #
+    if (excluded_toolchain && current_toolchain == default_toolchain) {
+      target_variant = "-novariant"
+    } else {
+      target_variant = ""
+    }
   }
+  not_needed([ "excluded_toolchain" ])
 
   builder_toolchain = toolchain_variant.base + target_variant
   if (invoker._variant_shared) {
@@ -1881,11 +2050,40 @@ template("variant_target") {
       }
     }
   } else if (current_toolchain == shlib_toolchain ||
+             target_type == "shared_library" ||
              builder_toolchain == toolchain_variant.base) {
-    # Don't copy from a variant into a -shared toolchain, because nobody
-    # looks for an executable or loadable_module there. Don't copy from
-    # the base toolchain to a variant, either. Instead, in both cases just
-    # forward any deps to the real target.
+    # This corresponds to the following cases, which don't require a
+    # copy from the builder_toolchain to the current one:
+    #
+    # - current_toolchain == shlib_toolchain:
+    #
+    #    Already in an shlib toolchain, but needs to be built in a
+    #    different (variant-specific) shlib toolchain. This happens
+    #    when the shared_library("foo") target depends on another
+    #    loadable_module("bar") target that must be built with a
+    #    different variant. E.g.:
+    #
+    #      //src:prog -->
+    #          //src:foo -->
+    #              //src:foo(x64-shared) -->
+    #                 //src:bar(x64-shared) --> HERE!
+    #                    //src:bar(x64-asan-shared)
+    #
+    # - target_type == "shared_library":
+    #
+    #    Should only happen when in the default toolchain instance
+    #    to redirect to the variant-specific builder toolchain.
+    #
+    # - builder_toolchain == toolchain_variant.base
+    #
+    #    This happens when a "foo" build in a variant toolchain depends
+    #    on another target that needs to be built in the base one.
+    #    that is built in a base toolchain, e.g.:
+    #
+    #       //src:foo(x64-asan) -->
+    #           //src:bar(x64-asan) --> HERE!
+    #             //src:bar(x64)
+    #
     group(target_name) {
       forward_variables_from(target_invoker,
                              [
@@ -1895,7 +2093,10 @@ template("variant_target") {
       if (defined(visibility)) {
         visibility += [ ":${target_name}" ]
       }
-      deps = [ ":${target_name}(${builder_toolchain})" ]
+
+      # NOTE: public_deps is required to ensure shared_library() targets
+      # properly export their headers and public configs to dependents.
+      public_deps = [ ":${target_name}(${builder_toolchain})" ]
     }
   } else {
     # When some variant was selected, then this target in all other
@@ -2033,24 +2234,61 @@ template("variant_target") {
 #
 if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
   if (!toolchain_variant.is_pic_default) {
-    # In the main toolchain, shared_library just redirects to the same
-    # target in the -shared toolchain.
-    template("shared_library") {
-      group(target_name) {
-        public_deps = [ ":$target_name(${current_toolchain}-shared)" ]
-        forward_variables_from(invoker,
-                               [
-                                 "testonly",
-                                 "visibility",
-                               ])
+    if (in_default_toolchain && select_variant_canonical != []) {
+      # Perform variant build selection when referring to a shared library
+      # directly in the default toolchain.
+      #
+      # Note that this does _not_ happen when in other toolchains. For example,
+      # if select_variants was configured to build the '//src:foo' library in
+      # the 'asan' variant, and its dependency '//src:bar' in the 'ubsan'
+      # variant, then this will happen in practice:
+      #
+      #    //src:foo(default_toolchain): group() -->
+      #      //src:foo(x64-asan-shared): shared_library() -->
+      #        //src:bar(x64-asan-shared): shared_library()
+      #
+      #    //src:bar(default_toolchain): group() -->
+      #      //src:bar(x64-ubsan-shared): shared_library()
+      #
+      template("shared_library") {
+        _target_name = target_name
+        variant_target("shared_library") {
+          forward_variables_from(invoker,
+                                 "*",
+                                 [
+                                   "testonly",
+                                   "visibility",
+                                 ])
+          forward_variables_from(invoker,
+                                 [
+                                   "testonly",
+                                   "visibility",
+                                 ])
+          target_name = _target_name
+          _variant_shared = toolchain_variant.with_shared
+        }
       }
-      not_needed(invoker, "*")
+    } else {
+      # In a base toolchain that has an shlib_toolchain, shared_library just
+      # redirects to the same target in the -shared toolchain.
+      template("shared_library") {
+        group(target_name) {
+          public_deps = [ ":$target_name(${current_toolchain}-shared)" ]
+          forward_variables_from(invoker,
+                                 [
+                                   "testonly",
+                                   "visibility",
+                                 ])
+        }
+        not_needed(invoker, "*")
+      }
     }
   } else {
     # In the -shared toolchain, shared_library is just its normal self,
     # but if the invoker constrained the visibility, we must make sure
     # the dependency from the main toolchain is still allowed.
     template("shared_library") {
+      not_needed(invoker, [ "exclude_toolchain_tags" ])
       _fuchsia_binary(target_name) {
         target_type = "shared_library"
 

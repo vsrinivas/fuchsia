@@ -82,6 +82,26 @@ template("sdk_static_library") {
 
   runtime_deps_file = "$target_out_dir/$target_name.runtime_deps"
 
+  # This is subtle: If one of the dependencies is listed in runtime_deps
+  # with an _sdk suffix, assume it is a shared_library() target, and ensure
+  # that the current target depends on the dependency built in the same
+  # build variant, i.e. ignoring build variant redirection, even when we
+  # are in the default toolchain.
+  if (current_toolchain == default_toolchain && defined(invoker.runtime_deps)) {
+    _new_deps = []
+    foreach(dep, invoker.deps) {
+      _dep_label = get_label_info(dep, "label_no_toolchain")
+      _dep_sdk_label = _dep_label + "_sdk"
+      if (invoker.runtime_deps + [ _dep_sdk_label ] - [ _dep_sdk_label ] !=
+          invoker.runtime_deps) {
+        dep = _dep_label + "($shlib_toolchain_no_default_variant_redirect)"
+      }
+      _new_deps += [ dep ]
+    }
+    invoker.deps = []
+    invoker.deps = _new_deps
+  }
+
   static_library(main_target_name) {
     forward_variables_from(invoker,
                            "*",

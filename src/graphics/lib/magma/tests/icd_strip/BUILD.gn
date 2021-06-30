@@ -21,14 +21,19 @@ test("test_icd_strip_bin") {
 
   sources = [ "test_icd_strip.cc" ]
 
-  deps = [ "//third_party/googletest:gtest" ]
+  deps = [
+    ":icd_strip_test",
+    "//third_party/googletest:gtest",
+  ]
+
+  # Instrumented variants adds symbols (e.g. `__asan_init`)
+  # which are not in the allowlist and will fail the build
+  # so disable these.
+  exclude_toolchain_tags = [ "instrumented" ]
 }
 
 fuchsia_unittest_package("test_icd_strip") {
-  deps = [
-    ":icd_strip_test",
-    ":test_icd_strip_bin",
-  ]
+  deps = [ ":test_icd_strip_bin" ]
 }
 
 group("icd_strip") {

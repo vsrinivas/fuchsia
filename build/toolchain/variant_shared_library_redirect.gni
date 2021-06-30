@@ -184,9 +184,9 @@ template("variant_shared_library_redirect") {
   }
 
   if (_variant == false) {
-    _library_toolchain = current_toolchain
+    _library_toolchain = shlib_toolchain
   } else {
-    _library_toolchain = "${toolchain_variant.base}${_variant}"
+    _library_toolchain = "${toolchain_variant.base}${_variant}-shared"
   }
 
   _final_target = "${_library_label}(${_library_toolchain})"

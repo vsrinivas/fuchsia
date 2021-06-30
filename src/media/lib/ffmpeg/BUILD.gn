@@ -16,6 +16,7 @@ ffmpeg_prebuilt_variants = [
   "coverage",
   "coverage-rust",
   "coverage-sdk",
+  "novariant",
   "thinlto",
   "ubsan",
 ]
@@ -67,7 +68,8 @@ if (use_prebuilt_ffmpeg) {
   }
 
   variant_prefix = toolchain_variant.name
-  if (variant_prefix == "debug" || variant_prefix == "release") {
+  if (variant_prefix == "debug" || variant_prefix == "release" ||
+      variant_prefix == "novariant") {
     variant_prefix = ""
   }
 

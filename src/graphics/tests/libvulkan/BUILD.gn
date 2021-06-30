@@ -41,6 +41,18 @@ executable("fake_vulkan_loader_bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+
+  deps += [
+    ":icd-json",
+    ":libvulkan_fake",
+  ]
+
+  # IMPORTANT: The fake_vulkan_loader_bin program
+  # expects the library to be in /pkg/lib/ at
+  # runtime, which disallows using instrumented
+  # variants, which will install it it /pkg/lib/<variant>/
+  # instead, resulting in a runtime error.
+  exclude_toolchain_tags = [ "instrumented" ]
 }
 
 resource("icd-json") {
@@ -61,7 +73,6 @@ fuchsia_component("libvulkan_test_driver") {
   testonly = true
   component_name = "libvulkan_test_driver"
   deps = [
-    ":icd-json",
     ":libvulkan_test_bin",
     "//src/lib/vulkan/validation_layers",
   ]
@@ -75,7 +86,6 @@ fuchsia_component("libvulkan_test_driver_manifest_fs") {
   testonly = true
   component_name = "libvulkan_test_driver_manifest_fs"
   deps = [
-    ":icd-json",
     ":libvulkan_test_bin",
     "//src/lib/vulkan/validation_layers",
   ]

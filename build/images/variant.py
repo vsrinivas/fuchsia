@@ -90,6 +90,9 @@ def make_variant(name, info):
         if 'lto' in name:
             # LTO variants don't get their own libprefix like instrumented ones.
             libprefix = ''
+        if 'novariant' in name:
+            # Special "novariant" variant also doesn't have its own libprefix
+            libprefix = ''
         if libprefix != '':
             libprefix += '/'
     return variant(tc, libprefix, runtime, aux, has_libcxx)
