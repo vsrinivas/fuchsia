@@ -352,13 +352,13 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
 
     // TODO(fxbug.dev/67206): these should be moved into FlatlandManager.
     {
-      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland>)> handler =
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::composition::Flatland>)> handler =
           fit::bind_member(flatland_manager_.get(), &flatland::FlatlandManager::CreateFlatland);
       zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));
       FX_DCHECK(status == ZX_OK);
     }
     {
-      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::FlatlandDisplay>)>
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::composition::FlatlandDisplay>)>
           handler = fit::bind_member(flatland_manager_.get(),
                                      &flatland::FlatlandManager::CreateFlatlandDisplay);
       zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));

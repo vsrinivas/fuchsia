@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include "fuchsia/ui/scenic/internal/cpp/fidl.h"
+#include "fuchsia/ui/composition/cpp/fidl.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/allocation/allocator.h"
@@ -54,20 +54,20 @@ using fuchsia::math::SizeU;
 using fuchsia::ui::composition::Allocator_RegisterBufferCollection_Result;
 using fuchsia::ui::composition::BufferCollectionExportToken;
 using fuchsia::ui::composition::BufferCollectionImportToken;
-using fuchsia::ui::scenic::internal::ContentId;
-using fuchsia::ui::scenic::internal::ContentLink;
-using fuchsia::ui::scenic::internal::ContentLinkStatus;
-using fuchsia::ui::scenic::internal::ContentLinkToken;
-using fuchsia::ui::scenic::internal::Error;
-using fuchsia::ui::scenic::internal::GraphLink;
-using fuchsia::ui::scenic::internal::GraphLinkStatus;
-using fuchsia::ui::scenic::internal::GraphLinkToken;
-using fuchsia::ui::scenic::internal::ImageProperties;
-using fuchsia::ui::scenic::internal::LayoutInfo;
-using fuchsia::ui::scenic::internal::LinkProperties;
-using fuchsia::ui::scenic::internal::OnPresentProcessedValues;
-using fuchsia::ui::scenic::internal::Orientation;
-using fuchsia::ui::scenic::internal::TransformId;
+using fuchsia::ui::composition::ContentId;
+using fuchsia::ui::composition::ContentLink;
+using fuchsia::ui::composition::ContentLinkStatus;
+using fuchsia::ui::composition::ContentLinkToken;
+using fuchsia::ui::composition::Error;
+using fuchsia::ui::composition::GraphLink;
+using fuchsia::ui::composition::GraphLinkStatus;
+using fuchsia::ui::composition::GraphLinkToken;
+using fuchsia::ui::composition::ImageProperties;
+using fuchsia::ui::composition::LayoutInfo;
+using fuchsia::ui::composition::LinkProperties;
+using fuchsia::ui::composition::OnPresentProcessedValues;
+using fuchsia::ui::composition::Orientation;
+using fuchsia::ui::composition::TransformId;
 
 namespace {
 
@@ -123,7 +123,7 @@ struct GlobalIdPair {
                   RegisterPresent(flatland->GetRoot().GetInstanceId(), _));                    \
     }                                                                                          \
     bool processed_callback = false;                                                           \
-    fuchsia::ui::scenic::internal::PresentArgs present_args;                                   \
+    fuchsia::ui::composition::PresentArgs present_args;                                        \
     present_args.set_requested_presentation_time(args.requested_presentation_time.get());      \
     present_args.set_acquire_fences(std::move(args.acquire_fences));                           \
     present_args.set_release_fences(std::move(args.release_fences));                           \
@@ -193,7 +193,7 @@ struct GlobalIdPair {
 const uint32_t kDefaultSize = 1;
 const glm::ivec2 kDefaultPixelScale = {1, 1};
 
-float GetOrientationAngle(fuchsia::ui::scenic::internal::Orientation orientation) {
+float GetOrientationAngle(fuchsia::ui::composition::Orientation orientation) {
   switch (orientation) {
     case Orientation::CCW_0_DEGREES:
       return 0.f;
@@ -501,7 +501,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
   // Returns Error code passed returned to OnPresentProcessed() for |flatland|.
   Error GetPresentError(scheduling::SessionId session_id) { return flatland_errors_[session_id]; }
 
-  void RegisterPresentError(fuchsia::ui::scenic::internal::FlatlandPtr& flatland_channel,
+  void RegisterPresentError(fuchsia::ui::composition::FlatlandPtr& flatland_channel,
                             scheduling::SessionId session_id) {
     flatland_channel.events().OnPresentProcessed =
         [this, session_id](OnPresentProcessedValues values, Error error) {
@@ -519,8 +519,8 @@ class FlatlandTest : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
 
  private:
-  std::vector<fuchsia::ui::scenic::internal::FlatlandPtr> flatlands_;
-  std::vector<fuchsia::ui::scenic::internal::FlatlandDisplayPtr> flatland_displays_;
+  std::vector<fuchsia::ui::composition::FlatlandPtr> flatlands_;
+  std::vector<fuchsia::ui::composition::FlatlandDisplayPtr> flatland_displays_;
   std::unordered_map<scheduling::SessionId, Error> flatland_errors_;
   glm::vec2 display_pixel_scale_ = kDefaultPixelScale;
 
@@ -595,7 +595,7 @@ TEST_F(FlatlandTest, PresentWithNoFieldsSet) {
   const zx::time kDefaultRequestedPresentationTime = zx::time(0);
 
   EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(flatland->GetRoot().GetInstanceId(), _));
-  fuchsia::ui::scenic::internal::PresentArgs present_args;
+  fuchsia::ui::composition::PresentArgs present_args;
   flatland->Present(std::move(present_args));
   EXPECT_EQ(GetPresentError(flatland->GetSessionId()), Error::NO_ERROR);
 
@@ -1822,7 +1822,7 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
   auto session_id = scheduling::GetNextSessionId();
   std::vector<std::shared_ptr<BufferCollectionImporter>> importers;
   importers.push_back(buffer_collection_importer_);
-  fuchsia::ui::scenic::internal::FlatlandPtr parent_ptr;
+  fuchsia::ui::composition::FlatlandPtr parent_ptr;
   std::shared_ptr<Flatland> parent = Flatland::New(
       std::make_shared<utils::UnownedDispatcherHolder>(parent_loop.dispatcher()),
       parent_ptr.NewRequest(), session_id,
@@ -1841,7 +1841,7 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
   // Create the child Flatland session using another loop.
   async::TestLoop child_loop;
   session_id = scheduling::GetNextSessionId();
-  fuchsia::ui::scenic::internal::FlatlandPtr child_ptr;
+  fuchsia::ui::composition::FlatlandPtr child_ptr;
   std::shared_ptr<Flatland> child = Flatland::New(
       std::make_shared<utils::UnownedDispatcherHolder>(child_loop.dispatcher()),
       child_ptr.NewRequest(), session_id,
@@ -1880,7 +1880,7 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
   EXPECT_TRUE(child_loop.RunUntilIdle());
 
   // Overwriting hanging gets should cause an error on child's loop as we process the request.
-  fuchsia::ui::scenic::internal::PresentArgs present_args;
+  fuchsia::ui::composition::PresentArgs present_args;
   child->Present(std::move(present_args));
   EXPECT_TRUE(child_loop.RunUntilIdle());
   EXPECT_EQ(GetPresentError(child->GetSessionId()), Error::BAD_HANGING_GET);
@@ -3675,7 +3675,7 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
       std::make_shared<Allocator>(context_provider_.context(), importers, screenshot_importers,
                                   utils::CreateSysmemAllocatorSyncPtr());
   auto session_id = scheduling::GetNextSessionId();
-  fuchsia::ui::scenic::internal::FlatlandPtr flatland_ptr;
+  fuchsia::ui::composition::FlatlandPtr flatland_ptr;
   auto flatland = Flatland::New(
       std::make_shared<utils::UnownedDispatcherHolder>(dispatcher()), flatland_ptr.NewRequest(),
       session_id,

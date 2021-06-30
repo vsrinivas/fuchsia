@@ -23,22 +23,22 @@
 using fuchsia::math::RectF;
 using fuchsia::math::SizeU;
 using fuchsia::math::Vec;
-using fuchsia::ui::scenic::internal::ContentLink;
-using fuchsia::ui::scenic::internal::ContentLinkStatus;
-using fuchsia::ui::scenic::internal::ContentLinkToken;
-using fuchsia::ui::scenic::internal::Error;
-using fuchsia::ui::scenic::internal::GraphLink;
-using fuchsia::ui::scenic::internal::GraphLinkToken;
-using fuchsia::ui::scenic::internal::ImageProperties;
-using fuchsia::ui::scenic::internal::LinkProperties;
-using fuchsia::ui::scenic::internal::OnPresentProcessedValues;
-using fuchsia::ui::scenic::internal::Orientation;
+using fuchsia::ui::composition::ContentLink;
+using fuchsia::ui::composition::ContentLinkStatus;
+using fuchsia::ui::composition::ContentLinkToken;
+using fuchsia::ui::composition::Error;
+using fuchsia::ui::composition::GraphLink;
+using fuchsia::ui::composition::GraphLinkToken;
+using fuchsia::ui::composition::ImageProperties;
+using fuchsia::ui::composition::LinkProperties;
+using fuchsia::ui::composition::OnPresentProcessedValues;
+using fuchsia::ui::composition::Orientation;
 
 namespace flatland {
 
 std::shared_ptr<Flatland> Flatland::New(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
+    fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> request,
     scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
     std::shared_ptr<FlatlandPresenter> flatland_presenter, std::shared_ptr<LinkSystem> link_system,
     std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
@@ -51,7 +51,7 @@ std::shared_ptr<Flatland> Flatland::New(
 }
 
 Flatland::Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-                   fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
+                   fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> request,
                    scheduling::SessionId session_id,
                    std::function<void()> destroy_instance_function,
                    std::shared_ptr<FlatlandPresenter> flatland_presenter,
@@ -87,7 +87,7 @@ Flatland::~Flatland() {
   // TODO(fxbug.dev/55374): consider if Link tokens should be returned or not.
 }
 
-void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args) {
+void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
   // Close any clients that had invalid operations on link protocols.
   if (link_protocol_error_) {
     CloseConnection(Error::BAD_HANGING_GET);
@@ -285,7 +285,7 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
 }
 
 void Flatland::UnlinkFromParent(
-    fuchsia::ui::scenic::internal::Flatland::UnlinkFromParentCallback callback) {
+    fuchsia::ui::composition::Flatland::UnlinkFromParentCallback callback) {
   if (!parent_link_) {
     error_reporter_->ERROR() << "UnlinkFromParent failed, no existing parent Link";
     ReportBadOperationError();
@@ -863,7 +863,7 @@ void Flatland::ReleaseTransform(TransformId transform_id) {
 }
 
 void Flatland::ReleaseLink(ContentId link_id,
-                           fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) {
+                           fuchsia::ui::composition::Flatland::ReleaseLinkCallback callback) {
   if (link_id.value == kInvalidId) {
     error_reporter_->ERROR() << "ReleaseLink called with link_id zero";
     ReportBadOperationError();
@@ -1020,8 +1020,7 @@ void Flatland::CloseConnection(Error error) {
 // MatrixData function implementations
 
 // static
-float Flatland::MatrixData::GetOrientationAngle(
-    fuchsia::ui::scenic::internal::Orientation orientation) {
+float Flatland::MatrixData::GetOrientationAngle(fuchsia::ui::composition::Orientation orientation) {
   switch (orientation) {
     case Orientation::CCW_0_DEGREES:
       return 0.f;
@@ -1042,7 +1041,7 @@ void Flatland::MatrixData::SetTranslation(Vec translation) {
   RecomputeMatrix();
 }
 
-void Flatland::MatrixData::SetOrientation(fuchsia::ui::scenic::internal::Orientation orientation) {
+void Flatland::MatrixData::SetOrientation(fuchsia::ui::composition::Orientation orientation) {
   angle_ = GetOrientationAngle(orientation);
 
   RecomputeMatrix();

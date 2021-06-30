@@ -5,7 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_UBER_STRUCT_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_UBER_STRUCT_H_
 
-#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 
 #include <memory>
 #include <unordered_map>
@@ -39,7 +39,7 @@ struct UberStruct {
   // The LinkProperties for each child link of this Flatland instance. Entries in this map will
   // have children that are in different Flatland instances.
   using LinkPropertiesMap =
-      std::unordered_map<TransformHandle, fuchsia::ui::scenic::internal::LinkProperties>;
+      std::unordered_map<TransformHandle, fuchsia::ui::composition::LinkProperties>;
   LinkPropertiesMap link_properties;
 
   // The local (i.e. relative to the parent) geometric transformation matrix of each

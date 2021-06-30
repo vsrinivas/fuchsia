@@ -5,7 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_MANAGER_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_MANAGER_H_
 
-#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
@@ -40,7 +40,7 @@ class FlatlandManager : public scheduling::SessionUpdater {
                       buffer_collection_importers);
   ~FlatlandManager() override;
 
-  void CreateFlatland(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> flatland);
+  void CreateFlatland(fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> flatland);
 
   // TODO(fxbug.dev/76985): this creates a FlatlandDisplay attached to the "primary" hardware
   // display (i.e. the only one supported).  In the future there will be APIs that allow clients to
@@ -48,7 +48,7 @@ class FlatlandManager : public scheduling::SessionUpdater {
   // them.  For now, attempts to create a second concurrent FlatlandDisplay (or
   // gfx::DisplayCompositor) will fail.
   void CreateFlatlandDisplay(
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::FlatlandDisplay> flatland);
+      fidl::InterfaceRequest<fuchsia::ui::composition::FlatlandDisplay> flatland);
 
   // |scheduling::SessionUpdater|
   scheduling::SessionUpdater::UpdateResults UpdateSessions(

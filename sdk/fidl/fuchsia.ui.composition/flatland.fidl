@@ -1,11 +1,10 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-library fuchsia.ui.scenic.internal;
+library fuchsia.ui.composition;
 
 using fuchsia.math;
-using fuchsia.ui.composition;
 using fuchsia.scenic.scheduling;
 using zx;
 
@@ -255,7 +254,7 @@ protocol Flatland {
     /// pertaining to all [`Present`]s that had content that were part of that
     /// frame.
     ///
-    /// See [`fuchsia.ui.scenic.internal/PresentArgs`] documentation above for
+    /// See [`fuchsia.ui.composition/PresentArgs`] documentation above for
     /// more detailed information on what arguments are passed in and their
     /// role.
     Present(PresentArgs args);
@@ -450,7 +449,7 @@ protocol Flatland {
     /// Zero is not a valid Image id. All other values are valid, assuming they are not already in
     /// use for another piece of Content (see [`ReleaseImage`] for more details).
     CreateImage(ContentId image_id,
-                fuchsia.ui.composition.BufferCollectionImportToken import_token,
+                BufferCollectionImportToken import_token,
                 uint32 vmo_index,
                 ImageProperties properties);
 

@@ -5,7 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_HANGING_GET_HELPER_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_HANGING_GET_HELPER_H_
 
-#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>

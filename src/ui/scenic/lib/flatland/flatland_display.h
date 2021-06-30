@@ -5,7 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_DISPLAY_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_DISPLAY_H_
 
-#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding.h>
 
@@ -25,14 +25,14 @@ namespace flatland {
 
 // FlatlandDisplay implements the FIDL API of the same name.  It is the glue between a physical
 // display and a tree of Flatland content attached underneath.
-class FlatlandDisplay : public fuchsia::ui::scenic::internal::FlatlandDisplay,
+class FlatlandDisplay : public fuchsia::ui::composition::FlatlandDisplay,
                         public std::enable_shared_from_this<FlatlandDisplay> {
  public:
-  using TransformId = fuchsia::ui::scenic::internal::TransformId;
+  using TransformId = fuchsia::ui::composition::TransformId;
 
   static std::shared_ptr<FlatlandDisplay> New(
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::FlatlandDisplay> request,
+      fidl::InterfaceRequest<fuchsia::ui::composition::FlatlandDisplay> request,
       scheduling::SessionId session_id, std::shared_ptr<scenic_impl::display::Display> display,
       std::function<void()> destroy_display_function,
       std::shared_ptr<FlatlandPresenter> flatland_presenter,
@@ -46,10 +46,10 @@ class FlatlandDisplay : public fuchsia::ui::scenic::internal::FlatlandDisplay,
   FlatlandDisplay(FlatlandDisplay&&) = delete;
   FlatlandDisplay& operator=(FlatlandDisplay&&) = delete;
 
-  // |fuchsia::ui::scenic::internal::FlatlandDisplay|
+  // |fuchsia::ui::composition::FlatlandDisplay|
   void SetContent(
-      fuchsia::ui::scenic::internal::ContentLinkToken token,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link) override;
+      fuchsia::ui::composition::ContentLinkToken token,
+      fidl::InterfaceRequest<fuchsia::ui::composition::ContentLink> content_link) override;
 
   TransformHandle root_transform() const { return root_transform_; }
   scenic_impl::display::Display* display() const { return display_.get(); }
@@ -58,7 +58,7 @@ class FlatlandDisplay : public fuchsia::ui::scenic::internal::FlatlandDisplay,
 
  private:
   FlatlandDisplay(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-                  fidl::InterfaceRequest<fuchsia::ui::scenic::internal::FlatlandDisplay> request,
+                  fidl::InterfaceRequest<fuchsia::ui::composition::FlatlandDisplay> request,
                   scheduling::SessionId session_id,
                   std::shared_ptr<scenic_impl::display::Display> display,
                   std::function<void()> destroy_display_function,
@@ -72,7 +72,7 @@ class FlatlandDisplay : public fuchsia::ui::scenic::internal::FlatlandDisplay,
 
   // The FIDL binding for this FlatlandDisplay, which references |this| as the implementation and
   // run on |dispatcher_|.
-  fidl::Binding<fuchsia::ui::scenic::internal::FlatlandDisplay> binding_;
+  fidl::Binding<fuchsia::ui::composition::FlatlandDisplay> binding_;
 
   // The unique SessionId for this FlatlandDisplay. Used to schedule Presents and register
   // UberStructs with the UberStructSystem.

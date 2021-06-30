@@ -40,8 +40,8 @@ source_set("flatland") {
   public_configs = [ ":glm_config" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.scenic.internal",
     "//src/lib/fxl",
 
     # TODO(fxbug.dev/56879): this dependency should be broken down into smaller libraries,

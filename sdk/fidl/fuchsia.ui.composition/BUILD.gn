@@ -10,9 +10,14 @@ fidl("fuchsia.ui.composition") {
   # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
   experimental_api_summary = true
 
-  sources = [ "allocator.fidl" ]
+  sources = [
+    "allocator.fidl",
+    "flatland.fidl",
+  ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.math",
+    "//sdk/fidl/fuchsia.scenic.scheduling",
     "//sdk/fidl/fuchsia.sysmem",
     "//zircon/vdso/zx",
   ]

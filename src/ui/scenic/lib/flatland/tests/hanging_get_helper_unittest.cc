@@ -12,8 +12,8 @@
 #include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 
 using fuchsia::math::SizeU;
-using fuchsia::ui::scenic::internal::GraphLinkStatus;
-using fuchsia::ui::scenic::internal::LayoutInfo;
+using fuchsia::ui::composition::GraphLinkStatus;
+using fuchsia::ui::composition::LayoutInfo;
 
 namespace flatland {
 namespace test {

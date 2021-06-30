@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_math as fmath, fidl_fuchsia_ui_composition as scenic_alloc,
-    fidl_fuchsia_ui_scenic_internal as fland, fuchsia_async as fasync,
+    fidl_fuchsia_ui_composition as fland, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol, fuchsia_syslog as syslog, fuchsia_zircon as zx,
     log::*,
 };

@@ -10,17 +10,7 @@ fidl("fuchsia.ui.scenic.internal") {
 
   sdk_category = "internal"
 
-  sources = [
-    "flatland.fidl",
-    "snapshot.fidl",
-  ]
+  sources = [ "snapshot.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.math",
-    "//sdk/fidl/fuchsia.mem",
-    "//sdk/fidl/fuchsia.scenic.scheduling",
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//zircon/vdso/zx",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.mem" ]
 }

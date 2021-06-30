@@ -13,15 +13,15 @@ static void ReportError() {
   FX_CHECK(false) << "Crashing on error.";
 }
 
-using fuchsia::ui::scenic::internal::ContentLink;
-using fuchsia::ui::scenic::internal::ContentLinkToken;
-using fuchsia::ui::scenic::internal::LinkProperties;
+using fuchsia::ui::composition::ContentLink;
+using fuchsia::ui::composition::ContentLinkToken;
+using fuchsia::ui::composition::LinkProperties;
 
 namespace flatland {
 
 std::shared_ptr<FlatlandDisplay> FlatlandDisplay::New(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::FlatlandDisplay> request,
+    fidl::InterfaceRequest<fuchsia::ui::composition::FlatlandDisplay> request,
     scheduling::SessionId session_id, std::shared_ptr<scenic_impl::display::Display> display,
     std::function<void()> destroy_display_function,
     std::shared_ptr<FlatlandPresenter> flatland_presenter, std::shared_ptr<LinkSystem> link_system,
@@ -34,7 +34,7 @@ std::shared_ptr<FlatlandDisplay> FlatlandDisplay::New(
 
 FlatlandDisplay::FlatlandDisplay(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::FlatlandDisplay> request,
+    fidl::InterfaceRequest<fuchsia::ui::composition::FlatlandDisplay> request,
     scheduling::SessionId session_id, std::shared_ptr<scenic_impl::display::Display> display,
     std::function<void()> destroy_display_function,
     std::shared_ptr<FlatlandPresenter> flatland_presenter, std::shared_ptr<LinkSystem> link_system,

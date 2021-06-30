@@ -8,13 +8,13 @@
 
 #include <glm/gtc/matrix_access.hpp>
 
-using fuchsia::ui::scenic::internal::ContentLink;
-using fuchsia::ui::scenic::internal::ContentLinkStatus;
-using fuchsia::ui::scenic::internal::ContentLinkToken;
-using fuchsia::ui::scenic::internal::GraphLink;
-using fuchsia::ui::scenic::internal::GraphLinkStatus;
-using fuchsia::ui::scenic::internal::GraphLinkToken;
-using fuchsia::ui::scenic::internal::LayoutInfo;
+using fuchsia::ui::composition::ContentLink;
+using fuchsia::ui::composition::ContentLinkStatus;
+using fuchsia::ui::composition::ContentLinkToken;
+using fuchsia::ui::composition::GraphLink;
+using fuchsia::ui::composition::GraphLinkStatus;
+using fuchsia::ui::composition::GraphLinkToken;
+using fuchsia::ui::composition::LayoutInfo;
 
 namespace flatland {
 
@@ -33,7 +33,7 @@ LinkSystem::LinkSystem(TransformHandle::InstanceId instance_id)
 
 LinkSystem::ChildLink LinkSystem::CreateChildLink(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, ContentLinkToken token,
-    fuchsia::ui::scenic::internal::LinkProperties initial_properties,
+    fuchsia::ui::composition::LinkProperties initial_properties,
     fidl::InterfaceRequest<ContentLink> content_link, TransformHandle graph_handle,
     LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());

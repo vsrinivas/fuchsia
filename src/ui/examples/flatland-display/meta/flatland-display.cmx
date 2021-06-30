@@ -9,8 +9,8 @@
         "services": [
             "fuchsia.sysmem.Allocator",
             "fuchsia.ui.composition.Allocator",
-            "fuchsia.ui.scenic.internal.Flatland",
-            "fuchsia.ui.scenic.internal.FlatlandDisplay"
+            "fuchsia.ui.composition.Flatland",
+            "fuchsia.ui.composition.FlatlandDisplay"
         ]
     }
 }

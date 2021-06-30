@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -24,11 +24,11 @@ int main(int argc, const char** argv) {
 
   auto component_context = sys::ComponentContext::Create();
 
-  auto flatland = component_context->svc()->Connect<fuchsia::ui::scenic::internal::Flatland>();
+  auto flatland = component_context->svc()->Connect<fuchsia::ui::composition::Flatland>();
   auto flatland_display =
-      component_context->svc()->Connect<fuchsia::ui::scenic::internal::FlatlandDisplay>();
+      component_context->svc()->Connect<fuchsia::ui::composition::FlatlandDisplay>();
 
-  constexpr fuchsia::ui::scenic::internal::TransformId kRootTransformId{.value = 1};
+  constexpr fuchsia::ui::composition::TransformId kRootTransformId{.value = 1};
 
   flatland->CreateTransform(kRootTransformId);
   flatland->SetRootTransform(kRootTransformId);

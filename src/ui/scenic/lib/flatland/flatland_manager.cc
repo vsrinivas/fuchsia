@@ -47,7 +47,7 @@ FlatlandManager::~FlatlandManager() {
 }
 
 void FlatlandManager::CreateFlatland(
-    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request) {
+    fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> request) {
   CheckIsOnMainThread();
 
   const scheduling::SessionId id = uber_struct_system_->GetNextInstanceId();
@@ -94,7 +94,7 @@ void FlatlandManager::CreateFlatland(
 }
 
 void FlatlandManager::CreateFlatlandDisplay(
-    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::FlatlandDisplay> request) {
+    fidl::InterfaceRequest<fuchsia::ui::composition::FlatlandDisplay> request) {
   const scheduling::SessionId id = uber_struct_system_->GetNextInstanceId();
   FX_DCHECK(flatland_instances_.find(id) == flatland_instances_.end());
   FX_DCHECK(flatland_display_instances_.find(id) == flatland_display_instances_.end());

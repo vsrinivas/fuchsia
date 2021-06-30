@@ -6,7 +6,6 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_H_
 
 #include <fuchsia/ui/composition/cpp/fidl.h>
-#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
@@ -46,13 +45,13 @@ namespace flatland {
 // This is a WIP implementation of the 2D Layer API. It currently exists to run unit tests, and to
 // provide a platform for features to be iterated and implemented over time.
 // All methods following constructor run on |dispatcher_|.
-class Flatland : public fuchsia::ui::scenic::internal::Flatland,
+class Flatland : public fuchsia::ui::composition::Flatland,
                  public std::enable_shared_from_this<Flatland> {
  public:
   using BufferCollectionId = uint64_t;
-  using ContentId = fuchsia::ui::scenic::internal::ContentId;
+  using ContentId = fuchsia::ui::composition::ContentId;
   using FuturePresentationInfos = std::vector<fuchsia::scenic::scheduling::PresentationInfo>;
-  using TransformId = fuchsia::ui::scenic::internal::TransformId;
+  using TransformId = fuchsia::ui::composition::TransformId;
 
   // Binds this Flatland object to serve |request| on |dispatcher|. The |destroy_instance_function|
   // will be invoked from the Looper that owns |dispatcher| when this object is ready to be cleaned
@@ -64,7 +63,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   // like frame scheduling, linking, buffer allocation, and presentation to the global scene graph.
   static std::shared_ptr<Flatland> New(
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
+      fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> request,
       scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
       std::shared_ptr<FlatlandPresenter> flatland_presenter,
       std::shared_ptr<LinkSystem> link_system,
@@ -80,59 +79,59 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   Flatland(Flatland&&) = delete;
   Flatland& operator=(Flatland&&) = delete;
 
-  // |fuchsia::ui::scenic::internal::Flatland|
-  void Present(fuchsia::ui::scenic::internal::PresentArgs args) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
+  void Present(fuchsia::ui::composition::PresentArgs args) override;
+  // |fuchsia::ui::composition::Flatland|
   void LinkToParent(
-      fuchsia::ui::scenic::internal::GraphLinkToken token,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> graph_link) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+      fuchsia::ui::composition::GraphLinkToken token,
+      fidl::InterfaceRequest<fuchsia::ui::composition::GraphLink> graph_link) override;
+  // |fuchsia::ui::composition::Flatland|
   void UnlinkFromParent(
-      fuchsia::ui::scenic::internal::Flatland::UnlinkFromParentCallback callback) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+      fuchsia::ui::composition::Flatland::UnlinkFromParentCallback callback) override;
+  // |fuchsia::ui::composition::Flatland|
   void ClearGraph() override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
   void CreateTransform(TransformId transform_id) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
   void SetTranslation(TransformId transform_id, fuchsia::math::Vec translation) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
   void SetOrientation(TransformId transform_id,
-                      fuchsia::ui::scenic::internal::Orientation orientation) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+                      fuchsia::ui::composition::Orientation orientation) override;
+  // |fuchsia::ui::composition::Flatland|
   void AddChild(TransformId parent_transform_id, TransformId child_transform_id) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
   void RemoveChild(TransformId parent_transform_id, TransformId child_transform_id) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
   void SetRootTransform(TransformId transform_id) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
   void CreateLink(
-      ContentId link_id, fuchsia::ui::scenic::internal::ContentLinkToken token,
-      fuchsia::ui::scenic::internal::LinkProperties properties,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+      ContentId link_id, fuchsia::ui::composition::ContentLinkToken token,
+      fuchsia::ui::composition::LinkProperties properties,
+      fidl::InterfaceRequest<fuchsia::ui::composition::ContentLink> content_link) override;
+  // |fuchsia::ui::composition::Flatland|
   void CreateImage(ContentId image_id,
                    fuchsia::ui::composition::BufferCollectionImportToken import_token,
                    uint32_t vmo_index,
-                   fuchsia::ui::scenic::internal::ImageProperties properties) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+                   fuchsia::ui::composition::ImageProperties properties) override;
+  // |fuchsia::ui::composition::Flatland|
   void SetImageSampleRegion(ContentId image_id, fuchsia::math::RectF rect) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
   void SetImageDestinationSize(ContentId image_id, fuchsia::math::SizeU size) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
   void SetOpacity(TransformId transform_id, float val) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
   void SetContent(TransformId transform_id, ContentId content_id) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
   void SetLinkProperties(ContentId link_id,
-                         fuchsia::ui::scenic::internal::LinkProperties properties) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+                         fuchsia::ui::composition::LinkProperties properties) override;
+  // |fuchsia::ui::composition::Flatland|
   void ReleaseTransform(TransformId transform_id) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
   void ReleaseLink(ContentId link_id,
-                   fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+                   fuchsia::ui::composition::Flatland::ReleaseLinkCallback callback) override;
+  // |fuchsia::ui::composition::Flatland|
   void ReleaseImage(ContentId image_id) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
+  // |fuchsia::ui::composition::Flatland|
   void SetDebugName(std::string name) override;
 
   // Called just before the FIDL client receives the event of the same name, indicating that this
@@ -163,7 +162,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
 
  private:
   Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-           fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
+           fidl::InterfaceRequest<fuchsia::ui::composition::Flatland> request,
            scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
            std::shared_ptr<FlatlandPresenter> flatland_presenter,
            std::shared_ptr<LinkSystem> link_system,
@@ -173,7 +172,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
 
   void ReportBadOperationError();
   void ReportLinkProtocolError(const std::string& error_log);
-  void CloseConnection(fuchsia::ui::scenic::internal::Error error);
+  void CloseConnection(fuchsia::ui::composition::Error error);
 
   // The dispatcher this Flatland instance is running on.
   async_dispatcher_t* dispatcher() const { return dispatcher_holder_->dispatcher(); }
@@ -181,7 +180,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
 
   // The FIDL binding for this Flatland instance, which references |this| as the implementation and
   // run on |dispatcher_|.
-  fidl::Binding<fuchsia::ui::scenic::internal::Flatland> binding_;
+  fidl::Binding<fuchsia::ui::composition::Flatland> binding_;
 
   // Users are not allowed to use zero as a TransformId or ContentId.
   static constexpr uint64_t kInvalidId = 0;
@@ -258,7 +257,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   // Wraps a LinkSystem::ChildLink and the properties currently associated with that link.
   struct ChildLinkData {
     LinkSystem::ChildLink link;
-    fuchsia::ui::scenic::internal::LinkProperties properties;
+    fuchsia::ui::composition::LinkProperties properties;
     fuchsia::math::SizeU size;
   };
 
@@ -274,14 +273,14 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   class MatrixData {
    public:
     void SetTranslation(fuchsia::math::Vec translation);
-    void SetOrientation(fuchsia::ui::scenic::internal::Orientation orientation);
+    void SetOrientation(fuchsia::ui::composition::Orientation orientation);
     void SetScale(fuchsia::math::SizeU scale);
 
     // Returns this geometric transformation as a single 3x3 matrix using the order of operations
     // above: translation, orientation, then scale.
     glm::mat3 GetMatrix() const;
 
-    static float GetOrientationAngle(fuchsia::ui::scenic::internal::Orientation orientation);
+    static float GetOrientationAngle(fuchsia::ui::composition::Orientation orientation);
 
    private:
     // Applies the translation, then orientation, then scale to the identity matrix.

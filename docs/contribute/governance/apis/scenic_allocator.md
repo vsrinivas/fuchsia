@@ -49,10 +49,10 @@ protocol Allocator {
     /// BufferCollection as their backing memory.
     ///
     /// Clients can send `export_token` to register buffer collections with Allocator to be used
-    /// later in [`fuchsia.ui.scenic.internal/Flatland`] instances or other Scenic APIs. For
+    /// later in [`fuchsia.ui.composition/Flatland`] instances or other Scenic APIs. For
     /// example, by passing a [`BufferCollectionImportToken`] containing the matching peer of
     /// [`BufferCollectionExportToken`], they can create image resources via
-    /// [`fuchsia.ui.scenic.internal/Flatland.CreateImage`]. Clients should wait for the response
+    /// [`fuchsia.ui.composition/Flatland.CreateImage`]. Clients should wait for the response
     /// before using `import_token`.
     ///
     /// Flatland participates in the allocation of buffers by setting constraints on the

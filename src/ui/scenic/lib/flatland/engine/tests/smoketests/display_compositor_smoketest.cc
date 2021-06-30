@@ -29,13 +29,13 @@ using flatland::TransformGraph;
 using flatland::TransformHandle;
 using flatland::UberStruct;
 using flatland::UberStructSystem;
-using fuchsia::ui::scenic::internal::ContentLink;
-using fuchsia::ui::scenic::internal::ContentLinkStatus;
-using fuchsia::ui::scenic::internal::ContentLinkToken;
-using fuchsia::ui::scenic::internal::GraphLink;
-using fuchsia::ui::scenic::internal::GraphLinkToken;
-using fuchsia::ui::scenic::internal::LayoutInfo;
-using fuchsia::ui::scenic::internal::LinkProperties;
+using fuchsia::ui::composition::ContentLink;
+using fuchsia::ui::composition::ContentLinkStatus;
+using fuchsia::ui::composition::ContentLinkToken;
+using fuchsia::ui::composition::GraphLink;
+using fuchsia::ui::composition::GraphLinkToken;
+using fuchsia::ui::composition::LayoutInfo;
+using fuchsia::ui::composition::LinkProperties;
 
 using namespace scenic_impl;
 using namespace display;
@@ -227,8 +227,7 @@ VK_TEST_P(DisplayCompositorParameterizedSmokeTest, FullscreenRectangleTest) {
   uberstruct->images[image_handle] = image_metadata;
   uberstruct->local_matrices[image_handle] = glm::scale(
       glm::translate(glm::mat3(1.0), glm::vec2(0, 0)), glm::vec2(kRectWidth, kRectHeight));
-  uberstruct->local_image_sample_regions[image_handle] = {0, 0,
-                                                          static_cast<float>(kTextureWidth),
+  uberstruct->local_image_sample_regions[image_handle] = {0, 0, static_cast<float>(kTextureWidth),
                                                           static_cast<float>(kTextureHeight)};
   session.PushUberStruct(std::move(uberstruct));
 

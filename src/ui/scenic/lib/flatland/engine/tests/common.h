@@ -125,7 +125,7 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
     // the LinkSystem will delete the link. Tests should add |child_link.link_handle| to their
     // TransformGraphs to use the ChildLink in a topology.
     struct ChildLink {
-      fidl::InterfacePtr<fuchsia::ui::scenic::internal::ContentLink> content_link;
+      fidl::InterfacePtr<fuchsia::ui::composition::ContentLink> content_link;
       LinkSystem::ChildLink child_link;
 
       // Returns the handle the parent should add as a child in its local topology to include the
@@ -165,7 +165,7 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
     // the LinkSystem will delete the link. When |parent_link_| has a value, the
     // |parent_link.link_origin| from this object is used as the root TransformHandle.
     struct ParentLink {
-      fidl::InterfacePtr<fuchsia::ui::scenic::internal::GraphLink> graph_link;
+      fidl::InterfacePtr<fuchsia::ui::composition::GraphLink> graph_link;
       LinkSystem::ParentLink parent_link;
     };
     std::optional<ParentLink> parent_link_;

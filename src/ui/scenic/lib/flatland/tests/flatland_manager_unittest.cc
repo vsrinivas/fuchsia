@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include "fuchsia/ui/scenic/internal/cpp/fidl.h"
+#include "fuchsia/ui/composition/cpp/fidl.h"
 #include "lib/gtest/real_loop_fixture.h"
 #include "src/ui/scenic/lib/allocation/mock_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/tests/mock_flatland_presenter.h"
@@ -23,9 +23,9 @@ using flatland::FlatlandPresenter;
 using flatland::LinkSystem;
 using flatland::MockFlatlandPresenter;
 using flatland::UberStructSystem;
-using fuchsia::ui::scenic::internal::Error;
-using fuchsia::ui::scenic::internal::Flatland;
-using fuchsia::ui::scenic::internal::OnPresentProcessedValues;
+using fuchsia::ui::composition::Error;
+using fuchsia::ui::composition::Flatland;
+using fuchsia::ui::composition::OnPresentProcessedValues;
 
 // These macros works like functions that check a variety of conditions, but if those conditions
 // fail, the line number for the failure will appear in-line rather than in a function.
@@ -46,7 +46,7 @@ using fuchsia::ui::scenic::internal::OnPresentProcessedValues;
       EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(session_id, _));          \
       EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));       \
     }                                                                                  \
-    fuchsia::ui::scenic::internal::PresentArgs present_args;                           \
+    fuchsia::ui::composition::PresentArgs present_args;                                \
     present_args.set_requested_presentation_time(0);                                   \
     present_args.set_acquire_fences({});                                               \
     present_args.set_release_fences({});                                               \
@@ -166,8 +166,8 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
     gtest::RealLoopFixture::TearDown();
   }
 
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> CreateFlatland() {
-    fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> CreateFlatland() {
+    fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland;
     // Since GetFuturePresentationInfos() happens when a Flatland instance is created,
     // EXPECT it here.
     EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
@@ -215,9 +215,9 @@ namespace flatland {
 namespace test {
 
 TEST_F(FlatlandManagerTest, CreateFlatlands) {
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1 = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland1 = CreateFlatland();
 
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2 = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland2 = CreateFlatland();
 
   RunLoopUntilIdle();
 
@@ -229,7 +229,7 @@ TEST_F(FlatlandManagerTest, CreateFlatlands) {
 TEST_F(FlatlandManagerTest, ClientDiesBeforeManager) {
   scheduling::SessionId id;
   {
-    fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
+    fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
     id = uber_struct_system_->GetLatestInstanceId();
 
     RunLoopUntilIdle();
@@ -248,7 +248,7 @@ TEST_F(FlatlandManagerTest, ClientDiesBeforeManager) {
 }
 
 TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   RunLoopUntilIdle();
@@ -271,7 +271,7 @@ TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
 
 TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
   // Set up a Flatland instance with an OnPresentProcessed() callback.
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens = 0;
@@ -288,7 +288,7 @@ TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
 
 TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
   // Setup two Flatland instances with OnPresentProcessed() callbacks.
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1 = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland1 = CreateFlatland();
   const scheduling::SessionId id1 = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens1 = 0;
@@ -298,7 +298,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
     EXPECT_FALSE(values.future_presentation_infos().empty());
   };
 
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2 = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland2 = CreateFlatland();
   const scheduling::SessionId id2 = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens2 = 0;
@@ -379,7 +379,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
 // called. If that's the case, we need to ensure that present tokens returned from the first
 // update are not lost.
 TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentTokens) {
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens = 0;
@@ -428,7 +428,7 @@ TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentToken
 
 TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   // Setup a Flatland instance with an OnPresentProcessed() callback.
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   Error error_returned = Error::NO_ERROR;
@@ -463,7 +463,7 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
 
 TEST_F(FlatlandManagerTest, ErrorClosesSession) {
   // Setup a Flatland instance with an OnPresentProcessed() callback.
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   Error error_returned = Error::NO_ERROR;
@@ -492,7 +492,7 @@ TEST_F(FlatlandManagerTest, ErrorClosesSession) {
 
 TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
   // Setup a Flatland instance with an OnPresentProcessed() callback.
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t tokens_remaining = 1;
@@ -527,14 +527,14 @@ TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
 
 TEST_F(FlatlandManagerTest, OnFramePresentedEvent) {
   // Setup two Flatland instances with OnFramePresented() callbacks.
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1 = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland1 = CreateFlatland();
   const scheduling::SessionId id1 = uber_struct_system_->GetLatestInstanceId();
 
   std::optional<fuchsia::scenic::scheduling::FramePresentedInfo> info1;
   flatland1.events().OnFramePresented =
       [&info1](fuchsia::scenic::scheduling::FramePresentedInfo info) { info1 = std::move(info); };
 
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2 = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland2 = CreateFlatland();
   const scheduling::SessionId id2 = uber_struct_system_->GetLatestInstanceId();
 
   std::optional<fuchsia::scenic::scheduling::FramePresentedInfo> info2;

@@ -5,7 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_LINK_SYSTEM_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_LINK_SYSTEM_H_
 
-#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 
@@ -34,7 +34,7 @@ using LinkProtocolErrorCallback = std::function<void(const std::string&)>;
 
 // An implementation of the GraphLink protocol, consisting of hanging gets for various updateable
 // pieces of information.
-class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
+class GraphLinkImpl : public fuchsia::ui::composition::GraphLink {
  public:
   explicit GraphLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder)
       : layout_helper_(dispatcher_holder), status_helper_(std::move(dispatcher_holder)) {}
@@ -44,15 +44,15 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
     error_callback_ = std::move(error_callback);
   }
 
-  void UpdateLayoutInfo(fuchsia::ui::scenic::internal::LayoutInfo info) {
+  void UpdateLayoutInfo(fuchsia::ui::composition::LayoutInfo info) {
     layout_helper_.Update(std::move(info));
   }
 
-  void UpdateLinkStatus(fuchsia::ui::scenic::internal::GraphLinkStatus status) {
+  void UpdateLinkStatus(fuchsia::ui::composition::GraphLinkStatus status) {
     status_helper_.Update(std::move(status));
   }
 
-  // |fuchsia::ui::scenic::internal::GraphLink|
+  // |fuchsia::ui::composition::GraphLink|
   void GetLayout(GetLayoutCallback callback) override {
     if (layout_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
@@ -63,12 +63,12 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
     }
 
     layout_helper_.SetCallback(
-        [callback = std::move(callback)](fuchsia::ui::scenic::internal::LayoutInfo info) {
+        [callback = std::move(callback)](fuchsia::ui::composition::LayoutInfo info) {
           callback(std::move(info));
         });
   }
 
-  // |fuchsia::ui::scenic::internal::GraphLink|
+  // |fuchsia::ui::composition::GraphLink|
   void GetStatus(GetStatusCallback callback) override {
     if (status_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
@@ -84,13 +84,13 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
  private:
   LinkProtocolErrorCallback error_callback_;
 
-  HangingGetHelper<fuchsia::ui::scenic::internal::LayoutInfo> layout_helper_;
-  HangingGetHelper<fuchsia::ui::scenic::internal::GraphLinkStatus> status_helper_;
+  HangingGetHelper<fuchsia::ui::composition::LayoutInfo> layout_helper_;
+  HangingGetHelper<fuchsia::ui::composition::GraphLinkStatus> status_helper_;
 };
 
 // An implementation of the ContentLink protocol, consisting of hanging gets for various updateable
 // pieces of information.
-class ContentLinkImpl : public fuchsia::ui::scenic::internal::ContentLink {
+class ContentLinkImpl : public fuchsia::ui::composition::ContentLink {
  public:
   explicit ContentLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder)
       : status_helper_(std::move(dispatcher_holder)) {}
@@ -100,11 +100,11 @@ class ContentLinkImpl : public fuchsia::ui::scenic::internal::ContentLink {
     error_callback_ = std::move(error_callback);
   }
 
-  void UpdateLinkStatus(fuchsia::ui::scenic::internal::ContentLinkStatus status) {
+  void UpdateLinkStatus(fuchsia::ui::composition::ContentLinkStatus status) {
     status_helper_.Update(std::move(status));
   }
 
-  // |fuchsia::ui::scenic::internal::ContentLink|
+  // |fuchsia::ui::composition::ContentLink|
   void GetStatus(GetStatusCallback callback) override {
     if (status_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
@@ -120,7 +120,7 @@ class ContentLinkImpl : public fuchsia::ui::scenic::internal::ContentLink {
  private:
   LinkProtocolErrorCallback error_callback_;
 
-  HangingGetHelper<fuchsia::ui::scenic::internal::ContentLinkStatus> status_helper_;
+  HangingGetHelper<fuchsia::ui::composition::ContentLinkStatus> status_helper_;
 };
 
 // A system for managing links between Flatland instances. Each Flatland instance creates Links
@@ -149,13 +149,13 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // when the link resolves. This allows creation and destruction logic to be paired within a single
   // ObjectLinker endpoint, instead of being spread out between the two endpoints.
   struct GraphLinkRequest {
-    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> interface;
+    fidl::InterfaceRequest<fuchsia::ui::composition::GraphLink> interface;
     TransformHandle child_handle;
     LinkProtocolErrorCallback error_callback;
   };
 
   struct ContentLinkRequest {
-    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> interface;
+    fidl::InterfaceRequest<fuchsia::ui::composition::ContentLink> interface;
     LinkProtocolErrorCallback error_callback;
   };
 
@@ -199,9 +199,9 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // Flatland session thread.
   ChildLink CreateChildLink(
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-      fuchsia::ui::scenic::internal::ContentLinkToken token,
-      fuchsia::ui::scenic::internal::LinkProperties initial_properties,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link,
+      fuchsia::ui::composition::ContentLinkToken token,
+      fuchsia::ui::composition::LinkProperties initial_properties,
+      fidl::InterfaceRequest<fuchsia::ui::composition::ContentLink> content_link,
       TransformHandle graph_handle, LinkProtocolErrorCallback error_callback);
 
   // Creates the parent end of a link. Once both ends of a Link have been created, the LinkSystem
@@ -211,8 +211,8 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // Flatland session thread.
   ParentLink CreateParentLink(
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-      fuchsia::ui::scenic::internal::GraphLinkToken token,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> graph_link,
+      fuchsia::ui::composition::GraphLinkToken token,
+      fidl::InterfaceRequest<fuchsia::ui::composition::GraphLink> graph_link,
       TransformHandle link_origin, LinkProtocolErrorCallback error_callback);
 
   // Returns a snapshot of the current set of links, represented as a map from LinkSystem-owned
@@ -265,9 +265,9 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // referenced by both these sets and the Flatland instance that created them via creation of a
   // link. Entries in these sets are controlled entirely by the link resolution and failure
   // callbacks that exist in the ObjectLinker links.
-  fidl::BindingSet<fuchsia::ui::scenic::internal::GraphLink, std::shared_ptr<GraphLinkImpl>>
+  fidl::BindingSet<fuchsia::ui::composition::GraphLink, std::shared_ptr<GraphLinkImpl>>
       graph_link_bindings_;
-  fidl::BindingSet<fuchsia::ui::scenic::internal::ContentLink, std::shared_ptr<ContentLinkImpl>>
+  fidl::BindingSet<fuchsia::ui::composition::ContentLink, std::shared_ptr<ContentLinkImpl>>
       content_link_bindings_;
 };
 

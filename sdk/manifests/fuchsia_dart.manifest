@@ -23,6 +23,7 @@ sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.io2
 sdk://fidl/fuchsia.logger
+sdk://fidl/fuchsia.math
 sdk://fidl/fuchsia.media
 sdk://fidl/fuchsia.media.audio
 sdk://fidl/fuchsia.media.sessions2
@@ -31,6 +32,7 @@ sdk://fidl/fuchsia.modular
 sdk://fidl/fuchsia.modular.session
 sdk://fidl/fuchsia.modular.testing
 sdk://fidl/fuchsia.net.http
+sdk://fidl/fuchsia.scenic.scheduling
 sdk://fidl/fuchsia.settings
 sdk://fidl/fuchsia.sys
 sdk://fidl/fuchsia.sysmem

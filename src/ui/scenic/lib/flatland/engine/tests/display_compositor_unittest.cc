@@ -21,13 +21,13 @@ using flatland::TransformGraph;
 using flatland::TransformHandle;
 using flatland::UberStruct;
 using flatland::UberStructSystem;
-using fuchsia::ui::scenic::internal::ContentLink;
-using fuchsia::ui::scenic::internal::ContentLinkStatus;
-using fuchsia::ui::scenic::internal::ContentLinkToken;
-using fuchsia::ui::scenic::internal::GraphLink;
-using fuchsia::ui::scenic::internal::GraphLinkToken;
-using fuchsia::ui::scenic::internal::LayoutInfo;
-using fuchsia::ui::scenic::internal::LinkProperties;
+using fuchsia::ui::composition::ContentLink;
+using fuchsia::ui::composition::ContentLinkStatus;
+using fuchsia::ui::composition::ContentLinkToken;
+using fuchsia::ui::composition::GraphLink;
+using fuchsia::ui::composition::GraphLinkToken;
+using fuchsia::ui::composition::LayoutInfo;
+using fuchsia::ui::composition::LinkProperties;
 
 namespace flatland {
 namespace test {

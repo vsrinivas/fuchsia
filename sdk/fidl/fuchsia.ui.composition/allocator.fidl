@@ -28,7 +28,7 @@ enum RegisterBufferCollectionUsage {
     /// DEFAULT means that the specified buffer collection will be used for
     /// Flatland and gfx image creation.
     ///
-    /// See [`fuchsia.ui.scenic.internal/Flatland.CreateImage`] for more.
+    /// See [`fuchsia.ui.composition/Flatland.CreateImage`] for more.
     DEFAULT = 0;
 
     /// SCREENSHOT means that the specified buffer collection will be used for
@@ -40,12 +40,12 @@ enum RegisterBufferCollectionUsage {
 /// fields below are REQUIRED.
 resource table RegisterBufferCollectionArgs {
     /// Clients can send [`export_token`] to register buffer collections with Allocator to be used
-    /// later in [`fuchsia.ui.scenic.internal/Flatland`] instances or other Scenic APIs, such as
+    /// later in [`fuchsia.ui.composition/Flatland`] instances or other Scenic APIs, such as
     /// Screenshot.
     ///
     /// For example, by passing a [`BufferCollectionImportToken`] containing the matching peer of
     /// [`BufferCollectionExportToken`], they can create image resources via
-    /// [`fuchsia.ui.scenic.internal/Flatland.CreateImage`].
+    /// [`fuchsia.ui.composition/Flatland.CreateImage`].
     ///
     /// Clients should wait for the response before using `import_token`.
     ///
