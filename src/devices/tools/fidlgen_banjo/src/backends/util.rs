@@ -10,6 +10,7 @@ use {
 };
 
 static ATTR_NAME_DOC: &'static str = "doc";
+static ATTR_NAME_NAMESPACED: &'static str = "namespaced";
 static ATTR_NAME_TRANSPORT: &'static str = "transport";
 
 pub enum Decl<'a> {
@@ -124,15 +125,77 @@ pub fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> Str
     "".to_string()
 }
 
-pub fn for_banjo_transport(maybe_attrs: &Option<Vec<Attribute>>) -> bool {
+/// Returns an `Option` containing the value returned by `func` when applied to
+/// the first `attr.name` and `attr.value` where
+/// `to_lower_snake_case(attr.name) == attr_name`. Otherwise, returns `None`.
+///
+/// # Arguments
+///
+/// * `maybe_attrs` - `Option<Vec<Attribute>>` containing the attributes
+///                   associated with a FIDL IR token.
+/// * `attr_name`   - `&str` to match against each attribute name appearing in
+///                   `maybe_attrs`.
+/// * `func`        - `FnOnce<&str, &str> -> R` to apply to attribute name and
+///                   value if a matching attribute name is found.
+///
+/// # EXAMPLES
+///
+/// ```
+/// let maybe_attrs = Some(vec![Attribute { name: "foo".to_string(), value: "value".to_string() }]);
+/// let test = apply_to_attr(&maybe_attrs, "foo", |attr_name, attr_value| {
+///     format!("{}: {}", attr_name, attr_value)
+/// });
+///
+/// assert_eq!(test, Some("foo: value".to_string()));
+/// ```
+pub fn apply_to_attr<F, R>(
+    maybe_attrs: &Option<Vec<Attribute>>,
+    attr_name: &str,
+    func: F,
+) -> Option<R>
+where
+    F: FnOnce(&str, &str) -> R,
+{
     if let Some(attrs) = maybe_attrs {
         for attr in attrs.iter() {
-            if to_lower_snake_case(&attr.name) == ATTR_NAME_TRANSPORT {
-                return attr.value == "Banjo";
+            if to_lower_snake_case(&attr.name) == attr_name {
+                return Some(func(&attr.name, &attr.value));
             }
         }
     }
-    false
+    None
+}
+
+/// Returns `Ok(true)` if `maybe_attrs` contains an attribute with the name
+/// "Namespaced" (or any case-insensitive equivalent) and no associated value.
+/// If an attribute with that name does not exist, returns `Ok(false)`. If an
+/// attribute with that name exists and has a value, returns `Err`.
+///
+/// # Arguments
+///
+/// * `maybe_attrs` - `Option<Vec<Attribute>>` containing the attributes
+///                   associated with a FIDL IR token.
+///
+/// # EXAMPLES
+///
+/// ```
+/// let maybe_attrs_with_namespaced =
+///     Some(vec![Attribute { name: String::from("Namespaced"), value: String::from("") }]);
+/// assert!(is_namespaced(&maybe_attrs_with_namespaced).expect("is_namespaced should not fail"));
+/// ```
+pub fn is_namespaced(maybe_attrs: &Option<Vec<Attribute>>) -> Result<bool, Error> {
+    apply_to_attr(maybe_attrs, ATTR_NAME_NAMESPACED, |_, attr_value| {
+        if attr_value != "" {
+            return Err(anyhow!("{} attribute cannot have a value.", ATTR_NAME_NAMESPACED));
+        }
+        Ok(true)
+    })
+    .unwrap_or(Ok(false))
+}
+
+pub fn for_banjo_transport(maybe_attrs: &Option<Vec<Attribute>>) -> bool {
+    apply_to_attr(maybe_attrs, ATTR_NAME_TRANSPORT, |_, attr_value| attr_value == "Banjo")
+        .unwrap_or(false)
 }
 
 //---------------------------------------------
@@ -482,4 +545,63 @@ pub fn get_out_params(
             _ => format!("{}* out_{}", ty_name, name)
         }
     }).collect()}), return_param))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apply_to_attr_with_name() {
+        let maybe_attrs_simple =
+            Some(vec![Attribute { name: String::from("foo"), value: String::from("value") }]);
+        let test = apply_to_attr(&maybe_attrs_simple, "foo", |attr_name, attr_value| {
+            format!("{}: {}", attr_name, attr_value)
+        });
+        assert_eq!(test, Some("foo: value".to_string()));
+    }
+
+    #[test]
+    fn apply_to_attr_without_name() {
+        let maybe_attrs_simple =
+            Some(vec![Attribute { name: String::from("foo"), value: String::from("value") }]);
+        let test = apply_to_attr(&maybe_attrs_simple, "bar", |attr_name, attr_value| {
+            format!("{}: {}", attr_name, attr_value)
+        });
+        assert_eq!(test, None);
+    }
+
+    #[test]
+    fn apply_to_attr_with_duplicate_name() {
+        let maybe_attrs_duplicate_name = Some(vec![
+            Attribute { name: String::from("foo"), value: String::from("value") },
+            Attribute { name: String::from("foo"), value: String::from("eulav") },
+        ]);
+        let test = apply_to_attr(&maybe_attrs_duplicate_name, "foo", |attr_name, attr_value| {
+            format!("{}: {}", attr_name, attr_value)
+        });
+        assert_eq!(test, Some("foo: value".to_string()));
+    }
+
+    #[test]
+    fn is_namespaced_ok_true() {
+        let maybe_attrs_with_namespaced =
+            Some(vec![Attribute { name: String::from("Namespaced"), value: String::from("") }]);
+        assert!(is_namespaced(&maybe_attrs_with_namespaced).expect("is_namespaced should not fail"));
+    }
+    #[test]
+    fn is_namespaced_ok_false() {
+        let maybe_attrs_without_namespaced =
+            Some(vec![Attribute { name: String::from("NotNamespaced"), value: String::from("") }]);
+        assert!(
+            !is_namespaced(&maybe_attrs_without_namespaced).expect("is_namespaced should not fail")
+        );
+    }
+
+    #[test]
+    fn is_namespaced_err() {
+        let maybe_attrs_with_namespaced =
+            Some(vec![Attribute { name: String::from("Namespaced"), value: String::from("foo") }]);
+        is_namespaced(&maybe_attrs_with_namespaced).expect_err("is_namespaced should fail");
+    }
 }

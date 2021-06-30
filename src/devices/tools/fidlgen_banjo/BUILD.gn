@@ -12,7 +12,10 @@ group("fidlgen_banjo") {
 
 group("tests") {
   testonly = true
-  deps = [ "tests" ]
+  deps = [
+    ":lib_test($host_toolchain)",
+    "tests",
+  ]
 }
 
 rustc_binary("bin") {
@@ -36,6 +39,7 @@ rustc_library("lib") {
   edition = "2018"
 
   name = "fidlgen_banjo_lib"
+  with_unit_tests = true
 
   sources = [
     "src/backends/c.rs",

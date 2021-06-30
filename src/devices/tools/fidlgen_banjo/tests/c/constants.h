@@ -15,6 +15,7 @@ __BEGIN_CDECLS
 
 // Forward declarations
 #define SOME_VALUE UINT32_C(12345)
+#define banjo_examples_constants_NAMESPACED_VALUE UINT8_C(32)
 #define FANCY_PANTS INT16_C(0xFF)
 #define DO_IT false
 #define ANOTHER_VALUE INT8_C(32)

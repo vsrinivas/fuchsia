@@ -218,6 +218,13 @@ representation because:
 The downside is that we don't get type safety, which is why you see the helper macros (like
 **UINT32_C()** above); they just cast the constant to the appropriate type.
 
+Note: Adding the `[Namespaced]` attribute to constant declarations for
+Banjo C bindings will cause the variable name to be prefaced by the FIDL
+library name. In this example, adding the `[Namespaced]` attribute to `I2C_MAX_RW_OPS`
+would cause the variable name to be `fuchsia_hardware_i2c_I2C_MAX_RW_OPS`
+instead. This may be required to avoid name conflicts with FIDL hlcpp constant
+bindings in the same build target.
+
 ### Protocol structures
 
 And now we get into the good parts.
@@ -835,6 +842,13 @@ turning it into an "in-out" parameter.
 ### The Mutable attribute
 
 This attribute should be used to make `struct`/`union` fields of type `vector` or `string` mutable.
+
+### The Namespaced attribute
+
+This attribute applies to `const` declarations and makes it so that the C backend prefaces the
+constant name with the snake-cased FIDL library name, e.g. `library_name_CONSTANT_K` instead
+of `CONSTANT_K`. This attribute may be required to avoid name conflicts with FIDL hlcpp constant
+bindings in the same build target.
 
 ### The OutOfLineContents attribute
 

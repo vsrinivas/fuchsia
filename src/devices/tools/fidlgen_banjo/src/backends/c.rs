@@ -6,13 +6,13 @@ use {
     super::{
         util::{
             array_bounds, for_banjo_transport, get_base_type_from_alias, get_declarations,
-            get_doc_comment, name_buffer, name_size, not_callback, primitive_type_to_c_str,
-            to_c_name, Decl, ProtocolType,
+            get_doc_comment, is_namespaced, name_buffer, name_size, not_callback,
+            primitive_type_to_c_str, to_c_name, Decl, ProtocolType,
         },
         Backend,
     },
     crate::fidl::*,
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Context, Error},
     std::io,
     std::iter,
 };
@@ -470,10 +470,20 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     fn codegen_constant_decl(&self, data: &Const, ir: &FidlIr) -> Result<String, Error> {
         let mut accum = String::new();
         accum.push_str(get_doc_comment(&data.maybe_attributes, 0).as_str());
+
+        let name = data.name.get_name().to_string();
+        let namespaced = is_namespaced(&data.maybe_attributes)
+            .context(format!("Looking for namespaced attribute on constant {}", name))?;
+        let name = if namespaced {
+            format!("{}_{}", ir.get_library_name().replace(".", "_"), name)
+        } else {
+            name
+        };
+
         accum.push_str(
             format!(
                 "#define {name} {value}",
-                name = &data.name.get_name(),
+                name = name,
                 value = constant_to_c_str(&data._type, &data.value, ir)?
             )
             .as_str(),

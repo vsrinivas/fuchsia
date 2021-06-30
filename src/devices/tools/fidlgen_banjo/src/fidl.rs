@@ -576,6 +576,10 @@ macro_rules! fetch_declaration {
 }
 
 impl FidlIr {
+    pub fn get_library_name(&self) -> String {
+        self.name.0.to_string()
+    }
+
     pub fn get_declaration(&self, identifier: &CompoundIdentifier) -> Result<&Declaration, Error> {
         self.declarations.0.get(identifier).ok_or(anyhow!("~~ error never seen ~~~")).or_else(
             |_| {
