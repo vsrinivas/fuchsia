@@ -1327,6 +1327,8 @@ if (supports_fastboot_fvm) {
       "$fvm_ftl_nand_pages_per_block",
       "--nand-block-count",
       "$fvm_ftl_nand_block_count",
+      "--max-disk-size",
+      "$fvm_max_disk_size",
 
       # Make sure to use fvm.blob.sparse.blk, which has an empty minfs
       # partition. This triggers the device to re-generate minfs at runtime
@@ -1334,14 +1336,6 @@ if (supports_fastboot_fvm) {
       "--sparse",
       rebase_path(fvm_blob_sparse_blk_path),
     ]
-
-    if (fvm_max_disk_size != false) {
-      fvm_generation_args += [
-        "--max-disk-size",
-        "$fvm_max_disk_size",
-      ]
-    }
-
     fvm_inputs = [ fvm_blob_sparse_blk_path ]
     fvm_deps = [ ":fvm.blob.sparse.blk" ]
 
