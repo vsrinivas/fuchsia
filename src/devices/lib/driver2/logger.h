@@ -7,7 +7,7 @@
 
 #include <lib/syslog/logger.h>
 
-#include "namespace.h"
+#include "src/devices/lib/driver2/namespace.h"
 
 #define FDF_LOGL(severity, logger, msg...) logger.log(FX_LOG_##severity, __FILE__, __LINE__, msg)
 #define FDF_LOG(severity, msg...) FDF_LOGL(severity, logger_, msg)
@@ -15,8 +15,8 @@
 // Provides a driver's logger.
 class Logger {
  public:
-  // Creates a logger with a given |name|, which will only send logs that are of
-  // at least |min_severity|.
+  // Creates a logger with a given `name`, which will only send logs that are of
+  // at least `min_severity`.
   static zx::status<Logger> Create(const Namespace& ns, async_dispatcher_t* dispatcher,
                                    std::string_view name,
                                    fx_log_severity_t min_severity = FX_LOG_SEVERITY_DEFAULT);
