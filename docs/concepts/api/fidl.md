@@ -151,10 +151,10 @@ protocols to be under `fuchsia.net` than `fuchsia.hardware`.
 
 ### Avoid nesting too deeply
 
-Prefer library names with three components (e.g. ` fuchsia.net.ppp`), and avoid
-library names with more than four components (e.g., `fuchsia.apps.foo.bar.baz`).
-If you use more than four components, you should have a specific reason for that
-choice.
+Prefer library names with three components (e.g. `fuchsia.hardware.network`),
+and avoid library names with more than four components (e.g.
+`fuchsia.apps.foo.bar.baz`).  If you use more than four components, you should
+have a specific reason for that choice.
 
 ### Library dependencies
 

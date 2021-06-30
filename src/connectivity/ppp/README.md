@@ -30,10 +30,6 @@ connection. It supports IPv4 and IPv6 network layers.
     connections. Does not maintain any state about the connection. Exits after
     sending one command.
 
-## SDK
-- [fuchsia.net.ppp](../../../sdk/fidl/fuchsia.net.ppp) provides both device and
-  service interfaces.
-
 ## Build
 The root `BUILD.gn` defines the main build targets. `:ppp` builds all drivers,
 services, and tools. `:tests` builds all tests.
@@ -72,19 +68,11 @@ commands begin with `(qemu)`.
   by pinging the client's IP from the host.
 
 # Design
-## `fuchsia.net.ppp`
-The `Device` protocol focuses on a simple `Tx`/`Rx` interface. It relies on the
-caller to provide a protocol with each message. `Tx` and `Rx` follow a hanging
-get pattern, blocking until the driver has sent or received the data. This
-allows natural backpressure and avoids signalling clients. `Enable` controls
-whether the driver has exclusive access to the serial port. `SetStatus`/
-`GetStatus` control the allowed network protocols for the current PPP
-connection.
 
 ## `serial-ppp`
 The driver reads and writes PPP frames according to the HDLC-like framing in
 RFC-1662. It also muxes the different protocols between driver clients. The
-driver communicates with clients using the `fuchsia.net.ppp` FIDL.
+driver communicates with clients using the `fuchsia.hardware.network` FIDL.
 
 The HDLC framing, and Frame Check Sequence calculation are in a library for
 reuse.

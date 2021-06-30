@@ -138,9 +138,6 @@ At present, these are the libraries considered in this document:
    + only referenced in
      https://source.chromium.org/chromium/chromium/src/+/main:fuchsia/http/
    + slated for deletion
-- `fuchsia.net.ppp`
-   + dead code? can we delete it? can it be subsumed by
-     `fuchsia.hardware.network`?
 - `fuchsia.net.routes`
    + included in SDK
    + narrow route+MAC resolution API in service of partner needs
