@@ -335,9 +335,14 @@ impl BuiltinEnvironment {
         inspector: Inspector,
         enable_hub: bool,
     ) -> Result<BuiltinEnvironment, Error> {
-        let execution_mode = match runtime_config.debug {
-            true => ExecutionMode::Debug,
-            false => ExecutionMode::Production,
+        let execution_mode = if runtime_config.debug {
+            warn!(
+                "Component Manager is in debug mode. In this mode, the component tree will not \
+                be started until the static event stream `StartComponentTree` is dropped."
+            );
+            ExecutionMode::Debug
+        } else {
+            ExecutionMode::Production
         };
 
         let num_threads = runtime_config.num_threads.clone();
