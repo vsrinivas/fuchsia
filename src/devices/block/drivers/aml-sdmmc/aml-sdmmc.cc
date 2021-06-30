@@ -182,14 +182,12 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
     if (length == 0 || ((length % 4) != 0)) {
       return ZX_ERR_INTERNAL;
     }
-    uint32_t data_copied = 0;
     uint32_t* dest = reinterpret_cast<uint32_t*>(req->virt_buffer);
     volatile uint32_t* src = reinterpret_cast<volatile uint32_t*>(
         reinterpret_cast<uintptr_t>(mmio_.get()) + kAmlSdmmcPingOffset);
     while (length) {
       *dest++ = *src++;
       length -= 4;
-      data_copied += 4;
     }
   }
 
@@ -627,7 +625,6 @@ zx_status_t AmlSdmmc::SetupDataDescsPio(sdmmc_req_t* req, aml_sdmmc_desc_t* desc
   cmd.set_data_io(1);
   if (!(req->cmd_flags & SDMMC_CMD_READ)) {
     cmd.set_data_wr(1);
-    uint32_t data_copied = 0;
     uint32_t data_remaining = length;
     uint32_t* src = reinterpret_cast<uint32_t*>(req->virt_buffer);
     volatile uint32_t* dest = reinterpret_cast<volatile uint32_t*>(
@@ -635,7 +632,6 @@ zx_status_t AmlSdmmc::SetupDataDescsPio(sdmmc_req_t* req, aml_sdmmc_desc_t* desc
     while (data_remaining) {
       *dest++ = *src++;
       data_remaining -= 4;
-      data_copied += 4;
     }
   }
 
