@@ -201,6 +201,9 @@ source_set("core") {
     "//zircon/system/ulib/sync",
   ]
   friend = [ "test/*" ]
+
+  # Suppress warnings the brcmfmac code doesn't comply with.
+  configs += [ "//build/config:Wno-unused-but-set-variable" ]
 }
 
 # Source set including the driver sources, and the bus definitions conditionally compiled in on each

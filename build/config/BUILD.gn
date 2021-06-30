@@ -818,6 +818,7 @@ config("Wno-unused-but-set-variable") {
   visibility = [
     "//src/connectivity/network/tools/nc/third_party/openbsd-netcat/*",
     "//src/connectivity/wlan/drivers/third_party/atheros/ath10k/*",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/*",
     "//src/graphics/drivers/msd-intel-gen/src",
     "//third_party/Vulkan-ValidationLayers/*",
     "//third_party/android/device/generic/goldfish-opengl/*",
