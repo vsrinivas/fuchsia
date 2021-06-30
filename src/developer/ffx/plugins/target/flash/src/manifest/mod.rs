@@ -301,7 +301,7 @@ pub(crate) async fn verify_hardware(
         .map_err(|e| anyhow!("Communication error with the device: {:?}", e))?;
     if let Some(r) = rev.split("-").next() {
         if r != *revision {
-            ffx_bail!("Hardware mismatch! Trying to flash images built for {}", revision);
+            ffx_bail!("Hardware mismatch! Trying to flash images built for {} but have {}", revision, r);
         }
     } else {
         ffx_bail!("Could not verify hardware revision of target device");
