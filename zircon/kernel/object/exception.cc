@@ -192,6 +192,17 @@ static zx_status_t exception_handler_worker(uint exception_type,
     return status;
   }
 
+  if (status != ZX_ERR_NEXT) {
+    // If the iterator returned false, but status got changed from ZX_ERR_NEXT, then this means it
+    // attempted to send to a handler, but the sending process failed. We still have no way to
+    // handle the exception but we can at least make noise in the debuglog.
+    printf(
+        "KERN: Failed to deliver %s exception to exception handler in user thread %lu.%lu with "
+        "status: %d\n",
+        excp_type_to_string(exception_type), thread->process()->get_koid(), thread->get_koid(),
+        status);
+  }
+
   // If we got here we ran out of handlers and nobody resumed the thread.
   return ZX_ERR_NEXT;
 }
