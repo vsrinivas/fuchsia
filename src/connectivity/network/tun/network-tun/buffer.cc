@@ -69,15 +69,13 @@ void Buffer::PushPart(const BufferPart& part) {
 }
 
 zx_status_t Buffer::Read(std::vector<uint8_t>& vec) {
-  size_t total = 0;
   auto inserter = std::back_inserter(vec);
   for (const BufferPart& part : parts()) {
-    size_t len = part.region.length;
-    zx_status_t status = vmo_store_->Read(part.region.vmo, part.region.offset, len, inserter);
+    zx_status_t status =
+        vmo_store_->Read(part.region.vmo, part.region.offset, part.region.length, inserter);
     if (status != ZX_OK) {
       return status;
     }
-    total += len;
   }
   return ZX_OK;
 }
