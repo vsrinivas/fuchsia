@@ -264,8 +264,8 @@ template("sanitizer_default_options") {
 #
 #   * tags
 #     - Required: The target defined is a no-op target in toolchains where
-#       $tags are not found in ${toolchain.tags}.  This makes it convenient
-#       to depend on this unconditionally.
+#       $tags are not found in ${toolchain_variant.tags}.  This makes it
+#       convenient to depend on this unconditionally.
 #     - Type: list(string)
 #
 template("sanitizer_extra_options") {

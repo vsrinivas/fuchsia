@@ -11,7 +11,7 @@ import("//build/config/compiler.gni")
 phys_configs = [
   # With the MMU and caches disabled, misaligned accesses always fault.
   # Tell the compiler to emit only aligned accesses, assuming the code
-  # obeys the C++ alignment rules.  The toolchain.tags string can be
+  # obeys the C++ alignment rules.  The toolchain_variant.tags string can be
   # matched to exclude assembly code that does unaligned accesses.
   "//zircon/kernel/arch/arm64/phys:strict-align",
 

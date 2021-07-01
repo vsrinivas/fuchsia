@@ -45,8 +45,4 @@ toolchain = {
   } else {
     cpu = current_cpu
   }
-
-  # The `tags` value is the list of tags that applies to the current
-  # toolchain instance.
-  tags = toolchain_variant.tags
 }

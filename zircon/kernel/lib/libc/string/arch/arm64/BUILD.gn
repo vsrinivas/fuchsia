@@ -4,11 +4,9 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
-
 source_set("arm64") {
-  if (toolchain.tags + [ "strict-align" ] - [ "strict-align" ] !=
-      toolchain.tags) {
+  if (toolchain_variant.tags + [ "strict-align" ] - [ "strict-align" ] !=
+      toolchain_variant.tags) {
     # This environment can't handled unaligned accesses, which the
     # optimized assembly routines do.
     sources = [

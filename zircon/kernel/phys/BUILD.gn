@@ -158,8 +158,8 @@ if (toolchain.environment == "kernel.phys" ||
     ]
 
     # If the toolchain is compiling a PIE executable, include required libraries.
-    if (toolchain.tags + [ "static-pie" ] - [ "static-pie" ] !=
-        toolchain.tags) {
+    if (toolchain_variant.tags + [ "static-pie" ] - [ "static-pie" ] !=
+        toolchain_variant.tags) {
       public_deps += [
         # "main.h" has #include <lib/static-pie/static-pie.h>
         "//zircon/system/ulib/static-pie",

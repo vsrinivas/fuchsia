@@ -6,7 +6,6 @@
 
 import("//build/config/zircon/standard.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
-import("//build/unification/global_variables.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/c_utils.gni")
@@ -15,7 +14,6 @@ import("//src/devices/bus/drivers/pci/pci.gni")
 import("//zircon/kernel/lib/code-patching/code-patching.gni")
 import("//zircon/kernel/lib/version/version_string.gni")
 import("params.gni")
-
 declare_args() {
   # **TODO(fxbug.dev/32414): This is a temporary switch that will be removed.**
   # If true, use the new "physboot" booting path for the Zircon kernel.
@@ -365,7 +363,8 @@ if (is_kernel) {
       "-Wl,-T," + rebase_path("kernel.ld", root_build_dir),
       "-Wl,--emit-relocs",
     ]
-    if (toolchain.tags + [ "lto" ] - [ "lto" ] != toolchain.tags) {
+    if (toolchain_variant.tags + [ "lto" ] - [ "lto" ] !=
+        toolchain_variant.tags) {
       # (Thin)LTO linker driver overrides the PIC/PIE metadata embedded in the
       # IR and will choose the relocation model based on the output which for
       # the kernel would be static rather than PIE. We need to explicitly
@@ -522,8 +521,8 @@ if (is_kernel) {
     # itself can be shorter.  Assume the kernel will fit under the
     # threshold (about 1MB) in well-optimized builds.
     if (optimize != "none" && optimize != "debug" &&
-        toolchain.tags + [ "instrumented" ] - [ "instrumented" ] ==
-        toolchain.tags) {
+        toolchain_variant.tags + [ "instrumented" ] - [ "instrumented" ] ==
+        toolchain_variant.tags) {
       defines = [ "TINY" ]
     }
   }
