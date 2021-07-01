@@ -125,10 +125,31 @@ impl<C: DnsHandle, P: ConnectionProvider<Conn = C>> NameServer<C, P> {
                 //   TODO: there are probably other return codes from the server we may want to
                 //    retry on. We may also want to evaluate NoError responses that lack records as errors as well
                 if self.options.distrust_nx_responses {
-                    if let ResponseCode::ServFail = response.response_code() {
-                        let note = "Nameserver responded with SERVFAIL";
-                        debug!("{}", note);
-                        return Err(ProtoError::from(note));
+                    match response.response_code() {
+                        code @ ResponseCode::ServFail | code @ ResponseCode::Refused => {
+                            let note = format!("Nameserver responded with {}", code);
+                            debug!("{}", note);
+                            return Err(ProtoError::from(note));
+                        }
+                        ResponseCode::NoError
+                        | ResponseCode::FormErr
+                        | ResponseCode::NXDomain
+                        | ResponseCode::NotImp
+                        | ResponseCode::YXDomain
+                        | ResponseCode::YXRRSet
+                        | ResponseCode::NXRRSet
+                        | ResponseCode::NotAuth
+                        | ResponseCode::NotZone
+                        | ResponseCode::BADVERS
+                        | ResponseCode::BADSIG
+                        | ResponseCode::BADKEY
+                        | ResponseCode::BADTIME
+                        | ResponseCode::BADMODE
+                        | ResponseCode::BADNAME
+                        | ResponseCode::BADALG
+                        | ResponseCode::BADTRUNC
+                        | ResponseCode::BADCOOKIE
+                        | ResponseCode::Unknown(_) => (),
                     }
                 }
 
