@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/global_variables.gni")
+import("//build/config/clang/clang_cpu.gni")
 
 config("headers") {
   visibility = [
@@ -49,7 +49,7 @@ config("musl_internal.config") {
 
   include_dirs = [
     "src/internal",
-    "arch/${toolchain.cpu}",
+    "arch/${clang_cpu}",
   ]
 
   defines = [ "_XOPEN_SOURCE=700" ]

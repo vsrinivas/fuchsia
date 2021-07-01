@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/config/clang/clang_cpu.gni")
 
 source_set("ldso") {
   deps = [
@@ -11,7 +11,7 @@ source_set("ldso") {
     "//zircon/third_party/ulib/musl:musl_internal",
   ]
   sources = [
-    "//zircon/third_party/ulib/musl/arch/${toolchain.cpu}/dl-entry.S",
+    "//zircon/third_party/ulib/musl/arch/${clang_cpu}/dl-entry.S",
     "dynlink-sancov.S",
     "dynlink.c",
   ]

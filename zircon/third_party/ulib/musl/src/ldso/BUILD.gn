@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/config/clang/clang_cpu.gni")
 
 source_set("ldso") {
   deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [
-    "${toolchain.cpu}/tlsdesc.S",
+    "${clang_cpu}/tlsdesc.S",
     "dlclose.c",
     "dlerror.c",
     "dlinfo.c",
