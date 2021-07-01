@@ -176,7 +176,10 @@ BaseStream::TimelineFunctionSnapshot PacketQueue::ref_time_to_frac_presentation_
 
 void PacketQueue::ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
                                   zx::duration underflow_duration) {
-  TRACE_INSTANT("audio", "PacketQueue::ReportUnderflow", TRACE_SCOPE_PROCESS);
+  TRACE_INSTANT("audio", "PacketQueue::ReportUnderflow", TRACE_SCOPE_THREAD,
+                "floor(frac_source_start)", frac_source_start.Floor(),
+                "floor(frac_source_mix_point)", frac_source_mix_point.Floor(), "duration_ns",
+                underflow_duration.to_nsecs());
   TRACE_ALERT("audio", "audiounderflow");
   uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
 
@@ -220,7 +223,9 @@ void PacketQueue::ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix
 }
 
 void PacketQueue::ReportPartialUnderflow(Fixed frac_source_offset, int64_t dest_mix_offset) {
-  TRACE_INSTANT("audio", "PacketQueue::ReportPartialUnderflow", TRACE_SCOPE_PROCESS);
+  TRACE_INSTANT("audio", "PacketQueue::ReportPartialUnderflow", TRACE_SCOPE_THREAD,
+                "floor(frac_source_offset)", frac_source_offset.Floor(), "dest_mix_offset",
+                dest_mix_offset);
 
   // Shifts by less than four source frames do not necessarily indicate underflow. A shift of this
   // duration can be caused by the round-to-nearest-dest-frame step, when our rate-conversion ratio

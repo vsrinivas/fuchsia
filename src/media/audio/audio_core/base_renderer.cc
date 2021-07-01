@@ -347,7 +347,7 @@ void BaseRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
 }
 
 void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCallback callback) {
-  TRACE_DURATION("audio", "BaseRenderer::SendPacket");
+  TRACE_DURATION("audio", "BaseRenderer::SendPacket", "pts", packet.pts);
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   // It is an error to attempt to send a packet before we have established at least a minimum valid
