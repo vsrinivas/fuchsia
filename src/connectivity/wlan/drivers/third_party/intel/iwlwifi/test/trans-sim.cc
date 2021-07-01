@@ -21,7 +21,6 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <lib/fake-bti/bti.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/status.h>
 
 #include <wlan/protocol/mac.h>
@@ -34,8 +33,8 @@ extern "C" {
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ddk-tester.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 using wlan::testing::IWL_TRANS_GET_TRANS_SIM;
 using wlan::testing::SimMvm;
@@ -311,9 +310,9 @@ struct iwl_trans* TransportSim::iwl_trans() {
   return iwl_trans_;
 }
 
-TransportSim::TransportSim(::wlan::simulation::Environment* env)
+TransportSim::TransportSim(::wlan::simulation::Environment* env, zx_device_t* parent)
     : SimMvm(env), device_{}, iwl_trans_(nullptr) {
-  device_.zxdev = ::fake_ddk::kFakeParent;
+  device_.zxdev = parent;
   fake_bti_create(&device_.bti);
   sim_device_ = nullptr;
 }
@@ -321,6 +320,7 @@ TransportSim::TransportSim(::wlan::simulation::Environment* env)
 TransportSim::~TransportSim() {
   if (sim_device_) {
     sim_device_->DdkAsyncRemove();
+    mock_ddk::ReleaseFlaggedDevices(sim_device_->zxdev());
   }
   zx_handle_close(device_.bti);
 }

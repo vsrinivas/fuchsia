@@ -16,7 +16,10 @@ namespace wlan::testing {
 
 const common::MacAddr SingleApTest::default_macaddr_(kApAddr);
 
-SingleApTest::SingleApTest() : ap_(&env_, default_macaddr_, kSsid, kChannel), sim_trans_(&env_) {
+SingleApTest::SingleApTest()
+    : fake_parent_(MockDevice::FakeRootParent()),
+      ap_(&env_, default_macaddr_, kSsid, kChannel),
+      sim_trans_(&env_, fake_parent_.get()) {
   // Add a default MVM firmware to the fake DDK.
   TlvFwBuilder fw_builder;
   const uint32_t dummy_ucode = 0;
@@ -25,7 +28,7 @@ SingleApTest::SingleApTest() : ap_(&env_, default_macaddr_, kSsid, kChannel), si
   fw_builder.AddValue(IWL_UCODE_TLV_DATA, &dummy_ucode, sizeof(dummy_ucode));
   fw_builder.AddValue(IWL_UCODE_TLV_INIT, &dummy_ucode, sizeof(dummy_ucode));
   fw_builder.AddValue(IWL_UCODE_TLV_INIT_DATA, &dummy_ucode, sizeof(dummy_ucode));
-  fake_ddk_.SetFirmware(fw_builder.GetBinary());
+  fake_parent_->SetFirmware(fw_builder.GetBinary());
 
   zx_status_t status = sim_trans_.Init();
   ZX_ASSERT_MSG(ZX_OK == status, "Transportation initialization failed: %s",

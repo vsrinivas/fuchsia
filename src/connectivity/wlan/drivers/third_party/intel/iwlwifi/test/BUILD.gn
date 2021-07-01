@@ -16,7 +16,6 @@ source_set("iwlwifi_sim_trans_ss") {
   testonly = true
 
   sources = [
-    "fake-ddk-tester.cc",
     "sim-default-nvm.cc",
     "sim-mvm.cc",
     "sim-nvm.cc",
@@ -32,7 +31,7 @@ source_set("iwlwifi_sim_trans_ss") {
     "//src/devices/lib/driver",
     "//src/devices/pci/testing:pci-protocol-fake",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
   ]
 
@@ -56,7 +55,7 @@ testing_deps = [
   "//src/connectivity/wlan/drivers/testing/lib/sim-device",
   "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
   "//src/devices/testing/fake-bti",
-  "//src/devices/testing/fake_ddk",
+  "//src/devices/testing/mock-ddk",
   "//zircon/public/lib/mock-function",
   "//zircon/public/lib/zircon-internal",
   "//zircon/public/lib/zxtest",
@@ -159,6 +158,8 @@ executable("pcie_test") {
     "//garnet/lib/wlan/protocol:protocol",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie",
+    "//src/devices/pci/testing:pci-protocol-fake",
+    "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

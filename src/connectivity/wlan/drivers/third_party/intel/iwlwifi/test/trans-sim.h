@@ -37,7 +37,7 @@ static inline struct trans_sim_priv* IWL_TRANS_GET_TRANS_SIM(struct iwl_trans* t
 
 class TransportSim : public SimMvm {
  public:
-  explicit TransportSim(::wlan::simulation::Environment* env);
+  TransportSim(::wlan::simulation::Environment* env, zx_device_t* parent);
   ~TransportSim();
 
   // This function must be called before starting using other functions.

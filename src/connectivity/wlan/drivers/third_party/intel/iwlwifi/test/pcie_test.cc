@@ -17,7 +17,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fake-bti/bti.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/align.h>
@@ -30,6 +29,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "src/devices/testing/mock-ddk/mock-device.h"
+
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
@@ -39,26 +40,57 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/pcie_device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ddk-tester-pci.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
+#include "src/devices/pci/testing/pci_protocol_fake.h"
 
 namespace {
 
-TEST(FakeDdkTesterPci, DeviceLifeCycle) {
-  wlan::testing::FakeDdkTesterPci tester;
+constexpr int kTestDeviceId = 0x095a;
+constexpr int kTestSubsysDeviceId = 0x9e10;
 
+TEST(MockDdkTesterPci, DeviceLifeCycle) {
+  auto parent = MockDevice::FakeRootParent();
+
+  // Set up a fake pci:
+  pci::FakePciProtocol fake_pci;
+  // Set up the first BAR.
+  fake_pci.CreateBar(/*bar_id=*/0, /*size=*/4096);
+
+  // Identify as the correct device.
+  fake_pci.SetDeviceInfo({.device_id = kTestDeviceId});
+  zx::unowned_vmo config = fake_pci.GetConfigVmo();
+  config->write(&kTestSubsysDeviceId, PCI_CFG_SUBSYSTEM_ID, sizeof(kTestSubsysDeviceId));
+
+  // Need an IRQ of some kind. Since Intel drivers are very specific in their
+  // MSI-X handling we'll keep it simple and use a legacy interrupt.
+  fake_pci.AddLegacyInterrupt();
+
+  // Now add the protocol to the parent.
+  // PCI is the only protocol of interest here.
+  parent->AddProtocol(ZX_PROTOCOL_PCI, fake_pci.get_protocol().ops, fake_pci.get_protocol().ctx);
+
+  // Create() allocates and binds the device.
+  ASSERT_OK(wlan::iwlwifi::PcieDevice::Create(parent.get()), "Bind failed");
+
+  auto& pcie_device = parent->children().front();
+  // Set up a fake firmware of non-zero size for the PcieDevice:
   // TODO(fxbug.dev/76744) since device initialization will fail (as there is no hardware backing
   // this PcieDevice), we are free to use a fake firmware here that does not pass driver validation
   // anyways.
-  tester.SetFirmware(std::string(4, '\0'));
-
-  // Create() allocates and binds the device.
-  ASSERT_OK(wlan::iwlwifi::PcieDevice::Create(fake_ddk::kFakeParent), "Bind failed");
+  pcie_device->SetFirmware(std::string(4, '\0'));
 
   // TODO(fxbug.dev/76744) the Create() call will succeed, but since there is no hardware backing
   // this PcieDevice, initialization will ultimately fail and the PcieDevice instance will be
-  // automatically removed without explicitly reporting an error.  This means an explicit
-  // DdkAsyncRemove() is not necessary.
+  // automatically removed without explicitly reporting an error.
+  pcie_device->InitOp();  // Calls DdkInit for ddktl devices.
+
+  // If another thread is spawned during the init call, wait until InitReply is called:
+  pcie_device->WaitUntilInitReplyCalled();
+  EXPECT_EQ(1, parent->child_count());
+
+  device_async_remove(pcie_device.get());
+
+  mock_ddk::ReleaseFlaggedDevices(pcie_device.get());
 }
 
 class PcieTest;

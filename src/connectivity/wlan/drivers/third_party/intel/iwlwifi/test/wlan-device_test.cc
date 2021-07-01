@@ -4,7 +4,6 @@
 
 // To test PHY and MAC device callback functions.
 
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-function/mock-function.h>
 #include <stdio.h>
 #include <zircon/syscalls.h>
@@ -18,7 +17,6 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/device.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ddk-tester.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock_trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
@@ -317,12 +315,13 @@ TEST_F(WlanDeviceTest, PhyCreateDestroySingleInterface) {
   ASSERT_NE(mvmvif, nullptr);
   ASSERT_EQ(mvmvif->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
   // Count includes phy device in addition to the newly created mac device.
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 2);
+  ASSERT_EQ(fake_parent_->descendant_count(), 2);
 
   // Remove interface
   ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_OK);
+  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
   ASSERT_EQ(mvm->mvmvif[iface_id], nullptr);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 1);
+  ASSERT_EQ(fake_parent_->descendant_count(), 1);
 }
 
 TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
@@ -338,68 +337,73 @@ TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
   ASSERT_EQ(iface_id, 0);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 2);
+  ASSERT_EQ(fake_parent_->descendant_count(), 2);
 
   // Add 2nd interface
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
   ASSERT_EQ(iface_id, 1);
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 3);
+  ASSERT_EQ(fake_parent_->descendant_count(), 3);
 
   // Add 3rd interface
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
   ASSERT_EQ(iface_id, 2);
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 4);
+  ASSERT_EQ(fake_parent_->descendant_count(), 4);
 
   // Remove the 2nd interface
   ASSERT_EQ(device_->WlanphyImplDestroyIface(1), ZX_OK);
+  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
   ASSERT_EQ(mvm->mvmvif[1], nullptr);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 3);
+  ASSERT_EQ(fake_parent_->descendant_count(), 3);
 
   // Add a new interface and it should be the 2nd one.
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
   ASSERT_EQ(iface_id, 1);
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 4);
+  ASSERT_EQ(fake_parent_->descendant_count(), 4);
 
   // Add 4th interface
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
   ASSERT_EQ(iface_id, 3);
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 5);
+  ASSERT_EQ(fake_parent_->descendant_count(), 5);
 
   // Add 5th interface and it should fail
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_ERR_NO_RESOURCES);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 5);
+  ASSERT_EQ(fake_parent_->descendant_count(), 5);
 
   // Remove the 2nd interface
   ASSERT_EQ(device_->WlanphyImplDestroyIface(1), ZX_OK);
+  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
   ASSERT_EQ(mvm->mvmvif[1], nullptr);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 4);
+  ASSERT_EQ(fake_parent_->descendant_count(), 4);
 
   // Remove the 3rd interface
   ASSERT_EQ(device_->WlanphyImplDestroyIface(2), ZX_OK);
+  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
   ASSERT_EQ(mvm->mvmvif[2], nullptr);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 3);
+  ASSERT_EQ(fake_parent_->descendant_count(), 3);
 
   // Remove the 4th interface
   ASSERT_EQ(device_->WlanphyImplDestroyIface(3), ZX_OK);
+  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
   ASSERT_EQ(mvm->mvmvif[3], nullptr);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 2);
+  ASSERT_EQ(fake_parent_->descendant_count(), 2);
 
   // Remove the 1st interface
   ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_OK);
+  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
   ASSERT_EQ(mvm->mvmvif[0], nullptr);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 1);
+  ASSERT_EQ(fake_parent_->descendant_count(), 1);
 
   // Remove the 1st interface again and it should fail.
   ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_ERR_NOT_FOUND);
-  ASSERT_EQ(fake_ddk_.DeviceCount(), 1);
+  ASSERT_EQ(fake_parent_->descendant_count(), 1);
 }
 
 // The class for WLAN device MAC testing.
