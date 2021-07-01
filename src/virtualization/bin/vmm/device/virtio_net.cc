@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -22,6 +23,7 @@
 #include <virtio/net.h>
 
 #include "guest_ethernet.h"
+#include "src/connectivity/network/lib/net_interfaces/cpp/net_interfaces.h"
 #include "src/virtualization/bin/vmm/device/device_base.h"
 #include "src/virtualization/bin/vmm/device/stream_base.h"
 
@@ -168,6 +170,9 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
  public:
   VirtioNetImpl(sys::ComponentContext* context) : DeviceBase(context), context_(*context) {
     netstack_ = context_.svc()->Connect<fuchsia::netstack::Netstack>();
+    fuchsia::net::interfaces::StatePtr interfaces_state =
+        context_.svc()->Connect<fuchsia::net::interfaces::State>();
+    interfaces_state->GetWatcher(fuchsia::net::interfaces::WatcherOptions(), watcher_.NewRequest());
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
@@ -251,24 +256,62 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     return fit::make_ok_promise(nic_id);
   }
 
+  struct HostInterfaceFinder {
+    using completer_type = fpromise::completer<uint32_t>;
+
+    void OnInterfacesEvent(fuchsia::net::interfaces::Event event) {
+      std::optional result = [&event]() -> std::optional<completer_type::result_type> {
+        switch (event.Which()) {
+          case fuchsia::net::interfaces::Event::kExisting: {
+            std::optional<net::interfaces::Properties> validated =
+                net::interfaces::Properties::VerifyAndCreate(std::move(event.existing()));
+            if (!validated.has_value()) {
+              FX_LOGS(ERROR) << "malformed properties found in existing event from "
+                                "fuchsia.net.interfaces/Watcher";
+              return fpromise::error();
+            }
+            const net::interfaces::Properties& properties = validated.value();
+            if (properties.IsGloballyRoutable()) {
+              return fpromise::ok(properties.id());
+            }
+            __FALLTHROUGH;
+          }
+          case fuchsia::net::interfaces::Event::kAdded:
+          case fuchsia::net::interfaces::Event::kChanged:
+          case fuchsia::net::interfaces::Event::kRemoved:
+            return std::nullopt;
+          case fuchsia::net::interfaces::Event::kIdle:
+            FX_LOGS(ERROR) << "failed to find host interface";
+            return fpromise::error();
+          case fuchsia::net::interfaces::Event::Invalid:
+            FX_LOGS(ERROR) << "invalid event received from fuchsia.net.interfaces/Watcher";
+            return fpromise::error();
+        }
+      }();
+
+      if (result.has_value()) {
+        completer.complete_or_abandon(result.value());
+      } else {
+        watcher->Watch(
+            [this](fuchsia::net::interfaces::Event event) { OnInterfacesEvent(std::move(event)); });
+      }
+    }
+
+    fuchsia::net::interfaces::WatcherPtr& watcher;
+    completer_type& completer;
+  };
+
   fit::promise<uint32_t> FindHostInterface() {
     fit::bridge<uint32_t> bridge;
 
-    auto callback = [completer = std::move(bridge.completer)](
-                        std::vector<fuchsia::netstack::NetInterface> interfaces) mutable {
-      for (auto& interface : interfaces) {
-        if (!(static_cast<uint32_t>(interface.flags) &
-              static_cast<uint32_t>(fuchsia::netstack::Flags::UP)) ||
-            static_cast<uint32_t>(interface.features) != 0) {
-          continue;
-        }
-        completer.complete_ok(interface.id);
-        return;
-      }
-      FX_LOGS(ERROR) << "Failed to find host interface";
-      completer.complete_error();
-    };
-    netstack_->GetInterfaces(std::move(callback));
+    watcher_->Watch([completer = std::move(bridge.completer),
+                     this](fuchsia::net::interfaces::Event event) mutable {
+      HostInterfaceFinder finder{
+          .watcher = watcher_,
+          .completer = completer,
+      };
+      finder.OnInterfacesEvent(std::move(event));
+    });
 
     return bridge.consumer.promise();
   }
@@ -323,6 +366,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   fidl::Binding<fuchsia::hardware::ethernet::Device> device_binding_ =
       fidl::Binding<fuchsia::hardware::ethernet::Device>(&guest_ethernet_);
   fuchsia::netstack::NetstackPtr netstack_;
+  fuchsia::net::interfaces::WatcherPtr watcher_;
 
   RxStream rx_stream_;
   TxStream tx_stream_;

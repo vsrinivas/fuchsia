@@ -13,6 +13,7 @@
 #include <lib/fit/bridge.h>
 #include <zircon/device/ethernet.h>
 
+#include <algorithm>
 #include <map>
 #include <vector>
 
@@ -76,15 +77,17 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase {
     loop_.Shutdown();
   }
 
-  void NotImplemented_(const std::string& name) override {}
+  void NotImplemented_(const std::string& name) override;
 
   // fuchsia::netstack::testing::Netstack_TestBase
-  void GetInterfaces(GetInterfacesCallback callback) override;
   void BridgeInterfaces(std::vector<uint32_t> nicids, BridgeInterfacesCallback callback) override;
   void AddEthernetDevice(std::string topological_path,
                          fuchsia::netstack::InterfaceConfig interfaceConfig,
                          ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
                          AddEthernetDeviceCallback callback) override;
+
+  // fuchsia::netstack::testing::Netstack_TestBase
+  void SetInterfaceStatus(uint32_t nicid, bool enabled) override;
 
   fidl::InterfaceRequestHandler<fuchsia::netstack::Netstack> GetHandler() {
     return bindings_.GetHandler(this);
@@ -107,8 +110,8 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase {
   struct CompareMacAddress {
     bool operator()(const fuchsia::hardware::ethernet::MacAddress& a,
                     const fuchsia::hardware::ethernet::MacAddress& b) const {
-      // The octets of a MacAddress are a std::array, which implements lexigraphical ordering.
-      return a.octets < b.octets;
+      return std::lexicographical_compare(a.octets.begin(), a.octets.end(), b.octets.begin(),
+                                          b.octets.end());
     }
   };
 

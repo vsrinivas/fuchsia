@@ -265,6 +265,7 @@ executable("virtio_net_bin") {
     "//sdk/fidl/fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/lib/fit-promise",
+    "//src/connectivity/network/lib/net_interfaces/cpp",
     "//zircon/public/lib/async-cpp",
   ]
 }
@@ -336,6 +337,7 @@ executable("device_tests") {
   deps = [
     ":device",
     ":magma_image",
+    "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.virtualization.hardware",

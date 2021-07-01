@@ -250,16 +250,8 @@ fit::promise<void, zx_status_t> Device::WritePacket(std::vector<uint8_t> packet)
   });
 }
 
-void FakeNetstack::GetInterfaces(GetInterfacesCallback callback) {
-  std::vector<fuchsia::netstack::NetInterface> interfaces;
-  interfaces.push_back({
-      .id = 0,
-      .flags = fuchsia::netstack::Flags::UP,
-      .addr = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address()),
-      .netmask = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address()),
-      .broadaddr = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address()),
-  });
-  callback(std::move(interfaces));
+void FakeNetstack::NotImplemented_(const std::string& name) {
+  FX_LOGS(ERROR) << "Not implemented: " << name;
 }
 
 void FakeNetstack::BridgeInterfaces(std::vector<uint32_t> nicids,
@@ -314,6 +306,10 @@ void FakeNetstack::AddEthernetDevice(
     completers_itr->second.back().complete_ok(itr->second.get());
     completers_itr->second.pop_back();
   }
+}
+
+void FakeNetstack::SetInterfaceStatus(uint32_t nicid, bool enabled) {
+  // Ignored as our fake netstack does not track interface status.
 }
 
 static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
