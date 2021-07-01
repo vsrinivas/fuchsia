@@ -28,12 +28,17 @@ group("drivers") {
 # config that will cause them to actually be used. Product configs (and only
 # product configs, rather than other group targets, to avoid conflicts) should
 # also include an appropriate target under config/.
+common_packages = [
+  "wlancfg",
+  "//src/connectivity/location/regulatory_region",
+]
+
 group("packages") {
-  deps = [
-    "wlancfg",
-    "wlanstack",
-    "//src/connectivity/location/regulatory_region",
-  ]
+  deps = common_packages + [ "wlanstack" ]
+}
+
+group("packages-legacy-privacy") {
+  deps = common_packages + [ "wlanstack:wlanstack-legacy-privacy" ]
 }
 
 group("tests") {

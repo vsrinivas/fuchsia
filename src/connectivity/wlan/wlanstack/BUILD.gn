@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 metrics_registry("wlan_metrics_registry") {
@@ -108,6 +109,19 @@ fuchsia_package_with_single_component("wlanstack") {
     ":wlan_metrics_registry",
   ]
   manifest = "meta/wlanstack.cmx"
+}
+
+fuchsia_package_with_single_component("wlanstack-legacy-privacy") {
+  package_name = "wlanstack"
+  deps = [
+    ":bin",
+    ":wlan_metrics_registry",
+  ]
+  manifest = "meta/wlanstack.cmx"
+}
+
+core_shard("wlanstack-core-shard") {
+  shard_file = "meta/wlanstack.core_shard.cml"
 }
 
 fuchsia_unittest_package("wlanstack-tests") {
