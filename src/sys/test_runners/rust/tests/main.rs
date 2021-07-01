@@ -127,41 +127,40 @@ async fn launch_and_run_sample_test_include_disabled() {
     // Confirm that non-ignored tests are still included.
     let events_failing_test =
         grouped_events.get(&Some("my_tests::failing_test".to_string())).unwrap();
-    assert_eq!(&events_failing_test[0], &RunEvent::case_found("my_tests::failing_test"));
-    assert_eq!(&events_failing_test[1], &RunEvent::case_started("my_tests::failing_test"));
+    assert_eq!(
+        &events_failing_test.non_artifact_events[0],
+        &RunEvent::case_found("my_tests::failing_test")
+    );
+    assert_eq!(
+        &events_failing_test.non_artifact_events[1],
+        &RunEvent::case_started("my_tests::failing_test")
+    );
 
     assert_eq!(
-        &events_failing_test[3],
+        &events_failing_test.stdout_events[1],
         &RunEvent::case_stdout("my_tests::failing_test", "stack backtrace:")
     );
 
     let events_ignored_failing_test =
         grouped_events.get(&Some("my_tests::ignored_failing_test".to_string())).unwrap();
     assert_eq!(
-        events_ignored_failing_test.first().unwrap(),
+        events_ignored_failing_test.non_artifact_events.first().unwrap(),
         &RunEvent::case_found("my_tests::ignored_failing_test")
     );
     assert_eq!(
-        events_ignored_failing_test.last().unwrap(),
+        events_ignored_failing_test.non_artifact_events.last().unwrap(),
         &RunEvent::case_finished("my_tests::ignored_failing_test")
     );
 
     assert_eq!(
-        events_ignored_failing_test.get(events_ignored_failing_test.len() - 2).unwrap(),
+        events_ignored_failing_test
+            .non_artifact_events
+            .get(events_ignored_failing_test.non_artifact_events.len() - 2)
+            .unwrap(),
         &RunEvent::case_stopped("my_tests::ignored_failing_test", CaseStatus::Failed),
     );
 
-    assert!(
-        events_ignored_failing_test
-            .iter()
-            .filter(|event| match event {
-                RunEvent::CaseStdout { .. } => true,
-                _ => false,
-            })
-            .count()
-            > 1,
-        "Expected > 1 log messages"
-    );
+    assert!(events_ignored_failing_test.stdout_events.len() > 1, "Expected > 1 log messages");
 
     let events_ignored_passing_test =
         grouped_events.get(&Some("my_tests::ignored_passing_test".to_string())).unwrap();
@@ -174,6 +173,8 @@ async fn launch_and_run_sample_test_include_disabled() {
             RunEvent::case_stopped("my_tests::ignored_passing_test", CaseStatus::Passed),
             RunEvent::case_finished("my_tests::ignored_passing_test"),
         ]
+        .into_iter()
+        .group()
     );
 }
 

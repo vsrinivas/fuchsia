@@ -6,7 +6,7 @@
 
 use {
     crate::errors::FdioError,
-    crate::logs::{create_log_stream, LoggerError, LoggerStream},
+    crate::logs::{create_log_stream, create_std_combined_log_stream, LoggerError, LoggerStream},
     anyhow::Error,
     fidl_fuchsia_process as fproc,
     fuchsia_component::client::connect_to_protocol,
@@ -76,23 +76,37 @@ pub struct LaunchProcessArgs<'a> {
     pub executable_vmo: Option<zx::Vmo>,
 }
 
-/// Launches process, assigns a logger as stdout/stderr to launched process.
+/// Launches process, assigns a combined logger stream as stdout/stderr to launched process.
 pub async fn launch_process(
     args: LaunchProcessArgs<'_>,
 ) -> Result<(Process, ScopedJob, LoggerStream), LaunchError> {
     let launcher = connect_to_protocol::<fproc::LauncherMarker>().map_err(LaunchError::Launcher)?;
-    launch_process_impl(args, launcher).await
+    let (logger, stdout_handle, stderr_handle) =
+        create_std_combined_log_stream().map_err(LaunchError::Logger)?;
+    let (process, job) = launch_process_impl(args, launcher, stdout_handle, stderr_handle).await?;
+    Ok((process, job, logger))
+}
+
+/// Launches process, assigns two separate stdout and stderr streams to launched process.
+/// Returns (process, job, stdout_logger, stderr_logger)
+pub async fn launch_process_with_separate_std_handles(
+    args: LaunchProcessArgs<'_>,
+) -> Result<(Process, ScopedJob, LoggerStream, LoggerStream), LaunchError> {
+    let launcher = connect_to_protocol::<fproc::LauncherMarker>().map_err(LaunchError::Launcher)?;
+    let (stdout_logger, stdout_handle) = create_log_stream().map_err(LaunchError::Logger)?;
+    let (stderr_logger, stderr_handle) = create_log_stream().map_err(LaunchError::Logger)?;
+    let (process, job) = launch_process_impl(args, launcher, stdout_handle, stderr_handle).await?;
+    Ok((process, job, stdout_logger, stderr_logger))
 }
 
 async fn launch_process_impl(
     args: LaunchProcessArgs<'_>,
     launcher: fproc::LauncherProxy,
-) -> Result<(Process, ScopedJob, LoggerStream), LaunchError> {
+    stdout_handle: zx::Handle,
+    stderr_handle: zx::Handle,
+) -> Result<(Process, ScopedJob), LaunchError> {
     const STDOUT: u16 = 1;
     const STDERR: u16 = 2;
-
-    let (logger, stdout_handle, stderr_handle) =
-        create_log_stream().map_err(LaunchError::Logger)?;
 
     let mut handle_infos = args.handle_infos.unwrap_or(vec![]);
 
@@ -149,7 +163,7 @@ async fn launch_process_impl(
 
     let process = process.ok_or_else(|| LaunchError::UnExpectedError)?;
 
-    Ok((process, ScopedJob::new(zx::Job::from_handle(component_job)), logger))
+    Ok((process, ScopedJob::new(zx::Job::from_handle(component_job))))
 }
 
 // Structure to guard job and kill it when going out of scope.
@@ -285,8 +299,12 @@ mod tests {
             }
             return all_handles;
         };
+        let (_logger, stdout_handle, stderr_handle) =
+            create_std_combined_log_stream().map_err(LaunchError::Logger).unwrap();
         let client_fut = async move {
-            let _ = launch_process_impl(args, mock_proxy).await.expect("failed to launch process");
+            let _ = launch_process_impl(args, mock_proxy, stdout_handle, stderr_handle)
+                .await
+                .expect("failed to launch process");
         };
 
         let (all_handles, ()) = futures::future::join(mock_fut, client_fut).await;

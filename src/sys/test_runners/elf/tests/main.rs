@@ -8,7 +8,7 @@ use {
     ftest_manager::{CaseStatus, RunOptions, SuiteStatus},
     fuchsia_async as fasync,
     pretty_assertions::assert_eq,
-    test_manager_test_lib::RunEvent,
+    test_manager_test_lib::{GroupRunEventByTestCase, RunEvent},
 };
 
 fn default_options() -> RunOptions {
@@ -30,15 +30,21 @@ pub async fn run_test(test_url: &str, run_options: RunOptions) -> Result<Vec<Run
 async fn launch_and_run_passing_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/elf-test-runner-example-tests#meta/passing_test.cm";
 
-    let events = run_test(test_url, default_options()).await.unwrap();
+    let events = run_test(test_url, default_options()).await.unwrap().into_iter().group();
 
     let expected_events = vec![
         RunEvent::case_found("main"),
         RunEvent::case_started("main"),
+        RunEvent::case_stdout("main", "stdout msg1"),
+        RunEvent::case_stdout("main", "stdout msg2"),
+        RunEvent::case_stderr("main", "stderr msg1"),
+        RunEvent::case_stderr("main", "stderr msg2"),
         RunEvent::case_stopped("main", CaseStatus::Passed),
         RunEvent::case_finished("main"),
         RunEvent::suite_finished(SuiteStatus::Passed),
-    ];
+    ]
+    .into_iter()
+    .group();
     assert_eq!(events, expected_events);
 }
 

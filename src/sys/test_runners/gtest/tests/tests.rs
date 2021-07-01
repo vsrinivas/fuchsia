@@ -8,7 +8,7 @@ use {
     crate::lib::{assert_events_eq, run_test},
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{CaseStatus, SuiteStatus},
-    maplit::{hashmap, hashset},
+    maplit::hashset,
     pretty_assertions::assert_eq,
     std::{collections::HashSet, iter::FromIterator},
     test_manager_test_lib::{GroupRunEventByTestCase, RunEvent},
@@ -33,7 +33,9 @@ async fn launch_and_run_sample_test() {
     let (events, _logs) = run_test(test_url, default_options()).await.unwrap();
     let events = events.into_iter().group_by_test_case_unordered();
 
-    let expected_events = include!("../test_data/sample_tests_golden_events.rsf");
+    let expected_events = include!("../test_data/sample_tests_golden_events.rsf")
+        .into_iter()
+        .group_by_test_case_unordered();
 
     assert_events_eq(&events, &expected_events);
 }
@@ -64,7 +66,9 @@ async fn launch_and_run_sample_test_no_concurrent() {
     let (events, _logs) = run_test(test_url, run_options).await.unwrap();
     let events = events.into_iter().group_by_test_case_unordered();
 
-    let expected_events = include!("../test_data/sample_tests_golden_events.rsf");
+    let expected_events = include!("../test_data/sample_tests_golden_events.rsf")
+        .into_iter()
+        .group_by_test_case_unordered();
 
     assert_events_eq(&events, &expected_events);
 }
@@ -83,7 +87,9 @@ async fn launch_and_run_sample_test_include_disabled() {
         RunEvent::case_started("SampleDisabled.DISABLED_TestPass"),
         RunEvent::case_stopped("SampleDisabled.DISABLED_TestPass", CaseStatus::Passed),
         RunEvent::case_finished("SampleDisabled.DISABLED_TestPass"),
-    ];
+    ]
+    .into_iter()
+    .group();
     let expected_fail_events = hashset![
         RunEvent::case_found("SampleDisabled.DISABLED_TestFail"),
         RunEvent::case_started("SampleDisabled.DISABLED_TestFail"),
@@ -101,7 +107,9 @@ async fn launch_and_run_sample_test_include_disabled() {
         // gtest treats tests that call `GTEST_SKIP()` as `Passed`.
         RunEvent::case_stopped("SampleDisabled.DynamicSkip", CaseStatus::Passed),
         RunEvent::case_finished("SampleDisabled.DynamicSkip"),
-    ];
+    ]
+    .into_iter()
+    .group();
 
     let actual_pass_events =
         events.get(&Some("SampleDisabled.DISABLED_TestPass".to_string())).unwrap();
@@ -109,7 +117,11 @@ async fn launch_and_run_sample_test_include_disabled() {
 
     // Not going to check all of the exact log events.
     let actual_fail_events = HashSet::from_iter(
-        events.get(&Some("SampleDisabled.DISABLED_TestFail".to_string())).unwrap().clone(),
+        events
+            .get(&Some("SampleDisabled.DISABLED_TestFail".to_string()))
+            .unwrap()
+            .non_artifact_events
+            .clone(),
     );
     assert!(
         actual_fail_events.is_superset(&expected_fail_events),
@@ -118,7 +130,7 @@ async fn launch_and_run_sample_test_include_disabled() {
     );
 
     let actual_skip_events = events.get(&Some("SampleDisabled.DynamicSkip".to_string())).unwrap();
-    assert_eq!(actual_skip_events, &expected_skip_events)
+    assert_eq!(actual_skip_events, &expected_skip_events);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

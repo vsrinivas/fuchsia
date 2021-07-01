@@ -87,6 +87,8 @@ rustc_library("test_lib") {
     "//third_party/rust_crates:futures",
   ]
 
+  test_deps = [ "//third_party/rust_crates:maplit" ]
+
   sources = [ "src/test_lib.rs" ]
 }
 

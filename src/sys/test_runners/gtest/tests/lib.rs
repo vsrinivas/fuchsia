@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_test_manager::RunOptions,
     fuchsia_async as fasync,
     std::collections::{HashMap, HashSet},
-    test_manager_test_lib::RunEvent,
+    test_manager_test_lib::{GroupedRunEvents, RunEvent},
 };
 
 pub async fn run_test(
@@ -27,8 +27,8 @@ pub async fn run_test(
 /// Helper for comparing grouped test events. Produces more readable diffs than diffing the entire
 /// two maps.
 pub fn assert_events_eq(
-    a: &HashMap<Option<String>, Vec<RunEvent>>,
-    b: &HashMap<Option<String>, Vec<RunEvent>>,
+    a: &HashMap<Option<String>, GroupedRunEvents>,
+    b: &HashMap<Option<String>, GroupedRunEvents>,
 ) {
     let a_keys: HashSet<Option<String>> = b.keys().cloned().collect();
     let b_keys: HashSet<Option<String>> = a.keys().cloned().collect();

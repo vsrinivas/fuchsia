@@ -11,7 +11,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client,
     futures::{channel::mpsc, prelude::*},
-    maplit::hashmap,
     pretty_assertions::assert_eq,
     test_manager_test_lib::{GroupRunEventByTestCase, RunEvent, TestBuilder},
 };
@@ -245,19 +244,14 @@ fn default_run_option() -> ftest_manager::RunOptions {
 async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm";
     let (events, logs) = run_single_test(test_url, default_run_option()).await.unwrap();
-    let events = events.into_iter().group_by_test_case_unordered();
 
-    let expected_events = hashmap! {
-        Some("EchoTest".to_string()) => vec![
-            RunEvent::case_found("EchoTest"),
-            RunEvent::case_started("EchoTest"),
-            RunEvent::case_stopped("EchoTest", CaseStatus::Passed),
-            RunEvent::case_finished("EchoTest"),
-        ],
-        None =>  vec![
-            RunEvent::suite_finished(SuiteStatus::Passed),
-        ]
-    };
+    let expected_events = vec![
+        RunEvent::case_found("EchoTest"),
+        RunEvent::case_started("EchoTest"),
+        RunEvent::case_stopped("EchoTest", CaseStatus::Passed),
+        RunEvent::case_finished("EchoTest"),
+        RunEvent::suite_finished(SuiteStatus::Passed),
+    ];
 
     assert_eq!(logs, Vec::<String>::new());
     assert_eq!(&expected_events, &events);
@@ -298,7 +292,9 @@ async fn launch_and_test_gtest_runner_sample_test() {
     let events = events.into_iter().group_by_test_case_unordered();
 
     let expected_events =
-        include!("../../../test_runners/gtest/test_data/sample_tests_golden_events.rsf");
+        include!("../../../test_runners/gtest/test_data/sample_tests_golden_events.rsf")
+            .into_iter()
+            .group_by_test_case_unordered();
 
     assert_eq!(logs, Vec::<String>::new());
     assert_eq!(&expected_events, &events);
@@ -313,30 +309,23 @@ async fn filter_test() {
     let (events, logs) = run_single_test(test_url, options).await.unwrap();
     let events = events.into_iter().group_by_test_case_unordered();
 
-    let expected_events = hashmap! {
-        Some("SampleTest2.SimplePass".to_string()) => vec![
-            RunEvent::case_found("SampleTest2.SimplePass"),
-            RunEvent::case_started("SampleTest2.SimplePass"),
-            RunEvent::case_stopped("SampleTest2.SimplePass", CaseStatus::Passed),
-            RunEvent::case_finished("SampleTest2.SimplePass"),
-        ],
-        Some("SampleFixture.Test1".to_string()) => vec![
-            RunEvent::case_found("SampleFixture.Test1"),
-            RunEvent::case_started("SampleFixture.Test1"),
-            RunEvent::case_stopped("SampleFixture.Test1", CaseStatus::Passed),
-            RunEvent::case_finished("SampleFixture.Test1"),
-        ],
-
-        Some("SampleFixture.Test2".to_string()) => vec![
-            RunEvent::case_found("SampleFixture.Test2"),
-            RunEvent::case_started("SampleFixture.Test2"),
-            RunEvent::case_stopped("SampleFixture.Test2", CaseStatus::Passed),
-            RunEvent::case_finished("SampleFixture.Test2"),
-        ],
-        None =>  vec![
-            RunEvent::suite_finished(SuiteStatus::Passed),
-        ]
-    };
+    let expected_events = vec![
+        RunEvent::case_found("SampleTest2.SimplePass"),
+        RunEvent::case_started("SampleTest2.SimplePass"),
+        RunEvent::case_stopped("SampleTest2.SimplePass", CaseStatus::Passed),
+        RunEvent::case_finished("SampleTest2.SimplePass"),
+        RunEvent::case_found("SampleFixture.Test1"),
+        RunEvent::case_started("SampleFixture.Test1"),
+        RunEvent::case_stopped("SampleFixture.Test1", CaseStatus::Passed),
+        RunEvent::case_finished("SampleFixture.Test1"),
+        RunEvent::case_found("SampleFixture.Test2"),
+        RunEvent::case_started("SampleFixture.Test2"),
+        RunEvent::case_stopped("SampleFixture.Test2", CaseStatus::Passed),
+        RunEvent::case_finished("SampleFixture.Test2"),
+        RunEvent::suite_finished(SuiteStatus::Passed),
+    ]
+    .into_iter()
+    .group_by_test_case_unordered();
 
     assert_eq!(logs, Vec::<String>::new());
     assert_eq!(&expected_events, &events);
@@ -351,7 +340,9 @@ async fn parallel_tests() {
     let events = events.into_iter().group_by_test_case_unordered();
 
     let expected_events =
-        include!("../../../test_runners/gtest/test_data/sample_tests_golden_events.rsf");
+        include!("../../../test_runners/gtest/test_data/sample_tests_golden_events.rsf")
+            .into_iter()
+            .group_by_test_case_unordered();
 
     assert_eq!(logs, Vec::<String>::new());
     assert_eq!(&expected_events, &events);
@@ -387,7 +378,9 @@ async fn multiple_test() {
     let gtest_events2 = gtest_events2.into_iter().group_by_test_case_unordered();
 
     let expected_events =
-        include!("../../../test_runners/gtest/test_data/sample_tests_golden_events.rsf");
+        include!("../../../test_runners/gtest/test_data/sample_tests_golden_events.rsf")
+            .into_iter()
+            .group_by_test_case_unordered();
 
     assert_eq!(gtest_log1, Vec::<String>::new());
     assert_eq!(gtest_log2, Vec::<String>::new());

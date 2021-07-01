@@ -6,156 +6,110 @@
 // This file should be imported using `include!("<path to file>")`.
 {
     use {
-        maplit::hashmap,
         fidl_fuchsia_test_manager::{SuiteStatus, CaseStatus},
         test_manager_test_lib::RunEvent,
     };
 
-    hashmap! {
-        Some("SampleTest1.SimpleFail".to_string()) => vec![
-            RunEvent::case_found("SampleTest1.SimpleFail"),
-            RunEvent::case_started("SampleTest1.SimpleFail"),
-            RunEvent::case_stdout(
-                "SampleTest1.SimpleFail",
-                "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:9: Failure",
-            ),
-            RunEvent::case_stdout("SampleTest1.SimpleFail", "Value of: true"),
-            RunEvent::case_stdout("SampleTest1.SimpleFail", "  Actual: true"),
-            RunEvent::case_stdout("SampleTest1.SimpleFail", "Expected: false"),
-            RunEvent::case_stopped("SampleTest1.SimpleFail", CaseStatus::Failed),
-            RunEvent::case_finished("SampleTest1.SimpleFail"),
-        ],
+    vec![
+        RunEvent::case_found("SampleTest1.SimpleFail"),
+        RunEvent::case_started("SampleTest1.SimpleFail"),
+        RunEvent::case_stdout(
+            "SampleTest1.SimpleFail",
+            "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:9: Failure",
+        ),
+        RunEvent::case_stdout("SampleTest1.SimpleFail", "Value of: true"),
+        RunEvent::case_stdout("SampleTest1.SimpleFail", "  Actual: true"),
+        RunEvent::case_stdout("SampleTest1.SimpleFail", "Expected: false"),
+        RunEvent::case_stopped("SampleTest1.SimpleFail", CaseStatus::Failed),
+        RunEvent::case_finished("SampleTest1.SimpleFail"),
 
-        Some("SampleTest1.Crashing".to_string()) => vec![
-            RunEvent::case_found("SampleTest1.Crashing"),
-            RunEvent::case_started("SampleTest1.Crashing"),
-            RunEvent::case_stdout("SampleTest1.Crashing", "Test exited abnormally"),
-            RunEvent::case_stopped("SampleTest1.Crashing", CaseStatus::Failed),
-            RunEvent::case_finished("SampleTest1.Crashing"),
-        ],
+        RunEvent::case_found("SampleTest1.Crashing"),
+        RunEvent::case_started("SampleTest1.Crashing"),
+        RunEvent::case_stdout("SampleTest1.Crashing", "Test exited abnormally"),
+        RunEvent::case_stopped("SampleTest1.Crashing", CaseStatus::Failed),
+        RunEvent::case_finished("SampleTest1.Crashing"),
 
-        Some("SampleTest2.SimplePass".to_string()) => vec![
-            RunEvent::case_found("SampleTest2.SimplePass"),
-            RunEvent::case_started("SampleTest2.SimplePass"),
-            RunEvent::case_stopped("SampleTest2.SimplePass", CaseStatus::Passed),
-            RunEvent::case_finished("SampleTest2.SimplePass"),
-        ],
+        RunEvent::case_found("SampleTest2.SimplePass"),
+        RunEvent::case_started("SampleTest2.SimplePass"),
+        RunEvent::case_stopped("SampleTest2.SimplePass", CaseStatus::Passed),
+        RunEvent::case_finished("SampleTest2.SimplePass"),
 
-        Some("SampleFixture.Test1".to_string()) => vec![
-            RunEvent::case_found("SampleFixture.Test1"),
-            RunEvent::case_started("SampleFixture.Test1"),
-            RunEvent::case_stopped("SampleFixture.Test1", CaseStatus::Passed),
-            RunEvent::case_finished("SampleFixture.Test1"),
-        ],
+        RunEvent::case_found("SampleFixture.Test1"),
+        RunEvent::case_started("SampleFixture.Test1"),
+        RunEvent::case_stopped("SampleFixture.Test1", CaseStatus::Passed),
+        RunEvent::case_finished("SampleFixture.Test1"),
 
-        Some("SampleFixture.Test2".to_string()) => vec![
-            RunEvent::case_found("SampleFixture.Test2"),
-            RunEvent::case_started("SampleFixture.Test2"),
-            RunEvent::case_stopped("SampleFixture.Test2", CaseStatus::Passed),
-            RunEvent::case_finished("SampleFixture.Test2"),
-        ],
+        RunEvent::case_found("SampleFixture.Test2"),
+        RunEvent::case_started("SampleFixture.Test2"),
+        RunEvent::case_stopped("SampleFixture.Test2", CaseStatus::Passed),
+        RunEvent::case_finished("SampleFixture.Test2"),
 
-        Some("SampleDisabled.DISABLED_TestPass".to_string()) => vec![
-            RunEvent::case_found("SampleDisabled.DISABLED_TestPass"),
-            RunEvent::case_started("SampleDisabled.DISABLED_TestPass"),
-            RunEvent::case_stopped("SampleDisabled.DISABLED_TestPass", CaseStatus::Skipped),
-            RunEvent::case_finished("SampleDisabled.DISABLED_TestPass"),
-        ],
+        RunEvent::case_found("SampleDisabled.DISABLED_TestPass"),
+        RunEvent::case_started("SampleDisabled.DISABLED_TestPass"),
+        RunEvent::case_stopped("SampleDisabled.DISABLED_TestPass", CaseStatus::Skipped),
+        RunEvent::case_finished("SampleDisabled.DISABLED_TestPass"),
 
-        Some("SampleDisabled.DISABLED_TestFail".to_string()) => vec![
-            RunEvent::case_found("SampleDisabled.DISABLED_TestFail"),
-            RunEvent::case_started("SampleDisabled.DISABLED_TestFail"),
-            RunEvent::case_stopped("SampleDisabled.DISABLED_TestFail", CaseStatus::Skipped),
-            RunEvent::case_finished("SampleDisabled.DISABLED_TestFail"),
-        ],
+        RunEvent::case_found("SampleDisabled.DISABLED_TestFail"),
+        RunEvent::case_started("SampleDisabled.DISABLED_TestFail"),
+        RunEvent::case_stopped("SampleDisabled.DISABLED_TestFail", CaseStatus::Skipped),
+        RunEvent::case_finished("SampleDisabled.DISABLED_TestFail"),
 
-        Some("SampleDisabled.DynamicSkip".to_string()) => vec![
-            RunEvent::case_found("SampleDisabled.DynamicSkip"),
-            RunEvent::case_started("SampleDisabled.DynamicSkip"),
-            RunEvent::case_stdout(
-                "SampleDisabled.DynamicSkip",
-                "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:25: Skipped"
-            ),
-            RunEvent::case_stdout(
-                "SampleDisabled.DynamicSkip",
-                ""
-            ),
-            // gtest treats tests that call `GTEST_SKIP()` as `Passed`.
-            RunEvent::case_stopped("SampleDisabled.DynamicSkip", CaseStatus::Passed),
-            RunEvent::case_finished("SampleDisabled.DynamicSkip"),
-        ],
+        RunEvent::case_found("SampleDisabled.DynamicSkip"),
+        RunEvent::case_started("SampleDisabled.DynamicSkip"),
+        RunEvent::case_stdout(
+            "SampleDisabled.DynamicSkip",
+            "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:25: Skipped",
+        ),
+        RunEvent::case_stdout("SampleDisabled.DynamicSkip", ""),
+        // gtest treats tests that call `GTEST_SKIP()` as `Passed`.
+        RunEvent::case_stopped("SampleDisabled.DynamicSkip", CaseStatus::Passed),
+        RunEvent::case_finished("SampleDisabled.DynamicSkip"),
 
-        Some("Tests/SampleParameterizedTestFixture.Test/0".to_string()) => vec![
-            RunEvent::case_found("Tests/SampleParameterizedTestFixture.Test/0"),
-            RunEvent::case_started("Tests/SampleParameterizedTestFixture.Test/0"),
-            RunEvent::case_stopped(
-                "Tests/SampleParameterizedTestFixture.Test/0",
-                CaseStatus::Passed,
-            ),
-            RunEvent::case_finished("Tests/SampleParameterizedTestFixture.Test/0"),
-        ],
+        RunEvent::case_found("Tests/SampleParameterizedTestFixture.Test/0"),
+        RunEvent::case_started("Tests/SampleParameterizedTestFixture.Test/0"),
+        RunEvent::case_stopped("Tests/SampleParameterizedTestFixture.Test/0", CaseStatus::Passed),
+        RunEvent::case_finished("Tests/SampleParameterizedTestFixture.Test/0"),
 
-        Some("Tests/SampleParameterizedTestFixture.Test/1".to_string()) => vec![
-            RunEvent::case_found("Tests/SampleParameterizedTestFixture.Test/1"),
-            RunEvent::case_started("Tests/SampleParameterizedTestFixture.Test/1"),
-            RunEvent::case_stopped(
-                "Tests/SampleParameterizedTestFixture.Test/1",
-                CaseStatus::Passed,
-            ),
-            RunEvent::case_finished("Tests/SampleParameterizedTestFixture.Test/1"),
-        ],
+        RunEvent::case_found("Tests/SampleParameterizedTestFixture.Test/1"),
+        RunEvent::case_started("Tests/SampleParameterizedTestFixture.Test/1"),
+        RunEvent::case_stopped("Tests/SampleParameterizedTestFixture.Test/1", CaseStatus::Passed),
+        RunEvent::case_finished("Tests/SampleParameterizedTestFixture.Test/1"),
 
-        Some("Tests/SampleParameterizedTestFixture.Test/2".to_string()) => vec![
-            RunEvent::case_found("Tests/SampleParameterizedTestFixture.Test/2"),
-            RunEvent::case_started("Tests/SampleParameterizedTestFixture.Test/2"),
-            RunEvent::case_stopped(
-                "Tests/SampleParameterizedTestFixture.Test/2",
-                CaseStatus::Passed,
-            ),
-            RunEvent::case_finished("Tests/SampleParameterizedTestFixture.Test/2"),
-        ],
+        RunEvent::case_found("Tests/SampleParameterizedTestFixture.Test/2"),
+        RunEvent::case_started("Tests/SampleParameterizedTestFixture.Test/2"),
+        RunEvent::case_stopped("Tests/SampleParameterizedTestFixture.Test/2", CaseStatus::Passed),
+        RunEvent::case_finished("Tests/SampleParameterizedTestFixture.Test/2"),
 
-        Some("Tests/SampleParameterizedTestFixture.Test/3".to_string()) => vec![
-            RunEvent::case_found("Tests/SampleParameterizedTestFixture.Test/3"),
-            RunEvent::case_started("Tests/SampleParameterizedTestFixture.Test/3"),
-            RunEvent::case_stopped(
-                "Tests/SampleParameterizedTestFixture.Test/3",
-                CaseStatus::Passed,
-            ),
-            RunEvent::case_finished("Tests/SampleParameterizedTestFixture.Test/3"),
-        ],
+        RunEvent::case_found("Tests/SampleParameterizedTestFixture.Test/3"),
+        RunEvent::case_started("Tests/SampleParameterizedTestFixture.Test/3"),
+        RunEvent::case_stopped("Tests/SampleParameterizedTestFixture.Test/3", CaseStatus::Passed),
+        RunEvent::case_finished("Tests/SampleParameterizedTestFixture.Test/3"),
 
-        Some("WriteToStdout.TestPass".to_string()) => vec![
-            RunEvent::case_found("WriteToStdout.TestPass"),
-            RunEvent::case_started("WriteToStdout.TestPass"),
-            RunEvent::case_stdout("WriteToStdout.TestPass", "first msg"),
-            RunEvent::case_stdout("WriteToStdout.TestPass", "second msg"),
-            RunEvent::case_stdout("WriteToStdout.TestPass", ""),
-            RunEvent::case_stdout("WriteToStdout.TestPass", ""),
-            RunEvent::case_stdout("WriteToStdout.TestPass", "third msg"),
-            RunEvent::case_stdout("WriteToStdout.TestPass", ""),
-            RunEvent::case_stopped("WriteToStdout.TestPass", CaseStatus::Passed),
-            RunEvent::case_finished("WriteToStdout.TestPass"),
-        ],
+        RunEvent::case_found("WriteToStdout.TestPass"),
+        RunEvent::case_started("WriteToStdout.TestPass"),
+        RunEvent::case_stdout("WriteToStdout.TestPass", "first msg"),
+        RunEvent::case_stdout("WriteToStdout.TestPass", "second msg"),
+        RunEvent::case_stdout("WriteToStdout.TestPass", ""),
+        RunEvent::case_stdout("WriteToStdout.TestPass", ""),
+        RunEvent::case_stdout("WriteToStdout.TestPass", "third msg"),
+        RunEvent::case_stdout("WriteToStdout.TestPass", ""),
+        RunEvent::case_stopped("WriteToStdout.TestPass", CaseStatus::Passed),
+        RunEvent::case_finished("WriteToStdout.TestPass"),
 
-        Some("WriteToStdout.TestFail".to_string()) => vec![
-            RunEvent::case_found("WriteToStdout.TestFail"),
-            RunEvent::case_started("WriteToStdout.TestFail"),
-            RunEvent::case_stdout("WriteToStdout.TestFail", "first msg"),
-            RunEvent::case_stdout(
-                "WriteToStdout.TestFail",
-                "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:42: Failure",
-            ),
-            RunEvent::case_stdout("WriteToStdout.TestFail", "Value of: true"),
-            RunEvent::case_stdout("WriteToStdout.TestFail", "  Actual: true"),
-            RunEvent::case_stdout("WriteToStdout.TestFail", "Expected: false"),
-            RunEvent::case_stdout("WriteToStdout.TestFail", "second msg"),
-            RunEvent::case_stopped("WriteToStdout.TestFail", CaseStatus::Failed),
-            RunEvent::case_finished("WriteToStdout.TestFail"),
-        ],
+        RunEvent::case_found("WriteToStdout.TestFail"),
+        RunEvent::case_started("WriteToStdout.TestFail"),
+        RunEvent::case_stdout("WriteToStdout.TestFail", "first msg"),
+        RunEvent::case_stdout(
+            "WriteToStdout.TestFail",
+            "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:42: Failure",
+        ),
+        RunEvent::case_stdout("WriteToStdout.TestFail", "Value of: true"),
+        RunEvent::case_stdout("WriteToStdout.TestFail", "  Actual: true"),
+        RunEvent::case_stdout("WriteToStdout.TestFail", "Expected: false"),
+        RunEvent::case_stdout("WriteToStdout.TestFail", "second msg"),
+        RunEvent::case_stopped("WriteToStdout.TestFail", CaseStatus::Failed),
+        RunEvent::case_finished("WriteToStdout.TestFail"),
 
-        None => vec![
-            RunEvent::suite_finished(SuiteStatus::Failed),
-        ],
-    }
+        RunEvent::suite_finished(SuiteStatus::Failed),
+    ]
 }

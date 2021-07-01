@@ -179,38 +179,36 @@ pub async fn process_events(
         fasync::Task::spawn(async move { suite_instance.collect_events(sender).await });
     let mut events = vec![];
     let mut log_tasks = vec![];
-    let mut buffered_logs = HashMap::new();
+    let mut buffered_stdout = HashMap::new();
+    let mut buffered_stderr = HashMap::new();
     while let Some(event) = recv.next().await {
         match event.payload {
             test_manager_test_lib::SuiteEventPayload::RunEvent(RunEvent::CaseStdout {
                 name,
                 stdout_message,
             }) => {
-                let logs = stdout_message.split("\n");
-                let mut logs = logs.collect::<Vec<&str>>();
-                // discard last empty log(if it ended in newline, or  store im-complete line)
-                let mut last_incomplete_line = logs.pop();
-                if stdout_message.as_bytes().last() == Some(&b'\n') {
-                    last_incomplete_line = None;
+                let strings = line_buffer_std_message(
+                    &name,
+                    stdout_message,
+                    exclude_empty_logs,
+                    &mut buffered_stdout,
+                );
+                for s in strings {
+                    events.push(RunEvent::case_stdout(name.clone(), s));
                 }
-                for log in logs {
-                    if exclude_empty_logs && log.len() == 0 {
-                        continue;
-                    }
-                    let mut msg = log.to_owned();
-                    // This is only executed for first log line and used to concat previous
-                    // buffered line.
-                    if let Some(prev_log) = buffered_logs.remove(&name) {
-                        msg = format!("{}{}", prev_log, msg);
-                    }
-                    events.push(RunEvent::case_stdout(name.clone(), msg));
-                    if let Some(log) = last_incomplete_line {
-                        let mut log = log.to_owned();
-                        if let Some(prev_log) = buffered_logs.remove(&name) {
-                            log = format!("{}{}", prev_log, log);
-                        }
-                        buffered_logs.insert(name.clone(), log);
-                    }
+            }
+            test_manager_test_lib::SuiteEventPayload::RunEvent(RunEvent::CaseStderr {
+                name,
+                stderr_message,
+            }) => {
+                let strings = line_buffer_std_message(
+                    &name,
+                    stderr_message,
+                    exclude_empty_logs,
+                    &mut buffered_stderr,
+                );
+                for s in strings {
+                    events.push(RunEvent::case_stderr(name.clone(), s));
                 }
             }
             test_manager_test_lib::SuiteEventPayload::RunEvent(e) => events.push(e),
@@ -225,8 +223,11 @@ pub async fn process_events(
     }
     execution_task.await.context("test execution failed")?;
 
-    for (name, log) in buffered_logs {
+    for (name, log) in buffered_stdout {
         events.push(RunEvent::case_stdout(name, log));
+    }
+    for (name, log) in buffered_stderr {
+        events.push(RunEvent::case_stderr(name, log));
     }
 
     let mut collected_logs = vec![];
@@ -239,6 +240,43 @@ pub async fn process_events(
     }
 
     Ok((events, collected_logs))
+}
+
+// Process stdout/stderr messages and return Vec of processed strings
+fn line_buffer_std_message(
+    name: &str,
+    std_message: String,
+    exclude_empty_logs: bool,
+    buffer: &mut HashMap<String, String>,
+) -> Vec<String> {
+    let mut ret = vec![];
+    let logs = std_message.split("\n");
+    let mut logs = logs.collect::<Vec<&str>>();
+    // discard last empty log(if it ended in newline, or  store im-complete line)
+    let mut last_incomplete_line = logs.pop();
+    if std_message.as_bytes().last() == Some(&b'\n') {
+        last_incomplete_line = None;
+    }
+    for log in logs {
+        if exclude_empty_logs && log.len() == 0 {
+            continue;
+        }
+        let mut msg = log.to_owned();
+        // This is only executed for first log line and used to concat previous
+        // buffered line.
+        if let Some(prev_log) = buffer.remove(name) {
+            msg = format!("{}{}", prev_log, msg);
+        }
+        ret.push(msg);
+    }
+    if let Some(log) = last_incomplete_line {
+        let mut log = log.to_owned();
+        if let Some(prev_log) = buffer.remove(name) {
+            log = format!("{}{}", prev_log, log);
+        }
+        buffer.insert(name.to_string(), log);
+    }
+    ret
 }
 
 // Binds to test manager component and returns run builder service.
@@ -303,6 +341,7 @@ pub async fn test_component(
 mod tests {
     use super::*;
     use fidl_fuchsia_test::Status;
+    use maplit::hashmap;
 
     #[test]
     fn test_ordering_by_enum() {
@@ -364,5 +403,28 @@ mod tests {
         ];
         events.sort();
         assert_eq!(events, expected_events);
+    }
+
+    #[test]
+    fn line_buffer_std_message_incomplete_line() {
+        let mut buf = HashMap::new();
+        buf.insert("test".to_string(), "some_prev_text".to_string());
+        let strings = line_buffer_std_message("test", "a \nb\nc\nd".into(), false, &mut buf);
+        assert_eq!(strings, vec!["some_prev_texta ".to_owned(), "b".to_owned(), "c".to_owned()]);
+        assert_eq!(buf, hashmap! {"test".to_string() => "d".to_string()});
+    }
+
+    #[test]
+    fn line_buffer_std_message_complete_line() {
+        let mut buf = HashMap::new();
+        buf.insert("test".to_string(), "some_prev_text".to_string());
+        let strings = line_buffer_std_message("test", "a \nb\nc\n".into(), false, &mut buf);
+        assert_eq!(strings, vec!["some_prev_texta ".to_owned(), "b".to_owned(), "c".to_owned()]);
+        assert_eq!(buf.len(), 0);
+
+        // test when initial buf is empty
+        let strings = line_buffer_std_message("test", "d \ne\nf\n".into(), false, &mut buf);
+        assert_eq!(strings, vec!["d ".to_owned(), "e".to_owned(), "f".to_owned()]);
+        assert_eq!(buf.len(), 0);
     }
 }

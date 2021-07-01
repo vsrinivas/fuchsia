@@ -116,6 +116,8 @@ impl TestServer {
 
         let (test_stdout, stdout_client) =
             zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
+        let (test_stderr, stderr_client) =
+            zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
         let (case_listener_proxy, listener) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
                 .map_err(FidlError::CreateProxy)
@@ -123,13 +125,20 @@ impl TestServer {
         run_listener
             .on_test_case_started(
                 invocation,
-                ftest::StdHandles { out: Some(stdout_client), ..ftest::StdHandles::EMPTY },
+                ftest::StdHandles {
+                    out: Some(stdout_client),
+                    err: Some(stderr_client),
+                    ..ftest::StdHandles::EMPTY
+                },
                 listener,
             )
             .map_err(RunTestError::SendStart)?;
-        let test_stdout =
-            fasync::Socket::from_socket(test_stdout).map_err(KernelError::SocketToAsync).unwrap();
-        let mut test_stdout = SocketLogWriter::new(test_stdout);
+        let mut test_stdout = SocketLogWriter::new(
+            fasync::Socket::from_socket(test_stdout).map_err(KernelError::SocketToAsync).unwrap(),
+        );
+        let mut test_stderr = SocketLogWriter::new(
+            fasync::Socket::from_socket(test_stderr).map_err(KernelError::SocketToAsync).unwrap(),
+        );
 
         let mut args = component.args.clone();
         if let Some(user_args) = &run_options.arguments {
@@ -137,11 +146,16 @@ impl TestServer {
         }
 
         // Launch test program
-        let (process, _job, stdlogger) =
+        let (process, _job, stdout_logger, stderr_logger) =
             launch_component_process::<RunTestError>(&component, args).await?;
 
         // Drain stdout
-        let () = stdlogger.buffer_and_drain(&mut test_stdout).await?;
+        let stdout_fut = stdout_logger.buffer_and_drain(&mut test_stdout);
+        // Drain stderr
+        let stderr_fut = stderr_logger.buffer_and_drain(&mut test_stderr);
+        let (ret1, ret2) = futures::future::join(stdout_fut, stderr_fut).await;
+        ret1?;
+        ret2?;
 
         // Wait for test to return
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
@@ -166,7 +180,7 @@ impl TestServer {
 async fn launch_component_process<E>(
     component: &Component,
     args: Vec<String>,
-) -> Result<(zx::Process, launch::ScopedJob, LoggerStream), E>
+) -> Result<(zx::Process, launch::ScopedJob, LoggerStream, LoggerStream), E>
 where
     E: From<NamespaceError> + From<launch::LaunchError> + From<ComponentError>,
 {
@@ -175,7 +189,7 @@ where
     component.loader_service(loader);
     let executable_vmo = Some(component.executable_vmo()?);
 
-    Ok(launch::launch_process(launch::LaunchProcessArgs {
+    Ok(launch::launch_process_with_separate_std_handles(launch::LaunchProcessArgs {
         bin_path: &component.binary,
         process_name: &component.name,
         job: Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),

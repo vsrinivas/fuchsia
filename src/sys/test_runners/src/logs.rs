@@ -6,7 +6,7 @@
 
 use {
     crate::errors::FdioError, fdio::fdio_sys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::prelude::*, std::num::NonZeroUsize, thiserror::Error, zx::HandleBased,
+    futures::prelude::*, std::num::NonZeroUsize, std::os::unix::prelude::AsRawFd, thiserror::Error,
 };
 
 /// Buffer size for socket read calls to `LoggerStream::buffer_and_drain`.
@@ -38,42 +38,52 @@ pub enum LogError {
     Write(std::io::Error),
 }
 
-/// Creates socket handle for stdout and stderr and hooks them to same socket.
+/// Creates a combined socket handle for stdout and stderr and hooks them to same socket.
 /// It also wraps the socket into stream and returns it back.
-pub fn create_log_stream() -> Result<(LoggerStream, zx::Handle, zx::Handle), LoggerError> {
+pub fn create_std_combined_log_stream(
+) -> Result<(LoggerStream, zx::Handle, zx::Handle), LoggerError> {
     let (client, log) =
         zx::Socket::create(zx::SocketOpts::STREAM).map_err(LoggerError::CreateSocket)?;
-    let mut stdout_file_handle = zx::sys::ZX_HANDLE_INVALID;
     let mut stderr_file_handle = zx::sys::ZX_HANDLE_INVALID;
 
+    let std_file: std::fs::File =
+        fdio::create_fd(log.into()).map_err(|s| LoggerError::Fdio(FdioError::Create(s)))?;
+
     unsafe {
-        let mut std_fd: i32 = -1;
-
-        let mut status = fdio::fdio_sys::fdio_fd_create(log.into_raw(), &mut std_fd);
-        if let Err(s) = zx::Status::ok(status) {
-            return Err(LoggerError::Fdio(FdioError::Create(s)));
-        }
-
-        status =
-            fdio_sys::fdio_fd_clone(std_fd, &mut stderr_file_handle as *mut zx::sys::zx_handle_t);
+        let status = fdio_sys::fdio_fd_clone(
+            std_file.as_raw_fd(),
+            &mut stderr_file_handle as *mut zx::sys::zx_handle_t,
+        );
         if let Err(s) = zx::Status::ok(status) {
             return Err(LoggerError::Fdio(FdioError::Clone(s)));
         }
+    }
 
-        status = fdio_sys::fdio_fd_transfer(
-            std_fd,
-            &mut stdout_file_handle as *mut zx::sys::zx_handle_t,
-        );
-        if let Err(s) = zx::Status::ok(status) {
-            return Err(LoggerError::Fdio(FdioError::Transfer(s)));
-        }
+    let stdout_file_handle =
+        fdio::transfer_fd(std_file).map_err(|s| LoggerError::Fdio(FdioError::Transfer(s)))?;
 
+    unsafe {
         Ok((
             LoggerStream::new(client).map_err(LoggerError::InvalidSocket)?,
-            zx::Handle::from_raw(stdout_file_handle),
+            stdout_file_handle,
             zx::Handle::from_raw(stderr_file_handle),
         ))
     }
+}
+
+/// Creates a socket handle for stdout/stderr and hooks it to a file handle.
+/// It also wraps the socket into stream and returns it back.
+pub fn create_log_stream() -> Result<(LoggerStream, zx::Handle), LoggerError> {
+    let (client, log) =
+        zx::Socket::create(zx::SocketOpts::STREAM).map_err(LoggerError::CreateSocket)?;
+
+    let std_file =
+        fdio::create_fd(log.into()).map_err(|s| LoggerError::Fdio(FdioError::Create(s)))?;
+
+    let file_handle =
+        fdio::transfer_fd(std_file).map_err(|s| LoggerError::Fdio(FdioError::Transfer(s)))?;
+
+    Ok((LoggerStream::new(client).map_err(LoggerError::InvalidSocket)?, file_handle))
 }
 /// Collects logs in background and gives a way to collect those logs.
 pub struct LogStreamReader {

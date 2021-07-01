@@ -225,9 +225,22 @@ impl RunEvent {
     }
 }
 
+/// Groups events by stdout, stderr and non stdout/stderr events to make it easy to compare them
+/// in tests.
+#[derive(Default, Debug, Eq, PartialEq, Clone)]
+pub struct GroupedRunEvents {
+    // order of events is maintained.
+    pub non_artifact_events: Vec<RunEvent>,
+    // order of stdout events is maintained.
+    pub stdout_events: Vec<RunEvent>,
+    // order of stderr events is maintained.
+    pub stderr_events: Vec<RunEvent>,
+}
+
 /// Trait allowing iterators over `RunEvent` to be partitioned by test case name.
 pub trait GroupRunEventByTestCase: Iterator<Item = RunEvent> + Sized {
-    /// Groups the `RunEvent`s by test case name into a map that preserves insertion order.
+    /// Groups the `RunEvent`s by test case name into a map that preserves insertion order of
+    /// various types of events.
     /// The overall order of test cases (by first event) and the orders of events within each test
     /// case are preserved, but events from different test cases are effectively de-interleaved.
     ///
@@ -237,35 +250,76 @@ pub trait GroupRunEventByTestCase: Iterator<Item = RunEvent> + Sized {
     /// use linked_hash_map::LinkedHashMap;
     ///
     /// let events: Vec<RunEvent> = get_events();
-    /// let grouped: LinkedHashMap<Option<String>, RunEvent> =
-    ///     events.into_iter().group_by_test_case();
+    /// let grouped: LinkedHashMap<Option<String>, GroupedRunEvents> =
+    ///     events.into_iter().group_by_test_case_ordered();
     /// ```
-    fn group_by_test_case_ordered(self) -> LinkedHashMap<Option<String>, Vec<RunEvent>> {
+    fn group_by_test_case_ordered(self) -> LinkedHashMap<Option<String>, GroupedRunEvents> {
         let mut map = LinkedHashMap::new();
         for run_event in self {
-            map.entry(run_event.owned_test_case_name()).or_insert(Vec::new()).push(run_event);
+            match run_event {
+                RunEvent::CaseStderr { .. } => map
+                    .entry(run_event.owned_test_case_name())
+                    .or_insert(GroupedRunEvents::default())
+                    .stderr_events
+                    .push(run_event),
+
+                RunEvent::CaseStdout { .. } => map
+                    .entry(run_event.owned_test_case_name())
+                    .or_insert(GroupedRunEvents::default())
+                    .stdout_events
+                    .push(run_event),
+
+                _ => map
+                    .entry(run_event.owned_test_case_name())
+                    .or_insert(GroupedRunEvents::default())
+                    .non_artifact_events
+                    .push(run_event),
+            }
         }
         map
-    }
-
-    /// De-interleaves the `RunEvents` by test case. The overall order of test cases (by first
-    /// event) and the orders of events within each test case are preserved.
-    fn deinterleave(self) -> Box<dyn Iterator<Item = RunEvent>> {
-        Box::new(
-            self.group_by_test_case_ordered()
-                .into_iter()
-                .flat_map(|(_, events)| events.into_iter()),
-        )
     }
 
     /// Groups the `RunEvent`s by test case name into an unordered map. The orders of events within
     /// each test case are preserved, but the test cases themselves are not in a defined order.
-    fn group_by_test_case_unordered(self) -> HashMap<Option<String>, Vec<RunEvent>> {
+    fn group_by_test_case_unordered(self) -> HashMap<Option<String>, GroupedRunEvents> {
         let mut map = HashMap::new();
         for run_event in self {
-            map.entry(run_event.owned_test_case_name()).or_insert(Vec::new()).push(run_event);
+            match run_event {
+                RunEvent::CaseStderr { .. } => map
+                    .entry(run_event.owned_test_case_name())
+                    .or_insert(GroupedRunEvents::default())
+                    .stderr_events
+                    .push(run_event),
+
+                RunEvent::CaseStdout { .. } => map
+                    .entry(run_event.owned_test_case_name())
+                    .or_insert(GroupedRunEvents::default())
+                    .stdout_events
+                    .push(run_event),
+
+                _ => map
+                    .entry(run_event.owned_test_case_name())
+                    .or_insert(GroupedRunEvents::default())
+                    .non_artifact_events
+                    .push(run_event),
+            }
         }
         map
+    }
+
+    /// Group `RunEvent`s by stdout, stderr and non-stdout/err events and returns `GroupedRunEvents`.
+    fn group(self) -> GroupedRunEvents {
+        let mut events = GroupedRunEvents::default();
+        for run_event in self {
+            match run_event {
+                RunEvent::CaseStderr { .. } => events.stderr_events.push(run_event),
+
+                RunEvent::CaseStdout { .. } => events.stdout_events.push(run_event),
+
+                _ => events.non_artifact_events.push(run_event),
+            }
+        }
+        events
     }
 }
 
