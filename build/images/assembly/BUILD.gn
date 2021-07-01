@@ -24,13 +24,6 @@ import("//build/product.gni")
 import("//build/zbi/zbi.gni")
 
 ####
-# The following are required to be set in order for assembly to properly
-# determine how the product uses the zbi, bootfs, base images, etc.  This is
-# because the existing build doesn't have clearer flags for determining this
-# at this time.
-assert(build_info_product != "", "'build_info_product' must be set in args.gn")
-
-####
 #
 # Deal with "bringup" and other zbi-only builds.
 #
@@ -93,7 +86,18 @@ dep_labels = {
   #
   system_image_pkg = "//build/images:system_image.meta"
 
-  if (build_info_product != "bringup") {
+  # `bootfs_only` is only set by 'bringup', which uses different assembly
+  # targets and differently named files in the previous assembly implementation
+  # than `core` and above.  That difference should go away as
+  # //build/images/BUILD.gn is ported over to using ffx assembly.
+  if (bootfs_only) {
+    fuchsia_zbi = "//build/images/bringup"
+    fuchsia_zbi_manifest = fuchsia_zbi
+
+    if (use_vbmeta) {
+      fuchsia_vbmeta = "//build/images/bringup:bringup.vbmeta"
+    }
+  } else {
     if (custom_signing_script != "" || use_vboot) {
       fuchsia_zbi = "//build/images:signed"
     } else {
@@ -103,13 +107,6 @@ dep_labels = {
 
     if (use_vbmeta) {
       fuchsia_vbmeta = "//build/images:fuchsia.vbmeta"
-    }
-  } else {
-    fuchsia_zbi = "//build/images/bringup"
-    fuchsia_zbi_manifest = fuchsia_zbi
-
-    if (use_vbmeta) {
-      fuchsia_vbmeta = "//build/images/bringup:bringup.vbmeta"
     }
   }
   prev_update_pkg = "//build/images:update.meta"
@@ -227,7 +224,17 @@ files = {
   extracted_sysimg_meta_contents = "${extracted_sysimg_pkg}/meta/contents"
   extracted_sysimg_meta_package = "${extracted_sysimg_pkg}/meta/package"
 
-  if (build_info_product != "bringup") {
+  # bootfs_only is only set by 'bringup', which uses different assembly targets
+  # in the previous assembly implements.
+  if (bootfs_only) {
+    # The zbi created by //build/images/bringup
+    fuchsia_zbi = "${root_build_dir}/bringup.zbi"
+    fuchsia_zbi_manifest = "${fuchsia_zbi}.json"
+
+    # The vbmeta for bringup.
+    fuchsia_vbmeta = "${root_build_dir}/bringup.vbmeta"
+    fuchsia_vbmeta_salt = "${fuchsia_vbmeta}.salt"
+  } else {
     if (custom_signing_script != "") {
       # The vendor-processed zbi created by //build/images:signed
       fuchsia_zbi = "${root_build_dir}/fuchsia.zbi.signed"
@@ -242,14 +249,6 @@ files = {
 
     # The vbmeta for fuchsia_zbi
     fuchsia_vbmeta = "${root_build_dir}/fuchsia.vbmeta"
-    fuchsia_vbmeta_salt = "${fuchsia_vbmeta}.salt"
-  } else {
-    # The zbi created by //build/images/bringup
-    fuchsia_zbi = "${root_build_dir}/bringup.zbi"
-    fuchsia_zbi_manifest = "${fuchsia_zbi}.json"
-
-    # The vbmeta for bringup.
-    fuchsia_vbmeta = "${root_build_dir}/bringup.vbmeta"
     fuchsia_vbmeta_salt = "${fuchsia_vbmeta}.salt"
   }
 
