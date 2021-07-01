@@ -16,7 +16,7 @@ use crate::night_mode::types::NightModeInfo;
 use crate::payload_convert;
 use crate::service::message::{Delegate, Messenger, Receptor, Signature};
 use crate::service_context::ServiceContext;
-use crate::setup::types::ConfigurationInterfaceFlags;
+use crate::setup::types::SetConfigurationInterfacesParams;
 
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -133,7 +133,7 @@ generate_inspect! {
         SetUserDataSharingConsent(Option<bool>),
 
         // Setup info requests.
-        SetConfigurationInterfaces(ConfigurationInterfaceFlags),
+        SetConfigurationInterfaces(SetConfigurationInterfacesParams),
     }
 }
 

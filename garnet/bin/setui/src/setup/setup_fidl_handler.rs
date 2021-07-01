@@ -8,24 +8,12 @@ use crate::fidl_process;
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::Request;
-use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
+use crate::setup::types::{
+    ConfigurationInterfaceFlags, SetConfigurationInterfacesParams, SetupInfo,
+};
 use fidl_fuchsia_settings::{Error, SetupMarker, SetupRequest, SetupSettings, SetupWatchResponder};
-use std::convert::TryFrom;
 
 fidl_hanging_get_responder!(SetupMarker, SetupSettings, SetupWatchResponder);
-
-impl TryFrom<SetupSettings> for Request {
-    type Error = &'static str;
-    fn try_from(value: SetupSettings) -> Result<Self, Self::Error> {
-        if let Some(configuration_interfaces) = value.enabled_configuration_interfaces {
-            return Ok(Request::SetConfigurationInterfaces(ConfigurationInterfaceFlags::from(
-                configuration_interfaces,
-            )));
-        }
-
-        Err("Ineligible change")
-    }
-}
 
 impl From<SettingInfo> for SetupSettings {
     fn from(response: SettingInfo) -> Self {
@@ -82,29 +70,30 @@ impl From<SetupInfo> for SetupSettings {
     }
 }
 
-async fn reboot(context: RequestContext<SetupSettings, SetupWatchResponder>) -> Result<(), Error> {
-    context
-        .request(SettingType::Power, Request::Reboot)
-        .await
-        .map(|_| ())
-        .map_err(|_| fidl_fuchsia_settings::Error::Failed)
+fn to_request(value: SetupSettings, should_reboot: bool) -> Result<Request, &'static str> {
+    if let Some(configuration_interfaces) = value.enabled_configuration_interfaces {
+        return Ok(Request::SetConfigurationInterfaces(SetConfigurationInterfacesParams {
+            config_interfaces_flags: ConfigurationInterfaceFlags::from(configuration_interfaces),
+            should_reboot,
+        }));
+    }
+
+    Err("Ineligible change")
 }
 
 async fn set(
     context: RequestContext<SetupSettings, SetupWatchResponder>,
     settings: SetupSettings,
-    do_reboot: bool,
+    should_reboot: bool,
 ) -> Result<(), Error> {
-    let request = Request::try_from(settings).map_err(|_| fidl_fuchsia_settings::Error::Failed)?;
+    let request =
+        to_request(settings, should_reboot).map_err(|_| fidl_fuchsia_settings::Error::Failed)?;
     context
         .request(SettingType::Setup, request)
         .await
         .map_err(|_| fidl_fuchsia_settings::Error::Failed)?;
-    if do_reboot {
-        reboot(context).await
-    } else {
-        Ok(())
-    }
+
+    Ok(())
 }
 
 async fn process_request(
@@ -114,6 +103,7 @@ async fn process_request(
     // Support future expansion of FIDL
     #[allow(unreachable_patterns)]
     match req {
+        // TODO(fxb/79644): Clean up Set interface.
         SetupRequest::Set { settings, responder } => {
             match set(context, settings, true).await {
                 Ok(_) => responder.send(&mut Ok(())).ok(),
