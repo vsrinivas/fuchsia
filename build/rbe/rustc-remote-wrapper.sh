@@ -304,6 +304,12 @@ function nonsystem_shlibs() {
     xargs -n 1 realpath --relative-to="$project_root"
 }
 
+function depfile_inputs_by_line() {
+  # From a depfile arrange deps one per line.
+  # This looks at the phony deps "FILE:".
+  grep ":$" "$1" | cut -d: -f1
+}
+
 # The rustc binary might be linked against shared libraries.
 # Exclude system libraries in /usr/lib and /lib.
 # convert to paths relative to $project_root for rewrapper.
@@ -321,7 +327,7 @@ top_source="$(realpath --relative-to="$project_root" "$top_source")"
 # These inputs appear relative to the build/output directory, but need to be
 # relative to the $project_root for rewrapper.
 "${dep_only_command[@]}"
-mapfile -t depfile_inputs < <(grep ':$' "$depfile.nolink" | cut -d: -f1 | \
+mapfile -t depfile_inputs < <(depfile_inputs_by_line "$depfile.nolink" | \
   xargs -n 1 realpath --relative-to="$project_root")
 # Done with temporary depfile, remove it.
 rm -f "$depfile.nolink"
@@ -335,8 +341,8 @@ rm -f "$depfile.nolink"
 #   * transitive dependent libraries [$depfile.nolink]
 #   * objects and libraries used as linker arguments [$link_arg_files]
 #   * system rust libraries [$depfile.nolink]
-#   * TODO(fangism): clang toolchain binaries for codegen and linking
-#     For example: -Clinker=.../lld
+#   * clang toolchain binaries for codegen and linking
+#       For example: -Clinker=.../lld
 
 # Need more than the bin/ directory, but its parent dir which contains tool
 # libraries, and system libraries needed for linking.
@@ -406,6 +412,28 @@ else
   debug_var "[$script: remote]" "${remote_rustc_command[@]}"
   "${remote_rustc_command[@]}"
   status="$?"
+
+  # Scan remote-generated depfile for absolute paths, and reject them.
+  abs_deps=()
+  if test -f "$depfile"
+  then
+    # TEMPORARY WORKAROUND until upstream fix lands:
+    #   https://github.com/pest-parser/pest/pull/522
+    # Rewrite the depfile if it contains any absolute paths from the remote
+    # build; paths should be relative to the root_build_dir.
+    sed -i -e 's|/b/f/w/out/[^/]*/||g' "$depfile"
+
+    mapfile -t remote_depfile_inputs < <(depfile_inputs_by_line "$depfile")
+    for f in "${remote_depfile_inputs[@]}"
+    do
+      case "$f" in
+        /*) abs_deps+=("$f") ;;
+      esac
+    done
+    test "${#abs_deps[@]}" = 0 || status=1
+    # error message below
+  fi
+
   test "$status" = 0 || {
     # On any failure, dump debug info, even if it is not related to RBE.
     verbose=1
@@ -422,6 +450,12 @@ EOF
     # Identify which target failed by its command, useful in parallel build.
     debug_var "[$script: FAIL]" "${remote_rustc_command[@]}"
     dump_vars
+
+    # Reject absolute paths in depfiles.
+    if test "${#abs_deps[@]}" -ge 1
+    then
+      debug_var "Forbidden absolute paths in remote-generated depfile" "${abs_deps[@]}"
+    fi
 
     echo
     tmpdir="${RBE_proxy_log_dir:-/tmp}"
