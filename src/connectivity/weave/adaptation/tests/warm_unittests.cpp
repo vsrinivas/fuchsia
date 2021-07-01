@@ -43,7 +43,6 @@ using fuchsia::lowpan::device::OnMeshPrefix;
 using fuchsia::lowpan::device::Protocols;
 using fuchsia::lowpan::device::ServiceError;
 
-using fuchsia::netstack::NetInterface;
 using fuchsia::netstack::RouteTableEntry;
 using fuchsia::netstack::Status;
 
@@ -80,10 +79,17 @@ bool CompareIpAddress(const ::nl::Inet::IPAddress& right, const ::fuchsia::net::
 
 }  // namespace
 
+struct OwnedInterface {
+  uint64_t id;
+  std::string name;
+  fuchsia::net::IpAddress addr;
+  std::vector<fuchsia::net::Subnet> ipv6addrs;
+};
+
 class FakeNetInterfaces : public fuchsia::net::interfaces::testing::State_TestBase,
                           public fuchsia::net::interfaces::testing::Watcher_TestBase {
  public:
-  void InitializeInterfaces(const std::vector<NetInterface>& interfaces) {
+  void InitializeInterfaces(const std::vector<OwnedInterface>& interfaces) {
     existing_events_.clear();
     for (const auto& interface : interfaces) {
       AddExistingInterface(interface);
@@ -137,7 +143,7 @@ class FakeNetInterfaces : public fuchsia::net::interfaces::testing::State_TestBa
   }
 
  private:
-  void AddExistingInterface(const NetInterface& interface) {
+  void AddExistingInterface(const OwnedInterface& interface) {
     fuchsia::net::interfaces::Event event;
     fuchsia::net::interfaces::Properties properties;
     properties.set_id(interface.id);
@@ -261,7 +267,7 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
 
     // Find the interface with the specified ID and append the address.
     auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
-                           [&](const NetInterface& interface) { return nicid == interface.id; });
+                           [&](const OwnedInterface& interface) { return nicid == interface.id; });
     if (it == interfaces_.end()) {
       callback({.status = Status::UNKNOWN_INTERFACE});
       return;
@@ -277,7 +283,7 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
                               RemoveInterfaceAddressCallback callback) override {
     // Find the interface with the specified ID and remove the address.
     auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
-                           [&](const NetInterface& interface) { return nicid == interface.id; });
+                           [&](const OwnedInterface& interface) { return nicid == interface.id; });
     if (it == interfaces_.end()) {
       callback({.status = Status::UNKNOWN_INTERFACE});
       return;
@@ -329,39 +335,35 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
   // Mutators, accessors, and helpers for tests.
 
   // Add a fake interface with the given name. Does not check for duplicates.
-  FakeNetstack& AddFakeInterface(std::string name) {
-    fuchsia::net::Ipv4Address empty_v4;
-    std::memset(empty_v4.addr.data(), 0xFF, empty_v4.addr.size());
-
-    auto& interface = interfaces_.emplace_back();
-    interface.id = ++last_id_assigned;
-    interface.name = name;
-    interface.addr.set_ipv4(empty_v4);
-    interface.netmask.set_ipv4(empty_v4);
-    interface.broadaddr.set_ipv4(empty_v4);
+  FakeNetstack& AddOwnedInterface(std::string name) {
+    interfaces_.push_back({
+        .id = ++last_id_assigned,
+        .name = name,
+    });
     return *this;
   }
 
   // Remove the fake interface with the given name. If it is not present, no change occurs.
-  FakeNetstack& RemoveFakeInterface(std::string name) {
-    auto it = std::remove_if(interfaces_.begin(), interfaces_.end(),
-                             [&](const NetInterface& interface) { return interface.name == name; });
+  FakeNetstack& RemoveOwnedInterface(std::string name) {
+    auto it =
+        std::remove_if(interfaces_.begin(), interfaces_.end(),
+                       [&](const OwnedInterface& interface) { return interface.name == name; });
     interfaces_.erase(it, interfaces_.end());
     return *this;
   }
 
   // Access the current interfaces.
-  const std::vector<NetInterface>& interfaces() const { return interfaces_; }
+  const std::vector<OwnedInterface>& interfaces() const { return interfaces_; }
 
   // Access the current route table.
   const std::vector<RouteTableEntry>& route_table() const { return route_table_; }
 
   // Get a pointer to an interface by name.
-  void GetInterfaceByName(const std::string name, NetInterface& interface) {
+  OwnedInterface& GetInterfaceByName(const std::string name) {
     auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
-                           [&](const NetInterface& interface) { return interface.name == name; });
-    ASSERT_NE(it, interfaces_.end());
-    ASSERT_EQ(it->Clone(&interface), ZX_OK);
+                           [&](const OwnedInterface& interface) { return interface.name == name; });
+    EXPECT_NE(it, interfaces_.end());
+    return *it;
   }
 
   // Check if the given interface ID and address exists in the route table.
@@ -388,7 +390,7 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
   fidl::Binding<fuchsia::netstack::Netstack> binding_{this};
   fidl::Binding<fuchsia::netstack::RouteTableTransaction> route_table_binding_{this};
   async_dispatcher_t* dispatcher_;
-  std::vector<NetInterface> interfaces_;
+  std::vector<OwnedInterface> interfaces_;
   std::vector<RouteTableEntry> route_table_;
   uint32_t last_id_assigned = 0;
 };
@@ -466,9 +468,9 @@ class WarmTest : public testing::WeaveTestFixture<> {
     Warm::Platform::Init(nullptr);
 
     // Populate initial fake interfaces
-    AddFakeInterface(kTunInterfaceName);
-    AddFakeInterface(kThreadInterfaceName);
-    AddFakeInterface(kWiFiInterfaceName);
+    AddOwnedInterface(kTunInterfaceName);
+    AddOwnedInterface(kThreadInterfaceName);
+    AddOwnedInterface(kWiFiInterfaceName);
 
     RunFixtureLoop();
   }
@@ -486,45 +488,33 @@ class WarmTest : public testing::WeaveTestFixture<> {
   FakeNetstack& fake_net_stack() { return fake_net_stack_; }
   FakeStack& fake_stack() { return fake_stack_; }
 
-  void AddFakeInterface(std::string name) {
-    fake_net_stack_.AddFakeInterface(name);
+  void AddOwnedInterface(std::string name) {
+    fake_net_stack_.AddOwnedInterface(name);
     fake_net_interfaces_.InitializeInterfaces(fake_net_stack_.interfaces());
   }
 
-  void RemoveFakeInterface(std::string name) {
-    fake_net_stack_.RemoveFakeInterface(name);
+  void RemoveOwnedInterface(std::string name) {
+    fake_net_stack_.RemoveOwnedInterface(name);
     fake_net_interfaces_.InitializeInterfaces(fake_net_stack_.interfaces());
   }
 
-  NetInterface& GetThreadInterface(NetInterface& interface) {
-    fake_net_stack().GetInterfaceByName(kThreadInterfaceName, interface);
-    return interface;
+  OwnedInterface& GetThreadInterface() {
+    return fake_net_stack_.GetInterfaceByName(kThreadInterfaceName);
   }
 
-  uint32_t GetThreadInterfaceId() {
-    NetInterface interface;
-    return GetThreadInterface(interface).id;
+  uint32_t GetThreadInterfaceId() { return GetThreadInterface().id; }
+
+  OwnedInterface& GetTunnelInterface() {
+    return fake_net_stack_.GetInterfaceByName(kTunInterfaceName);
   }
 
-  NetInterface& GetTunnelInterface(NetInterface& interface) {
-    fake_net_stack().GetInterfaceByName(kTunInterfaceName, interface);
-    return interface;
+  uint32_t GetTunnelInterfaceId() { return GetTunnelInterface().id; }
+
+  OwnedInterface& GetWiFiInterface() {
+    return fake_net_stack_.GetInterfaceByName(kWiFiInterfaceName);
   }
 
-  uint32_t GetTunnelInterfaceId() {
-    NetInterface interface;
-    return GetTunnelInterface(interface).id;
-  }
-
-  NetInterface& GetWiFiInterface(NetInterface& interface) {
-    fake_net_stack().GetInterfaceByName(kWiFiInterfaceName, interface);
-    return interface;
-  }
-
-  uint32_t GetWiFiInterfaceId() {
-    NetInterface interface;
-    return GetWiFiInterface(interface).id;
-  }
+  uint32_t GetWiFiInterfaceId() { return GetWiFiInterface().id; }
 
  private:
   FakeLowpanLookup fake_lowpan_lookup_;
@@ -537,11 +527,10 @@ class WarmTest : public testing::WeaveTestFixture<> {
 TEST_F(WarmTest, AddRemoveAddressThread) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
-  NetInterface lowpan;
   Inet::IPAddress addr;
 
   // Sanity check - no addresses assigned.
-  GetThreadInterface(lowpan);
+  OwnedInterface& lowpan = GetThreadInterface();
   EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
 
   // Attempt to add the address.
@@ -550,7 +539,6 @@ TEST_F(WarmTest, AddRemoveAddressThread) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked.
-  GetThreadInterface(lowpan);
   ASSERT_EQ(lowpan.ipv6addrs.size(), 1u);
   EXPECT_TRUE(CompareIpAddress(addr, lowpan.ipv6addrs[0].addr));
   EXPECT_TRUE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
@@ -560,7 +548,6 @@ TEST_F(WarmTest, AddRemoveAddressThread) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked.
-  GetThreadInterface(lowpan);
   EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
   EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 }
@@ -568,11 +555,10 @@ TEST_F(WarmTest, AddRemoveAddressThread) {
 TEST_F(WarmTest, AddRemoveAddressTunnel) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
-  NetInterface weave_tun;
   Inet::IPAddress addr;
 
   // Sanity check - no addresses assigned.
-  GetTunnelInterface(weave_tun);
+  OwnedInterface& weave_tun = GetTunnelInterface();
   EXPECT_EQ(weave_tun.ipv6addrs.size(), 0u);
 
   // Attempt to add the address.
@@ -581,7 +567,6 @@ TEST_F(WarmTest, AddRemoveAddressTunnel) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked.
-  GetTunnelInterface(weave_tun);
   ASSERT_EQ(weave_tun.ipv6addrs.size(), 1u);
   EXPECT_TRUE(CompareIpAddress(addr, weave_tun.ipv6addrs[0].addr));
 
@@ -590,18 +575,16 @@ TEST_F(WarmTest, AddRemoveAddressTunnel) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked.
-  GetTunnelInterface(weave_tun);
   EXPECT_EQ(weave_tun.ipv6addrs.size(), 0u);
 }
 
 TEST_F(WarmTest, AddRemoveAddressWiFi) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
-  NetInterface wlan;
   Inet::IPAddress addr;
 
   // Sanity check - no addresses assigned.
-  GetWiFiInterface(wlan);
+  OwnedInterface& wlan = GetWiFiInterface();
   EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
 
   // Attempt to add the address.
@@ -610,7 +593,6 @@ TEST_F(WarmTest, AddRemoveAddressWiFi) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked.
-  GetWiFiInterface(wlan);
   ASSERT_EQ(wlan.ipv6addrs.size(), 1u);
   EXPECT_TRUE(CompareIpAddress(addr, wlan.ipv6addrs[0].addr));
 
@@ -619,18 +601,16 @@ TEST_F(WarmTest, AddRemoveAddressWiFi) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked.
-  GetWiFiInterface(wlan);
   EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
 }
 
 TEST_F(WarmTest, RemoveAddressThreadNotFound) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
-  NetInterface lowpan;
   Inet::IPAddress addr;
 
   // Sanity check - no addresses assigned.
-  GetThreadInterface(lowpan);
+  OwnedInterface& lowpan = GetThreadInterface();
   EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
 
   // Attempt to remove the address, expecting failure.
@@ -639,7 +619,6 @@ TEST_F(WarmTest, RemoveAddressThreadNotFound) {
   EXPECT_EQ(result, kPlatformResultFailure);
 
   // Sanity check - still no addresses assigned.
-  GetThreadInterface(lowpan);
   EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
   EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 }
@@ -647,11 +626,10 @@ TEST_F(WarmTest, RemoveAddressThreadNotFound) {
 TEST_F(WarmTest, RemoveAddressTunnelNotFound) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
-  NetInterface weave_tun;
   Inet::IPAddress addr;
 
   // Sanity check - no addresses assigned.
-  GetTunnelInterface(weave_tun);
+  OwnedInterface& weave_tun = GetTunnelInterface();
   EXPECT_EQ(weave_tun.ipv6addrs.size(), 0u);
 
   // Attempt to remove the address, expecting failure.
@@ -660,18 +638,16 @@ TEST_F(WarmTest, RemoveAddressTunnelNotFound) {
   EXPECT_EQ(result, kPlatformResultFailure);
 
   // Sanity check - still no addresses assigned.
-  GetTunnelInterface(weave_tun);
   EXPECT_EQ(weave_tun.ipv6addrs.size(), 0u);
 }
 
 TEST_F(WarmTest, RemoveAddressWiFiNotFound) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
-  NetInterface wlan;
   Inet::IPAddress addr;
 
   // Sanity check - no addresses assigned.
-  GetWiFiInterface(wlan);
+  OwnedInterface& wlan = GetWiFiInterface();
   EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
 
   // Attempt to remove the address, expecting failure.
@@ -680,7 +656,6 @@ TEST_F(WarmTest, RemoveAddressWiFiNotFound) {
   EXPECT_EQ(result, kPlatformResultFailure);
 
   // Sanity check - still no addresses assigned.
-  GetWiFiInterface(wlan);
   EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
 }
 
@@ -689,7 +664,7 @@ TEST_F(WarmTest, AddAddressThreadNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  RemoveFakeInterface(kThreadInterfaceName);
+  RemoveOwnedInterface(kThreadInterfaceName);
 
   // Attempt to add to the interface when there's no Thread interface. Expect failure.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -703,7 +678,7 @@ TEST_F(WarmTest, RemoveAddressThreadNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  RemoveFakeInterface(kThreadInterfaceName);
+  RemoveOwnedInterface(kThreadInterfaceName);
 
   // Attempt to remove from the interface when there's no Thread interface. Expect success.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -717,7 +692,7 @@ TEST_F(WarmTest, AddAddressTunnelNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  RemoveFakeInterface(kTunInterfaceName);
+  RemoveOwnedInterface(kTunInterfaceName);
 
   // Attempt to add to the interface when there's no Tunnel interface. Expect failure.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -730,7 +705,7 @@ TEST_F(WarmTest, RemoveAddressTunnelNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  RemoveFakeInterface(kTunInterfaceName);
+  RemoveOwnedInterface(kTunInterfaceName);
 
   // Attempt to remove from the interface when there's no Tunnel interface. Expect success.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -743,7 +718,7 @@ TEST_F(WarmTest, AddAddressWiFiNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  RemoveFakeInterface(kWiFiInterfaceName);
+  RemoveOwnedInterface(kWiFiInterfaceName);
 
   // Attempt to add to the interface when there's no WiFi interface. Expect failure.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -756,7 +731,7 @@ TEST_F(WarmTest, RemoveAddressWiFiNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  RemoveFakeInterface(kWiFiInterfaceName);
+  RemoveOwnedInterface(kWiFiInterfaceName);
 
   // Attempt to remove from the interface when there's no WiFi interface. Expect success.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
