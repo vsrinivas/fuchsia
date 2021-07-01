@@ -425,12 +425,15 @@ def main():
                     src_dir = t + src_dir[len(f):]
                     break
 
+            # When files from gocache are printed in the output they have
+            # normalized absolute paths, so use absolute path to filter them.
+            abs_go_cache = os.path.abspath(args.go_cache)
             src_dir = os.path.relpath(src_dir)
             for field in files_fields:
                 files = package.get(field)
                 if files:
                     for file in files:
-                        if args.go_cache in file:
+                        if abs_go_cache in file:
                             continue
                         into.write(' ')
                         into.write(os.path.join(src_dir, file))
