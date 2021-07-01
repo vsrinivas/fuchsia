@@ -71,6 +71,9 @@ class Extractor {
 // Extract minfs filesystem contained in |input_fd|.
 zx::status<> MinfsExtract(fbl::unique_fd input_fd, extractor::Extractor& extractor);
 
+// Extract blobfs filesystem contained in |input_fd|.
+zx::status<> BlobfsExtract(fbl::unique_fd input_fd, extractor::Extractor& extractor);
+
 }  // namespace extractor
 
 #endif  // SRC_STORAGE_EXTRACTOR_CPP_EXTRACTOR_H_

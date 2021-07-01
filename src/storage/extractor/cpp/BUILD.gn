@@ -13,6 +13,7 @@ group("tests") {
 test("disk_extractor_unit_test") {
   testonly = true
   sources = [
+    "blobfs_extractor_test.cc",
     "extractor_test.cc",
     "hex_dump_generator_test.cc",
     "minfs_extractor_test.cc",
@@ -20,6 +21,7 @@ test("disk_extractor_unit_test") {
   deps = [
     "//sdk/fidl/fuchsia.fs",
     "//src/lib/fxl/test:gtest_main",
+    "//src/storage/blobfs/test/integration:blobfs_integration_fixtures",
     "//src/storage/extractor/c:disk_extractor",
     "//src/storage/extractor/cpp:disk_extractor",
     "//src/storage/fs_test",
@@ -28,6 +30,7 @@ test("disk_extractor_unit_test") {
     "//zircon/public/lib/zxc",
     "//zircon/third_party/ulib/cksum",
   ]
+  data_deps = [ "//src/storage/bin/blobfs" ]
 }
 
 fuchsia_component("disk-extractor-unit-test-component") {
@@ -61,12 +64,14 @@ static_library("disk_extractor") {
   ]
 
   sources = [
+    "blobfs_extractor.cc",
     "extractor.cc",
     "hex_dump_generator.cc",
     "minfs_extractor.cc",
   ]
   public_deps = [
     "//sdk/lib/fit-promise",
+    "//src/storage/blobfs",
     "//src/storage/extractor/c:disk_extractor",
     "//src/storage/minfs",
     "//zircon/public/lib/zxc",
