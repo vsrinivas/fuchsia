@@ -4,6 +4,8 @@
 use {
     anyhow::{format_err, Context, Error},
     fidl::endpoints::create_endpoints,
+    fidl_fuchsia_net_interfaces as fnet_interfaces,
+    fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext,
     fidl_fuchsia_net_stack::StackMarker,
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
     fidl_fuchsia_netstack::{NetstackMarker, RouteTableEntry, RouteTableTransactionMarker},
@@ -14,6 +16,7 @@ use {
     futures::TryStreamExt,
     net_declare::fidl_ip,
     prettytable::{cell, format, row, Table},
+    std::collections::HashMap,
     std::convert::TryFrom,
     std::io::{Read, Write},
     std::net::{SocketAddr, TcpListener, TcpStream},
@@ -89,16 +92,22 @@ impl BusConnection {
 }
 
 fn get_interface_id(
-    name: &str,
-    intf: &Vec<fidl_fuchsia_net_stack::InterfaceInfo>,
+    want_name: &str,
+    intf: &HashMap<u64, fnet_interfaces_ext::Properties>,
 ) -> Result<u64, Error> {
-    let res = intf
-        .iter()
+    intf.values()
         .find_map(
-            |interface| if interface.properties.name == name { Some(interface.id) } else { None },
+            |fidl_fuchsia_net_interfaces_ext::Properties {
+                 id,
+                 name,
+                 device_class: _,
+                 online: _,
+                 addresses: _,
+                 has_default_ipv4_route: _,
+                 has_default_ipv6_route: _,
+             }| if name == want_name { Some(*id) } else { None },
         )
-        .ok_or(anyhow::format_err!("failed to find {}", name))?;
-    Ok(res)
+        .ok_or(anyhow::format_err!("failed to find {}", want_name))
 }
 
 async fn add_route_table_entry(
@@ -125,12 +134,19 @@ async fn add_route_table_entry(
 }
 
 async fn run_fuchsia_node() -> Result<(), Error> {
+    let interface_state =
+        fuchsia_component::client::connect_to_protocol::<fnet_interfaces::StateMarker>()
+            .context("failed to connect to interfaces/State")?;
     let stack =
         client::connect_to_protocol::<StackMarker>().context("failed to connect to netstack")?;
     let netstack =
         connect_to_protocol::<NetstackMarker>().context("failed to connect to netstack")?;
 
-    let intf = stack.list_interfaces().await.context("getting interfaces")?;
+    let stream = fnet_interfaces_ext::event_stream_from_state(&interface_state)
+        .context("failed to get interface stream")?;
+    let intf = fnet_interfaces_ext::existing(stream, HashMap::new())
+        .await
+        .context("failed to get existing interfaces")?;
     let wlan_if_id = get_interface_id("wlan-f-ep", &intf)?;
     let wpan_if_id = get_interface_id("wpan-f-ep", &intf)?;
     let weave_if_id = get_interface_id("weave-f-ep", &intf)?;

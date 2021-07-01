@@ -6,10 +6,11 @@ use {
     anyhow::{format_err, Error},
     fasync::Time,
     fidl_fuchsia_lowpan_device::LookupMarker,
-    fuchsia_async as fasync,
+    fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext, fuchsia_async as fasync,
     fuchsia_async::TimeoutExt,
     fuchsia_component::client::{connect_to_protocol, launch, launcher, App},
     futures::prelude::*,
+    std::collections::HashMap,
 };
 
 const DEFAULT_TIMEOUT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_seconds(50);
@@ -104,14 +105,20 @@ pub async fn call_lowpanctl_cmd(args: Vec<String>) {
 }
 
 pub fn get_interface_id(
-    name: &str,
-    intf: &Vec<fidl_fuchsia_net_stack::InterfaceInfo>,
+    want_name: &str,
+    intf: &HashMap<u64, fnet_interfaces_ext::Properties>,
 ) -> Result<u64, Error> {
-    let res = intf
-        .iter()
+    intf.values()
         .find_map(
-            |interface| if interface.properties.name == name { Some(interface.id) } else { None },
+            |fidl_fuchsia_net_interfaces_ext::Properties {
+                 id,
+                 name,
+                 device_class: _,
+                 online: _,
+                 addresses: _,
+                 has_default_ipv4_route: _,
+                 has_default_ipv6_route: _,
+             }| if name == want_name { Some(*id) } else { None },
         )
-        .ok_or(anyhow::format_err!("failed to find {}", name))?;
-    Ok(res)
+        .ok_or(anyhow::format_err!("failed to find {}", want_name))
 }

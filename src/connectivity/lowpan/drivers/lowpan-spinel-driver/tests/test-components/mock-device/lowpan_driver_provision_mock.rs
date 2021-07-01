@@ -10,6 +10,7 @@ use {
 };
 
 #[fuchsia_async::run_singlethreaded(test)]
+#[ignore = "TODO(https://fxbug.dev/77055): deflake and enable"]
 async fn lowpan_driver_provision_mock() {
     syslog::init_with_tags(&["lowpan_driver_provision_mock"]).expect("Can't init logger");
     fx_log_info!("test start");
