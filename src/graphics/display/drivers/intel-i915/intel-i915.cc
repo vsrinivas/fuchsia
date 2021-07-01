@@ -8,7 +8,7 @@
 #include <fuchsia/hardware/intelgpucore/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
-#include <fuchsia/sysmem/c/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -33,6 +33,7 @@
 
 #include "dp-display.h"
 #include "hdmi-display.h"
+#include "lib/fidl/llcpp/client_end.h"
 #include "macros.h"
 #include "pci-ids.h"
 #include "registers-ddi.h"
@@ -763,9 +764,9 @@ zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx::
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static bool ConvertPixelFormatToType(fuchsia_sysmem_PixelFormat format, uint32_t* type_out) {
-  if (format.type != fuchsia_sysmem_PixelFormatType_BGRA32 &&
-      format.type != fuchsia_sysmem_PixelFormatType_R8G8B8A8) {
+static bool ConvertPixelFormatToType(fuchsia_sysmem::wire::PixelFormat format, uint32_t* type_out) {
+  if (format.type != fuchsia_sysmem::wire::PixelFormatType::kBgra32 &&
+      format.type != fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8) {
     return false;
   }
 
@@ -774,19 +775,19 @@ static bool ConvertPixelFormatToType(fuchsia_sysmem_PixelFormat format, uint32_t
   }
 
   switch (format.format_modifier.value) {
-    case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED:
+    case fuchsia_sysmem::wire::kFormatModifierIntelI915XTiled:
       *type_out = IMAGE_TYPE_X_TILED;
       return true;
 
-    case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED:
+    case fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled:
       *type_out = IMAGE_TYPE_Y_LEGACY_TILED;
       return true;
 
-    case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED:
+    case fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled:
       *type_out = IMAGE_TYPE_YF_TILED;
       return true;
 
-    case fuchsia_sysmem_FORMAT_MODIFIER_LINEAR:
+    case fuchsia_sysmem::wire::kFormatModifierLinear:
       *type_out = IMAGE_TYPE_SIMPLE;
       return true;
 
@@ -801,30 +802,30 @@ zx_status_t Controller::DisplayControllerImplImportImage(image_t* image, zx_unow
         image->type == IMAGE_TYPE_Y_LEGACY_TILED || image->type == IMAGE_TYPE_YF_TILED)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  zx_status_t status, status2;
-  fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
-  status =
-      fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(handle, &status2, &collection_info);
-  if (status != ZX_OK) {
-    return status;
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_sysmem::BufferCollection>(
+                                   zx::unowned_channel(handle)))
+                    .WaitForBuffersAllocated();
+  if (!result.ok()) {
+    zxlogf(ERROR, "Failed to wait for buffers allocated, %s", result.FormatDescription().c_str());
+    return result.status();
   }
-  if (status2 != ZX_OK) {
-    return status2;
-  }
-
-  zx::vmo vmo;
-  if (index < collection_info.buffer_count) {
-    vmo = zx::vmo(collection_info.buffers[index].vmo);
-    collection_info.buffers[index].vmo = ZX_HANDLE_INVALID;
-  }
-  for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
-    zx_handle_close(collection_info.buffers[i].vmo);
+  if (result->status != ZX_OK) {
+    return result->status;
   }
 
-  if (!collection_info.settings.has_image_format_constraints || !vmo) {
-    zxlogf(ERROR, "Invalid image format or index");
+  fuchsia_sysmem::wire::BufferCollectionInfo2& collection_info = result->buffer_collection_info;
+
+  if (!collection_info.settings.has_image_format_constraints) {
+    zxlogf(ERROR, "No image format constraints");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (index >= collection_info.buffer_count) {
+    zxlogf(ERROR, "Invalid index %d greater than buffer count %d", index,
+           collection_info.buffer_count);
     return ZX_ERR_OUT_OF_RANGE;
   }
+
+  zx::vmo vmo = std::move(collection_info.buffers[index].vmo);
 
   uint64_t offset = collection_info.buffers[index].vmo_usable_start;
   if (offset % PAGE_SIZE != 0) {
@@ -850,9 +851,18 @@ zx_status_t Controller::DisplayControllerImplImportImage(image_t* image, zx_unow
     return ZX_ERR_NO_MEMORY;
   }
 
-  uint32_t length = width_in_tiles(image->type, image->width, image->pixel_format) *
-                    height_in_tiles(image->type, image->height, image->pixel_format) *
-                    get_tile_byte_size(image->type);
+  auto format = ImageConstraintsToFormat(collection_info.settings.image_format_constraints,
+                                         image->width, image->height);
+  if (!format.is_ok()) {
+    zxlogf(ERROR, "Failed to get format from constraints");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  uint32_t length = ImageFormatImageSize(format.value());
+
+  ZX_DEBUG_ASSERT(length >= width_in_tiles(image->type, image->width, image->pixel_format) *
+                                height_in_tiles(image->type, image->height, image->pixel_format) *
+                                get_tile_byte_size(image->type));
 
   uint32_t align;
   if (image->type == IMAGE_TYPE_SIMPLE) {
@@ -863,7 +873,7 @@ zx_status_t Controller::DisplayControllerImplImportImage(image_t* image, zx_unow
     align = registers::PlaneSurface::kYTilingAlignment;
   }
   std::unique_ptr<GttRegion> gtt_region;
-  status = gtt_.AllocRegion(length, align, &gtt_region);
+  zx_status_t status = gtt_.AllocRegion(length, align, &gtt_region);
   if (status != ZX_OK) {
     return status;
   }
@@ -1674,10 +1684,10 @@ zx_status_t Controller::DisplayControllerImplGetSysmemConnection(zx::channel con
 
 zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
     const image_t* config, zx_unowned_handle_t collection) {
-  fuchsia_sysmem_BufferCollectionConstraints constraints = {};
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints = {};
   constraints.usage.display = fuchsia_sysmem_displayUsageLayer;
   constraints.has_buffer_memory_constraints = true;
-  fuchsia_sysmem_BufferMemoryConstraints& buffer_constraints =
+  fuchsia_sysmem::wire::BufferMemoryConstraints& buffer_constraints =
       constraints.buffer_memory_constraints;
   buffer_constraints.min_size_bytes = 0;
   buffer_constraints.max_size_bytes = 0xffffffff;
@@ -1686,7 +1696,7 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.ram_domain_supported = true;
   buffer_constraints.cpu_domain_supported = false;
   buffer_constraints.heap_permitted_count = 1;
-  buffer_constraints.heap_permitted[0] = fuchsia_sysmem_HeapType_SYSTEM_RAM;
+  buffer_constraints.heap_permitted[0] = fuchsia_sysmem::wire::HeapType::kSystemRam;
   unsigned image_constraints_count = 0;
   for (unsigned i = 0; i < countof(image_types); ++i) {
     // Skip if image type was specified and different from current type. This
@@ -1695,68 +1705,57 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
     if (config->type && config->type != image_types[i]) {
       continue;
     }
-    fuchsia_sysmem_ImageFormatConstraints& image_constraints =
+    fuchsia_sysmem::wire::ImageFormatConstraints& image_constraints =
         constraints.image_format_constraints[image_constraints_count++];
     switch (config->pixel_format) {
       case ZX_PIXEL_FORMAT_ARGB_8888:
       case ZX_PIXEL_FORMAT_RGB_x888:
-        image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+        image_constraints.pixel_format.type = fuchsia_sysmem::wire::PixelFormatType::kBgra32;
         break;
       case ZX_PIXEL_FORMAT_ABGR_8888:
       case ZX_PIXEL_FORMAT_BGR_888x:
-        image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_R8G8B8A8;
+        image_constraints.pixel_format.type = fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8;
         break;
     }
     image_constraints.pixel_format.has_format_modifier = true;
     switch (image_types[i]) {
       case IMAGE_TYPE_SIMPLE:
         image_constraints.pixel_format.format_modifier.value =
-            fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
+            fuchsia_sysmem::wire::kFormatModifierLinear;
         image_constraints.bytes_per_row_divisor = 64;
         image_constraints.start_offset_divisor = 64;
         break;
       case IMAGE_TYPE_X_TILED:
         image_constraints.pixel_format.format_modifier.value =
-            fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED;
+            fuchsia_sysmem::wire::kFormatModifierIntelI915XTiled;
         image_constraints.start_offset_divisor = 4096;
         image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
         break;
       case IMAGE_TYPE_Y_LEGACY_TILED:
         image_constraints.pixel_format.format_modifier.value =
-            fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+            fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled;
         image_constraints.start_offset_divisor = 4096;
         image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
         break;
       case IMAGE_TYPE_YF_TILED:
         image_constraints.pixel_format.format_modifier.value =
-            fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED;
+            fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled;
         image_constraints.start_offset_divisor = 4096;
         image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
         break;
     }
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
-    image_constraints.min_coded_width = 0;
-    image_constraints.max_coded_width = 0xffffffff;
-    image_constraints.min_coded_height = 0;
-    image_constraints.max_coded_height = 0xffffffff;
-    image_constraints.min_bytes_per_row = 0;
-    image_constraints.max_bytes_per_row = 0xffffffff;
-    image_constraints.max_coded_width_times_coded_height = 0xffffffff;
-    image_constraints.layers = 1;
-    image_constraints.coded_width_divisor = 1;
-    image_constraints.coded_height_divisor = 1;
-    image_constraints.display_width_divisor = 1;
-    image_constraints.display_height_divisor = 1;
+    image_constraints.color_space[0].type = fuchsia_sysmem::wire::ColorSpaceType::kSrgb;
   }
   constraints.image_format_constraints_count = image_constraints_count;
 
-  zx_status_t status =
-      fuchsia_sysmem_BufferCollectionSetConstraints(collection, true, &constraints);
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_sysmem::BufferCollection>(
+                                   zx::unowned_channel(collection)))
+                    .SetConstraints(true, constraints);
 
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to set constraints");
-    return status;
+  if (!result.ok()) {
+    zxlogf(ERROR, "Failed to set constraints, %s", result.FormatDescription().c_str());
+    return result.status();
   }
 
   return ZX_OK;
