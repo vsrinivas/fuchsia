@@ -40,7 +40,9 @@ test("component_cpp_testing_unittests_bin") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fuchsia-component-test/fidl:fuchsia.realm.builder",
     "//src/lib/fxl/test:gtest_main",
     "//src/testing/fidl:placeholders",
     "//zircon/public/lib/fidl",
@@ -56,14 +58,17 @@ test("component_cpp_testing_tests_bin") {
   sources = [
     "component_interceptor_unittest.cc",
     "enclosing_environment_test.cc",
-    "realm_builder_unittest.cc",
   ]
 
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.debugdata",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/testing/fidl:placeholders",
     "//zircon/public/lib/fidl",
@@ -97,6 +102,12 @@ fuchsia_component("helper_proc") {
   testonly = true
 }
 
+fuchsia_component("echo_server") {
+  deps = [ ":helper_proc_bin" ]
+  manifest = "meta/echo_server.cml"
+  testonly = true
+}
+
 executable("constructor_helper_proc") {
   testonly = true
 
@@ -114,14 +125,38 @@ executable("constructor_helper_proc") {
   ]
 }
 
+executable("realm_builder_test_bin") {
+  testonly = true
+
+  sources = [ "realm_builder_test.cc" ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:realm_builder",
+    "//src/lib/fuchsia-component-test/fidl:fuchsia.realm.builder",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/testing/fidl:placeholders",
+  ]
+}
+
+fuchsia_component("realm_builder_test") {
+  testonly = true
+  deps = [ ":realm_builder_test_bin" ]
+  manifest = "meta/realm_builder_test.cml"
+}
+
 fuchsia_test_package("component_cpp_tests") {
   test_components = [
     ":component_cpp_testing_tests",
     ":component_cpp_testing_unittests",
     ":component_cpp_unittests",
+    ":realm_builder_test",
   ]
   deps = [
     ":constructor_helper_proc",
+    ":echo_server",
     ":helper_proc",
   ]
 }

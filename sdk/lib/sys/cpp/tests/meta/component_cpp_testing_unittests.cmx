@@ -4,5 +4,10 @@
     ],
     "program": {
         "binary": "test/component_cpp_testing_unittests_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
     }
 }

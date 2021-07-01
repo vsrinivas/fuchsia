@@ -91,12 +91,25 @@ source_set("realm_builder") {
   testonly = true
 
   sources = [
+    "internal/errors.cc",
+    "internal/errors.h",
+    "internal/realm.cc",
+    "internal/realm.h",
+    "internal/scoped_instance.cc",
+    "internal/scoped_instance.h",
     "realm_builder.cc",
     "realm_builder.h",
   ]
 
   public_deps = [
-    # This is needed to ensure that realm_builder.h header is found by .cc ???
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fuchsia-component-test/fidl:fuchsia.realm.builder",
+    "//src/lib/fxl",
+    "//zircon/system/public:public",
   ]
 }
