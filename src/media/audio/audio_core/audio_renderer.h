@@ -67,7 +67,6 @@ class AudioRenderer : public BaseRenderer,
   // |media::audio::BaseRenderer|
   void ReportStart() final;
   void ReportStop() final;
-  void Shutdown() final;
   // Needed for ramped Play/Pause transitions
   void PlayInternal(zx::time reference_time, zx::time media_time, PlayCallback callback) final;
   void PauseInternal(PauseCallback callback) final;

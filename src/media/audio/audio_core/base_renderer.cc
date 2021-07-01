@@ -50,15 +50,9 @@ BaseRenderer::BaseRenderer(
 }
 
 BaseRenderer::~BaseRenderer() {
-  wav_writer_.Close();
-  payload_buffers_.clear();
-}
-
-void BaseRenderer::Shutdown() {
-  TRACE_DURATION("audio", "BaseRenderer::Shutdown");
-
-  ReportStop();
-
+  if (IsPlaying()) {
+    ReportStop();
+  }
   wav_writer_.Close();
   payload_buffers_.clear();
 }
