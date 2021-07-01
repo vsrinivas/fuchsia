@@ -2,39 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    anyhow::{format_err, Result},
+    anyhow::{Context as _, Result},
     fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
-    fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_net as fnet,
-    fidl_fuchsia_net_stack as fnetstack, fuchsia_zircon as zx,
+    fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo,
+    fidl_fuchsia_net_interfaces as fnet_interfaces,
+    fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext, fuchsia_zircon as zx,
     tracing::*,
 };
 
 pub struct HostIdentifier {
-    pub(crate) netstack_proxy: fnetstack::StackProxy,
+    pub(crate) interface_state_proxy: fnet_interfaces::StateProxy,
     pub(crate) name_provider_proxy: fdevice::NameProviderProxy,
     pub(crate) device_info_proxy: hwinfo::DeviceProxy,
     pub(crate) build_info_proxy: buildinfo::ProviderProxy,
     pub(crate) boot_timestamp_nanos: u64,
 }
 
+fn connect_to_protocol<S: fidl::endpoints::DiscoverableService>() -> Result<S::Proxy> {
+    fuchsia_component::client::connect_to_protocol::<S>().context(S::SERVICE_NAME)
+}
+
 impl HostIdentifier {
     pub fn new() -> Result<Self> {
-        let netstack_proxy =
-            fuchsia_component::client::connect_to_protocol::<fnetstack::StackMarker>()
-                .map_err(|s| format_err!("Failed to connect to NetStack service: {}", s))?;
-        let name_provider_proxy =
-            fuchsia_component::client::connect_to_protocol::<fdevice::NameProviderMarker>()
-                .map_err(|s| format_err!("Failed to connect to NameProviderService: {}", s))?;
-        let device_info_proxy =
-            fuchsia_component::client::connect_to_protocol::<hwinfo::DeviceMarker>()
-                .map_err(|s| format_err!("Failed to connect to DeviceProxy: {}", s))?;
-        let build_info_proxy =
-            fuchsia_component::client::connect_to_protocol::<buildinfo::ProviderMarker>()
-                .map_err(|s| format_err!("Failed to connect to BoardProxy: {}", s))?;
+        let interface_state_proxy = connect_to_protocol::<fnet_interfaces::StateMarker>()?;
+        let name_provider_proxy = connect_to_protocol::<fdevice::NameProviderMarker>()?;
+        let device_info_proxy = connect_to_protocol::<hwinfo::DeviceMarker>()?;
+        let build_info_proxy = connect_to_protocol::<buildinfo::ProviderMarker>()?;
         let boot_timestamp_nanos = (fuchsia_runtime::utc_time().into_nanos()
             - zx::Time::get_monotonic().into_nanos()) as u64;
         return Ok(Self {
-            netstack_proxy,
+            interface_state_proxy,
             name_provider_proxy,
             device_info_proxy,
             build_info_proxy,
@@ -43,8 +40,15 @@ impl HostIdentifier {
     }
 
     pub async fn identify(&self) -> Result<rcs::IdentifyHostResponse, rcs::IdentifyHostError> {
-        let mut ilist = self.netstack_proxy.list_interfaces().await.map_err(|e| {
-            error!(%e, "Getting interface list failed");
+        let stream = fnet_interfaces_ext::event_stream_from_state(&self.interface_state_proxy)
+            .map_err(|e| {
+                error!(%e, "Getting interface watcher failed");
+                rcs::IdentifyHostError::ListInterfacesFailed
+            })?;
+        let ilist = fnet_interfaces_ext::existing(stream, std::collections::HashMap::new())
+            .await
+            .map_err(|e| {
+            error!(%e, "Getting existing interfaces failed");
             rcs::IdentifyHostError::ListInterfacesFailed
         })?;
 
@@ -67,9 +71,24 @@ impl HostIdentifier {
 
         let addresses = Some(
             ilist
-                .iter_mut()
-                .flat_map(|int| int.properties.addresses.drain(..))
-                .collect::<Vec<fnet::Subnet>>(),
+                .into_iter()
+                .map(|(_, v): (u64, _)| v)
+                .flat_map(
+                    |fnet_interfaces_ext::Properties {
+                         id: _,
+                         name: _,
+                         device_class: _,
+                         online: _,
+                         addresses,
+                         has_default_ipv4_route: _,
+                         has_default_ipv6_route: _,
+                     }| {
+                        addresses
+                            .into_iter()
+                            .map(|fnet_interfaces_ext::Address { addr, valid_until: _ }| addr)
+                    },
+                )
+                .collect(),
         );
 
         let nodename = match self.name_provider_proxy.get_device_name().await {

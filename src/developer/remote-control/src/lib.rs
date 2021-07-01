@@ -165,17 +165,11 @@ impl RemoteControlService {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
-        fidl_fuchsia_device as fdevice,
-        fidl_fuchsia_hardware_ethernet::{Features, MacAddress},
-        fidl_fuchsia_hwinfo as hwinfo,
-        fidl_fuchsia_io::NodeMarker,
-        fidl_fuchsia_net as fnet, fidl_fuchsia_net_stack as fnetstack, fuchsia_async as fasync,
-        fuchsia_zircon as zx,
-        selectors::parse_selector,
-        service_discovery::PathEntry,
-        std::path::PathBuf,
+        super::*, fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
+        fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_io::NodeMarker,
+        fidl_fuchsia_net as fnet, fidl_fuchsia_net_interfaces as fnet_interfaces,
+        fuchsia_async as fasync, fuchsia_zircon as zx, selectors::parse_selector,
+        service_discovery::PathEntry, std::path::PathBuf,
     };
 
     const NODENAME: &'static str = "thumb-set-human-shred";
@@ -247,44 +241,75 @@ mod tests {
         proxy
     }
 
-    fn setup_fake_netstack_service() -> fnetstack::StackProxy {
+    fn setup_fake_interface_state_service() -> fnet_interfaces::StateProxy {
         let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<fnetstack::StackMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fnet_interfaces::StateMarker>().unwrap();
 
         fasync::Task::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    fnetstack::StackRequest::ListInterfaces { responder } => {
-                        let mut resp = vec![fnetstack::InterfaceInfo {
-                            id: 1,
-                            properties: fnetstack::InterfaceProperties {
-                                name: String::from("eth0"),
-                                topopath: String::from("N/A"),
-                                filepath: String::from("N/A"),
-                                administrative_status: fnetstack::AdministrativeStatus::Enabled,
-                                physical_status: fnetstack::PhysicalStatus::Up,
-                                mtu: 1,
-                                features: Features::empty(),
-                                mac: Some(Box::new(MacAddress { octets: [1, 2, 3, 4, 5, 6] })),
-                                addresses: vec![
-                                    fnet::Subnet {
-                                        addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
-                                            addr: IPV4_ADDR,
-                                        }),
-                                        prefix_len: 4,
-                                    },
-                                    fnet::Subnet {
-                                        addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                                            addr: IPV6_ADDR,
-                                        }),
-                                        prefix_len: 6,
-                                    },
-                                ],
-                            },
-                        }];
-                        let _ = responder.send(&mut resp.iter_mut());
+                    fnet_interfaces::StateRequest::GetWatcher {
+                        options: _,
+                        watcher,
+                        control_handle: _,
+                    } => {
+                        let mut stream = watcher.into_stream().unwrap();
+                        let mut first = true;
+                        while let Ok(Some(req)) = stream.try_next().await {
+                            match req {
+                                fnet_interfaces::WatcherRequest::Watch { responder } => {
+                                    let mut event = if first {
+                                        first = false;
+                                        fnet_interfaces::Event::Existing(
+                                            fnet_interfaces::Properties {
+                                                id: Some(1),
+                                                addresses: Some(
+                                                    std::array::IntoIter::new([
+                                                        fnet::Subnet {
+                                                            addr: fnet::IpAddress::Ipv4(
+                                                                fnet::Ipv4Address {
+                                                                    addr: IPV4_ADDR,
+                                                                },
+                                                            ),
+                                                            prefix_len: 4,
+                                                        },
+                                                        fnet::Subnet {
+                                                            addr: fnet::IpAddress::Ipv6(
+                                                                fnet::Ipv6Address {
+                                                                    addr: IPV6_ADDR,
+                                                                },
+                                                            ),
+                                                            prefix_len: 6,
+                                                        },
+                                                    ])
+                                                    .map(Some)
+                                                    .map(|addr| fnet_interfaces::Address {
+                                                        addr,
+                                                        valid_until: Some(1),
+                                                        ..fnet_interfaces::Address::EMPTY
+                                                    })
+                                                    .collect(),
+                                                ),
+                                                online: Some(true),
+                                                device_class: Some(
+                                                    fnet_interfaces::DeviceClass::Loopback(
+                                                        fnet_interfaces::Empty {},
+                                                    ),
+                                                ),
+                                                has_default_ipv4_route: Some(false),
+                                                has_default_ipv6_route: Some(false),
+                                                name: Some(String::from("eth0")),
+                                                ..fnet_interfaces::Properties::EMPTY
+                                            },
+                                        )
+                                    } else {
+                                        fnet_interfaces::Event::Idle(fnet_interfaces::Empty {})
+                                    };
+                                    let () = responder.send(&mut event).unwrap();
+                                }
+                            }
+                        }
                     }
-                    _ => assert!(false),
                 }
             }
         })
@@ -296,7 +321,7 @@ mod tests {
     fn make_rcs() -> Rc<RemoteControlService> {
         Rc::new(RemoteControlService::new_with_allocator(|| {
             Ok(HostIdentifier {
-                netstack_proxy: setup_fake_netstack_service(),
+                interface_state_proxy: setup_fake_interface_state_service(),
                 name_provider_proxy: setup_fake_name_provider_service(),
                 device_info_proxy: setup_fake_device_service(),
                 build_info_proxy: setup_fake_build_info_service(),

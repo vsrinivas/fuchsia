@@ -21,7 +21,7 @@
                 "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
                 "fuchsia.device.NameProvider",
                 "fuchsia.hwinfo.Device",
-                "fuchsia.net.stack.Stack",
+                "fuchsia.net.interfaces.State",
                 "fuchsia.overnet.Overnet",
                 "fuchsia.overnet.ServicePublisher",
                 "fuchsia.sys.Launcher",
