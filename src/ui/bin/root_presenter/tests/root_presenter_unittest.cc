@@ -713,12 +713,10 @@ TEST_F(RootPresenterTest, FocusOnStartup) {
   RunLoopUntil([this]() { return presentation()->is_initialized(); });
 
   zx_koid_t keyboard_focus_view_koid = ZX_KOID_INVALID;
-  bool keyboard_received_focus = false;
   // Callback to verify that a focus change triggered a notification.
-  keyboard_focus_ctl_->SetOnNotify([&keyboard_focus_view_koid, &keyboard_received_focus](
+  keyboard_focus_ctl_->SetOnNotify([&keyboard_focus_view_koid](
                                        const fuchsia::ui::views::ViewRef& view_ref) {
     keyboard_focus_view_koid = ExtractKoid(view_ref);
-    keyboard_received_focus = true;
   });
 
   // Connect to focus chain registry after Scenic has been set up.
@@ -738,15 +736,9 @@ TEST_F(RootPresenterTest, FocusOnStartup) {
   session.Present(0, [](auto) {});
 
   // Expect focus to change to the child view.
-  RunLoopUntil([&focused_view_koid, &keyboard_received_focus, child_view_koid]() {
-    return focused_view_koid == child_view_koid && keyboard_received_focus == true;
+  RunLoopUntil([&focused_view_koid, &keyboard_focus_view_koid, child_view_koid]() {
+    return focused_view_koid == child_view_koid && keyboard_focus_view_koid == child_view_koid;
   });
-  EXPECT_EQ(focused_view_koid, child_view_koid);
-
-  // Verifies that the keyboard focus listener got the appropriate view ref when
-  // the focus was updated.
-  EXPECT_EQ(focused_view_koid, keyboard_focus_view_koid);
-  EXPECT_NE(ZX_KOID_INVALID, keyboard_focus_view_koid);
 }
 
 // Tests that we can handle both an automatic focus request on startup and a simultaneous one
