@@ -69,9 +69,9 @@ void ViewManager::RegisterViewForSemantics(
   };
 
   fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener = handle.Bind();
-  semantic_listener.set_error_handler([](zx_status_t status) {
-    FX_LOGS(WARNING) << "Semantic Provider disconnected with status: "
-                     << zx_status_get_string(status);
+  semantic_listener.set_error_handler([koid](zx_status_t status) {
+    FX_LOGS(WARNING) << "Semantic Provider for view with koid " << koid
+                     << " disconnected with status: " << zx_status_get_string(status);
   });
 
   auto service =
