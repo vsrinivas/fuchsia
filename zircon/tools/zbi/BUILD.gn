@@ -18,7 +18,6 @@ zx_host_tool("zbi") {
     "//zircon/third_party/ulib/lz4",
   ]
   defines = [ "ZSTD_STATIC_LINKING_ONLY" ]
-  sdk_migrated = true
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config/zircon:Wno-conversion" ]

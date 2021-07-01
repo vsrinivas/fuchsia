@@ -26,7 +26,7 @@ zx_library("fidl") {
   host = true
   sdk = "source"
   sdk_headers = []
-  sdk_migrated = true
+
   sources = [
     "lib/c_generator.cc",
     "lib/check.cc",
@@ -113,13 +113,11 @@ if (current_os != "fuchsia") {
   zx_host_tool("fidlc") {
     sources = [ "compiler/main.cc" ]
     deps = [ ":fidl" ]
-    sdk_migrated = true
   }
 
   zx_host_tool("fidl-format") {
     sources = [ "formatter/main.cc" ]
     deps = [ ":fidl" ]
-    sdk_migrated = true
   }
 
   zx_host_tool("fidl-lint") {
@@ -128,7 +126,6 @@ if (current_os != "fuchsia") {
       "linter/main.cc",
     ]
     deps = [ ":fidl" ]
-    sdk_migrated = true
   }
 }
 

@@ -17,7 +17,7 @@ zx_library("acpi_lite") {
     "lib/acpi_lite/internal.h",
     "lib/acpi_lite/structures.h",
   ]
-  sdk_migrated = true
+
   kernel = true
   static = true
   host = true

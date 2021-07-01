@@ -21,7 +21,7 @@ zx_library("safemath") {
     "safemath/safe_math_clang_gcc_impl.h",
     "safemath/safe_math_shared_impl.h",
   ]
-  sdk_migrated = true
+
   sources = []
   host = true
   kernel = false

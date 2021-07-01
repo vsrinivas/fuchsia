@@ -20,7 +20,6 @@ zx_library("boot-shim") {
     "lib/boot-shim/item-base.h",
     "lib/boot-shim/test-serial-number.h",
   ]
-  sdk_migrated = true
 
   public_deps = [
     # <lib/boot-shim/item-base.h> has #include <lib/stdcompat/span.h>.
@@ -56,7 +55,6 @@ if (!is_kernel) {
 
     sdk = "source"
     sdk_headers = [ "lib/boot-shim/test-helper.h" ]
-    sdk_migrated = true
 
     sources = [ "test-helper.cc" ]
     deps = [

@@ -42,7 +42,7 @@ zx_library("zx") {
     "lib/zx/vmar.h",
     "lib/zx/vmo.h",
   ]
-  sdk_migrated = true
+
   sources = [
     "bti.cc",
     "channel.cc",

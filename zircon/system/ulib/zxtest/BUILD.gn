@@ -29,7 +29,7 @@ zx_library("zxtest") {
     "zxtest/cpp/zxtest.h",
     "zxtest/zxtest.h",
   ]
-  sdk_migrated = true
+
   sources = [
     "assertion.cc",
     "c-wrappers.cc",

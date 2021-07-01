@@ -11,7 +11,6 @@ zx_library("zx-panic-libc") {
   static = true
 
   sdk_headers = []
-  sdk_migrated = true
 
   sources = [ "zx_panic_libc.cc" ]
 }

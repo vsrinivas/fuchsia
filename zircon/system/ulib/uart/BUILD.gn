@@ -19,7 +19,6 @@ zx_library("uart") {
     "lib/uart/qemu.h",
     "lib/uart/uart.h",
   ]
-  sdk_migrated = true
 
   sources = [ "parse.cc" ]
   public_deps = [
@@ -44,7 +43,7 @@ zx_library("uart-mock") {
   host = true
   sdk = "source"
   sdk_headers = [ "lib/uart/mock.h" ]
-  sdk_migrated = true
+
   sources = []
   public_deps = [
     ":headers",

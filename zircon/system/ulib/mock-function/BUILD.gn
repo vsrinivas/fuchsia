@@ -8,7 +8,7 @@ zx_library("mock-function") {
   testonly = true
   sdk = "source"
   sdk_headers = [ "lib/mock-function/mock-function.h" ]
-  sdk_migrated = true
+
   sources = []
   public_deps = [ "//zircon/system/ulib/zxtest:headers" ]
 }

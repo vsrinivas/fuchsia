@@ -17,7 +17,6 @@ zx_library("fit-promise") {
 
   sdk = "source"
   sdk_publishable = true
-  sdk_migrated = true
 
   sdk_headers = [
     "lib/fpromise/barrier.h",

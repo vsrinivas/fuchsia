@@ -12,7 +12,7 @@ zx_library("counters") {
     "lib/counters.h",
     "lib/counter-vmo-abi.h",
   ]
-  sdk_migrated = true
+
   visibility = [
     "//src/zircon/bin/kcounter:*",
     "//src/zircon/tests/kcounter:*",

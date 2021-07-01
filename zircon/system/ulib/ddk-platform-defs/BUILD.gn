@@ -10,6 +10,6 @@ zx_library("ddk-platform-defs") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [ "lib/ddk/platform-defs.h" ]
-  sdk_migrated = true
+
   sources = []
 }

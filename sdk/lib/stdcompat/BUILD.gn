@@ -16,7 +16,6 @@ zx_library("stdcompat") {
 
   sdk = "source"
   sdk_publishable = true
-  sdk_migrated = true
 
   sdk_headers = [
     "lib/stdcompat/algorithm.h",

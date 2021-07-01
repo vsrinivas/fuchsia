@@ -9,6 +9,6 @@ zx_library("elf-psabi") {
   static = true
   sdk = "source"
   sdk_headers = [ "lib/elf-psabi/sp.h" ]
-  sdk_migrated = true
+
   sources = []
 }

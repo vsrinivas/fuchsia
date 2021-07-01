@@ -11,7 +11,6 @@ zx_library("cksum") {
 
   sdk = "source"
   sdk_headers = [ "lib/cksum.h" ]
-  sdk_migrated = true
 
   sources = [
     "adler32.c",

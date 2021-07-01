@@ -13,5 +13,4 @@ zx_library("host") {
 
   sdk = "source"
   sdk_headers = [ "lib/arch/intrin.h" ]
-  sdk_migrated = true
 }

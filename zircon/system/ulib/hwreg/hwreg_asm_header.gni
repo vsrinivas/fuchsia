@@ -43,7 +43,6 @@ template("hwreg_asm_header") {
                              ])
       forward_variables_from(invoker, [ "testonly" ])
       deps += [ "//zircon/system/ulib/hwreg" ]
-      sdk_migrated = true
     }
   } else {
     not_needed(invoker, "*")

@@ -8,7 +8,7 @@ zx_library("gfx") {
   kernel = true
   sdk = "source"
   sdk_headers = [ "gfx/gfx.h" ]
-  sdk_migrated = true
+
   if (is_efi_toolchain) {
     sources = []
   } else {

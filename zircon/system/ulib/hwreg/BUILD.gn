@@ -14,7 +14,7 @@ zx_library("hwreg") {
     "hwreg/mmio.h",
     "hwreg/pio.h",
   ]
-  sdk_migrated = true
+
   kernel = true
   static = true
   host = true
@@ -46,7 +46,6 @@ zx_library("hwreg-mock") {
     "hwreg/pio.h",
   ]
 
-  sdk_migrated = true
   kernel = true
   static = true
   host = true

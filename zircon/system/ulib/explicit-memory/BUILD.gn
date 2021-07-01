@@ -7,7 +7,7 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("explicit-memory") {
   sdk = "static"
   sdk_headers = [ "explicit-memory/bytes.h" ]
-  sdk_migrated = true
+
   kernel = true
   static = true
   sources = [ "bytes.c" ]

@@ -107,13 +107,6 @@ import("//build/unification/global_variables.gni")
 #     Type: bool
 #     Default: false
 #
-#   sdk_migrated
-#     Optional: Indicates that this library is built directly by the Fuchsia
-#     build, and no longer needs to be exported as a legacy target. This is
-#     used to ease build unification, and will disappear once it is completed.
-#     Type: bool
-#     Default: false
-#
 template("zx_library") {
   template_params = [
     "host",
@@ -124,9 +117,6 @@ template("zx_library") {
     "shared",
     "static",
   ]
-
-  # `sdk_migrated` is only used by the Zircon build system.
-  not_needed(invoker, [ "sdk_migrated" ])
 
   not_needed(invoker, [ "sdk_name" ])
 

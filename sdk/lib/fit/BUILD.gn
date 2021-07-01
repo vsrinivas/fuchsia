@@ -24,7 +24,6 @@ zx_library("fit") {
     "lib/fit/traits.h",
     "lib/fit/utility_internal.h",
   ]
-  sdk_migrated = true
 
   sources = []
   public_deps = [ "//sdk/lib/stdcompat" ]

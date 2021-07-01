@@ -12,7 +12,7 @@ zx_library("bitmap") {
     "bitmap/rle-bitmap.h",
     "bitmap/storage.h",
   ]
-  sdk_migrated = true
+
   kernel = true
   host = true
   static = true

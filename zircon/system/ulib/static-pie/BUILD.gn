@@ -18,7 +18,6 @@ source_set("relocation_h") {
 zx_library("static-pie") {
   sdk = "source"
   sdk_headers = [ "lib/static-pie/static-pie.h" ]
-  sdk_migrated = true
 
   host = true
   kernel = true

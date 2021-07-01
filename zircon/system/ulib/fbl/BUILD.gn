@@ -52,7 +52,7 @@ zx_library("fbl") {
     "fbl/unique_fd.h",
     "fbl/vector.h",
   ]
-  sdk_migrated = true
+
   host = true
   kernel = true
   static = true

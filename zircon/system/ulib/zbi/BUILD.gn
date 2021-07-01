@@ -15,7 +15,6 @@ zx_library("zbi") {
 
   sdk = "static"
   sdk_headers = [ "lib/zbi/zbi.h" ]
-  sdk_migrated = true
 
   host = true
   kernel = true

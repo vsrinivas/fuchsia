@@ -27,6 +27,5 @@ zx_library("coresight") {
     static = true
     sdk = "source"
     sdk_headers = []
-    sdk_migrated = true
   }
 }

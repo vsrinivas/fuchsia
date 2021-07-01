@@ -31,7 +31,7 @@ zx_library("zxc") {
   static = true
 
   sdk = "source"
-  sdk_migrated = true
+
   sdk_publishable = true
   sdk_name = "zxc-experimental-driver-only"
   sdk_headers = [

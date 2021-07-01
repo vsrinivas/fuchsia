@@ -15,7 +15,6 @@ zx_library("memalloc") {
     "lib/memalloc/allocator.h",
     "lib/memalloc/range.h",
   ]
-  sdk_migrated = true
 
   host = true
   kernel = true

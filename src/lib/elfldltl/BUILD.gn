@@ -17,7 +17,6 @@ zx_library("elfldltl") {
     "lib/elfldltl/field.h",
     "lib/elfldltl/layout.h",
   ]
-  sdk_migrated = true
 
   sources = []
 

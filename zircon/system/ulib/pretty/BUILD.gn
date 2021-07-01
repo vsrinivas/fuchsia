@@ -10,7 +10,7 @@ zx_library("pretty") {
     "pretty/hexdump.h",
     "pretty/sizes.h",
   ]
-  sdk_migrated = true
+
   kernel = true
   host = true
   static = true

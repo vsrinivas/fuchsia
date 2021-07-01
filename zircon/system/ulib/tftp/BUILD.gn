@@ -7,7 +7,7 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("tftp") {
   sdk = "static"
   sdk_headers = [ "tftp/tftp.h" ]
-  sdk_migrated = true
+
   kernel = true
   host = true
   static = true

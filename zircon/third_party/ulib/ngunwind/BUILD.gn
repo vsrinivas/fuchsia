@@ -46,7 +46,6 @@ zx_library("ngunwind") {
     "ngunwind/fuchsia.h",
     "ngunwind/libunwind.h",
   ]
-  sdk_migrated = true
 
   configs += [ ":private_config" ]
   deps = [ "//src/zircon/lib/zircon" ]

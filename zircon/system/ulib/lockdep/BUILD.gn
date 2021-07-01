@@ -20,7 +20,7 @@ zx_library("lockdep") {
     "lockdep/runtime_api.h",
     "lockdep/thread_lock_state.h",
   ]
-  sdk_migrated = true
+
   kernel = true
   static = true
   sources = []

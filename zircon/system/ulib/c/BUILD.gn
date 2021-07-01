@@ -135,7 +135,6 @@ if (zircon_toolchain == false) {
 
     sdk = "shared"
     sdk_headers = []
-    sdk_migrated = true
 
     # At link time and in DT_SONAME, musl is known as libc.so.  But the
     # (only) place it needs to be installed at runtime is where the

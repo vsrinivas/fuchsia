@@ -16,7 +16,6 @@ zx_library("arch") {
 
   sdk = "source"
   sdk_headers = [ "lib/arch/asm.h" ]
-  sdk_migrated = true
 
   sources = [
     "cpuid.cc",

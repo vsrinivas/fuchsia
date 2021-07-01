@@ -17,7 +17,7 @@ zx_library("async") {
     "lib/async/trap.h",
     "lib/async/wait.h",
   ]
-  sdk_migrated = true
+
   host = true
   public_deps = [
     # <lib/async/cpp/executor.h> has #include <lib/fit/promise.h>
@@ -47,7 +47,7 @@ zx_library("async-cpp") {
     "lib/async/cpp/trap.h",
     "lib/async/cpp/wait.h",
   ]
-  sdk_migrated = true
+
   public_deps = [
     # <lib/async/cpp/executor.h> has #include <lib/zx/time.h>.
     # <lib/async/cpp/task.h> has #include <lib/zx/time.h>.

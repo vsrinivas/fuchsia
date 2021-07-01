@@ -43,7 +43,6 @@ zx_library("x86") {
 
   sdk = "source"
   sdk_headers = [ "lib/arch/intrin.h" ]
-  sdk_migrated = true
 }
 
 hwreg_asm_header("gen-cpuid-asm") {

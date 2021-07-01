@@ -17,7 +17,6 @@ zx_library("kazoo_lib") {
   host = true
 
   sdk = "source"
-  sdk_migrated = true
 
   configs += [ ":kazoo_config" ]
 
@@ -56,7 +55,6 @@ zx_library("kazoo_lib") {
 zx_host_tool("kazoo") {
   configs += [ ":kazoo_config" ]
 
-  sdk_migrated = true
   sources = [ "main.cc" ]
 
   deps = [ ":kazoo_lib" ]

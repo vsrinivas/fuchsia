@@ -14,7 +14,6 @@ zx_library("zbitl") {
   # compilation of this library to the fuchsia build.
   sdk = "source"
   sdk_headers = []
-  sdk_migrated = true
 
   sources = [
     "item.cc",

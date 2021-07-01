@@ -23,7 +23,7 @@ zx_library("zircon-internal") {
     "lib/zircon-internal/paths.h",
     "lib/zircon-internal/xorshiftrand.h",
   ]
-  sdk_migrated = true
+
   kernel = true
   host = true
   static = true

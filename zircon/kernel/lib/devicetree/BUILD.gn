@@ -20,5 +20,4 @@ zx_library("devicetree") {
   static = true
   sdk = "source"
   sdk_headers = []
-  sdk_migrated = true
 }

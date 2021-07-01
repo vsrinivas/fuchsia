@@ -7,7 +7,7 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("lazy_init") {
   sdk = "source"
   sdk_headers = [ "lib/lazy_init/lazy_init.h" ]
-  sdk_migrated = true
+
   sources = []
   kernel = true
   static = true

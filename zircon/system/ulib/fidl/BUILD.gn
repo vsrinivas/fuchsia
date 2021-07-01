@@ -23,7 +23,6 @@ zx_library("fidl_base") {
     "lib/fidl/visitor.h",
     "lib/fidl/walker.h",
   ]
-  sdk_migrated = true
 
   sources = [
     "decoding_and_validating.cc",
@@ -48,7 +47,7 @@ zx_library("fidl") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [ "lib/fidl/epitaph.h" ]
-  sdk_migrated = true
+
   sources = [
     "epitaph.c",
     "handle_closing.cc",
@@ -104,7 +103,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/vector_view.h",
                     "lib/fidl/llcpp/wire_messaging.h",
                   ] + llcpp_wavl_tree_headers
-    sdk_migrated = true
+
     sources = [
       "llcpp_async_binding.cc",
       "llcpp_async_transaction.cc",
@@ -164,7 +163,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/traits.h",
                     "lib/fidl/llcpp/vector_view.h",
                   ] + llcpp_wavl_tree_headers
-    sdk_migrated = true
+
     sources = [
       "llcpp_coding.c",
       "llcpp_encoding.cc",
