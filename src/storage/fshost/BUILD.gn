@@ -481,9 +481,10 @@ template("fshost_config") {
       contents += [ "blobfs-max-bytes=$blobfs_maximum_runtime_bytes" ]
     }
 
-    if (defined(invoker.minfs_maximum_runtime_bytes)) {
+    if (defined(invoker.minfs_maximum_runtime_bytes_override)) {
       # This can be overridden by the invoker but defaults to the file one if undefined.
-      contents += [ "minfs-max-bytes=${invoker.minfs_maximum_runtime_bytes}" ]
+      contents +=
+          [ "minfs-max-bytes=${invoker.minfs_maximum_runtime_bytes_override}" ]
     } else if (minfs_maximum_runtime_bytes != "") {
       contents += [ "minfs-max-bytes=$minfs_maximum_runtime_bytes" ]
     }
@@ -560,6 +561,6 @@ fshost_config("integration_test_config") {
   #
   # This number is chosen to be large because it will apply to all tests in the fshost integration
   # test. So all minfs partitions created in that test must be smaller than this value.
-  minfs_maximum_runtime_bytes = 1073741824
+  minfs_maximum_runtime_bytes_override = 1073741824
   apply_limits_to_ramdisk = true
 }
