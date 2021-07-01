@@ -10,6 +10,7 @@
 // clang-format on
 
 #include <fuchsia/net/cpp/fidl.h>
+#include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <netinet/ip6.h>
@@ -61,24 +62,43 @@ bool ShouldEnableV6Forwarding(InterfaceType interface_type) {
 // failures to fetch the list, no value will be returned. When the interface
 // does not exist, the interface ID '0' will be returned (it is guaranteed by
 // the networking stack that all valid interface IDs are positive).
-std::optional<uint64_t> GetInterfaceId(fuchsia::netstack::NetstackSyncPtr &stack_sync_ptr,
-                                       std::string interface_name) {
-  std::vector<fuchsia::netstack::NetInterface> ifs;
+std::optional<uint64_t> GetInterfaceId(std::string interface_name) {
+  fuchsia::net::interfaces::StateSyncPtr state_sync_ptr;
+  fuchsia::net::interfaces::WatcherOptions options;
+  fuchsia::net::interfaces::WatcherSyncPtr watcher_sync_ptr;
 
-  zx_status_t status = stack_sync_ptr->GetInterfaces(&ifs);
+  auto svc = nl::Weave::DeviceLayer::PlatformMgrImpl().GetComponentContextForProcess()->svc();
+  zx_status_t status = svc->Connect(state_sync_ptr.NewRequest());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to acquire interface list: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failed to bind state protocol: " << zx_status_get_string(status);
     return std::nullopt;
   }
 
-  std::vector<fuchsia::netstack::NetInterface>::iterator it = std::find_if(
-      ifs.begin(), ifs.end(),
-      [&](const fuchsia::netstack::NetInterface &info) { return info.name == interface_name; });
-  if (it == ifs.end()) {
-    FX_LOGS(ERROR) << "Failed to acquire interface id for " << interface_name;
-    return 0;
+  state_sync_ptr->GetWatcher(std::move(options), watcher_sync_ptr.NewRequest());
+  if (!watcher_sync_ptr.is_bound()) {
+    FX_LOGS(ERROR) << "Failed to bind watcher.";
+    return std::nullopt;
   }
-  return it->id;
+
+  fuchsia::net::interfaces::Event event;
+  do {
+    status = watcher_sync_ptr->Watch(&event);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to watch for interface event: " << zx_status_get_string(status);
+      return std::nullopt;
+    }
+    // If the entry is not of type `existing`, it is not part of the initial
+    // list of interfaces that was present when the channel was initialized.
+    if (!event.is_existing()) {
+      continue;
+    }
+    // Check if the event matches the provided interface name and if so, return
+    // the interface ID.
+    if (event.existing().name() == interface_name) {
+      return event.existing().id();
+    }
+  } while (!event.is_idle());
+  return 0;
 }
 
 }  // namespace
@@ -113,7 +133,7 @@ PlatformResult AddRemoveHostAddress(InterfaceType interface_type, const Inet::IP
   }
 
   // Determine the interface ID to add/remove from.
-  std::optional<uint64_t> interface_id = GetInterfaceId(stack_sync_ptr, interface_name.value());
+  std::optional<uint64_t> interface_id = GetInterfaceId(interface_name.value());
   if (!add && interface_id && interface_id.value() == 0) {
     // When removing, don't report an error if the interface wasn't found. The
     // interface may already have been removed at this point.
@@ -219,7 +239,7 @@ PlatformResult AddRemoveHostRoute(InterfaceType interface_type, const Inet::IPPr
   }
 
   // Determine the interface ID to add/remove from.
-  std::optional<uint64_t> interface_id = GetInterfaceId(stack_sync_ptr, interface_name.value());
+  std::optional<uint64_t> interface_id = GetInterfaceId(interface_name.value());
   if (!add && interface_id && interface_id.value() == 0) {
     // When removing, don't report an error if the interface wasn't found. The
     // interface may already have been removed at this point.

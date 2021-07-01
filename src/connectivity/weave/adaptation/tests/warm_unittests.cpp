@@ -4,6 +4,7 @@
 
 #include <fuchsia/lowpan/device/cpp/fidl_test_base.h>
 #include <fuchsia/net/cpp/fidl.h>
+#include <fuchsia/net/interfaces/cpp/fidl_test_base.h>
 #include <fuchsia/net/stack/cpp/fidl_test_base.h>
 #include <fuchsia/netstack/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -78,6 +79,82 @@ bool CompareIpAddress(const ::nl::Inet::IPAddress& right, const ::fuchsia::net::
 }
 
 }  // namespace
+
+class FakeNetInterfaces : public fuchsia::net::interfaces::testing::State_TestBase,
+                          public fuchsia::net::interfaces::testing::Watcher_TestBase {
+ public:
+  void InitializeInterfaces(const std::vector<NetInterface>& interfaces) {
+    existing_events_.clear();
+    for (const auto& interface : interfaces) {
+      AddExistingInterface(interface);
+    }
+
+    fuchsia::net::interfaces::Empty idle_event;
+    fuchsia::net::interfaces::Event event =
+        fuchsia::net::interfaces::Event::WithIdle(std::move(idle_event));
+    existing_events_.push_back(std::move(event));
+  }
+
+  void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
+
+  fidl::InterfaceRequestHandler<fuchsia::net::interfaces::State> GetHandler(
+      async_dispatcher_t* dispatcher) {
+    dispatcher_ = dispatcher;
+    return [this](fidl::InterfaceRequest<fuchsia::net::interfaces::State> request) {
+      state_binding_.Bind(std::move(request), dispatcher_);
+    };
+  }
+
+  void GetWatcher(fuchsia::net::interfaces::WatcherOptions options,
+                  fidl::InterfaceRequest<fuchsia::net::interfaces::Watcher> watcher) override {
+    events_.clear();
+    for (auto& existing_event : existing_events_) {
+      fuchsia::net::interfaces::Event event;
+      existing_event.Clone(&event);
+      events_.push_back(std::move(event));
+    }
+    watcher_binding_.Bind(std::move(watcher), dispatcher_);
+  }
+
+  void Watch(fuchsia::net::interfaces::Watcher::WatchCallback callback) override {
+    watch_callback_ = std::move(callback);
+    SendPendingEvent();
+  }
+
+  void SendPendingEvent() {
+    if (events_.empty() || !watch_callback_) {
+      return;
+    }
+    fuchsia::net::interfaces::Event event(std::move(events_.front()));
+    events_.pop_front();
+    watch_callback_(std::move(event));
+    watch_callback_ = nullptr;
+  }
+
+  void Close(zx_status_t epitaph_value = ZX_OK) {
+    watcher_binding_.Close(epitaph_value);
+    state_binding_.Close(epitaph_value);
+  }
+
+ private:
+  void AddExistingInterface(const NetInterface& interface) {
+    fuchsia::net::interfaces::Event event;
+    fuchsia::net::interfaces::Properties properties;
+    properties.set_id(interface.id);
+    properties.set_name(interface.name);
+    properties.set_has_default_ipv4_route(true);
+    properties.set_has_default_ipv6_route(true);
+    event = fuchsia::net::interfaces::Event::WithExisting(std::move(properties));
+    existing_events_.push_back(std::move(event));
+  }
+
+  async_dispatcher_t* dispatcher_;
+  fuchsia::net::interfaces::Watcher::WatchCallback watch_callback_;
+  std::deque<fuchsia::net::interfaces::Event> events_;
+  std::vector<fuchsia::net::interfaces::Event> existing_events_;
+  fidl::Binding<fuchsia::net::interfaces::State> state_binding_{this};
+  fidl::Binding<fuchsia::net::interfaces::Watcher> watcher_binding_{this};
+};
 
 class FakeLowpanDeviceRoute final : public fuchsia::lowpan::device::testing::DeviceRoute_TestBase {
  public:
@@ -176,15 +253,6 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
                      public fuchsia::netstack::testing::RouteTableTransaction_TestBase {
  private:
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
-
-  // fuchsia::netstack::Netstack interface definitions.
-  void GetInterfaces(GetInterfacesCallback callback) override {
-    std::vector<NetInterface> result(interfaces_.size());
-    for (size_t i = 0; i < result.size(); ++i) {
-      ASSERT_EQ(interfaces_[i].Clone(&result[i]), ZX_OK);
-    }
-    callback(std::move(result));
-  }
 
   void SetInterfaceAddress(uint32_t nicid, ::fuchsia::net::IpAddress addr, uint8_t prefix_len,
                            SetInterfaceAddressCallback callback) override {
@@ -385,6 +453,8 @@ class WarmTest : public testing::WeaveTestFixture<> {
     context_provider_.service_directory_provider()->AddService(
         fake_lowpan_lookup_.GetHandler(dispatcher()));
     context_provider_.service_directory_provider()->AddService(
+        fake_net_interfaces_.GetHandler(dispatcher()));
+    context_provider_.service_directory_provider()->AddService(
         fake_net_stack_.GetHandler(dispatcher()));
     context_provider_.service_directory_provider()->AddService(
         fake_stack_.GetHandler(dispatcher()));
@@ -396,9 +466,9 @@ class WarmTest : public testing::WeaveTestFixture<> {
     Warm::Platform::Init(nullptr);
 
     // Populate initial fake interfaces
-    fake_net_stack().AddFakeInterface(kTunInterfaceName);
-    fake_net_stack().AddFakeInterface(kThreadInterfaceName);
-    fake_net_stack().AddFakeInterface(kWiFiInterfaceName);
+    AddFakeInterface(kTunInterfaceName);
+    AddFakeInterface(kThreadInterfaceName);
+    AddFakeInterface(kWiFiInterfaceName);
 
     RunFixtureLoop();
   }
@@ -412,8 +482,19 @@ class WarmTest : public testing::WeaveTestFixture<> {
 
  protected:
   FakeLowpanLookup& fake_lowpan_lookup() { return fake_lowpan_lookup_; }
+  FakeNetInterfaces& fake_net_interfaces() { return fake_net_interfaces_; }
   FakeNetstack& fake_net_stack() { return fake_net_stack_; }
   FakeStack& fake_stack() { return fake_stack_; }
+
+  void AddFakeInterface(std::string name) {
+    fake_net_stack_.AddFakeInterface(name);
+    fake_net_interfaces_.InitializeInterfaces(fake_net_stack_.interfaces());
+  }
+
+  void RemoveFakeInterface(std::string name) {
+    fake_net_stack_.RemoveFakeInterface(name);
+    fake_net_interfaces_.InitializeInterfaces(fake_net_stack_.interfaces());
+  }
 
   NetInterface& GetThreadInterface(NetInterface& interface) {
     fake_net_stack().GetInterfaceByName(kThreadInterfaceName, interface);
@@ -448,6 +529,7 @@ class WarmTest : public testing::WeaveTestFixture<> {
  private:
   FakeLowpanLookup fake_lowpan_lookup_;
   FakeNetstack fake_net_stack_;
+  FakeNetInterfaces fake_net_interfaces_;
   FakeStack fake_stack_;
   sys::testing::ComponentContextProvider context_provider_;
 };
@@ -607,7 +689,7 @@ TEST_F(WarmTest, AddAddressThreadNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  fake_net_stack().RemoveFakeInterface(kThreadInterfaceName);
+  RemoveFakeInterface(kThreadInterfaceName);
 
   // Attempt to add to the interface when there's no Thread interface. Expect failure.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -621,7 +703,7 @@ TEST_F(WarmTest, RemoveAddressThreadNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  fake_net_stack().RemoveFakeInterface(kThreadInterfaceName);
+  RemoveFakeInterface(kThreadInterfaceName);
 
   // Attempt to remove from the interface when there's no Thread interface. Expect success.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -635,7 +717,7 @@ TEST_F(WarmTest, AddAddressTunnelNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  fake_net_stack().RemoveFakeInterface(kTunInterfaceName);
+  RemoveFakeInterface(kTunInterfaceName);
 
   // Attempt to add to the interface when there's no Tunnel interface. Expect failure.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -648,7 +730,7 @@ TEST_F(WarmTest, RemoveAddressTunnelNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  fake_net_stack().RemoveFakeInterface(kTunInterfaceName);
+  RemoveFakeInterface(kTunInterfaceName);
 
   // Attempt to remove from the interface when there's no Tunnel interface. Expect success.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -661,7 +743,7 @@ TEST_F(WarmTest, AddAddressWiFiNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  fake_net_stack().RemoveFakeInterface(kWiFiInterfaceName);
+  RemoveFakeInterface(kWiFiInterfaceName);
 
   // Attempt to add to the interface when there's no WiFi interface. Expect failure.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
@@ -674,7 +756,7 @@ TEST_F(WarmTest, RemoveAddressWiFiNoInterface) {
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
 
-  fake_net_stack().RemoveFakeInterface(kWiFiInterfaceName);
+  RemoveFakeInterface(kWiFiInterfaceName);
 
   // Attempt to remove from the interface when there's no WiFi interface. Expect success.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
