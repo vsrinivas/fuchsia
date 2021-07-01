@@ -54,7 +54,7 @@ class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
 struct ConfigValues {
   zx::duration min_predicted_frame_duration =
       scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration;
-  bool enable_allocator_for_flatland = false;
+  bool enable_allocator_for_flatland = true;
   bool pointer_auto_focus_on = true;
 };
 
