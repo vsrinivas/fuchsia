@@ -221,7 +221,7 @@ reg_xa  .req x11
 
 .macro entry_init
 .align 7
-    hvc_jump .Linit_table 8
+    hvc_jump .Linit_table 9
 .Linit_table:
     b el2_hvc_psci        // HVC 0:      psci
     b el2_hvc_mexec       // HVC 1:      mexec
@@ -231,7 +231,7 @@ reg_xa  .req x11
     b el2_hvc_bad_state   // HVC 5: (**) resume     (disabled)
     b el2_hvc_bad_state   // HVC 6: (**) gich_state (disabled)
     b el2_hvc_bad_state   // HVC 7: (**) gich_vtr   (disabled)
-
+    b el2_hvc_tlbi_el2    // HVC 8:      tlbi EL2
 .endm
 
 .macro entry_sync return_code
@@ -257,6 +257,7 @@ reg_xa  .req x11
     b el2_hvc_resume      // HVC 5:      resume
     b el2_hvc_gich_state  // HVC 6:      gich_state
     b el2_hvc_gich_vtr    // HVC 7:      gich_vtr
+    b el2_hvc_tlbi_el2    // HVC 8:      tlbi EL2
 .endm
 
 .macro entry_irq return_code
@@ -593,6 +594,20 @@ FUNCTION_LABEL(el2_fp_resume)
     ldp reg_xs, reg_xt, [sp], 16
     eret
     SPECULATION_POSTFENCE
+
+// zx_status_t arm64_el2_tlbi_el2();
+FUNCTION(arm64_el2_tlbi_el2)
+    hvc 8
+    ret
+END_FUNCTION(arm64_el2_tlbi_el2)
+
+FUNCTION_LABEL(el2_hvc_tlbi_el2)
+    // Invalidate all EL2 TLB entries.
+    tlbi alle2
+    dsb sy
+    isb
+
+    exception_return ZX_OK
 
 FUNCTION_LABEL(el2_hvc_bad_state)
     // Simply returns the ZX_ERR_BAD_STATE error code.

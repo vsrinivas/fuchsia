@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/fit/defer.h>
+
 #include <arch/arm64/mmu.h>
 #include <arch/hypervisor.h>
 #include <dev/interrupt.h>
@@ -12,6 +14,7 @@
 #include <kernel/cpu.h>
 #include <kernel/mutex.h>
 #include <ktl/move.h>
+#include <vm/arch_vm_aspace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
@@ -23,35 +26,59 @@ DECLARE_SINGLETON_MUTEX(GuestMutex);
 size_t num_guests TA_GUARDED(GuestMutex::Get()) = 0;
 ktl::unique_ptr<El2CpuState> el2_cpu_state TA_GUARDED(GuestMutex::Get());
 
+constexpr size_t kEl2PhysAddressSize = (1ul << MMU_USER_SIZE_SHIFT);
+
+// Unmap all mappings everything in the given address space, releasing all resources.
+void UnmapAll(ArchVmAspace& aspace) {
+  size_t page_count = kEl2PhysAddressSize / PAGE_SIZE;
+  zx_status_t result = aspace.Unmap(/*vaddr=*/0, page_count, nullptr);
+  DEBUG_ASSERT(result == ZX_OK);
+}
+
 }  // namespace
 
+El2TranslationTable::~El2TranslationTable() { Reset(); }
+
+void El2TranslationTable::Reset() {
+  if (el2_aspace_) {
+    UnmapAll(*el2_aspace_);
+    el2_aspace_->Destroy();
+    el2_aspace_.reset();
+  }
+}
+
 zx_status_t El2TranslationTable::Init() {
-  zx_status_t status = l0_page_.Alloc(0);
+  // Create the address space.
+  el2_aspace_.emplace(/*base=*/0, /*size=*/kEl2PhysAddressSize, ArmAspaceType::kHypervisor);
+  zx_status_t status = el2_aspace_->Init();
   if (status != ZX_OK) {
+    el2_aspace_.reset();
     return status;
   }
-  status = l1_page_.Alloc(0);
-  if (status != ZX_OK) {
-    return status;
+
+  // Map in all conventional physical memory read/write.
+  size_t num_arenas = pmm_num_arenas();
+  for (size_t i = 0; i < num_arenas; i++) {
+    pmm_arena_info_t arena;
+    pmm_get_arena_info(/*count=*/1, i, &arena, sizeof(arena));
+    paddr_t arena_paddr = vaddr_to_paddr(reinterpret_cast<void*>(arena.base));
+    size_t page_count = arena.size / PAGE_SIZE;
+    // TODO(fxbug.dev/79743): Only kernel text should be executable.
+    status = el2_aspace_->MapContiguous(
+        /*vaddr=*/arena_paddr, /*paddr=*/arena_paddr, page_count,
+        ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_READ |
+            ARCH_MMU_FLAG_PERM_EXECUTE,
+        nullptr);
+    if (status != ZX_OK) {
+      Reset();
+      return status;
+    }
   }
 
-  // L0: Point to a single L1 translation table.
-  pte_t* l0_pte = l0_page_.VirtualAddress<pte_t>();
-  *l0_pte = l1_page_.PhysicalAddress() | MMU_PTE_L012_DESCRIPTOR_TABLE;
-
-  // L1: Identity map the first 512GB of physical memory at.
-  pte_t* l1_pte = l1_page_.VirtualAddress<pte_t>();
-  for (size_t i = 0; i < PAGE_SIZE / sizeof(pte_t); i++) {
-    l1_pte[i] = i * (1u << 30) | MMU_PTE_ATTR_AF | MMU_PTE_ATTR_SH_INNER_SHAREABLE |
-                MMU_PTE_ATTR_AP_P_RW_U_RW | MMU_PTE_ATTR_NORMAL_MEMORY |
-                MMU_PTE_L012_DESCRIPTOR_BLOCK;
-  }
-
-  __dmb(ARM_MB_SY);
   return ZX_OK;
 }
 
-zx_paddr_t El2TranslationTable::Base() const { return l0_page_.PhysicalAddress(); }
+zx_paddr_t El2TranslationTable::Base() const { return el2_aspace_->arch_table_phys(); }
 
 zx_status_t El2Stack::Alloc() { return page_.Alloc(0); }
 
@@ -121,13 +148,9 @@ zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
 
 El2CpuState::~El2CpuState() { mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask_, el2_off_task, nullptr); }
 
-zx_status_t El2CpuState::AllocVmid(uint8_t* vmid) {
-  return id_allocator_.AllocId(vmid);
-}
+zx_status_t El2CpuState::AllocVmid(uint8_t* vmid) { return id_allocator_.AllocId(vmid); }
 
-zx_status_t El2CpuState::FreeVmid(uint8_t vmid) {
-  return id_allocator_.FreeId(vmid);
-}
+zx_status_t El2CpuState::FreeVmid(uint8_t vmid) { return id_allocator_.FreeId(vmid); }
 
 zx_status_t alloc_vmid(uint8_t* vmid) {
   Guard<Mutex> guard(GuestMutex::Get());

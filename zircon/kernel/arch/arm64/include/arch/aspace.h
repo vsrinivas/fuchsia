@@ -17,9 +17,10 @@
 #include <vm/arch_vm_aspace.h>
 
 enum class ArmAspaceType {
-  kUser,    // Userspace address space.
-  kKernel,  // Kernel address space.
-  kGuest,   // Second-stage address space.
+  kUser,        // Userspace address space.
+  kKernel,      // Kernel address space.
+  kGuest,       // Second-stage address space.
+  kHypervisor,  // EL2 hypervisor address space.
 };
 
 class ArmArchVmAspace final : public ArchVmAspaceInterface {

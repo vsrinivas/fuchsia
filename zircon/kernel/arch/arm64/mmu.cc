@@ -305,6 +305,8 @@ ktl::string_view ArmAspaceTypeName(ArmAspaceType type) {
       return "user";
     case ArmAspaceType::kGuest:
       return "guest";
+    case ArmAspaceType::kHypervisor:
+      return "hypervisor";
   }
   __UNREACHABLE;
 }
@@ -360,7 +362,7 @@ class ArmArchVmAspace::ConsistencyManager {
     __dsb(ARM_MB_ISH);
 
     // Check if we should just be performing a full ASID invalidation.
-    if (num_pending_tlbs_ > kMaxPendingTlbs) {
+    if (num_pending_tlbs_ > kMaxPendingTlbs || aspace_.type_ == ArmAspaceType::kHypervisor) {
       cm_flush_all.Add(1);
       cm_flush_all_replacing.Add(num_pending_tlbs_);
       aspace_.FlushAsid();
@@ -406,6 +408,7 @@ uint ArmArchVmAspace::MmuFlagsFromPte(pte_t pte) {
   switch (type_) {
     case ArmAspaceType::kUser:
     case ArmAspaceType::kKernel:
+    case ArmAspaceType::kHypervisor:
       return s1_pte_attr_to_mmu_flags(pte);
     case ArmAspaceType::kGuest:
       return s2_pte_attr_to_mmu_flags(pte);
@@ -435,7 +438,8 @@ zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mm
 
   // Compute shift values based on the address space type.
   switch (type_) {
-    case ArmAspaceType::kUser: {
+    case ArmAspaceType::kUser:
+    case ArmAspaceType::kHypervisor: {
       index_shift = MMU_USER_TOP_SHIFT;
       page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
 
@@ -627,6 +631,9 @@ void ArmArchVmAspace::FlushTLBEntry(vaddr_t vaddr, bool terminal) const {
       DEBUG_ASSERT(status == ZX_OK);
       return;
     }
+    case ArmAspaceType::kHypervisor:
+      PANIC("Unsupported.");
+      return;
   }
   __UNREACHABLE;
 }
@@ -646,6 +653,12 @@ void ArmArchVmAspace::FlushAsid() const {
     case ArmAspaceType::kGuest: {
       paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
       zx_status_t status = arm64_el2_tlbi_vmid(vttbr);
+      DEBUG_ASSERT(status == ZX_OK);
+      return;
+    }
+    case ArmAspaceType::kHypervisor: {
+      // Flush all TLB entries in EL2.
+      zx_status_t status = arm64_el2_tlbi_el2();
       DEBUG_ASSERT(status == ZX_OK);
       return;
     }
@@ -1141,11 +1154,14 @@ void ArmArchVmAspace::MmuParamsFromFlags(uint mmu_flags, pte_t* attrs, vaddr_t* 
                                          uint* top_size_shift, uint* top_index_shift,
                                          uint* page_size_shift) {
   switch (type_) {
-    case ArmAspaceType::kUser: {
+    case ArmAspaceType::kUser:
+    case ArmAspaceType::kHypervisor: {
       if (attrs) {
         *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
         // User pages are marked non global
-        *attrs |= MMU_PTE_ATTR_NON_GLOBAL;
+        if (type_ == ArmAspaceType::kUser) {
+          *attrs |= MMU_PTE_ATTR_NON_GLOBAL;
+        }
       }
       *vaddr_base = 0;
       *top_size_shift = MMU_USER_SIZE_SHIFT;
@@ -1564,10 +1580,13 @@ zx_status_t ArmArchVmAspace::Init() {
         return status.status_value();
       }
       asid_ = status.value();
-    } else {
-      DEBUG_ASSERT(type_ == ArmAspaceType::kGuest);
+    } else if (type_ == ArmAspaceType::kGuest) {
       DEBUG_ASSERT(base_ + size_ <= 1UL << MMU_GUEST_SIZE_SHIFT);
       page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
+    } else {
+      DEBUG_ASSERT(type_ == ArmAspaceType::kHypervisor);
+      DEBUG_ASSERT(base_ + size_ <= 1UL << MMU_USER_SIZE_SHIFT);
+      page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
     }
 
     paddr_t pa;

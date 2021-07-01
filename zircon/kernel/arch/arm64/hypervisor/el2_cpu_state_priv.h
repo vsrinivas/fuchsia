@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_HYPERVISOR_EL2_CPU_STATE_PRIV_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_HYPERVISOR_EL2_CPU_STATE_PRIV_H_
 
+#include <arch/aspace.h>
 #include <fbl/array.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/page.h>
@@ -16,12 +17,17 @@
 
 class El2TranslationTable {
  public:
+  El2TranslationTable() = default;
+  ~El2TranslationTable();
+
   zx_status_t Init();
   zx_paddr_t Base() const;
 
  private:
-  hypervisor::Page l0_page_;
-  hypervisor::Page l1_page_;
+  // Reset to initial state, releasing all allocated resources.
+  void Reset();
+
+  ktl::optional<ArchVmAspace> el2_aspace_;
 };
 
 // Represents a stack for use with EL2/

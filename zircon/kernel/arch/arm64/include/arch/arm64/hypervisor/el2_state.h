@@ -110,8 +110,9 @@
 
 #ifndef __ASSEMBLER__
 
-#include <arch/defines.h>
 #include <zircon/types.h>
+
+#include <arch/defines.h>
 
 typedef uint32_t __ALIGNED(8) algn32_t;
 
@@ -258,6 +259,9 @@ extern zx_status_t arm64_el2_off();
 extern zx_status_t arm64_el2_tlbi_ipa(zx_paddr_t vttbr, zx_vaddr_t addr, bool terminal);
 extern zx_status_t arm64_el2_tlbi_vmid(zx_paddr_t vttbr);
 extern zx_status_t arm64_el2_resume(zx_paddr_t vttbr, zx_paddr_t state, uint64_t hcr);
+
+// Invalidate all TLB entries in EL2.
+extern zx_status_t arm64_el2_tlbi_el2();
 
 __END_CDECLS
 
