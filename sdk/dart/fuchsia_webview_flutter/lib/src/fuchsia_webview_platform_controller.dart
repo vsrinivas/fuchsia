@@ -67,7 +67,7 @@ class FuchsiaWebViewPlatformController extends WebViewPlatformController {
     if (_currentState.canGoBack != null) {
       return _currentState.canGoBack!;
     }
-    return Future.value();
+    return false;
   }
 
   @override
@@ -75,7 +75,7 @@ class FuchsiaWebViewPlatformController extends WebViewPlatformController {
     if (_currentState.canGoBack != null) {
       return _currentState.canGoForward!;
     }
-    return Future.value();
+    return false;
   }
 
   @override
