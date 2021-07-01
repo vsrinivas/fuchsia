@@ -111,6 +111,20 @@ struct HdmiProxyResponse {
   ProxyResponse header;
 };
 
+// ZX_PROTOCOL_ACPI proxy support.
+enum class AcpiOp {
+  CONNECT_SERVER,
+};
+
+struct AcpiProxyRequest {
+  ProxyRequest header;
+  AcpiOp op;
+};
+
+struct AcpiProxyResponse {
+  ProxyResponse header;
+};
+
 // ZX_PROTOCOL_BUTTONS proxy support.
 enum class ButtonsOp {
   GET_NOTIFY_CHANNEL,
