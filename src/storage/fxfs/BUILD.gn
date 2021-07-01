@@ -159,6 +159,12 @@ fs_test_suite("fxfs") {
     supports_resize = true
     max_file_size = 9223372036854775807
   }
+
+  # For now, random-op-tests runs too slowly for the coverage build
+  # TODO(jfsuliiv): Enable when performance is good enough
+  if (is_coverage) {
+    omit_components = [ ":fxfs-random-op-tests" ]
+  }
 }
 
 group("tests") {

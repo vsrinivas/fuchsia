@@ -218,5 +218,8 @@ template("fs_test_suite") {
       ":${suite_name}-unlink-tests",
       ":${suite_name}-watcher-tests",
     ]
+    if (defined(invoker.omit_components)) {
+      test_components -= invoker.omit_components
+    }
   }
 }
