@@ -323,6 +323,73 @@ TEST_F(ViewWrapperTest, HighlightWithTransformAndOffsetContainers) {
   EXPECT_EQ((*highlight_scale)[1], 150.0f);
 }
 
+TEST_F(ViewWrapperTest, HighlightWithSelfReferentOffsetContainer) {
+  std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+
+  // Create test nodes.
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(0u, "test_label_0", {1u});
+    node.set_transform({10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 50, 60, 70, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  // This node's offset container is equal to its own node id, so the loop to
+  // apply transforms should stop after this node.
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(1u, "test_label_1", {2u});
+    node.set_container_id(1u);
+    node.set_transform({7, 0, 0, 0, 0, 8, 0, 0, 0, 0, 9, 0, 10, 10, 10, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(2u, "test_label_2");
+    node.set_container_id(1u);
+    node.set_transform({1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 100, 100, 100, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  auto tree_ptr = tree_service_->Get();
+  ASSERT_TRUE(tree_ptr);
+
+  ASSERT_TRUE(tree_ptr->Update(std::move(node_updates)));
+  RunLoopUntilIdle();
+
+  // Highlight node 2.
+  view_wrapper_->HighlightNode(2u);
+
+  // Verify that annotation view received bounding_box (defined above) as parameter to
+  // DrawHighlight().
+  const auto& highlight_bounding_box = annotation_view_->GetCurrentFocusHighlight();
+  EXPECT_TRUE(highlight_bounding_box.has_value());
+  EXPECT_EQ(highlight_bounding_box->min.x, 1.0f);
+  EXPECT_EQ(highlight_bounding_box->min.y, 2.0f);
+  EXPECT_EQ(highlight_bounding_box->min.z, 3.0f);
+  EXPECT_EQ(highlight_bounding_box->max.x, 4.0f);
+  EXPECT_EQ(highlight_bounding_box->max.y, 5.0f);
+  EXPECT_EQ(highlight_bounding_box->max.z, 6.0f);
+
+  const auto& highlight_translation = annotation_view_->GetFocusHighlightTranslationVector();
+  EXPECT_TRUE(highlight_translation.has_value());
+  EXPECT_EQ((*highlight_translation)[0], 710.0f);
+  EXPECT_EQ((*highlight_translation)[1], 810.0f);
+  EXPECT_EQ((*highlight_translation)[2], 910.0f);
+
+  const auto& highlight_scale = annotation_view_->GetFocusHighlightScaleVector();
+  EXPECT_TRUE(highlight_scale.has_value());
+  EXPECT_EQ((*highlight_scale)[0], 7.0f);
+  EXPECT_EQ((*highlight_scale)[1], 16.0f);
+}
+
 TEST_F(ViewWrapperTest, MagnificationHighlight) {
   std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
 

@@ -192,7 +192,16 @@ std::optional<SemanticTransform> ViewWrapper::GetNodeToRootTransform(uint32_t no
     // node, NOT the parent of |current_node|. If no offset container is
     // specified, then we assume the transform is relative to the parent.
     if (current_node->has_container_id()) {
-      current_node_id = current_node->container_id();
+      const auto container_id = current_node->container_id();
+
+      // It's possible for a node to have a container id equal to its own id.
+      // In this case, this node's coordinate space will be equivalent to
+      // "root" space, so we should terminate the loop here.
+      if (container_id == current_node_id) {
+        break;
+      }
+
+      current_node_id = container_id;
     } else {
       auto parent_node = tree_weak_ptr->GetParentNode(current_node_id);
       FX_DCHECK(parent_node);
