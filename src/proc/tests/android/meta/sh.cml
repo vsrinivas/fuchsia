@@ -2,6 +2,7 @@
     program: {
         runner: "starnix",
         binary: "system/bin/sh",
+        args: [ "-i" ],
         root: "root",
     },
 }

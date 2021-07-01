@@ -28,7 +28,9 @@ pub fn sys_clone(
 
     let mut registers = ctx.registers;
     registers.rax = 0;
-    registers.rsp = user_stack.ptr() as u64;
+    if !user_stack.is_null() {
+        registers.rsp = user_stack.ptr() as u64;
+    }
 
     if flags & (CLONE_SETTLS as u64) != 0 {
         registers.fs_base = user_tls.ptr() as u64;
