@@ -56,6 +56,8 @@ CodecClient::CodecClient(async::Loop* loop, thrd_t loop_thread,
                     codec_handle = std::move(codec_handle)]() mutable {
     zx_status_t bind_status = sysmem_.Bind(std::move(sysmem), dispatcher_);
     ZX_ASSERT(bind_status == ZX_OK);
+    sysmem_.set_error_handler(
+        [](zx_status_t status) { FX_PLOGS(FATAL, status) << "sysmem_ failed - unexpected"; });
     sysmem_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
     codec_ = codec_handle.Bind();

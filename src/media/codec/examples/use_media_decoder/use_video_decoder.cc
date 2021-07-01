@@ -661,6 +661,9 @@ void VideoDecoderRunner::Run() {
         // Bind the fuchsia::media::CodecFactoryHandle to a CodecFactoryPtr so we can send a
         // CreateDecoder message. This unbinds params_.codec_factory.
         auto codec_factory_ptr = params_.codec_factory.Bind();
+        codec_factory_ptr.set_error_handler([](zx_status_t status) {
+          FX_PLOGS(FATAL, status) << "codec_factory failed - unexpected";
+        });
         codec_factory_ptr->CreateDecoder(std::move(decoder_params),
                                          std::move(codec_client_request));
         // Now that the CreateDecoder message is sent, we no longer need to keep a channel open

@@ -428,13 +428,11 @@ bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
                               uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
                               bool is_secure_output, bool is_secure_input, EmitFrame emit_frame,
                               const UseVideoDecoderTestParams* test_params) {
-  fuchsia::mediacodec::CodecFactoryPtr codec_factory;
-  codec_factory.set_error_handler(
-      [](zx_status_t status) { FX_PLOGS(FATAL, status) << "codec_factory failed - unexpected"; });
+  fuchsia::mediacodec::CodecFactoryHandle codec_factory;
+
   component_context->svc()->Connect<fuchsia::mediacodec::CodecFactory>(codec_factory.NewRequest());
-  fuchsia::sysmem::AllocatorPtr sysmem;
-  sysmem.set_error_handler(
-      [](zx_status_t status) { FX_PLOGS(FATAL, status) << "sysmem failed - unexpected"; });
+  fuchsia::sysmem::AllocatorHandle sysmem;
+
   component_context->svc()->Connect<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
 
   std::unique_ptr<InputCopier> input_copier;
