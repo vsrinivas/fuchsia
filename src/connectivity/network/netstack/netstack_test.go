@@ -1157,30 +1157,14 @@ func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp
 
 func getInterfaceAddresses(t *testing.T, ni *stackImpl, nicid tcpip.NICID) []tcpip.AddressWithPrefix {
 	t.Helper()
-
-	ifaces, err := ni.ListInterfaces(context.Background())
-	if err != nil {
-		t.Fatalf("ni.ListInterfaces() failed: %s", err)
+	nicInfos := ni.ns.stack.NICInfo()
+	nicInfo, ok := nicInfos[nicid]
+	if !ok {
+		t.Fatalf("couldn't find NICID=%d in %#v", nicid, nicInfos)
 	}
-
-	info, found := stack.InterfaceInfo{}, false
-	for _, i := range ifaces {
-		if tcpip.NICID(i.Id) == nicid {
-			info = i
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("couldn't find NICID=%d in %#v", nicid, ifaces)
-	}
-
-	addrs := make([]tcpip.AddressWithPrefix, 0, len(info.Properties.Addresses))
-	for _, a := range info.Properties.Addresses {
-		addrs = append(addrs, tcpip.AddressWithPrefix{
-			Address:   fidlconv.ToTCPIPAddress(a.Addr),
-			PrefixLen: int(a.PrefixLen),
-		})
+	addrs := make([]tcpip.AddressWithPrefix, len(nicInfo.ProtocolAddresses))
+	for i := range nicInfo.ProtocolAddresses {
+		addrs[i] = nicInfo.ProtocolAddresses[i].AddressWithPrefix
 	}
 	return addrs
 }
