@@ -195,7 +195,7 @@ impl BtGap {
 async fn run_host_watcher(hd: HostDispatcher) -> Result<(), Error> {
     let host_events = watch_hosts();
     pin_mut!(host_events);
-    while let Some(msg) = host_events.try_next().await? {
+    while let Some(msg) = host_events.try_next().await.context("failed to watch hosts")? {
         match msg {
             HostAdded(device_path) => {
                 let result = hd.add_device(&device_path).await;

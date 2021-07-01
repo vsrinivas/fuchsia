@@ -11,8 +11,9 @@ use {
     fuchsia_vfs_watcher::{self as vfs_watcher, WatchEvent, WatchMessage},
     futures::{future, FutureExt, Stream, TryStreamExt},
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
-    log::warn,
+    log::{info, warn},
     std::{
+        ffi::OsStr,
         io,
         path::{Path, PathBuf},
     },
@@ -36,6 +37,13 @@ pub fn watch_hosts() -> impl Stream<Item = Result<HostEvent, io::Error>> {
 }
 
 fn as_host_event(msg: WatchMessage) -> Option<HostEvent> {
+    // This is needed because, in some test scenarios, the vfs_watcher sends a message for the
+    // directory's population of the `.` entry. It is reasonable in general, as we'd never want
+    // to count the CWD as a "HostEvent".
+    if msg.filename == OsStr::new(".") {
+        info!("Ignoring spurious host watch event for path \".\"");
+        return None;
+    }
     let path = Path::new(HOST_DEVICE_DIR).join(&msg.filename);
     match msg.event {
         WatchEvent::EXISTING | WatchEvent::ADD_FILE => Some(HostEvent::HostAdded(path)),
