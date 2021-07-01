@@ -26,7 +26,7 @@ DECLARE_SINGLETON_MUTEX(GuestMutex);
 size_t num_guests TA_GUARDED(GuestMutex::Get()) = 0;
 ktl::unique_ptr<El2CpuState> el2_cpu_state TA_GUARDED(GuestMutex::Get());
 
-constexpr size_t kEl2PhysAddressSize = (1ul << MMU_USER_SIZE_SHIFT);
+constexpr size_t kEl2PhysAddressSize = (1ul << MMU_IDENT_SIZE_SHIFT);
 
 // Unmap all mappings everything in the given address space, releasing all resources.
 void UnmapAll(ArchVmAspace& aspace) {

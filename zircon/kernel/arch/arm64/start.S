@@ -181,7 +181,7 @@ FUNCTION(_start)
 .Lclear_tt_trampoline:
     str     xzr, [page_table0, tmp, lsl#3]
     add     tmp, tmp, #1
-    cmp     tmp, #MMU_PAGE_TABLE_ENTRIES_IDENT
+    cmp     tmp, #MMU_IDENT_PAGE_TABLE_ENTRIES_TOP
     blt     .Lclear_tt_trampoline
 
     /* Setup mapping at phys -> phys */
@@ -375,9 +375,9 @@ END_DATA(boot_cpu_shadow_call_kstack)
 #endif
 
 .section .bss.prebss.translation_table, "aw", @nobits
-.align 3 + MMU_PAGE_TABLE_ENTRIES_IDENT_SHIFT
+.align 3 + MMU_IDENT_PAGE_TABLE_ENTRIES_TOP_SHIFT
 DATA(tt_trampoline)
-    .skip 8 * MMU_PAGE_TABLE_ENTRIES_IDENT
+    .skip 8 * MMU_IDENT_PAGE_TABLE_ENTRIES_TOP
 END_DATA(tt_trampoline)
 
 // This symbol is used by image.S

@@ -438,8 +438,7 @@ zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mm
 
   // Compute shift values based on the address space type.
   switch (type_) {
-    case ArmAspaceType::kUser:
-    case ArmAspaceType::kHypervisor: {
+    case ArmAspaceType::kUser: {
       index_shift = MMU_USER_TOP_SHIFT;
       page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
 
@@ -466,6 +465,15 @@ zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mm
       vaddr_rem = vaddr;
       ulong __UNUSED index = vaddr_rem >> index_shift;
       ASSERT(index < MMU_GUEST_PAGE_TABLE_ENTRIES_TOP);
+      break;
+    }
+    case ArmAspaceType::kHypervisor: {
+      index_shift = MMU_IDENT_TOP_SHIFT;
+      page_size_shift = MMU_IDENT_PAGE_SIZE_SHIFT;
+
+      vaddr_rem = vaddr;
+      ulong __UNUSED index = vaddr_rem >> index_shift;
+      ASSERT(index < MMU_IDENT_PAGE_TABLE_ENTRIES_TOP);
       break;
     }
     default:
@@ -1154,14 +1162,11 @@ void ArmArchVmAspace::MmuParamsFromFlags(uint mmu_flags, pte_t* attrs, vaddr_t* 
                                          uint* top_size_shift, uint* top_index_shift,
                                          uint* page_size_shift) {
   switch (type_) {
-    case ArmAspaceType::kUser:
-    case ArmAspaceType::kHypervisor: {
+    case ArmAspaceType::kUser: {
       if (attrs) {
         *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
         // User pages are marked non global
-        if (type_ == ArmAspaceType::kUser) {
-          *attrs |= MMU_PTE_ATTR_NON_GLOBAL;
-        }
+        *attrs |= MMU_PTE_ATTR_NON_GLOBAL;
       }
       *vaddr_base = 0;
       *top_size_shift = MMU_USER_SIZE_SHIFT;
@@ -1187,6 +1192,16 @@ void ArmArchVmAspace::MmuParamsFromFlags(uint mmu_flags, pte_t* attrs, vaddr_t* 
       *top_size_shift = MMU_GUEST_SIZE_SHIFT;
       *top_index_shift = MMU_GUEST_TOP_SHIFT;
       *page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
+      return;
+    }
+    case ArmAspaceType::kHypervisor: {
+      if (attrs) {
+        *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
+      }
+      *vaddr_base = 0;
+      *top_size_shift = MMU_IDENT_SIZE_SHIFT;
+      *top_index_shift = MMU_IDENT_TOP_SHIFT;
+      *page_size_shift = MMU_IDENT_PAGE_SIZE_SHIFT;
       return;
     }
   }
@@ -1585,8 +1600,8 @@ zx_status_t ArmArchVmAspace::Init() {
       page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
     } else {
       DEBUG_ASSERT(type_ == ArmAspaceType::kHypervisor);
-      DEBUG_ASSERT(base_ + size_ <= 1UL << MMU_USER_SIZE_SHIFT);
-      page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
+      DEBUG_ASSERT(base_ + size_ <= 1UL << MMU_IDENT_SIZE_SHIFT);
+      page_size_shift = MMU_IDENT_PAGE_SIZE_SHIFT;
     }
 
     paddr_t pa;
