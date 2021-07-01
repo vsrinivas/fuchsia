@@ -481,10 +481,6 @@ typedef struct composite_device_fragment {
 void device_get_fragments(zx_device_t* dev, composite_device_fragment_t* comp_list,
                           size_t comp_count, size_t* comp_actual);
 
-// Returns the specific fragment identified by the name provided when it was created via
-// `device_add_composite`. Returns false if no fragment exists.
-bool device_get_fragment(zx_device_t* dev, const char* name, zx_device_t** out);
-
 // Returns the specific protocol from the named fragment, identified by the name
 // provided when it was created via`device_add_composite`. Returns ZX_ERR_NOT_FOUND if
 // no fragment exists.

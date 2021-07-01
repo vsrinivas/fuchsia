@@ -132,10 +132,6 @@ __EXPORT uint32_t device_get_fragment_count(zx_device_t* dev) { return 0; }
 __EXPORT void device_get_fragments(zx_device_t* dev, composite_device_fragment_t* comp_list,
                                    size_t comp_count, size_t* comp_actual) {}
 
-__EXPORT bool device_get_fragment(zx_device_t* dev, const char* name, zx_device_t** out) {
-  return false;
-}
-
 __EXPORT
 void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* new_txn) {}
 

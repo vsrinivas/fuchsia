@@ -594,13 +594,6 @@ __EXPORT void device_get_fragments(zx_device_t* dev, composite_device_fragment_t
   return fake_ddk::Bind::Instance()->DeviceGetFragments(dev, comp_list, comp_count, comp_actual);
 }
 
-__EXPORT bool device_get_fragment(zx_device_t* dev, const char* name, zx_device_t** out) {
-  if (!fake_ddk::Bind::Instance()) {
-    return false;
-  }
-  return fake_ddk::Bind::Instance()->DeviceGetFragment(dev, name, out);
-}
-
 __EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* device, const char* name,
                                                   uint32_t proto_id, void* protocol) {
   if (!fake_ddk::Bind::Instance()) {

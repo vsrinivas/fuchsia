@@ -455,13 +455,6 @@ __EXPORT void device_get_fragments(zx_device_t* dev, composite_device_fragment_t
   return dev->composite()->GetFragments(comp_list, comp_count, comp_actual);
 }
 
-__EXPORT bool device_get_fragment(zx_device_t* dev, const char* name, zx_device_t** out) {
-  if (!dev->is_composite()) {
-    return false;
-  }
-  return dev->composite()->GetFragment(name, out);
-}
-
 __EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* dev, const char* name,
                                                   uint32_t proto_id, void* out) {
   if (!dev->is_composite()) {
