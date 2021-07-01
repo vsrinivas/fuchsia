@@ -145,9 +145,9 @@ async fn download_file_to_destination(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::repository::{
-        FileSystemRepository, Repository, RepositoryKeyConfig, RepositoryManager,
-        RepositoryMetadata, RepositoryServer,
+    use crate::{
+        repository::{RepositoryManager, RepositoryServer},
+        test_utils::make_writable_empty_repository,
     };
     use fuchsia_async as fasync;
     use fuchsia_pkg::CreationManifest;
@@ -220,14 +220,15 @@ mod test {
         let manager = RepositoryManager::new();
 
         let tempdir = tempfile::tempdir().unwrap();
-        let keys = &vec![RepositoryKeyConfig::Ed25519Key(vec![1, 2, 3, 4])];
+        let root = tempdir.path().join("tuf");
+        let repo = make_writable_empty_repository("tuf", root.clone()).await.unwrap();
 
         // Write targets.json
         let target_json = create_targets_json();
-        let target_json_path = tempdir.path().join("targets.json");
+        let target_json_path = root.join("targets.json");
         write_file(target_json_path.clone(), target_json.as_slice());
 
-        let blob_dir = tempdir.path().join("blobs");
+        let blob_dir = root.join("blobs");
         create_dir(&blob_dir).unwrap();
 
         // Put meta.far and blob into blobs directory
@@ -240,11 +241,6 @@ mod test {
             blob_dir.join("15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b");
         write_file(blob_path, "".as_bytes());
 
-        let repo = Repository::new_with_metadata(
-            "tuf",
-            Box::new(FileSystemRepository::new(tempdir.path().to_path_buf())),
-            RepositoryMetadata::new(keys.to_vec(), 1),
-        );
         manager.add(Arc::new(repo));
 
         let addr = (Ipv4Addr::LOCALHOST, 0).into();

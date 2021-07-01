@@ -6,15 +6,31 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/test_spec.gni")
 
+host_test_data("empty-repo") {
+  sources = [
+    "//src/sys/pkg/tests/pkg-resolver/template/repository/1.root.json",
+    "//src/sys/pkg/tests/pkg-resolver/template/repository/1.snapshot.json",
+    "//src/sys/pkg/tests/pkg-resolver/template/repository/1.targets.json",
+    "//src/sys/pkg/tests/pkg-resolver/template/repository/root.json",
+    "//src/sys/pkg/tests/pkg-resolver/template/repository/snapshot.json",
+    "//src/sys/pkg/tests/pkg-resolver/template/repository/targets.json",
+    "//src/sys/pkg/tests/pkg-resolver/template/repository/timestamp.json",
+  ]
+  outputs =
+      [ "$root_out_dir/test_data/ffx_lib_pkg/empty-repo/{{source_file_part}}" ]
+}
+
 rustc_library("pkg") {
   name = "pkg"
   edition = "2018"
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/fidl-fuchsia-developer-bridge-ext",
+    "//src/developer/ffx/lib/timeout:lib",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-hyper",
     "//src/lib/http-sse:http_sse",
@@ -41,9 +57,11 @@ rustc_library("pkg") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tokio",
+    "//third_party/rust_crates:walkdir",
   ]
 
   test_deps = [
+    ":empty-repo",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
@@ -58,6 +76,7 @@ rustc_library("pkg") {
     "src/repository/manager.rs",
     "src/repository/pm.rs",
     "src/repository/server.rs",
+    "src/test_utils.rs",
   ]
 }
 

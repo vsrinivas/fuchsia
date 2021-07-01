@@ -198,7 +198,14 @@ async fn handle_request(
 
     let resource = match resource_path {
         "repo.json" => {
-            let config = repo.get_config(&local_addr.to_string());
+            let config = match repo.get_config(&local_addr.to_string()).await {
+                Ok(c) => c,
+                Err(e) => {
+                    error!("failed to generate config: {:?}", e);
+                    return status_response(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+
             match config.try_into() {
                 Ok(c) => c,
                 Err(e) => {
@@ -285,14 +292,12 @@ async fn handle_auto(
         // Make sure the entry is cleaned up if the repository is deleted.
         let weak_sse_response_creators = Arc::downgrade(&sse_response_creators);
         repo.on_drop(move || {
-            println!("dropping repo");
             if let Some(sse_response_creators) = weak_sse_response_creators.upgrade() {
                 sse_response_creators.write().remove(&id);
             }
 
             // shut down the task.
             drop(task);
-            println!("dropping task");
         });
     };
 
@@ -417,21 +422,17 @@ impl tokio::io::AsyncWrite for HyperStream {
 mod tests {
     use {
         super::*,
-        crate::repository::{
-            FileSystemRepository, MirrorConfig, Repository, RepositoryConfig, RepositoryKeyConfig,
-            RepositoryManager, RepositoryMetadata,
+        crate::{
+            repository::{MirrorConfig, RepositoryConfig, RepositoryManager},
+            test_utils::{make_writable_empty_repository, repo_key},
         },
         anyhow::Result,
         bytes::Bytes,
         fuchsia_async as fasync,
         http_sse::Client as SseClient,
         matches::assert_matches,
-        std::{
-            fs::{create_dir, remove_file},
-            io::Write as _,
-            net::Ipv4Addr,
-            path::Path,
-        },
+        std::{fs::remove_file, io::Write as _, net::Ipv4Addr, path::Path},
+        timeout::timeout,
     };
 
     async fn get(url: impl AsRef<str>) -> Result<Response<Body>> {
@@ -441,7 +442,7 @@ mod tests {
         Ok(response)
     }
 
-    async fn get_bytes(url: impl AsRef<str>) -> Result<Bytes> {
+    async fn get_bytes(url: impl AsRef<str> + std::fmt::Debug) -> Result<Bytes> {
         let response = get(url).await?;
         assert_eq!(response.status(), StatusCode::OK);
         Ok(hyper::body::to_bytes(response).await?)
@@ -453,14 +454,14 @@ mod tests {
         tmp.persist(path).unwrap();
     }
 
-    async fn verify_repo_json(devhost: &str, server_url: &str, keys: Vec<RepositoryKeyConfig>) {
+    async fn verify_repo_json(devhost: &str, server_url: &str) {
         let url = format!("{}/{}/repo.json", server_url, devhost);
         let json: RepositoryConfig =
             serde_json::from_slice(&get_bytes(&url).await.unwrap()).unwrap();
 
         let expected = RepositoryConfig {
             repo_url: Some(format!("fuchsia-pkg://{}", devhost)),
-            root_keys: Some(keys),
+            root_keys: Some(vec![repo_key()]),
             root_version: Some(1),
             mirrors: Some(vec![MirrorConfig {
                 mirror_url: Some(server_url.to_string()),
@@ -526,34 +527,26 @@ mod tests {
 
         let d = tempfile::tempdir().unwrap();
 
-        let test_cases = [
-            ("devhost-0", ["0-0", "0-1"], &vec![RepositoryKeyConfig::Ed25519Key(vec![1, 2, 3, 4])]),
-            ("devhost-1", ["1-0", "1-1"], &vec![RepositoryKeyConfig::Ed25519Key(vec![5, 6, 7, 8])]),
-        ];
+        let test_cases = [("devhost-0", ["0-0", "0-1"]), ("devhost-1", ["1-0", "1-1"])];
 
-        for (devhost, bodies, keys) in &test_cases {
-            let dir = d.path().join(devhost);
-            create_dir(&dir).unwrap();
+        for (devhost, bodies) in &test_cases {
+            let dir = d.path().to_path_buf().join(devhost);
+            let repo = make_writable_empty_repository(*devhost, dir.clone()).await.unwrap();
 
             for body in &bodies[..] {
                 write_file(&dir.join(body), body.as_bytes());
             }
 
-            let repo = Repository::new_with_metadata(
-                devhost,
-                Box::new(FileSystemRepository::new(dir)),
-                RepositoryMetadata::new(keys.to_vec(), 1),
-            );
             manager.add(Arc::new(repo));
         }
 
         run_test(manager, |server_url| async move {
-            for (devhost, bodies, key_vec) in &test_cases {
+            for (devhost, bodies) in &test_cases {
                 for body in &bodies[..] {
                     let url = format!("{}/{}/{}", server_url, devhost, body);
                     assert_matches!(get_bytes(&url).await, Ok(bytes) if bytes == &body[..]);
                 }
-                verify_repo_json(devhost, &server_url, key_vec.to_vec()).await;
+                verify_repo_json(devhost, &server_url).await;
             }
         })
         .await
@@ -564,7 +557,9 @@ mod tests {
         let manager = RepositoryManager::new();
 
         let d = tempfile::tempdir().unwrap();
-        let d = d.path();
+        let d = d.path().join("devhost");
+
+        let repo = make_writable_empty_repository("devhost", d.clone()).await.unwrap();
 
         let timestamp_file = d.join("timestamp.json");
         write_file(
@@ -574,12 +569,6 @@ mod tests {
                 .as_bytes(),
         );
 
-        let keys = vec![RepositoryKeyConfig::Ed25519Key(vec![1, 2, 3, 4])];
-        let repo = Repository::new_with_metadata(
-            "devhost",
-            Box::new(FileSystemRepository::new(d.to_path_buf())),
-            RepositoryMetadata::new(keys, 1),
-        );
         manager.add(Arc::new(repo));
 
         run_test(manager, |server_url| {
@@ -589,8 +578,15 @@ mod tests {
                 let mut client =
                     SseClient::connect(fuchsia_hyper::new_https_client(), url).await.unwrap();
 
-                assert_eq!(client.next().await.unwrap().unwrap().data(), "1");
-
+                assert_eq!(
+                    timeout(std::time::Duration::from_secs(3), client.next())
+                        .await
+                        .unwrap()
+                        .unwrap()
+                        .unwrap()
+                        .data(),
+                    "1"
+                );
                 write_file(
                     &timestamp_file,
                     serde_json::to_string(&SignedTimestamp {

@@ -8,9 +8,6 @@ use {
     std::{collections::HashMap, sync::Arc},
 };
 
-#[cfg(test)]
-use super::RepositoryMetadata;
-
 type ArcRepository = Arc<Repository>;
 
 /// RepositoryManager is responsible for managing all the repositories in use by ffx.
@@ -49,42 +46,35 @@ impl RepositoryManager {
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::repository::FileSystemRepository};
+    use {super::*, crate::test_utils::make_readonly_empty_repository};
+    const REPO_NAME: &str = "fake-repo";
 
-    #[test]
-    fn test_add() {
-        let repo = Repository::new_with_metadata(
-            "my_repo",
-            Box::new(FileSystemRepository::new("/nowhere".into())),
-            RepositoryMetadata::default(),
-        );
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add() {
+        let repo = make_readonly_empty_repository(REPO_NAME).await.unwrap();
 
         let manager = RepositoryManager::new();
         manager.add(Arc::new(repo));
 
         assert_eq!(
             manager.repositories().map(|x| x.name().to_owned()).collect::<Vec<_>>(),
-            vec!["my_repo".to_owned()]
+            vec![REPO_NAME.to_owned()]
         );
     }
 
-    #[test]
-    fn test_remove() {
-        let repo = Repository::new_with_metadata(
-            "my_repo",
-            Box::new(FileSystemRepository::new("/nowhere".into())),
-            RepositoryMetadata::default(),
-        );
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_remove() {
+        let repo = make_readonly_empty_repository(REPO_NAME).await.unwrap();
 
         let manager = RepositoryManager::new();
         manager.add(Arc::new(repo));
 
         assert_eq!(
             manager.repositories().map(|x| x.name().to_owned()).collect::<Vec<_>>(),
-            vec!["my_repo".to_owned()]
+            vec![REPO_NAME.to_owned()]
         );
 
-        manager.remove("my_repo");
+        manager.remove(REPO_NAME);
         assert!(manager.repositories().next().is_none());
     }
 }

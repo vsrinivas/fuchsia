@@ -41,6 +41,9 @@ protocol RepositoryRegistry {
     ListRepositories(request<RepositoryIterator> iterator);
 
     RegisterTarget(RepositoryTarget target_info) -> () error RepositoryError;
+
+    /// List the packages in the repository named `name`.
+    ListPackages(string:MAX_NAME name, request<RepositoryPackagesIterator> iterator) -> () error RepositoryError;
 };
 
 struct RepositoryConfig {
@@ -50,6 +53,20 @@ struct RepositoryConfig {
 
 protocol RepositoryIterator {
     Next() -> (vector<RepositoryConfig>:MAX_REPOS repos);
+};
+
+protocol RepositoryPackagesIterator {
+    Next() -> (vector<RepositoryPackage>:MAX packages);
+};
+
+table RepositoryPackage {
+    /// Package name
+    1: string:2048 name;
+    /// Package's merkle hash
+    2: string:2048 hash;
+    /// Size in bytes of all blobs in this package.
+    3: uint64 size;
+    // TODO: add `components` here.
 };
 
 table RepositoryTarget {

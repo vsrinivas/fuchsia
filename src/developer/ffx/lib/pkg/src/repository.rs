@@ -5,6 +5,7 @@
 use {
     anyhow::Context,
     bytes::Bytes,
+    fidl_fuchsia_developer_bridge::RepositoryPackage,
     fidl_fuchsia_developer_bridge_ext::RepositorySpec,
     fidl_fuchsia_pkg as pkg,
     futures::{
@@ -18,10 +19,13 @@ use {
         convert::TryFrom,
         io,
         path::PathBuf,
-        sync::atomic::{AtomicUsize, Ordering},
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
     },
     tuf::{
-        client::{Client, Config},
+        client::{Client, Config, DefaultTranslator},
         crypto::KeyType,
         interchange::Json,
         metadata::{MetadataPath, MetadataVersion, RawSignedMetadata},
@@ -153,18 +157,6 @@ impl TryFrom<RepositoryConfig> for Resource {
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct RepositoryMetadata {
-    root_keys: Vec<RepositoryKeyConfig>,
-    root_version: u32,
-}
-
-impl RepositoryMetadata {
-    pub fn new(root_keys: Vec<RepositoryKeyConfig>, root_version: u32) -> Self {
-        Self { root_keys, root_version }
-    }
-}
-
 pub struct Repository {
     /// The name of the repository.
     name: String,
@@ -172,13 +164,22 @@ pub struct Repository {
     /// A unique ID for the repository, scoped to this instance of the daemon.
     id: RepositoryId,
 
-    /// The TUF metadata for this repository
-    metadata: RepositoryMetadata,
-
     /// Backend for this repository
     backend: Box<dyn RepositoryBackend + Send + Sync>,
 
     drop_handlers: Mutex<Vec<Box<dyn FnOnce() + Send + Sync>>>,
+
+    /// The TUF client for this repository
+    client: Arc<
+        Mutex<
+            Client<
+                Json,
+                EphemeralRepository<Json>,
+                Box<dyn RepositoryProvider<Json>>,
+                DefaultTranslator,
+            >,
+        >,
+    >,
 }
 
 impl Repository {
@@ -186,29 +187,14 @@ impl Repository {
         name: &str,
         backend: Box<dyn RepositoryBackend + Send + Sync>,
     ) -> Result<Self, Error> {
-        let metadata = Self::get_metadata(backend.get_tuf_repo()?).await?;
+        let client = Arc::new(Mutex::new(Self::get_client(backend.get_tuf_repo()?).await?));
         Ok(Self {
             name: name.to_string(),
             id: RepositoryId::new(),
             backend,
-            metadata,
+            client,
             drop_handlers: Mutex::new(Vec::new()),
         })
-    }
-
-    /// This should only be used in tests.
-    pub fn new_with_metadata(
-        name: &str,
-        backend: Box<dyn RepositoryBackend + Sync + Send>,
-        metadata: RepositoryMetadata,
-    ) -> Self {
-        Self {
-            name: name.to_string(),
-            id: RepositoryId::new(),
-            backend,
-            metadata,
-            drop_handlers: Mutex::new(Vec::new()),
-        }
     }
 
     /// Create a [Repository] from a [RepositorySpec].
@@ -229,7 +215,6 @@ impl Repository {
     pub fn on_drop<F: FnOnce() + Send + Sync + 'static>(&self, f: F) {
         self.drop_handlers.lock().push(Box::new(f));
     }
-
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -266,21 +251,36 @@ impl Repository {
         Ok(bytes)
     }
 
-    pub fn get_config(&self, mirror_url: &str) -> RepositoryConfig {
-        RepositoryConfig {
+    pub async fn get_config(&self, mirror_url: &str) -> Result<RepositoryConfig, Error> {
+        let client = self.client.lock();
+        let root_keys = client
+            .trusted_root()
+            .root_keys()
+            .filter(|k| *k.typ() == KeyType::Ed25519)
+            .map(|key| RepositoryKeyConfig::Ed25519Key(key.as_bytes().to_vec()))
+            .collect::<Vec<_>>();
+        let root_version = client.root_version();
+        Ok(RepositoryConfig {
             repo_url: Some(format!("fuchsia-pkg://{}", self.name)),
-            root_keys: Some(self.metadata.root_keys.clone()),
-            root_version: Some(self.metadata.root_version),
+            root_keys: Some(root_keys),
+            root_version: Some(root_version),
             mirrors: Some(vec![MirrorConfig {
                 mirror_url: Some(format!("http://{}", mirror_url)),
                 subscribe: Some(self.backend.supports_watch()),
             }]),
-        }
+        })
     }
-
-    async fn get_metadata(
+    async fn get_client(
         tuf_repo: Box<dyn RepositoryProvider<Json>>,
-    ) -> Result<RepositoryMetadata, Error> {
+    ) -> Result<
+        Client<
+            Json,
+            EphemeralRepository<Json>,
+            Box<dyn RepositoryProvider<Json>>,
+            DefaultTranslator,
+        >,
+        Error,
+    > {
         let metadata_repo = EphemeralRepository::<Json>::new();
 
         let mut md = tuf_repo
@@ -297,20 +297,34 @@ impl Repository {
 
         let raw_signed_meta = RawSignedMetadata::<Json, _>::new(buf);
 
-        let client =
+        let mut client =
             Client::with_trusted_root(Config::default(), &raw_signed_meta, metadata_repo, tuf_repo)
                 .await
                 .context("initializing client")?;
+        client.update().await.map_err(|e| Error::Other(anyhow::anyhow!(e)))?;
 
-        let root_keys = client
-            .trusted_root()
-            .root_keys()
-            .filter(|k| *k.typ() == KeyType::Ed25519)
-            .map(|key| RepositoryKeyConfig::Ed25519Key(key.as_bytes().to_vec()))
-            .collect::<Vec<_>>();
-        let root_version = client.root_version();
+        Ok(client)
+    }
 
-        Ok(RepositoryMetadata::new(root_keys, root_version))
+    // TODO(fxbug.dev/79915) add tests for this method.
+    pub async fn list_packages(&self) -> Result<Vec<RepositoryPackage>, Error> {
+        let client = self.client.lock();
+        let targets = client.trusted_targets().context("missing target information")?;
+        Ok(targets
+            .targets()
+            .into_iter()
+            .filter_map(|(k, v)| {
+                let custom = v.custom()?;
+                let size = custom.get("size")?.as_u64()?;
+                let hash = custom.get("merkle")?.as_str().unwrap_or("").to_string();
+                Some(RepositoryPackage {
+                    name: Some(k.to_string()),
+                    size: Some(size),
+                    hash: Some(hash),
+                    ..RepositoryPackage::EMPTY
+                })
+            })
+            .collect())
     }
 }
 
@@ -346,26 +360,21 @@ pub trait RepositoryBackend: std::fmt::Debug {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {
+        super::*,
+        crate::test_utils::{make_readonly_empty_repository, repo_key},
+    };
     const ROOT_VERSION: u32 = 1;
-
-    fn fake_root_key() -> Vec<RepositoryKeyConfig> {
-        vec![RepositoryKeyConfig::Ed25519Key(vec![1, 2, 3, 4])]
-    }
+    const REPO_NAME: &str = "fake-repo";
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_config() {
-        let d = tempfile::tempdir().unwrap();
-        let repo = Repository::new_with_metadata(
-            "devhost".into(),
-            Box::new(FileSystemRepository::new(d.path().to_path_buf())),
-            RepositoryMetadata::new(fake_root_key(), ROOT_VERSION),
-        );
+        let repo = make_readonly_empty_repository(REPO_NAME).await.unwrap();
 
         let server_url = "some-url:1234";
         let expected = RepositoryConfig {
-            repo_url: Some("fuchsia-pkg://devhost".to_string()),
-            root_keys: Some(fake_root_key()),
+            repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
+            root_keys: Some(vec![repo_key()]),
             root_version: Some(ROOT_VERSION),
             mirrors: Some(vec![MirrorConfig {
                 mirror_url: Some(format!("http://{}", server_url)),
@@ -373,6 +382,6 @@ mod test {
             }]),
         };
 
-        assert_eq!(repo.get_config(server_url), expected);
+        assert_eq!(repo.get_config(server_url).await.unwrap(), expected);
     }
 }

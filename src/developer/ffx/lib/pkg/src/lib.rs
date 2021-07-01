@@ -3,3 +3,4 @@
 // found in the LICENSE file.
 
 pub mod repository;
+pub mod test_utils;

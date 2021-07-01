@@ -22,6 +22,7 @@ use {
 const REPOSITORY_MANAGER_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.RepositoryManager";
 const REWRITE_SERVICE_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.rewrite.Engine";
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
+const MAX_PACKAGES: i64 = 512;
 
 struct ServerInfo {
     server: RepositoryServer,
@@ -147,7 +148,13 @@ impl Repo {
             })?;
 
         // TODO(fxbug.dev/77015): parameterize the mirror_url value here once we are dynamically assigning ports.
-        let config = repo.get_config(&format!("localhost:{}/{}", LISTEN_PORT, repo.name()));
+        let config = repo
+            .get_config(&format!("localhost:{}/{}", LISTEN_PORT, repo.name()))
+            .await
+            .map_err(|e| {
+            log::warn!("failed to get config: {}", e);
+            return bridge::RepositoryError::RepositoryManagerError;
+        })?;
 
         match proxy.add(config.into()).await {
             Ok(Ok(())) => {}
@@ -253,6 +260,56 @@ impl FidlService for Repo {
             }
             bridge::RepositoryRegistryRequest::RegisterTarget { target_info, responder } => {
                 responder.send(&mut self.register_target(cx, target_info).await)?;
+                Ok(())
+            }
+            bridge::RepositoryRegistryRequest::ListPackages { name, iterator, responder } => {
+                let mut stream = match iterator.into_stream() {
+                    Ok(s) => s,
+                    Err(e) => {
+                        log::warn!("error converting iterator to stream: {}", e);
+                        responder.send(&mut Err(bridge::RepositoryError::InternalError))?;
+                        return Ok(());
+                    }
+                };
+                let repo = if let Some(r) = self.manager.get(&name) {
+                    r
+                } else {
+                    responder.send(&mut Err(bridge::RepositoryError::NoMatchingRepository))?;
+                    return Ok(());
+                };
+
+                let values = repo.list_packages().await?;
+
+                let mut pos = 0;
+
+                fasync::Task::spawn(async move {
+                    while let Some(request) = stream.next().await {
+                        match request {
+                            Ok(bridge::RepositoryPackagesIteratorRequest::Next { responder }) => {
+                                let len = values.len();
+                                let chunk = &mut values[pos..]
+                                    [..std::cmp::min(len - pos, MAX_PACKAGES as usize)]
+                                    .into_iter()
+                                    .map(|p| p.clone());
+                                pos += MAX_PACKAGES as usize;
+                                pos = std::cmp::min(pos, len);
+
+                                if let Err(e) = responder.send(chunk) {
+                                    log::warn!(
+                                        "Error responding to RepositoryPackagesIterator request: {}",
+                                        e
+                                    );
+                                }
+                            }
+                            Err(e) => {
+                                log::warn!("Error in RepositoryPackagesIterator request stream: {}", e)
+                            }
+                        }
+                    }
+                })
+                .detach();
+
+                responder.send(&mut Ok(()))?;
                 Ok(())
             }
             bridge::RepositoryRegistryRequest::ListRepositories { iterator, .. } => {
