@@ -1,6 +1,6 @@
 # Realm builder
 
-The realm builder library exists to facilitate integration testing of v2
+The realm builder library exists to facilitate integration testing of
 components by allowing for the run-time construction of [realms][realms] and
 mocked components specific to individual test cases.
 
@@ -20,15 +20,12 @@ library. For a comprehensive list of features and which languages they are
 supported in, see the [feature matrix at the end of this
 document](#language-feature-matrix).
 
-## Setting up realm builder
+## Set up realm builder {#set-up}
 
-When the realm builder library is to be used in a test, the [realm builder CML
-shard][realm-builder-shard] must be [included][shard-includes] in the test's
-manifest. The shard brings important configuration needed to set up the
-collection in which the constructed realms will run. The library will not work
-without it.
+Add the [realm builder CML shard][realm-builder-shard] as an [`include`][shard-includes]
+in the test's manifest:
 
-```
+```json5
 {
     include: [
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
@@ -37,115 +34,116 @@ without it.
 }
 ```
 
-## Constructing a realm
-
-The best practice is to create a new `RealmBuilder` instance (by calling the
-library constructor) for each test case in your test. This will create a unique,
-isolated, child realm that ensures that the side-effects of one test case do not
-affect the others.
-
-Within this realm, you can create any number of child components, route
-capabilities between them, and even add child components that are implemented
-directly within the test controller code.
-
-### Adding a static component as a child
-
-Once a new `RealmBuilder` instance has been created, components can be added to
-it. Each added component needs two things: a name it will exist under in the
-realm (just like it would when [defining static components in a `.cml`
-file][children]), along with a source which defines how the component is created
-when the realm is built.
-
-For static components, the provided source should be a `ComponentSource::url`.
-[Any valid component URL][component-urls] is a suitable here, if it would work
-in the [`children`][children] section of a component manifest then it will work
-with realm builder.
-
-In the example below two components are added to a new realm with the names `a`
-and `b`. Both of these components are children of the realm's root, and once the
-realm is created the component framework will attempt to load component `a` from
-`fuchsia-pkg://fuchsia.com/foo#meta/foo.cm`, and `b` from
-`fuchsia-pkg://fuchsia.com/bar#meta/bar.cm`.
-
-```
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="add_a_and_b_example" adjust_indentation="auto" %}
-```
-
-```
-   <root>
-  /      \
- a        b
-```
-
-### Adding capability routes
-
-By default there are no [capability routes][cap-routes] in the new realm,
-neither to nor from any components in the realm. Unless some are added, none of
-the components in the realm will be able to access any capabilities.
-
-#### Routes between components in the realm
-
-In our example above where we add components `a` and `b` to our realm, by
-default neither of them can access anything from each other. If `b` needs to
-access a capability from `a`, then we need to add a capability route between the
-two components.
-
-```
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="route_from_a_to_b_example" adjust_indentation="auto" %}
-```
-
-Now, component `b` can open `fidl.examples.routing.echo.Echo` in its
-[namespace][namespaces] (presuming it has a suitable [use declaration][use]) and
-the request will be routed to component `a`. Component `a` must then serve and
-[expose][expose] `fidl.examples.routing.echo.Echo`.
-
-#### Routes from the realm to the test controller
-
-There are often capabilities available inside the created realm which the test
-would like to access. For example, the test may wish to verify that component
-`b` is behaving as expected by making assertions on state exposed by the
-protocol `fidl.examples.routing.echo.EchoClientStats`.
-
-These routes can be added by using a route endpoint of "above root". When a
-route has a target of `RouteEndpoint::above_root()` the created realm will
-automatically [`expose`][expose] the capability to its parent. This allows the
-realm builder instance to access the exposed capability.
-
-```
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="route_to_above_root_example" adjust_indentation="auto" %}
-```
-
-#### Routes from outside the realm #{routes-from-outside}
-
-This section shows how capabilities can be routed from the test controller's
-realm to within the generated realm. In order to serve a capability from the
-test controller directly and inject _it_ into the realm, jump to [mock
-components](#mock-components)."
-
-In order for a capability to be routed to components within any realm built by
-realm builder, you must:
-
-- [offer][offer] the capability from the test controller's realm to the
-  `#fuchsia_component_test_collection` [collection][collection], and
-- add a route from `RouteEndpoint::above_root()` to the target component.
-
-Some capabilities are [offered][offer] automatically by virtue of including the
-realm builder CML shard. The set of automatically offered capabilities can be
-seen by looking at the relevant offer declarations in realm builder's CML shard:
+This shard declares a [component collection][collection] called
+`fuchsia_component_test_collection` where the constructed realms run,
+and [offers][offer] a set of default capabilities to those realms:
 
 ```json5
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml" region_tag="collection_offers" adjust_indentation="auto" %}
 ```
 
-As an example, to make the`fuchsia.logger.LogSink` protocol from the parent's
-realm available to components `a` and `b`, write the following code:
+## Construct the component topology {#construct-realm}
 
+Create a new `RealmBuilder` instance for each test case in your test.
+This creates a unique, isolated, child realm that ensures that the side-effects
+of one test case do not affect the others.
+
+Use the `RealmBuilder` instance to add child components to the realm with the
+`add_component()` function. Each child component requires the following:
+
+1.  **Component name:** Unique identifier for the component inside the realm.
+    For static components, this maps to the `name` attribute of an instance
+    listed in the [`children`][children] section of the component manifest.
+1.  **Component source:** Defines how the component is created when the realm is
+    built. For static components, this should be a `ComponentSource::url` with a
+    valid [component URL][component-urls]. This maps to the `url` attribute of
+    an instance listed in the [`children`][children] section of a component
+    manifest.
+
+The example below adds two static child components to the created realm:
+
+*   Component `a` loads from `fuchsia-pkg://fuchsia.com/foo#meta/foo.cm`
+*   Component `b` loads from `fuchsia-pkg://fuchsia.com/bar#meta/bar.cm`
+
+```rust
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="add_a_and_b_example" adjust_indentation="auto" %}
 ```
+
+This creates the following component topology:
+
+```none
+   <root>
+  /      \
+ a        b
+```
+
+### Adding a mock component {#mock-components}
+
+Mock components allow tests to supply a local function that behaves as a
+dedicated component.
+Realm builder implements the protocols that enables the component framework to
+treat the local function as a component and handle incoming FIDL connections.
+The local function can hold state specific to the test case where it is used,
+allowing each constructed realm to have a mock for its specific use case.
+
+The following example serves the `fidl.examples.routing.echo.Echo` protocol
+from a mock component that handles protocol requests from a local
+`echo_server_mock()` function:
+
+```rust
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="mock_component_example" adjust_indentation="auto" %}
+```
+
+The `echo_server_mock()` creates a new `ServiceFs` to handle incoming FIDL
+connections. When the `echo_string()` protocol function is called, the mock
+sends a message to the test controller.
+
+```rust
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="echo_server_mock" adjust_indentation="auto" %}
+```
+
+## Add capability routes {#add-routes}
+
+By default there are no [capability routes][cap-routes] in the created realm.
+To route capabilities to components using `RealmBuilder`, call the `add_route()`
+function with the appropriate `CapabilityRoute`.
+
+The following example adds a `CapabilityRoute` to [offer][offer] component `b`
+the `fidl.examples.routing.echo.Echo` protocol from component `a`.
+
+```rust
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="route_from_a_to_b_example" adjust_indentation="auto" %}
+```
+
+### Exposing realm capabilities {#routes-to-test}
+
+To route capabilities provided from inside the created realm to the test controller,
+set the target of the `CapabilityRoute` using `RouteEndpoint::above_root()`.
+The created realm will automatically [`expose`][expose] the capability to its
+parent. This allows the `RealmBuilder` instance to access the exposed capability.
+
+The following example exposes a `fidl.examples.routing.echo.EchoClientStats`
+protocol to the parent test component:
+
+```rust
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="route_to_above_root_example" adjust_indentation="auto" %}
+```
+
+### Offering external capabilities {#routes-from-outside}
+
+To route capabilities from the test controller to components inside the created
+realm, set the source of the `CapabilityRoute` using `RouteEndpoint::above_root()`.
+Consider the following example to make the `fuchsia.logger.LogSink` protocol from
+the parent's realm available to components `a` and `b`:
+
+```rust
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="route_logsink_example" adjust_indentation="auto" %}
 ```
 
-To route a capability that isn't in the realm builder shard, you must
-[offer][offer] it directly.
+The `fuchsia.logger.LogSink` protocol is offered by default to the created realm
+through the [realm builder shard][realm-builder-shard].
+To route a capability that isn't in the realm builder shard,
+[offer][offer] it directly:
 
 ```json5
 {
@@ -160,7 +158,7 @@ To route a capability that isn't in the realm builder shard, you must
     ],
     offer: [
         {
-            protocol: "my.cool.Protocol",
+            protocol: "fuchsia.example.Foo",
             from: "#some-child",
             to: [ "#fuchsia_component_test_collection" ],
         },
@@ -169,101 +167,33 @@ To route a capability that isn't in the realm builder shard, you must
 }
 ```
 
-### Adding a mock component {#mock-components}
+## Creating the realm
 
-Mock components allow tests to supply a local function to behave as a dedicated
-component, instead of relying on a component implemented elsewhere. The local
-function can hold state specific to the test case it is being used in, allowing
-each constructed realm to have a mock geared for its specific use case.
+After you have added all the components and routes needed for the test case,
+use `realm.create()` to create the realm and make its components ready to
+execute.
 
-Revisiting our above example where we have two components, `a` and `b`, where
-`a` is a static component and serves `fidl.examples.routing.echo.Echo` to `b`,
-we could alternatively serve `fidl.examples.routing.echo.Echo` from a mock
-component directly. This mock component could be set up to pass a message back
-to the test when its echo implementation is accessed, allowing the test to
-confirm that `b` is using this protocol as expected.
-
-```
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="mock_component_example" adjust_indentation="auto" %}
-```
-
-The `echo_server_mock` function used above can be implemented just like any
-standalone component would be, by creating a new `ServiceFs` to handle incoming
-FIDL connections. When the `echo_string` function on the protocol is exercised,
-the oneshot is consumed to send a message back to the test, allowing the test to
-proceed to completion.
-
-```
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="echo_server_mock" adjust_indentation="auto" %}
-```
-
-The above example is identical to the one detailed in the [static
-components](#static-components) section, with one key difference: component `a`
-has a manifest constructed by realm builder and when run its implementation is
-provided by a local Rust function, instead of by an executable loaded from a
-package.
-
-Under the hood, this works because realm builder implements the correct
-protocols to enable the Component Framework to treat the local function just
-like any other real component. The framework generates valid handles for the
-component, and informs the component's runner (realm builder, in this case) when
-the component should start and stop running, just like every other component
-running on the system.
-
-It is with those framework-generated handles that the function provides
-capabilities into the realm or consumes capabilities from it. Running a
-`ServiceFs` on the mock's outgoing directory handle to provide a FIDL protocol
-is identical from the framework's perspective to other components, most of which
-do the same thing in their implementations.
-
-### Modifying generated manifests
-
-The `.add_route` function of realm builder addresses the majority of capability
-routing needs, but does not handle some edge cases. Installing custom
-environments, or setting the `subdir` field on a directory capability, are both
-currently unsupported.
-
-To address use cases such as these, once the components and routes have been
-provided, the individual component manifests that realm builder has assembled can
-be manually tweaked.
-
-```
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="mutate_generated_manifest_example" adjust_indentation="auto" %}
-```
-
-Note that the manifests for components with a source of `url` can not be fetched
-or set, as the contents of these components are not directly available to realm
-builder.
-
-## Running a realm
-
-Once realm builder contains all the components and routes needed for the test
-case, the real realm can be created, and its components made ready to execute.
-This is done by calling `realm.create()`.
-
-Under the hood, realm builder generates a series of component manifests, acts as
-a [Resolver] to serve the manifests using generated URLs, and then adds the
-generated root URL to a [component collection].
-
-```
+```rust
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="create_realm" adjust_indentation="auto" %}
 ```
 
-At this point, the constructed realm is no longer mutable. All further
-interactions must be performed using the `realm_instance` returned by
-`create()`. Any eager components will immediately begin execution, and any
-capabilities that were routed to `above_root` can be accessed by the test.
+Note: The constructed realm instance is immutable. You cannot change components
+or routes after calling `create()`.
 
-```
+Use the `realm_instance` returned by `create()` to perform additional tasks.
+Any eager components in the realm will immediately execute, and any
+capabilities routed using `above_root` are now accessible by the test.
+
+```rust
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="connect_to_protocol" adjust_indentation="auto" %}
 ```
 
-## Realm destruction
+## Destroying the realm
 
 When the test no longer needs the realm, it can be destroyed by destroying the
 realm instance returned by `create()`:
 
-```
+```rust
 // As per rust semantics, this also happens when `realm_instance` goes out of
 // scope.
 drop(realm_instance);
@@ -272,30 +202,32 @@ drop(realm_instance);
 This action instructs Component Manager to destroy the realm and all its
 children.
 
-## Advanced configuration of the test realm collection
+## Advanced configuration
 
-If a test author wants more control over the test realm's environment, they can
-declare a new collection in the test driver's manifest. Any such collection must
-be set up appropriately for realm builder, so copying the contents of realm
-builder's shard into the test driver manifest (and renaming the environment and
-collection) is a good starting point for setting up a new collection. For a
-real-world example of this.
+### Modifying generated manifests
 
-# Troubleshooting
+If the `add_route()` function does not provide support for your capability
+routing needs, you can manually adjust the individual component manifests that
+realm builder creates. Use the `get_decl()` function to obtain a specific child's
+manifest and modify its attributes. See the following example:
 
-## Invalid capability routes
+```rust
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="mutate_generated_manifest_example" adjust_indentation="auto" %}
+```
 
-The `.add_route` function of realm builder is powerful, but it's not always able
-to ensure that the routes are fully valid.
+Note: Manifests for components with a source of `url` can not be fetched or set.
+The contents of these components are not directly available to realm builder.
 
-One common source of invalid capability routes comes from attempting to route
-capabilities with a source of `above_root`: Unless the test's manifest has been
-modified to [offer][offer] the capabilities to the
-`#fuchsia_component_test_collection` [collection][collection], then requests to
-open the capability will not resolve. When a component attempts to access the
-capability, Component Manager will follow the offers to the root of the created
-realm and then error out, due to a missing offer. Users can know when this
-happens by watching for log messages from component manager, such as:
+## Troubleshooting
+
+### Invalid capability routes
+
+The `add_route()` function cannot validate if a capability is properly offered
+to the created realm from the test controller.
+
+If you attempt to route capabilities with a source of `above_root` without a
+corresponding [offer][offer], requests to open the capability will not resolve
+and you will see error messages similar to the following:
 
 ```
 [86842.196][klog][E] [component_manager] ERROR: Failed to route protocol `fidl.examples.routing.echo.Echo` with target component `/core:0/test_manager:0/tests:auto-10238282593681900609:4/test_wrapper:0/test_root:0/fuchsia_component_test_
@@ -303,20 +235,19 @@ happens by watching for log messages from component manager, such as:
 [86842.197][klog][I] ction:auto-4046836611955440668:16` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
 ```
 
-See the [routes coming from outside the realm](#routes-from-outside) section for
-more information on how to set up these routes correctly.
+For more information on how to properly offer capabilities from the test
+controller, see [offering external capabilities](#routes-from-outside).
 
-# Language feature matrix {#language-feature-matrix}
+## Language feature matrix {#language-feature-matrix}
 
 |                          | Rust |
 | ------------------------ |:----:|
-| CFv2 components          |    Y |
-| CFv1 components          |    N |
-| mock components          |    Y |
-| strong capability routes |    Y |
-| weak capability routes   |    N |
-| custom environments      |    N |
-| setting subdirectories   |    N |
+| Legacy components        |    N |
+| Mock components          |    Y |
+| Strong capability routes |    Y |
+| Weak capability routes   |    N |
+| Custom environments      |    N |
+| Setting subdirectories   |    N |
 
 
 [cap-routes]: /docs/concepts/components/v2/component_manifests.md#capability-routing
