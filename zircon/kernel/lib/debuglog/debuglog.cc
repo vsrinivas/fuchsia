@@ -448,7 +448,13 @@ void dlog_bluescreen_init() {
 
   // replay debug log?
 
+  // Print panic string.
+  //
+  // WARNING: This string is detected by external tools to detect
+  // kernel panics during tests. Changes should be made with care.
   printf("\nZIRCON KERNEL PANIC\n\n");
+
+  // Print uptime, current CPU, and version information.
   printf("UPTIME: %" PRIi64 "ms, CPU: %" PRIu32 "\n", current_time() / ZX_MSEC(1),
          arch_curr_cpu_num());
   print_backtrace_version_info();
