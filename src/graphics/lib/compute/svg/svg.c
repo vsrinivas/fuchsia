@@ -2219,9 +2219,6 @@ svg_parse_points(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len)
 {
   {
     struct svg_path_cmd_poly_point cmd = { .type = SVG_PATH_CMD_POLY_POINT };
-
-    bool first = true;
-
     do
       {
         uint32_t parse_count;
@@ -2235,8 +2232,6 @@ svg_parse_points(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len)
 
         val += n;
         len -= n;
-
-        first = false;
       }
     while (len > 0);
   }
