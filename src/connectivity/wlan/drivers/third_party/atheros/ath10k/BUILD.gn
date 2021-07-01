@@ -100,6 +100,8 @@ driver_module("ath10k_driver") {
   public_deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_c" ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  # Suppress warnings the atheros code doesn't comply with.
+  configs += [ "//build/config:Wno-unused-but-set-variable" ]
 }
 
 if (internal_access) {
