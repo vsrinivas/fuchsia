@@ -14,5 +14,7 @@ executable("nc") {
   ]
 
   deps = [ "//src/zircon/lib/zircon" ]
+  # Suppress warnings the openbsd-netcat code doesn't comply with.
   configs += [ "//build/config:Wno-conversion" ]
+  configs += [ "//build/config:Wno-unused-but-set-variable" ]
 }
