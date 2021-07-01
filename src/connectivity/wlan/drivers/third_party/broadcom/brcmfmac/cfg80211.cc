@@ -2004,6 +2004,7 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
     } else {
       brcmf_notify_disassoc(ndev, ZX_OK);
     }
+    cfg->disconnect_mode = BRCMF_DISCONNECT_NONE;
   }
   if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
     cfg->signal_report_timer->Stop();

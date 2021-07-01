@@ -214,6 +214,8 @@ class SimFirmware {
   // Num of clients currently associated with the SoftAP IF
   uint16_t GetNumClients(uint16_t ifidx);
 
+  void TriggerFirmwareDisassoc(uint32_t reason);
+
   // Firmware iovar accessors
   zx_status_t IovarsSet(uint16_t ifidx, const char* name, const void* value, size_t value_len,
                         bcme_status_t* fw_err);
