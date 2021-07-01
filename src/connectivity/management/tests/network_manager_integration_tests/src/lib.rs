@@ -167,52 +167,6 @@ fn connect_network_manager(
     Ok((router_admin, router_state))
 }
 
-async fn add_ethernet_device(
-    netstack_proxy: &fidl_fuchsia_netstack::NetstackProxy,
-    device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
-    name: &str,
-) -> Result<(), Error> {
-    let device_name = format!("/mock/{}", name);
-    let id = netstack_proxy
-        .add_ethernet_device(
-            &device_name,
-            &mut fidl_fuchsia_netstack::InterfaceConfig {
-                name: device_name.to_string(),
-                filepath: format!("/fake/filepath/for_test/{}", name),
-                metric: 0,
-            },
-            device,
-        )
-        .await
-        .context("failed to add ethernet device")?
-        .map_err(fuchsia_zircon::Status::from_raw)
-        .context("add_ethernet_device failed")?;
-
-    // Check that the newly added ethernet interface is present before continuing with the
-    // actual tests.
-    let interface = netstack_proxy
-        .get_interfaces()
-        .await
-        .expect("failed to get interfaces")
-        .into_iter()
-        .find(|interface| interface.id == id)
-        .ok_or(anyhow::format_err!("failed to find added ethernet device"))
-        .unwrap();
-    assert!(
-        !interface.features.contains(fidl_fuchsia_hardware_ethernet::Features::Loopback),
-        "unexpected interface features: ({:b}).contains({:b})",
-        interface.features,
-        fidl_fuchsia_hardware_ethernet::Features::Loopback
-    );
-    assert!(
-        !interface.flags.contains(fidl_fuchsia_netstack::Flags::Up),
-        "unexpected interface flags: ({:b}).contains({:b})",
-        interface.flags,
-        fidl_fuchsia_netstack::Flags::Up
-    );
-    Ok(())
-}
-
 async fn exec_cmd(env: &ManagedEnvironmentProxy, command: &str) -> String {
     let (router_admin, router_state) =
         connect_network_manager(&env).expect("Failed to connect from managed environment");
@@ -282,9 +236,21 @@ async fn test_device() -> Device {
             create_endpoint(name, &endpoint_manager).await.expect("failed to create endpoint");
         match endpoint.get_device().await.expect("failed to get ethernet device") {
             fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(device) => {
-                add_ethernet_device(&netstack_proxy, device, name)
+                let device_name = format!("/mock/{}", name);
+                let _: u32 = netstack_proxy
+                    .add_ethernet_device(
+                        &device_name,
+                        &mut fidl_fuchsia_netstack::InterfaceConfig {
+                            name: device_name.clone(),
+                            filepath: format!("/fake/filepath/for_test/{}", name),
+                            metric: 0,
+                        },
+                        device,
+                    )
                     .await
-                    .expect("error adding ethernet device")
+                    .expect("failed to add ethernet device")
+                    .map_err(fuchsia_zircon::Status::from_raw)
+                    .expect("add_ethernet_device failed");
             }
             fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(device) => {
                 // We specifically create an Ethertap endpoint in `create_endpoint`.

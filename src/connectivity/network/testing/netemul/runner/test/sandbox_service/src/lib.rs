@@ -136,15 +136,11 @@ mod tests {
         let env = create_env_with_netstack(&sandbox).unwrap();
         let (netstack, netstack_server_end) =
             fidl::endpoints::create_proxy::<NetstackMarker>().unwrap();
-        env.connect_to_service(NetstackMarker::NAME, netstack_server_end.into_channel())
-            .context("Can't connect to netstack")
-            .unwrap();
-        let ifs =
-            netstack.get_interfaces().await.context("can't list netstack interfaces").unwrap();
-        assert!(
-            ifs.len() <= 1,
-            "brand new netstack should not have any interfaces except for loopback"
-        );
+        let () = env
+            .connect_to_service(NetstackMarker::NAME, netstack_server_end.into_channel())
+            .expect("Can't connect to netstack");
+        let routes = netstack.get_route_table().await.expect("can't list netstack routes");
+        assert_eq!(routes, []);
     }
 
     #[fasync::run_singlethreaded]

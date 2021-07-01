@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::convert::TryInto as _;
 
 use fidl_fuchsia_logger;
 use fidl_fuchsia_net_ext::{IntoExt as _, NetTypesIpAddressExt};
@@ -43,20 +44,29 @@ use test_case::test_case;
 async fn set_interface_status_unknown_interface() -> Result {
     let name = "set_interface_status";
     let sandbox = netemul::TestSandbox::new()?;
-    let (_realm, netstack) =
+    let (realm, netstack) =
         sandbox.new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker, _>(name)?;
 
-    let interfaces = netstack.get_interfaces().await.context("failed to call get_interfaces")?;
-    let next_id =
-        1 + interfaces.iter().map(|interface| interface.id).max().ok_or(anyhow::format_err!(
-            "failed to find any network interfaces (at least localhost should be present)"
-        ))?;
+    let interface_state = realm
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("connect to fuchsia.net.interfaces/State service")?;
+    let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        HashMap::new(),
+    )
+    .await
+    .context("failed to observe interface addition")?;
+
+    let next_id = 1 + interfaces.keys().max().ok_or(anyhow::format_err!(
+        "failed to find any network interfaces (at least loopback should be present)"
+    ))?;
+    let next_id = next_id.try_into().with_context(|| format!("{} overflows id", next_id))?;
 
     let () = netstack
         .set_interface_status(next_id, false)
         .context("failed to call set_interface_status")?;
-    let _interfaces = netstack
-        .get_interfaces()
+    let _routes = netstack
+        .get_route_table()
         .await
         .context("failed to invoke netstack method after calling set_interface_status with an invalid argument")?;
 
@@ -67,7 +77,7 @@ async fn set_interface_status_unknown_interface() -> Result {
 async fn add_ethernet_device() -> Result {
     let name = "add_ethernet_device";
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_realm, netstack, device) = sandbox
+    let (realm, netstack, device) = sandbox
         .new_netstack_and_device::<Netstack2, netemul::Ethernet, fidl_fuchsia_netstack::NetstackMarker, _>(
             name,
         )
@@ -92,26 +102,36 @@ async fn add_ethernet_device() -> Result {
         .context("add_ethernet_device FIDL error")?
         .map_err(fuchsia_zircon::Status::from_raw)
         .context("add_ethernet_device failed")?;
-    let interface = netstack
-        .get_interfaces()
-        .await
-        .context("failed to get interfaces")?
-        .into_iter()
-        .find(|interface| interface.id == id)
-        .ok_or(anyhow::format_err!("failed to find added ethernet device"))?;
-    assert!(
-        !interface.features.contains(fidl_fuchsia_hardware_ethernet::Features::Loopback),
-        "unexpected interface features: ({:b}).contains({:b})",
-        interface.features,
-        fidl_fuchsia_hardware_ethernet::Features::Loopback
+
+    let interface_state = realm
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("connect to fuchsia.net.interfaces/State service")?;
+    let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id.into());
+    let (device_class, online) = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        &mut state,
+        |fidl_fuchsia_net_interfaces_ext::Properties {
+             id: _,
+             name: _,
+             device_class,
+             online,
+             addresses: _,
+             has_default_ipv4_route: _,
+             has_default_ipv6_route: _,
+         }| Some((*device_class, *online)),
+    )
+    .await
+    .context("failed to observe interface addition")?;
+
+    assert_eq!(
+        device_class,
+        fidl_fuchsia_net_interfaces::DeviceClass::Device(
+            fidl_fuchsia_hardware_network::DeviceClass::Ethernet
+        )
     );
-    assert!(
-        !interface.flags.contains(fidl_fuchsia_netstack::Flags::Up),
-        "unexpected interface flags: ({:b}).contains({:b})",
-        interface.flags,
-        fidl_fuchsia_netstack::Flags::Up
-    );
-    Ok::<(), anyhow::Error>(())
+    assert!(!online);
+
+    Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -306,9 +326,11 @@ async fn add_remove_interface_address_errors() -> Result {
         .unwrap_err();
     assert_eq!(error, fidl_fuchsia_net_stack::Error::NotFound);
 
+    let next_id = (max_id + 1).try_into().with_context(|| format!("{} overflows id", max_id))?;
+
     let error = netstack
         .remove_interface_address(
-            std::convert::TryInto::try_into(max_id + 1).expect("should fit"),
+            next_id,
             &mut interface_address.addr,
             interface_address.prefix_len,
         )
@@ -333,7 +355,7 @@ async fn add_remove_interface_address_errors() -> Result {
 
     let error = netstack
         .remove_interface_address(
-            std::convert::TryInto::try_into(max_id).expect("should fit"),
+            next_id,
             &mut interface_address.addr,
             interface_address.prefix_len,
         )
@@ -444,7 +466,7 @@ async fn disable_interface_loopback() -> Result {
         .context("failed to create realm")?;
 
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
-    let localhost = interfaces
+    let loopback = interfaces
         .iter()
         .find(|interface| {
             interface
@@ -454,11 +476,11 @@ async fn disable_interface_loopback() -> Result {
         })
         .ok_or(anyhow::format_err!("failed to find loopback interface"))?;
     assert_eq!(
-        localhost.properties.administrative_status,
+        loopback.properties.administrative_status,
         fidl_fuchsia_net_stack::AdministrativeStatus::Enabled
     );
-    let () = exec_fidl!(stack.disable_interface(localhost.id), "failed to disable interface")?;
-    let info = exec_fidl!(stack.get_interface_info(localhost.id), "failed to get interface info")?;
+    let () = exec_fidl!(stack.disable_interface(loopback.id), "failed to disable interface")?;
+    let info = exec_fidl!(stack.get_interface_info(loopback.id), "failed to get interface info")?;
     assert_eq!(
         info.properties.administrative_status,
         fidl_fuchsia_net_stack::AdministrativeStatus::Disabled
@@ -490,9 +512,8 @@ async fn test_remove_interface<E: netemul::Endpoint>(name: &str) -> Result {
     Ok(())
 }
 
-/// Tests that adding an interface causes an interface changed event.
 #[variants_test]
-async fn test_add_interface_causes_interfaces_changed<E: netemul::Endpoint>(name: &str) -> Result {
+async fn test_add_interface<E: netemul::Endpoint>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let (realm, stack, device) = sandbox
         .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(
@@ -501,18 +522,8 @@ async fn test_add_interface_causes_interfaces_changed<E: netemul::Endpoint>(name
         .await
         .context("failed to create netstack realm")?;
 
-    let netstack = realm
-        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
-        .context("failed to connect to netstack")?;
-
-    // Ensure we're connected to Netstack so we don't miss any events.
-    // Since we do it, assert that only loopback exists.
-    let ifs = netstack.get_interfaces().await.context("failed to get interfaces")?;
-    assert_eq!(ifs.len(), 1);
-
     let id = device.add_to_stack(&stack).await.context("failed to add device")?;
 
-    // Wait for interfaces changed event with the new ID.
     let interface_state = realm
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
@@ -538,15 +549,6 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -
         )
         .await
         .context("failed to create netstack realm")?;
-
-    let netstack = realm
-        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
-        .context("failed to connect to netstack")?;
-
-    // Ensure we're connected to Netstack so we don't miss any events.
-    // Since we do it, assert that only loopback exists.
-    let ifs = netstack.get_interfaces().await.context("failed to get interfaces")?;
-    assert_eq!(ifs.len(), 1);
 
     let id = device.add_to_stack(&stack).await.context("failed to add device")?;
     if enabled {

@@ -12,7 +12,7 @@ use fidl_fuchsia_netstack as netstack;
 use fidl_fuchsia_netstack_ext::RouteTable;
 use fidl_fuchsia_sys as sys;
 use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
-use fuchsia_component::client::AppBuilder;
+use fuchsia_component::client::{AppBuilder, ExitStatus};
 use fuchsia_zircon as zx;
 use test_case::test_case;
 
@@ -108,13 +108,37 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
         .context("add_ethernet_device FIDL error")?
         .map_err(fuchsia_zircon::Status::from_raw)
         .context("add_ethernet_device error")?;
-    let interface = netstack
-        .get_interfaces()
-        .await
-        .context("failed to get interfaces")?
-        .into_iter()
-        .find(|interface| interface.id == id)
-        .ok_or(anyhow::anyhow!("failed to find added ethernet device"))?;
+    let interface_state = app
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("failed to connect to fuchsia.net.interfaces/State service")?;
+    let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id.into());
+    let ipv6_addresses = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        &mut state,
+        |fidl_fuchsia_net_interfaces_ext::Properties {
+             id: _,
+             name: _,
+             device_class: _,
+             online: _,
+             addresses,
+             has_default_ipv4_route: _,
+             has_default_ipv6_route: _,
+         }| {
+            Some(
+                addresses
+                    .iter()
+                    .map(|fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| addr)
+                    .filter(|fidl_fuchsia_net::Subnet { addr, prefix_len: _ }| match addr {
+                        net::IpAddress::Ipv4(net::Ipv4Address { addr: _ }) => false,
+                        net::IpAddress::Ipv6(net::Ipv6Address { addr: _ }) => true,
+                    })
+                    .copied()
+                    .collect(),
+            )
+        },
+    )
+    .await
+    .context("failed to observe interface addition")?;
 
     // Kill the netstack.
     //
@@ -122,9 +146,9 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
     // but we explicitly kill it and wait for the terminated event before
     // proceeding.
     let () = app.kill().context("failed to kill app")?;
-    let _exit_status = app.wait().await.context("failed to observe netstack termination")?;
+    let _: ExitStatus = app.wait().await.context("failed to observe netstack termination")?;
 
-    Ok(interface.ipv6addrs)
+    Ok(ipv6_addresses)
 }
 
 /// Test that across netstack runs, a device will initially be assigned the same
