@@ -8,7 +8,8 @@ function list_optional_features {
     "incremental" \
     "ffx_discovery" \
     "legacy_set" \
-    "legacy_fastboot"
+    "legacy_fastboot" \
+    "legacy_serve"
 }
 
 # Return 0 (true) if the default of the given feature is enabled, 1 (false) otherwise.
@@ -18,6 +19,7 @@ function is_feature_enabled_by_default {
   "ffx_discovery") return 0 ;;
   "legacy_set") return 1 ;;
   "legacy_fastboot") return 1 ;;
+  "legacy_serve") return 0 ;;
   esac
 
   # global default is enabled
@@ -47,6 +49,11 @@ function help_optional_feature {
   "legacy_fastboot")
     h=(
       "Device provisioning based on legacy fastboot instead of ffx."
+      )
+    ;;
+  "legacy_serve")
+    h=(
+      "Serve packages using the legacy 'pm' package server."
       )
     ;;
   esac

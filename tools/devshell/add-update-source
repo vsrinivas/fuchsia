@@ -40,7 +40,7 @@ function main {
   set -- "${FX_ARGV[@]}"
 
   addr=""
-  port="8083"
+  port=""
   source_name="devhost"
   persist=""
   while [[ $# -ne 0 ]]; do
@@ -73,61 +73,107 @@ function main {
     shift
   done
 
-  if [[ -z "${addr}" ]]; then
-    addr=$(fx-command-run shell 'echo $SSH_CONNECTION' | cut -d ' ' -f 1)
-    if [[ $? -ne 0 || -z "${addr}" ]]; then
-      fx-error "unable to determine host address as seen from the target.  Is the target up?"
-      exit 1
+  if is_feature_enabled "legacy_serve"; then
+    if [[ -z "${port}" ]]; then
+      port="8083"
+    fi
+
+    if [[ -z "${addr}" ]]; then
+      addr=$(fx-command-run shell 'echo $SSH_CONNECTION' | cut -d ' ' -f 1)
+      if [[ $? -ne 0 || -z "${addr}" ]]; then
+        fx-error "unable to determine host address as seen from the target.  Is the target up?"
+        exit 1
+      fi
+    fi
+
+    addr="$(echo "${addr}" | sed 's/%/%25/g')"
+
+    # A poor mans heuristic for "is an ipv6 address", URL encase escape
+    # the address.
+    if [[ "${addr}" =~ : ]]; then
+      addr="[${addr}]"
+    fi
+
+    config_url="http://${addr}:${port}/config.json"
+
+    add_repo_args=(-n "${source_name}")
+    if [[ ! -z "${persist}" ]]; then
+      add_repo_args+=( "${persist}" )
+    fi
+    add_repo_args+=( "${config_url}" )
+
+    fx-command-run shell pkgctl repo add url "${add_repo_args[@]}"
+    err=$?
+
+    if [[ $err -ne 0 ]]; then
+      fx-error "Unable to register update source."
+      if [[ $err -eq 2 ]]; then
+        # The GET request failed.
+        fx-error " - Is 'fx serve' or 'fx serve-updates' running?"
+        fx-error " - Can the target reach ${config_url} ?"
+      fi
+      return "$err"
+    fi
+
+    rule="'{
+      \"version\": \"1\",
+      \"content\": [
+        {
+          \"host_match\": \"fuchsia.com\",
+          \"host_replacement\": \"${source_name}\",
+          \"path_prefix_match\": \"/\",
+          \"path_prefix_replacement\": \"/\"
+        }
+      ]
+    }'"
+
+    fx-command-run shell pkgctl rule replace json $rule
+    err=$?
+
+    if [[ $err -ne 0 ]]; then
+      fx-error "The repo has been set up, but there was an error setting the rewriting rule for ${source_name}: $rule"
+      fx-error "To remove the repo, run \"fx shell pkgctl repo rm fuchsia-pkg://${source_name}\"."
+      return $err
+    fi
+  else
+    # FIXME(http://fxbug.dev/77146): The tunnel is currently hardcoded to port
+    # [::1]:8085.
+    if [[ ! -z "${addr}" ]]; then
+      fx-error "Flag '--addr' is not yet supported by ffx repository serving"
+      fx-error "See http://fxbug.dev/77146 for more details."
+      return 1
+    fi
+
+    if [[ -z "${port}" ]]; then
+      port=8085
+    elif [[ "${port}" != "8085" ]]; then
+      fx-error "Flag '--port' is currently required to be 8085 by ffx repository serving"
+      fx-error "See http://fxbug.dev/77146 for more details."
+      return 1
+    fi
+
+    # FIXME(http://fxbug.dev/78901): ffx does not allow configuring repository
+    # persistence.
+    if [[ -z "{persist}" ]]; then
+      fx-error "Flag '--persist' is not yet supported by ffx repository serving"
+      fx-error "See http://fxbug.dev/78901 for more details."
+      return 1
+    fi
+
+    fx-command-run ffx repository add-from-pm "$source_name" "${FUCHSIA_BUILD_DIR}/amber-files"
+    err=$?
+    if [[ $err -ne 0 ]]; then
+      fx-error "The repository was not able to be added to ffx"
+      return $err
+    fi
+
+    fx-command-run ffx repository target register "$source_name"
+    err=$?
+    if [[ $err -ne 0 ]]; then
+      fx-error "The repository was unable to be added to the target device"
+      return $err
     fi
   fi
-
-  addr="$(echo "${addr}" | sed 's/%/%25/g')"
-
-  # A poor mans heuristic for "is an ipv6 address", URL encase escape
-  # the address.
-  if [[ "${addr}" =~ : ]]; then
-    addr="[${addr}]"
-  fi
-
-  config_url="http://${addr}:${port}/config.json"
-
-  fx-command-run shell pkgctl repo add url\
-    -n "${source_name}" \
-    "${persist}" \
-    "${config_url}"
-  err=$?
-
-  if [[ $err -ne 0 ]]; then
-    fx-error "Unable to register update source."
-    if [[ $err -eq 2 ]]; then
-      # The GET request failed.
-      fx-error " - Is 'fx serve' or 'fx serve-updates' running?"
-      fx-error " - Can the target reach ${config_url} ?"
-    fi
-    return "$err"
-  fi
-
-  rule="'{
-    \"version\": \"1\",
-    \"content\": [
-      {
-        \"host_match\": \"fuchsia.com\",
-        \"host_replacement\": \"${source_name}\",
-        \"path_prefix_match\": \"/\",
-        \"path_prefix_replacement\": \"/\"
-      }
-    ]
-  }'"
-
-  fx-command-run shell pkgctl rule replace json $rule
-  err=$?
-
-  if [[ $err -ne 0 ]]; then
-    fx-error "The repo has been set up, but there was an error setting the rewriting rule for ${source_name}: $rule"
-    fx-error "To remove the repo, run \"fx shell pkgctl repo rm fuchsia-pkg://${source_name}\"."
-    return $err
-  fi
-
 }
 
 main "$@"

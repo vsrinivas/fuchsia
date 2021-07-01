@@ -36,7 +36,7 @@ function usage {
 fx-standard-switches "$@"
 set -- "${FX_ARGV[@]}"
 
-port="8083"
+port=""
 serve_flags=()
 verbose=false
 auto_config=true
@@ -87,12 +87,12 @@ if [[ "${verbose}" != true ]]; then
   serve_flags+=("-q")
 fi
 
-pm_srv_pid=
+background_pid=
 cleanup() {
-  if [[ -n "${pm_srv_pid}" ]]; then
-    if kill -0 "${pm_srv_pid}" 2> /dev/null; then
-      kill -TERM "${pm_srv_pid}" 2> /dev/null
-      wait "${pm_srv_pid}" 2> /dev/null
+  if [[ -n "${background_pid}" ]]; then
+    if kill -0 "${background_pid}" 2> /dev/null; then
+      kill -TERM "${background_pid}" 2> /dev/null
+      wait "${background_pid}" 2> /dev/null
     fi
   fi
 }
@@ -179,28 +179,68 @@ else
   fi
 fi
 
-pm_serve_args=( serve -vt -repo "${repo_dir}" "${serve_flags[@]}" )
+if is_feature_enabled "legacy_serve"; then
+  # Default the port to 8083 if it is unset.
+  if [[ -z "${port}" ]]; then
+    port="8083"
+  fi
 
-# the manifest list file has relative paths and "pm serve" looks for them
-# from PWD, so pm command needs to be executed in "$FUCHSIA_BUILD_DIR"
-cd "${FUCHSIA_BUILD_DIR}"
+  pm_serve_args=( serve -vt -repo "${repo_dir}" "${serve_flags[@]}" )
+
+  # the manifest list file has relative paths and "pm serve" looks for them
+  # from PWD, so pm command needs to be executed in "$FUCHSIA_BUILD_DIR"
+  cd "${FUCHSIA_BUILD_DIR}"
+else
+  # FIXME(http://fxbug.dev/79636): ffx doesn't yet support incremental package building.
+  if is_feature_enabled "incremental"; then
+    fx-error "The feature 'incremental' is not supported yet by ffx"
+    fx-error "See http://fxbug.dev/79636 for more details."
+    exit 1
+  fi
+
+  # FIXME(http://fxbug.dev/77146): The tunnel is currently hardcoded to port
+  # 8085.
+  if [[ -z "${port}" ]]; then
+    port=8085
+  elif [[ "${port}" != "8085" ]]; then
+    fx-error "Flag '--port' is currently required to be 8085 by ffx repository serving"
+    fx-error "See http://fxbug.dev/77146 for more details."
+    exit 1
+  fi
+fi
 
 if [[ "${auto_config}" == false ]]; then
   log "Flag '--no-auto-config' used, automatic device configuration disabled."
   log "Use 'fx -d DEVICE add-update-source --port ${port}' to reconfigure devices as needed, since it is not persistent accross reboots."
   log "Serving packages on port ${port}..."
-  fx-command-exec host-tool pm "${pm_serve_args[@]}"
+
+  if is_feature_enabled "legacy_serve"; then
+    fx-command-exec host-tool pm "${pm_serve_args[@]}"
+  else
+    log "Repository is being served in the background by ffx"
+    exit 0
+  fi
 fi
 
-fx-command-exec host-tool pm "${pm_serve_args[@]}" &
-pm_srv_pid=$!
+if is_feature_enabled "legacy_serve"; then
+  fx-command-exec host-tool pm "${pm_serve_args[@]}" &
+  background_pid=$!
 
-# Allow a little slack for pm serve to startup, that way the first kill -0 will catch a dead server
-sleep 0.1
-if ! kill -0 "${pm_srv_pid}" 2> /dev/null; then
-  log "Server died, exiting"
-  wait
-  exit $?
+  # Allow a little slack for pm serve to startup, that way the first kill -0 will catch a dead server
+  sleep 0.1
+  if ! kill -0 "${background_pid}" 2> /dev/null; then
+    log "Server died, exiting"
+    wait
+    exit $?
+  fi
+else
+  if [[ "${verbose}" == true ]]; then
+    # FIXME(http://fxbug.dev/78891): `ffx daemon log` doesn't have a mechanism for
+    # filtering based off of a specific tag, so we'll grep for the lines that
+    # denote traffic to the web server.
+    fx-command-run ffx daemon log --follow --line-count 0 | grep ' \(pkg::repository::server\)\|\(ffx_daemon_service_repo\): ' &
+    background_pid=$!
+  fi
 fi
 
 log "Discovery..."
@@ -208,9 +248,13 @@ log "Discovery..."
 # State is used to prevent too much output
 state="discover"
 while true; do
-  if ! kill -0 "${pm_srv_pid}" 2> /dev/null; then
-    log "Server died, exiting"
-    pm_srv_pid=
+  if ! kill -0 "${background_pid}" 2> /dev/null; then
+    if is_feature_enabled "legacy_serve"; then
+      log "Server died, exiting"
+    else
+      log "Repository Server Logger died, exiting"
+    fi
+    background_pid=
     exit 1
   fi
 
