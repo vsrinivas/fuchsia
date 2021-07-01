@@ -5,11 +5,18 @@
 use {
     anyhow::{Context, Result},
     cs::{io::Directory, v2::V2Component, Subcommand},
+    errors::ffx_error,
     ffx_core::ffx_plugin,
     ffx_session_show_args::SessionShowCommand,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
 };
+
+const DETAILS_FAILURE: &str = "\
+Could not get session information from the target.
+
+This may be because there are no running sessions, or because the target is
+using a product configuration that does not support the session framework.";
 
 #[ffx_plugin()]
 pub async fn show(rcs_proxy: rc::RemoteControlProxy, _cmd: SessionShowCommand) -> Result<()> {
@@ -22,6 +29,8 @@ pub async fn show(rcs_proxy: rc::RemoteControlProxy, _cmd: SessionShowCommand) -
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
     let component = V2Component::explore(hub_dir, Subcommand::Show).await;
-    component.print_details("session:session")?;
+    component
+        .print_details("session:session")
+        .map_err(|e| ffx_error!("{}\n\nError was: {}", DETAILS_FAILURE, e))?;
     Ok(())
 }
