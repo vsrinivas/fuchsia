@@ -21,6 +21,7 @@ group("lib") {
     "fuchsia-bluetooth",
     "packet-encoding",
     "profile-client",
+    "vigil",
   ]
 }
 
@@ -42,5 +43,6 @@ group("tests") {
     "fuchsia-bluetooth:tests",
     "packet-encoding:tests",
     "profile-client:tests",
+    "vigil:tests",
   ]
 }
