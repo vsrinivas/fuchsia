@@ -307,7 +307,7 @@ zx::status<> DeviceBuilder::BuildComposite(zx_device_t* platform_bus,
       .parts = &fragment_parts[bus_index],
   };
 
-  composite_device_desc_t composite_desc = {
+  __UNUSED composite_device_desc_t composite_desc = {
       .props = dev_props_.data(),
       .props_count = dev_props_.size(),
       .str_props = str_props.data(),
@@ -317,18 +317,19 @@ zx::status<> DeviceBuilder::BuildComposite(zx_device_t* platform_bus,
       .coresident_device_index = 0,
   };
 
+#ifndef IS_TEST
+  // TODO(fxbug.dev/79923): re-enable this in tests once mock_ddk supports composites.
   auto composite_name = fbl::StringPrintf("%s-composite", name());
   // Don't worry about any metadata, since it's present in the "acpi" parent.
   auto composite_device = std::make_unique<Device>(parent_->zx_device_, handle_, platform_bus);
   zx_status_t status = composite_device->DdkAddComposite(composite_name.data(), &composite_desc);
 
-#ifndef IS_TEST
-  // TODO(fxbug.dev/79923): fake_ddk leaks composite devices, so we should migrate to mock_ddk
-  // once it supports composites.
   if (status == ZX_OK) {
     // The DDK takes ownership of the device, but only if DdkAddComposite succeeded.
     __UNUSED auto unused = composite_device.release();
   }
+#else
+  zx_status_t status = ZX_OK;
 #endif
 
   return zx::make_status(status);

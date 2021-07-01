@@ -56,7 +56,7 @@ test("acpi-test") {
   ]
   deps = shared_deps + shared_public_deps + [
            "//zircon/public/lib/zxtest",
-           "//src/devices/testing/fake_ddk",
+           "//src/devices/testing/mock-ddk",
            "test:mock-acpi",
          ]
 

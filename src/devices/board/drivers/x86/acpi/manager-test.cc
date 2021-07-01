@@ -6,7 +6,6 @@
 
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
-#include <lib/fake_ddk/fake_ddk.h>
 
 #include <initializer_list>
 #include <map>
@@ -16,28 +15,9 @@
 #include "src/devices/board/drivers/x86/acpi/acpi.h"
 #include "src/devices/board/drivers/x86/acpi/test/mock-acpi.h"
 #include "src/devices/board/drivers/x86/acpi/test/mock-pci.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 using acpi::test::Device;
-
-class AcpiFakeBind : public fake_ddk::Bind {
- public:
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    // Because of the way fake_ddk is implemented, it's not trivial to verify that the proper
-    // "tree" structure is replicated.
-    // We just substitute kFakeDevice for kFakeParent so that the fake_ddk implementation doesn't
-    // complain.
-    if (parent == fake_ddk::kFakeDevice) {
-      parent = fake_ddk::kFakeParent;
-    }
-
-    // DdkAdd() sets ctx to be "this".
-    added_devices.emplace_back(static_cast<acpi::Device*>(args->ctx));
-    return fake_ddk::Bind::DeviceAdd(drv, parent, args, out);
-  }
-
-  std::vector<std::unique_ptr<acpi::Device>> added_devices;
-};
 
 static void ExpectProps(acpi::DeviceBuilder* b, std::vector<zx_device_prop_t> expected_dev,
                         std::vector<zx_device_str_prop_t> expected_str) {
@@ -90,7 +70,8 @@ static void ExpectProps(acpi::DeviceBuilder* b, std::vector<zx_device_prop_t> ex
 
 class AcpiManagerTest : public zxtest::Test {
  public:
-  AcpiManagerTest() : manager_(&acpi_, fake_ddk::kFakeParent) {}
+  AcpiManagerTest()
+      : mock_root_(MockDevice::FakeRootParent()), manager_(&acpi_, mock_root_.get()) {}
   void SetUp() override { acpi_.SetDeviceRoot(std::make_unique<Device>("\\")); }
 
   void InsertDeviceBelow(std::string path, std::unique_ptr<Device> d) {
@@ -106,26 +87,26 @@ class AcpiManagerTest : public zxtest::Test {
     ret = manager_.ConfigureDiscoveredDevices();
     ASSERT_TRUE(ret.is_ok());
 
-    ret = manager_.PublishDevices(fake_ddk::kFakeParent);
+    ret = manager_.PublishDevices(mock_root_.get());
     ASSERT_TRUE(ret.is_ok());
   }
 
  protected:
-  AcpiFakeBind fake_ddk_;
+  std::shared_ptr<MockDevice> mock_root_;
   acpi::test::MockAcpi acpi_;
   acpi::Manager manager_;
 };
 
 TEST_F(AcpiManagerTest, TestEnumerateEmptyTables) {
   ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
-  ASSERT_EQ(fake_ddk_.added_devices.size(), 0);
+  ASSERT_EQ(mock_root_->descendant_count(), 0);
 }
 
 TEST_F(AcpiManagerTest, TestEnumerateSystemBus) {
   ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
   ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
 
-  ASSERT_EQ(fake_ddk_.added_devices.size(), 1);
+  ASSERT_EQ(mock_root_->descendant_count(), 1);
 }
 
 TEST_F(AcpiManagerTest, TestDevicesOnPciBus) {
@@ -139,7 +120,7 @@ TEST_F(AcpiManagerTest, TestDevicesOnPciBus) {
   ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.PCI0", std::move(device)));
 
   ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
-  ASSERT_EQ(fake_ddk_.added_devices.size(), 3);
+  ASSERT_EQ(mock_root_->descendant_count(), 3);
 
   Device* pci_bus = acpi_.GetDeviceRoot()->FindByPath("\\_SB_.PCI0");
   // Check the PCI bus's type was set correctly.
@@ -166,7 +147,7 @@ TEST_F(AcpiManagerTest, TestDeviceOnPciBusWithNoAdr) {
   ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.PCI0", std::move(device)));
 
   ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
-  ASSERT_EQ(fake_ddk_.added_devices.size(), 3);
+  ASSERT_EQ(mock_root_->descendant_count(), 3);
 
   ASSERT_TRUE(acpi::test::GetAcpiBdfs().empty());
 }
