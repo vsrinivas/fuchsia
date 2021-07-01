@@ -77,6 +77,8 @@ reproxy_tmpdir="$(mktemp -d -t reproxy."$date".XXXX)"
 # These environment variables take precedence over those found in --cfg.
 export RBE_log_dir="$reproxy_tmpdir"
 export RBE_proxy_log_dir="$reproxy_tmpdir"
+# rbe_metrics.{pb,txt} appears in -output_dir
+export RBE_output_dir="$reproxy_tmpdir"
 
 # Use the same config for bootstrap as for reproxy
 "$bootstrap" --re_proxy="$reproxy" --cfg="$reproxy_cfg" "${bootstrap_options[@]}"
