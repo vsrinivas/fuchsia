@@ -133,20 +133,16 @@ TEST_F(CompositeTest, GetProtocolParent) {
 }
 
 TEST_F(CompositeTest, GetFragment) {
-  zx_device_t *fragment1, *fragment2;
-  EXPECT_TRUE(device_get_fragment(fake_ddk::FakeParent(), "fragment-1", &fragment1));
-  EXPECT_TRUE(device_get_fragment(fake_ddk::FakeParent(), "fragment-2", &fragment2));
-
   // Only first two protocols are availably in fragment-1.
   fake_ddk::Protocol proto = {};
-  EXPECT_OK(device_get_protocol(fragment1, 0, &proto));
-  EXPECT_OK(device_get_protocol(fragment1, 1, &proto));
-  EXPECT_NE(device_get_protocol(fragment1, 2, &proto), ZX_OK);
+  EXPECT_OK(device_get_fragment_protocol(fake_ddk::FakeParent(), "fragment-1", 0, &proto));
+  EXPECT_OK(device_get_fragment_protocol(fake_ddk::FakeParent(), "fragment-1", 1, &proto));
+  EXPECT_NE(device_get_fragment_protocol(fake_ddk::FakeParent(), "fragment-1", 2, &proto), ZX_OK);
 
   // Only last protocols is availably in fragment-2.
-  EXPECT_NE(device_get_protocol(fragment2, 0, &proto), ZX_OK);
-  EXPECT_NE(device_get_protocol(fragment2, 1, &proto), ZX_OK);
-  EXPECT_OK(device_get_protocol(fragment2, 2, &proto));
+  EXPECT_NE(device_get_fragment_protocol(fake_ddk::FakeParent(), "fragment-2", 0, &proto), ZX_OK);
+  EXPECT_NE(device_get_fragment_protocol(fake_ddk::FakeParent(), "fragment-2", 1, &proto), ZX_OK);
+  EXPECT_OK(device_get_fragment_protocol(fake_ddk::FakeParent(), "fragment-2", 2, &proto));
 }
 
 TEST_F(CompositeTest, GetFragments) {

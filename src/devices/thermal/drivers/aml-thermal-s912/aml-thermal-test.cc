@@ -132,7 +132,7 @@ TEST_F(AmlThermalTest, GetDvfsInfo) {
       .count = 3};
 
   MockScpi scpi;
-  AmlThermal dut(nullptr, {}, {}, scpi.GetProto(), 0, zx::port(), fake_ddk::kFakeDevice);
+  AmlThermal dut(nullptr, {}, {}, scpi.GetProto(), 0, zx::port());
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
@@ -164,7 +164,7 @@ TEST_F(AmlThermalTest, GetDvfsInfo) {
 
 TEST_F(AmlThermalTest, DvfsOperatingPoint) {
   MockScpi scpi;
-  AmlThermal dut(nullptr, {}, {}, scpi.GetProto(), 0, zx::port(), fake_ddk::kFakeDevice);
+  AmlThermal dut(nullptr, {}, {}, scpi.GetProto(), 0, zx::port());
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
@@ -262,8 +262,7 @@ TEST_F(AmlThermalTest, DvfsOperatingPoint) {
 
 TEST_F(AmlThermalTest, FanLevel) {
   ddk::MockGpio fan0, fan1;
-  AmlThermal dut(nullptr, fan0.GetProto(), fan1.GetProto(), {}, 0, zx::port(),
-                 fake_ddk::kFakeDevice);
+  AmlThermal dut(nullptr, fan0.GetProto(), fan1.GetProto(), {}, 0, zx::port());
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
@@ -342,6 +341,12 @@ TEST_F(AmlThermalTest, TripPointThread) {
   fake_ddk::Bind ddk;
   ddk.SetMetadata(DEVICE_METADATA_THERMAL_CONFIG, encoded_metadata_.data(),
                   encoded_metadata_.size());
+  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[1], 1);
+  fragments[0].name = "scpi";
+  fragments[0].protocols.emplace_back(
+      fake_ddk::ProtocolEntry{0, fake_ddk::Protocol{nullptr, nullptr}});
+
+  ddk.SetFragments(std::move(fragments));
 
   ddk::MockGpio fan0, fan1;
   MockScpi scpi;
@@ -351,7 +356,7 @@ TEST_F(AmlThermalTest, TripPointThread) {
   zx::unowned_port port_ref(port.get());
 
   AmlThermal dut(fake_ddk::kFakeDevice, fan0.GetProto(), fan1.GetProto(), scpi.GetProto(), 1234,
-                 std::move(port), fake_ddk::kFakeDevice, zx::msec(10));
+                 std::move(port), zx::msec(10));
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
@@ -398,7 +403,7 @@ TEST_F(AmlThermalTest, TripPointThread) {
       .ExpectSetDvfsIdx(
           ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kLittleClusterPowerDomain), 0);
 
-  ASSERT_OK(dut.Init(fake_ddk::kFakeDevice));
+  ASSERT_OK(dut.Init());
 
   zx_port_packet_t packet;
 
@@ -474,6 +479,13 @@ TEST_F(AmlThermalTest, DdkLifecycle) {
   ddk.SetMetadata(DEVICE_METADATA_THERMAL_CONFIG, encoded_metadata_.data(),
                   encoded_metadata_.size());
 
+  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[1], 1);
+  fragments[0].name = "scpi";
+  fragments[0].protocols.emplace_back(
+      fake_ddk::ProtocolEntry{0, fake_ddk::Protocol{nullptr, nullptr}});
+
+  ddk.SetFragments(std::move(fragments));
+
   ddk::MockGpio fan0, fan1;
   MockScpi scpi;
 
@@ -481,7 +493,7 @@ TEST_F(AmlThermalTest, DdkLifecycle) {
   ASSERT_OK(zx::port::create(0, &port));
 
   AmlThermal dut(fake_ddk::kFakeParent, fan0.GetProto(), fan1.GetProto(), scpi.GetProto(), 1234,
-                 std::move(port), fake_ddk::kFakeDevice, zx::msec(10));
+                 std::move(port), zx::msec(10));
 
   fan0.ExpectConfigOut(ZX_OK, 0);
   fan1.ExpectConfigOut(ZX_OK, 0);

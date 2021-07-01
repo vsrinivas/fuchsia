@@ -3366,13 +3366,8 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
   zx_status_t (*targ_cpu_to_ce_addr)(struct ath10k * ar, uint32_t addr, uint32_t * ce_addr);
 
   zx_status_t ret = ZX_OK;
-  zx_device_t* fragment = NULL;
-  if (!device_get_fragment(dev, "pci", &fragment)) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
   pci_protocol_t pci;
-  if ((ret = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &pci) != ZX_OK)) {
+  if ((ret = device_get_fragment_protocol(dev, "pci", ZX_PROTOCOL_PCI, &pci) != ZX_OK)) {
     return ret;
   }
 

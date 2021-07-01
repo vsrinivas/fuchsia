@@ -1008,13 +1008,7 @@ static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
   mtx_init(&nvme->admin_lock, mtx_plain);
 
   zx_status_t status = ZX_OK;
-  zx_device_t* fragment = NULL;
-  if (!device_get_fragment(dev, "pci", &fragment)) {
-    status = ZX_ERR_NOT_FOUND;
-    goto fail;
-  }
-
-  if ((status = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &nvme->pci)) != ZX_OK) {
+  if ((status = device_get_fragment_protocol(dev, "pci", ZX_PROTOCOL_PCI, &nvme->pci)) != ZX_OK) {
     goto fail;
   }
 

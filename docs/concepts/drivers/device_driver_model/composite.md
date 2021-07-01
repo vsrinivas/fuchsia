@@ -178,17 +178,18 @@ If you specify `UINT32_MAX`, the device will reside in a new driver host.
 ## Using a composite device
 
 From a programming perspective, a composite device acts like an ordinary device,
-but it has no banjo protocol. This allows you to access all of the individual
-fragments that make up the composite device.
+but it has no banjo protocol. Each of the inividual fragments can provide
+protocols and metadata, but for ease of compatibility, the fragments should not
+be accessed directly.
 
-The first thing to retrieve a device for each fragment.
-This is done with **device_get_fragment()**:
+Instead, the protocols and metadata can be accessed directly for each fragment by
+calling **device_get_fragment_protocol()** and **device_get_fragment_metadata()**
 
 ```c
-bool device_get_fragment (
+bool device_get_fragment_protocol (
      zx_device_t* parent,
      const char* fragment_name,
-     zx_device_t** fragment);
+     uint32_t proto_id, void* out);
 ```
 
 The arguments are as follows:
@@ -197,23 +198,55 @@ Argument          | Meaning
 ------------------|---------------------------------------------------
 `parent`          | Pointer to `zx_device_t` representing parent
 `fragment_name`   | The name of the fragment you wish to fetch
-`fragment`        | Pointer to `zx_device_t` representing the fragment
-
-The program starts by declaring an array of `zx_device_t*` pointers to hold the
-devices, and call **device_get_fragment()**:
+`proto_id`        | The ID of the protocol to be retrieved
+`out`             | Pointer to a protocol to be returned
 
 ```
-zx_device_t* fragment;
-bool found = device_get_fragment(&composite, "fragment-name", &fragment);
-if (!found) {
-    zxlogf(ERROR, "could not get fragment-name");
-    return ZX_ERR_INTERNAL;
+foo_protocol_t proto;
+auto status = device_get_fragment_protocol(&composite, "fragment-name", ZX_PROTOCOL_FOO, &proto);
+if (status != ZX_OK) {
+    zxlogf(ERROR, "could not get protocol");
+    return status;
 }
 ```
 
-> The name of fragment supplied to **device_get_fragment()**
-> is the same as the one in **device_fragment_t** entries supplied to
-> the **device_add_composite()** call by the board driver.
+Similarly with metadata:
+
+```c
+bool device_get_fragment_metadata (
+     zx_device_t* parent,
+     const char* fragment_name,
+     uint32_t type, void* buf,
+     size_t buflen, size_t* actual);
+```
+
+The arguments are as follows:
+
+Argument          | Meaning
+------------------|---------------------------------------------------
+`parent`          | Pointer to `zx_device_t` representing parent
+`fragment_name`   | The name of the fragment you wish to fetch
+`type`            | The ID of the protocol to be retrieved
+`buf`             | Pointer to a data set to be filled
+`buflen`          | Maximum number of bytes that can be written to buf
+`actual`          | Pointer to a size_t which is filled with the actual size
+
+```
+std::vector<uint8_t> data(50);
+size_t actual = 0;
+auto status = device_get_fragment_metadata(&composite, "fragment-name",
+                                           DEVICE_METADATA_FOO, data.data(),
+                                           data.size(), &actual);
+if (status != ZX_OK) {
+    zxlogf(ERROR, "could not get metadata");
+    return status;
+}
+```
+
+> The name of fragment supplied to **device_get_fragment_protocol()** and
+> **device_get_fragment_metadata()** is the same as the one in
+> **device_fragment_t** entries supplied to the **device_add_composite()**
+> call by the board driver.
 
 ## Advanced Topics
 

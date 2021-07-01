@@ -72,20 +72,20 @@ void Gt6853InputReport::ToFidlInputReport(fuchsia_input_report::wire::InputRepor
 }
 
 zx::status<Gt6853Device*> Gt6853Device::CreateAndGetDevice(void* ctx, zx_device_t* parent) {
-  zx_device_t* i2c = {};
-  if (!device_get_fragment(parent, "i2c", &i2c)) {
+  ddk::I2cChannel i2c(parent, "i2c");
+  if (!i2c.is_valid()) {
     zxlogf(ERROR, "Failed to get I2C fragment");
     return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
-  zx_device_t* interrupt_gpio = {};
-  if (!device_get_fragment(parent, "gpio-int", &interrupt_gpio)) {
+  ddk::GpioProtocolClient interrupt_gpio(parent, "gpio-int");
+  if (!interrupt_gpio.is_valid()) {
     zxlogf(ERROR, "Failed to get interrupt GPIO fragment");
     return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
-  zx_device_t* reset_gpio = {};
-  if (!device_get_fragment(parent, "gpio-reset", &reset_gpio)) {
+  ddk::GpioProtocolClient reset_gpio(parent, "gpio-reset");
+  if (!reset_gpio.is_valid()) {
     zxlogf(ERROR, "Failed to get reset GPIO fragment");
     return zx::error(ZX_ERR_NO_RESOURCES);
   }

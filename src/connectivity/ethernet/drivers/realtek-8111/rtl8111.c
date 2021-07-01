@@ -355,14 +355,7 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
   mtx_init(&edev->tx_lock, mtx_plain);
   cnd_init(&edev->tx_cond);
 
-  zx_device_t* fragment = NULL;
-  if (!device_get_fragment(dev, "pci", &fragment)) {
-    zxlogf(ERROR, "rtl8111: no pci fragment found");
-    res = ZX_ERR_NOT_FOUND;
-    goto fail;
-  }
-
-  if ((res = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &edev->pci)) != ZX_OK) {
+  if ((res = device_get_fragment_protocol(dev, "pci", ZX_PROTOCOL_PCI, &edev->pci)) != ZX_OK) {
     zxlogf(ERROR, "rtl8111: no pci protocol");
     goto fail;
   }

@@ -65,12 +65,8 @@ void PcieDevice::DdkInit(::ddk::InitTxn txn) {
     pci_dev_.dev.zxdev = zxdev();
     pci_dev_.dev.task_dispatcher = task_loop_->dispatcher();
 
-    zx_device_t* fragment = nullptr;
-    if (!device_get_fragment(parent(), "pci", &fragment)) {
-      return ZX_ERR_NOT_FOUND;
-    }
-
-    if ((status = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &pci_dev_.proto)) != ZX_OK) {
+    if ((status = device_get_fragment_protocol(parent(), "pci", ZX_PROTOCOL_PCI,
+                                               &pci_dev_.proto)) != ZX_OK) {
       return status;
     }
 

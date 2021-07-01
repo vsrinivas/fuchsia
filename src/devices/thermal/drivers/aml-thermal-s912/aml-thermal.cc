@@ -47,13 +47,7 @@ fthermal::wire::OperatingPoint ScpiToThermalOpps(const scpi_opp_t& opps) {
 
 zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   zxlogf(INFO, "aml_thermal: driver begin...");
-  zx_device_t* scpi_dev = nullptr;
-  bool found = device_get_fragment(device, "scpi", &scpi_dev);
-  if (!found) {
-    THERMAL_ERROR("could not get scpi fragment");
-    return ZX_ERR_NO_RESOURCES;
-  }
-  ddk::ScpiProtocolClient scpi(scpi_dev);
+  ddk::ScpiProtocolClient scpi(device, "scpi");
   if (!scpi.is_valid()) {
     THERMAL_ERROR("could not get scpi protocol");
     return ZX_ERR_NO_RESOURCES;
@@ -85,8 +79,8 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  auto thermal = std::make_unique<AmlThermal>(device, fan0_gpio, fan1_gpio, scpi, sensor_id,
-                                              std::move(port), scpi_dev);
+  auto thermal =
+      std::make_unique<AmlThermal>(device, fan0_gpio, fan1_gpio, scpi, sensor_id, std::move(port));
 
   status = thermal->DdkAdd("vim-thermal");
   if (status != ZX_OK) {
@@ -215,11 +209,11 @@ void AmlThermal::DdkUnbind(ddk::UnbindTxn txn) {
 }
 
 void AmlThermal::DdkInit(ddk::InitTxn txn) {
-  zx_status_t status = Init(scpi_dev_);
+  zx_status_t status = Init();
   txn.Reply(status);
 }
 
-zx_status_t AmlThermal::Init(zx_device_t* dev) {
+zx_status_t AmlThermal::Init() {
   auto status = fan0_gpio_.ConfigOut(0);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not configure FAN_CTL0 gpio: %d", status);
@@ -233,7 +227,8 @@ zx_status_t AmlThermal::Init(zx_device_t* dev) {
   }
 
   size_t size;
-  status = device_get_metadata_size(dev, DEVICE_METADATA_THERMAL_CONFIG, &size);
+  status = device_get_fragment_metadata(zxdev(), "scpi", DEVICE_METADATA_THERMAL_CONFIG, nullptr, 0,
+                                        &size);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not read device metadata size: %d", status);
     return status;
@@ -241,8 +236,8 @@ zx_status_t AmlThermal::Init(zx_device_t* dev) {
 
   std::vector<uint8_t> raw_metadata(size);
   size_t read;
-  status = device_get_metadata(dev, DEVICE_METADATA_THERMAL_CONFIG, raw_metadata.data(),
-                               raw_metadata.size(), &read);
+  status = device_get_fragment_metadata(zxdev(), "scpi", DEVICE_METADATA_THERMAL_CONFIG,
+                                        raw_metadata.data(), raw_metadata.size(), &read);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not read device metadata: %d", status);
     return status;

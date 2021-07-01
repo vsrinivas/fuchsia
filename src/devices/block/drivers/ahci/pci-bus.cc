@@ -26,9 +26,7 @@ zx_status_t PciBus::RegWrite(size_t offset, uint32_t val) {
 
 zx_status_t PciBus::Configure(zx_device_t* parent) {
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  zx_device_t* fragment = nullptr;
-  if (!device_get_fragment(parent, "pci", &fragment) ||
-      (status = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &pci_)) != ZX_OK) {
+  if (device_get_fragment_protocol(parent, "pci", ZX_PROTOCOL_PCI, &pci_) != ZX_OK) {
     zxlogf(ERROR, "ahci: error getting pci config information");
     return status;
   }

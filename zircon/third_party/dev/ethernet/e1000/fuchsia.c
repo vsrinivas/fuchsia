@@ -919,14 +919,8 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
   mtx_init(&adapter->send_lock, mtx_plain);
 
   zx_status_t status = ZX_OK;
-  zx_device_t* fragment = NULL;
-  if (!device_get_fragment(dev, "pci", &fragment)) {
-    zxlogf(ERROR, "no pci fragment found");
-    status = ZX_ERR_NOT_FOUND;
-    goto fail;
-  }
-
-  if ((status = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &adapter->osdep.pci)) != ZX_OK) {
+  if ((status = device_get_fragment_protocol(dev, "pci", ZX_PROTOCOL_PCI, &adapter->osdep.pci)) !=
+      ZX_OK) {
     zxlogf(ERROR, "no pci protocol (%d)", status);
     goto fail;
   }

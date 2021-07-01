@@ -136,13 +136,7 @@ static zx_status_t pci_sdhci_bind(void* ctx, zx_device_t* parent) {
   }
 
   zx_status_t status = ZX_OK;
-  zx_device_t* fragment = NULL;
-  if (!device_get_fragment(parent, "pci", &fragment)) {
-    status = ZX_ERR_NOT_FOUND;
-    goto fail;
-  }
-
-  if ((status = device_get_protocol(fragment, ZX_PROTOCOL_PCI, (void*)&dev->pci)) != ZX_OK) {
+  if ((status = device_get_fragment_protocol(parent, "pci", ZX_PROTOCOL_PCI, &dev->pci)) != ZX_OK) {
     goto fail;
   }
 

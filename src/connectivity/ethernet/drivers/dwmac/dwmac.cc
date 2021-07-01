@@ -35,6 +35,8 @@ namespace {
 // MMIO Indexes.
 constexpr uint32_t kEthMacMmio = 0;
 
+constexpr char kPdevFragment[] = "fuchsia.hardware.platform.device.PDev";
+
 }  // namespace
 
 template <typename T, typename U>
@@ -183,11 +185,8 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
   // Reset the phy.
   mac_device->eth_board_.ResetPhy();
 
-  zx_device_t* pdev_fragment = nullptr;
-  device_get_fragment(device, "fuchsia.hardware.platform.device.PDev", &pdev_fragment);
-
   // Get and cache the mac address.
-  mac_device->GetMAC(pdev_fragment);
+  mac_device->GetMAC(device);
 
   // Reset the dma peripheral.
   mac_device->mmio_->SetBits32(DMAMAC_SRST, DW_MAC_DMA_BUSMODE);
@@ -224,8 +223,8 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
   // Populate board specific information
   eth_dev_metadata_t phy_info;
   size_t actual;
-  status = device_get_metadata(pdev_fragment, DEVICE_METADATA_ETH_PHY_DEVICE, &phy_info,
-                               sizeof(eth_dev_metadata_t), &actual);
+  status = device_get_fragment_metadata(device, kPdevFragment, DEVICE_METADATA_ETH_PHY_DEVICE,
+                                        &phy_info, sizeof(eth_dev_metadata_t), &actual);
   if (status != ZX_OK || actual != sizeof(eth_dev_metadata_t)) {
     zxlogf(ERROR, "dwmac: Could not get PHY metadata %d", status);
     return status;
@@ -416,8 +415,8 @@ zx_status_t DWMacDevice::GetMAC(zx_device_t* dev) {
   // metadata is padded so we need buffer size > 6 bytes
   uint8_t buffer[16];
   size_t actual;
-  zx_status_t status =
-      device_get_metadata(dev, DEVICE_METADATA_MAC_ADDRESS, buffer, sizeof(buffer), &actual);
+  zx_status_t status = device_get_fragment_metadata(dev, kPdevFragment, DEVICE_METADATA_MAC_ADDRESS,
+                                                    buffer, sizeof(buffer), &actual);
   if (status != ZX_OK || actual < 6) {
     zxlogf(ERROR, "dwmac: MAC address metadata load failed. Falling back on HW setting.");
     // read MAC address from hardware register

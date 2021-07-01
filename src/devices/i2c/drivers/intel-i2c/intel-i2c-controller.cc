@@ -789,17 +789,10 @@ zx_status_t IntelI2cController::DeviceSpecificInit(const uint16_t device_id) {
 }
 
 zx_status_t IntelI2cController::AddSubordinates() {
-  zx_device_t* pci_device;
-  bool found = DdkGetFragment("pci", &pci_device);
-  if (!found) {
-    zxlogf(ERROR, "i2c: failed to find pci parent device");
-    return ZX_ERR_INTERNAL;
-  }
-
   // Try to fetch our metadata so that we know who is on the bus.
   size_t metadata_size;
-  zx_status_t status =
-      device_get_metadata_size(pci_device, DEVICE_METADATA_ACPI_I2C_DEVICES, &metadata_size);
+  zx_status_t status = device_get_fragment_metadata(
+      parent(), "pci", DEVICE_METADATA_ACPI_I2C_DEVICES, nullptr, 0, &metadata_size);
 
   if ((status == ZX_ERR_NOT_FOUND) || ((status == ZX_OK) && !metadata_size)) {
     // No metadata means that there are no devices on this bus.  For now, we do
@@ -824,8 +817,8 @@ zx_status_t IntelI2cController::AddSubordinates() {
   size_t count = metadata_size / sizeof(acpi_i2c_device_t);
   std::vector<acpi_i2c_device_t> devices(count);
 
-  status = device_get_metadata(pci_device, DEVICE_METADATA_ACPI_I2C_DEVICES, devices.data(),
-                               metadata_size, nullptr);
+  status = device_get_fragment_metadata(parent(), "pci", DEVICE_METADATA_ACPI_I2C_DEVICES,
+                                        devices.data(), metadata_size, nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "i2c: failed to fetch metadata (status %d)", status);
     return status;

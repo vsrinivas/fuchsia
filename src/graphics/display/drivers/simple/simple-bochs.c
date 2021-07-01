@@ -80,12 +80,7 @@ static zx_status_t bochs_vbe_bind(void* ctx, zx_device_t* dev) {
   pci_protocol_t pci;
   zx_status_t status = ZX_OK;
 
-  zx_device_t* fragment = NULL;
-  if (!device_get_fragment(dev, "pci", &fragment)) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  if ((status = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &pci)) != ZX_OK) {
+  if ((status = device_get_fragment_protocol(dev, "pci", ZX_PROTOCOL_PCI, &pci)) != ZX_OK) {
     return status;
   }
 

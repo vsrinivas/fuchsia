@@ -2089,17 +2089,15 @@ void Controller::FinishInit() {
 zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) {
   zxlogf(TRACE, "Binding to display controller");
 
-  zx_device_t* fragment = nullptr;
   zx_status_t status = ZX_ERR_NOT_FOUND;
-  if (!device_get_fragment(parent(), "sysmem", &fragment) ||
-      (status = device_get_protocol(fragment, ZX_PROTOCOL_SYSMEM, &sysmem_)) != ZX_OK) {
+  if ((status = device_get_fragment_protocol(parent(), "sysmem", ZX_PROTOCOL_SYSMEM, &sysmem_)) !=
+      ZX_OK) {
     zxlogf(ERROR, "Could not get Display SYSMEM protocol: %s", zx_status_get_string(status));
     return status;
   }
 
   status = ZX_ERR_NOT_FOUND;
-  if (!device_get_fragment(parent(), "pci", &fragment) ||
-      (status = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &pci_)) != ZX_OK) {
+  if ((status = device_get_fragment_protocol(parent(), "pci", ZX_PROTOCOL_PCI, &pci_)) != ZX_OK) {
     zxlogf(ERROR, "Could not get Display PCI protocol: %s", zx_status_get_string(status));
     return status;
   }

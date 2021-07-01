@@ -47,22 +47,20 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
  public:
   AmlThermal(zx_device_t* device, const ddk::GpioProtocolClient& fan0_gpio,
              const ddk::GpioProtocolClient& fan1_gpio, const ddk::ScpiProtocolClient& scpi,
-             const uint32_t sensor_id, zx::port port, zx_device_t* scpi_dev,
-             zx::duration duration = kDuration)
+             const uint32_t sensor_id, zx::port port, zx::duration duration = kDuration)
       : DeviceType(device),
         fan0_gpio_(fan0_gpio),
         fan1_gpio_(fan1_gpio),
         scpi_(scpi),
         sensor_id_(sensor_id),
         port_(std::move(port)),
-        scpi_dev_(scpi_dev),
         duration_(duration) {}
 
   // Create and bind a driver instance.
   static zx_status_t Create(void* ctx, zx_device_t* device);
 
   // Perform post-construction runtime initialization.
-  zx_status_t Init(zx_device_t* dev);
+  zx_status_t Init();
 
   // Ddk-required methods.
   void DdkInit(ddk::InitTxn txn);
@@ -108,8 +106,6 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
 
   uint32_t sensor_id_;
   zx::port port_;
-
-  zx_device_t* scpi_dev_;
 
   thrd_t worker_ = {};
   fthermal::wire::ThermalDeviceInfo info_ = {};
