@@ -986,7 +986,7 @@ var1.v = zx::handle();
 
 
 
-TEST(Conformance, GoldenStringWithMaxSize2_Encode_Failure) {
+TEST(Conformance, GoldenStringWithMaxSize2_V1_Encode_Failure) {
 	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	auto var1 = conformance::wire::GoldenStringWithMaxSize2{};
 var1.s = "abc";

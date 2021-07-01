@@ -1033,8 +1033,7 @@ func TestParseEncodeFailureCase(t *testing.T) {
 	all, err := parse(gidl)
 	expectedAll := ir.All{
 		EncodeFailure: []ir.EncodeFailure{{
-			Name:        "OneStringOfMaxLengthFive-too-long",
-			WireFormats: []ir.WireFormat{ir.V1WireFormat},
+			Name: "OneStringOfMaxLengthFive-too-long",
 			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{

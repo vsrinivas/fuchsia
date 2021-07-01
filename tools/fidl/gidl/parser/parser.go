@@ -385,13 +385,9 @@ var sections = map[string]sectionMetadata{
 		},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.EncodeFailure{
-				Name:       name,
-				Value:      body.Value,
-				HandleDefs: body.HandleDefs,
-				// TODO(fxbug.dev/52495): Temporarily hardcoded to v1. We should
-				// either make encode_failure tests specify a wireformat -> err
-				// mapping, or remove the WireFormats field.
-				WireFormats:       []ir.WireFormat{ir.V1WireFormat},
+				Name:              name,
+				Value:             body.Value,
+				HandleDefs:        body.HandleDefs,
 				Err:               body.Err,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,

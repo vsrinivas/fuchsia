@@ -272,12 +272,9 @@ func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, schema gidlm
 		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", encodeFailure.Value, decl, libllcpp.HandleReprRaw)
 		errorCode := libllcpp.LlcppErrorCode(encodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
-		for _, wireFormat := range encodeFailure.WireFormats {
-			if !wireFormatSupported(wireFormat) {
-				continue
-			}
+		for _, wireFormat := range supportedWireFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
-				Name:        encodeFailure.Name,
+				Name:        testCaseName(encodeFailure.Name, wireFormat),
 				HandleDefs:  handleDefs,
 				ValueBuild:  valueBuild,
 				ValueVar:    valueVar,
@@ -318,8 +315,17 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 	return decodeFailureCases, nil
 }
 
+var supportedWireFormats = []gidlir.WireFormat{
+	gidlir.V1WireFormat,
+}
+
 func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
-	return wireFormat == gidlir.V1WireFormat
+	for _, wf := range supportedWireFormats {
+		if wireFormat == wf {
+			return true
+		}
+	}
+	return false
 }
 
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {

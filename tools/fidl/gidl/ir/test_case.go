@@ -44,7 +44,6 @@ type EncodeFailure struct {
 	Name              string
 	Value             Record
 	HandleDefs        []HandleDef
-	WireFormats       []WireFormat
 	Err               ErrorCode
 	BindingsAllowlist *LanguageList
 	BindingsDenylist  *LanguageList
