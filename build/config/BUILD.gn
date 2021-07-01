@@ -807,6 +807,7 @@ config("Wno-unused-but-set-parameter") {
   cflags = [ "-Wno-unused-but-set-parameter" ]
   visibility = [
     "//third_party/android/device/generic/goldfish-opengl:libvulkan_goldfish",
+    "//vendor/amlogic/*",
     "//zircon/third_party/uapp/dash",
   ]
 }
@@ -826,6 +827,7 @@ config("Wno-unused-but-set-variable") {
     "//third_party/mesa/src/compiler/nir/*",
     "//third_party/mesa/src/intel/vulkan/*",
     "//third_party/zstd/*",
+    "//vendor/arm/*",
     "//zircon/third_party/uapp/dash",
   ]
 }
