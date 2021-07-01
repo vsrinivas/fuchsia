@@ -9,6 +9,7 @@
 //  find docs -name "*.md" | xargs \
 //  grep "\{% includecode .*gerrit_path=\"examples/hello_world/rust/src/main.rs\""
 
+// [START main]
 fn main() {
     println!("{}, world!", greeting());
     eprintln!("{}, world!", greeting());
@@ -17,6 +18,7 @@ fn main() {
 fn greeting() -> String {
     return String::from("Hello");
 }
+// [END main]
 
 // [START test_mod]
 #[cfg(test)]

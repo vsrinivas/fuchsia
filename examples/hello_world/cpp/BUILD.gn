@@ -13,15 +13,17 @@ group("tests") {
 
 executable("bin") {
   output_name = "hello_world_cpp"
-
   sources = [ "hello_world.cc" ]
 }
 
+# [START fuchsia_component]
 fuchsia_component("hello-world-cpp-component") {
   component_name = "hello-world-cpp"
   manifest = "meta/hello_world_cpp.cml"
   deps = [ ":bin" ]
 }
+
+# [END fuchsia_component]
 
 executable("unittests") {
   testonly = true
@@ -30,6 +32,8 @@ executable("unittests") {
   deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
+# [START fuchsia_test]
 fuchsia_unittest_package("hello-world-cpp-unittests") {
   deps = [ ":unittests" ]
 }
+# [END fuchsia_test]

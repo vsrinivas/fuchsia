@@ -1,8 +1,14 @@
 {
+    // Enable system logging capabilities
     include: [ "syslog/client.shard.cml" ],
+
+    // Information about the program to run
     program: {
+        // Use the built-in ELF runner for the executable
         runner: "elf",
         binary: "bin/hello_world_rust",
+
+        // Enable stdout logging
         forward_stderr_to: "log",
         forward_stdout_to: "log",
     },

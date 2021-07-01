@@ -301,13 +301,13 @@ be streamed to the corresponding descriptor on the host terminal.
 Note: `fx serve` must be running in order to run a package that is not
 [in base or cached](/docs/concepts/build_system/boards_and_products.md#dependency_sets).
 
-Here's an example of running the Rust hello-world component. First, you'll need
+Here's an example of running the Dart hello-world component. First, you'll need
 the hello-world package in your universe:
 
 ```
-$ fx set <product>.<board> --with //examples/hello_world/rust:hello-world-rust && fx build
+$ fx set <product>.<board> --with //examples/hello_world && fx build
 ...
-$ fx ffx component run-legacy fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cmx
+$ fx ffx component run-legacy fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-dart.cmx
 Hello, world!
 ```
 

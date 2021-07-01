@@ -1,11 +1,7 @@
 # Explore Fuchsia {#explore-fuchsia}
 
-In Fuchsia, [components][components] are the basic unit of executable software.
-
-## Run an example component {#run-an-example-component}
-
-To run an example component on your Fuchsia device, see the
-[Run an example component][run-examples] guide.
+Once you have a device or emulator up an running, explore what you can do next
+with Fuchsia.
 
 ## Run ffx commands {#run-ffx-commands}
 
@@ -39,39 +35,23 @@ See the following example `ffx` commands:
     ffx target reboot
     ```
 
-## Write software for Fuchsia {#write-software-for-fuchsia}
+## Run some examples {#run-examples}
 
-[FIDL][fidl] (Fuchsia Interface Definition Language) is the Interprocess
-Communication (IPC) system for Fuchsia.
+Follow these guides to try out some example components:
 
-To learn more about FIDL, the following resources are available:
+*   [Run an example component](/docs/development/run/run-examples.md)
+*   [Run a test component](/docs/development/run/run-test-component.md)
 
-*   To get a brief overview of what FIDL is, including its design goals,
-    requirements, and workflows, read the [FIDL concepts][fidl-concepts] guide.
-*   To learn how to write FIDL APIs and client and server components, review the
-    [FIDL tutorials][fidl-tutorials].
+## Write software for Fuchsia {#write-software}
 
-## Run Fuchsia tests {#run-fuchsia-tests}
+The basic executable units of software in Fuchsia are
+[components](/docs/concepts/components/v2) that interact with each other using.
+[FIDL protocols](/docs/concepts/fidl/overview.md). Explore the following guides
+to learn more about building component-based software:
 
-To test Fuchsia on your device, see the [Run Fuchsia tests][run-fuchsia-tests]
-guide.
-
-## Launch a graphical component {#launch-a-graphical-component}
-
-Most graphical components in Fuchsia use the [Scenic][scenic] system compositor.
-You can launch such components (commonly found in `/system/apps`) using the
-`present_view` command, for example:
-
-```posix-terminal
-fssh present_view fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx
-```
-
-For more information, see [Scenic example apps](/src/ui/examples).
-
-If you launch a component that uses Scenic or hardware-accelerated graphics,
-Fuchsia enters the graphics mode, which doesn't display the shell. To use the
-shell, press `Alt+Escape` to enter the console mode. Press `Alt+Escape` again to
-return to the graphics mode.
+*   [Build components](/docs/development/components/build.md)
+*   [Fuchsia Interface Definition Language](/docs/development/languages/fidl/README.md)
+*   [FIDL tutorials](/docs/development/languages/fidl/tutorials/overview.md)
 
 ## Contribute changes {#contribute-changes}
 
