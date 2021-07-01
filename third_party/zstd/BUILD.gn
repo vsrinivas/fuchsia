@@ -139,6 +139,8 @@ config("internal.config") {
 
   # Suppress warnings the zstd code doesn't comply with.
   configs = [ "//build/config:Wno-conversion" ]
+  configs += [ "//build/config:Wno-unused-but-set-variable" ]
+
   cflags = [ "-Wno-implicit-fallthrough" ]
   if (is_gcc) {
     cflags += [ "-Wno-incompatible-pointer-types" ]
