@@ -291,6 +291,28 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
         vmo->Printf("[%2u/%2zu] : Value %#08x Id %#04hx\n", i, props.size(), p->value, p->id);
       }
     }
+
+    const auto& str_props = dev->str_props();
+    vmo->Printf("%zu String Propert%s\n", str_props.size(), str_props.size() == 1 ? "y" : "ies");
+    for (uint32_t i = 0; i < str_props.size(); ++i) {
+      const StrProperty* p = &str_props[i];
+      vmo->Printf("[%2u/%2zu] : %s=", i, str_props.size(), p->key.data());
+      std::visit(
+          [vmo](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+
+            if constexpr (std::is_same_v<T, uint32_t>) {
+              vmo->Printf("%#08x\n", arg);
+            } else if constexpr (std::is_same_v<T, std::string>) {
+              vmo->Printf("\"%s\"\n", arg.data());
+            } else if constexpr (std::is_same_v<T, bool>) {
+              vmo->Printf("%s\n", arg ? "true" : "false");
+            } else {
+              vmo->Printf("(unknown value type!)\n");
+            }
+          },
+          p->value);
+    }
     vmo->Printf("\n");
   }
 
