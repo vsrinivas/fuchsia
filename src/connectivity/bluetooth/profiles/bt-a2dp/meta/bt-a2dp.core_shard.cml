@@ -4,9 +4,11 @@
 {
     children: [
         {
+            // TODO(fxbug.dev/79964): Mark as eager. Because A2DP is part of "universe"
+            // in some cases, we run into startup issues for the component. For now, bt-a2dp
+            // will be started when a client requests a capability.
             name: "bt-a2dp",
             url: "fuchsia-pkg://fuchsia.com/bt-a2dp#meta/bt-a2dp.cm",
-            startup: "eager",
             environment: "#universe-resolver-env",
         },
     ],
