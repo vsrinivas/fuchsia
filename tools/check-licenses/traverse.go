@@ -72,7 +72,18 @@ func Run(ctx context.Context, config *Config) error {
 	r := trace.StartRegion(ctx, "singleLicenseFile walk")
 	for tree := range file_tree.getFileTreeIterator() {
 		tree := tree
+
+		// tree.SingleLicenseFiles may be modified while processing license files. So instead of
+		// iterating on it here, which might trigger a concurrent map iteration and write error, first
+		// create a list of filenames to iterate on. The map writes never add new paths so this is safe.
+		tree.RLock()
+		licenseFilePaths := make([]string, len(tree.SingleLicenseFiles))
 		for licenseFile := range tree.SingleLicenseFiles {
+			licenseFilePaths = append(licenseFilePaths, licenseFile)
+		}
+		tree.RUnlock()
+
+		for _, licenseFile := range licenseFilePaths {
 			licenseFile := licenseFile
 			workSem <- 1
 			eg.Go(func() error {
