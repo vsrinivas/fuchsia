@@ -4,10 +4,18 @@
 
 import("//build/components.gni")
 
-fuchsia_component("crasher") {
+fuchsia_component("crasher_v1") {
   component_name = "cpp_crasher"
 
   manifest = "meta/crasher.cmx"
+
+  deps = [ ":crasher_exe" ]
+}
+
+fuchsia_component("crasher_v2") {
+  component_name = "cpp_crasher"
+
+  manifest = "meta/crasher.cml"
 
   deps = [ ":crasher_exe" ]
 }

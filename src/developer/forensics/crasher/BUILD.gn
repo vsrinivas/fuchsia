@@ -6,7 +6,9 @@ import("//build/components.gni")
 
 fuchsia_package("crasher") {
   deps = [
-    "//src/developer/forensics/crasher/cpp:crasher",
-    "//src/developer/forensics/crasher/rust:crasher",
+    "//src/developer/forensics/crasher/cpp:crasher_v1",
+    "//src/developer/forensics/crasher/cpp:crasher_v2",
+    "//src/developer/forensics/crasher/rust:crasher_v1",
+    "//src/developer/forensics/crasher/rust:crasher_v2",
   ]
 }
