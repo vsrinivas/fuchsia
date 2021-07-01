@@ -285,7 +285,7 @@ You can review the outcome of merging any and all includes into a component
 manifest file by invoking the following command:
 
 ```sh
-fx cmc include {{ "<var>" }}cml_file{{ "</var>" }} --includepath $FUCHSIA_DIR
+fx cmc include {{ "<var>" }}cmx_file{{ "</var>" }} --includeroot $FUCHSIA_DIR --includepath $FUCHSIA_DIR/sdk/lib
 ```
 
 Includes can be recursive, meaning that shards can have their own includes.
