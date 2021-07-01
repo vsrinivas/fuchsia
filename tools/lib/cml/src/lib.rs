@@ -860,13 +860,16 @@ impl Document {
         }
         let my_program = self.program.as_mut().unwrap();
         let other_program = other.program.as_mut().unwrap();
-        if my_program.runner.is_some() && other_program.runner.is_some() {
-            return Err(Error::validate(format!(
-                "manifest include had a conflicting `program.runner`: {}",
-                include_path.display()
-            )));
+        if let Some(other_runner) = other_program.runner.take() {
+            if my_program.runner.is_some() {
+                return Err(Error::validate(format!(
+                    "manifest include had a conflicting `program.runner`: {}",
+                    include_path.display()
+                )));
+            } else {
+                *(&mut my_program.runner) = Some(other_runner);
+            }
         }
-        *(&mut my_program.runner) = other_program.runner.take();
 
         for (key, value) in other_program.info.iter() {
             if let Some(_) = my_program.info.insert(key.clone(), value.clone()) {
@@ -2165,6 +2168,19 @@ mod tests {
     fn test_merge_from_program() {
         let mut some = document(json!({ "program": { "binary": "bin/hello_world" } }));
         let mut other = document(json!({ "program": { "runner": "elf" } }));
+        some.merge_from(&mut other, &Path::new("some/path")).unwrap();
+        let expected =
+            document(json!({ "program": { "binary": "bin/hello_world", "runner": "elf" } }));
+        assert_eq!(some.program, expected.program);
+    }
+
+    #[test]
+    fn test_merge_from_program_without_runner() {
+        let mut some =
+            document(json!({ "program": { "binary": "bin/hello_world", "runner": "elf" } }));
+        // fxbug.dev/79951: merging with a document that doesn't have a runner doesn't override the
+        // runner that we already have assigned.
+        let mut other = document(json!({ "program": {} }));
         some.merge_from(&mut other, &Path::new("some/path")).unwrap();
         let expected =
             document(json!({ "program": { "binary": "bin/hello_world", "runner": "elf" } }));
