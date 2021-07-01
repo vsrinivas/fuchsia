@@ -113,7 +113,6 @@ template("zbi") {
                              "assert_no_deps",
                              "compress",
                              "data_deps",
-                             "metadata",
                              "testonly",
                              "visibility",
                            ])
@@ -173,6 +172,24 @@ template("zbi") {
       args += [ "--uncompressed" ]
     } else {
       args += [ "--compressed=$compress" ]
+    }
+
+    metadata = {
+      # Provide metadata so that a zbi() target can also act as if it were a
+      # zbi_input() with type == "zbi" and $sources of this target's $outputs.
+      # Thus a zbi() target can be a dependency of another zbi() target to
+      # combine them without requiring an intervening zbi_input() target.
+      zbi_input_barrier = []
+      zbi_input_args = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      zbi_input_args += [
+        "--type=container",
+        rebase_path(output_file, root_build_dir),
+      ]
     }
   }
 }
