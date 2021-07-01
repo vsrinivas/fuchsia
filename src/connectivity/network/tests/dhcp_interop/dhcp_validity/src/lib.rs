@@ -5,9 +5,8 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_net as fnet, fidl_fuchsia_net_dhcpv6 as fdhcpv6,
+    fidl_fuchsia_net_ext::IpExt as _,
     fidl_fuchsia_net_interfaces as finterfaces, fidl_fuchsia_net_name as fnetname,
-    fidl_fuchsia_net_stack as fstack,
-    fidl_fuchsia_net_stack_ext::FidlReturn as _,
     fidl_fuchsia_netemul_guest::{
         CommandListenerMarker, GuestDiscoveryMarker, GuestInteractionMarker,
     },
@@ -96,33 +95,33 @@ pub async fn verify_v6_dns_servers(
     interface_id: u64,
     want_dns_servers: Vec<fnetname::DnsServer_>,
 ) -> Result<(), Error> {
-    let stack = client::connect_to_protocol::<fstack::StackMarker>()
-        .context("connecting to stack service")?;
-    let info = stack
-        .get_interface_info(interface_id)
-        .await
-        .squash_result()
-        .context("getting interface info")?;
-
-    let addr = info
-        .properties
-        .addresses
-        .into_iter()
-        .find_map(|addr: fnet::Subnet| match addr.addr {
-            fnet::IpAddress::Ipv4(_addr) => None,
-            fnet::IpAddress::Ipv6(addr) => {
-                // Only use link-local addresses.
-                //
-                // TODO(https://github.com/rust-lang/rust/issues/27709): use
-                // `is_unicast_link_local_strict` when it's available in stable Rust.
-                if addr.addr[..8] == [0xfe, 0x80, 0, 0, 0, 0, 0, 0] {
-                    Some(addr)
-                } else {
-                    None
-                }
-            }
-        })
-        .ok_or(format_err!("no addresses found to start DHCPv6 client on"))?;
+    let interface_state = client::connect_to_protocol::<finterfaces::StateMarker>()?;
+    let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(interface_id.into());
+    let addr = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        &mut state,
+        |fidl_fuchsia_net_interfaces_ext::Properties {
+             id: _,
+             name: _,
+             device_class: _,
+             online: _,
+             addresses,
+             has_default_ipv4_route: _,
+             has_default_ipv6_route: _,
+         }| {
+            addresses.into_iter().find_map(
+                |fidl_fuchsia_net_interfaces_ext::Address {
+                     addr: fnet::Subnet { addr, prefix_len: _ },
+                     valid_until: _,
+                 }| match addr {
+                    fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: _ }) => None,
+                    fnet::IpAddress::Ipv6(addr) => addr.is_unicast_linklocal().then(|| *addr),
+                },
+            )
+        },
+    )
+    .await
+    .context("getting interface state")?;
 
     let provider = client::connect_to_protocol::<fdhcpv6::ClientProviderMarker>()
         .context("connecting to DHCPv6 client")?;
