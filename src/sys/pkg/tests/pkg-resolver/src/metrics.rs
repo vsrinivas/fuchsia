@@ -708,11 +708,6 @@ async fn pkg_resolver_create_tuf_client_status_ranges() {
         // turns them into a 500 and closes the connection. That results in flakiness when we can
         // request faster than the connection is removed from the pool.
         (101, 101, Http1xx),
-        // Hyper doesn't support 100-level responses other than protocol upgrade, and silently
-        // turns them into a 500.
-        (100, 100, HttpInternalServerError),
-        (101, 101, Http1xx),
-        (102, 199, HttpInternalServerError),
         // We're not sending a body, so our empty response will report as an encoding issue.
         (200, 200, Encoding),
         (201, 299, Http2xx),
