@@ -5,6 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.acpi") {
-  sources = [ "acpi.fidl" ]
+  sources = [
+    "acpi.fidl",
+    "device.fidl",
+  ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

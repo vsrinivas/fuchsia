@@ -1,0 +1,13 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+deprecated_syntax;
+library fuchsia.hardware.acpi;
+using zx;
+
+/// Provides access to an ACPI device.
+protocol Device {
+    /// If ACPI has determined this device is a bus, returns the bus ID.
+    /// Otherwise returns ZX_ERR_BAD_STATE.
+    GetBusId() -> (uint32 bus_id) error zx.status;
+};

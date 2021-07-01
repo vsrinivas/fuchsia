@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <zircon/syscalls/resource.h>
 
 #include <fbl/auto_lock.h>
@@ -306,5 +307,32 @@ zx_status_t Device::AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connection
     return st;
   }
   return sysmem_register_heap(&sysmem, heap, connection.release());
+}
+
+void Device::AcpiConnectServer(zx::channel server) {
+  zx_status_t status = ZX_OK;
+  if (!started_loop_) {
+    status = loop_.StartThread("acpi-fidl-thread");
+  }
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to start FIDL thread: %s", zx_status_get_string(status));
+    return;
+  }
+
+  started_loop_ = true;
+
+  status = fidl::BindSingleInFlightOnly(
+      loop_.dispatcher(), fidl::ServerEnd<fuchsia_hardware_acpi::Device>(std::move(server)), this);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to bind channel: %s", zx_status_get_string(status));
+  }
+}
+
+void Device::GetBusId(GetBusIdRequestView request, GetBusIdCompleter::Sync& completer) {
+  if (bus_id_ == UINT32_MAX) {
+    completer.ReplyError(ZX_ERR_BAD_STATE);
+  } else {
+    completer.ReplySuccess(bus_id_);
+  }
 }
 }  // namespace acpi

@@ -5,7 +5,9 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEVICE_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEVICE_H_
 #include <fuchsia/hardware/acpi/cpp/banjo.h>
+#include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/binding.h>
 
 #include <utility>
@@ -76,15 +78,20 @@ struct DeviceIrqResource {
 };
 
 class Device;
-using DeviceType = ddk::Device<::acpi::Device, ddk::Initializable>;
+using DeviceType = ddk::Device<::acpi::Device, ddk::Initializable,
+                               ddk::Messageable<fuchsia_hardware_acpi::Device>::Mixin>;
 class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_protocol> {
  public:
   Device(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus)
-      : DeviceType{parent}, acpi_handle_{acpi_handle}, platform_bus_{platform_bus} {}
+      : DeviceType{parent},
+        loop_(&kAsyncLoopConfigNeverAttachToThread),
+        acpi_handle_{acpi_handle},
+        platform_bus_{platform_bus} {}
 
   Device(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus,
          std::vector<uint8_t> metadata, BusType bus_type, uint32_t bus_id)
       : DeviceType{parent},
+        loop_(&kAsyncLoopConfigNeverAttachToThread),
         acpi_handle_{acpi_handle},
         platform_bus_{platform_bus},
         metadata_{std::move(metadata)},
@@ -94,6 +101,7 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
   Device(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus,
          std::vector<pci_bdf_t> pci_bdfs)
       : DeviceType{parent},
+        loop_(&kAsyncLoopConfigNeverAttachToThread),
         acpi_handle_{acpi_handle},
         platform_bus_{platform_bus},
         pci_bdfs_{std::move(pci_bdfs)} {}
@@ -112,10 +120,16 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
   zx_status_t AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti);
   zx_status_t AcpiConnectSysmem(zx::channel connection);
   zx_status_t AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connection);
+  void AcpiConnectServer(zx::channel server);
+
+  // FIDL impls
+  void GetBusId(GetBusIdRequestView request, GetBusIdCompleter::Sync& completer) override;
 
   std::vector<pci_bdf_t>& pci_bdfs() { return pci_bdfs_; }
 
  private:
+  bool started_loop_ = false;
+  async::Loop loop_;
   // Handle to the corresponding ACPI node
   ACPI_HANDLE acpi_handle_;
 
@@ -132,8 +146,7 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
   // FIDL-encoded child metadata.
   std::vector<uint8_t> metadata_;
   BusType bus_type_ = BusType::kUnknown;
-  // TODO(fxbug.dev/79557): expose this information to drivers so they know their own bus ID.
-  __UNUSED uint32_t bus_id_ = UINT32_MAX;
+  uint32_t bus_id_ = UINT32_MAX;
 
   // TODO(fxbug.dev/32978): remove once kernel PCI is no longer used.
   std::vector<pci_bdf_t> pci_bdfs_;

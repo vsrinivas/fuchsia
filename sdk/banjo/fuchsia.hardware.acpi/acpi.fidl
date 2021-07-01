@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.hardware.acpi;
 
 using zx;
@@ -17,6 +16,10 @@ resource struct AcpiMmio {
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Acpi {
+    /// Tells the ACPI driver to start listening for fuchsia.hardware.acpi
+    /// messages on server.
+    /// See //sdk/fidl/fuchsia.hardware.acpi/device.fidl.
+    ConnectServer(zx.handle:CHANNEL server) -> ();
     GetPio(uint32 index) -> (zx.status s, zx.handle:RESOURCE pio);
     GetMmio(uint32 index) -> (zx.status s, AcpiMmio mmio);
     MapInterrupt(int64 index) -> (zx.status s, zx.handle:INTERRUPT handle);
