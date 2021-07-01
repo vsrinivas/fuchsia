@@ -115,11 +115,22 @@ class Presentation : fuchsia::ui::policy::Presenter,
   void OnDeviceAdded(ui_input::InputDeviceImpl* input_device);
   void OnDeviceRemoved(uint32_t device_id);
 
-  // For tests. Returns true if the display has been initialized and if a client has been
-  // successfully attached.
-  bool is_initialized() const { return display_model_initialized_ && client_view_holder_attached_; }
+  // For tests. Returns true if the display has been initialized and the scene is ready down to the
+  // proxy view. Does not look at the a11y or client view.
+  bool is_initialized() const {
+    return display_model_initialized_ && graph_state_.root_view_attached.value() &&
+           graph_state_.injector_view_attached.value() && graph_state_.proxy_view_attached.value();
+  }
   // For tests. Returns true if everything is ready for input injection.
   bool ready_for_injection() const { return injector_->scene_ready(); }
+
+  struct GraphState {
+    std::optional<bool> root_view_attached;
+    std::optional<bool> injector_view_attached;
+    std::optional<bool> a11y_view_attached;
+    std::optional<bool> proxy_view_attached;
+    std::optional<bool> client_view_attached;
+  };
 
  private:
   // Creates and attaches a new View using the passed in tokens.
@@ -170,6 +181,16 @@ class Presentation : fuchsia::ui::policy::Presenter,
   // Passes the display rotation in degrees down to the scenic compositor.
   void SetScenicDisplayRotation();
 
+  // A valid scene graph is any that has root, injector, proxy and client views attached.
+  bool IsValidSceneGraph() const {
+    return graph_state_.root_view_attached.value() && graph_state_.injector_view_attached.value() &&
+           graph_state_.proxy_view_attached.value() && graph_state_.client_view_attached.value();
+  }
+
+  // Updates |graph_state_| and performs any appropriate actions depending on the new state.
+  // Every value in |updated_state| except for the one being updated should be std::nullopt.
+  void UpdateGraphState(GraphState updated_state);
+
   inspect::Node inspect_node_;
   InputReportInspector input_report_inspector_;
   InputEventInspector input_event_inspector_;
@@ -206,15 +227,20 @@ class Presentation : fuchsia::ui::policy::Presenter,
   std::optional<scenic::ViewHolder> proxy_view_holder_;
   std::optional<fuchsia::ui::views::ViewHolderToken> proxy_view_holder_token_;
 
-  // ViewHolder connected to the client View. Is std::nullopt until AttachClient() is called.
+  // ViewHolder connected to the client View and the ViewRef referring to the client view. Both are
+  // std::nullopt until AttachClient() is called.
   std::optional<scenic::ViewHolder> client_view_holder_;
+  std::optional<fuchsia::ui::views::ViewRef> client_view_ref_;
 
   CreateAccessibilityViewHolderCallback create_a11y_view_holder_callback_ = {};
 
-  // TODO(fxbug.dev/78519): Consolidate these two pieces of state.
-  // Tracks whether or not the client view and view holder have been attached to the scene.
-  bool client_view_holder_attached_ = false;
-  bool client_view_connected_ = false;
+  // Tracks the current state of the scene graph. Each boolean denotes whether a view is connected
+  // to its parent.
+  GraphState graph_state_ = {.root_view_attached = false,
+                             .injector_view_attached = false,
+                             .a11y_view_attached = false,
+                             .proxy_view_attached = false,
+                             .client_view_attached = false};
 
   std::optional<input::InjectorConfigSetup> injector_config_setup_;
   std::optional<input::Injector> injector_;

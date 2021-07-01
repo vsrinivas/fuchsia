@@ -154,8 +154,9 @@ Presentation::Presentation(inspect::Node inspect_node, sys::ComponentContext* co
       root_view_->AddChild(injector_view_holder_.value());
       injector_view_->AddChild(proxy_view_holder_.value());
 
-      safe_presenter_root_.QueuePresent([] {});
-      safe_presenter_injector_.QueuePresent([] {});
+      safe_presenter_root_.QueuePresent([this] { UpdateGraphState({.root_view_attached = true}); });
+      safe_presenter_injector_.QueuePresent(
+          [this] { UpdateGraphState({.injector_view_attached = true}); });
       safe_presenter_proxy_.QueuePresent([] {});
     }
 
@@ -199,6 +200,35 @@ Presentation::Presentation(inspect::Node inspect_node, sys::ComponentContext* co
   FX_DCHECK(proxy_view_holder_);
   FX_DCHECK(proxy_view_);
   FX_DCHECK(injector_);
+}
+
+void Presentation::UpdateGraphState(GraphState updated_state) {
+  // Replace anything that isn't std::nullopt.
+  // No (easy) way to iterate over a struct or a tuple, so we're left with brute force updating.
+  graph_state_.root_view_attached =
+      updated_state.root_view_attached.value_or(graph_state_.root_view_attached.value());
+  graph_state_.injector_view_attached =
+      updated_state.injector_view_attached.value_or(graph_state_.injector_view_attached.value());
+  graph_state_.a11y_view_attached =
+      updated_state.a11y_view_attached.value_or(graph_state_.a11y_view_attached.value());
+  graph_state_.proxy_view_attached =
+      updated_state.proxy_view_attached.value_or(graph_state_.proxy_view_attached.value());
+  graph_state_.client_view_attached =
+      updated_state.client_view_attached.value_or(graph_state_.client_view_attached.value());
+
+  if (IsValidSceneGraph()) {
+    injector_->MarkSceneReady();
+
+    FX_DCHECK(client_view_ref_.has_value());
+    FX_LOGS(INFO) << "Transferring focus to client";
+    request_focus_(fidl::Clone(client_view_ref_.value()));
+  }
+
+  if (graph_state_.client_view_attached.value() && create_a11y_view_holder_callback_) {
+    create_a11y_view_holder_callback_(std::move(*proxy_view_holder_token_));
+    proxy_view_holder_token_ = std::nullopt;
+    create_a11y_view_holder_callback_ = {};
+  }
 }
 
 void Presentation::InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info) {
@@ -345,12 +375,10 @@ void Presentation::AttachClient(
     fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
   if (client_view_holder_) {
-    client_view_holder_attached_ = false;
-    client_view_connected_ = false;
     proxy_view_->DetachChild(client_view_holder_.value());
+    UpdateGraphState({.client_view_attached = false});
   }
 
-  FX_DCHECK(!client_view_holder_attached_);
   client_view_holder_.emplace(&proxy_session_, std::move(view_holder_token), "Client View Holder");
   proxy_view_->AddChild(client_view_holder_.value());
 
@@ -358,44 +386,37 @@ void Presentation::AttachClient(
     SetViewHolderProperties(display_metrics_);
   }
 
-  proxy_session_.set_event_handler(
-      [this, view_ref = std::move(view_ref), client_id = client_view_holder_->id()](
-          std::vector<fuchsia::ui::scenic::Event> events) mutable {
-        for (const auto& event : events) {
-          if (event.Which() != fuchsia::ui::scenic::Event::Tag::kGfx)
-            continue;
+  client_view_ref_ = std::move(view_ref);
 
-          const auto& gfx_event = event.gfx();
-          if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewConnected &&
-              gfx_event.view_connected().view_holder_id == client_id) {
-            FX_LOGS(INFO) << "Transferring focus to client";
-            fuchsia::ui::views::ViewRef clone;
-            fidl::Clone(view_ref, &clone);
-            request_focus_(std::move(clone));
-            if (create_a11y_view_holder_callback_) {
-              create_a11y_view_holder_callback_(std::move(*proxy_view_holder_token_));
-              proxy_view_holder_token_ = std::nullopt;
-              create_a11y_view_holder_callback_ = {};
-            }
-            client_view_connected_ = true;
-            injector_->MarkSceneReady();
-          } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewDisconnected &&
-                     gfx_event.view_disconnected().view_holder_id == client_id) {
-            FX_LOGS(WARNING) << "Client View disconnected. Closing channel.";
-            proxy_view_->DetachChild(client_view_holder_.value());
-            client_view_holder_.reset();
-            safe_presenter_proxy_.QueuePresent([] {});
+  proxy_session_.set_event_handler([this, client_id = client_view_holder_->id()](
+                                       std::vector<fuchsia::ui::scenic::Event> events) mutable {
+    for (const auto& event : events) {
+      if (event.Which() != fuchsia::ui::scenic::Event::Tag::kGfx)
+        continue;
 
-            client_view_holder_attached_ = false;
-            client_view_connected_ = false;
-            presentation_binding_.Unbind();
-            proxy_session_.set_event_handler([](auto) {});
-          }
-        }
-      });
+      const auto& gfx_event = event.gfx();
+      if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewConnected &&
+          gfx_event.view_connected().view_holder_id == client_id) {
+        UpdateGraphState({.client_view_attached = true});
+      } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewDisconnected &&
+                 gfx_event.view_disconnected().view_holder_id == client_id) {
+        FX_LOGS(WARNING) << "Client View disconnected. Closing channel.";
+        proxy_view_->DetachChild(client_view_holder_.value());
+        client_view_holder_.reset();
+        safe_presenter_proxy_.QueuePresent([] {});
+        UpdateGraphState({.client_view_attached = false});
+        presentation_binding_.Unbind();
+        proxy_session_.set_event_handler([](auto) {});
+      } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
+        UpdateGraphState({.proxy_view_attached = true});
+      } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene) {
+        UpdateGraphState({.proxy_view_attached = false});
+      }
+    }
+  });
 
   presentation_binding_.Bind(std::move(presentation_request));
-  safe_presenter_proxy_.QueuePresent([this] { client_view_holder_attached_ = true; });
+  safe_presenter_proxy_.QueuePresent([] {});
 }
 
 void Presentation::UpdateViewport(const DisplayMetrics& display_metrics) {
@@ -553,6 +574,7 @@ void Presentation::CreateAccessibilityViewHolder(
     fuchsia::ui::views::ViewHolderToken a11y_view_holder_token,
     CreateAccessibilityViewHolderCallback callback) {
   FX_CHECK(injector_view_);
+  FX_LOGS(INFO) << "Inserting A11y View";
   // Detach proxy view holder from injector view.
   injector_view_->DetachChild(proxy_view_holder_.value());
 
@@ -563,6 +585,9 @@ void Presentation::CreateAccessibilityViewHolder(
   }
   proxy_view_.reset();
   proxy_view_holder_.reset();
+
+  UpdateGraphState(
+      {.a11y_view_attached = false, .proxy_view_attached = false, .client_view_attached = false});
 
   // Generate new proxy view/view holder tokens, create a new proxy view.
   // Note that we do not create a new proxy view holder here, because the a11y
@@ -590,22 +615,19 @@ void Presentation::CreateAccessibilityViewHolder(
     safe_presenter_root_.QueuePresent([] {});
   }
 
-  safe_presenter_injector_.QueuePresent([] {});
-  safe_presenter_proxy_.QueuePresent([] {});
+  safe_presenter_injector_.QueuePresent([this] { UpdateGraphState({.a11y_view_attached = true}); });
+  safe_presenter_proxy_.QueuePresent([this] { UpdateGraphState({.client_view_attached = true}); });
 
-  // Send the client view holder token to the a11y manager.
+  // Store `callback`, so that UpdateGraphState() can deliver the client
+  // ViewHolderToken to the a11y manager AFTER the client view is connected
+  // to the proxy view.
+  //
   // The a11y manager will then create its view and the new proxy view holder,
   // and attach both to the scene.
-  //
-  // We want to ensure that the a11y view finishes its setup AFTER the client
-  // view has been attached.
-  if (client_view_connected_) {
-    callback(std::move(proxy_view_holder_token));
-  } else {
-    create_a11y_view_holder_callback_ = std::move(callback);
-    proxy_view_holder_token_.emplace();
-    proxy_view_holder_token_ = std::move(proxy_view_holder_token);
-  }
+  FX_DCHECK(!graph_state_.client_view_attached.value());
+  create_a11y_view_holder_callback_ = std::move(callback);
+  proxy_view_holder_token_.emplace();
+  proxy_view_holder_token_ = std::move(proxy_view_holder_token);
 }
 
 }  // namespace root_presenter

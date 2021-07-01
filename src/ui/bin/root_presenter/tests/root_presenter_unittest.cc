@@ -714,10 +714,10 @@ TEST_F(RootPresenterTest, FocusOnStartup) {
 
   zx_koid_t keyboard_focus_view_koid = ZX_KOID_INVALID;
   // Callback to verify that a focus change triggered a notification.
-  keyboard_focus_ctl_->SetOnNotify([&keyboard_focus_view_koid](
-                                       const fuchsia::ui::views::ViewRef& view_ref) {
-    keyboard_focus_view_koid = ExtractKoid(view_ref);
-  });
+  keyboard_focus_ctl_->SetOnNotify(
+      [&keyboard_focus_view_koid](const fuchsia::ui::views::ViewRef& view_ref) {
+        keyboard_focus_view_koid = ExtractKoid(view_ref);
+      });
 
   // Connect to focus chain registry after Scenic has been set up.
   zx_koid_t focused_view_koid = ZX_KOID_INVALID;
@@ -739,6 +739,25 @@ TEST_F(RootPresenterTest, FocusOnStartup) {
   RunLoopUntil([&focused_view_koid, &keyboard_focus_view_koid, child_view_koid]() {
     return focused_view_koid == child_view_koid && keyboard_focus_view_koid == child_view_koid;
   });
+
+  {  // Now reset and connect the A11y view and observe that focus again moves to the child view
+     // once setup completes.
+    focused_view_koid = ZX_KOID_INVALID;
+    keyboard_focus_view_koid = ZX_KOID_INVALID;
+
+    fuchsia::ui::accessibility::view::RegistryPtr registry;
+    context_provider_.ConnectToPublicService(registry.NewRequest());
+    RunLoopUntilIdle();
+    EXPECT_TRUE(registry.is_bound());
+    a11y::AccessibilityView a11y_view(
+        std::move(registry),
+        context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>());
+    RunLoopUntil([&a11y_view]() { return a11y_view.is_initialized(); });
+
+    RunLoopUntil([&focused_view_koid, &keyboard_focus_view_koid, child_view_koid]() {
+      return focused_view_koid == child_view_koid && keyboard_focus_view_koid == child_view_koid;
+    });
+  }
 }
 
 // Tests that we can handle both an automatic focus request on startup and a simultaneous one
