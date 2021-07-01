@@ -14,13 +14,14 @@
 
             // Ensure that appmgr has at least one CPU sample
             // and that all present samples are greater than 0.
-            // Samples must contain non-zero entries for cpu_time,
-            // queue_time, and timestamp.
+            // Samples must contain non-zero entries for cpu_time, and timestamp.
+            // queue_time may contain a zero since appmgr's first
+            // measurement is from when it is one of the few processes
+            // running on the system.
             "<component_manager>:root/cpu_stats/measurements/components/core\\/appmgr/*/@samples/*:cpu_time WHERE [a] And(Count(a) > 0, Count(a) == Count(Filter(Fn([b], b > 0), a)))",
-            "<component_manager>:root/cpu_stats/measurements/components/core\\/appmgr/*/@samples/*:queue_time WHERE [a] And(Count(a) > 0, Count(a) == Count(Filter(Fn([b], b > 0), a)))",
+            "<component_manager>:root/cpu_stats/measurements/components/core\\/appmgr/*/@samples/*:queue_time WHERE [a] Count(a) > 0",
             "<component_manager>:root/cpu_stats/measurements/components/core\\/appmgr/*/@samples/*:timestamp WHERE [a] And(Count(a) > 0, Count(a) == Count(Filter(Fn([b], b > 0), a)))",
 
-            // TODO(fxbug.dev/75656): Reenable
             // Ensure that component manager has at least 2MB of space for CPU measurements and that not all of it is used.
             // "<component_manager>:root/cpu_stats/measurements/fuchsia.inspect.Stats:current_size WHERE [a] a < 2*1024*1024",
             // "<component_manager>:root/cpu_stats/measurements/fuchsia.inspect.Stats:maximum_size WHERE [a] a >= 2*1024*1024",
