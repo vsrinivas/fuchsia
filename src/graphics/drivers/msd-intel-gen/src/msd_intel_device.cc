@@ -555,12 +555,6 @@ magma::Status MsdIntelDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
     render_engine_cs_->SubmitBatch(std::move(batch));
   }
 
-  uint64_t client_id;
-  {
-    auto connection = context->connection().lock();
-    client_id = connection ? connection->client_id() : 0;
-  }
-
   RequestMaxFreq();
 
   return MAGMA_STATUS_OK;
