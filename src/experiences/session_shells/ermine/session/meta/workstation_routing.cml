@@ -17,6 +17,7 @@
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry",
                 "fuchsia.session.ElementManager",
+                "fuchsia.ui.accessibility.view.Registry",
             ],
         },
     ],
@@ -98,6 +99,7 @@
             protocol: [
               "fuchsia.input.injection.InputDeviceRegistry",
               "fuchsia.input.keymap.Configuration",
+              "fuchsia.ui.accessibility.view.Registry",
             ],
             from: "#scene_manager",
         },
