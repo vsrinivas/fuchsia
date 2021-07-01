@@ -5,13 +5,14 @@
 use {
     anyhow::{Context, Error},
     fidl::endpoints::{create_proxy, ClientEnd},
+    fidl::HandleBased,
     fidl_fuchsia_component_runner::{
         ComponentControllerEventStream, ComponentControllerMarker, ComponentRunnerMarker,
         ComponentRunnerProxy, ComponentStartInfo,
     },
-    fidl_fuchsia_data as fdata, fidl_fuchsia_test as ftest,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_process as fprocess, fidl_fuchsia_test as ftest,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_zircon as zx,
+    fuchsia_runtime as fruntime, fuchsia_zircon as zx,
     futures::{StreamExt, TryStreamExt},
     runner::component::ComponentNamespace,
     std::convert::TryInto,
@@ -74,17 +75,39 @@ async fn run_test_cases(
 
     for test in tests {
         let (case_listener_proxy, case_listener) = create_proxy::<ftest::CaseListenerMarker>()?;
-        run_listener_proxy.on_test_case_started(test, ftest::StdHandles::EMPTY, case_listener)?;
+
+        let (test_stdout, stdout_client) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
+        let (test_stderr, stderr_client) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
+        let stdout_handle_info = fprocess::HandleInfo {
+            handle: test_stdout.into_handle(),
+            id: fruntime::HandleInfo::new(fruntime::HandleType::FileDescriptor, 1).as_raw(),
+        };
+        let stderr_handle_info = fprocess::HandleInfo {
+            handle: test_stderr.into_handle(),
+            id: fruntime::HandleInfo::new(fruntime::HandleType::FileDescriptor, 2).as_raw(),
+        };
+
+        run_listener_proxy.on_test_case_started(
+            test,
+            ftest::StdHandles {
+                out: Some(stdout_client),
+                err: Some(stderr_client),
+                ..ftest::StdHandles::EMPTY
+            },
+            case_listener,
+        )?;
 
         let (component_controller, component_controller_server_end) =
             create_proxy::<ComponentControllerMarker>()?;
         let ns = Some(ComponentNamespace::try_into(namespace.clone()?)?);
+        let numbered_handles = Some(vec![stdout_handle_info, stderr_handle_info]);
         let start_info = ComponentStartInfo {
             resolved_url: Some(test_url.to_string()),
             program: program.clone(),
             ns,
             outgoing_dir: None,
             runtime_dir: None,
+            numbered_handles,
             ..ComponentStartInfo::EMPTY
         };
 
