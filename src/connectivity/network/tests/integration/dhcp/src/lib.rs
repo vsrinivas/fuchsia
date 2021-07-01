@@ -396,6 +396,13 @@ struct Settings<'a> {
         // A short client renewal time which will trigger well before the test timeout of 2 minutes.
         const SHORT_RENEW: u32 = 3;
 
+        let mut parameters = DEFAULT_TEST_CONFIG.dhcp_parameters();
+        parameters.push(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
+            default: Some(LONG_LEASE),
+            max: Some(LONG_LEASE),
+            ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
+        }));
+
         DhcpTestCase{
             network_configs: &mut [DhcpTestNetwork {
                 name: DEFAULT_NETWORK_NAME,
@@ -413,11 +420,7 @@ struct Settings<'a> {
                 ],
             }],
             dhcp_settings: &mut [Settings {
-                parameters: &mut vec![fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
-                    default: Some(LONG_LEASE),
-                    max: Some(LONG_LEASE),
-                    ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
-                })],
+                parameters: &mut parameters.to_vec(),
                 options: &mut [fidl_fuchsia_net_dhcp::Option_::RenewalTimeValue(SHORT_RENEW)],
             }],
             cycles:1,
@@ -488,13 +491,13 @@ async fn test_dhcp<E: netemul::Endpoint>(
     test_name: &str,
     sub_test_name: &str,
     test_case: DhcpTestCase<'_, '_>,
-) -> Result {
+) {
     let DhcpTestCase { network_configs, dhcp_settings, cycles, client_renews } = test_case;
 
     let name = format!("{}_{}", test_name, sub_test_name);
     let name = name.as_str();
 
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
 
     let sandbox_ref = &sandbox;
     let server_environments = stream::iter(dhcp_settings.into_iter())
@@ -524,11 +527,12 @@ async fn test_dhcp<E: netemul::Endpoint>(
             Result::Ok((server_environment, dhcpd))
         })
         .try_collect::<Vec<_>>()
-        .await?;
+        .await
+        .expect("failed to create server environments");
 
     let client_environment = sandbox
         .create_netstack_environment::<Netstack2, _>(format!("{}_client", name))
-        .context("failed to create client environment")?;
+        .expect("failed to create client environment");
     let client_env_ref = &client_environment;
 
     let server_environments_ref = &server_environments;
@@ -587,7 +591,8 @@ async fn test_dhcp<E: netemul::Endpoint>(
             Result::Ok((network, eps))
         })
         .try_collect::<Vec<_>>()
-        .await?;
+        .await
+        .expect("failed to install endpoints");
 
     let () = stream::iter(server_environments.iter())
         .map(Ok)
@@ -602,7 +607,8 @@ async fn test_dhcp<E: netemul::Endpoint>(
                 .map_err(fuchsia_zircon::Status::from_raw)
                 .context("dhcp/Server.StartServing returned error")
         })
-        .await?;
+        .await
+        .expect("failed to start DHCP servers");
 
     stream::iter(
         // Iterate over references to prevent filter from dropping endpoints.
@@ -622,6 +628,7 @@ async fn test_dhcp<E: netemul::Endpoint>(
             .await
     })
     .await
+    .expect("client failed to acquire expected addresses")
 }
 
 #[derive(Copy, Clone)]
