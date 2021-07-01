@@ -31,9 +31,7 @@ class MockAcpi : public Acpi {
 
   acpi::status<acpi::UniquePtr<ACPI_OBJECT>> EvaluateObject(
       ACPI_HANDLE object, const char* pathname,
-      std::optional<std::vector<ACPI_OBJECT>> args) override {
-    return acpi::error(AE_NOT_IMPLEMENTED);
-  }
+      std::optional<std::vector<ACPI_OBJECT>> args) override;
 
   acpi::status<acpi::UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE obj) override;
   acpi::status<ACPI_HANDLE> GetParent(ACPI_HANDLE child) override {

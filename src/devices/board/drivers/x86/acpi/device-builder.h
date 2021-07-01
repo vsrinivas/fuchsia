@@ -155,7 +155,7 @@ class DeviceBuilder {
   // For PCI, this is the result of evaluating _BBN.
   // For other buses, this is allocated as they're discovered.
   // (e.g. first i2c bus in the ACPI tables will be bus 0, second bus 1, etc.)
-  std::optional<uint32_t> bus_id_ = 0;
+  std::optional<uint32_t> bus_id_;
   DeviceBuilder* parent_;
   zx_device_t* zx_device_ = nullptr;
 

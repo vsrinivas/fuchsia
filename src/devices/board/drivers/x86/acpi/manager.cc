@@ -40,8 +40,9 @@ acpi::status<> Manager::DiscoverDevices() {
 }
 
 acpi::status<> Manager::ConfigureDiscoveredDevices() {
-  for (auto& kv : devices_) {
-    auto result = kv.second.InferBusTypes(
+  for (auto& handle : device_publish_order_) {
+    auto device = LookupDevice(handle);
+    auto result = device->InferBusTypes(
         acpi_, allocator_, this,
         [this](ACPI_HANDLE bus, BusType type, DeviceChildEntry child) -> size_t {
           DeviceBuilder* b = LookupDevice(bus);
@@ -78,7 +79,7 @@ acpi::status<> Manager::ConfigureDiscoveredDevices() {
           return child_index;
         });
     if (result.is_error()) {
-      zxlogf(WARNING, "Failed to InferBusTypes for %s: %d", kv.second.name(), result.error_value());
+      zxlogf(WARNING, "Failed to InferBusTypes for %s: %d", device->name(), result.error_value());
     }
   }
 

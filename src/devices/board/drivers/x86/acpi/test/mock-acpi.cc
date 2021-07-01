@@ -127,4 +127,14 @@ acpi::status<ACPI_HANDLE> MockAcpi::GetHandle(ACPI_HANDLE parent, const char* pa
   }
   return acpi::ok(ret);
 }
+
+acpi::status<acpi::UniquePtr<ACPI_OBJECT>> MockAcpi::EvaluateObject(
+    ACPI_HANDLE object, const char* pathname, std::optional<std::vector<ACPI_OBJECT>> args) {
+  if (strchr(pathname, '.') || pathname[0] == '^' || pathname[0] == '\\') {
+    return acpi::error(AE_NOT_IMPLEMENTED);
+  }
+
+  return acpi::error(AE_NOT_FOUND);
+}
+
 }  // namespace acpi::test
