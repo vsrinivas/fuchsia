@@ -165,7 +165,7 @@ func (n *ndpDispatcher) OnDuplicateAddressDetectionResult(nicID tcpip.NICID, add
 
 // OnOffLinkRouteUpdated implements ipv6.NDPDispatcher.
 func (n *ndpDispatcher) OnOffLinkRouteUpdated(nicID tcpip.NICID, dest tcpip.Subnet, router tcpip.Address, prf header.NDPRoutePreference) {
-	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOffLinkRouteUpdated(%d, %s, %s, %d)", nicID, dest, router, prf)
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOffLinkRouteUpdated(%d, %s, %s, %s)", nicID, dest, router, prf)
 	// TODO(https://fxbug.dev/79015): Support route preferences.
 	n.addEvent(&ndpDiscoveredOffLinkRouteEvent{ndpOffLinkRouteEventCommon: ndpOffLinkRouteEventCommon{
 		nicID:  nicID,
