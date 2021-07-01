@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/unification/global_variables.gni")
+import("//build/zircon/zircon_cpu.gni")
 
 source_set("platform") {
   sources = [

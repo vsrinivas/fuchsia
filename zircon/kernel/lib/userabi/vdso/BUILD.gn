@@ -7,6 +7,7 @@
 import("//build/config/zircon/standard.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/unification/zx_library.gni")
+import("//build/zircon/zircon_cpu.gni")
 
 # The vDSO is built in its own special environment because it has special
 # constraints.  If all the code going into the vDSO were built entirely in

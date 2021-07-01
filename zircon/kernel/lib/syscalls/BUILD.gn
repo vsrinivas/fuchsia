@@ -4,7 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/unification/zx_library.gni")
+import("//build/zircon/zircon_cpu.gni")
 
 zx_library("syscalls") {
   visibility = [ "//zircon/kernel/*" ]

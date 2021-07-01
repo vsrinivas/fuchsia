@@ -4,6 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/zircon/zircon_cpu.gni")
 import("//zircon/kernel/phys/phys_executable.gni")
 
 # Build a standalone ZBI kernel in the phys environment.

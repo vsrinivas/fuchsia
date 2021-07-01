@@ -4,8 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/unification/global_variables.gni")
 import("//build/zircon/c_utils.gni")
+import("//build/zircon/zircon_cpu.gni")
 
 ## This file provides the templates needed to extract code-patching directives
 ## stored in a special ELF section, and needed to specify code patching

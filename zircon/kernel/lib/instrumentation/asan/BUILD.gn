@@ -4,6 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/zircon/zircon_cpu.gni")
+
 # 1 shadow byte covers 2^3 bytes.
 asan_mapping_scale = 3
 
@@ -21,10 +23,6 @@ asan_mapping_offset = "0xdffffff000000000"
 _asan_config = [ "//build/config/sanitizers:asan" ]
 _sancov_config = [ "//build/config/sanitiziers:sancov" ]
 _toolchain_configs = toolchain_variant.configs
-zircon_cpu = target_cpu
-if (zircon_cpu == "x64") {
-  zircon_cpu = "x86"
-}
 is_asan = _toolchain_configs + _asan_config - _asan_config != _toolchain_configs
 is_sancov =
     _toolchain_configs + _sancov_config - _sancov_config != _toolchain_configs
