@@ -245,6 +245,7 @@ servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
 # termcolor 1.1.0 w/ UNLICENSE file removed per OSRB
 termcolor = { path = "tiny_mirrors/termcolor" }
 tracing-core = { path = "tiny_mirrors/tracing-core" }
+trust-dns-resolver = { path = "tiny_mirrors/trust-dns-resolver" }
 ttf-parser = { path = "tiny_mirrors/ttf-parser" }
 wasm-bindgen-futures = { path = "tiny_mirrors/wasm-bindgen-futures" }
 web-sys = { path = "tiny_mirrors/web-sys" }

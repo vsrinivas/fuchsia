@@ -9091,7 +9091,8 @@ rust_library("trust-dns-proto-v0_19_2") {
 
 rust_library("trust-dns-resolver-v0_19_2") {
   crate_name = "trust_dns_resolver"
-  crate_root = "//third_party/rust_crates/vendor/trust-dns-resolver/src/lib.rs"
+  crate_root =
+      "//third_party/rust_crates/tiny_mirrors/trust-dns-resolver/src/lib.rs"
   output_name = "trust_dns_resolver-b1fe29499f1925ce"
   configs -= [
     "//build/config:rust_edition_2018",
