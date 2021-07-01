@@ -76,8 +76,13 @@ async fn run_test_cases(
     for test in tests {
         let (case_listener_proxy, case_listener) = create_proxy::<ftest::CaseListenerMarker>()?;
 
+        let (test_stdin, _) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
         let (test_stdout, stdout_client) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
         let (test_stderr, stderr_client) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
+        let stdin_handle_info = fprocess::HandleInfo {
+            handle: test_stdin.into_handle(),
+            id: fruntime::HandleInfo::new(fruntime::HandleType::FileDescriptor, 0).as_raw(),
+        };
         let stdout_handle_info = fprocess::HandleInfo {
             handle: test_stdout.into_handle(),
             id: fruntime::HandleInfo::new(fruntime::HandleType::FileDescriptor, 1).as_raw(),
@@ -100,7 +105,8 @@ async fn run_test_cases(
         let (component_controller, component_controller_server_end) =
             create_proxy::<ComponentControllerMarker>()?;
         let ns = Some(ComponentNamespace::try_into(namespace.clone()?)?);
-        let numbered_handles = Some(vec![stdout_handle_info, stderr_handle_info]);
+        let numbered_handles =
+            Some(vec![stdin_handle_info, stdout_handle_info, stderr_handle_info]);
         let start_info = ComponentStartInfo {
             resolved_url: Some(test_url.to_string()),
             program: program.clone(),

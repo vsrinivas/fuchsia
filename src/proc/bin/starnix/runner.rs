@@ -4,15 +4,18 @@
 
 use anyhow::{anyhow, format_err, Context, Error};
 use fidl::endpoints::ServerEnd;
+use fidl::HandleBased;
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component_runner::{
     self as fcrunner, ComponentControllerMarker, ComponentStartInfo,
 };
 use fidl_fuchsia_io as fio;
+use fidl_fuchsia_process as fprocess;
 use fidl_fuchsia_starnix_developer as fstardev;
 use fidl_fuchsia_sys2 as fsys;
 use fuchsia_async as fasync;
 use fuchsia_component::client as fclient;
+use fuchsia_runtime::{HandleInfo, HandleType};
 use fuchsia_zircon::{
     self as zx, sys::zx_exception_info_t, sys::zx_thread_state_general_regs_t,
     sys::ZX_EXCEPTION_STATE_HANDLED, sys::ZX_EXCEPTION_STATE_TRY_NEXT,
@@ -21,13 +24,13 @@ use fuchsia_zircon::{
 use futures::TryStreamExt;
 use log::{error, info};
 use rand::Rng;
+use std::convert::TryFrom;
 use std::ffi::CString;
 use std::mem;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
 use crate::fs::*;
-use crate::not_implemented;
 use crate::signals::signal_handling::*;
 use crate::strace;
 use crate::syscalls::decls::SyscallDecl;
@@ -180,14 +183,38 @@ pub fn spawn_task<F>(
     });
 }
 
+/// Creates a `FdTable` from the provided handles.
+///
+/// Only `numbered_handles` that are of type `HandleInfo::FileDescriptor` are used to create files,
+/// and the handles are required to be of type `zx::Socket`.
+fn files_from_numbered_handles(
+    numbered_handles: Option<Vec<fprocess::HandleInfo>>,
+    kernel: &Kernel,
+) -> Result<Arc<FdTable>, Error> {
+    let files = FdTable::new();
+    if let Some(numbered_handles) = numbered_handles {
+        for numbered_handle in numbered_handles {
+            let info = HandleInfo::try_from(numbered_handle.id)?;
+            if info.handle_type() == HandleType::FileDescriptor {
+                files.insert(
+                    FdNumber::from_raw(info.arg().into()),
+                    create_file_from_handle(kernel, numbered_handle.handle)?,
+                );
+            }
+        }
+    }
+    Ok(files)
+}
+
 async fn start_component(
     kernel: Arc<Kernel>,
     start_info: ComponentStartInfo,
     controller: ServerEnd<ComponentControllerMarker>,
 ) -> Result<(), Error> {
     info!(
-        "start_component: {}",
-        start_info.resolved_url.clone().unwrap_or("<unknown>".to_string())
+        "start_component: {}\narguments: {:?}",
+        start_info.resolved_url.clone().unwrap_or("<unknown>".to_string()),
+        start_info.numbered_handles,
     );
 
     let root_path = runner::get_program_string(&start_info, "root")
@@ -218,12 +245,7 @@ async fn start_component(
     )
     .map_err(|e| anyhow!("Failed to open root: {}", e))?;
 
-    let files = FdTable::new();
-    let stdio = SyslogFile::new(&kernel);
-    files.insert(FdNumber::from_raw(0), stdio.clone());
-    files.insert(FdNumber::from_raw(1), stdio.clone());
-    files.insert(FdNumber::from_raw(2), stdio);
-
+    let files = files_from_numbered_handles(start_info.numbered_handles, &kernel)?;
     let task_owner = Task::create_process(
         &kernel,
         &binary_path,
@@ -276,7 +298,7 @@ pub async fn start_runner(
     Ok(())
 }
 
-async fn start(url: String) -> Result<(), Error> {
+async fn start(url: String, args: fsys::CreateChildArgs) -> Result<(), Error> {
     // TODO(fxbug.dev/74511): The amount of setup required here is a bit lengthy. Ideally,
     // fuchsia-component would provide native bindings for the Realm API that could reduce this
     // logic to a few lines.
@@ -293,15 +315,31 @@ async fn start(url: String) -> Result<(), Error> {
         environment: None,
         ..fsys::ChildDecl::EMPTY
     };
-    let child_args =
-        fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
     let () = realm
-        .create_child(&mut collection_ref, child_decl, child_args)
+        .create_child(&mut collection_ref, child_decl, args)
         .await?
         .map_err(|e| format_err!("failed to create child: {:?}", e))?;
     // The component is run in a `SingleRun` collection instance, and will be automatically
     // deleted when it exits.
     Ok(())
+}
+
+/// Creates a `HandleInfo` from the provided socket and file descriptor.
+///
+/// The file descriptor is encoded as a `PA_HND(PA_FD, <file_descriptor>)` before being stored in
+/// the `HandleInfo`.
+///
+/// Returns an error if `socket` is `None`.
+fn handle_info_from_socket(
+    socket: Option<fidl::Socket>,
+    file_descriptor: u16,
+) -> Result<fprocess::HandleInfo, Error> {
+    if let Some(socket) = socket {
+        let info = HandleInfo::new(HandleType::FileDescriptor, file_descriptor);
+        Ok(fprocess::HandleInfo { handle: socket.into_handle(), id: info.as_raw() })
+    } else {
+        Err(anyhow!("Failed to create HandleInfo"))
+    }
 }
 
 pub async fn start_manager(
@@ -310,13 +348,33 @@ pub async fn start_manager(
     while let Some(event) = request_stream.try_next().await? {
         match event {
             fstardev::ManagerRequest::Start { url, responder } => {
-                if let Err(e) = start(url).await {
+                let args = fsys::CreateChildArgs {
+                    numbered_handles: None,
+                    ..fsys::CreateChildArgs::EMPTY
+                };
+                if let Err(e) = start(url, args).await {
                     error!("failed to start component: {}", e);
                 }
                 responder.send()?;
             }
-            fstardev::ManagerRequest::StartShell { .. } => {
-                not_implemented!("StartShell not yet implemented.")
+            fstardev::ManagerRequest::StartShell { params, controller: _, .. } => {
+                let numbered_handles = vec![
+                    handle_info_from_socket(params.stdin, 0)?,
+                    handle_info_from_socket(params.stdout, 1)?,
+                    handle_info_from_socket(params.stderr, 2)?,
+                ];
+                let args = fsys::CreateChildArgs {
+                    numbered_handles: Some(numbered_handles),
+                    ..fsys::CreateChildArgs::EMPTY
+                };
+                if let Err(e) = start(
+                    "fuchsia-pkg://fuchsia.com/test_android_distro#meta/sh.cm".to_string(),
+                    args,
+                )
+                .await
+                {
+                    error!("failed to start shell: {}", e);
+                }
             }
         }
     }

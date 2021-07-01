@@ -24,6 +24,7 @@ if (target_cpu == "x64") {
       "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
       "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
       "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
+      "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
       "//sdk/fidl/fuchsia.starnix.developer:fuchsia.starnix.developer-rustc",
       "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
       "//src/lib/fdio/rust:fdio",
