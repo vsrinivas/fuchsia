@@ -29,6 +29,11 @@ struct CdfListTag {};
 struct CdfDeviceListTag {};
 }  // namespace internal
 
+struct StrProperty {
+  std::string key;
+  std::variant<uint32_t, std::string, bool> value;
+};
+
 // A single device that is part of a composite device.
 // TODO(teisenbe): Should this just be an inner-class of CompositeDevice?
 class CompositeDeviceFragment
@@ -98,8 +103,8 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
  public:
   // Only public because of make_unique.  You probably want Create().
   CompositeDevice(fbl::String name, fbl::Array<const zx_device_prop_t> properties,
-                  uint32_t fragments_count, uint32_t coresident_device_index,
-                  fbl::Array<std::unique_ptr<Metadata>> metadata);
+                  fbl::Array<const StrProperty> str_properties, uint32_t fragments_count,
+                  uint32_t coresident_device_index, fbl::Array<std::unique_ptr<Metadata>> metadata);
 
   CompositeDevice(CompositeDevice&&) = delete;
   CompositeDevice& operator=(CompositeDevice&&) = delete;
@@ -115,6 +120,7 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
 
   const fbl::String& name() const { return name_; }
   const fbl::Array<const zx_device_prop_t>& properties() const { return properties_; }
+  const fbl::Array<const StrProperty>& str_properties() const { return str_properties_; }
   uint32_t fragments_count() const { return fragments_count_; }
 
   // Returns a reference to the constructed composite device, if it exists.
@@ -151,6 +157,7 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
  private:
   const fbl::String name_;
   const fbl::Array<const zx_device_prop_t> properties_;
+  const fbl::Array<const StrProperty> str_properties_;
   const uint32_t fragments_count_;
   const uint32_t coresident_device_index_;
   const fbl::Array<std::unique_ptr<Metadata>> metadata_;

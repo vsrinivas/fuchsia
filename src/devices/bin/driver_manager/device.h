@@ -92,11 +92,6 @@ struct DeviceDriverHostListTag {};
 struct DeviceAllDevicesListTag {};
 }  // namespace internal
 
-struct StrProperty {
-  std::string key;
-  std::variant<uint32_t, std::string, bool> value;
-};
-
 class Device
     : public fbl::RefCounted<Device>,
       public fidl::WireServer<fuchsia_device_manager::Coordinator>,

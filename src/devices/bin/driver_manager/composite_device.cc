@@ -17,10 +17,12 @@
 // CompositeDevice methods
 
 CompositeDevice::CompositeDevice(fbl::String name, fbl::Array<const zx_device_prop_t> properties,
+                                 fbl::Array<const StrProperty> str_properties,
                                  uint32_t fragments_count, uint32_t coresident_device_index,
                                  fbl::Array<std::unique_ptr<Metadata>> metadata)
     : name_(std::move(name)),
       properties_(std::move(properties)),
+      str_properties_(std::move(str_properties)),
       fragments_count_(fragments_count),
       coresident_device_index_(coresident_device_index),
       metadata_(std::move(metadata)) {}
@@ -43,6 +45,19 @@ zx_status_t CompositeDevice::Create(
   fbl::Array<std::unique_ptr<Metadata>> metadata(
       new std::unique_ptr<Metadata>[comp_desc.metadata.count()], comp_desc.metadata.count());
 
+  fbl::Array<StrProperty> str_properties(new StrProperty[comp_desc.str_props.count()],
+                                         comp_desc.str_props.count());
+  for (size_t i = 0; i < comp_desc.str_props.count(); i++) {
+    str_properties[i].key = comp_desc.str_props[i].key.get();
+    if (comp_desc.str_props[i].value.is_int_value()) {
+      str_properties[i].value = comp_desc.str_props[i].value.int_value();
+    } else if (comp_desc.str_props[i].value.is_str_value()) {
+      str_properties[i].value = std::string(comp_desc.str_props[i].value.str_value().get());
+    } else if (comp_desc.str_props[i].value.is_bool_value()) {
+      str_properties[i].value = comp_desc.str_props[i].value.bool_value();
+    }
+  }
+
   for (size_t i = 0; i < comp_desc.metadata.count(); i++) {
     std::unique_ptr<Metadata> md;
     zx_status_t status = Metadata::Create(comp_desc.metadata[i].data.count(), &md);
@@ -57,8 +72,8 @@ zx_status_t CompositeDevice::Create(
   }
 
   auto dev = std::make_unique<CompositeDevice>(
-      std::move(name), std::move(properties), comp_desc.fragments.count(),
-      comp_desc.coresident_device_index, std::move(metadata));
+      std::move(name), std::move(properties), std::move(str_properties),
+      comp_desc.fragments.count(), comp_desc.coresident_device_index, std::move(metadata));
   for (uint32_t i = 0; i < comp_desc.fragments.count(); ++i) {
     const auto& fidl_fragment = comp_desc.fragments[i];
     size_t parts_count = fidl_fragment.parts_count;

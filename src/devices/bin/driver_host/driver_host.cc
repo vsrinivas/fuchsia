@@ -1204,9 +1204,21 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
     props.push_back(convert_device_prop(comp_desc->props[i]));
   }
 
+  fidl::FidlAllocator allocator;
+  std::vector<fuchsia_device_manager::wire::DeviceStrProperty> str_props = {};
+  for (size_t i = 0; i < comp_desc->str_props_count; i++) {
+    if (!property_value_type_valid(comp_desc->str_props[i].property_value.value_type)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    str_props.push_back(convert_device_str_prop(comp_desc->str_props[i], allocator));
+  }
+
   fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_dev = {
       .props =
           ::fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty>::FromExternal(props),
+      .str_props =
+          ::fidl::VectorView<fuchsia_device_manager::wire::DeviceStrProperty>::FromExternal(
+              str_props),
       .fragments =
           ::fidl::VectorView<fuchsia_device_manager::wire::DeviceFragment>::FromExternal(compvec),
       .coresident_device_index = comp_desc->coresident_device_index,

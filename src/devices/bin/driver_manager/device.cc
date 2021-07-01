@@ -173,6 +173,13 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, fbl::RefPtr<Driver
                                      composite_props.size());
   memcpy(props.data(), composite_props.data(), props.size() * sizeof(props[0]));
 
+  const auto& composite_str_props = composite.str_properties();
+  fbl::Array<StrProperty> str_props(new StrProperty[composite_str_props.size()],
+                                    composite_str_props.size());
+  for (size_t i = 0; i < composite_str_props.size(); i++) {
+    str_props[i] = composite_str_props[i];
+  }
+
   auto dev = fbl::MakeRefCounted<Device>(coordinator, composite.name(), fbl::String(),
                                          fbl::String(), nullptr, 0, zx::vmo(), zx::channel());
   if (!dev) {
@@ -185,6 +192,11 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, fbl::RefPtr<Driver
   }
 
   zx_status_t status = dev->SetProps(std::move(props));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = dev->SetStrProps(std::move(str_props));
   if (status != ZX_OK) {
     return status;
   }
