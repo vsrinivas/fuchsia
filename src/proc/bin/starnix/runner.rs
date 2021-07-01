@@ -246,12 +246,19 @@ async fn start_component(
     .map_err(|e| anyhow!("Failed to open root: {}", e))?;
 
     let files = files_from_numbered_handles(start_info.numbered_handles, &kernel)?;
+
+    let root_node = new_remote_filesystem(
+        syncio::directory_clone(&root, fio::CLONE_FLAG_SAME_RIGHTS)?,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+    );
+    let namespace = Namespace::new(root_node);
+
     let task_owner = Task::create_process(
         &kernel,
         &binary_path,
         0,
         files,
-        FsContext::new(root),
+        FsContext::new(namespace),
         Credentials::new(3),
         None,
     )?;

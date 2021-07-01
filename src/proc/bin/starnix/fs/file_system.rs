@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_io as fio;
 use parking_lot::RwLock;
 use std::sync::Arc;
 
@@ -31,12 +30,7 @@ pub struct FsContext {
 }
 
 impl FsContext {
-    pub fn new(root_remote: fio::DirectorySynchronousProxy) -> Arc<FsContext> {
-        let root_node = new_remote_filesystem(
-            syncio::directory_clone(&root_remote, fio::CLONE_FLAG_SAME_RIGHTS).unwrap(),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
-        );
-        let namespace = Namespace::new(root_node);
+    pub fn new(namespace: Arc<Namespace>) -> Arc<FsContext> {
         let root_node = namespace.root();
         Arc::new(FsContext { namespace, root_node, state: RwLock::new(FsContextState::default()) })
     }
