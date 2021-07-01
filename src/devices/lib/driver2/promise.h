@@ -26,7 +26,8 @@ fit::result<fidl::Client<T>, zx_status_t> ConnectWithResult(const Namespace& ns,
   if (result.is_error()) {
     return fit::error(result.status_value());
   }
-  return fit::ok(fidl::Client<T>(std::move(*result), dispatcher));
+  fidl::Client<T> client(std::move(*result), dispatcher);
+  return fit::ok(std::move(client));
 }
 
 // Helps to call a fit::promise lambda function.
@@ -72,9 +73,9 @@ struct ContinueCall<Func, 1> {
 // Connects to the given |path| in |ns|, and returns a fit::promise containing a
 // fidl::Client on success.
 template <typename T>
-fit::promise<fidl::Client<T>, zx_status_t> Connect(const Namespace& ns,
-                                                   async_dispatcher_t* dispatcher,
-                                                   std::string_view path) {
+fit::promise<fidl::Client<T>, zx_status_t> Connect(
+    const Namespace& ns, async_dispatcher_t* dispatcher,
+    std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>) {
   return fit::make_result_promise(internal::ConnectWithResult<T>(ns, dispatcher, path));
 }
 
