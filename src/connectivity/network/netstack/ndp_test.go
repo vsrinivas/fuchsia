@@ -208,6 +208,58 @@ func TestNDPInvalidateUnknownOffLinkRoute(t *testing.T) {
 	}
 }
 
+func TestNDPIPv6OffLinkRoutePreferences(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ndpDisp := newNDPDispatcherForTest()
+	ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ndpDisp.start(ctx)
+
+	ifs1 := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs1.Remove)
+	if err := ifs1.Up(); err != nil {
+		t.Fatalf("ifs1.Up(): %s", err)
+	}
+	ifs2 := addNoopEndpoint(t, ns, "")
+	t.Cleanup(ifs2.Remove)
+	if err := ifs2.Up(); err != nil {
+		t.Fatalf("ifs2.Up(): %s", err)
+	}
+
+	dest := tcpip.AddressWithPrefix{Address: util.Parse("abcd:ee00::"), PrefixLen: 32}.Subnet()
+	r1 := tcpip.Route{Destination: dest, NIC: ifs1.nicid, Gateway: testLinkLocalV6Addr1}
+	r2 := tcpip.Route{Destination: dest, NIC: ifs2.nicid, Gateway: testLinkLocalV6Addr1}
+	broadcastSubnet := util.PointSubnet(header.IPv4Broadcast)
+	expectedRouteTable := []tcpip.Route{
+		{Destination: broadcastSubnet, NIC: ifs1.nicid},
+		{Destination: broadcastSubnet, NIC: ifs2.nicid},
+
+		ipv6LinkLocalOnLinkRoute(ifs1.nicid),
+		ipv6LinkLocalOnLinkRoute(ifs2.nicid),
+
+		r1,
+		r2,
+	}
+
+	ndpDisp.OnOffLinkRouteUpdated(r2.NIC, r2.Destination, r2.Gateway, header.LowRoutePreference)
+	ndpDisp.OnOffLinkRouteUpdated(r1.NIC, r1.Destination, r1.Gateway, header.HighRoutePreference)
+	waitForEmptyQueue(ndpDisp)
+	if diff := cmp.Diff(expectedRouteTable, ns.stack.GetRouteTable()); diff != "" {
+		t.Errorf("route table mismatch (-want +got):\n%s", diff)
+	}
+
+	// Flip the preferences for the routes.
+	expectedRouteTable[4], expectedRouteTable[5] = expectedRouteTable[5], expectedRouteTable[4]
+	ndpDisp.OnOffLinkRouteUpdated(r2.NIC, r2.Destination, r2.Gateway, header.HighRoutePreference)
+	ndpDisp.OnOffLinkRouteUpdated(r1.NIC, r1.Destination, r1.Gateway, header.LowRoutePreference)
+	waitForEmptyQueue(ndpDisp)
+	if diff := cmp.Diff(expectedRouteTable, ns.stack.GetRouteTable()); diff != "" {
+		t.Errorf("route table mismatch (-want +got):\n%s", diff)
+	}
+
+}
+
 // Test that ndpDispatcher properly handles the discovery and invalidation of
 // off-link routes.
 func TestNDPIPv6OffLinkRouteDiscovery(t *testing.T) {

@@ -50,8 +50,13 @@ func createRoute(nicid tcpip.NICID, subnet string, gateway string) tcpip.Route {
 }
 
 func createExtendedRoute(nicid tcpip.NICID, subnet string, gateway string, metric routes.Metric, tracksInterface bool, dynamic bool, enabled bool) routes.ExtendedRoute {
+	return createExtendedRouteWithPrf(nicid, subnet, gateway, routes.MediumPreference, metric, tracksInterface, dynamic, enabled)
+}
+
+func createExtendedRouteWithPrf(nicid tcpip.NICID, subnet string, gateway string, prf routes.Preference, metric routes.Metric, tracksInterface bool, dynamic bool, enabled bool) routes.ExtendedRoute {
 	return routes.ExtendedRoute{
 		Route:                 createRoute(nicid, subnet, gateway),
+		Prf:                   prf,
 		Metric:                metric,
 		MetricTracksInterface: tracksInterface,
 		Dynamic:               dynamic,
@@ -121,59 +126,68 @@ func TestExtendedRouteMatch(t *testing.T) {
 func TestSortingLess(t *testing.T) {
 	for _, tc := range []struct {
 		subnet1 string
+		prf1    routes.Preference
 		metric1 routes.Metric
 		nic1    tcpip.NICID
 
 		subnet2 string
+		prf2    routes.Preference
 		metric2 routes.Metric
 		nic2    tcpip.NICID
 
 		want bool
 	}{
 		// non-default before default
-		{"100.99.24.12/32", 100, 1, "0.0.0.0/0", 100, 1, true},
-		{"10.144.0.0/12", 100, 1, "0.0.0.0/0", 100, 2, true},
-		{"127.0.0.1/24", 100, 1, "0.0.0.0/0", 100, 1, true},
-		{"2511:5f32:4:6:124::2:1/128", 100, 1, "::/0", 100, 1, true},
-		{"fe80:ffff:0:1234:5:6::/96", 100, 2, "::/0", 100, 1, true},
-		{"::1/128", 100, 2, "::/0", 100, 2, true},
+		{subnet1: "100.99.24.12/32", metric1: 100, nic1: 1, subnet2: "0.0.0.0/0", metric2: 100, nic2: 1, want: true},
+		{subnet1: "10.144.0.0/12", metric1: 100, nic1: 1, subnet2: "0.0.0.0/0", metric2: 100, nic2: 2, want: true},
+		{subnet1: "127.0.0.1/24", metric1: 100, nic1: 1, subnet2: "0.0.0.0/0", metric2: 100, nic2: 1, want: true},
+		{subnet1: "2511:5f32:4:6:124::2:1/128", metric1: 100, nic1: 1, subnet2: "::/0", metric2: 100, nic2: 1, want: true},
+		{subnet1: "fe80:ffff:0:1234:5:6::/96", metric1: 100, nic1: 2, subnet2: "::/0", metric2: 100, nic2: 1, want: true},
+		{subnet1: "::1/128", metric1: 100, nic1: 2, subnet2: "::/0", metric2: 100, nic2: 2, want: true},
 		// IPv4 before IPv6
-		{"100.99.24.12/32", 100, 1, "2511:5f32:4:6:124::2/120", 100, 1, true},
-		{"100.99.24.12/32", 100, 2, "2605:32::12/128", 100, 1, true},
-		{"127.0.0.1/24", 100, 1, "::1/128", 100, 1, true},
-		{"0.0.0.0/0", 100, 1, "::/0", 100, 3, true},
+		{subnet1: "100.99.24.12/32", metric1: 100, nic1: 1, subnet2: "2511:5f32:4:6:124::2/120", metric2: 100, nic2: 1, want: true},
+		{subnet1: "100.99.24.12/32", metric1: 100, nic1: 2, subnet2: "2605:32::12/128", metric2: 100, nic2: 1, want: true},
+		{subnet1: "127.0.0.1/24", metric1: 100, nic1: 1, subnet2: "::1/128", metric2: 100, nic2: 1, want: true},
+		{subnet1: "0.0.0.0/0", metric1: 100, nic1: 1, subnet2: "::/0", metric2: 100, nic2: 3, want: true},
 		// longer prefix wins
-		{"100.99.24.12/32", 100, 2, "100.99.24.12/31", 100, 1, true},
-		{"100.99.24.12/32", 100, 1, "10.144.0.0/12", 100, 1, true},
-		{"100.99.24.128/25", 100, 5, "128.0.0.1/24", 100, 3, true},
-		{"2511:5f32:4:6:124::2:12/128", 100, 1, "2511:5f32:4:6:124::2:12/126", 100, 1, true},
-		{"2511:5f32:4:6:124::2:12/128", 100, 1, "2605:32::12/127", 100, 1, true},
-		{"fe80:ffff:0:1234:5:6::/96", 100, 2, "2511:5f32:4:6:124::/90", 100, 1, true},
-		{"2511:5f32:4:6:124::2:1/128", 100, 1, "::1/120", 100, 2, true},
+		{subnet1: "100.99.24.12/32", metric1: 100, nic1: 2, subnet2: "100.99.24.12/31", metric2: 100, nic2: 1, want: true},
+		{subnet1: "100.99.24.12/32", metric1: 100, nic1: 1, subnet2: "10.144.0.0/12", metric2: 100, nic2: 1, want: true},
+		{subnet1: "100.99.24.128/25", metric1: 100, nic1: 5, subnet2: "128.0.0.1/24", metric2: 100, nic2: 3, want: true},
+		{subnet1: "2511:5f32:4:6:124::2:12/128", metric1: 100, nic1: 1, subnet2: "2511:5f32:4:6:124::2:12/126", metric2: 100, nic2: 1, want: true},
+		{subnet1: "2511:5f32:4:6:124::2:12/128", metric1: 100, nic1: 1, subnet2: "2605:32::12/127", metric2: 100, nic2: 1, want: true},
+		{subnet1: "fe80:ffff:0:1234:5:6::/96", metric1: 100, nic1: 2, subnet2: "2511:5f32:4:6:124::/90", metric2: 100, nic2: 1, want: true},
+		{subnet1: "2511:5f32:4:6:124::2:1/128", metric1: 100, nic1: 1, subnet2: "::1/120", metric2: 100, nic2: 2, want: true},
+		// higher preference wins
+		{subnet1: "100.99.24.12/32", prf1: routes.HighPreference, metric1: 2, nic1: 1, subnet2: "10.1.21.31/32", prf2: routes.LowPreference, metric2: 1, nic2: 1, want: true},
+		{subnet1: "100.99.24.12/32", prf1: routes.MediumPreference, metric1: 2, nic1: 1, subnet2: "10.1.21.31/32", prf2: routes.LowPreference, metric2: 1, nic2: 2, want: true},
+		{subnet1: "100.99.2.0/23", prf1: routes.HighPreference, metric1: 2, nic1: 3, subnet2: "10.1.22.0/23", prf2: routes.MediumPreference, metric2: 1, nic2: 1, want: true},
+		{subnet1: "100.99.24.12/32", prf1: routes.LowPreference, metric1: 1, nic1: 1, subnet2: "10.1.21.31/32", prf2: routes.HighPreference, metric2: 2, nic2: 1, want: false},
+		{subnet1: "100.99.24.12/32", prf1: routes.LowPreference, metric1: 1, nic1: 1, subnet2: "10.1.21.31/32", prf2: routes.MediumPreference, metric2: 2, nic2: 2, want: false},
+		{subnet1: "100.99.2.0/23", prf1: routes.MediumPreference, metric1: 1, nic1: 3, subnet2: "10.1.22.0/23", prf2: routes.HighPreference, metric2: 2, nic2: 1, want: false},
 		// lower metric
-		{"100.99.24.12/32", 100, 1, "10.1.21.31/32", 101, 1, true},
-		{"100.99.24.12/32", 101, 1, "10.1.21.31/32", 100, 2, false},
-		{"100.99.2.0/23", 100, 3, "10.1.22.0/23", 101, 1, true},
-		{"100.99.2.0/23", 101, 1, "10.1.22.0/23", 100, 1, false},
-		{"2511:5f32:4:6:124::2:1/128", 100, 1, "2605:32::12/128", 101, 1, true},
-		{"2511:5f32:4:6:124::2:1/128", 101, 3, "2605:32::12/128", 100, 2, false},
-		{"2511:5f32:4:6:124::2:1/96", 100, 1, "fe80:ffff:0:1234:5:6::/96", 101, 4, true},
-		{"2511:5f32:4:6:124::2:1/96", 101, 1, "fe80:ffff:0:1234:5:6::/96", 100, 4, false},
+		{subnet1: "100.99.24.12/32", metric1: 100, nic1: 1, subnet2: "10.1.21.31/32", metric2: 101, nic2: 1, want: true},
+		{subnet1: "100.99.24.12/32", metric1: 101, nic1: 1, subnet2: "10.1.21.31/32", metric2: 100, nic2: 2, want: false},
+		{subnet1: "100.99.2.0/23", metric1: 100, nic1: 3, subnet2: "10.1.22.0/23", metric2: 101, nic2: 1, want: true},
+		{subnet1: "100.99.2.0/23", metric1: 101, nic1: 1, subnet2: "10.1.22.0/23", metric2: 100, nic2: 1, want: false},
+		{subnet1: "2511:5f32:4:6:124::2:1/128", metric1: 100, nic1: 1, subnet2: "2605:32::12/128", metric2: 101, nic2: 1, want: true},
+		{subnet1: "2511:5f32:4:6:124::2:1/128", metric1: 101, nic1: 3, subnet2: "2605:32::12/128", metric2: 100, nic2: 2, want: false},
+		{subnet1: "2511:5f32:4:6:124::2:1/96", metric1: 100, nic1: 1, subnet2: "fe80:ffff:0:1234:5:6::/96", metric2: 101, nic2: 4, want: true},
+		{subnet1: "2511:5f32:4:6:124::2:1/96", metric1: 101, nic1: 1, subnet2: "fe80:ffff:0:1234:5:6::/96", metric2: 100, nic2: 4, want: false},
 		// tie-breaker: destination IPs
-		{"10.1.21.31/32", 100, 2, "100.99.24.12/32", 100, 1, true},
-		{"100.99.24.12/32", 100, 1, "10.1.21.31/32", 100, 3, false},
-		{"2511:5f32:4:6:124::2:1/128", 100, 1, "2605:32::12/128", 100, 1, true},
-		{"2605:32::12/128", 100, 1, "2511:5f32:4:6:124::2:1/128", 100, 1, false},
+		{subnet1: "10.1.21.31/32", metric1: 100, nic1: 2, subnet2: "100.99.24.12/32", metric2: 100, nic2: 1, want: true},
+		{subnet1: "100.99.24.12/32", metric1: 100, nic1: 1, subnet2: "10.1.21.31/32", metric2: 100, nic2: 3, want: false},
+		{subnet1: "2511:5f32:4:6:124::2:1/128", metric1: 100, nic1: 1, subnet2: "2605:32::12/128", metric2: 100, nic2: 1, want: true},
+		{subnet1: "2605:32::12/128", metric1: 100, nic1: 1, subnet2: "2511:5f32:4:6:124::2:1/128", metric2: 100, nic2: 1, want: false},
 		// tie-breaker: NIC
-		{"10.1.21.31/32", 100, 1, "10.1.21.31/32", 100, 2, true},
-		{"10.1.21.31/32", 100, 2, "10.1.21.31/32", 100, 1, false},
-		{"2511:5f32:4:6:124::2:1/128", 100, 1, "2511:5f32:4:6:124::2:1/128", 100, 2, true},
-		{"2511:5f32:4:6:124::2:1/128", 100, 2, "2511:5f32:4:6:124::2:1/128", 100, 1, false},
+		{subnet1: "10.1.21.31/32", metric1: 100, nic1: 1, subnet2: "10.1.21.31/32", metric2: 100, nic2: 2, want: true},
+		{subnet1: "10.1.21.31/32", metric1: 100, nic1: 2, subnet2: "10.1.21.31/32", metric2: 100, nic2: 1, want: false},
+		{subnet1: "2511:5f32:4:6:124::2:1/128", metric1: 100, nic1: 1, subnet2: "2511:5f32:4:6:124::2:1/128", metric2: 100, nic2: 2, want: true},
+		{subnet1: "2511:5f32:4:6:124::2:1/128", metric1: 100, nic1: 2, subnet2: "2511:5f32:4:6:124::2:1/128", metric2: 100, nic2: 1, want: false},
 	} {
 		name := fmt.Sprintf("Test-%s@nic%d[m:%d]_<_%s@nic%d[m:%d]", tc.subnet1, tc.nic1, tc.metric1, tc.subnet2, tc.nic2, tc.metric2)
 		t.Run(name, func(t *testing.T) {
-			e1 := createExtendedRoute(tc.nic1, tc.subnet1, "", tc.metric1, true, true, true)
-			e2 := createExtendedRoute(tc.nic2, tc.subnet2, "", tc.metric2, true, true, true)
+			e1 := createExtendedRouteWithPrf(tc.nic1, tc.subnet1, "", tc.prf1, tc.metric1, true, true, true)
+			e2 := createExtendedRouteWithPrf(tc.nic2, tc.subnet2, "", tc.prf2, tc.metric2, true, true, true)
 			if got := routes.Less(&e1, &e2); got != tc.want {
 				t.Errorf("got Less(%s, %s) = %t, want = %t", &e1, &e2, got, tc.want)
 			}
@@ -232,7 +246,7 @@ func TestAddRoute(t *testing.T) {
 			tb := routes.RouteTable{}
 			for _, j := range tc.order {
 				r := testRouteTable[j]
-				tb.AddRoute(r.Route, r.Metric, r.MetricTracksInterface, r.Dynamic, r.Enabled)
+				tb.AddRoute(r.Route, r.Prf, r.Metric, r.MetricTracksInterface, r.Dynamic, r.Enabled)
 			}
 			tableWanted := testRouteTable
 			tableGot := tb.GetExtendedRouteTable()
@@ -253,7 +267,7 @@ func TestAddRoute(t *testing.T) {
 		tb.Set(testRouteTable)
 		for i, r := range testRouteTable {
 			r.Dynamic = !r.Dynamic
-			tb.AddRoute(r.Route, r.Metric, r.MetricTracksInterface, r.Dynamic, r.Enabled)
+			tb.AddRoute(r.Route, r.Prf, r.Metric, r.MetricTracksInterface, r.Dynamic, r.Enabled)
 			tableWanted := testRouteTable
 			tableGot := tb.GetExtendedRouteTable()
 			if tableGot[i].Dynamic != r.Dynamic {
@@ -264,7 +278,7 @@ func TestAddRoute(t *testing.T) {
 			}
 
 			r.Enabled = !r.Enabled
-			tb.AddRoute(r.Route, r.Metric, r.MetricTracksInterface, r.Dynamic, r.Enabled)
+			tb.AddRoute(r.Route, r.Prf, r.Metric, r.MetricTracksInterface, r.Dynamic, r.Enabled)
 			tableGot = tb.GetExtendedRouteTable()
 			if tableGot[i].Enabled != r.Enabled {
 				t.Errorf("got tableGot[%d].Enabled = %t, want %t", i, tableGot[i].Enabled, r.Enabled)
@@ -276,6 +290,41 @@ func TestAddRoute(t *testing.T) {
 	})
 
 	// The metric is used as a tie-breaker when routes have the same prefix length
+	t.Run("Changing preference", func(t *testing.T) {
+		r0 := createRoute(1, "0.0.0.0/0", "192.168.1.1")
+		r1 := createRoute(2, "0.0.0.0/0", "192.168.100.10")
+
+		// 1.test - r0 is more preferred.
+		{
+			var tb routes.RouteTable
+			tb.AddRoute(r0, routes.HighPreference, 100, true, true, true)
+			tb.AddRoute(r1, routes.LowPreference, 100, true, true, true)
+			tableGot := tb.GetExtendedRouteTable()
+			if got, want := tableGot[0].Route, r0; got != want {
+				t.Errorf("got = %s, want = %s", got, want)
+			}
+			if got, want := tableGot[1].Route, r1; got != want {
+				t.Errorf("got = %s, want = %s", got, want)
+			}
+		}
+
+		// 2.test - r1 is more preferred.
+		{
+			var tb routes.RouteTable
+			tb.AddRoute(r0, routes.LowPreference, 100, true, true, true)
+			tb.AddRoute(r1, routes.HighPreference, 100, true, true, true)
+			tableGot := tb.GetExtendedRouteTable()
+			if got, want := tableGot[0].Route, r1; got != want {
+				t.Errorf("got = %s, want = %s", got, want)
+			}
+			if got, want := tableGot[1].Route, r0; got != want {
+				t.Errorf("got = %s, want = %s", got, want)
+			}
+		}
+	})
+
+	// The metric is used as a tie-breaker when routes have the same prefix length
+	// and preference.
 	t.Run("Changing metric", func(t *testing.T) {
 		r0 := createRoute(1, "0.0.0.0/0", "192.168.1.1")
 		r1 := createRoute(2, "0.0.0.0/0", "192.168.100.10")
@@ -283,8 +332,8 @@ func TestAddRoute(t *testing.T) {
 		// 1.test - r0 gets lower metric.
 		{
 			var tb routes.RouteTable
-			tb.AddRoute(r0, 100, true, true, true)
-			tb.AddRoute(r1, 200, true, true, true)
+			tb.AddRoute(r0, routes.MediumPreference, 100, true, true, true)
+			tb.AddRoute(r1, routes.MediumPreference, 200, true, true, true)
 			tableGot := tb.GetExtendedRouteTable()
 			if got, want := tableGot[0].Route, r0; got != want {
 				t.Errorf("got = %s, want = %s", got, want)
@@ -297,8 +346,8 @@ func TestAddRoute(t *testing.T) {
 		// 2.test - r1 gets lower metric.
 		{
 			var tb routes.RouteTable
-			tb.AddRoute(r0, 200, true, true, true)
-			tb.AddRoute(r1, 100, true, true, true)
+			tb.AddRoute(r0, routes.MediumPreference, 200, true, true, true)
+			tb.AddRoute(r1, routes.MediumPreference, 100, true, true, true)
 			tableGot := tb.GetExtendedRouteTable()
 			if got, want := tableGot[0].Route, r1; got != want {
 				t.Errorf("got = %s, want = %s", got, want)
@@ -390,8 +439,8 @@ func TestUpdateMetricByInterface(t *testing.T) {
 
 		// Initially r0 has lower metric and is ahead in the table.
 		tb := routes.RouteTable{}
-		tb.AddRoute(r0, 100, true, true, true)
-		tb.AddRoute(r1, 200, true, true, true)
+		tb.AddRoute(r0, routes.MediumPreference, 100, true, true, true)
+		tb.AddRoute(r1, routes.MediumPreference, 200, true, true, true)
 		{
 			tableGot := tb.GetExtendedRouteTable()
 			if got, want := tableGot[0].Route, r0; got != want {

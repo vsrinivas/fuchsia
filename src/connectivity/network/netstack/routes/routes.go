@@ -43,12 +43,31 @@ var (
 // priority with a lower value being better.
 type Metric uint32
 
+// Preference is the preference for a route.
+type Preference int
+
+const (
+	// LowPreference indicates that a route has a low preference.
+	LowPreference Preference = iota
+
+	// MediumPreference indicates that a route has a medium (default)
+	// preference.
+	MediumPreference
+
+	// HighPreference indicates that a route has a high preference.
+	HighPreference
+)
+
 // ExtendedRoute is a single route that contains the standard tcpip.Route plus
 // additional attributes.
 type ExtendedRoute struct {
 	// Route used to build the route table to be fed into the
 	// gvisor.dev/gvisor/pkg lib.
 	Route tcpip.Route
+
+	// Prf is the preference of the route when comparing routes to the same
+	// destination.
+	Prf Preference
 
 	// Metric acts as a tie-breaker when comparing otherwise identical routes.
 	Metric Metric
@@ -132,10 +151,10 @@ func (rt *RouteTable) Set(r []ExtendedRoute) {
 }
 
 // AddRoute inserts the given route to the table in a sorted fashion. If the
-// route already exists, it simply updates that route's metric, dynamic and
-// enabled fields.
-func (rt *RouteTable) AddRoute(route tcpip.Route, metric Metric, tracksInterface bool, dynamic bool, enabled bool) {
-	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Adding route %s with metric:%d, trackIf=%t, dynamic=%t, enabled=%t", route, metric, tracksInterface, dynamic, enabled)
+// route already exists, it simply updates that route's preference, metric,
+// dynamic, and enabled fields.
+func (rt *RouteTable) AddRoute(route tcpip.Route, prf Preference, metric Metric, tracksInterface bool, dynamic bool, enabled bool) {
+	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Adding route %s with prf=%d metric=%d, trackIf=%t, dynamic=%t, enabled=%t", route, prf, metric, tracksInterface, dynamic, enabled)
 
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -150,6 +169,7 @@ func (rt *RouteTable) AddRoute(route tcpip.Route, metric Metric, tracksInterface
 
 	newEr := ExtendedRoute{
 		Route:                 route,
+		Prf:                   prf,
 		Metric:                metric,
 		MetricTracksInterface: tracksInterface,
 		Dynamic:               dynamic,
@@ -338,6 +358,11 @@ func Less(ei, ej *ExtendedRoute) bool {
 	// Longer prefix wins.
 	if riPrefix, rjPrefix := ri.Destination.Prefix(), rj.Destination.Prefix(); riPrefix != rjPrefix {
 		return riPrefix > rjPrefix
+	}
+
+	// Higher preference wins.
+	if ei.Prf != ej.Prf {
+		return ei.Prf > ej.Prf
 	}
 
 	// Lower metrics wins.

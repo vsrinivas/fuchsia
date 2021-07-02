@@ -61,6 +61,7 @@ func (*ndpOffLinkRouteEventCommon) isNDPEvent() {}
 
 type ndpDiscoveredOffLinkRouteEvent struct {
 	ndpOffLinkRouteEventCommon
+	prf header.NDPRoutePreference
 }
 
 type ndpInvalidatedOffLinkRouteEvent struct {
@@ -166,12 +167,14 @@ func (n *ndpDispatcher) OnDuplicateAddressDetectionResult(nicID tcpip.NICID, add
 // OnOffLinkRouteUpdated implements ipv6.NDPDispatcher.
 func (n *ndpDispatcher) OnOffLinkRouteUpdated(nicID tcpip.NICID, dest tcpip.Subnet, router tcpip.Address, prf header.NDPRoutePreference) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOffLinkRouteUpdated(%d, %s, %s, %s)", nicID, dest, router, prf)
-	// TODO(https://fxbug.dev/79015): Support route preferences.
-	n.addEvent(&ndpDiscoveredOffLinkRouteEvent{ndpOffLinkRouteEventCommon: ndpOffLinkRouteEventCommon{
-		nicID:  nicID,
-		dest:   dest,
-		router: router,
-	}})
+	n.addEvent(&ndpDiscoveredOffLinkRouteEvent{
+		ndpOffLinkRouteEventCommon: ndpOffLinkRouteEventCommon{
+			nicID:  nicID,
+			dest:   dest,
+			router: router,
+		},
+		prf: prf,
+	})
 }
 
 // OnOffLinkRouteInvalidated implements ipv6.NDPDispatcher.
@@ -450,12 +453,25 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 
 			case *ndpDiscoveredOffLinkRouteEvent:
 				rt := tcpip.Route{Destination: event.dest, Gateway: event.router, NIC: event.nicID}
-				_ = syslog.InfoTf(ndpSyslogTagName, "discovered an off-link route to [%s] through [%s] on nicID (%d): [%s]", event.dest, event.router, event.nicID, rt)
+				_ = syslog.InfoTf(ndpSyslogTagName, "discovered an off-link route to [%s] through [%s] on nicID (%d) with preference=%s: [%s]", event.dest, event.router, event.nicID, event.prf, rt)
+
+				var prf routes.Preference
+				switch event.prf {
+				case header.LowRoutePreference:
+					prf = routes.LowPreference
+				case header.MediumRoutePreference:
+					prf = routes.MediumPreference
+				case header.HighRoutePreference:
+					prf = routes.HighPreference
+				default:
+					panic(fmt.Sprintf("unhandled NDP route preference = %s", event.prf))
+				}
+
 				// rt is added as a 'static' route because Netstack will remove dynamic
 				// routes on DHCPv4 changes. See
 				// staticRouteAvoidingLifeCycleHooks for more details.
-				if err := n.ns.AddRoute(rt, metricNotSet, staticRouteAvoidingLifeCycleHooks); err != nil {
-					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to add the route [%s] for the discovered off-link route to [%s] through [%s] on nicID (%d): %s", rt, event.dest, event.router, event.nicID, err)
+				if err := n.ns.addRouteWithPreference(rt, prf, metricNotSet, staticRouteAvoidingLifeCycleHooks); err != nil {
+					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to add the route [%s] with preference=%s for the discovered off-link route to [%s] through [%s] on nicID (%d): %s", rt, event.prf, event.dest, event.router, event.nicID, err)
 				}
 
 			case *ndpInvalidatedOffLinkRouteEvent:

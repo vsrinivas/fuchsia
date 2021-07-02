@@ -298,17 +298,28 @@ func (ns *Netstack) name(nicid tcpip.NICID) string {
 
 // AddRoute adds a single route to the route table in a sorted fashion.
 func (ns *Netstack) AddRoute(r tcpip.Route, metric routes.Metric, dynamic bool) error {
-	_ = syslog.Infof("adding route %s metric=%d dynamic=%t", r, metric, dynamic)
 	return ns.AddRoutes([]tcpip.Route{r}, metric, dynamic)
+}
+
+func (ns *Netstack) addRouteWithPreference(r tcpip.Route, prf routes.Preference, metric routes.Metric, dynamic bool) error {
+	return ns.addRoutesWithPreference([]tcpip.Route{r}, prf, metric, dynamic)
 }
 
 // AddRoutes adds one or more routes to the route table in a sorted
 // fashion.
+//
+// The routes will be added with the default (medium) medium preference value.
 func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bool) error {
+	return ns.addRoutesWithPreference(rs, routes.MediumPreference, metric, dynamic)
+}
+
+func (ns *Netstack) addRoutesWithPreference(rs []tcpip.Route, prf routes.Preference, metric routes.Metric, dynamic bool) error {
 	metricTracksInterface := false
 	if metric == metricNotSet {
 		metricTracksInterface = true
 	}
+
+	_ = syslog.Infof("adding routes [%s] prf=%d metric=%d dynamic=%t", rs, prf, metric, dynamic)
 
 	var defaultRouteAdded bool
 	for _, r := range rs {
@@ -335,7 +346,7 @@ func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bo
 			metric = ifs.mu.metric
 		}
 
-		ns.routeTable.AddRoute(r, metric, metricTracksInterface, dynamic, enabled)
+		ns.routeTable.AddRoute(r, prf, metric, metricTracksInterface, dynamic, enabled)
 		ifs.mu.Unlock()
 
 		if util.IsAny(r.Destination.ID()) && enabled {
@@ -639,6 +650,7 @@ func (ifs *ifState) stateChangeLocked(name string, adminUp, linkOnline bool) boo
 			// broadcasting it to the whole link.
 			ifs.ns.routeTable.AddRoute(
 				tcpip.Route{Destination: util.PointSubnet(header.IPv4Broadcast), NIC: ifs.nicid},
+				routes.MediumPreference,
 				lowPriorityRoute,
 				false, /* metricTracksInterface */
 				true,  /* dynamic */
@@ -657,6 +669,7 @@ func (ifs *ifState) stateChangeLocked(name string, adminUp, linkOnline bool) boo
 			// changes. See staticRouteAvoidingLifeCycleHooks for more details.
 			ifs.ns.routeTable.AddRoute(
 				ipv6LinkLocalOnLinkRoute(ifs.nicid),
+				routes.MediumPreference,
 				metricNotSet,
 				true, /* metricTracksInterface */
 				staticRouteAvoidingLifeCycleHooks,
