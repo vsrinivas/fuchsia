@@ -80,6 +80,8 @@ class Tcs3400Device : public DeviceType,
 
   zx_status_t FillInputRpt() TA_REQ(client_input_lock_);
   zx_status_t InitGain(uint8_t gain);
+  zx_status_t WriteReg(uint8_t reg, uint8_t value) TA_REQ(i2c_lock_);
+  zx_status_t ReadReg(uint8_t reg, uint8_t& output_value) TA_REQ(i2c_lock_);
   int Thread();
 };
 }  // namespace tcs
