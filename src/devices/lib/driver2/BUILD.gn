@@ -57,11 +57,13 @@ executable("llcpp_test") {
     "namespace_test.cc",
     "promise_test.cc",
     "start_args_test.cc",
+    "test_base.cc",
     "test_base.h",
   ]
 
   deps = [
     ":llcpp",
+    "//sdk/fidl/fuchsia.device.fs",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/fidl/cpp",

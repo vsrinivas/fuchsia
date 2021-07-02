@@ -4,7 +4,11 @@
 
 #include <fuchsia/io/cpp/fidl_test_base.h>
 
-class TestDirectory : public fuchsia::io::testing::Directory_TestBase {
+#include "src/devices/lib/driver2/namespace.h"
+
+namespace driver::testing {
+
+class Directory : public fuchsia::io::testing::Directory_TestBase {
  public:
   using OpenHandler =
       fit::function<void(std::string path, fidl::InterfaceRequest<fuchsia::io::Node> object)>;
@@ -23,3 +27,7 @@ class TestDirectory : public fuchsia::io::testing::Directory_TestBase {
 
   OpenHandler open_handler_;
 };
+
+zx::status<Namespace> CreateNamespace(fidl::ClientEnd<fuchsia_io::Directory> client_end);
+
+}  // namespace driver::testing

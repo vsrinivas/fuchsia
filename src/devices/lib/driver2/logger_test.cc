@@ -4,8 +4,9 @@
 
 #include "src/devices/lib/driver2/logger.h"
 
-#include <fuchsia/io/cpp/fidl_test_base.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl_test_base.h>
+#include <fuchsia/logger/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
@@ -31,7 +32,7 @@ class TestLogSink : public flogger::testing::LogSink_TestBase {
   }
 
  private:
-  void Connect(::zx::socket socket) override { connect_handler_(std::move(socket)); }
+  void Connect(zx::socket socket) override { connect_handler_(std::move(socket)); }
 
   void NotImplemented_(const std::string& name) override {
     printf("Not implemented: LogSink::%s\n", name.data());
@@ -69,11 +70,7 @@ TEST(LoggerTest, CreateAndLog) {
   // Setup namespace.
   auto svc = fidl::CreateEndpoints<fuchsia_io::Directory>();
   EXPECT_EQ(ZX_OK, svc.status_value());
-  fidl::FidlAllocator allocator;
-  fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);
-  ns_entries[0].Allocate(allocator);
-  ns_entries[0].set_path(allocator, "/svc").set_directory(allocator, std::move(svc->client));
-  auto ns = Namespace::Create(ns_entries);
+  auto ns = driver::testing::CreateNamespace(std::move(svc->client));
   ASSERT_TRUE(ns.is_ok());
 
   // Setup logger.
@@ -82,9 +79,9 @@ TEST(LoggerTest, CreateAndLog) {
   log_sink.SetConnectHandler([&log_socket](zx::socket socket) { log_socket = std::move(socket); });
   fidl::Binding<flogger::LogSink> log_binding(&log_sink);
 
-  TestDirectory svc_directory;
+  driver::testing::Directory svc_directory;
   svc_directory.SetOpenHandler([&loop, &log_binding](std::string path, auto object) {
-    EXPECT_EQ("fuchsia.logger.LogSink", path);
+    EXPECT_EQ(fidl::DiscoverableProtocolName<fuchsia_logger::LogSink>, path);
     log_binding.Bind(object.TakeChannel(), loop.dispatcher());
   });
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);

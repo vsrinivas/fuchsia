@@ -27,7 +27,7 @@ TEST(NamespaceTest, CreateAndConnect) {
   auto ns = Namespace::Create(ns_entries);
   ASSERT_TRUE(ns.is_ok());
 
-  TestDirectory pkg_directory;
+  driver::testing::Directory pkg_directory;
   fidl::Binding<fio::Directory> pkg_binding(&pkg_directory);
   pkg_binding.Bind(pkg->server.TakeChannel(), loop.dispatcher());
 
