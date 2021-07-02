@@ -23,7 +23,10 @@ impl Arbitrary for RandomLogRecord {
     fn arbitrary(u: &mut Unstructured<'_>) -> Result<Self> {
         let sequence = u64::arbitrary(u)?;
         let padding1: [zx::sys::PadByte; 4] = Default::default();
-        let datalen = u16::arbitrary(u)?;
+        let mut datalen = u16::arbitrary(u)?;
+        if usize::from(datalen) > zx::sys::ZX_LOG_RECORD_DATA_MAX {
+            datalen = zx::sys::ZX_LOG_RECORD_DATA_MAX.to_string().parse::<u16>().unwrap();
+        }
         let severity = u8::arbitrary(u)?;
         let flags = u8::arbitrary(u)?;
         let timestamp = i64::arbitrary(u)? as zx::sys::zx_time_t;
