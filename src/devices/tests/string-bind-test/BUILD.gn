@@ -14,8 +14,8 @@ test("test") {
 
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
+    "//sdk/fidl/fuchsia.driver.development",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",

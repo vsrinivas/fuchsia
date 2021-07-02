@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/device/test/llcpp/fidl.h>
+#include <fuchsia/driver/development/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/driver.h>
 #include <lib/devmgr-integration-test/fixture.h>
@@ -73,37 +73,37 @@ class BindCompilerTest : public testing::Test {
     }
     ASSERT_EQ(status, ZX_OK);
 
-    // Connect to the BindDebugger service.
-    auto bind_endpoints = fidl::CreateEndpoints<fuchsia::device::manager::BindDebugger>();
+    // Connect to the DriverDevelopment service.
+    auto bind_endpoints = fidl::CreateEndpoints<fuchsia::driver::development::DriverDevelopment>();
     ASSERT_EQ(bind_endpoints.status_value(), ZX_OK);
 
     std::string svc_name =
-        fxl::StringPrintf("svc/%s", fuchsia::device::manager::BindDebugger::Name_);
+        fxl::StringPrintf("svc/%s", fuchsia::driver::development::DriverDevelopment::Name_);
     sys::ServiceDirectory svc_dir(devmgr_.TakeSvcRootDir().TakeChannel());
     status = svc_dir.Connect(svc_name, bind_endpoints->server.TakeChannel());
     ASSERT_EQ(status, ZX_OK);
 
-    bind_debugger_.Bind(bind_endpoints->client.TakeChannel());
+    driver_dev_.Bind(bind_endpoints->client.TakeChannel());
   }
 
   IsolatedDevmgr devmgr_;
-  fuchsia::device::manager::BindDebuggerSyncPtr bind_debugger_;
+  fuchsia::driver::development::DriverDevelopmentSyncPtr driver_dev_;
   std::string driver_libpath_;
   std::string relative_device_path_;
 };
 
 // Check that calling GetBindRules with an invalid driver path returns ZX_ERR_NOT_FOUND.
 TEST_F(BindCompilerTest, InvalidDriver) {
-  fuchsia::device::manager::BindDebugger_GetBindRules_Result result;
-  ASSERT_EQ(bind_debugger_->GetBindRules("abc", &result), ZX_OK);
+  fuchsia::driver::development::DriverDevelopment_GetBindRules_Result result;
+  ASSERT_EQ(driver_dev_->GetBindRules("abc", &result), ZX_OK);
   ASSERT_TRUE(result.is_err());
   ASSERT_EQ(result.err(), ZX_ERR_NOT_FOUND);
 }
 
 // Get the bind program of the test driver and check that it has the expected instructions.
 TEST_F(BindCompilerTest, ValidDriver) {
-  fuchsia::device::manager::BindDebugger_GetBindRules_Result result;
-  ASSERT_EQ(bind_debugger_->GetBindRules(driver_libpath_, &result), ZX_OK);
+  fuchsia::driver::development::DriverDevelopment_GetBindRules_Result result;
+  ASSERT_EQ(driver_dev_->GetBindRules(driver_libpath_, &result), ZX_OK);
   ASSERT_TRUE(result.is_response());
   auto instructions = result.response().bind_rules.bytecode_v1();
 
@@ -123,8 +123,8 @@ TEST_F(BindCompilerTest, ValidDriver) {
 
 // Check that calling GetDeviceProperties with an invalid device path returns ZX_ERR_NOT_FOUND.
 TEST_F(BindCompilerTest, InvalidDevice) {
-  fuchsia::device::manager::BindDebugger_GetDeviceProperties_Result result;
-  ASSERT_EQ(bind_debugger_->GetDeviceProperties("abc", &result), ZX_OK);
+  fuchsia::driver::development::DriverDevelopment_GetDeviceProperties_Result result;
+  ASSERT_EQ(driver_dev_->GetDeviceProperties("abc", &result), ZX_OK);
   ASSERT_TRUE(result.is_err());
   ASSERT_EQ(result.err(), ZX_ERR_NOT_FOUND);
 }
@@ -133,8 +133,8 @@ TEST_F(BindCompilerTest, InvalidDevice) {
 TEST_F(BindCompilerTest, ValidDevice) {
   std::string child_device_path(relative_device_path_ + "/" + kChildDeviceName);
 
-  fuchsia::device::manager::BindDebugger_GetDeviceProperties_Result result;
-  ASSERT_EQ(bind_debugger_->GetDeviceProperties(child_device_path, &result), ZX_OK);
+  fuchsia::driver::development::DriverDevelopment_GetDeviceProperties_Result result;
+  ASSERT_EQ(driver_dev_->GetDeviceProperties(child_device_path, &result), ZX_OK);
 
   ASSERT_TRUE(result.is_response());
   auto props = result.response().property_list.props;

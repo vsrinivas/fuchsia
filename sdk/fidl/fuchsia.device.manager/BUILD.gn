@@ -13,7 +13,6 @@ fidl("fuchsia.device.manager") {
     "coordinator.fidl",
     "debug.fidl",
     "device-watcher.fidl",
-    "driver-host-development.fidl",
     "system-state-transition.fidl",
   ]
   public_deps = [

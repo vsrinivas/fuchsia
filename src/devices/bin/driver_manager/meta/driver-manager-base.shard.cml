@@ -9,10 +9,9 @@
         {
             protocol: [
                 "fuchsia.device.manager.Administrator",
-                "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
-                "fuchsia.device.manager.DriverHostDevelopment",
                 "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.driver.development.DriverDevelopment",
                 "fuchsia.driver.registrar.DriverRegistrar",
                 "fuchsia.hardware.pci.DeviceWatcher",
                 "fuchsia.hardware.usb.DeviceWatcher",
@@ -77,10 +76,9 @@
         {
             protocol: [
                 "fuchsia.device.manager.Administrator",
-                "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
-                "fuchsia.device.manager.DriverHostDevelopment",
                 "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.driver.development.DriverDevelopment",
                 "fuchsia.driver.registrar.DriverRegistrar",
                 "fuchsia.hardware.pci.DeviceWatcher",
                 "fuchsia.hardware.usb.DeviceWatcher",

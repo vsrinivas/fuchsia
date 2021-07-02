@@ -1,0 +1,41 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+deprecated_syntax;
+library fuchsia.driver.development;
+
+using fuchsia.device.manager;
+using zx;
+
+union BindRulesBytecode {
+    /// Bind rules in the old bytecode format.
+    1: vector<fuchsia.device.manager.BindInstruction>:fuchsia.device.manager.BIND_RULES_INSTRUCTIONS_MAX bytecode_v1;
+
+    /// Bind rules in the new bytecode format.
+    2: vector<uint8>:MAX bytecode_v2;
+};
+
+/// Interface for developing and debugging drivers.
+/// This interface should only be used for development and disabled in release builds.
+[Discoverable]
+protocol DriverDevelopment {
+    /// Restart all Driver Hosts containing the driver specified by `driver path`.
+    /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path.
+    RestartDriverHosts(string:fuchsia.device.manager.DEVICE_PATH_MAX driver_path) -> () error zx.status;
+
+    /// Returns the bind program of the given driver.
+    /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path.
+    /// ZX_ERR_BUFFER_TOO_SMALL indicates that the driver's bind program is longer than the
+    /// maximum number of instructions (BIND_PROGRAM_INSTRUCTIONS_MAX).
+    GetBindRules(string:fuchsia.device.manager.DEVICE_PATH_MAX driver_path)
+        -> (BindRulesBytecode bind_rules)
+        error zx.status;
+
+    /// Returns the list of properties of the given device.
+    /// ZX_ERR_NOT_FOUND indicates that there is no device matching the given path.
+    /// ZX_ERR_BAD_PATH indicates that the given path is not valid.
+    /// ZX_ERR_BUFFER_TOO_SMALL indicates either that the given path is too long,
+    /// or that the device has more than the maximum number of properties (PROPERTIES_MAX).
+    GetDeviceProperties(string:fuchsia.device.manager.DEVICE_PATH_MAX device_path)
+        -> (fuchsia.device.manager.DevicePropertyList property_list) error zx.status;
+};

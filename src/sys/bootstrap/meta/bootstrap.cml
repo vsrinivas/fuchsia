@@ -380,7 +380,6 @@
         {
             protocol: [
                 "fuchsia.device.manager.Administrator",
-                "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
             ],
             from: "#driver_manager",
@@ -812,9 +811,7 @@
         {
             protocol: [
                 "fuchsia.device.manager.Administrator",
-                "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
-                "fuchsia.device.manager.DriverHostDevelopment",
                 "fuchsia.device.manager.SystemStateTransition",
                 "fuchsia.driver.registrar.DriverRegistrar",
             ],

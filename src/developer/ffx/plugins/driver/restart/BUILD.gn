@@ -9,7 +9,9 @@ ffx_plugin("ffx_driver_restart") {
   edition = "2021"
   with_unit_tests = true
 
-  deps = [ "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
+  ]
 
   sources = [
     "src/args.rs",

@@ -253,16 +253,8 @@
             path: "/svc_for_sys/fuchsia.device.manager.Administrator",
         },
         {
-            protocol: "fuchsia.device.manager.BindDebugger",
-            path: "/svc_for_sys/fuchsia.device.manager.BindDebugger",
-        },
-        {
             protocol: "fuchsia.device.manager.DebugDumper",
             path: "/svc_for_sys/fuchsia.device.manager.DebugDumper",
-        },
-        {
-            protocol: "fuchsia.device.manager.DriverHostDevelopment",
-            path: "/svc_for_sys/fuchsia.device.manager.DriverHostDevelopment",
         },
         {
             protocol: "fuchsia.driver.registrar.DriverRegistrar",

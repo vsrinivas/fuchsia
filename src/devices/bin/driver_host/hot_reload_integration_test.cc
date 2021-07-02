@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/device/restarttest/llcpp/fidl.h>
 #include <fuchsia/device/test/llcpp/fidl.h>
+#include <fuchsia/driver/development/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/devmgr-integration-test/fixture.h>
@@ -29,7 +29,7 @@ using driver_integration_test::IsolatedDevmgr;
 using fuchsia_device_restarttest::TestDevice;
 
 void SetupEnvironment(board_test::DeviceEntry dev, driver_integration_test::IsolatedDevmgr* devmgr,
-                      fuchsia::device::manager::DriverHostDevelopmentSyncPtr* development_) {
+                      fuchsia::driver::development::DriverDevelopmentSyncPtr* development_) {
   driver_integration_test::IsolatedDevmgr::Args args;
   args.device_list.push_back(dev);
 
@@ -39,12 +39,12 @@ void SetupEnvironment(board_test::DeviceEntry dev, driver_integration_test::Isol
   zx::channel device_channel, remote;
   ASSERT_EQ(zx::channel::create(0, &device_channel, &remote), ZX_OK);
 
-  // Connect to the DriverHostDevelopment service.
+  // Connect to the DriverDevelopment service.
   zx::channel local;
   ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
 
   std::string svc_name =
-      fxl::StringPrintf("svc/%s", fuchsia::device::manager::DriverHostDevelopment::Name_);
+      fxl::StringPrintf("svc/%s", fuchsia::driver::development::DriverDevelopment::Name_);
   zx::status svc = service::Clone(devmgr->svc_root_dir());
   ASSERT_EQ(svc.status_value(), ZX_OK);
   sys::ServiceDirectory svc_dir(svc->TakeChannel());
@@ -57,7 +57,7 @@ void SetupEnvironment(board_test::DeviceEntry dev, driver_integration_test::Isol
 // Test restarting a driver host containing only one driver.
 TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
   driver_integration_test::IsolatedDevmgr devmgr;
-  fuchsia::device::manager::DriverHostDevelopmentSyncPtr development_;
+  fuchsia::driver::development::DriverDevelopmentSyncPtr development_;
 
   // Test device to add to devmgr.
   board_test::DeviceEntry dev = {};
@@ -94,7 +94,7 @@ TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
   ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd), &watcher));
 
   // Restart the driver host of the test driver.
-  fuchsia::device::manager::DriverHostDevelopment_RestartDriverHosts_Result result;
+  fuchsia::driver::development::DriverDevelopment_RestartDriverHosts_Result result;
   auto resp =
       development_->RestartDriverHosts("/boot/driver/driver-host-restart-driver.so", &result);
   ASSERT_OK(resp);
@@ -123,7 +123,7 @@ TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
 // the parent.
 TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
   driver_integration_test::IsolatedDevmgr devmgr;
-  fuchsia::device::manager::DriverHostDevelopmentSyncPtr development_;
+  fuchsia::driver::development::DriverDevelopmentSyncPtr development_;
 
   // Test device to add to devmgr.
   board_test::DeviceEntry dev = {};
@@ -172,7 +172,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
   ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd_watcher), &watcher));
 
   // Restart the driver host of the parent driver.
-  fuchsia::device::manager::DriverHostDevelopment_RestartDriverHosts_Result result;
+  fuchsia::driver::development::DriverDevelopment_RestartDriverHosts_Result result;
   auto resp = development_->RestartDriverHosts("/boot/driver/driver-host-test-driver.so", &result);
   ASSERT_OK(resp);
 
@@ -212,7 +212,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
 // the child.
 TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
   driver_integration_test::IsolatedDevmgr devmgr;
-  fuchsia::device::manager::DriverHostDevelopmentSyncPtr development_;
+  fuchsia::driver::development::DriverDevelopmentSyncPtr development_;
 
   // Test device to add to devmgr.
   board_test::DeviceEntry dev = {};
@@ -261,7 +261,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
                zx_status_get_string(parent_before->result.err()));
 
   // Restart the driver host of the child driver.
-  fuchsia::device::manager::DriverHostDevelopment_RestartDriverHosts_Result result;
+  fuchsia::driver::development::DriverDevelopment_RestartDriverHosts_Result result;
   auto resp =
       development_->RestartDriverHosts("/boot/driver/driver-host-test-child-driver.so", &result);
   ASSERT_OK(resp);

@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_H_
 
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/driver/development/llcpp/fidl.h>
 #include <fuchsia/driver/registrar/llcpp/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <fuchsia/power/manager/llcpp/fidl.h>
@@ -55,7 +56,6 @@
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 using statecontrol_fidl::wire::SystemPowerState;
-namespace device_manager_fidl = fuchsia_device_manager;
 namespace power_manager_fidl = fuchsia_power_manager;
 namespace fdf = fuchsia_driver_framework;
 
@@ -156,8 +156,7 @@ struct CoordinatorConfig {
   std::vector<fbl::String> eager_fallback_drivers;
 };
 
-class Coordinator : public fidl::WireServer<device_manager_fidl::BindDebugger>,
-                    public fidl::WireServer<device_manager_fidl::DriverHostDevelopment>,
+class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDevelopment>,
                     public fidl::WireServer<fuchsia_driver_registrar::DriverRegistrar> {
  public:
   Coordinator(const Coordinator&) = delete;
@@ -245,11 +244,6 @@ class Coordinator : public fidl::WireServer<device_manager_fidl::BindDebugger>,
                               const void* data, uint32_t length);
   zx_status_t AddCompositeDevice(const fbl::RefPtr<Device>& dev, std::string_view name,
                                  fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc);
-
-  // Implementation of fuchsia::device::manager::DriverHostDevelopment FIDL protocol.
-  // Restart all Driver Hosts containing a driver specified by |driver_path|.
-  void RestartDriverHosts(RestartDriverHostsRequestView request,
-                          RestartDriverHostsCompleter::Sync& completer) override;
 
   void DmMexec(zx::vmo kernel, zx::vmo bootdata);
 
@@ -394,7 +388,9 @@ class Coordinator : public fidl::WireServer<device_manager_fidl::BindDebugger>,
   zx_status_t MatchDeviceToDriver(const fbl::RefPtr<Device>& dev, const Driver* driver,
                                   bool autobind);
 
-  // Bind debugger interface
+  // fuchsia.driver.development/DriverDevelopment interface
+  void RestartDriverHosts(RestartDriverHostsRequestView request,
+                          RestartDriverHostsCompleter::Sync& completer) override;
   void GetBindRules(GetBindRulesRequestView request,
                     GetBindRulesCompleter::Sync& completer) override;
   void GetDeviceProperties(GetDevicePropertiesRequestView request,

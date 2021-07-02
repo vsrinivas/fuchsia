@@ -1807,7 +1807,7 @@ void Coordinator::GetBindRules(GetBindRulesRequestView request,
 
     auto instructions_vec_view = ::fidl::VectorView<BindInstruction>::FromExternal(instructions);
 
-    completer.ReplySuccess(fuchsia_device_manager::wire::BindRulesBytecode::WithBytecodeV1(
+    completer.ReplySuccess(fuchsia_driver_development::wire::BindRulesBytecode::WithBytecodeV1(
         fidl::ObjectView<::fidl::VectorView<BindInstruction>>::FromExternal(
             &instructions_vec_view)));
   } else if (driver->bytecode_version == 2) {
@@ -1823,7 +1823,7 @@ void Coordinator::GetBindRules(GetBindRulesRequestView request,
     }
 
     auto bytecode_vec_view = ::fidl::VectorView<uint8_t>::FromExternal(bytecode);
-    completer.ReplySuccess(fuchsia_device_manager::wire::BindRulesBytecode::WithBytecodeV2(
+    completer.ReplySuccess(fuchsia_driver_development::wire::BindRulesBytecode::WithBytecodeV2(
         fidl::ObjectView<::fidl::VectorView<uint8_t>>::FromExternal(&bytecode_vec_view)));
   } else {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
@@ -1990,37 +1990,20 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     return status;
   }
 
-  const auto bind_debugger = [this](zx::channel request) {
-    auto status =
-        fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_device_manager::BindDebugger>>(
-            dispatcher_, std::move(request), this);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           fidl::DiscoverableProtocolName<fuchsia_device_manager::BindDebugger>,
-           zx_status_get_string(status));
-    }
-    return status;
-  };
-  status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_device_manager::BindDebugger>,
-                             fbl::MakeRefCounted<fs::Service>(bind_debugger));
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  const auto driver_host_dev = [this](zx::channel request) {
+  const auto driver_dev = [this](zx::channel request) {
     auto status = fidl::BindSingleInFlightOnly<
-        fidl::WireServer<fuchsia_device_manager::DriverHostDevelopment>>(dispatcher_,
+        fidl::WireServer<fuchsia_driver_development::DriverDevelopment>>(dispatcher_,
                                                                          std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           fidl::DiscoverableProtocolName<fuchsia_device_manager::DriverHostDevelopment>,
+           fidl::DiscoverableProtocolName<fuchsia_driver_development::DriverDevelopment>,
            zx_status_get_string(status));
     }
     return status;
   };
   status = svc_dir->AddEntry(
-      fidl::DiscoverableProtocolName<fuchsia_device_manager::DriverHostDevelopment>,
-      fbl::MakeRefCounted<fs::Service>(driver_host_dev));
+      fidl::DiscoverableProtocolName<fuchsia_driver_development::DriverDevelopment>,
+      fbl::MakeRefCounted<fs::Service>(driver_dev));
   if (status != ZX_OK) {
     return status;
   }

@@ -9,15 +9,18 @@ use {
     bind::instruction::DeviceProperty,
     ffx_core::ffx_plugin,
     ffx_driver_debug_bind_args::DriverDebugBindCommand,
-    fidl_fuchsia_device_manager::{BindDebuggerProxy, BindRulesBytecode},
+    fidl_fuchsia_driver_development::{BindRulesBytecode, DriverDevelopmentProxy},
     fuchsia_zircon_status as zx,
 };
 
 #[ffx_plugin(
     "driver_enabled",
-    BindDebuggerProxy = "bootstrap/driver_manager:expose:fuchsia.device.manager.BindDebugger"
+    DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
 )]
-pub async fn debug_bind(service: BindDebuggerProxy, cmd: DriverDebugBindCommand) -> Result<()> {
+pub async fn debug_bind(
+    service: DriverDevelopmentProxy,
+    cmd: DriverDebugBindCommand,
+) -> Result<()> {
     let bind_rules_result = service
         .get_bind_rules(&cmd.driver_path)
         .await

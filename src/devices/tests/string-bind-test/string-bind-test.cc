@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/device/test/llcpp/fidl.h>
+#include <fuchsia/driver/development/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/driver.h>
 #include <lib/devmgr-integration-test/fixture.h>
@@ -79,28 +79,28 @@ class StringBindTest : public testing::Test {
         devmgr_.devfs_root(), "test/test/string-bind-parent/child", &string_bind_fd);
     ASSERT_EQ(ZX_OK, status);
 
-    // Connect to the BindDebugger service.
-    auto bind_endpoints = fidl::CreateEndpoints<fuchsia::device::manager::BindDebugger>();
+    // Connect to the DriverDevelopment service.
+    auto bind_endpoints = fidl::CreateEndpoints<fuchsia::driver::development::DriverDevelopment>();
     ASSERT_EQ(ZX_OK, bind_endpoints.status_value());
 
     std::string svc_name =
-        fxl::StringPrintf("svc/%s", fuchsia::device::manager::BindDebugger::Name_);
+        fxl::StringPrintf("svc/%s", fuchsia::driver::development::DriverDevelopment::Name_);
     sys::ServiceDirectory svc_dir(devmgr_.TakeSvcRootDir().TakeChannel());
     status = svc_dir.Connect(svc_name, bind_endpoints->server.TakeChannel());
     ASSERT_EQ(ZX_OK, status);
 
-    bind_debugger_.Bind(bind_endpoints->client.TakeChannel());
+    driver_dev_.Bind(bind_endpoints->client.TakeChannel());
   }
 
   IsolatedDevmgr devmgr_;
-  fuchsia::device::manager::BindDebuggerSyncPtr bind_debugger_;
+  fuchsia::driver::development::DriverDevelopmentSyncPtr driver_dev_;
   std::string relative_device_path_;
 };
 
 // Get the bind program of the test driver and check that it has the expected instructions.
 TEST_F(StringBindTest, DriverBytecode) {
-  fuchsia::device::manager::BindDebugger_GetBindRules_Result result;
-  ASSERT_EQ(ZX_OK, bind_debugger_->GetBindRules(kStringBindDriverLibPath, &result));
+  fuchsia::driver::development::DriverDevelopment_GetBindRules_Result result;
+  ASSERT_EQ(ZX_OK, driver_dev_->GetBindRules(kStringBindDriverLibPath, &result));
   ASSERT_TRUE(result.is_response());
   auto bytecode = result.response().bind_rules.bytecode_v2();
 
@@ -132,8 +132,8 @@ TEST_F(StringBindTest, DriverBytecode) {
 TEST_F(StringBindTest, DeviceProperties) {
   std::string child_device_path(relative_device_path_ + "/" + kChildDeviceName);
 
-  fuchsia::device::manager::BindDebugger_GetDeviceProperties_Result result;
-  ASSERT_EQ(ZX_OK, bind_debugger_->GetDeviceProperties(child_device_path, &result));
+  fuchsia::driver::development::DriverDevelopment_GetDeviceProperties_Result result;
+  ASSERT_EQ(ZX_OK, driver_dev_->GetDeviceProperties(child_device_path, &result));
 
   ASSERT_TRUE(result.is_response());
 

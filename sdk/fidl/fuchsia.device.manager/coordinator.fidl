@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.device.manager;
 
 // TODO(teisenbe): Move these interfaces to be internal to the devmgr codebase
@@ -41,14 +40,6 @@ struct BindInstruction {
     uint32 arg;
     /// bitfield that encodes debugging information
     uint32 debug;
-};
-
-union BindRulesBytecode {
-    /// Bind rules in the old bytecode format.
-    1: vector<BindInstruction>:BIND_RULES_INSTRUCTIONS_MAX bytecode_v1;
-
-    /// Bind rules in the new bytecode format.
-    2: vector<uint8>:MAX bytecode_v2;
 };
 
 // Identifier used to let the devcoordinator describe specific devices during
@@ -317,24 +308,4 @@ protocol Coordinator {
     /// Returns whether the compatibility tests started, and does not convey
     /// anything about the status of the test.
     RunCompatibilityTests(int64 hook_wait_time) -> () error zx.status;
-};
-
-/// Protocol for getting the information needed to debug bind programs from the devcoordinator.
-[Discoverable]
-protocol BindDebugger {
-    /// Returns the bind program of the given driver.
-    /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path.
-    /// ZX_ERR_BUFFER_TOO_SMALL indicates that the driver's bind program is longer than the
-    /// maximum number of instructions (BIND_PROGRAM_INSTRUCTIONS_MAX).
-    GetBindRules(string:DEVICE_PATH_MAX driver_path)
-        -> (BindRulesBytecode bind_rules)
-        error zx.status;
-
-    /// Returns the list of properties of the given device.
-    /// ZX_ERR_NOT_FOUND indicates that there is no device matching the given path.
-    /// ZX_ERR_BAD_PATH indicates that the given path is not valid.
-    /// ZX_ERR_BUFFER_TOO_SMALL indicates either that the given path is too long,
-    /// or that the device has more than the maximum number of properties (PROPERTIES_MAX).
-    GetDeviceProperties(string:DEVICE_PATH_MAX device_path)
-        -> (DevicePropertyList property_list) error zx.status;
 };

@@ -84,6 +84,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
+    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_llcpp",
     "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar_llcpp",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_c",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",

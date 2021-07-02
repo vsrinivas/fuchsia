@@ -84,7 +84,6 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",
-                "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.NameProvider",
                 "fuchsia.diagnostics.ArchiveAccessor",
