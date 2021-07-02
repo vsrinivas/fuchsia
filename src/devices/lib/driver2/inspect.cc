@@ -6,6 +6,8 @@
 
 #include "src/lib/storage/vfs/cpp/vmo_file.h"
 
+namespace driver {
+
 zx::status<zx::vmo> ExposeInspector(const inspect::Inspector& inspector,
                                     const fbl::RefPtr<fs::PseudoDir>& dir) {
   if (!inspector) {
@@ -33,3 +35,5 @@ zx::status<zx::vmo> ExposeInspector(const inspect::Inspector& inspector,
 
   return zx::ok(std::move(vmo));
 }
+
+}  // namespace driver

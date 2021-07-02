@@ -20,26 +20,26 @@ class TestDriver {
       : dispatcher_(dispatcher), outgoing_(dispatcher) {}
 
   zx::status<> Init(fdf::wire::DriverStartArgs* start_args) {
-    auto error = start_args::SymbolValue<zx_status_t*>(start_args->symbols(), "error");
+    auto error = driver::SymbolValue<zx_status_t*>(start_args->symbols(), "error");
     if (error.is_ok()) {
       return zx::error(**error);
     }
 
     // Call the "func" driver symbol.
-    auto func = start_args::SymbolValue<void (*)()>(start_args->symbols(), "func");
+    auto func = driver::SymbolValue<void (*)()>(start_args->symbols(), "func");
     if (func.is_ok()) {
       (*func)();
     }
 
     // Set the "dispatcher" driver symbol.
     auto dispatcher =
-        start_args::SymbolValue<async_dispatcher_t**>(start_args->symbols(), "dispatcher");
+        driver::SymbolValue<async_dispatcher_t**>(start_args->symbols(), "dispatcher");
     if (dispatcher.is_ok()) {
       **dispatcher = dispatcher_;
     }
 
     // Connect to the incoming service.
-    auto svc_dir = start_args::NsValue(start_args->ns(), "/svc");
+    auto svc_dir = driver::NsValue(start_args->ns(), "/svc");
     if (svc_dir.is_error()) {
       return svc_dir.take_error();
     }

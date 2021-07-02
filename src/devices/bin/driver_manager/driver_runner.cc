@@ -216,7 +216,7 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   if (capabilities.is_error()) {
     return capabilities.take_error();
   }
-  auto binary = start_args::ProgramValue(start_info.program(), "binary").value_or("");
+  auto binary = driver::ProgramValue(start_info.program(), "binary").value_or("");
   fdf::wire::DriverStartArgs args(allocator);
   args.set_node(allocator, std::move(client_end))
       .set_symbols(allocator, node.symbols())
@@ -572,7 +572,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   auto symbols = node.symbols();
 
   // Launch a driver host, or use an existing driver host.
-  if (start_args::ProgramValue(request->start_info.program(), "colocate").value_or("") == "true") {
+  if (driver::ProgramValue(request->start_info.program(), "colocate").value_or("") == "true") {
     if (&node == root_node_.get()) {
       LOGF(ERROR, "Failed to start driver '%.*s', root driver cannot colocate",
            static_cast<int>(url.size()), url.data());

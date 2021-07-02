@@ -6,6 +6,8 @@
 
 #include <zircon/device/vfs.h>
 
+namespace driver {
+
 zx::status<Namespace> Namespace::Create(
     fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry>& entries) {
   fdio_ns_t* ns;
@@ -46,3 +48,5 @@ zx::status<> Namespace::Connect(std::string_view path, zx::channel server_end) c
       fdio_ns_connect(ns_, path.data(), ZX_FS_RIGHT_READABLE, server_end.release());
   return zx::make_status(status);
 }
+
+}  // namespace driver

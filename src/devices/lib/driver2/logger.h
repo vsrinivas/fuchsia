@@ -12,6 +12,8 @@
 #define FDF_LOGL(severity, logger, msg...) logger.log(FX_LOG_##severity, __FILE__, __LINE__, msg)
 #define FDF_LOG(severity, msg...) FDF_LOGL(severity, logger_, msg)
 
+namespace driver {
+
 // Provides a driver's logger.
 class Logger {
  public:
@@ -39,5 +41,7 @@ class Logger {
 
   fx_logger_t* logger_ = nullptr;
 };
+
+}  // namespace driver
 
 #endif  // SRC_DEVICES_LIB_DRIVER2_LOGGER_H_

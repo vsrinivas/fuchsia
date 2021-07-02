@@ -9,6 +9,8 @@
 #include <lib/fdio/namespace.h>
 #include <lib/zx/status.h>
 
+namespace driver {
+
 // Manages a driver's namespace.
 class Namespace {
  public:
@@ -47,5 +49,7 @@ class Namespace {
 
   fdio_ns_t* ns_ = nullptr;
 };
+
+}  // namespace driver
 
 #endif  // SRC_DEVICES_LIB_DRIVER2_NAMESPACE_H_

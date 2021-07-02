@@ -15,22 +15,22 @@ struct fake_context : fit::context {
   fit::suspended_task suspend_task() override { return fit::suspended_task(); }
 };
 
-// Test that promise::Continue() correctly returns fit::results, and can be
-// resumed using promise::ContinueWith.
+// Test that driver::Continue() correctly returns fit::results, and can be
+// resumed using driver::ContinueWith.
 TEST(PromiseTest, Continue) {
   fake_context context;
 
-  auto success = fit::make_promise(promise::Continue(
-      [](promise::ContinueWith<fit::result<>>& with) -> fit::result<> { return fit::ok(); }));
+  auto success = fit::make_promise(driver::Continue(
+      [](driver::ContinueWith<fit::result<>>& with) -> fit::result<> { return fit::ok(); }));
   EXPECT_TRUE(success(context).is_ok());
 
-  auto failure = fit::make_promise(promise::Continue(
-      [](promise::ContinueWith<fit::result<>>& with) -> fit::result<> { return fit::error(); }));
+  auto failure = fit::make_promise(driver::Continue(
+      [](driver::ContinueWith<fit::result<>>& with) -> fit::result<> { return fit::error(); }));
   EXPECT_TRUE(failure(context).is_error());
 
   fit::function<void()> callback;
   auto pending = fit::make_promise(
-      promise::Continue([&callback](promise::ContinueWith<fit::result<>>& with) -> fit::result<> {
+      driver::Continue([&callback](driver::ContinueWith<fit::result<>>& with) -> fit::result<> {
         callback = [&with] { with.Return(fit::ok()); };
         return fit::pending();
       }));

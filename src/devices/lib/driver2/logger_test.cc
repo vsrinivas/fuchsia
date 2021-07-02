@@ -87,7 +87,7 @@ TEST(LoggerTest, CreateAndLog) {
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
   svc_binding.Bind(svc->server.TakeChannel(), loop.dispatcher());
 
-  auto logger = Logger::Create(*ns, loop.dispatcher(), kName);
+  auto logger = driver::Logger::Create(*ns, loop.dispatcher(), kName);
   ASSERT_TRUE(logger.is_ok());
   loop.RunUntilIdle();
 
@@ -120,10 +120,10 @@ TEST(LoggerTest, Create_NoLogSink) {
   fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);
   ns_entries[0].Allocate(allocator);
   ns_entries[0].set_path(allocator, "/pkg").set_directory(allocator, std::move(pkg->client));
-  auto ns = Namespace::Create(ns_entries);
+  auto ns = driver::Namespace::Create(ns_entries);
   ASSERT_TRUE(ns.is_ok());
 
   // Setup logger.
-  auto logger = Logger::Create(*ns, loop.dispatcher(), kName);
+  auto logger = driver::Logger::Create(*ns, loop.dispatcher(), kName);
   ASSERT_TRUE(logger.is_error());
 }

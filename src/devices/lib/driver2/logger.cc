@@ -6,6 +6,8 @@
 
 #include <fuchsia/logger/llcpp/fidl.h>
 
+namespace driver {
+
 zx::status<Logger> Logger::Create(const Namespace& ns, async_dispatcher_t* dispatcher,
                                   std::string_view name, fx_log_severity_t min_severity) {
   zx::socket client_end, server_end;
@@ -70,3 +72,5 @@ void Logger::log(fx_log_severity_t severity, const char* file, int line, const c
                  va_list args) {
   fx_logger_logf_with_source(logger_, severity, nullptr, file, line, msg, args);
 }
+
+}  // namespace driver

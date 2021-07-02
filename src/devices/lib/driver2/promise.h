@@ -9,7 +9,7 @@
 
 #include "src/devices/lib/driver2/namespace.h"
 
-namespace promise {
+namespace driver {
 
 template <typename T>
 class ContinueWith;
@@ -19,7 +19,7 @@ namespace internal {
 // Connects to the given |path| in |ns|, and returns a fit::result containing a
 // fidl::Client on success.
 template <typename T>
-fit::result<fidl::Client<T>, zx_status_t> ConnectWithResult(const Namespace& ns,
+fit::result<fidl::Client<T>, zx_status_t> ConnectWithResult(const driver::Namespace& ns,
                                                             async_dispatcher_t* dispatcher,
                                                             std::string_view path) {
   auto result = ns.Connect<T>(path);
@@ -74,7 +74,7 @@ struct ContinueCall<Func, 1> {
 // fidl::Client on success.
 template <typename T>
 fit::promise<fidl::Client<T>, zx_status_t> Connect(
-    const Namespace& ns, async_dispatcher_t* dispatcher,
+    const driver::Namespace& ns, async_dispatcher_t* dispatcher,
     std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>) {
   return fit::make_result_promise(internal::ConnectWithResult<T>(ns, dispatcher, path));
 }
@@ -119,6 +119,6 @@ auto Continue(Func func) {
   return internal::ContinueCall<Func, size>::Call(std::move(func));
 }
 
-}  // namespace promise
+}  // namespace driver
 
 #endif  // SRC_DEVICES_LIB_DRIVER2_PROMISE_H_

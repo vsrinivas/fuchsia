@@ -22,19 +22,19 @@ class PackagedDriver {
   zx::status<> Init(fdf::wire::DriverStartArgs* start_args) {
     node_.Bind(std::move(start_args->node()), dispatcher_);
 
-    auto ns = Namespace::Create(start_args->ns());
+    auto ns = driver::Namespace::Create(start_args->ns());
     if (ns.is_error()) {
       return ns.take_error();
     }
     ns_ = std::move(ns.value());
 
-    auto logger = Logger::Create(ns_, dispatcher_, "packaged_driver");
+    auto logger = driver::Logger::Create(ns_, dispatcher_, "packaged_driver");
     if (logger.is_error()) {
       return logger.take_error();
     }
     logger_ = std::move(logger.value());
 
-    auto inspect = ExposeInspector(inspector_, outgoing_.root_dir());
+    auto inspect = driver::ExposeInspector(inspector_, outgoing_.root_dir());
     if (inspect.is_error()) {
       FDF_LOG(ERROR, "Failed to expose inspector: %s", inspect.status_string());
       return inspect.take_error();
@@ -52,8 +52,8 @@ class PackagedDriver {
   async_dispatcher_t* dispatcher_;
   svc::Outgoing outgoing_;
   fidl::Client<fdf::Node> node_;
-  Namespace ns_;
-  Logger logger_;
+  driver::Namespace ns_;
+  driver::Logger logger_;
   inspect::Inspector inspector_;
   zx::vmo inspect_vmo_;
 };

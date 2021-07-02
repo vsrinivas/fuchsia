@@ -134,7 +134,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
     return;
   }
   std::string url(request->start_args.url().get());
-  auto pkg = request->start_args.has_ns() ? start_args::NsValue(request->start_args.ns(), "/pkg")
+  auto pkg = request->start_args.has_ns() ? driver::NsValue(request->start_args.ns(), "/pkg")
                                           : zx::error(ZX_ERR_INVALID_ARGS);
   if (pkg.is_error()) {
     LOGF(ERROR, "Failed to start driver, missing '/pkg' directory: %s",
@@ -144,7 +144,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
   }
   zx::status<std::string> binary =
       request->start_args.has_program()
-          ? start_args::ProgramValue(request->start_args.program(), "binary")
+          ? driver::ProgramValue(request->start_args.program(), "binary")
           : zx::error(ZX_ERR_INVALID_ARGS);
   if (binary.is_error()) {
     LOGF(ERROR, "Failed to start driver, missing 'binary' argument: %s",

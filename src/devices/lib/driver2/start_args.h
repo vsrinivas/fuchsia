@@ -10,7 +10,7 @@
 #include <fuchsia/driver/framework/llcpp/fidl.h>
 #include <lib/zx/status.h>
 
-namespace start_args {
+namespace driver {
 
 template <typename T>
 zx::status<T> SymbolValue(
@@ -55,6 +55,6 @@ inline zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-}  // namespace start_args
+}  // namespace driver
 
 #endif  // SRC_DEVICES_LIB_DRIVER2_START_ARGS_H_
