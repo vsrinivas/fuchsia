@@ -412,8 +412,7 @@ func TestSetPackageSource(t *testing.T) {
 			name:          "devhost",
 			expectedSSHArgs: [][]string{
 				{"echo", "$SSH_CONNECTION"},
-				{"pkgctl", "repo", "add", "url", "-n", "devhost", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
-				{"pkgctl", "rule", "rule", "replace", "json", `{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}`},
+				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
 			},
 		},
 		{
@@ -424,8 +423,7 @@ func TestSetPackageSource(t *testing.T) {
 			name:          "devhost",
 			expectedSSHArgs: [][]string{
 				{"echo", "$SSH_CONNECTION"},
-				{"pkgctl", "repo", "add", "url", "-n", "devhost", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
-				{"pkgctl", "rule", "rule", "replace", "json", `{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}`},
+				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
 			},
 		},
 		{
@@ -436,8 +434,7 @@ func TestSetPackageSource(t *testing.T) {
 			name:          "devhost",
 			expectedSSHArgs: [][]string{
 				{"echo", "$SSH_CONNECTION"},
-				{"pkgctl", "repo", "add", "url", "-n", "devhost", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
-				{"pkgctl", "rule", "rule", "replace", "json", `{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}`},
+				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
 			},
 		},
 		{
@@ -449,8 +446,7 @@ func TestSetPackageSource(t *testing.T) {
 			sshPort:       "1022",
 			expectedSSHArgs: [][]string{
 				{"echo", "$SSH_CONNECTION"},
-				{"pkgctl", "repo", "add", "url", "-n", "devhost", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
-				{"pkgctl", "rule", "rule", "replace", "json", `{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}`},
+				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
 			},
 		},
 		{
@@ -463,8 +459,7 @@ func TestSetPackageSource(t *testing.T) {
 			persist:       true,
 			expectedSSHArgs: [][]string{
 				{"echo", "$SSH_CONNECTION"},
-				{"pkgctl", "repo", "add", "url", "-p", "-n", "devhost", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
-				{"pkgctl", "rule", "rule", "replace", "json", `{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}`},
+				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json", "-p"},
 			},
 		},
 	}

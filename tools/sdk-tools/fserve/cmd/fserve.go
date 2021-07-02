@@ -525,25 +525,17 @@ func setPackageSource(ctx context.Context, sdk sdkProvider, repoPort string, nam
 		hostIP = fmt.Sprintf("[%s]", hostIP)
 	}
 
-	var sshArgs []string
+	// TODO(fxbug.dev/74493): Use pkgctl instead of amber_ctl.
+	sshArgs := []string{"amber_ctl", "add_src", "-n", name, "-f",
+		fmt.Sprintf("http://%v:%v/config.json", hostIP, repoPort)}
+
 	if persist {
-		sshArgs = []string{"pkgctl", "repo", "add", "url", "-p", "-n", name,
-			fmt.Sprintf("http://%v:%v/config.json", hostIP, repoPort)}
-	} else {
-		sshArgs = []string{"pkgctl", "repo", "add", "url", "-n", name,
-			fmt.Sprintf("http://%v:%v/config.json", hostIP, repoPort)}
+		sshArgs = append(sshArgs, "-p")
 	}
 
 	verbose := level == logger.DebugLevel || level == logger.TraceLevel
 	if _, err = sdk.RunSSHCommand(targetAddress, sshConfig, privateKey, sshPort, verbose, sshArgs); err != nil {
 		return fmt.Errorf("Could not set package server address on device: %v", err)
-	}
-
-	ruleTemplate := `{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"%v","path_prefix_match":"/","path_prefix_replacement":"/"}]}`
-	sshArgs = []string{"pkgctl", "rule", "replace", "json",
-		fmt.Sprintf(ruleTemplate, name)}
-	if _, err = sdk.RunSSHCommand(targetAddress, sshConfig, privateKey, sshPort, verbose, sshArgs); err != nil {
-		return fmt.Errorf("Could not set package url rewriting rules on device: %v", err)
 	}
 
 	return nil
