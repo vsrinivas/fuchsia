@@ -188,6 +188,14 @@ static zx_status_t exception_handler_worker(uint exception_type,
       continue;
     }
 
+    // ZX_ERR_STOP means the handler wants to kill the thread.
+    if (status == ZX_ERR_STOP) {
+      *out_processed = true;
+      DEBUG_ASSERT(thread == ThreadDispatcher::GetCurrent());
+      ThreadDispatcher::KillCurrent();
+      return ZX_ERR_INTERNAL_INTR_KILLED;
+    }
+
     // Anything other than ZX_ERR_NEXT means we're done.
     return status;
   }

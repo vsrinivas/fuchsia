@@ -114,18 +114,18 @@ void ExceptionDispatcher::on_zero_handles() {
   response_event_.Signal();
 }
 
-bool ExceptionDispatcher::ResumesThreadOnClose() const {
+uint32_t ExceptionDispatcher::GetDisposition() const {
   canary_.Assert();
 
   Guard<fbl::Mutex> guard{get_lock()};
-  return resume_on_close_;
+  return disposition_;
 }
 
-void ExceptionDispatcher::SetWhetherResumesThreadOnClose(bool resume_on_close) {
+void ExceptionDispatcher::SetDisposition(uint32_t disposition) {
   canary_.Assert();
 
   Guard<Mutex> guard{get_lock()};
-  resume_on_close_ = resume_on_close;
+  disposition_ = disposition;
 }
 
 bool ExceptionDispatcher::IsSecondChance() const {
@@ -166,8 +166,19 @@ zx_status_t ExceptionDispatcher::WaitForHandleClose() {
 
   // Return the close action and reset it for next time.
   Guard<Mutex> guard{get_lock()};
-  status = resume_on_close_ ? ZX_OK : ZX_ERR_NEXT;
-  resume_on_close_ = false;
+  switch (disposition_) {
+    case ZX_EXCEPTION_STATE_HANDLED:
+      status = ZX_OK;
+      break;
+    case ZX_EXCEPTION_STATE_THREAD_EXIT:
+      status = ZX_ERR_STOP;
+      break;
+    case ZX_EXCEPTION_STATE_TRY_NEXT:
+    default:
+      status = ZX_ERR_NEXT;
+      break;
+  }
+  disposition_ = ZX_EXCEPTION_STATE_TRY_NEXT;
   return status;
 }
 
@@ -177,7 +188,7 @@ void ExceptionDispatcher::DiscardHandleClose() {
   response_event_.Unsignal();
 
   Guard<Mutex> guard{get_lock()};
-  resume_on_close_ = false;
+  disposition_ = ZX_EXCEPTION_STATE_TRY_NEXT;
 }
 
 void ExceptionDispatcher::Clear() {

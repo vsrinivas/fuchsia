@@ -1021,9 +1021,7 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
         return ZX_ERR_WRONG_TYPE;
       }
 
-      bool resume_on_close = exception->ResumesThreadOnClose();
-      return _value.reinterpret<uint32_t>().copy_to_user(
-          resume_on_close ? ZX_EXCEPTION_STATE_HANDLED : ZX_EXCEPTION_STATE_TRY_NEXT);
+      return _value.reinterpret<uint32_t>().copy_to_user(exception->GetDisposition());
     }
     case ZX_PROP_EXCEPTION_STRATEGY: {
       if (size < sizeof(uint32_t)) {
@@ -1206,9 +1204,11 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
         return status;
       }
       if (value == ZX_EXCEPTION_STATE_HANDLED) {
-        exception->SetWhetherResumesThreadOnClose(true);
+        exception->SetDisposition(ZX_EXCEPTION_STATE_HANDLED);
       } else if (value == ZX_EXCEPTION_STATE_TRY_NEXT) {
-        exception->SetWhetherResumesThreadOnClose(false);
+        exception->SetDisposition(ZX_EXCEPTION_STATE_TRY_NEXT);
+      } else if (value == ZX_EXCEPTION_STATE_THREAD_EXIT) {
+        exception->SetDisposition(ZX_EXCEPTION_STATE_THREAD_EXIT);
       } else {
         return ZX_ERR_INVALID_ARGS;
       }

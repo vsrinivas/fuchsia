@@ -841,8 +841,9 @@ pub struct zx_exception_report_t {
 pub type zx_exception_state_t = u32;
 
 multiconst!(zx_exception_state_t, [
-    ZX_EXCEPTION_STATE_TRY_NEXT   = 0;
-    ZX_EXCEPTION_STATE_HANDLED    = 1;
+    ZX_EXCEPTION_STATE_TRY_NEXT    = 0;
+    ZX_EXCEPTION_STATE_HANDLED     = 1;
+    ZX_EXCEPTION_STATE_THREAD_EXIT = 2;
 ]);
 
 pub type zx_exception_strategy_t = u32;

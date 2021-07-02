@@ -908,6 +908,7 @@ static void test_bad_syscall(bad_syscall_arg arg) {
   // Clean up.
   ASSERT_OK(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr));
   ASSERT_OK(zx_handle_close(thread_h));
+  ASSERT_OK(zxr_thread_destroy(&thread));
 }
 
 TEST(Threads, BadSyscall) {
@@ -918,6 +919,39 @@ TEST(Threads, BadSyscall) {
   test_bad_syscall(arg);
   arg.syscall_number = 10000;
   test_bad_syscall(arg);
+}
+
+TEST(Threads, ExitViaException) {
+  bad_syscall_arg arg = {};
+  arg.syscall_number = 1;
+
+  zxr_thread_t thread;
+  zx_handle_t thread_h;
+
+  ASSERT_OK(zx_event_create(0, &arg.event));
+  ASSERT_TRUE(start_thread(threads_bad_syscall_fn, &arg, &thread, &thread_h));
+
+  // The thread will now be blocked on the event. Wake it up and catch the bad syscall
+  // exception.
+  zx_handle_t exception_channel, exception;
+  ASSERT_OK(zx_task_create_exception_channel(zx_process_self(), 0, &exception_channel));
+  ASSERT_OK(zx_object_signal(arg.event, 0, ZX_USER_SIGNAL_0));
+  wait_thread_excp_type(thread_h, exception_channel, ZX_EXCP_POLICY_ERROR, ZX_EXCP_THREAD_STARTING,
+                        &exception);
+
+  // Notice that we do not jump to thread exit, unlike in Thread.BadSyscall.
+  // Instead, we terminate the thread using ZX_EXCEPTION_STATE_THREAD_EXIT.
+
+  uint32_t state = ZX_EXCEPTION_STATE_THREAD_EXIT;
+  ASSERT_OK(zx_object_set_property(exception, ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)));
+  ASSERT_OK(zx_handle_close(exception));
+
+  ASSERT_EQ(zx_handle_close(exception_channel), ZX_OK);
+
+  // Clean up.
+  ASSERT_OK(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr));
+  ASSERT_OK(zx_handle_close(thread_h));
+  ASSERT_OK(zxr_thread_destroy(&thread));
 }
 
 static void port_wait_for_signal(zx_handle_t port, zx_handle_t thread, zx_time_t deadline,

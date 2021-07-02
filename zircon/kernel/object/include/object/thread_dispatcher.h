@@ -76,7 +76,12 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   ~ThreadDispatcher();
 
   static ThreadDispatcher* GetCurrent() { return Thread::Current::Get()->user_thread(); }
+
+  // Terminates the current thread. Does not return.
   static void ExitCurrent() __NO_RETURN { Thread::Current::Exit(0); }
+  // Marks the current thread for termination. The thread will actually termiante when
+  // the kernel stack unwinds.
+  static void KillCurrent() { Thread::Current::Kill(); }
 
   // Dispatcher implementation.
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_THREAD; }

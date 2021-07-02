@@ -602,6 +602,16 @@ void Thread::Current::Exit(int retcode) {
   Thread::Current::ExitLocked(retcode);
 }
 
+void Thread::Current::Kill() {
+  Thread* current_thread = Thread::Current::Get();
+
+  current_thread->canary_.Assert();
+  DEBUG_ASSERT(current_thread->state() == THREAD_RUNNING);
+  DEBUG_ASSERT(!current_thread->IsIdle());
+
+  current_thread->Kill();
+}
+
 // kill a thread
 void Thread::Kill() {
   canary_.Assert();

@@ -862,6 +862,7 @@ typedef struct zx_info_msi {
 // ZX_PROP_EXCEPTION_STATE values.
 #define ZX_EXCEPTION_STATE_TRY_NEXT         0u
 #define ZX_EXCEPTION_STATE_HANDLED          1u
+#define ZX_EXCEPTION_STATE_THREAD_EXIT      2u
 
 // How an exception should be handled
 // ZX_PROP_EXCEPTION_STRATEGY values.

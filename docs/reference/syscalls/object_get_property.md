@@ -187,8 +187,10 @@ Allowed operations: **get**, **set**
 
 When set to `ZX_EXCEPTION_STATE_HANDLED`, closing the exception handle will
 finish exception processing and resume the underlying thread.
-`ZX_EXCEPTION_STATE_TRY_NEXT` will instead continue exception processing by
-trying the next handler in order.
+When set to `ZX_EXCEPTION_STATE_TRY_NEXT`, closing the exception handle will
+continue exception processing by trying the next handler in order.
+When set to `ZX_EXCEPTION_STATE_THREAD_EXIT`, closing the exception handle will
+cause the thread that generated the exception to exit.
 
 ### ZX_PROP_EXCEPTION_STRATEGY
 

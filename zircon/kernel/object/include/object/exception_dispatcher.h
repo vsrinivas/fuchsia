@@ -81,10 +81,10 @@ class ExceptionDispatcher final
   zx_status_t MakeThreadHandle(HandleOwner* handle) const;
   zx_status_t MakeProcessHandle(HandleOwner* handle) const;
 
-  // Whether to resume the thread on exception close or pass it to the
-  // next handler in line.
-  bool ResumesThreadOnClose() const;
-  void SetWhetherResumesThreadOnClose(bool resume_on_close);
+  // Whether to resume the thread on exception close, pass it to the
+  // next handler in line, or kill the thread. See ZX_EXCEPTION_STATE_*
+  uint32_t GetDisposition() const;
+  void SetDisposition(uint32_t disposition);
 
   // Whether a debugger should have a second chance to handle the exception
   // after the process handler has tried and failed to do so.
@@ -133,7 +133,7 @@ class ExceptionDispatcher final
   const zx_exception_report_t* report_ TA_GUARDED(get_lock());
   const arch_exception_context_t* arch_context_ TA_GUARDED(get_lock());
 
-  bool resume_on_close_ TA_GUARDED(get_lock()) = false;
+  uint32_t disposition_ TA_GUARDED(get_lock()) = ZX_EXCEPTION_STATE_TRY_NEXT;
   bool second_chance_ TA_GUARDED(get_lock()) = false;
   AutounsignalEvent response_event_;
 };

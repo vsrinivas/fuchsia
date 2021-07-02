@@ -729,6 +729,7 @@ struct Thread {
     static void Reschedule();
     static void Exit(int retcode) __NO_RETURN;
     static void ExitLocked(int retcode) TA_REQ(thread_lock) __NO_RETURN;
+    static void Kill();
     static void BecomeIdle() __NO_RETURN;
 
     // Wait until the deadline has occurred.
