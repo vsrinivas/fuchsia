@@ -652,13 +652,13 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct
 	return nil
 }
 
-func (p *Parser) parseHandleRestrict(rightsConfiguration rightsConfiguration) (interface{}, error) {
+func (p *Parser) parseHandleRestrict(rightsConfiguration rightsConfiguration) (ir.HandleWithRights, error) {
 	if _, err := p.consumeToken(tLparen); err != nil {
-		return nil, err
+		return ir.HandleWithRights{}, err
 	}
 	handle, err := p.parseHandle(handleInfo{usesInValue: 1})
 	if err != nil {
-		return nil, err
+		return ir.HandleWithRights{}, err
 	}
 	objectType := fidlgen.ObjectTypeNone
 	rights := fidlgen.HandleRightsSameRights
@@ -667,29 +667,29 @@ func (p *Parser) parseHandleRestrict(rightsConfiguration rightsConfiguration) (i
 
 		labelTok, err := p.consumeToken(tText)
 		if err != nil {
-			return nil, err
+			return ir.HandleWithRights{}, err
 		}
 
 		if _, err := p.consumeToken(tColon); err != nil {
-			return nil, err
+			return ir.HandleWithRights{}, err
 		}
 
 		switch labelTok.value {
 		case "rights":
 			if !rightsConfiguration.allowRights {
-				return nil, fmt.Errorf("rights are disabled for this section")
+				return ir.HandleWithRights{}, fmt.Errorf("rights are disabled for this section")
 			}
 
 			rights, err = p.parseHandleRights()
 			if err != nil {
-				return nil, err
+				return ir.HandleWithRights{}, err
 			}
 		default:
-			return nil, fmt.Errorf("unknown restrict label: %s", labelTok.value)
+			return ir.HandleWithRights{}, fmt.Errorf("unknown restrict label: %s", labelTok.value)
 		}
 	}
 	if _, err := p.consumeToken(tRparen); err != nil {
-		return nil, err
+		return ir.HandleWithRights{}, err
 	}
 	return ir.HandleWithRights{
 		Handle: handle,
@@ -698,7 +698,7 @@ func (p *Parser) parseHandleRestrict(rightsConfiguration rightsConfiguration) (i
 	}, nil
 }
 
-func (p *Parser) parseValue(rightsConfiguration rightsConfiguration) (interface{}, error) {
+func (p *Parser) parseValue(rightsConfiguration rightsConfiguration) (ir.Value, error) {
 	tok, err := p.peekToken()
 	if err != nil {
 		return nil, err
@@ -764,7 +764,7 @@ func (p *Parser) parseValue(rightsConfiguration rightsConfiguration) (interface{
 	}
 }
 
-func parseNum(tok token, neg bool) (interface{}, error) {
+func parseNum(tok token, neg bool) (ir.Value, error) {
 	if strings.Contains(tok.value, ".") {
 		val, err := strconv.ParseFloat(tok.value, 64)
 		if err != nil {
@@ -788,26 +788,26 @@ func parseNum(tok token, neg bool) (interface{}, error) {
 	}
 }
 
-func (p *Parser) parseRawFloat() (interface{}, error) {
+func (p *Parser) parseRawFloat() (ir.RawFloat, error) {
 	// Already parsed raw_float token.
 	if _, err := p.consumeToken(tLparen); err != nil {
-		return nil, err
+		return 0, err
 	}
 	tok, err := p.nextToken()
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	raw, err := strconv.ParseUint(tok.value, 0, 64)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	if _, err := p.consumeToken(tRparen); err != nil {
-		return nil, err
+		return 0, err
 	}
 	return ir.RawFloat(raw), nil
 }
 
-func (p *Parser) parseRecord(name string, rightsConfiguration rightsConfiguration) (interface{}, error) {
+func (p *Parser) parseRecord(name string, rightsConfiguration rightsConfiguration) (ir.Record, error) {
 	obj := ir.Record{Name: name}
 	err := p.parseCommaSeparated(tLacco, tRacco, func() error {
 		tokFieldName, err := p.consumeToken(tText)
@@ -818,7 +818,7 @@ func (p *Parser) parseRecord(name string, rightsConfiguration rightsConfiguratio
 		if _, err := p.consumeToken(tColon); err != nil {
 			return err
 		}
-		var val interface{}
+		var val ir.Value
 		if key.IsKnown() {
 			val, err = p.parseValue(rightsConfiguration)
 		} else {
@@ -831,7 +831,7 @@ func (p *Parser) parseRecord(name string, rightsConfiguration rightsConfiguratio
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return ir.Record{}, err
 	}
 	return obj, nil
 }
