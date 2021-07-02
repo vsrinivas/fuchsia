@@ -84,6 +84,7 @@ class Localhost {
             ..write('Stopped the server.');
           await req.response.close();
           stopServer();
+          break;
         }
 
         final targetFile = _pages[fileName];

@@ -73,10 +73,6 @@ class ErmineDriver {
     if (_driver == null) {
       fail('unable to connect to ermine.');
     }
-
-    // Close any pre-existing views.
-    await _driver.requestData('closeAll');
-    expect((await launchedViews()).isEmpty, isTrue);
   }
 
   /// Closes [FlutterDriverConnector] and performs cleanup.

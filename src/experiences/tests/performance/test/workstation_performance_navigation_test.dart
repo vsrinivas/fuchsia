@@ -79,8 +79,17 @@ void main() {
 
     // Starts hosting a local http website.
     // ignore: unawaited_futures
-    ermine.component.launch(_testserverUrl);
+    ermine.component.launch(_testserverUrl).catchError(print);
     expect(await ermine.isRunning(_testserverUrl), isTrue);
+
+    expect(
+        await ermine.waitFor(() async {
+          const statusUrl = 'http://127.0.0.1:8080/blue.html';
+          final result = await ermine.sl4f.ssh.run('curl -s $statusUrl');
+          return result.stdout.isNotEmpty;
+        }),
+        isTrue);
+    print('Started the test server');
   });
 
   tearDownAll(() async {
@@ -95,22 +104,15 @@ void main() {
     // running.
     // TODO(fxb/69291): Remove this workaround once we can properly close hidden
     // components
-    FlutterDriver browser = await ermine.launchAndWaitForSimpleBrowser();
     const stopUrl = 'http://127.0.0.1:8080/stop';
-    await browser.requestData(stopUrl);
-    await browser.waitFor(find.text(stopUrl), timeout: _timeout);
-    expect(await ermine.isStopped(_testserverUrl), isTrue);
+    final result = await ermine.sl4f.ssh.run('curl -s $stopUrl');
+    expect(result.stdout, 'Stopped the server.');
     print('Stopped the test server');
 
-    await ermine.driver.requestData('close');
-    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
-    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
-    print('Closed the browser');
-
-    await webDriverConnector?.tearDown();
+    await webDriverConnector.tearDown();
     await ermine.tearDown();
-    await sl4fDriver?.stopServer();
-    sl4fDriver?.close();
+    await sl4fDriver.stopServer();
+    sl4fDriver.close();
   });
 
   Future<bool> _waitForTabArrangement(FlutterDriver browser,
