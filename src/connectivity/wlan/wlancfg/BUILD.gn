@@ -170,6 +170,11 @@ fuchsia_test_package("wlancfg-tests") {
     ":test_driver",
     "//src/sys/stash:stash_secure_v2",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 metrics_registry("wlan_metrics_registry") {
