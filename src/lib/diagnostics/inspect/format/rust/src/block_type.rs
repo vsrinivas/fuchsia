@@ -8,7 +8,8 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use std::fmt;
 
 /// The type of a block.
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, FromPrimitive, ToPrimitive)]
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd, FromPrimitive, ToPrimitive)]
+#[repr(u8)]
 pub enum BlockType {
     /// Contains index of the next free block of the same order.
     Free = 0,
@@ -48,6 +49,9 @@ pub enum BlockType {
 
     /// A boolean value
     BoolValue = 13,
+
+    /// A string reference value.
+    StringReference = 14,
 }
 
 impl fmt::Display for BlockType {
@@ -67,6 +71,7 @@ impl fmt::Display for BlockType {
             BlockType::ArrayValue => write!(f, "ARRAY_VALUE"),
             BlockType::LinkValue => write!(f, "LINK_VALUE"),
             BlockType::BoolValue => write!(f, "BOOL_VALUE"),
+            BlockType::StringReference => write!(f, "STRING_REFERENCE"),
         }
     }
 }
@@ -95,17 +100,9 @@ impl BlockType {
         }
     }
 
-    /// Returns whether the type is node or tombstone or not.
-    pub fn is_node_or_tombstone(&self) -> bool {
-        match *self {
-            BlockType::NodeValue | BlockType::Tombstone => true,
-            _ => false,
-        }
-    }
-
     /// Returns an array of all the types.
     #[cfg(test)]
-    pub fn all() -> [BlockType; 14] {
+    pub fn all() -> [BlockType; 15] {
         [
             BlockType::Free,
             BlockType::Reserved,
@@ -121,6 +118,7 @@ impl BlockType {
             BlockType::ArrayValue,
             BlockType::LinkValue,
             BlockType::BoolValue,
+            BlockType::StringReference,
         ]
     }
 }

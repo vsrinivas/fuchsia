@@ -441,8 +441,8 @@ impl<'a> ScanResult<'a> {
         let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
         let parent_index = block.parent_index()?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
-        let total_length = block.property_total_length()?;
-        let mut buffer = vec![0u8; block.property_total_length().map_err(ReaderError::VmoFormat)?];
+        let total_length = block.total_length()?;
+        let mut buffer = vec![0u8; block.total_length().map_err(ReaderError::VmoFormat)?];
         let mut extent_index = block.property_extent_index()?;
         let mut offset = 0;
         // Incrementally add the contents of each extent in the extent linked list

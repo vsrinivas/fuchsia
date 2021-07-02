@@ -107,10 +107,10 @@ impl<T: ReadableBlockContainer> Block<T> {
         Ok(self.read_payload().property_extent_index())
     }
 
-    /// Gets the total length of a PROPERTY block.
-    pub fn property_total_length(&self) -> Result<usize, Error> {
-        self.check_type(BlockType::BufferValue)?;
-        Ok(self.read_payload().property_total_length().to_usize().unwrap())
+    /// Gets the total length of a PROPERTY or STRING_REFERERENCE block.
+    pub fn total_length(&self) -> Result<usize, Error> {
+        self.check_multi_type(&[BlockType::BufferValue, BlockType::StringReference])?;
+        Ok(self.read_payload().total_length().to_usize().unwrap())
     }
 
     /// Gets the flags of a PROPERTY block.
@@ -123,7 +123,7 @@ impl<T: ReadableBlockContainer> Block<T> {
 
     /// Returns the next EXTENT in an EXTENT chain.
     pub fn next_extent(&self) -> Result<u32, Error> {
-        self.check_type(BlockType::Extent)?;
+        self.check_multi_type(&[BlockType::Extent, BlockType::StringReference])?;
         Ok(self.read_header().extent_next_index())
     }
 
@@ -246,7 +246,7 @@ impl<T: ReadableBlockContainer> Block<T> {
 
     /// Get the child count of a NODE_VALUE block.
     pub fn child_count(&self) -> Result<u64, Error> {
-        self.check_node_or_tombstone()?;
+        self.check_multi_type(&[BlockType::NodeValue, BlockType::Tombstone])?;
         Ok(self.read_payload().numeric_value())
     }
 
@@ -269,6 +269,24 @@ impl<T: ReadableBlockContainer> Block<T> {
         let mut bytes = vec![0u8; length];
         self.container.read_bytes(self.payload_offset(), &mut bytes);
         Ok(String::from(std::str::from_utf8(&bytes).map_err(|_| Error::NameNotUtf8)?))
+    }
+
+    /// Returns the current reference count of a string reference.
+    pub fn string_reference_count(&self) -> Result<u32, Error> {
+        self.check_type(BlockType::StringReference)?;
+        let header = self.read_header();
+        Ok(header.string_reference_count())
+    }
+
+    /// Read the inline portion of a STRING_REFERENCE
+    pub fn inline_string_reference(&self) -> Result<Vec<u8>, Error> {
+        self.check_type(BlockType::StringReference)?;
+        let allotted_to_total_len = 4; // 4 bytes are used for the total_length in Payload
+        let max_len_inlined = utils::payload_size_for_order(self.order()) - allotted_to_total_len;
+        let length = self.total_length()?;
+        let mut bytes = vec![0u8; min(length, max_len_inlined)];
+        self.container.read_bytes(self.payload_offset() + allotted_to_total_len, &mut bytes);
+        Ok(bytes)
     }
 
     /// Returns the type of a block. Panics on an invalid value.
@@ -338,16 +356,21 @@ impl<T: ReadableBlockContainer> Block<T> {
         Ok(())
     }
 
-    /// Check if the block is NODE or TOMBSTONE.
-    fn check_node_or_tombstone(&self) -> Result<(), Error> {
+    /// Check if the block is one of the given types.
+    fn check_multi_type(&self, options: &[BlockType]) -> Result<(), Error> {
         if cfg!(debug_assertions) {
-            let block_type = self.block_type();
-            if block_type.is_node_or_tombstone() {
-                return Ok(());
+            let mut wanted = "".to_string();
+            for b in options {
+                match self.check_type(*b) {
+                    Ok(_) => return Ok(()),
+                    Err(e) => wanted.push_str(format!("{}|", e).as_str()),
+                }
             }
-            return Err(Error::UnexpectedBlockTypeRepr("NODE|TOMBSTONE", block_type));
+
+            Err(Error::UnexpectedBlockTypeRepr(wanted, self.block_type()))
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 
     /// Check if the block is of *_VALUE.
@@ -357,7 +380,7 @@ impl<T: ReadableBlockContainer> Block<T> {
             if block_type.is_any_value() {
                 return Ok(());
             }
-            return Err(Error::UnexpectedBlockTypeRepr("*_VALUE", block_type));
+            return Err(Error::UnexpectedBlockTypeRepr("*_VALUE".to_string(), block_type));
         }
         Ok(())
     }
@@ -558,7 +581,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
 
     /// Sets the index of the next EXTENT in the chain.
     pub fn set_extent_next_index(&self, next_extent_index: u32) -> Result<(), Error> {
-        self.check_type(BlockType::Extent)?;
+        self.check_multi_type(&[BlockType::Extent, BlockType::StringReference])?;
         let mut header = self.read_header();
         header.set_extent_next_index(next_extent_index);
         self.write_header(header);
@@ -678,11 +701,25 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         Ok(())
     }
 
-    /// Sets the total length of a BUFFER_VALUE block.
-    pub fn set_property_total_length(&self, length: u32) -> Result<(), Error> {
-        self.check_type(BlockType::BufferValue)?;
+    /// Initializes a STRING_REFERENCE block. Everything is set except for
+    /// the payload string and total length.
+    pub fn become_string_reference(&self) -> Result<(), Error> {
+        self.check_type(BlockType::Reserved)?;
+        let header = self.read_header();
+        let mut new_header = BlockHeader(0);
+        new_header.set_order(header.order());
+        new_header.set_block_type(BlockType::StringReference.to_u8().unwrap());
+        new_header.set_extent_next_index(0);
+        new_header.set_string_reference_count(0);
+        self.write_header(new_header);
+        Ok(())
+    }
+
+    /// Sets the total length of a BUFFER_VALUE or STRING_REFERENCE block.
+    pub fn set_total_length(&self, length: u32) -> Result<(), Error> {
+        self.check_multi_type(&[BlockType::BufferValue, BlockType::StringReference])?;
         let mut payload = self.read_payload();
-        payload.set_property_total_length(length);
+        payload.set_total_length(length);
         self.write_payload(payload);
         Ok(())
     }
@@ -698,9 +735,47 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
 
     /// Set the child count of a NODE_VALUE block.
     pub fn set_child_count(&self, count: u64) -> Result<(), Error> {
-        self.check_node_or_tombstone()?;
+        self.check_multi_type(&[BlockType::NodeValue, BlockType::Tombstone])?;
         self.write_payload(Payload(count));
         Ok(())
+    }
+
+    /// Increment the reference count by 1.
+    pub fn increment_string_reference_count(&self) -> Result<(), Error> {
+        self.check_type(BlockType::StringReference)?;
+        let mut header = self.read_header();
+        let cur = header.string_reference_count();
+        let new_count = cur.checked_add(1).ok_or(Error::InvalidReferenceCount)?;
+        header.set_string_reference_count(new_count);
+
+        self.write_header(header);
+        Ok(())
+    }
+
+    /// Decrement the reference count by 1.
+    pub fn decrement_string_reference_count(&self) -> Result<(), Error> {
+        self.check_type(BlockType::StringReference)?;
+        let mut header = self.read_header();
+        let cur = header.string_reference_count();
+        let new_count = cur.checked_sub(1).ok_or(Error::InvalidReferenceCount)?;
+        header.set_string_reference_count(new_count);
+
+        self.write_header(header);
+        Ok(())
+    }
+
+    /// Write the portion of the string that fits into the STRING_REFERENCE block,
+    /// as well as write the total length of value to the block.
+    /// Returns the number of bytes written.
+    pub fn write_string_reference_inline(&self, value: &[u8]) -> Result<usize, Error> {
+        self.check_type(BlockType::StringReference)?;
+        self.set_total_length(value.len() as u32)?;
+        let allotted_to_total_len = 4; // 4 bytes are used for the total_length in Payload
+        let max_len = utils::payload_size_for_order(self.order()) - allotted_to_total_len;
+        // we do not care about splitting multibyte UTF-8 characters, because the rest
+        // of the split will go in an extent and be joined together at read time.
+        let to_inline = &value[..min(value.len(), max_len)];
+        Ok(self.container.write_bytes(self.payload_offset() + allotted_to_total_len, to_inline))
     }
 
     /// Creates a NAME block.
@@ -756,7 +831,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         parent_index: u32,
     ) -> Result<(), Error> {
         if !block_type.is_any_value() {
-            return Err(Error::UnexpectedBlockTypeRepr("*_VALUE", block_type));
+            return Err(Error::UnexpectedBlockTypeRepr("*_VALUE".to_string(), block_type));
         }
         let header = self.read_header();
         self.check_type_eq(header.block_type(), BlockType::Reserved)?;
@@ -933,6 +1008,81 @@ mod tests {
     }
 
     #[test]
+    fn test_become_string_reference() {
+        test_ok_types(
+            move |b| b.become_string_reference(),
+            &BTreeSet::from_iter(vec![BlockType::Reserved]),
+        );
+        let container = [0u8; constants::MIN_ORDER_SIZE];
+        let block = get_reserved(&container);
+        assert!(block.become_string_reference().is_ok());
+        assert_eq!(block.block_type(), BlockType::StringReference);
+        assert_eq!(block.next_extent().unwrap(), 0);
+        assert_eq!(block.string_reference_count().unwrap(), 0);
+        assert_eq!(block.total_length().unwrap(), 0);
+        assert_eq!(block.inline_string_reference().unwrap(), vec![]);
+        assert_eq!(container[..8], [0x01, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    }
+
+    #[test]
+    fn test_inline_string_reference() {
+        let container = [0u8; constants::MIN_ORDER_SIZE];
+        let block = get_reserved(&container);
+        block.set_order(0).unwrap();
+        assert!(block.become_string_reference().is_ok());
+
+        assert_eq!(block.write_string_reference_inline("ab".as_bytes()).unwrap(), 2);
+        assert_eq!(block.string_reference_count().unwrap(), 0);
+        assert_eq!(block.total_length().unwrap(), 2);
+        assert_eq!(block.order(), 0);
+        assert_eq!(block.next_extent().unwrap(), 0);
+        assert_eq!(block.inline_string_reference().unwrap(), "ab".as_bytes());
+
+        assert_eq!(block.write_string_reference_inline("abcd".as_bytes()).unwrap(), 4);
+        assert_eq!(block.string_reference_count().unwrap(), 0);
+        assert_eq!(block.total_length().unwrap(), 4);
+        assert_eq!(block.order(), 0);
+        assert_eq!(block.next_extent().unwrap(), 0);
+        assert_eq!(block.inline_string_reference().unwrap(), "abcd".as_bytes());
+
+        assert_eq!(
+            block.write_string_reference_inline("abcdefghijklmnopqrstuvwxyz".as_bytes()).unwrap(),
+            4 // with order == 0, only 4 bytes will be inlined
+        );
+        assert_eq!(block.string_reference_count().unwrap(), 0);
+        assert_eq!(block.total_length().unwrap(), 26);
+        assert_eq!(block.order(), 0);
+        assert_eq!(block.next_extent().unwrap(), 0);
+        assert_eq!(block.inline_string_reference().unwrap(), "abcd".as_bytes());
+
+        assert_eq!(block.write_string_reference_inline("abcdef".as_bytes()).unwrap(), 4);
+        assert_eq!(block.string_reference_count().unwrap(), 0);
+        assert_eq!(block.total_length().unwrap(), 6);
+        assert_eq!(block.order(), 0);
+        assert_eq!(block.next_extent().unwrap(), 0);
+        assert_eq!(block.inline_string_reference().unwrap(), "abcd".as_bytes());
+    }
+
+    #[test]
+    fn test_string_reference_count() {
+        let container = [0u8; constants::MIN_ORDER_SIZE];
+        let block = get_reserved(&container);
+        block.set_order(0).unwrap();
+        assert!(block.become_string_reference().is_ok());
+        assert_eq!(block.string_reference_count().unwrap(), 0);
+
+        assert!(block.increment_string_reference_count().is_ok());
+        assert_eq!(block.string_reference_count().unwrap(), 1);
+
+        assert!(block.decrement_string_reference_count().is_ok());
+        assert_eq!(block.string_reference_count().unwrap(), 0);
+
+        assert!(block.decrement_string_reference_count().is_err());
+        assert_eq!(block.string_reference_count().unwrap(), 0);
+    }
+
+    #[test]
     fn test_become_header() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let mut block = get_reserved(&container);
@@ -1060,10 +1210,13 @@ mod tests {
         assert_eq!(block.next_extent().unwrap(), 4);
 
         test_ok_types(move |b| b.become_extent(1), &BTreeSet::from_iter(vec![BlockType::Reserved]));
-        test_ok_types(move |b| b.next_extent(), &BTreeSet::from_iter(vec![BlockType::Extent]));
+        test_ok_types(
+            move |b| b.next_extent(),
+            &BTreeSet::from_iter(vec![BlockType::Extent, BlockType::StringReference]),
+        );
         test_ok_types(
             move |b| b.set_extent_next_index(4),
-            &BTreeSet::from_iter(vec![BlockType::Extent]),
+            &BTreeSet::from_iter(vec![BlockType::Extent, BlockType::StringReference]),
         );
         test_ok_types(
             move |b| b.extent_set_contents(&"test".as_bytes()),
@@ -1232,16 +1385,18 @@ mod tests {
         assert_eq!(container[..8], [0x01, 0x07, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x10]);
 
-        assert!(block.set_property_total_length(10).is_ok());
-        assert_eq!(block.property_total_length().unwrap(), 10);
+        assert!(block.set_total_length(10).is_ok());
+        assert_eq!(block.total_length().unwrap(), 10);
         assert_eq!(container[..8], [0x01, 0x07, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x0a, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x10]);
 
-        let types = BTreeSet::from_iter(vec![BlockType::BufferValue]);
-        test_ok_types(move |b| b.set_property_extent_index(4), &types);
-        test_ok_types(move |b| b.set_property_total_length(4), &types);
-        test_ok_types(move |b| b.property_extent_index(), &types);
-        test_ok_types(move |b| b.property_format(), &types);
+        let ok_for_buffer_and_string_reference =
+            BTreeSet::from_iter(vec![BlockType::BufferValue, BlockType::StringReference]);
+        let ok_for_buffer = BTreeSet::from_iter(vec![BlockType::BufferValue]);
+        test_ok_types(move |b| b.set_property_extent_index(4), &ok_for_buffer);
+        test_ok_types(move |b| b.set_total_length(4), &ok_for_buffer_and_string_reference);
+        test_ok_types(move |b| b.property_extent_index(), &ok_for_buffer);
+        test_ok_types(move |b| b.property_format(), &ok_for_buffer);
         test_ok_types(
             move |b| b.become_property(2, 3, PropertyFormat::Bytes),
             &BTreeSet::from_iter(vec![BlockType::Reserved]),

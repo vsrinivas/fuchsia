@@ -1568,12 +1568,12 @@ mod tests {
             let property = node.create_string("property", "test");
             let property_block = property.get_block().unwrap();
             assert_eq!(property_block.block_type(), BlockType::BufferValue);
-            assert_eq!(property_block.property_total_length().unwrap(), 4);
+            assert_eq!(property_block.total_length().unwrap(), 4);
             assert_eq!(property_block.property_format().unwrap(), PropertyFormat::String);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
             property.set("test-set");
-            assert_eq!(property_block.property_total_length().unwrap(), 8);
+            assert_eq!(property_block.total_length().unwrap(), 8);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
     }
@@ -1593,12 +1593,12 @@ mod tests {
             let property = node.create_bytes("property", b"test");
             let property_block = property.get_block().unwrap();
             assert_eq!(property_block.block_type(), BlockType::BufferValue);
-            assert_eq!(property_block.property_total_length().unwrap(), 4);
+            assert_eq!(property_block.total_length().unwrap(), 4);
             assert_eq!(property_block.property_format().unwrap(), PropertyFormat::Bytes);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
             property.set(b"test-set");
-            assert_eq!(property_block.property_total_length().unwrap(), 8);
+            assert_eq!(property_block.total_length().unwrap(), 8);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
     }

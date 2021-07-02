@@ -701,7 +701,7 @@ impl InnerState {
     ) -> Result<(), Error> {
         self.free_extents(block.property_extent_index()?)?;
         let extent_index = self.write_extents(value)?;
-        block.set_property_total_length(value.len().to_u32().unwrap())?;
+        block.set_total_length(value.len().to_u32().unwrap())?;
         block.set_property_extent_index(extent_index)?;
         Ok(())
     }
@@ -1002,7 +1002,7 @@ mod tests {
             assert_eq!(block.index(), 1);
             assert_eq!(block.parent_index().unwrap(), 0);
             assert_eq!(block.name_index().unwrap(), 2);
-            assert_eq!(block.property_total_length().unwrap(), 13);
+            assert_eq!(block.total_length().unwrap(), 13);
             assert_eq!(block.property_format().unwrap(), PropertyFormat::String);
 
             let name_block = state.heap().get_block(2).unwrap();
@@ -1053,7 +1053,7 @@ mod tests {
             assert_eq!(block.index(), 1);
             assert_eq!(block.parent_index().unwrap(), 0);
             assert_eq!(block.name_index().unwrap(), 2);
-            assert_eq!(block.property_total_length().unwrap(), 13);
+            assert_eq!(block.total_length().unwrap(), 13);
             assert_eq!(block.property_extent_index().unwrap(), 4);
             assert_eq!(block.property_format().unwrap(), PropertyFormat::Bytes);
 
@@ -1192,7 +1192,7 @@ mod tests {
             assert_eq!(block.index(), 1);
             assert_eq!(block.parent_index().unwrap(), 0);
             assert_eq!(block.name_index().unwrap(), 2);
-            assert_eq!(block.property_total_length().unwrap(), 6000);
+            assert_eq!(block.total_length().unwrap(), 6000);
             assert_eq!(block.property_extent_index().unwrap(), 128);
             assert_eq!(block.property_format().unwrap(), PropertyFormat::String);
 

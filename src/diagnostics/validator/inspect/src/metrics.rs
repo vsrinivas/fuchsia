@@ -164,6 +164,7 @@ impl Metrics {
             BlockType::ArrayValue => NUMERIC_TYPE_SIZE * block.array_slots()?,
             BlockType::Name => block.name_length()?,
             BlockType::Extent => block.extent_contents()?.len(),
+            BlockType::StringReference => block.total_length()?,
         };
 
         let header_bytes = match block_type {
@@ -175,6 +176,7 @@ impl Metrics {
             | BlockType::Tombstone
             | BlockType::ArrayValue
             | BlockType::LinkValue => 16,
+            BlockType::StringReference => 12,
             BlockType::IntValue
             | BlockType::DoubleValue
             | BlockType::UintValue
@@ -372,7 +374,7 @@ mod tests {
         value_header.set_value_parent_index(0);
         put_header!(value_header, 1, &mut buffer);
         let mut property_payload = Payload(0);
-        property_payload.set_property_total_length(12);
+        property_payload.set_total_length(12);
         property_payload.set_property_extent_index(4);
         property_payload.set_property_flags(enum_value!(PropertyFormat::String));
         put_payload!(property_payload, 1, &mut buffer);

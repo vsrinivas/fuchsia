@@ -217,6 +217,10 @@ impl Scanner {
                 Ok(BlockType::Extent) => self.process_extent(block, buffer)?,
                 Ok(BlockType::Name) => self.process_name(block, buffer)?,
                 Ok(BlockType::Tombstone) => self.process_tombstone(block)?,
+                Ok(BlockType::StringReference) => {
+                    // TODO(fxbug.dev/78811): add reader for string references
+                    return Err(format_err!("STRING_REFERENCE is not implemented"));
+                }
                 Err(error) => return Err(format_err!("Failed to read block type: {:?}", error)),
             }
         }
@@ -414,7 +418,7 @@ impl Scanner {
             BlockType::BoolValue => ScannedPayload::Bool(block.bool_value()?),
             BlockType::BufferValue => {
                 let format = block.property_format()?;
-                let length = block.property_total_length()?;
+                let length = block.total_length()?;
                 let link = block.property_extent_index()?;
                 match format {
                     PropertyFormat::String => ScannedPayload::String { length, link },

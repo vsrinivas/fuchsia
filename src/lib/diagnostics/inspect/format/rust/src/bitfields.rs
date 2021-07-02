@@ -36,6 +36,7 @@ bitfield! {
     /// - 11: Array value
     /// - 12: Link value
     /// - 13: Bool value
+    /// - 14: String Reference
     pub u8, block_type, set_block_type: 15, 8;
 
     /// Only for a `HEADER` block. The version number. Currently 1.
@@ -56,8 +57,13 @@ bitfield! {
     /// Only for `NAME` blocks. The length of the string.
     pub u16, name_length, set_name_length: 27, 16;
 
-    /// Only for `EXTENT` blocks. The index of the next `EXTENT` block.
+    /// Only for `EXTENT` or `STRING_REFERENCE` blocks.
+    /// The index of the next `EXTENT` block.
     pub u32, extent_next_index, set_extent_next_index: 39, 16;
+
+    /// Only for `STRING_REFERENCE` blocks.
+    /// The number of active references to the string, including itself.
+    pub u32, string_reference_count, set_string_reference_count: 63, 40;
 
     /// The raw 64 bits of the header section of the block.
     pub value, _: 63, 0;
@@ -70,8 +76,8 @@ bitfield! {
     /// The raw 64 bits of the payload section of the block.
     pub value, _: 63, 0;
 
-    /// Only for `BUFFER` blocks. The total size of the buffer.
-    pub u32, property_total_length, set_property_total_length: 31, 0;
+    /// Only for `BUFFER` or `STRING_REFERENCE` blocks. The total size of the buffer.
+    pub u32, total_length, set_total_length: 31, 0;
 
     /// Only for `BUFFER` blocks. The index of the first `EXTENT` block of this buffer.
     pub u32, property_extent_index, set_property_extent_index: 59, 32;
@@ -135,10 +141,10 @@ mod tests {
     #[test]
     fn test_payload() {
         let mut payload = Payload(0);
-        payload.set_property_total_length(0xab);
+        payload.set_total_length(0xab);
         payload.set_property_extent_index(0x1234);
         payload.set_property_flags(3);
-        assert_eq!(payload.property_total_length(), 0xab);
+        assert_eq!(payload.total_length(), 0xab);
         assert_eq!(payload.property_extent_index(), 0x1234);
         assert_eq!(payload.property_flags(), 3);
         assert_eq!(payload.value(), 0x30001234000000ab);

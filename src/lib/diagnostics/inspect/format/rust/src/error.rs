@@ -41,7 +41,10 @@ pub enum Error {
     UnexpectedBlockType(BlockType, BlockType),
 
     #[error("Invalid block type. Expected: {0}, got: {1}")]
-    UnexpectedBlockTypeRepr(&'static str, BlockType),
+    UnexpectedBlockTypeRepr(String, BlockType),
+
+    #[error("Invalid reference count. Reference count must be in range (0, 2^32)")]
+    InvalidReferenceCount,
 }
 
 impl Error {
