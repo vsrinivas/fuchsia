@@ -518,7 +518,15 @@ impl Journal {
                 ))?,
         );
 
-        log::info!("replay done");
+        if last_checkpoint.file_offset != reader.journal_file_checkpoint().file_offset {
+            log::info!(
+                "replayed to {} (discarded to: {})",
+                last_checkpoint.file_offset,
+                reader.journal_file_checkpoint().file_offset
+            );
+        } else {
+            log::info!("replayed to {}", reader.journal_file_checkpoint().file_offset);
+        }
         Ok(())
     }
 

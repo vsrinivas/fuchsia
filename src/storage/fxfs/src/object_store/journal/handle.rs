@@ -41,6 +41,7 @@ impl Handle {
     }
 
     pub fn push_extent(&mut self, r: Range<u64>) {
+        self.size += r.length();
         self.extents.push((r, 0));
     }
 
@@ -60,8 +61,8 @@ impl Handle {
                     self.start_offset = range.start;
                 } else if range.start != self.size {
                     bail!(anyhow!(FxfsError::Inconsistent).context(format!(
-                        "Unexpected journal extent {:?}, expected start: {}",
-                        range, self.size
+                        "Unexpected journal extent @{} {:?}, expected start: {}",
+                        journal_offset, item, self.size
                     )));
                 }
                 self.extents
@@ -79,7 +80,7 @@ impl Handle {
             if *offset < discard_offset {
                 break;
             }
-            self.size = range.start;
+            self.size -= range.length();
             self.extents.pop();
         }
     }
