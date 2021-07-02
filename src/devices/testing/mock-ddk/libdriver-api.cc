@@ -141,7 +141,7 @@ __EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* device, const cha
   if (!device) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return device_get_protocol(device, proto_id, protocol);
+  return device->GetProtocol(proto_id, protocol, name);
 }
 
 __EXPORT

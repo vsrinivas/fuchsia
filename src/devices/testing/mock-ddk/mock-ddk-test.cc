@@ -395,6 +395,55 @@ TEST(MockDdk, SetProtocol) {
   EXPECT_FALSE(test_device->GetProtocol(kFakeProtocolID2).is_ok());
 }
 
+// Fragments are devices that allow for protocols to come from different parents.
+TEST(MockDdk, SetFragments) {
+  auto parent = MockDevice::FakeRootParent();  // Hold on to the parent during the test.
+  auto result = TestDevice::Bind(parent.get());
+  ASSERT_TRUE(result.is_ok());
+  TestDevice* test_device = result.value();
+
+  constexpr uint32_t kFakeProtocolID = 4;
+  constexpr uint32_t kFakeProtocolID2 = 5;
+
+  // Initially, the device will fail to get a protocol:
+  EXPECT_FALSE(test_device->GetProtocol(kFakeProtocolID).is_ok());
+
+  test_math_protocol_ops math_ops = {.domath = [](void* ctx, int in, int* out) { *out = in + 1; }};
+  test_math_protocol_ops math_ops2 = {.domath = [](void* ctx, int in, int* out) { *out = in - 1; }};
+  // You can add protocols to new or existing fragments using AddProtocol:
+  parent->AddProtocol(kFakeProtocolID, &math_ops, nullptr, "fragment 1");
+  parent->AddProtocol(kFakeProtocolID2, &math_ops2, nullptr, "fragment 2");
+
+  // Now, when querying the normal protocols, the device will fail to get a protocol:
+  mock_ddk::Protocol protocol;
+  EXPECT_NE(device_get_protocol(parent.get(), kFakeProtocolID, &protocol), ZX_OK);
+
+  // But if you query a fragment protocol, it can succeed:
+  auto status =
+      device_get_fragment_protocol(parent.get(), "fragment 1", kFakeProtocolID, &protocol);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(protocol.ops, &math_ops);
+
+  status = device_get_fragment_protocol(parent.get(), "fragment 2", kFakeProtocolID2, &protocol);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(protocol.ops, &math_ops2);
+
+  // As expected, device_get_fragment_protocol will fail if you request a protocol id
+  // that is not present in the fragment, or a non-existing fragment:
+  // non-existing fragment:
+  EXPECT_NE(
+      device_get_fragment_protocol(parent.get(), "not a fragment", kFakeProtocolID, &protocol),
+      ZX_OK);
+
+  // Mismatched fragment / protocol id:
+  EXPECT_NE(device_get_fragment_protocol(parent.get(), "fragment 1", kFakeProtocolID2, &protocol),
+            ZX_OK);
+
+  // Mismatched fragment / protocol id:
+  EXPECT_NE(device_get_fragment_protocol(parent.get(), "fragment 2", kFakeProtocolID, &protocol),
+            ZX_OK);
+}
+
 // In case a device loads firmware as part of its initialization, MockDevice provides
 // a way to set firmware that can be accessed by the load_firmware call.
 TEST(MockDdk, LoadFirmware) {

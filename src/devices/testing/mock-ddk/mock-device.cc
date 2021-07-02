@@ -167,14 +167,8 @@ void MockDevice::PropagateMetadata() {
   }
 }
 
-void MockDevice::AddProtocol(uint32_t id, const void* ops, void* ctx) {
-  protocols_.push_back(mock_ddk::ProtocolEntry{id, {ops, ctx}});
-}
-
-void MockDevice::AddParentProtocol(uint32_t id, const void* ops, void* ctx) {
-  if (!IsRootParent()) {
-    parent_->AddProtocol(id, ops, ctx);
-  }
+void MockDevice::AddProtocol(uint32_t id, const void* ops, void* ctx, const char* fragment_name) {
+  protocols_[fragment_name].push_back(mock_ddk::ProtocolEntry{id, {ops, ctx}});
 }
 
 void MockDevice::SetFirmware(std::vector<uint8_t> firmware, std::string_view path) {
@@ -210,10 +204,16 @@ zx_status_t MockDevice::LoadFirmware(std::string_view path, zx_handle_t* fw, siz
   return ZX_OK;
 }
 
-zx_status_t MockDevice::GetProtocol(uint32_t proto_id, void* protocol) const {
+zx_status_t MockDevice::GetProtocol(uint32_t proto_id, void* protocol,
+                                    const char* fragment_name) const {
+  // Check if there are protocols for the fragment/device:
+  auto protocol_set = protocols_.find(fragment_name);
+  if (protocol_set == protocols_.end()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   auto out = reinterpret_cast<mock_ddk::Protocol*>(protocol);
   // First we check if the user has added protocols:
-  for (const auto& proto : protocols_) {
+  for (const auto& proto : protocol_set->second) {
     if (proto_id == proto.id) {
       out->ops = proto.proto.ops;
       out->ctx = proto.proto.ctx;

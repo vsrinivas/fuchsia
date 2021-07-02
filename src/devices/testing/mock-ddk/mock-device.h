@@ -151,8 +151,8 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
 
   // device_get_protocol is usually called by child devices to get their parent protocols.
   // You can add protocols here to your device or your parent device.
-  void AddProtocol(uint32_t id, const void* ops, void* ctx);
-  void AddParentProtocol(uint32_t id, const void* ops, void* ctx);
+  // if you want to add a protocol to a fragment, add the fragment's name as 'name'.
+  void AddProtocol(uint32_t id, const void* ops, void* ctx, const char* name = "");
 
   // This struct can also be a root parent device, with reduced functionality.
   // This allows the parent to store protocols that can be accessed by a child device.
@@ -212,10 +212,14 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   friend zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* device,
                                                const char* path, zx_handle_t* fw, size_t* size);
 
-  // device_get_protocol calls GetProtocol
-  zx_status_t GetProtocol(uint32_t proto_id, void* protocol) const;
+  // device_get_protocol and device_get_fragment_protocol call GetProtocol.
+  // Get protocol can get the normal protocols for the device, if fragment_name = "".
+  // Otherwise, it gets protocols associated with the fragment identified by fragment_name.
+  zx_status_t GetProtocol(uint32_t proto_id, void* protocol, const char* fragment_name = "") const;
   friend zx_status_t device_get_protocol(const zx_device_t* device, uint32_t proto_id,
                                          void* protocol);
+  friend zx_status_t device_get_fragment_protocol(zx_device_t* device, const char* fragment_name,
+                                                  uint32_t proto_id, void* protocol);
 
   // device_get_metadata calls GetMetadata:
   zx_status_t GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual);
@@ -234,7 +238,8 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
 
   // list of this device's children in the device tree
   std::list<std::shared_ptr<MockDevice>> children_;
-  std::vector<mock_ddk::ProtocolEntry> protocols_;
+  // Stores the normal protocols under the key "", fragment protocols under their name.
+  std::unordered_map<std::string, std::list<mock_ddk::ProtocolEntry>> protocols_;
   std::unordered_map<std::string_view, std::vector<uint8_t>> firmware_;
 
   // Map of metadata set by SetMetadata.
