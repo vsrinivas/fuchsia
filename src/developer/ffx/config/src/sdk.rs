@@ -152,9 +152,9 @@ impl Sdk {
             &mut version,
             |meta| {
                 let meta_path = path_prefix.join(meta);
-
                 fs::File::open(meta_path.clone())
                     .context(format!("opening sdk path: {:?}", meta_path))
+                    .ok()
                     .map(BufReader::new)
             },
         )
@@ -167,7 +167,7 @@ impl Sdk {
         get_meta: M,
     ) -> Result<Vec<Value>>
     where
-        M: Fn(&str) -> Result<BufReader<T>>,
+        M: Fn(&str) -> Option<BufReader<T>>,
         T: io::Read,
     {
         let manifest: Manifest = serde_json::from_reader(manifest)?;
@@ -180,12 +180,11 @@ impl Sdk {
         let metas = manifest
             .parts
             .into_iter()
-            .map(|x| {
-                get_meta(&x.meta)
-                    .and_then(|reader| serde_json::from_reader(reader).map_err(|x| x.into()))
+            .map(|x| match get_meta(&x.meta) {
+                Some(reader) => serde_json::from_reader(reader).map_err(|x| x.into()),
+                None => serde_json::from_str("{}").map_err(|x| x.into()),
             })
             .collect::<Result<Vec<_>>>()?;
-
         Ok(metas)
     }
 
@@ -313,6 +312,9 @@ impl Sdk {
         Ok(Sdk { path_prefix, metas, real_paths: RealPaths::Map(real_paths), version })
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// tests
 
 #[cfg(test)]
 mod test {
@@ -501,7 +503,7 @@ mod test {
 	  "schema_version": "1"
     }"#;
 
-    fn get_sdk_manifest_meta(name: &str) -> Result<BufReader<&'static [u8]>> {
+    fn get_sdk_manifest_meta(name: &str) -> Option<BufReader<&'static [u8]>> {
         if name == "fidl/fuchsia.data/meta.json" {
             const META: &str = r#"{
               "deps": [],
@@ -513,7 +515,7 @@ mod test {
               "type": "fidl_library"
             }"#;
 
-            Ok(BufReader::new(META.as_bytes()))
+            Some(BufReader::new(META.as_bytes()))
         } else if name == "tools/zxdb-meta.json" {
             const META: &str = r#"{
               "files": [
@@ -525,9 +527,9 @@ mod test {
               "type": "host_tool"
             }"#;
 
-            Ok(BufReader::new(META.as_bytes()))
+            Some(BufReader::new(META.as_bytes()))
         } else {
-            Err(anyhow!("No such manifest: {}", name))
+            None
         }
     }
 
