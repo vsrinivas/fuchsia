@@ -74,7 +74,7 @@ pub fn init_logging_for_test_with_threads<R>(
 ) -> impl Fn(usize) -> R {
     move |n| {
         #[cfg(target_os = "fuchsia")]
-        let _guard = init_logging_with_threads(None);
+        let _guard = init_logging_with_threads(Some(_name));
         #[cfg(not(target_os = "fuchsia"))]
         crate::host::logger::init();
 
