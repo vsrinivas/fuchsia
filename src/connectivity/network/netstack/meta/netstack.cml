@@ -2,53 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    program: {
-        runner: "elf",
-        binary: "bin/netstack",
-    },
-    capabilities: [
-        {
-            protocol: [
-                "fuchsia.net.filter.Filter",
-                "fuchsia.net.interfaces.State",
-                "fuchsia.net.neighbor.Controller",
-                "fuchsia.net.neighbor.View",
-                "fuchsia.net.routes.State",
-                "fuchsia.net.stack.Log",
-                "fuchsia.net.stack.Stack",
-                "fuchsia.netstack.Netstack",
-                "fuchsia.posix.socket.Provider",
-            ],
-        },
-    ],
+    include: [ "//src/connectivity/network/netstack/meta/netstack.shard.cml" ],
     use: [
         {
-            // TODO(fxbug.dev/63680) rename this to the correct replacement for
-            // isolated-cache-storage once it is implemented.
             storage: "cache",
             path: "/cache",
         },
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.stash.SecureStore",
-            ],
-        },
-    ],
-    expose: [
-        {
-            protocol: [
-                "fuchsia.net.filter.Filter",
-                "fuchsia.net.interfaces.State",
-                "fuchsia.net.neighbor.Controller",
-                "fuchsia.net.neighbor.View",
-                "fuchsia.net.routes.State",
-                "fuchsia.net.stack.Log",
-                "fuchsia.net.stack.Stack",
-                "fuchsia.netstack.Netstack",
-                "fuchsia.posix.socket.Provider",
-            ],
-            from: "self",
+            protocol: [ "fuchsia.stash.SecureStore" ],
         },
     ],
 }
