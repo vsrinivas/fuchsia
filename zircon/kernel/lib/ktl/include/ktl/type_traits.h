@@ -25,6 +25,7 @@ using std::disjunction;
 using std::disjunction_v;
 
 using std::conditional;
+using std::conditional_t;
 
 using std::decay;
 using std::decay_t;
@@ -44,6 +45,9 @@ using std::is_copy_constructible_v;
 using std::is_copy_assignable;
 using std::is_copy_assignable_v;
 
+using std::is_integral;
+using std::is_integral_v;
+
 using std::is_lvalue_reference;
 using std::is_lvalue_reference_v;
 
@@ -58,6 +62,9 @@ using std::is_pod_v;
 
 using std::is_same;
 using std::is_same_v;
+
+using std::is_signed;
+using std::is_signed_v;
 
 using std::is_standard_layout;
 using std::is_standard_layout_v;

@@ -107,20 +107,35 @@ std::vector<std::string> GetRightsSpecsFromDocAttribute(const std::string& full_
 }
 
 std::optional<Type> PrimitiveTypeFromName(std::string subtype) {
+  if (subtype == "int8") {
+    return Type(TypeInt8{});
+  }
   if (subtype == "uint8") {
     return Type(TypeUint8{});
-  } else if (subtype == "uint16") {
+  }
+  if (subtype == "int16") {
+    return Type(TypeInt16{});
+  }
+  if (subtype == "uint16") {
     return Type(TypeUint16{});
-  } else if (subtype == "int32") {
+  }
+  if (subtype == "int32") {
     return Type(TypeInt32{});
-  } else if (subtype == "uint32") {
+  }
+  if (subtype == "uint32") {
     return Type(TypeUint32{});
-  } else if (subtype == "int64") {
+  }
+  if (subtype == "int64") {
     return Type(TypeInt64{});
-  } else if (subtype == "uint64") {
+  }
+  if (subtype == "uint64") {
     return Type(TypeUint64{});
-  } else if (subtype == "bool") {
+  }
+  if (subtype == "bool") {
     return Type(TypeBool{});
+  }
+  if (subtype == "char") {
+    return Type(TypeChar{});
   }
 
   return std::nullopt;

@@ -2,8 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <functional>
+
 #include "tools/kazoo/output_util.h"
 #include "tools/kazoo/outputs.h"
+
+namespace {
+
+// Each incoming argument directly from the user is declared as using the
+// widened type (always either int64_t or uint64_t) so the compiler is under no
+// illusions that it can trust the incoming register values not to have excess
+// high bit values set (or cleared for negative signed values).  Then the
+// wrapper will safely narrow the register value into the argument value of the
+// declared type.  See //zircon/kernel/lib/syscalls/safe-syscall-argument.h for
+// the SafeSyscallArgument template class that provides the RawType type and
+// the Sanitize function used in the generated code.
+
+std::string ArgumentExpr(const StructMember& arg) {
+  return "SafeSyscallArgument<" + GetCUserModeName(arg.type()) + ">::Sanitize(" + arg.name() + ")";
+}
+
+}  // namespace
 
 bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
   CopyrightHeaderWithCppComments(writer);
@@ -17,7 +36,8 @@ bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
     }
     writer->Printf("syscall_result wrapper_%s(", syscall->name().c_str());
     for (const auto& arg : syscall->kernel_arguments()) {
-      writer->Printf("%s %s, ", GetCUserModeName(arg.type()).c_str(), arg.name().c_str());
+      writer->Printf("SafeSyscallArgument<%s>::RawType %s, ", GetCUserModeName(arg.type()).c_str(),
+                     arg.name().c_str());
     }
     writer->Puts("uint64_t pc) {\n");
     writer->Printf(
@@ -26,14 +46,14 @@ bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
         indent, syscall->name().c_str(), syscall->name().c_str());
 
     // Write out locals for the output handles.
-    std::vector<std::string> out_handle_names;
-    for (const auto& arg: syscall->kernel_arguments()) {
+    std::vector<std::reference_wrapper<const StructMember>> out_handle_args;
+    for (const auto& arg : syscall->kernel_arguments()) {
       const Type& type = arg.type();
       if (type.IsPointer()) {
         std::string pointed_to = GetCKernelModeName(type.DataAsPointer().pointed_to_type());
         if (type.constness() == Constness::kMutable && pointed_to == "zx_handle_t" &&
             !type.DataAsPointer().was_vector()) {
-          out_handle_names.push_back(arg.name());
+          out_handle_args.push_back(arg);
           writer->Printf("%s%suser_out_handle out_handle_%s;\n", indent, indent,
                          arg.name().c_str());
         }
@@ -46,21 +66,22 @@ bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
     for (size_t i = 0; i < syscall->kernel_arguments().size(); ++i) {
       const StructMember& arg = syscall->kernel_arguments()[i];
       const Type& type = arg.type();
+      const std::string arg_expr = ArgumentExpr(arg);
       if (type.IsPointer()) {
         std::string pointed_to = GetCKernelModeName(type.DataAsPointer().pointed_to_type());
         if (type.constness() == Constness::kConst) {
-          writer->Printf("make_user_in_ptr(%s)", arg.name().c_str());
+          writer->Printf("make_user_in_ptr(%s)", arg_expr.c_str());
         } else if (type.constness() == Constness::kMutable) {
           if (pointed_to == "zx_handle_t" && !type.DataAsPointer().was_vector()) {
             writer->Printf("&out_handle_%s", arg.name().c_str());
           } else if (type.optionality() == Optionality::kInputArgument) {
-            writer->Printf("make_user_inout_ptr(%s)", arg.name().c_str());
+            writer->Printf("make_user_inout_ptr(%s)", arg_expr.c_str());
           } else {
-            writer->Printf("make_user_out_ptr(%s)", arg.name().c_str());
+            writer->Printf("make_user_out_ptr(%s)", arg_expr.c_str());
           }
         }
       } else {
-        writer->Puts(arg.name());
+        writer->Puts(arg_expr);
       }
       if (i != syscall->kernel_arguments().size() - 1) {
         writer->Puts(", ");
@@ -69,20 +90,20 @@ bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
     writer->Puts(");\n");
 
     // Complete copy out of output handles.
-    if (!out_handle_names.empty()) {
+    if (!out_handle_args.empty()) {
       writer->Printf("%s%sif (result != ZX_OK)\n", indent, indent);
       writer->Printf("%s%s%sreturn result;\n", indent, indent, indent);
 
-      for (const auto& name : out_handle_names) {
+      for (const StructMember& arg : out_handle_args) {
         writer->Printf(
             "%s%sif (out_handle_%s.begin_copyout(current_process, make_user_out_ptr(%s)))\n",
-            indent, indent, name.c_str(), name.c_str());
+            indent, indent, arg.name().c_str(), ArgumentExpr(arg).c_str());
         writer->Printf("%s%s%sreturn ZX_ERR_INVALID_ARGS;\n", indent, indent, indent);
       }
 
-      for (const auto& name : out_handle_names) {
+      for (const StructMember& arg : out_handle_args) {
         writer->Printf("%s%sout_handle_%s.finish_copyout(current_process);\n", indent, indent,
-                       name.c_str());
+                       arg.name().c_str());
       }
     }
 

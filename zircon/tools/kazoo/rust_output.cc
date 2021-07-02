@@ -46,13 +46,15 @@ class Formatter {
       void operator()(const std::monostate&) { ret = "<TODO!>"; }
       void operator()(const TypeBool&) { ret = "u32"; }
       void operator()(const TypeChar&) { ret = "u8"; }
+      void operator()(const TypeInt8&) { ret = "i8"; }
+      void operator()(const TypeInt16&) { ret = "i16"; }
       void operator()(const TypeInt32&) { ret = "i32"; }
       void operator()(const TypeInt64&) { ret = "i64"; }
       void operator()(const TypeSizeT&) { ret = "usize"; }
+      void operator()(const TypeUint8&) { ret = "u8"; }
       void operator()(const TypeUint16&) { ret = "u16"; }
       void operator()(const TypeUint32&) { ret = "u32"; }
       void operator()(const TypeUint64&) { ret = "u64"; }
-      void operator()(const TypeUint8&) { ret = "u8"; }
       void operator()(const TypeVoid&) { ret = "u8"; }
       // TODO(syscall-fidl-transition): This is what abigen does, not sure if there's something
       // better that could be done.

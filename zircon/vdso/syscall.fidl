@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 
+deprecated_syntax;
 library zx;
 
 [Transport = "Syscall"]
@@ -43,4 +43,16 @@ protocol syscall {
 
     [testonly]
     syscall_test_handle_create(status return_value) -> (status status, handle:EVENT out);
+
+    [testonly]
+    syscall_test_widening_unsigned_narrow(uint64 a, uint32 b, uint16 c, uint8 d) -> (uint64 total);
+
+    [testonly]
+    syscall_test_widening_signed_narrow(int64 a, int32 b, int16 c, int8 d) -> (int64 total);
+
+    [testonly]
+    syscall_test_widening_unsigned_wide(uint64 a, uint32 b, uint16 c, uint8 d) -> (uint64 total);
+
+    [testonly]
+    syscall_test_widening_signed_wide(int64 a, int32 b, int16 c, int8 d) -> (int64 total);
 };

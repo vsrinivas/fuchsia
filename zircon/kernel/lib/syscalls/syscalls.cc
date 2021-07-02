@@ -20,6 +20,7 @@
 #include <syscalls/syscalls.h>
 
 #include "priv.h"
+#include "safe-syscall-argument.h"
 #include "vdso-valid-sysret.h"
 
 #define LOCAL_TRACE 0

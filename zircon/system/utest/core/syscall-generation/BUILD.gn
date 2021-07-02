@@ -10,6 +10,7 @@ source_set("syscall-generation") {
   sources = [ "syscall-generation.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
     "//zircon/public/lib/zxtest",
   ]
 }

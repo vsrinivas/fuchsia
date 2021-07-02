@@ -24,6 +24,8 @@ class SyscallLibrary;
 
 class TypeBool {};
 class TypeChar {};
+class TypeInt8 {};
+class TypeInt16 {};
 class TypeInt32 {};
 class TypeInt64 {};
 class TypeSizeT {};
@@ -42,10 +44,10 @@ class TypePointer;
 class TypeString {};
 class TypeStruct;
 class TypeVector;
-using TypeData =
-    std::variant<std::monostate, TypeBool, TypeChar, TypeInt32, TypeInt64, TypeSizeT, TypeUint16,
-                 TypeUint32, TypeUint64, TypeUint8, TypeUintptrT, TypeVoid, TypeZxBasicAlias,
-                 TypeAlias, TypeEnum, TypeHandle, TypePointer, TypeString, TypeStruct, TypeVector>;
+using TypeData = std::variant<std::monostate, TypeBool, TypeChar, TypeInt8, TypeInt16, TypeInt32,
+                              TypeInt64, TypeSizeT, TypeUint16, TypeUint32, TypeUint64, TypeUint8,
+                              TypeUintptrT, TypeVoid, TypeZxBasicAlias, TypeAlias, TypeEnum,
+                              TypeHandle, TypePointer, TypeString, TypeStruct, TypeVector>;
 
 class Type;
 
@@ -190,6 +192,8 @@ class Type {
   bool IsHandle() const { return std::holds_alternative<TypeHandle>(type_data_); }
   bool IsSignedInt() const {
     return std::holds_alternative<TypeChar>(type_data_) ||
+           std::holds_alternative<TypeInt8>(type_data_) ||
+           std::holds_alternative<TypeInt16>(type_data_) ||
            std::holds_alternative<TypeInt32>(type_data_) ||
            std::holds_alternative<TypeInt64>(type_data_);
   }

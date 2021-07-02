@@ -64,9 +64,10 @@ def generate_fidlc_json(fidlc_binary, syscall_dir, output_fidlc_json_path):
                 fidl_files.append(os.path.join(syscall_dir, entry.name))
 
     subprocess.check_call(
-        [fidlc_binary, '--experimental', 'old_syntax_only', '--json',
-            output_fidlc_json_path, '--files'] +
-        sorted(fidl_files))
+        [
+            fidlc_binary, '--experimental', 'old_syntax_only', '--json',
+            output_fidlc_json_path, '--files'
+        ] + sorted(fidl_files))
 
 
 def build_golden(input_files, output_combined):
@@ -146,7 +147,7 @@ def main():
     files = generate_kazoo_outputs(kazoo, tmp_json, all_styles, tmp_kazoo_dir)
 
     build_golden(files, args.new_golden)
-    rc = subprocess.call(['diff', GOLDEN, args.new_golden])
+    rc = subprocess.call(['diff', '-u', GOLDEN, args.new_golden])
     if rc != 0:
         print('CHANGES DETECTED IN SYSCALL OUTPUT')
         print()

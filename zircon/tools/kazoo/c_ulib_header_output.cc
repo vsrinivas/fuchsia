@@ -51,8 +51,8 @@ class Formatter {
   }
 
   struct StructNames {
-    std::string base_name;  // signals
-    std::string type_name;  // zxio_dirent_t
+    std::string base_name;      // signals
+    std::string type_name;      // zxio_dirent_t
     std::string c_struct_name;  // zxio_dirent
   };
 
@@ -79,6 +79,12 @@ class Formatter {
           if constexpr (std::is_same_v<T, TypeChar>) {
             return "char";
           }
+          if constexpr (std::is_same_v<T, TypeInt8>) {
+            return "int8_t";
+          }
+          if constexpr (std::is_same_v<T, TypeInt16>) {
+            return "int16_t";
+          }
           if constexpr (std::is_same_v<T, TypeInt32>) {
             return "int32_t";
           }
@@ -88,6 +94,9 @@ class Formatter {
           if constexpr (std::is_same_v<T, TypeSizeT>) {
             return "size_t";
           }
+          if constexpr (std::is_same_v<T, TypeUint8>) {
+            return "uint8_t";
+          }
           if constexpr (std::is_same_v<T, TypeUint16>) {
             return "uint16_t";
           }
@@ -96,9 +105,6 @@ class Formatter {
           }
           if constexpr (std::is_same_v<T, TypeUint64>) {
             return "uint64_t";
-          }
-          if constexpr (std::is_same_v<T, TypeUint8>) {
-            return "uint8_t";
           }
           if constexpr (std::is_same_v<T, TypeUintptrT>) {
             return "uintptr_t";
@@ -148,6 +154,12 @@ class Formatter {
           if constexpr (std::is_same_v<T, TypeChar>) {
             return num_str;
           }
+          if constexpr (std::is_same_v<T, TypeInt8>) {
+            return num_str;
+          }
+          if constexpr (std::is_same_v<T, TypeInt16>) {
+            return num_str;
+          }
           if constexpr (std::is_same_v<T, TypeInt32>) {
             return num_str;
           }
@@ -165,7 +177,7 @@ class Formatter {
 
 std::string MakeTitleLine(const std::string& base_name) {
   std::vector<std::string> words = SplitString(base_name, '_', kTrimWhitespace);
-  std::for_each(words.begin(), words.end(), [](std::string &s){ s[0] = ToUpperASCII(s[0]); });
+  std::for_each(words.begin(), words.end(), [](std::string& s) { s[0] = ToUpperASCII(s[0]); });
   std::string title = JoinStrings(words, " ");
   // Pad up to 80 columns. 4 is to account for space characters around.
   int trailing_length = 80 - static_cast<int>(title.size()) - 4;
@@ -221,7 +233,7 @@ __BEGIN_CDECLS
                    names.type_name.c_str());
     writer->Puts("\n");
     writer->Printf("#define %s ((%s)%s)\n", formatter.FormatMember(*bits, "NONE").c_str(),
-                    names.type_name.c_str(), formatter.FormatConstant(*bits, 0).c_str());
+                   names.type_name.c_str(), formatter.FormatConstant(*bits, 0).c_str());
     writer->Puts("\n");
     uint64_t all = 0;
     for (const auto& k : bits->members()) {
@@ -233,7 +245,7 @@ __BEGIN_CDECLS
     }
     writer->Puts("\n");
     writer->Printf("#define %s ((%s)%s)\n", formatter.FormatMember(*bits, "ALL").c_str(),
-                    names.type_name.c_str(), formatter.FormatConstant(*bits, all).c_str());
+                   names.type_name.c_str(), formatter.FormatConstant(*bits, all).c_str());
     writer->Puts("\n");
   }
 
@@ -292,7 +304,8 @@ __BEGIN_CDECLS
 // Optional fields have corresponding presence indicators. When creating
 // a new object, it is desirable to use the %s helper macro
 // to set the fields, to avoid forgetting to change the presence indicator.
-)", setter_macro_name.c_str());
+)",
+                     setter_macro_name.c_str());
     }
     writer->Printf("typedef struct %s {", names.c_struct_name.c_str());
     writer->Puts("\n");
@@ -315,7 +328,8 @@ __BEGIN_CDECLS
   // and the corresponding presence indicator will be false.
   // Therefore, a completely empty |%s| may be conveniently
   // obtained via value-initialization e.g. `%s a = {};`.
-)", names.type_name.c_str(), names.type_name.c_str());
+)",
+                     names.type_name.c_str(), names.type_name.c_str());
       writer->Printf("  struct %s {\n", presence_bits_name.c_str());
       for (const auto& member : table->members()) {
         if (member.required() == Required::kYes) {

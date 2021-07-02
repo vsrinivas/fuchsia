@@ -32,7 +32,8 @@ size_t GoTypeSize(const Type& type) {
   if (native_name == "void") {
     return 0;
   }
-  if (native_name == "bool" || native_name == "uint8") {
+  if (native_name == "uint8" || native_name == "int8" || native_name == "bool" ||
+      native_name == "char") {
     return 1;
   }
   if (native_name == "int16" || native_name == "uint16") {

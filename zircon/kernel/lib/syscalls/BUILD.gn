@@ -94,6 +94,7 @@ if (is_kernel) {
     deps = [
       ":headers",
       "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/userabi:headers",
     ]
   }

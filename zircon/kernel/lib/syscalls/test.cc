@@ -49,3 +49,46 @@ zx_status_t sys_syscall_test_handle_create(zx_status_t return_value, user_out_ha
   }
   return return_value;
 }
+
+// If the compiler assumes that incoming high bits in argument registers for
+// narrower-typed arguments are zero or sign-extended, then it won't narrow the
+// arguments being passed from the syscall_test_* function to the Test*
+// function and the high bits will show in the totals.
+
+namespace {
+
+[[gnu::noinline]] uint64_t TestNarrow(uint64_t a64, uint32_t a32, uint16_t a16, uint8_t a8) {
+  return a64 + a32 + a16 + a8;
+}
+
+[[gnu::noinline]] int64_t TestSignedNarrow(int64_t a64, int32_t a32, int16_t a16, int8_t a8) {
+  return a64 + a32 + a16 + a8;
+}
+
+[[gnu::noinline]] uint64_t TestWide(uint64_t a64, uint64_t a32, uint64_t a16, uint64_t a8) {
+  return a64 + a32 + a16 + a8;
+}
+
+[[gnu::noinline]] int64_t TestSignedWide(int64_t a64, int64_t a32, int64_t a16, int64_t a8) {
+  return a64 + a32 + a16 + a8;
+}
+
+}  // namespace
+
+uint64_t sys_syscall_test_widening_unsigned_narrow(uint64_t a64, uint32_t a32, uint16_t a16,
+                                                   uint8_t a8) {
+  return TestNarrow(a64, a32, a16, a8);
+}
+
+uint64_t sys_syscall_test_widening_unsigned_wide(uint64_t a64, uint32_t a32, uint16_t a16,
+                                                 uint8_t a8) {
+  return TestWide(a64, a32, a16, a8);
+}
+
+int64_t sys_syscall_test_widening_signed_narrow(int64_t a64, int32_t a32, int16_t a16, int8_t a8) {
+  return TestSignedNarrow(a64, a32, a16, a8);
+}
+
+int64_t sys_syscall_test_widening_signed_wide(int64_t a64, int32_t a32, int16_t a16, int8_t a8) {
+  return TestSignedWide(a64, a32, a16, a8);
+}

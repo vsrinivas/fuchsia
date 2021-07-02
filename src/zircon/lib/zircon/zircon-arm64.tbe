@@ -133,6 +133,10 @@ Symbols:
   _zx_syscall_test_7: { Type: Func }
   _zx_syscall_test_8: { Type: Func }
   _zx_syscall_test_handle_create: { Type: Func }
+  _zx_syscall_test_widening_signed_narrow: { Type: Func }
+  _zx_syscall_test_widening_signed_wide: { Type: Func }
+  _zx_syscall_test_widening_unsigned_narrow: { Type: Func }
+  _zx_syscall_test_widening_unsigned_wide: { Type: Func }
   _zx_syscall_test_wrapper: { Type: Func }
   _zx_system_get_dcache_line_size: { Type: Func }
   _zx_system_get_event: { Type: Func }
@@ -312,6 +316,10 @@ Symbols:
   zx_syscall_test_7: { Type: Func, Weak: true }
   zx_syscall_test_8: { Type: Func, Weak: true }
   zx_syscall_test_handle_create: { Type: Func, Weak: true }
+  zx_syscall_test_widening_signed_narrow: { Type: Func, Weak: true }
+  zx_syscall_test_widening_signed_wide: { Type: Func, Weak: true }
+  zx_syscall_test_widening_unsigned_narrow: { Type: Func, Weak: true }
+  zx_syscall_test_widening_unsigned_wide: { Type: Func, Weak: true }
   zx_syscall_test_wrapper: { Type: Func, Weak: true }
   zx_system_get_dcache_line_size: { Type: Func, Weak: true }
   zx_system_get_event: { Type: Func, Weak: true }
