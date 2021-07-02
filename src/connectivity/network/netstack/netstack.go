@@ -12,8 +12,6 @@ import (
 	"fmt"
 	"net"
 	"sync"
-	"sync/atomic"
-	"syscall/zx"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
@@ -26,7 +24,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	"fidl/fuchsia/device"
 	fidlethernet "fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/netstack"
 
@@ -179,8 +176,7 @@ type NICRemovedHandler interface {
 
 // A Netstack tracks all of the running state of the network stack.
 type Netstack struct {
-	dnsConfig    dns.ServersConfig
-	nameProvider *device.NameProviderWithCtxInterface
+	dnsConfig dns.ServersConfig
 
 	interfaceWatchers interfaceWatcherCollection
 
@@ -762,29 +758,6 @@ func (ifs *ifState) Remove() {
 }
 
 var nameProviderErrorLogged uint32 = 0
-
-func (ns *Netstack) getDeviceName() string {
-	result, err := ns.nameProvider.GetDeviceName(context.Background())
-	if err != nil {
-		if atomic.CompareAndSwapUint32(&nameProviderErrorLogged, 0, 1) {
-			_ = syslog.Warnf("getDeviceName: error accessing device name provider: %s", err)
-		}
-		return device.DefaultDeviceName
-	}
-
-	switch tag := result.Which(); tag {
-	case device.NameProviderGetDeviceNameResultResponse:
-		atomic.StoreUint32(&nameProviderErrorLogged, 0)
-		return result.Response.Name
-	case device.NameProviderGetDeviceNameResultErr:
-		if atomic.CompareAndSwapUint32(&nameProviderErrorLogged, 0, 1) {
-			_ = syslog.Warnf("getDeviceName: nameProvider.GetdeviceName() = %s", zx.Status(result.Err))
-		}
-		return device.DefaultDeviceName
-	default:
-		panic(fmt.Sprintf("unknown tag: GetDeviceName().Which() = %d", tag))
-	}
-}
 
 // TODO(stijlist): figure out a way to make it impossible to accidentally
 // enable DHCP on loopback interfaces.

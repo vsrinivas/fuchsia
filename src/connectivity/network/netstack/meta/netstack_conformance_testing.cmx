@@ -13,7 +13,6 @@
             "isolated-cache-storage"
         ],
         "services": [
-            "fuchsia.device.NameProvider",
             "fuchsia.stash.SecureStore"
         ]
     }

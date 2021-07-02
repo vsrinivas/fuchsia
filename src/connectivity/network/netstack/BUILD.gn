@@ -103,7 +103,6 @@ go_library("lib") {
     "routes",
     "time",
     "util",
-    "//sdk/fidl/fuchsia.device($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",
     "//sdk/fidl/fuchsia.inspect.deprecated($go_toolchain)",

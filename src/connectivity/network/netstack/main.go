@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -30,7 +31,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	"fidl/fuchsia/device"
 	"fidl/fuchsia/logger"
 	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/neighbor"
@@ -318,17 +318,10 @@ func Main() {
 		}
 	}
 
-	req, np, err := device.NewNameProviderWithCtxInterfaceRequest()
-	if err != nil {
-		syslog.Fatalf("could not connect to device name provider service: %s", err)
-	}
-	appCtx.ConnectToEnvService(req)
-
 	f := filter.New(stk)
 
 	ns := &Netstack{
 		dnsConfig:          dns.MakeServersConfig(stk.Clock()),
-		nameProvider:       np,
 		stack:              stk,
 		nicRemovedHandlers: []NICRemovedHandler{&ndpDisp.dynamicAddressSourceTracker, f},
 	}
