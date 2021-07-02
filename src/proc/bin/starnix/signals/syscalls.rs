@@ -17,17 +17,25 @@ pub fn sys_rt_sigaction(
     signum: UncheckedSignal,
     user_action: UserRef<sigaction_t>,
     user_old_action: UserRef<sigaction_t>,
+    sigset_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    let signal = Signal::try_from(signum)?;
-    if signal == Signal::SIGKILL || signal == Signal::SIGSTOP {
+    if sigset_size != std::mem::size_of::<sigset_t>() {
         return Err(EINVAL);
     }
 
+    let signal = Signal::try_from(signum)?;
+
     let new_signal_action = if !user_action.is_null() {
+        // Actions can't be set for SIGKILL and SIGSTOP, but the actions for these signals can
+        // still be returned in `user_old_action`, so only return early if the intention is to
+        // set an action (i.e., the user_action is non-null).
+        if signal == Signal::SIGKILL || signal == Signal::SIGSTOP {
+            return Err(EINVAL);
+        }
+
         let mut signal_action = sigaction_t::default();
         ctx.task.mm.read_object(user_action, &mut signal_action)?;
         Some(signal_action)
-        // TODO: Sometimes the new action will trigger pending signals to be discarded.
     } else {
         None
     };
@@ -657,8 +665,10 @@ mod tests {
             sys_rt_sigaction(
                 &ctx,
                 UncheckedSignal::from(SIGKILL),
+                // The signal is only checked when the action is set (i.e., action is non-null).
+                UserRef::<sigaction_t>::new(UserAddress::from(10)),
                 UserRef::<sigaction_t>::default(),
-                UserRef::<sigaction_t>::default()
+                std::mem::size_of::<sigset_t>(),
             ),
             Err(EINVAL)
         );
@@ -666,8 +676,10 @@ mod tests {
             sys_rt_sigaction(
                 &ctx,
                 UncheckedSignal::from(SIGSTOP),
+                // The signal is only checked when the action is set (i.e., action is non-null).
+                UserRef::<sigaction_t>::new(UserAddress::from(10)),
                 UserRef::<sigaction_t>::default(),
-                UserRef::<sigaction_t>::default()
+                std::mem::size_of::<sigset_t>(),
             ),
             Err(EINVAL)
         );
@@ -675,8 +687,10 @@ mod tests {
             sys_rt_sigaction(
                 &ctx,
                 UncheckedSignal::from(Signal::NUM_SIGNALS + 1),
+                // The signal is only checked when the action is set (i.e., action is non-null).
+                UserRef::<sigaction_t>::new(UserAddress::from(10)),
                 UserRef::<sigaction_t>::default(),
-                UserRef::<sigaction_t>::default()
+                std::mem::size_of::<sigset_t>(),
             ),
             Err(EINVAL)
         );
@@ -709,7 +723,8 @@ mod tests {
                 &ctx,
                 UncheckedSignal::from(SIGHUP),
                 UserRef::<sigaction_t>::default(),
-                old_action_ref
+                old_action_ref,
+                std::mem::size_of::<sigset_t>()
             ),
             Ok(SUCCESS)
         );
@@ -739,7 +754,8 @@ mod tests {
                 &ctx,
                 UncheckedSignal::from(SIGINT),
                 set_action_ref,
-                UserRef::<sigaction_t>::default()
+                UserRef::<sigaction_t>::default(),
+                std::mem::size_of::<sigset_t>(),
             ),
             Ok(SUCCESS)
         );
