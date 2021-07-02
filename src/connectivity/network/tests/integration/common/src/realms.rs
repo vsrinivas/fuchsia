@@ -29,14 +29,8 @@ impl NetstackVersion {
     /// Gets the Fuchsia URL for this Netstack component.
     pub fn get_url(&self) -> &'static str {
         match self {
-            NetstackVersion::Netstack2 => {
-                // TODO(https://fxbug.dev/78313): change this to a relative URL
-                // once RealmBuilder supports relative package URLs.
-                "fuchsia-pkg://fuchsia.com/netstack-integration-tests-v2#meta/netstack-debug.cm"
-            }
-            NetstackVersion::Netstack3 => {
-                "fuchsia-pkg://fuchsia.com/netstack-integration-tests-v2#meta/netstack3.cm"
-            }
+            NetstackVersion::Netstack2 => "#meta/netstack-debug.cm",
+            NetstackVersion::Netstack3 => "#meta/netstack3.cm",
         }
     }
 
@@ -240,8 +234,7 @@ pub enum NetCfg {}
 impl Manager for NetCfg {
     // Note, netcfg.cmx must never be used in a Netemul environment as it breaks
     // hermeticity.
-    const PKG_URL: &'static str =
-        "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netcfg-netemul.cmx";
+    const PKG_URL: &'static str = "#meta/netcfg-netemul.cmx";
     // Specify an empty config file for NetCfg when it is run in netemul.
     const TESTING_ARGS: &'static [&'static str] = &["--config-data", "netcfg/empty.json"];
 }
@@ -253,8 +246,7 @@ pub enum NetworkManager {}
 impl Manager for NetworkManager {
     // Note, network-manager.cmx must never be used in a Netemul environment as it breaks
     // hermeticity.
-    const PKG_URL: &'static str =
-        "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/network-manager-netemul.cmx";
+    const PKG_URL: &'static str = "#meta/network-manager-netemul.cmx";
     const TESTING_ARGS: &'static [&'static str] = &[];
 }
 
@@ -269,8 +261,7 @@ pub trait Reachability: Copy + Clone {
 pub enum ReachabilityMonitor {}
 
 impl Reachability for ReachabilityMonitor {
-    const PKG_URL: &'static str =
-        "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/reachability.cmx";
+    const PKG_URL: &'static str = "#meta/reachability.cmx";
 }
 
 /// Extensions to `netemul::TestSandbox`.
