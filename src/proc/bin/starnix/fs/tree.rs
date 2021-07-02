@@ -32,13 +32,13 @@ struct FsNodeState {
 }
 
 pub trait FsNodeOps: Send + Sync {
-    fn open(&self) -> Result<Box<dyn FileOps>, Errno>;
+    fn open(&self, node: &FsNode) -> Result<Box<dyn FileOps>, Errno>;
 
     // The various ways of creating sub-nodes
-    fn lookup(&self, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+    fn lookup(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         Err(ENOTDIR)
     }
-    fn mkdir(&self, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+    fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         Err(ENOTDIR)
     }
 
@@ -89,19 +89,19 @@ impl FsNode {
     }
 
     pub fn open(self: &FsNodeHandle) -> Result<FileHandle, Errno> {
-        Ok(FileObject::new_from_box(self.ops().open()?, Arc::clone(self)))
+        Ok(FileObject::new_from_box(self.ops().open(&self)?, Arc::clone(self)))
     }
 
     pub fn component_lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
         let node = self.get_or_create_empty_child(name.to_vec());
-        node.initialize(|name| self.ops().lookup(name))?;
+        node.initialize(|name| self.ops().lookup(&self, name))?;
         Ok(node)
     }
 
     #[cfg(test)]
     pub fn mkdir(self: &FsNodeHandle, name: FsString) -> Result<FsNodeHandle, Errno> {
         let node = self.get_or_create_empty_child(name);
-        let exists = node.initialize(|name| self.ops().mkdir(name))?;
+        let exists = node.initialize(|name| self.ops().mkdir(&self, name))?;
         if exists {
             return Err(EEXIST);
         }

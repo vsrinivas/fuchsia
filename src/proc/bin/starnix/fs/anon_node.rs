@@ -29,7 +29,7 @@ impl Anon {
 }
 
 impl FsNodeOps for Anon {
-    fn open(&self) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
         Err(ENOSYS)
     }
 }

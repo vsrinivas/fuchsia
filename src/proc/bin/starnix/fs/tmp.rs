@@ -11,10 +11,10 @@ use crate::types::*;
 pub struct TmpfsDirectory;
 
 impl FsNodeOps for TmpfsDirectory {
-    fn mkdir(&self, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+    fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         Ok(Box::new(Self))
     }
-    fn open(&self) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
         Err(ENOSYS)
     }
 }

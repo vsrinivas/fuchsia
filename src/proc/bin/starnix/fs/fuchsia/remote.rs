@@ -50,7 +50,7 @@ struct RemoteDirectoryNode {
 }
 
 impl FsNodeOps for RemoteDirectoryNode {
-    fn open(&self) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(RemoteFile {
             node: RemoteNode::Directory(
                 syncio::directory_clone(&self.dir, fio::CLONE_FLAG_SAME_RIGHTS).map_err(|_| EIO)?,
@@ -58,7 +58,7 @@ impl FsNodeOps for RemoteDirectoryNode {
         }))
     }
 
-    fn lookup(&self, name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+    fn lookup(&self, _node: &FsNode, name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         let desc = syncio::directory_open(
             &self.dir,
             std::str::from_utf8(name).map_err(|_| {
@@ -91,7 +91,7 @@ impl FsNodeOps for RemoteDirectoryNode {
         })
     }
 
-    fn mkdir(&self, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+    fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         not_implemented!("remote mkdir");
         Err(ENOSYS)
     }
@@ -106,7 +106,7 @@ struct RemoteFileNode {
 }
 
 impl FsNodeOps for RemoteFileNode {
-    fn open(&self) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(RemoteFile {
             node: RemoteNode::File(
                 syncio::file_clone(&self.file, fio::CLONE_FLAG_SAME_RIGHTS).map_err(|_| EIO)?,
