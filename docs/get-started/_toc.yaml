@@ -9,11 +9,11 @@ toc:
 - title: "Overview"
   path: /docs/get-started/README.md
 - heading: "Get started with Fuchsia"
-- title: "Download the Fuchsia source code"
+- title: "1. Download the Fuchsia source code"
   path: /docs/get-started/get_fuchsia_source.md
-- title: "Configure and build Fuchsia"
+- title: "2. Configure and build Fuchsia"
   path: /docs/get-started/build_fuchsia.md
-- title: "Start the Fuchsia emulator"
+- title: "3. Start the Fuchsia emulator"
   path: /docs/get-started/set_up_femu.md
-- title: "Explore Fuchsia"
+- title: "4. Explore Fuchsia"
   path: /docs/get-started/explore_fuchsia.md
