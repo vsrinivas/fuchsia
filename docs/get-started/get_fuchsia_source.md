@@ -22,6 +22,9 @@ We recommend you run `ffx platform preflight`, which examines your machine
 and informs you of issues that may affect building Fuchsia from source or
 running the Fuchsia emulator.
 
+At this time the `preflight` tool is only provided as an x64 prebuilt. Fuchsia
+is currently not guaranteed to build successfully on other host architectures.
+
 * {Linux}
 
   ```posix-terminal
