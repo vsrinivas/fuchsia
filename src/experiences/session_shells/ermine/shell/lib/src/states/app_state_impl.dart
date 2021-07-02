@@ -21,6 +21,7 @@ import 'package:ermine/src/utils/mobx_extensions.dart';
 import 'package:ermine/src/utils/themes.dart';
 import 'package:ermine/src/utils/view_handle.dart';
 import 'package:flutter/material.dart' hide Action;
+import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
@@ -64,7 +65,10 @@ class AppStateImpl with Disposable implements AppState {
     pointerEventsService
       ..onPeekBegin = _onPeekBegin
       ..onPeekEnd = _onPeekEnd;
-    startupService.serve();
+
+    startupService
+      ..onInspect = _onInspect
+      ..serve();
 
     // Add reactions to state changes.
     reactions.add(reaction<bool>((_) => views.isNotEmpty, (hasViews) {
@@ -433,5 +437,44 @@ class AppStateImpl with Disposable implements AppState {
       errors.removeWhere(
           (key, value) => key == url && value[1].startsWith(errorType));
     });
+  }
+
+  // Adds inspect data when requested by [Inspect].
+  void _onInspect(Node node) {
+    // Overlays currently visible.
+    node.boolProperty('appBarVisible')!.setValue(appBarVisible.value);
+    node.boolProperty('sideBarVisible')!.setValue(sideBarVisible.value);
+    node.boolProperty('overlaysVisible')!.setValue(overlaysVisible.value);
+
+    // Number of running component views.
+    node.intProperty('numViews')?.setValue(views.length);
+
+    if (views.isNotEmpty) {
+      // List of views that are currently running.
+      for (int i = 0; i < views.length; i++) {
+        final view = views[i];
+
+        // Active (focused) view.
+        if (view == topView.value) {
+          node.stringProperty('activeView')?.setValue('view-$i');
+        }
+
+        // View title, url, focused and viewport.
+        final viewNode = node.child('view-$i')!;
+        viewNode.stringProperty('title')!.setValue(view.title);
+        viewNode.stringProperty('url')!.setValue(view.url!);
+        viewNode.boolProperty('focused')!.setValue(view == topView.value);
+
+        final viewport = view.viewport;
+        if (viewport != null) {
+          viewNode.stringProperty('viewportLTRB')!.setValue([
+                viewport.left,
+                viewport.top,
+                viewport.right,
+                viewport.bottom,
+              ].join(','));
+        }
+      }
+    }
   }
 }

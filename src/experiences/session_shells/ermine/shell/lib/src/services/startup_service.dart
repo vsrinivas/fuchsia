@@ -11,6 +11,7 @@ import 'package:fidl_fuchsia_buildinfo/fidl_async.dart';
 import 'package:fidl_fuchsia_device_manager/fidl_async.dart';
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:flutter/services.dart';
+import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic/views.dart';
@@ -49,6 +50,10 @@ class StartupService {
   /// Returns the shell's [ViewHandle].
   final ViewHandle hostView;
 
+  /// Callback to service [Inspect] requests from the system.
+  late final void Function(Node) onInspect;
+
+  final _inspect = Inspect();
   final _intl = PropertyProviderProxy();
   final _deviceManager = AdministratorProxy();
   final _provider = ProviderProxy();
@@ -113,7 +118,11 @@ class StartupService {
     _provider.ctrl.close();
   }
 
+  /// Publish outgoing services.
   void serve() {
+    _inspect
+      ..serve(componentContext.outgoing)
+      ..onDemand('ermine', onInspect);
     componentContext.outgoing.serveFromStartupInfo();
   }
 

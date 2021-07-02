@@ -22,6 +22,7 @@ class ViewStateImpl with Disposable implements ViewState {
 
   final String? id;
 
+  @override
   final String? url;
 
   @override
@@ -47,6 +48,9 @@ class ViewStateImpl with Disposable implements ViewState {
 
   @override
   final Observable<bool> focusable = true.asObservable();
+
+  @override
+  Rect? get viewport => viewConnection.viewport;
 
   final VoidCallback _onClose;
   @override
