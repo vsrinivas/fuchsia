@@ -12,7 +12,7 @@ test("serial-unittest-bin") {
   include_dirs = [ ".." ]
   deps = [
     "..:common",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//zircon/public/lib/zxtest",
   ]
 }

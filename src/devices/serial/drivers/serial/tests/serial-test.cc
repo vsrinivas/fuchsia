@@ -4,7 +4,6 @@
 
 #include "serial.h"
 
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <memory>
@@ -12,6 +11,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
 
@@ -136,45 +137,46 @@ class FakeSerialImpl : public ddk::SerialImplProtocol<FakeSerialImpl> {
 
 class SerialTester {
  public:
-  SerialTester() { ddk_.SetProtocol(ZX_PROTOCOL_SERIAL_IMPL, serial_impl_.proto()); }
-
-  fake_ddk::Bind& ddk() { return ddk_; }
+  SerialTester() {
+    fake_parent_->AddProtocol(ZX_PROTOCOL_SERIAL_IMPL, serial_impl_.proto()->ops,
+                              serial_impl_.proto()->ctx);
+  }
   FakeSerialImpl& serial_impl() { return serial_impl_; }
+  zx_device_t* fake_parent() { return fake_parent_.get(); }
 
  private:
-  fake_ddk::Bind ddk_;
+  std::shared_ptr<MockDevice> fake_parent_ = MockDevice::FakeRootParent();
   FakeSerialImpl serial_impl_;
 };
 
 TEST(SerialTest, InitNoProtocolParent) {
   // SerialTester is intentionally not defined in this scope as it would
   // define the ZX_PROTOCOL_SERIAL_IMPL protocol.
-  serial::SerialDevice device(fake_ddk::kFakeParent);
+  auto fake_parent = MockDevice::FakeRootParent();
+  serial::SerialDevice device(fake_parent.get());
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, device.Init());
 }
 
 TEST(SerialTest, Init) {
   SerialTester tester;
-  serial::SerialDevice device(fake_ddk::kFakeParent);
+  serial::SerialDevice device(tester.fake_parent());
   ASSERT_EQ(ZX_OK, device.Init());
 }
 
 TEST(SerialTest, DdkLifetime) {
   SerialTester tester;
-  serial::SerialDevice* device(new serial::SerialDevice(fake_ddk::kFakeParent));
+  serial::SerialDevice* device(new serial::SerialDevice(tester.fake_parent()));
 
   ASSERT_EQ(ZX_OK, device->Init());
   ASSERT_EQ(ZX_OK, device->Bind());
   device->DdkAsyncRemove();
-  EXPECT_TRUE(tester.ddk().Ok());
 
-  // Delete the object.
-  device->DdkRelease();
+  ASSERT_EQ(ZX_OK, mock_ddk::ReleaseFlaggedDevices(tester.fake_parent()));
 }
 
 TEST(SerialTest, DdkRelease) {
   SerialTester tester;
-  serial::SerialDevice* device(new serial::SerialDevice(fake_ddk::kFakeParent));
+  serial::SerialDevice* device(new serial::SerialDevice(tester.fake_parent()));
   FakeSerialImpl& serial_impl = tester.serial_impl();
 
   ASSERT_EQ(ZX_OK, device->Init());
@@ -206,7 +208,7 @@ class SerialDeviceTest : public zxtest::Test {
 };
 
 SerialDeviceTest::SerialDeviceTest() {
-  device_ = new serial::SerialDevice(fake_ddk::kFakeParent);
+  device_ = new serial::SerialDevice(tester_.fake_parent());
 
   if (ZX_OK != device_->Init()) {
     delete device_;
