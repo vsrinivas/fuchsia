@@ -151,10 +151,48 @@ static void riscv64_page_fault_handler(long cause, struct iframe_t *frame) {
   }
 }
 
+static bool riscv64_is_floating_point_instruction(long instruction) {
+  // All floating point instructions have the following bit patterns in the
+  // 7 lsb "opcode" portion of the instruction:
+  //
+  //    0000111 LOAD-FP (width determined by bits 12-14)
+  //    0100111 STORE-FP (width determined by bits 12-14)
+  //    1010011 OP-FP (specific FP instruction determined by other bits)
+  //    1000011 FMADD
+  //    1000111 FMSUB
+  //    1001011 FNMSUB
+  //    1001111 FNMADD
+
+  instruction &= 0b1111111;
+  return (instruction == 0b0000111) ||  // LOAD-FP
+         (instruction == 0b0100111) ||  // STORE-FP
+         (instruction == 0b1010011) ||  // OP-FP
+         (instruction == 0b1000011) ||  // FMADD
+         (instruction == 0b1000111) ||  // FMSUB
+         (instruction == 0b1001011) ||  // FNMSUB
+         (instruction == 0b1001111);    // FNMADD
+}
+
 static void riscv64_illegal_instruction_handler(long cause, struct iframe_t *frame) {
-  // vaddr_t tval = riscv64_csr_read(RISCV64_CSR_STVAL);
-  // TODO(revest): Check that it's a floating point operation
-  frame->status |= RISCV64_CSR_SSTATUS_FS_INITIAL;
+  long instruction = riscv64_csr_read(RISCV64_CSR_STVAL);
+  if (riscv64_is_floating_point_instruction(instruction)) {
+    // A floating point instruction was used but floating point support is not
+    // enabled.  Enable it now.
+    if ((frame->status & RISCV64_CSR_SSTATUS_FS) != RISCV64_CSR_SSTATUS_FS_OFF) {
+      panic("FP already enabled %#lx, epc %#lx, inst %#lx, cpu %u", cause,
+          frame->epc, instruction, arch_curr_cpu_num());
+    }
+    frame->status |= RISCV64_CSR_SSTATUS_FS_INITIAL;
+  } else if (!(frame->status & RISCV64_CSR_SSTATUS_PP)) {
+    // An illegal instruction happened in a user thread.  Handle the execption.
+    // This will kill the process.
+    try_dispatch_user_data_fault_exception(ZX_EXCP_UNDEFINED_INSTRUCTION,
+        frame);
+  } else {
+    // An illegal instruction happened in a kernel thread.  That's bad, panic.
+    panic("Exception in a kernel thread %#lx, epc %#lx, inst %#lx, cpu %u",
+        cause, frame->epc, instruction, arch_curr_cpu_num());
+  }
 }
 
 extern "C" syscall_result riscv64_syscall_dispatcher(struct iframe_t *frame);

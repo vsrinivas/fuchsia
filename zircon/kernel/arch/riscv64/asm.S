@@ -5,30 +5,46 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
+#include <arch/regs.h>
 #include <arch/riscv64.h>
 #include <lib/syscalls/zx-syscall-numbers.h>
 #include <zircon/errors.h>
 
-#define REGOFF(x) ((x) * 8)
-
 // void riscv64_context_switch(vaddr_t *old_sp, vaddr_t new_sp);
 FUNCTION(riscv64_context_switch)
     /* save old frame */
-    /* This layout should match struct context_switch_frame */
-    addi  sp, sp, -REGOFF(13)
-    sd    ra, REGOFF(0)(sp)
-    sd    s0, REGOFF(1)(sp)
-    sd    s1, REGOFF(2)(sp)
-    sd    s2, REGOFF(3)(sp)
-    sd    s3, REGOFF(4)(sp)
-    sd    s4, REGOFF(5)(sp)
-    sd    s5, REGOFF(6)(sp)
-    sd    s6, REGOFF(7)(sp)
-    sd    s7, REGOFF(8)(sp)
-    sd    s8, REGOFF(9)(sp)
-    sd    s9, REGOFF(10)(sp)
-    sd    s10, REGOFF(11)(sp)
-    sd    s11, REGOFF(12)(sp)
+    addi  sp, sp, -SIZEOF_CONTEXT_SWITCH_FRAME
+    sd    ra, CONTEXT_SWITCH_FRAME_OFFSET_RA(sp)
+
+    sd    s0, CONTEXT_SWITCH_FRAME_OFFSET_S(0)(sp)
+    sd    s1, CONTEXT_SWITCH_FRAME_OFFSET_S(1)(sp)
+    sd    s2, CONTEXT_SWITCH_FRAME_OFFSET_S(2)(sp)
+    sd    s3, CONTEXT_SWITCH_FRAME_OFFSET_S(3)(sp)
+    sd    s4, CONTEXT_SWITCH_FRAME_OFFSET_S(4)(sp)
+    sd    s5, CONTEXT_SWITCH_FRAME_OFFSET_S(5)(sp)
+    sd    s6, CONTEXT_SWITCH_FRAME_OFFSET_S(6)(sp)
+    sd    s7, CONTEXT_SWITCH_FRAME_OFFSET_S(7)(sp)
+    sd    s8, CONTEXT_SWITCH_FRAME_OFFSET_S(8)(sp)
+    sd    s9, CONTEXT_SWITCH_FRAME_OFFSET_S(9)(sp)
+    sd    s10, CONTEXT_SWITCH_FRAME_OFFSET_S(10)(sp)
+    sd    s11, CONTEXT_SWITCH_FRAME_OFFSET_S(11)(sp)
+
+    // TODO(tracker #99): This code can be optimized by not saving/restoring
+    // the floating registers if FP support is off.  See riscv64_exception_entry
+    // below for details.
+
+    fsd   fs0, CONTEXT_SWITCH_FRAME_OFFSET_FS(0)(sp)
+    fsd   fs1, CONTEXT_SWITCH_FRAME_OFFSET_FS(1)(sp)
+    fsd   fs2, CONTEXT_SWITCH_FRAME_OFFSET_FS(2)(sp)
+    fsd   fs3, CONTEXT_SWITCH_FRAME_OFFSET_FS(3)(sp)
+    fsd   fs4, CONTEXT_SWITCH_FRAME_OFFSET_FS(4)(sp)
+    fsd   fs5, CONTEXT_SWITCH_FRAME_OFFSET_FS(5)(sp)
+    fsd   fs6, CONTEXT_SWITCH_FRAME_OFFSET_FS(6)(sp)
+    fsd   fs7, CONTEXT_SWITCH_FRAME_OFFSET_FS(7)(sp)
+    fsd   fs8, CONTEXT_SWITCH_FRAME_OFFSET_FS(8)(sp)
+    fsd   fs9, CONTEXT_SWITCH_FRAME_OFFSET_FS(9)(sp)
+    fsd   fs10, CONTEXT_SWITCH_FRAME_OFFSET_FS(10)(sp)
+    fsd   fs11, CONTEXT_SWITCH_FRAME_OFFSET_FS(11)(sp)
 
     /* save old sp */
     sd    sp, (a0)
@@ -37,56 +53,72 @@ FUNCTION(riscv64_context_switch)
     mv    sp, a1
 
     /* restore new frame */
-    ld    ra, REGOFF(0)(sp)
-    ld    s0, REGOFF(1)(sp)
-    ld    s1, REGOFF(2)(sp)
-    ld    s2, REGOFF(3)(sp)
-    ld    s3, REGOFF(4)(sp)
-    ld    s4, REGOFF(5)(sp)
-    ld    s5, REGOFF(6)(sp)
-    ld    s6, REGOFF(7)(sp)
-    ld    s7, REGOFF(8)(sp)
-    ld    s8, REGOFF(9)(sp)
-    ld    s9, REGOFF(10)(sp)
-    ld    s10, REGOFF(11)(sp)
-    ld    s11, REGOFF(12)(sp)
-    addi  sp, sp, REGOFF(13)
+    ld    s0, CONTEXT_SWITCH_FRAME_OFFSET_S(0)(sp)
+    ld    s1, CONTEXT_SWITCH_FRAME_OFFSET_S(1)(sp)
+    ld    s2, CONTEXT_SWITCH_FRAME_OFFSET_S(2)(sp)
+    ld    s3, CONTEXT_SWITCH_FRAME_OFFSET_S(3)(sp)
+    ld    s4, CONTEXT_SWITCH_FRAME_OFFSET_S(4)(sp)
+    ld    s5, CONTEXT_SWITCH_FRAME_OFFSET_S(5)(sp)
+    ld    s6, CONTEXT_SWITCH_FRAME_OFFSET_S(6)(sp)
+    ld    s7, CONTEXT_SWITCH_FRAME_OFFSET_S(7)(sp)
+    ld    s8, CONTEXT_SWITCH_FRAME_OFFSET_S(8)(sp)
+    ld    s9, CONTEXT_SWITCH_FRAME_OFFSET_S(9)(sp)
+    ld    s10, CONTEXT_SWITCH_FRAME_OFFSET_S(10)(sp)
+    ld    s11, CONTEXT_SWITCH_FRAME_OFFSET_S(11)(sp)
+
+    fld   fs0, CONTEXT_SWITCH_FRAME_OFFSET_FS(0)(sp)
+    fld   fs1, CONTEXT_SWITCH_FRAME_OFFSET_FS(1)(sp)
+    fld   fs2, CONTEXT_SWITCH_FRAME_OFFSET_FS(2)(sp)
+    fld   fs3, CONTEXT_SWITCH_FRAME_OFFSET_FS(3)(sp)
+    fld   fs4, CONTEXT_SWITCH_FRAME_OFFSET_FS(4)(sp)
+    fld   fs5, CONTEXT_SWITCH_FRAME_OFFSET_FS(5)(sp)
+    fld   fs6, CONTEXT_SWITCH_FRAME_OFFSET_FS(6)(sp)
+    fld   fs7, CONTEXT_SWITCH_FRAME_OFFSET_FS(7)(sp)
+    fld   fs8, CONTEXT_SWITCH_FRAME_OFFSET_FS(8)(sp)
+    fld   fs9, CONTEXT_SWITCH_FRAME_OFFSET_FS(9)(sp)
+    fld   fs10, CONTEXT_SWITCH_FRAME_OFFSET_FS(10)(sp)
+    fld   fs11, CONTEXT_SWITCH_FRAME_OFFSET_FS(11)(sp)
+
+    ld    ra, CONTEXT_SWITCH_FRAME_OFFSET_RA(sp)
+    addi  sp, sp, SIZEOF_CONTEXT_SWITCH_FRAME
 
     ret
 END_FUNCTION(riscv64_context_switch)
 
-// void riscv64_uspace_entry(iframe_t* iframe, void *tp) __NO_RETURN;
+// void riscv64_uspace_entry(iframe_t* iframe, void *sp) __NO_RETURN;
+// Where |sp| is the kernel stack pointer.
 FUNCTION(riscv64_uspace_entry)
-    // Save the thread pointer at the top of the stack
+    // Save the thread pointer at the top of the stack.
     sd     tp, -REGOFF(1)(a1)
 
     // Save the kernel stack pointer in iframe->scratch and the sscratch register
-    sd     a1, REGOFF(0)(a0)
+    sd     a1, IFRAME_T_OFFSET_SCRATCH(a0)
     csrw   sscratch, a1
 
     // Load the iframe
-    ld     sp, REGOFF(1)(a0)
-    ld     t0, REGOFF(2)(a0)
+    ld     sp, IFRAME_T_OFFSET_SP(a0)
+    ld     t0, IFRAME_T_OFFSET_EPC(a0)
     csrw   sepc, t0
-    ld     t0, REGOFF(3)(a0)
+    ld     t0, IFRAME_T_OFFSET_STATUS(a0)
     csrw   sstatus, t0
-    ld     ra, REGOFF(4)(a0)
-    ld     tp, REGOFF(5)(a0)
-    ld     a1, REGOFF(7)(a0)
-    ld     a2, REGOFF(8)(a0)
-    ld     a3, REGOFF(9)(a0)
-    ld     a4, REGOFF(10)(a0)
-    ld     a5, REGOFF(11)(a0)
-    ld     a6, REGOFF(12)(a0)
-    ld     a7, REGOFF(13)(a0)
-    ld     t0, REGOFF(14)(a0)
-    ld     t1, REGOFF(15)(a0)
-    ld     t2, REGOFF(16)(a0)
-    ld     t3, REGOFF(17)(a0)
-    ld     t4, REGOFF(18)(a0)
-    ld     t5, REGOFF(19)(a0)
-    ld     t6, REGOFF(20)(a0)
-    ld     a0, REGOFF(6)(a0)
+    ld     ra, IFRAME_T_OFFSET_RA(a0)
+    ld     tp, IFRAME_T_OFFSET_TP(a0)
+    // Load a0 last since it points to the iframe_t.
+    ld     a1, IFRAME_T_OFFSET_A(1)(a0)
+    ld     a2, IFRAME_T_OFFSET_A(2)(a0)
+    ld     a3, IFRAME_T_OFFSET_A(3)(a0)
+    ld     a4, IFRAME_T_OFFSET_A(4)(a0)
+    ld     a5, IFRAME_T_OFFSET_A(5)(a0)
+    ld     a6, IFRAME_T_OFFSET_A(6)(a0)
+    ld     a7, IFRAME_T_OFFSET_A(7)(a0)
+    ld     t0, IFRAME_T_OFFSET_T(0)(a0)
+    ld     t1, IFRAME_T_OFFSET_T(1)(a0)
+    ld     t2, IFRAME_T_OFFSET_T(2)(a0)
+    ld     t3, IFRAME_T_OFFSET_T(3)(a0)
+    ld     t4, IFRAME_T_OFFSET_T(4)(a0)
+    ld     t5, IFRAME_T_OFFSET_T(5)(a0)
+    ld     t6, IFRAME_T_OFFSET_T(6)(a0)
+    ld     a0, IFRAME_T_OFFSET_A(0)(a0)
 
     // TODO(revest): zero out remaining registers ?
 
@@ -113,65 +145,107 @@ FUNCTION(riscv64_exception_entry)
 taken_from_kernelspace:
     // 1- we were already running in kernelspace, we just keep the previous sp
     csrrw  sp, sscratch, sp
-    // 4- save the existing sp in an iframe on the stack
-    sd     sp, -REGOFF(20)(sp)
+    // 4- save the existing sp in an iframe on the stack.
+    sd     sp, -(SIZEOF_IFRAME_T - IFRAME_T_OFFSET_SP)(sp)
     // 2- reserve an iframe_t on the stack
-    addi   sp, sp, -REGOFF(21)
-    // 3- sscratch was 0 so we store x0 in the iframe's field for sscratch
-    sd     x0, REGOFF(0)(sp)
+    addi   sp, sp, -SIZEOF_IFRAME_T
+    // 3- sscratch was 0 so we store zero in the iframe's field for sscratch
+    sd     zero, IFRAME_T_OFFSET_SCRATCH(sp)
     // 5- save the t0 register
-    sd     t0, REGOFF(14)(sp)
+    sd     t0, IFRAME_T_OFFSET_T(0)(sp)
     // 6- save the tp register
-    sd     tp, REGOFF(5)(sp)
+    sd     tp, IFRAME_T_OFFSET_TP(sp)
     // 7- tp is already set to the kernel version of the thread pointer
-
     j      save_rest_of_iframe
+
 taken_from_userspace:
     // 1- we just got the current thread's kernel stack out of sscratch
     // 3- sscratch was our current stack, we store it in an iframe on the stack
-    sd     sp, -REGOFF(21)(sp)
+    sd     sp, -SIZEOF_IFRAME_T(sp)
     // 2- reserve an iframe_t on the stack
-    addi   sp, sp, -REGOFF(21)
+    addi   sp, sp, -SIZEOF_IFRAME_T
     // 5- save the t0 register before we need to overwrite it with sscratch
-    sd     t0, REGOFF(14)(sp)
+    sd     t0, IFRAME_T_OFFSET_T(0)(sp)
     // 4a- retrieve the previous sp in t0. use this opportunity to also set
     // sscratch to 0, in on our convention this means that we are in kernelspace
     csrrw  t0, sscratch, 0
     // 4b- save the existing sp in an iframe on the stack
-    sd     t0, REGOFF(1)(sp)
+    sd     t0, IFRAME_T_OFFSET_SP(sp)
     // 6- save the tp register
-    sd     tp, REGOFF(5)(sp)
-    // 6- restore tp, saved at the top of the stack by riscv64_uspace_entry
-    ld     tp, REGOFF(20)(sp)
+    sd     tp, IFRAME_T_OFFSET_TP(sp)
+    // 7- restore kernel tp, saved at the top of the stack by
+    // riscv64_uspace_entry.
+    // NOTE: See TODO in riscv64_uspace_entry.
+    ld     tp, (SIZEOF_IFRAME_T-REGOFF(1))(sp)
 
     // this is shared by both cases, we store all the callee trashed regs
 save_rest_of_iframe:
     // sscratch is already saved
     // sp is already saved
     csrr   t0, sepc
-    sd     t0, REGOFF(2)(sp)
+    sd     t0, IFRAME_T_OFFSET_EPC(sp)
     csrr   t0, sstatus
-    sd     t0, REGOFF(3)(sp)
-    sd     ra, REGOFF(4)(sp)
+    sd     t0, IFRAME_T_OFFSET_STATUS(sp)
+    sd     ra, IFRAME_T_OFFSET_RA(sp)
     // tp is already saved
-    sd     a0, REGOFF(6)(sp)
-    sd     a1, REGOFF(7)(sp)
-    sd     a2, REGOFF(8)(sp)
-    sd     a3, REGOFF(9)(sp)
-    sd     a4, REGOFF(10)(sp)
-    sd     a5, REGOFF(11)(sp)
-    sd     a6, REGOFF(12)(sp)
-    sd     a7, REGOFF(13)(sp)
-    // t0 is already saved
-    sd     t1, REGOFF(15)(sp)
-    sd     t2, REGOFF(16)(sp)
-    sd     t3, REGOFF(17)(sp)
-    sd     t4, REGOFF(18)(sp)
-    sd     t5, REGOFF(19)(sp)
-    sd     t6, REGOFF(20)(sp)
+    sd     a0, IFRAME_T_OFFSET_A(0)(sp)
+    sd     a1, IFRAME_T_OFFSET_A(1)(sp)
+    sd     a2, IFRAME_T_OFFSET_A(2)(sp)
+    sd     a3, IFRAME_T_OFFSET_A(3)(sp)
+    sd     a4, IFRAME_T_OFFSET_A(4)(sp)
+    sd     a5, IFRAME_T_OFFSET_A(5)(sp)
+    sd     a6, IFRAME_T_OFFSET_A(6)(sp)
+    sd     a7, IFRAME_T_OFFSET_A(7)(sp)
+    // sd     t0, IFRAME_T_T0_OFFSET(sp)  already saved above.
+    sd     t1, IFRAME_T_OFFSET_T(1)(sp)
+    sd     t2, IFRAME_T_OFFSET_T(2)(sp)
+    sd     t3, IFRAME_T_OFFSET_T(3)(sp)
+    sd     t4, IFRAME_T_OFFSET_T(4)(sp)
+    sd     t5, IFRAME_T_OFFSET_T(5)(sp)
+    sd     t6, IFRAME_T_OFFSET_T(6)(sp)
 
-    // TODO(revest): check sstatus.SD and save/restore floating point registers
-    // there are other things that need to be done following page 34
+    // If the floating point registers are dirty, save them too.
+    // Note: t0 at this time holds the value of CSR sstatus.
+    srli   t1, t0, 13              // Put FS[1:0] into t1[1:0].
+    andi   t1, t1, 3               // Mask out all bits but t1[1:0].
+    addi   t2, zero, 3             // Load "dirty" value (3) into t2.
+    bne    t1, t2, call_c_handler  // Skip saving fp registers if not "dirty".
+
+    slli   t2, t2, 13              // Move t2[1:0] into FS[1:0] position in t2.
+    not    t2, t2                  // Create a mask except for FS[1:0] field.
+    and    t0, t0, t2              // Clear FS[1:0] in t0.
+
+    addi   t2, zero, 2             // Load "clean" value (2) into t2.
+    slli   t2, t2, 13              // Move t2[1:0] into FS[1:0] position in t2.
+    or     t0, t0, t2              // Set FS[1:0] in t0 to "clean".
+
+    // Save updated FS[1:0] in sstatus field of iframe.
+    sd     t0, IFRAME_T_OFFSET_STATUS(sp)
+
+    // Save floating point control register.
+    csrr   t0, fcsr
+    sd     t0, IFRAME_T_OFFSET_FCSR(sp)
+
+    fsd    fa0, IFRAME_T_OFFSET_FA(0)(sp)
+    fsd    fa1, IFRAME_T_OFFSET_FA(1)(sp)
+    fsd    fa2, IFRAME_T_OFFSET_FA(2)(sp)
+    fsd    fa3, IFRAME_T_OFFSET_FA(3)(sp)
+    fsd    fa4, IFRAME_T_OFFSET_FA(4)(sp)
+    fsd    fa5, IFRAME_T_OFFSET_FA(5)(sp)
+    fsd    fa6, IFRAME_T_OFFSET_FA(6)(sp)
+    fsd    fa7, IFRAME_T_OFFSET_FA(7)(sp)
+    fsd    ft0, IFRAME_T_OFFSET_FT(0)(sp)
+    fsd    ft1, IFRAME_T_OFFSET_FT(1)(sp)
+    fsd    ft2, IFRAME_T_OFFSET_FT(2)(sp)
+    fsd    ft3, IFRAME_T_OFFSET_FT(3)(sp)
+    fsd    ft4, IFRAME_T_OFFSET_FT(4)(sp)
+    fsd    ft5, IFRAME_T_OFFSET_FT(5)(sp)
+    fsd    ft6, IFRAME_T_OFFSET_FT(6)(sp)
+    fsd    ft7, IFRAME_T_OFFSET_FT(7)(sp)
+    fsd    ft8, IFRAME_T_OFFSET_FT(8)(sp)
+    fsd    ft9, IFRAME_T_OFFSET_FT(9)(sp)
+    fsd    ft10, IFRAME_T_OFFSET_FT(10)(sp)
+    fsd    ft11, IFRAME_T_OFFSET_FT(11)(sp)
 
 call_c_handler:
     csrr   a0, scause
@@ -179,34 +253,104 @@ call_c_handler:
     jal    riscv64_exception_handler
 
 restore_iframe:
-    ld     t0, REGOFF(0)(sp)
+    ld     t0, IFRAME_T_OFFSET_SCRATCH(sp)
     csrw   sscratch, t0
-    ld     t0, REGOFF(2)(sp)
+    ld     t0, IFRAME_T_OFFSET_EPC(sp)
     csrw   sepc, t0
-    ld     t0, REGOFF(3)(sp)
+    ld     t0, IFRAME_T_OFFSET_STATUS(sp)
     csrw   sstatus, t0
-    ld     ra, REGOFF(4)(sp)
-    ld     a0, REGOFF(6)(sp)
-    ld     a1, REGOFF(7)(sp)
-    ld     a2, REGOFF(8)(sp)
-    ld     a3, REGOFF(9)(sp)
-    ld     a4, REGOFF(10)(sp)
-    ld     a5, REGOFF(11)(sp)
-    ld     a6, REGOFF(12)(sp)
-    ld     a7, REGOFF(13)(sp)
-    ld     t0, REGOFF(14)(sp)
-    ld     t1, REGOFF(15)(sp)
-    ld     t2, REGOFF(16)(sp)
-    ld     t3, REGOFF(17)(sp)
-    ld     t4, REGOFF(18)(sp)
-    ld     t5, REGOFF(19)(sp)
-    ld     t6, REGOFF(20)(sp)
-    // now save the kernelspace's thread pointer at the top of the stack
-    sd     tp, REGOFF(20)(sp)
+
+    // Restore floating point registers if needed.  If the state is "initial"
+    // set register values to a known state (all zeroes).  If the state is
+    // "clean" load the register values from the iframe.  It would be an error
+    // for the state to be "dirty" since the kernel does not use floating point
+    // instructions.
+    srli   t1, t0, 13             // Put FS[1:0] into t1[1:0].
+    andi   t1, t1, 3              // Mask out all bits but t1[1:0].
+
+    // If state is "off" then no floating point registers are in use.
+    // Skip to restoring the integer registers.
+    beq    t1, zero, restore_non_fp_state  // Branch if state is "off".
+
+    // Restore floating point control register.
+    ld     t0, IFRAME_T_OFFSET_FCSR(sp)
+    csrw   fcsr, t0
+
+    // If state is "initial" then floating point registers are in use
+    // and must be set to the known initial state.
+    addi   t2, zero, 1             // Load "initial" value (1) into t2.
+    beq    t1, t2, fp_set_initial  // Branch if state is "initial".
+
+    // At this point assume the value is "clean" and not "dirty".
+    // TODO: Do we want to check for "dirty" and panic or something?
+    fld    fa0, IFRAME_T_OFFSET_FA(0)(sp)
+    fld    fa1, IFRAME_T_OFFSET_FA(1)(sp)
+    fld    fa2, IFRAME_T_OFFSET_FA(2)(sp)
+    fld    fa3, IFRAME_T_OFFSET_FA(3)(sp)
+    fld    fa4, IFRAME_T_OFFSET_FA(4)(sp)
+    fld    fa5, IFRAME_T_OFFSET_FA(5)(sp)
+    fld    fa6, IFRAME_T_OFFSET_FA(6)(sp)
+    fld    fa7, IFRAME_T_OFFSET_FA(7)(sp)
+    fld    ft0, IFRAME_T_OFFSET_FT(0)(sp)
+    fld    ft1, IFRAME_T_OFFSET_FT(1)(sp)
+    fld    ft2, IFRAME_T_OFFSET_FT(2)(sp)
+    fld    ft3, IFRAME_T_OFFSET_FT(3)(sp)
+    fld    ft4, IFRAME_T_OFFSET_FT(4)(sp)
+    fld    ft5, IFRAME_T_OFFSET_FT(5)(sp)
+    fld    ft6, IFRAME_T_OFFSET_FT(6)(sp)
+    fld    ft7, IFRAME_T_OFFSET_FT(7)(sp)
+    fld    ft8, IFRAME_T_OFFSET_FT(8)(sp)
+    fld    ft9, IFRAME_T_OFFSET_FT(9)(sp)
+    fld    ft10, IFRAME_T_OFFSET_FT(10)(sp)
+    fld    ft11, IFRAME_T_OFFSET_FT(11)(sp)
+    j      restore_non_fp_state
+
+fp_set_initial:
+    // Set all floating point registers to zero.
+    fcvt.d.l fa0, zero
+    fcvt.d.l fa1, zero
+    fcvt.d.l fa2, zero
+    fcvt.d.l fa3, zero
+    fcvt.d.l fa4, zero
+    fcvt.d.l fa5, zero
+    fcvt.d.l fa6, zero
+    fcvt.d.l fa7, zero
+    fcvt.d.l ft0, zero
+    fcvt.d.l ft1, zero
+    fcvt.d.l ft2, zero
+    fcvt.d.l ft3, zero
+    fcvt.d.l ft4, zero
+    fcvt.d.l ft5, zero
+    fcvt.d.l ft6, zero
+    fcvt.d.l ft7, zero
+    fcvt.d.l ft8, zero
+    fcvt.d.l ft9, zero
+    fcvt.d.l ft10, zero
+    fcvt.d.l ft11, zero
+
+restore_non_fp_state:
+    ld     ra, IFRAME_T_OFFSET_RA(sp)
+    ld     a0, IFRAME_T_OFFSET_A(0)(sp)
+    ld     a1, IFRAME_T_OFFSET_A(1)(sp)
+    ld     a2, IFRAME_T_OFFSET_A(2)(sp)
+    ld     a3, IFRAME_T_OFFSET_A(3)(sp)
+    ld     a4, IFRAME_T_OFFSET_A(4)(sp)
+    ld     a5, IFRAME_T_OFFSET_A(5)(sp)
+    ld     a6, IFRAME_T_OFFSET_A(6)(sp)
+    ld     a7, IFRAME_T_OFFSET_A(7)(sp)
+    ld     t0, IFRAME_T_OFFSET_T(0)(sp)
+    ld     t1, IFRAME_T_OFFSET_T(1)(sp)
+    ld     t2, IFRAME_T_OFFSET_T(2)(sp)
+    ld     t3, IFRAME_T_OFFSET_T(3)(sp)
+    ld     t4, IFRAME_T_OFFSET_T(4)(sp)
+    ld     t5, IFRAME_T_OFFSET_T(5)(sp)
+    ld     t6, IFRAME_T_OFFSET_T(6)(sp)
+    // now save the kernelspace's thread pointer at the top of the stack.
+    sd     tp, (SIZEOF_IFRAME_T - REGOFF(1))(sp)
     // and restore the iframe's thread pointer
-    ld     tp, REGOFF(5)(sp)
+    ld     tp, IFRAME_T_OFFSET_TP(sp)
     // finish by restoring the stack (because it overwrites our iframe pointer)
-    ld     sp, REGOFF(1)(sp)
+    ld     sp, IFRAME_T_OFFSET_SP(sp)
 
     sret
 END_FUNCTION(riscv64_exception_entry)
@@ -230,26 +374,27 @@ END_FUNCTION(riscv64_exception_entry)
     j .Lpost_syscall
 .endm
 
-// riscv64_syscall_dispatcher receives an iframe pointer. Registers are parsed
-// using the following convention:
+// void riscv64_syscall_dispatcher(iframe_t* iframe);
+// Registers in the iframe are parsed using the following convention:
 //
-// a0-a7 - contains syscall arguments
-// t0    - contains syscall_num
+//   a0-a7 - contains syscall arguments
+//   t0    - contains syscall_num
 //
 FUNCTION(riscv64_syscall_dispatcher)
     addi   sp, sp, -8
     sd     ra, (sp)
 
-    ld     t1, REGOFF(2)(a0)
-    ld     t0, REGOFF(14)(a0)
-    ld     a7, REGOFF(13)(a0)
-    ld     a6, REGOFF(12)(a0)
-    ld     a5, REGOFF(11)(a0)
-    ld     a4, REGOFF(10)(a0)
-    ld     a3, REGOFF(9)(a0)
-    ld     a2, REGOFF(8)(a0)
-    ld     a1, REGOFF(7)(a0)
-    ld     a0, REGOFF(6)(a0)
+    ld     t1, IFRAME_T_OFFSET_EPC(a0)
+    ld     t0, IFRAME_T_OFFSET_T(0)(a0)
+    // Load a0 last since it pointers to the iframe_t.
+    ld     a1, IFRAME_T_OFFSET_A(1)(a0)
+    ld     a2, IFRAME_T_OFFSET_A(2)(a0)
+    ld     a3, IFRAME_T_OFFSET_A(3)(a0)
+    ld     a4, IFRAME_T_OFFSET_A(4)(a0)
+    ld     a5, IFRAME_T_OFFSET_A(5)(a0)
+    ld     a6, IFRAME_T_OFFSET_A(6)(a0)
+    ld     a7, IFRAME_T_OFFSET_A(7)(a0)
+    ld     a0, IFRAME_T_OFFSET_A(0)(a0)
 
     // Verify syscall number and call the unknown handler if bad.
     li     t2, ZX_SYS_COUNT

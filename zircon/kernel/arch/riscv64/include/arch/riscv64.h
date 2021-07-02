@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_ARCH_RISCV64_INCLUDE_ARCH_RISCV64_H_
 #define ZIRCON_KERNEL_ARCH_RISCV64_INCLUDE_ARCH_RISCV64_H_
 
+#include <arch/regs.h>  // For REGOFF
+
 #define RISCV64_CSR_SMODE_BITS     (1 << 8)
 
 // These CSRs are only in user CSR space (still readable by all modes though)
@@ -65,6 +67,13 @@
 #define RISCV64_EXCEPTION_INS_PAGE_FAULT      12
 #define RISCV64_EXCEPTION_LOAD_PAGE_FAULT     13
 #define RISCV64_EXCEPTION_STORE_PAGE_FAULT    15
+
+// Byte offsets corresponding to the fields of riscv64_context_switch_frame.
+#define CONTEXT_SWITCH_FRAME_OFFSET_RA REGOFF(0)
+#define CONTEXT_SWITCH_FRAME_OFFSET_S(n) REGOFF(1 + n)
+#define CONTEXT_SWITCH_FRAME_OFFSET_FS(n) REGOFF(13 + n)
+
+#define SIZEOF_CONTEXT_SWITCH_FRAME REGOFF(26)
 
 #ifndef __ASSEMBLER__
 
@@ -161,8 +170,27 @@ struct riscv64_context_switch_frame {
   unsigned long s10;
   unsigned long s11;
 
+  unsigned long fs0; // f8-f9
+  unsigned long fs1;
+
+  unsigned long fs2; // f18-f27
+  unsigned long fs3;
+  unsigned long fs4;
+  unsigned long fs5;
+  unsigned long fs6;
+  unsigned long fs7;
+  unsigned long fs8;
+  unsigned long fs9;
+  unsigned long fs10;
+  unsigned long fs11;
+
   unsigned long reserved; // stack alignment
 };
+
+static_assert(__offsetof(riscv64_context_switch_frame, ra) == CONTEXT_SWITCH_FRAME_OFFSET_RA, "");
+static_assert(__offsetof(riscv64_context_switch_frame, s0) == CONTEXT_SWITCH_FRAME_OFFSET_S(0), "");
+static_assert(__offsetof(riscv64_context_switch_frame, fs0) == CONTEXT_SWITCH_FRAME_OFFSET_FS(0), "");
+static_assert(sizeof(riscv64_context_switch_frame) == SIZEOF_CONTEXT_SWITCH_FRAME, "");
 
 extern "C" void riscv64_exception_entry(void);
 extern "C" void riscv64_context_switch(vaddr_t *old_sp, vaddr_t new_sp);
