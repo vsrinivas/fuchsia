@@ -14,3 +14,9 @@ extend uint fuchsia.BIND_ACPI_BUS_TYPE {
   SPI = 2,
   I2C = 3,
 };
+
+// ACPI HID.
+string hid;
+
+// First ACPI CID, until there's a better way to handle lists in bind programs.
+string first_cid;

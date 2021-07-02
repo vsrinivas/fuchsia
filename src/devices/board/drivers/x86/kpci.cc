@@ -580,8 +580,9 @@ zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object, ACPI_DEVICE_
   // Publish PCI root as /dev/sys/platform/ level.
   // Only publish one PCI root device for all PCI roots
   // TODO: store context for PCI root protocol
-  std::array<zx_device_prop_t, 4> props;
-  auto args = get_device_add_args("pci", info, &props);
+  device_add_args_t args{
+      .name = "pci",
+  };
   auto device =
       std::make_unique<acpi::Device>(platform_bus, object, platform_bus, std::move(acpi_bdfs));
 

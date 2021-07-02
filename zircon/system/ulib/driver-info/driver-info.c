@@ -176,10 +176,8 @@ const char* di_bind_param_name(uint32_t param_num) {
       return "PlatDev.PID";
     case BIND_PLATFORM_DEV_DID:
       return "PlatDev.DID";
-    case BIND_ACPI_HID_0_3:
-      return "ACPI.HID[0-3]";
-    case BIND_ACPI_HID_4_7:
-      return "ACPI.HID[4-7]";
+    case BIND_ACPI_BUS_TYPE:
+      return "ACPI.BusType";
     case BIND_IHDA_CODEC_VID:
       return "IHDA.Codec.VID";
     case BIND_IHDA_CODEC_DID:

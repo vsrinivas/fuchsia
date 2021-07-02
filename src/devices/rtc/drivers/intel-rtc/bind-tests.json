@@ -4,8 +4,7 @@
         "expected": "match",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_ACPI_HID_0_3": "0x504e5030",
-            "fuchsia.BIND_ACPI_HID_4_7": "0x42303000"
+            "fuchsia.acpi.hid": "\"PNP0B00\""
         }
     },
     {
@@ -13,50 +12,31 @@
         "expected": "match",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_ACPI_CID_0_3": "0x504e5030",
-            "fuchsia.BIND_ACPI_CID_4_7": "0x42303000"
+            "fuchsia.acpi.first_cid": "\"PNP0B00\""
         }
     },
     {
-        "name": "HID_0_3 Mismatch",
+        "name": "HID Mismatch",
         "expected": "abort",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_ACPI_HID_4_7": "0x42303000"
+            "fuchsia.acpi.hid": "\"PNP0B01\""
         }
     },
     {
-        "name": "HID_4_7 Mismatch",
+        "name": "CID Mismatch",
         "expected": "abort",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_ACPI_HID_0_3": "0x504e5030"
-        }
-    },
-    {
-        "name": "CID_0_3 Mismatch",
-        "expected": "abort",
-        "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_ACPI_CID_4_7": "0x42303000"
-        }
-    },
-    {
-        "name": "CID_4_7 Mismatch",
-        "expected": "abort",
-        "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_ACPI_CID_0_3": "0x504e5030"
+            "fuchsia.acpi.first_cid": "\"PNP0B01\""
         }
     },
     {
         "name": "Missing protocol",
         "expected": "abort",
         "device": {
-            "fuchsia.BIND_ACPI_HID_0_3": "0x504e5030",
-            "fuchsia.BIND_ACPI_HID_4_7": "0x42303000",
-            "fuchsia.BIND_ACPI_CID_0_3": "0x504e5030",
-            "fuchsia.BIND_ACPI_CID_4_7": "0x42303000"
+            "fuchsia.acpi.first_cid": "\"PNP0B00\"",
+            "fuchsia.acpi.hid": "\"PNP0B00\""
         }
     }
 ]

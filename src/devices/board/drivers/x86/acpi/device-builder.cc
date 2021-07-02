@@ -111,35 +111,13 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator
 
   // Add HID and CID properties, if present.
   if (info->Valid & ACPI_VALID_HID) {
-    str_props_.emplace_back(OwnedStringProp("acpi.hid", info->HardwareId.String));
-
-    // Only publish HID{0_3,4_7} props if the HID (excluding NULL terminator) fits in 8 bytes.
-    if (info->HardwareId.Length - 1 <= sizeof(uint64_t)) {
-      dev_props_.emplace_back(zx_device_prop_t{
-          .id = BIND_ACPI_HID_0_3,
-          .value = internal::ExtractPnpIdWord(info->HardwareId, 0),
-      });
-      dev_props_.emplace_back(zx_device_prop_t{
-          .id = BIND_ACPI_HID_4_7,
-          .value = internal::ExtractPnpIdWord(info->HardwareId, 4),
-      });
-    }
+    str_props_.emplace_back(OwnedStringProp("fuchsia.acpi.hid", info->HardwareId.String));
   }
 
   if (info->Valid & ACPI_VALID_CID && info->CompatibleIdList.Count > 0) {
     auto& first = info->CompatibleIdList.Ids[0];
     // We only expose the first CID.
-    // Only publish CID{0_3,4_7} props if the CID (excluding NULL terminator) fits in 8 bytes.
-    if (first.Length - 1 <= sizeof(uint64_t)) {
-      dev_props_.emplace_back(zx_device_prop_t{
-          .id = BIND_ACPI_CID_0_3,
-          .value = internal::ExtractPnpIdWord(first, 0),
-      });
-      dev_props_.emplace_back(zx_device_prop_t{
-          .id = BIND_ACPI_CID_4_7,
-          .value = internal::ExtractPnpIdWord(first, 4),
-      });
-    }
+    str_props_.emplace_back(OwnedStringProp("fuchsia.acpi.first_cid", first.String));
   }
 
   // If our parent has a bus type, and we have an address on that bus, then we'll expose it in our

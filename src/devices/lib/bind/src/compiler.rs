@@ -324,16 +324,7 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     keys.push(("BIND_PLATFORM_DEV_INSTANCE_ID".to_string(), 0x0304));
 
     // ACPI binding variables at 0x04XX
-    // The _HID is a 7- or 8-byte string. Because a bind property is 32-bit, use 2
-    // properties to bind using the _HID. They are encoded in big endian order for
-    // human readability. In the case of 7-byte _HID's, the 8th-byte shall be 0.
-    keys.push(("BIND_ACPI_HID_0_3".to_string(), 0x0400));
-    keys.push(("BIND_ACPI_HID_4_7".to_string(), 0x0401));
-    // The _CID may be a valid HID value or a bus-specific string. The ACPI bus
-    // driver only publishes those that are valid HID values.
-    keys.push(("BIND_ACPI_CID_0_3".to_string(), 0x0402));
-    keys.push(("BIND_ACPI_CID_4_7".to_string(), 0x0403));
-    keys.push(("BIND_ACPI_BUS_TYPE".to_string(), 0x0404));
+    keys.push(("BIND_ACPI_BUS_TYPE".to_string(), 0x0400));
 
     // Intel HDA Codec binding variables at 0x05XX
     keys.push(("BIND_IHDA_CODEC_VID".to_string(), 0x0500));

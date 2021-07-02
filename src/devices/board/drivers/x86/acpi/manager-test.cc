@@ -64,8 +64,8 @@ static void ExpectProps(acpi::DeviceBuilder* b, std::vector<zx_device_prop_t> ex
         left--;
       }
     }
-    ASSERT_EQ(left, 0);
   }
+  ASSERT_EQ(left, 0);
 }
 
 class AcpiManagerTest : public zxtest::Test {
@@ -163,17 +163,14 @@ TEST_F(AcpiManagerTest, TestDeviceWithHidCid) {
   Device* test = acpi_.GetDeviceRoot()->FindByPath("\\_SB_.TEST");
   // Check the properties were generated as expected.
   acpi::DeviceBuilder* builder = manager_.LookupDevice(test);
-  ASSERT_NO_FATAL_FAILURES(ExpectProps(
-      builder,
-      {
-          zx_device_prop_t{.id = BIND_ACPI_HID_0_3, .value = 0x47474747},
-          zx_device_prop_t{.id = BIND_ACPI_HID_4_7, .value = 0x30303030},
-          zx_device_prop_t{.id = BIND_ACPI_CID_0_3, .value = 0x41414141},
-          zx_device_prop_t{.id = BIND_ACPI_CID_4_7, .value = 0x31313131},
-      },
-      {
-          zx_device_str_prop_t{.key = "acpi.hid", .property_value = str_prop_str_val("GGGG0000")},
-      }));
+  ASSERT_NO_FATAL_FAILURES(
+      ExpectProps(builder, {},
+                  {
+                      zx_device_str_prop_t{.key = "fuchsia.acpi.hid",
+                                           .property_value = str_prop_str_val("GGGG0000")},
+                      zx_device_str_prop_t{.key = "fuchsia.acpi.first_cid",
+                                           .property_value = str_prop_str_val("AAAA1111")},
+                  }));
 }
 
 TEST_F(AcpiManagerTest, TestSpiDevice) {

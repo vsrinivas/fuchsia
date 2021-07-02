@@ -67,15 +67,6 @@ zx_status_t I2cBusPublishMetadata(acpi::Acpi* acpi, zx_device_t* dev, uint8_t pc
         acpi_i2c_device_t new_dev;
         new_dev.protocol_id = ZX_PROTOCOL_I2C;
 
-        // Extract the vendor specific HW ID into our devprops if it is present.
-        zx_status_t status = acpi::ExtractHidToDevProps(*info, new_dev.props, new_dev.propcount);
-        if (status != ZX_OK) {
-          zxlogf(WARNING,
-                 "Failed to extract HID info ACPI I2C device \"%s\" on bus \"%s\" (status %d)\n",
-                 fourcc_to_string(info->Name).str, fourcc_to_string(i2c_bus_info.Name).str, status);
-          return acpi::ok();
-        }
-
         // If we have a CID, and it matches the I2C HID CID, then add the
         // I2C HID class to our devprops if we can.
         //
@@ -97,16 +88,6 @@ zx_status_t I2cBusPublishMetadata(acpi::Acpi* acpi, zx_device_t* dev, uint8_t pc
 
             new_dev.props[new_dev.propcount].id = BIND_I2C_CLASS;
             new_dev.props[new_dev.propcount++].value = I2C_CLASS_HID;
-          }
-
-          // Extract the first compatible ID into our devprops if it is present.
-          status = acpi::ExtractCidToDevProps(*info, new_dev.props, new_dev.propcount);
-          if (status != ZX_OK) {
-            zxlogf(WARNING,
-                   "Failed to extract CID info ACPI I2C device \"%s\" on bus \"%s\" (status %d)\n",
-                   fourcc_to_string(info->Name).str, fourcc_to_string(i2c_bus_info.Name).str,
-                   status);
-            return acpi::ok();
           }
         }
 

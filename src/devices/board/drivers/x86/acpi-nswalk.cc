@@ -166,55 +166,6 @@ acpi::status<UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE obj) {
 
 }  // namespace acpi
 
-device_add_args_t get_device_add_args(const char* name, ACPI_DEVICE_INFO* info,
-                                      std::array<zx_device_prop_t, 4>* out_props) {
-  uint32_t propcount = 0;
-
-  // Publish HID, and the first CID (if present), in device props
-  if (zx_status_t status = acpi::ExtractHidToDevProps(*info, *out_props, propcount);
-      status != ZX_OK) {
-    zxlogf(WARNING, "Failed to extract HID into dev_props for acpi device \"%s\" (status %d)\n",
-           fourcc_to_string(info->Name).str, status);
-  }
-  if (zx_status_t status = acpi::ExtractCidToDevProps(*info, *out_props, propcount);
-      status != ZX_OK) {
-    zxlogf(WARNING, "Failed to extract CID into dev_props for acpi device \"%s\" (status %d)\n",
-           fourcc_to_string(info->Name).str, status);
-  }
-
-  if (zxlog_level_enabled(TRACE)) {
-    // ACPI names are always 4 characters in a uint32
-    zxlogf(TRACE, "acpi: got device %s", fourcc_to_string(info->Name).str);
-    if (info->Valid & ACPI_VALID_HID) {
-      zxlogf(TRACE, "     HID=%s", info->HardwareId.String);
-    } else {
-      zxlogf(TRACE, "     HID=invalid");
-    }
-    if (info->Valid & ACPI_VALID_ADR) {
-      zxlogf(TRACE, "     ADR=0x%" PRIx64 "", (uint64_t)info->Address);
-    } else {
-      zxlogf(TRACE, "     ADR=invalid");
-    }
-    if (info->Valid & ACPI_VALID_CID) {
-      zxlogf(TRACE, "    CIDS=%d", info->CompatibleIdList.Count);
-      for (uint i = 0; i < info->CompatibleIdList.Count; i++) {
-        zxlogf(TRACE, "     [%u] %s", i, info->CompatibleIdList.Ids[i].String);
-      }
-    } else {
-      zxlogf(TRACE, "     CID=invalid");
-    }
-    zxlogf(TRACE, "    devprops:");
-    for (size_t i = 0; i < propcount; i++) {
-      zxlogf(TRACE, "     [%zu] id=0x%08x value=0x%08x", i, (*out_props)[i].id,
-             (*out_props)[i].value);
-    }
-  }
-
-  return {.name = name,
-          .props = (propcount > 0) ? out_props->data() : nullptr,
-          .prop_count = propcount};
-}
-
 zx_status_t acpi_suspend(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
                          uint8_t* out_state) {
   switch (suspend_reason & DEVICE_MASK_SUSPEND_REASON) {

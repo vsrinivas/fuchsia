@@ -8,8 +8,7 @@
     },
     {
         "device": {
-            "fuchsia.BIND_ACPI_HID_0_3": "0x47465348",
-            "fuchsia.BIND_ACPI_HID_4_7": "0x30303033",
+            "fuchsia.acpi.hid": "\"GFSH0000\"",
             "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE"
         },
         "expected": "abort",
@@ -17,8 +16,7 @@
     },
     {
         "device": {
-            "fuchsia.BIND_ACPI_HID_0_3": "0x47465348",
-            "fuchsia.BIND_ACPI_HID_4_7": "0x30303036",
+            "fuchsia.acpi.hid": "\"GFSH0006\"",
             "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE"
         },
         "expected": "match",
