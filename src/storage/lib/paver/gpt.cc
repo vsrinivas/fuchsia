@@ -305,7 +305,7 @@ zx::status<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::Init
       "Please run *one* of the following command(s):\n");
 
   for (const auto& [gpt_path, _] : gpt_devices) {
-    ERROR("install-disk-image init-partition-tables --block-device %s\n", gpt_path.c_str());
+    ERROR("fx init-partition-tables %s\n", gpt_path.c_str());
   }
 
   return zx::error(ZX_ERR_NOT_FOUND);
