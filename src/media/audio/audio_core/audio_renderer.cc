@@ -26,10 +26,7 @@ AudioRenderer::AudioRenderer(
 }
 
 AudioRenderer::~AudioRenderer() {
-  // This happens in ReportStop, which is called via BaseRenderer::~BaseRenderer(),
-  // however that destructor does not call AudioRenderer::ReportStop because the subclass
-  // (AudioRenderer) has already been destructed.
-  context().audio_admin().UpdateRendererState(usage_, false, this);
+  AudioRenderer::ReportStop();
   context().volume_manager().RemoveStream(this);
 }
 
@@ -38,6 +35,11 @@ void AudioRenderer::OnLinkAdded() {
   context().volume_manager().NotifyStreamChanged(this);
 
   BaseRenderer::OnLinkAdded();
+}
+
+void AudioRenderer::Shutdown() {
+  BaseRenderer::Shutdown();
+  gain_control_bindings_.CloseAll();
 }
 
 void AudioRenderer::ReportStart() {

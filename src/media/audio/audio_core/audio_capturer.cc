@@ -168,6 +168,7 @@ void AudioCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
     return;
   }
 
+  ReportStop();
   usage_ = CaptureUsageFromFidlCaptureUsage(usage);
   reporter().SetUsage(usage_);
   context().volume_manager().NotifyStreamChanged(this);
