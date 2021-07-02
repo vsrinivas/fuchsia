@@ -59,10 +59,10 @@ class Canary {
     magic_ = 0;
   }
 
-  // ZX_DEBUG_ASSERT that the value of |magic_| is as expected.
+  // ZX_ASSERT that the value of |magic_| is as expected.
   void Assert() const {
-    ZX_DEBUG_ASSERT_MSG(Valid(), "Invalid canary (expt: %08x, got: %08x)\n",
-                        static_cast<uint32_t>(magic), magic_);
+    ZX_ASSERT_MSG(Valid(), "Invalid canary (expt: %08x, got: %08x)\n", static_cast<uint32_t>(magic),
+                  magic_);
   }
 
   // Some places have special handling of bad magic values. For theses
