@@ -100,15 +100,16 @@ if an update is necessary.
 
 ## Staging an update {#staging-update}
 
-Regardless if an update was triggered by `omaha-client` or `system-update-checker`,
+Regardless of whether an update was triggered by `omaha-client`, `system-update-checker`,
 or even a forced update check, an update needs to be written to disk.
 
-The update process is divided in the following steps:
+The update process is divided into the following steps:
 
 * [Fetch update package](#fetch-update-package)
-* [Trigger garbage collection](#garbage-collection)
 * [Verify board matches](#verify-board)
 * [Verify epoch is supported](#verify-epoch)
+* [Replace retained packages set](#retained-packages)
+* [Trigger garbage collection](#garbage-collection)
 * [Fetch remaining packages](#fetch-reamaining-packages)
 * [Write images to block device](#write-images-block-device)
 * [Set alternate partition as active](#set-alternate-active)
@@ -122,28 +123,32 @@ partitioned in practice.
 
 ### Fetch update package {#fetch-update-package}
 
-The `system-updater` fetches the [update package], using the provided update package URL.
-The dynamic index is then updated to reference the new update package. A sample update package may
-look like this:
+The `system-updater` fetches the [update package], using the
+[provided update package URL][system-updater-url-fidl]. The dynamic index is then updated to
+reference the new update package. A sample update package may look like this:
 
 ```
 /board
 /epoch.json
 /firmware
 /fuchsia.vbmeta
-/meta
 /packages.json
 /recovery.vbmeta
 /version
 /zbi.signed
 /zedboot.signed
+/meta/contents
+/meta/package
 ```
 
-If the fetch fails because there's not enough space, the `system-updater` will trigger a garbage
-collection to delete all BLOBs that aren’t referenced in either the static or dynamic indexes. After
-the garbage collection, the `system-updater` will retry the fetch. If the retry fails, the
-`system-updater` will trigger a more-aggressive garbage collection and once again retry to fetch
-the update package.
+If the fetch fails because there's not enough space, the `system-updater` will trigger garbage
+collection to delete all BLOBs that aren’t referenced in either the static or dynamic indexes or
+the retained packages set. After garbage collection, the `system-updater` will retry the fetch. If
+the retry fails, the `system-updater` will [replace][replace-retained-packages-fidl] the retained
+packages set with just the update package it is trying to fetch (if the update package URL
+included the [hash](/docs/concepts/packages/package_url.md#package-hash), otherwise it will clear
+the retained package set) and then again trigger garbage collection and retry the update package
+fetch.
 
 ![Figure: Fetch update package](images/resolve-update-pkg.png)
 
@@ -152,7 +157,7 @@ update package. We assume the `system-updater` failed to fetch the update packag
 inadequate space, triggered a garbage collection to evict the version 0 blobs referenced by slot B,
 and then retried to successfully fetch the version 2 update package.
 
-Optionally, update packages may contain an `update-mode` file. This file
+Optionally, the update package may contain an `update-mode` file. This file
 determines whether the system update happens in Normal or ForceRecovery
 mode. If the update-mode file is not present, the `system-updater`
 defaults to the Normal mode.
@@ -160,16 +165,6 @@ defaults to the Normal mode.
 When the mode is ForceRecovery, the `system-updater` writes an image to recovery,
 marks slots A and B as unbootable, then boots to recovery. For more information,
 see the [implementation of ForceRecovery][recovery-mode-code].
-
-### Trigger garbage collection {#garbage-collection}
-
-A garbage collection is triggered to delete all BLOBs exclusive to the old system.
-This step frees up additional space for any new packages.
-
-![Figure: Garbage collection](images/gc.png)
-
-**Figure 5**. The `system-updater` instructs `pkg-cache` to garbage collect all BLOBs exclusive to
-the old system. In this example, it means `pkg-cache` will evict BLOBs exclusively referenced by the version 1 update package.
 
 ### Verify board matches {#verify-board}
 
@@ -179,20 +174,46 @@ file in the update package.
 
 ![Figure: Verify board matches](images/verify-board.png)
 
-**Figure 6**. The `system-updater` verifies the board in the update package matches the board
+**Figure 5**. The `system-updater` verifies the board in the update package matches the board
 on slot A.
 
 ### Verify epoch is supported {#verify-epoch}
 
-Update packages contain an epoch file (`epoch.json`). If the epoch of the update
+The update package contains an epoch file (`epoch.json`). If the epoch of the update
 package (the target epoch) is less than the epoch of the `system-updater`
 (the source epoch), the OTA fails. For additional context,
 see [RFC-0071](/docs/contribute/governance/rfcs/0071_ota_backstop.md).
 
 ![Figure: Verify epoch is supported](images/verify-epoch.png)
 
-**Figure 7**. The `system-updater` verifies the epoch in the update package is supported by
+**Figure 6**. The `system-updater` verifies the epoch in the update package is supported by
 comparing it to the epoch of the current OS.
+
+### Replace retained packages set {#retained-packages}
+
+[Replace][replace-retained-packages-fidl] the retained packages set with the current update package
+and all of the packages that will be fetched later in the OTA process.
+
+The retained packages set is a set of packages that are protected from garbage collection (in
+addition to the packages in the static and dynamic indexes). It is used to prevent garbage
+collection from deleting BLOBs needed by the current update process. For example, consider a device
+that fetched some of the packages needed for an update and then rebooted for unrelated reasons. When
+the device starts to OTA again, it still needs the packages it fetched before rebooting, but those
+packages are not protected by the dynamic index (which, like the retained packages set, is cleared
+on reboot). By adding those packages to the retained packages set, the `system-updater` can then
+trigger garbage collection (to e.g. remove blobs used by a previous system version) without undoing
+past work.
+
+### Trigger garbage collection {#garbage-collection}
+
+Garbage collection is triggered to delete all BLOBs exclusive to the old system.
+This step frees up additional space for any new packages.
+
+![Figure: Garbage collection](images/gc.png)
+
+**Figure 7**. The `system-updater` instructs `pkg-cache` to garbage collect all BLOBs exclusive to
+the old system. In this example, it means `pkg-cache` will evict BLOBs exclusively referenced by
+the version 1 update package.
 
 ### Fetch remaining packages {#fetch-reamaining-packages}
 
@@ -210,10 +231,9 @@ The `packages.json` looks like the following:
 }
 ```
 
-The `system-updater` instructs the `pkg-resolver` to resolve all the package URLs.
-When fetching packages, the package management system only fetches BLOBs that
-are required for an update. This means that only BLOBs that don't exist or need
-to be updated on the system. The package management system fetches entire BLOBs,
+The `system-updater` instructs the `pkg-resolver` to resolve all the package URLs. When resolving
+packages, the package management system only fetches BLOBs that are required for an update, i.e.
+only those BLOBs that aren't already present. The package management system fetches entire BLOBs,
 as opposed to a diff of whatever might currently be on the system.
 
 Once all packages have been feteched, a BlobFS sync is triggered to flush the
@@ -407,3 +427,5 @@ After this, the update is considered committed. This means:
 [FIDL service]: https://fuchsia.dev/reference/fidl/fuchsia.paver#BootManager.SetActiveConfigurationHealthy
 [kAbrMaxPriority]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/firmware/lib/abr/include/lib/abr/data.h;l=28;drc=bea16aa2d8a0bbc293a82ed44e03525ebe13bc94
 [flow-c]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/firmware/lib/abr/flow.c;l=197;drc=bea16aa2d8a0bbc293a82ed44e03525ebe13bc94
+[replace-retained-packages-fidl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.pkg/cache.fidl;l=216;drc=a265f6e224c76f783a14bce7c24b085b90cc3ad8
+[system-updater-url-fidl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/pkg/fidl/fuchsia.update.installer/installer.fidl;l=53;drc=896f3220d71b442b44da13bc04a5634993488330
