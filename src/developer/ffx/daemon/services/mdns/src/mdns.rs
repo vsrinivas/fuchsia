@@ -426,6 +426,10 @@ fn make_listen_socket(listen_addr: SocketAddr) -> Result<UdpSocket> {
                     &SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), listen_addr.port()).into(),
                 )
                 .context("bind")?;
+            // For some reason this often fails to bind on Mac, so avoid it and
+            // use the interface binding loop to get multicast group joining to
+            // work.
+            #[cfg(not(target_os = "macos"))]
             socket.join_multicast_v6(&MDNS_MCAST_V6, 0).context("join_multicast_v6")?;
             socket
         }
