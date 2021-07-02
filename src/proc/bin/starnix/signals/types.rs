@@ -58,7 +58,7 @@ impl Eq for Signal {}
 impl Signal {
     /// Returns the bitmask for this signal number.
     pub fn mask(&self) -> u64 {
-        1 << self.number
+        1 << (self.number - 1)
     }
 
     /// Returns true if the signal is a real-time signal.

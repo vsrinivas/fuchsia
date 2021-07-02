@@ -130,6 +130,9 @@ gvisor_test_component("pipe_test") {
 gvisor_test_component("sigaction_test") {
 }
 
+gvisor_test_component("sigprocmask_test") {
+}
+
 fuchsia_test_package("test_android_distro") {
   deps = [
     ":android_system_image",
@@ -143,6 +146,7 @@ fuchsia_test_package("test_android_distro") {
     ":pipe_test",
     ":sh_test",
     ":sigaction_test",
+    ":sigprocmask_test",
     ":syscalls_test",
   ]
 

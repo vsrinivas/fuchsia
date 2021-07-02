@@ -71,6 +71,13 @@ pub fn sys_rt_sigprocmask(
         _ => return Err(EINVAL),
     };
 
+    // Read the new mask. This must be done before the old maks is written to `user_old_set`
+    // since it might point to the same location as `user_set`.
+    let mut new_mask = sigset_t::default();
+    if !user_set.is_null() {
+        ctx.task.mm.read_object(user_set, &mut new_mask)?;
+    }
+
     let mut signal_mask = ctx.task.signal_mask.lock();
     // If old_set is not null, store the previous value in old_set.
     if !user_old_set.is_null() {
@@ -81,9 +88,6 @@ pub fn sys_rt_sigprocmask(
     if user_set.is_null() {
         return Ok(SUCCESS);
     }
-
-    let mut new_mask = sigset_t::default();
-    ctx.task.mm.read_object(user_set, &mut new_mask)?;
 
     let mut updated_signal_mask = match how {
         SIG_BLOCK => (*signal_mask | new_mask),
