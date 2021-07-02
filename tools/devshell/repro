@@ -83,15 +83,18 @@ function repro {
     build_url="https://luci-milo.appspot.com/p/${project}/builders/${bucket}/${builder}/b${build_id}"
   fi
 
-  # Note that it's not a strict requirement that a fint params file have the
-  # same name as its builder; it just happens to be the case for most builders
-  # (except the builder that do multiple builds and thus have multiple fint
-  # params files).
-  # TODO(olivernewman): Expose the entire contents of the fint params file
-  # contents from the builder as an output property and have this script
-  # retrieve that property instead of reading from disk to ensure that we
-  # always use the same version of the fint params as infra does.
-  fint_params_file_relative="integration/infra/config/generated/${project}/specs/${bucket}/${builder}.fint.textproto"
+  fint_params_file_relative="$(get_fint_params_path)"
+  # Older builds don't emit the fint params path as an output property, so we
+  # have to fall back to a more fragile approach for constructing the path.
+  # TODO(olivernewman): Delete this more fragile logic after we no longer need
+  # to reproduce any builds from before fxrev.dev/551763 landed.
+  if [[ -z "$fint_params_file_relative" ]]; then
+    # Note that it's not a strict requirement that a fint params file have the
+    # same name as its builder; it just happens to be the case for most builders
+    # (except the builders that do multiple builds and thus have multiple fint
+    # params files).
+    fint_params_file_relative="integration/infra/config/generated/${project}/specs/${bucket}/${builder}.fint.textproto"
+  fi
   fint_params_file="${FUCHSIA_DIR}/${fint_params_file_relative}"
 
   if [[ ! -f "${fint_params_file}" ]]; then
@@ -240,6 +243,12 @@ function get_builder_field {
 # Returns a space-separated list of all the tests that failed for the build.
 function get_failed_tests {
   jq '.output.properties.failed_test_names? // [] | unique | join(" ")' "$build"
+}
+
+# Returns the fint params path used by the build. Older builds may not have this
+# property set.
+function get_fint_params_path {
+  jq '.output.properties.fint_params_path? // ""' "$build"
 }
 
 # Returns "true" or "false" depending on whether the build exposes a
