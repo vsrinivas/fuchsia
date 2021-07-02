@@ -5,7 +5,7 @@
 use {fidl_fidl_examples_routing_echo as fecho, fuchsia_component::client::connect_to_protocol};
 
 #[fuchsia::test]
-async fn echo_integration_test() {
+async fn test_echo() {
     const ECHO_STRING: &str = "Hello, world!";
     let echo = connect_to_protocol::<fecho::EchoMarker>().expect("error connecting to echo");
     let out = echo.echo_string(Some(ECHO_STRING)).await.expect("echo_string failed");

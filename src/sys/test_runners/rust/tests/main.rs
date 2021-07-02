@@ -13,7 +13,8 @@ use {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_echo_test() {
-    let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/echo-test-realm.cm";
+    let test_url =
+        "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/echo_integration_test.cm";
     let (events, _logs) = run_test(test_url, false, Some(10), vec![]).await.unwrap();
 
     let expected_events = vec![

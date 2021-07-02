@@ -17,10 +17,19 @@ group("test_data") {
 fuchsia_package("rust-test-runner-example") {
   testonly = true
   deps = [
+    ":echo-example",
     "concurrency-test",
-    "echo-example",
     "huge-rust-tests",
     "no-rust-tests",
     "sample-rust-tests",
+  ]
+}
+
+group("echo-example") {
+  testonly = true
+  public_deps = [
+    "//examples/components/routing/echo_server:echo_server_component",
+    "//examples/components/routing/integration_tests:echo_integration_test_component",
+    "//examples/components/routing/integration_tests:echo_integration_test_driver",
   ]
 }
