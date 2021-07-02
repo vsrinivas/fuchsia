@@ -204,7 +204,8 @@ std::unique_ptr<fidl_codec::Value> SyscallInputOutputBase::GenerateValue(
 }
 
 bool SyscallInputOutputBase::GetAutomationInstructions(
-    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_input, Syscall& syscall) {
+    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall) {
   return false;
 }
 
@@ -484,24 +485,53 @@ void Syscall::ComputeStatistics(const OutputEvent* event) const {
 }
 
 bool ComputeAutomation(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+                       debug_ipc::Arch arch,
                        const std::vector<std::unique_ptr<SyscallInputOutputBase>>& fields,
                        bool is_invoked, Syscall& syscall) {
   bool fully_automated = true;
   for (const auto& field : fields) {
-    if (!field->conditions()->empty() ||
-        !field->GetAutomationInstructions(argument_indexes, is_invoked, syscall)) {
+    std::vector<debug_ipc::AutomationCondition> automation_conditions;
+    for (const auto& condition : *(field->conditions())) {
+      if (!condition->ComputeAutomationCondition(argument_indexes, is_invoked, arch, syscall,
+                                                 automation_conditions)) {
+        continue;
+      }
+    }
+    if (!field->GetAutomationInstructions(argument_indexes, is_invoked, automation_conditions,
+                                          syscall)) {
       fully_automated = false;
     }
   }
   return fully_automated;
 }
 
-void Syscall::ComputeAutomation(const std::vector<debug_ipc::RegisterID>& argument_indexes) {
+void Syscall::ComputeAutomation(debug_ipc::Arch arch) {
   if (invoked_bp_instructions_.size() + exit_bp_instructions_.size() > 0) {
     return;
   }
-  bool initial_automated = fidlcat::ComputeAutomation(argument_indexes, inputs_, true, *this);
-  bool exit_automated = fidlcat::ComputeAutomation(argument_indexes, outputs_, false, *this);
+
+  static const std::vector<debug_ipc::RegisterID> amd64_argument_indexes = {
+      debug_ipc::RegisterID::kX64_rdi, debug_ipc::RegisterID::kX64_rsi,
+      debug_ipc::RegisterID::kX64_rdx, debug_ipc::RegisterID::kX64_rcx,
+      debug_ipc::RegisterID::kX64_r8,  debug_ipc::RegisterID::kX64_r9};
+
+  static const std::vector<debug_ipc::RegisterID> arm64_argument_indexes = {
+      debug_ipc::RegisterID::kARMv8_x0, debug_ipc::RegisterID::kARMv8_x1,
+      debug_ipc::RegisterID::kARMv8_x2, debug_ipc::RegisterID::kARMv8_x3,
+      debug_ipc::RegisterID::kARMv8_x4, debug_ipc::RegisterID::kARMv8_x5,
+      debug_ipc::RegisterID::kARMv8_x6, debug_ipc::RegisterID::kARMv8_x7};
+  const std::vector<debug_ipc::RegisterID>* arg_index;
+  if (arch == debug_ipc::Arch::kX64) {
+    arg_index = &amd64_argument_indexes;
+  } else if (arch == debug_ipc::Arch::kArm64) {
+    arg_index = &arm64_argument_indexes;
+  } else {
+    FX_LOGS(ERROR) << "Unknown architecture";
+    return;
+  }
+
+  bool initial_automated = fidlcat::ComputeAutomation(*arg_index, arch, inputs_, true, *this);
+  bool exit_automated = fidlcat::ComputeAutomation(*arg_index, arch, outputs_, false, *this);
   fully_automated_ = initial_automated && exit_automated;
   debug_ipc::AutomationInstruction clear_instr;
   if (invoked_bp_instructions_.size() + exit_bp_instructions_.size() > 0) {

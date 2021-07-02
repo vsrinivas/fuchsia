@@ -67,6 +67,20 @@ THREAD_CREATE_DISPLAY_TEST(ZxThreadCreate, ZX_OK,
                            "  -> \x1B[32mZX_OK\x1B[0m ("
                            "out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
+CREATE_AUTOMATION_TEST(ZxThreadCreateAutomation, "zx_thread_create", ZX_OK,
+                       "Invoked bp instructions:\n"
+                       "  load_memory rsi, rdx\n"
+                       "  stored_value(0) = r8\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  clear_stored_values\n",
+                       "Invoked bp instructions:\n"
+                       "  load_memory x1, x2\n"
+                       "  stored_value(0) = x4\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  clear_stored_values\n");
+
 // zx_thread_start tests.
 
 std::unique_ptr<SystemCallTest> ZxThreadStart(int64_t result, std::string_view result_name,

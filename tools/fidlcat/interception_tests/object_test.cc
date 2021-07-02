@@ -480,6 +480,53 @@ OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "value: \x1B[32mzx.exception_state\x1B[0m = \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n");
 
+CREATE_AUTOMATION_TEST(
+    ZxObjectGetPropertyAutomation, "zx_object_get_property", ZX_OK,
+    "Invoked bp instructions:\n"
+    "  stored_value(0) = rsi\n"
+    "  stored_value(1) = rdx. conditions: stored_value(0) == 3\n"
+    "  stored_value(2) = rcx. conditions: stored_value(0) == 3\n"
+    "  stored_value(3) = rsi\n"
+    "  stored_value(4) = rdx. conditions: stored_value(3) == 5\n"
+    "  stored_value(5) = rsi\n"
+    "  stored_value(6) = rdx. conditions: stored_value(5) == 6\n"
+    "  stored_value(7) = rsi\n"
+    "  stored_value(8) = rdx. conditions: stored_value(7) == 12\n"
+    "  stored_value(9) = rsi\n"
+    "  stored_value(10) = rdx. conditions: stored_value(9) == 13\n"
+    "  stored_value(11) = rsi\n"
+    "  stored_value(12) = rdx. conditions: stored_value(11) == 16\n"
+    "Exit bp instructions:\n"
+    "  load_memory stored_value(1), stored_value(2). conditions: stored_value(0) == 3\n"
+    "  load_memory stored_value(4), 8. conditions: stored_value(3) == 5\n"
+    "  load_memory stored_value(6), 8. conditions: stored_value(5) == 6\n"
+    "  load_memory stored_value(8), 8. conditions: stored_value(7) == 12\n"
+    "  load_memory stored_value(10), 8. conditions: stored_value(9) == 13\n"
+    "  load_memory stored_value(12), 4. conditions: stored_value(11) == 16\n"
+    "  clear_stored_values\n",
+    "Invoked bp instructions:\n"
+    "  stored_value(0) = x1\n"
+    "  stored_value(1) = x2. conditions: stored_value(0) == 3\n"
+    "  stored_value(2) = x3. conditions: stored_value(0) == 3\n"
+    "  stored_value(3) = x1\n"
+    "  stored_value(4) = x2. conditions: stored_value(3) == 5\n"
+    "  stored_value(5) = x1\n"
+    "  stored_value(6) = x2. conditions: stored_value(5) == 6\n"
+    "  stored_value(7) = x1\n"
+    "  stored_value(8) = x2. conditions: stored_value(7) == 12\n"
+    "  stored_value(9) = x1\n"
+    "  stored_value(10) = x2. conditions: stored_value(9) == 13\n"
+    "  stored_value(11) = x1\n"
+    "  stored_value(12) = x2. conditions: stored_value(11) == 16\n"
+    "Exit bp instructions:\n"
+    "  load_memory stored_value(1), stored_value(2). conditions: stored_value(0) == 3\n"
+    "  load_memory stored_value(4), 8. conditions: stored_value(3) == 5\n"
+    "  load_memory stored_value(6), 8. conditions: stored_value(5) == 6\n"
+    "  load_memory stored_value(8), 8. conditions: stored_value(7) == 12\n"
+    "  load_memory stored_value(10), 8. conditions: stored_value(9) == 13\n"
+    "  load_memory stored_value(12), 4. conditions: stored_value(11) == 16\n"
+    "  clear_stored_values\n");
+
 // zx_object_set_property tests.
 
 std::unique_ptr<SystemCallTest> ZxObjectSetProperty(int64_t result, std::string_view result_name,
@@ -710,6 +757,30 @@ OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(
     "value: \x1B[32mzx.exception_state\x1B[0m = \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+CREATE_AUTOMATION_TEST(ZxObjectSetPropertyAutomation, "zx_object_set_property", ZX_OK,
+                       "Invoked bp instructions:\n"
+                       "  load_memory rdx, rcx. conditions: rsi == 3\n"
+                       "  load_memory rdx, 8. conditions: rsi == 4\n"
+                       "  load_memory rdx, 8. conditions: rsi == 2\n"
+                       "  load_memory rdx, 8. conditions: rsi == 5\n"
+                       "  load_memory rdx, 8. conditions: rsi == 12\n"
+                       "  load_memory rdx, 8. conditions: rsi == 13\n"
+                       "  load_memory rdx, 8. conditions: rsi == 15\n"
+                       "  load_memory rdx, 4. conditions: rsi == 16\n"
+                       "Exit bp instructions:\n"
+                       "  clear_stored_values\n",
+                       "Invoked bp instructions:\n"
+                       "  load_memory x2, x3. conditions: x1 == 3\n"
+                       "  load_memory x2, 8. conditions: x1 == 4\n"
+                       "  load_memory x2, 8. conditions: x1 == 2\n"
+                       "  load_memory x2, 8. conditions: x1 == 5\n"
+                       "  load_memory x2, 8. conditions: x1 == 12\n"
+                       "  load_memory x2, 8. conditions: x1 == 13\n"
+                       "  load_memory x2, 8. conditions: x1 == 15\n"
+                       "  load_memory x2, 4. conditions: x1 == 16\n"
+                       "Exit bp instructions:\n"
+                       "  clear_stored_values\n");
 
 // zx_object_get_info tests.
 

@@ -795,6 +795,11 @@ class SyscallInputOutputConditionBase {
 
   // True if the condition is satisfied.
   virtual bool True(SyscallDecoderInterface* decoder, Stage stage) const = 0;
+
+  virtual bool ComputeAutomationCondition(
+      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+      debug_ipc::Arch arch, Syscall& syscall,
+      std::vector<debug_ipc::AutomationCondition>& condition_vect) const = 0;
 };
 
 // Condition that a syscall argument must meet.
@@ -816,6 +821,11 @@ class SyscallInputOutputCondition : public SyscallInputOutputConditionBase {
     return access_->Value(decoder, stage) == value_;
   }
 
+  bool ComputeAutomationCondition(
+      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+      debug_ipc::Arch arch, Syscall& syscall,
+      std::vector<debug_ipc::AutomationCondition>& condition_vect) const override;
+
  private:
   // Access to the syscall argument.
   const std::unique_ptr<Access<Type>> access_;
@@ -836,6 +846,13 @@ class SyscallInputOutputArchCondition : public SyscallInputOutputConditionBase {
 
   bool True(SyscallDecoderInterface* decoder, Stage /*stage*/) const override {
     return decoder->arch() == arch_;
+  }
+
+  bool ComputeAutomationCondition(
+      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+      debug_ipc::Arch arch, Syscall& syscall,
+      std::vector<debug_ipc::AutomationCondition>& condition_vect) const override {
+    return arch_ == arch;
   }
 
  private:
@@ -913,8 +930,9 @@ class SyscallInputOutputBase {
   }
 
   // Returns true if everything which needs memory has generated automation instructions.
-  virtual bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
-                                         bool is_invoked, Syscall& syscall);
+  virtual bool GetAutomationInstructions(
+      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+      const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall);
 
  private:
   // For ouput arguments, condition the error code must meet.
@@ -949,10 +967,30 @@ class SyscallInputOutput : public SyscallInputOutputBase {
   }
 
   bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
-                                 bool is_invoked, Syscall& syscall) override;
+                                 bool is_invoked,
+                                 const std::vector<debug_ipc::AutomationCondition>& conditions,
+                                 Syscall& syscall) override {
+    return true;
+  }
+
+  const Access<Type>* access_ptr() const { return access_.get(); }
 
  private:
   const std::unique_ptr<Access<Type>> access_;
+};
+
+// An input/output which only displays a pointer.  This is always displayed inline.
+template <typename Type>
+class SyscallInputOutputPointer : public SyscallInputOutput<Type> {
+ public:
+  SyscallInputOutputPointer(int64_t error_code, std::string_view name,
+                            std::unique_ptr<Access<Type>> access)
+      : SyscallInputOutput<Type>(error_code, name, std::move(access)) {}
+
+  bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+                                 bool is_invoked,
+                                 const std::vector<debug_ipc::AutomationCondition>& conditions,
+                                 Syscall& syscall) override;
 };
 
 // An input/output which displays actual/requested. This is always displayed inline.
@@ -1025,6 +1063,11 @@ class SyscallInputOutputIndirect : public SyscallInputOutputBase {
   std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override;
 
+  bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+                                 bool is_invoked,
+                                 const std::vector<debug_ipc::AutomationCondition>& conditions,
+                                 Syscall& syscall) override;
+
  private:
   // Type of the value.
   SyscallType syscall_type_;
@@ -1077,6 +1120,11 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
       }
     }
   }
+
+  bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+                                 bool is_invoked,
+                                 const std::vector<debug_ipc::AutomationCondition>& conditions,
+                                 Syscall& syscall) override;
 
  private:
   // Type of one buffer item.
@@ -1175,6 +1223,11 @@ class SyscallInputOutputString : public SyscallInputOutputBase {
       }
     }
   }
+
+  bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+                                 bool is_invoked,
+                                 const std::vector<debug_ipc::AutomationCondition>& conditions,
+                                 Syscall& syscall) override;
 
  private:
   const std::unique_ptr<Access<FromType>> string_;
@@ -1697,9 +1750,10 @@ class Syscall {
 
   // Adds an inline output to display.
   template <typename Type>
-  SyscallInputOutput<Type>* Output(int64_t error_code, std::string_view name,
-                                   std::unique_ptr<Access<Type>> access) {
-    auto object = std::make_unique<SyscallInputOutput<Type>>(error_code, name, std::move(access));
+  SyscallInputOutputPointer<Type>* Output(int64_t error_code, std::string_view name,
+                                          std::unique_ptr<Access<Type>> access) {
+    auto object =
+        std::make_unique<SyscallInputOutputPointer<Type>>(error_code, name, std::move(access));
     auto result = object.get();
     outputs_.push_back(std::move(object));
     return result;
@@ -1812,18 +1866,18 @@ class Syscall {
 
   void ComputeStatistics(const OutputEvent* event) const;
 
-  void ComputeAutomation(const std::vector<debug_ipc::RegisterID>& argument_indexes);
+  void ComputeAutomation(debug_ipc::Arch arch);
 
   // This function stores the value of the operand passed to it when the invoked breakpoint is hit.
   // Then it modifies the operand so that when the exit breakpoint is hit it will load the stored
   // value.
-  void EnsureOutputValue(debug_ipc::AutomationOperand* operand) {
+  void EnsureOutputValue(debug_ipc::AutomationOperand* operand,
+                         const std::vector<debug_ipc::AutomationCondition>& conditions) {
     if (operand->kind() == debug_ipc::AutomationOperandKind::kRegister ||
         operand->kind() == debug_ipc::AutomationOperandKind::kStackSlot ||
         operand->kind() == debug_ipc::AutomationOperandKind::kRegisterTimesConstant) {
       debug_ipc::AutomationInstruction store_instr;
-      store_instr.InitComputeAndStore(*operand, next_stored_value_index_,
-                                      std::vector<debug_ipc::AutomationCondition>());
+      store_instr.InitComputeAndStore(*operand, next_stored_value_index_, conditions);
       AddAutomationInstruction(true, store_instr);
       operand->InitStoredValue(next_stored_value_index_);
       ++next_stored_value_index_;
@@ -2467,20 +2521,37 @@ std::unique_ptr<fidl_codec::Value> Access<Type>::GenerateValue(SyscallDecoderInt
 }
 
 template <typename Type>
-bool SyscallInputOutput<Type>::GetAutomationInstructions(
-    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked, Syscall& syscall) {
-  debug_ipc::AutomationOperand access_value = access_->ComputeAutomationOperand(argument_indexes);
-  if (is_invoked) {
-    return true;
+bool SyscallInputOutputCondition<Type>::ComputeAutomationCondition(
+    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    debug_ipc::Arch arch, Syscall& syscall,
+    std::vector<debug_ipc::AutomationCondition>& condition_vect) const {
+  debug_ipc::AutomationCondition condition;
+  debug_ipc::AutomationOperand operand = access_->ComputeAutomationOperand(argument_indexes);
+  if (!is_invoked) {
+    syscall.EnsureOutputValue(&operand, std::vector<debug_ipc::AutomationCondition>());
   }
+  condition.InitEquals(operand, static_cast<uint64_t>(value_));
+  condition_vect.emplace_back(condition);
+  return true;
+}
+
+template <typename Type>
+bool SyscallInputOutputPointer<Type>::GetAutomationInstructions(
+    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall) {
+  debug_ipc::AutomationOperand access_value =
+      SyscallInputOutput<Type>::access_ptr()->ComputeAutomationOperand(argument_indexes);
   if (access_value.kind() == debug_ipc::AutomationOperandKind::kZero) {
     return false;
   }
-  syscall.EnsureOutputValue(&access_value);
+  if (!is_invoked) {
+    syscall.EnsureOutputValue(&access_value, conditions);
+  }
+
   debug_ipc::AutomationOperand size;
   size.InitConstant(static_cast<uint32_t>(sizeof(Type)));
   debug_ipc::AutomationInstruction instr;
-  instr.InitLoadMemory(access_value, size, std::vector<debug_ipc::AutomationCondition>());
+  instr.InitLoadMemory(access_value, size, conditions);
   syscall.AddAutomationInstruction(is_invoked, instr);
   return true;
 }
@@ -2490,6 +2561,26 @@ std::unique_ptr<fidl_codec::Value> SyscallInputOutputIndirect<Type, FromType>::G
     SyscallDecoderInterface* decoder, Stage stage) const {
   const FromType* buffer = buffer_->Content(decoder, stage);
   return fidlcat::GenerateValue<Type>(*reinterpret_cast<const Type*>(buffer));
+}
+
+template <typename Type, typename FromType>
+bool SyscallInputOutputIndirect<Type, FromType>::GetAutomationInstructions(
+    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall) {
+  debug_ipc::AutomationOperand buff_id = buffer_->ComputeAutomationOperand(argument_indexes);
+  if (buff_id.kind() == debug_ipc::AutomationOperandKind::kZero) {
+    return false;
+  }
+  if (!is_invoked) {
+    syscall.EnsureOutputValue(&buff_id, conditions);
+  }
+
+  debug_ipc::AutomationOperand size;
+  size.InitConstant(static_cast<uint32_t>(sizeof(Type)));
+  debug_ipc::AutomationInstruction instr;
+  instr.InitLoadMemory(buff_id, size, conditions);
+  syscall.AddAutomationInstruction(is_invoked, instr);
+  return true;
 }
 
 template <typename Type, typename FromType, typename SizeType>
@@ -2515,6 +2606,61 @@ SyscallInputOutputBuffer<Type, FromType, SizeType>::GenerateValue(SyscallDecoder
     }
   }
   return vector_value;
+}
+
+template <typename Type, typename FromType, typename SizeType>
+bool SyscallInputOutputBuffer<Type, FromType, SizeType>::GetAutomationInstructions(
+    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall) {
+  debug_ipc::AutomationOperand buff_id = buffer_->ComputeAutomationOperand(argument_indexes);
+  if (buff_id.kind() == debug_ipc::AutomationOperandKind::kZero) {
+    return false;
+  }
+
+  debug_ipc::AutomationOperand size;
+  if (elem_count_ == nullptr) {
+    size = elem_size_->ComputeAutomationOperand(argument_indexes);
+  } else {
+    // TODO(michaelrj): In this case size needs to be elem_size_ * elem_count_, but there isn't a
+    // way to multiply two registers right now. Thankfully, this is only used for zx_fifo_write
+    // right now, and so can be handled later.
+    return false;
+  }
+
+  if (size.kind() == debug_ipc::AutomationOperandKind::kZero) {
+    return false;
+  }
+
+  if (!is_invoked) {
+    syscall.EnsureOutputValue(&buff_id, conditions);
+    syscall.EnsureOutputValue(&size, conditions);
+  }
+
+  debug_ipc::AutomationInstruction instr;
+  instr.InitLoadMemory(buff_id, size, conditions);
+  syscall.AddAutomationInstruction(is_invoked, instr);
+  return true;
+}
+
+template <typename FromType>
+bool SyscallInputOutputString<FromType>::GetAutomationInstructions(
+    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall) {
+  debug_ipc::AutomationOperand string_id = string_->ComputeAutomationOperand(argument_indexes);
+  debug_ipc::AutomationOperand size = string_size_->ComputeAutomationOperand(argument_indexes);
+  if (string_id.kind() == debug_ipc::AutomationOperandKind::kZero ||
+      size.kind() == debug_ipc::AutomationOperandKind::kZero) {
+    return false;
+  }
+  if (!is_invoked) {
+    syscall.EnsureOutputValue(&string_id, conditions);
+    syscall.EnsureOutputValue(&size, conditions);
+  }
+
+  debug_ipc::AutomationInstruction instr;
+  instr.InitLoadMemory(string_id, size, conditions);
+  syscall.AddAutomationInstruction(is_invoked, instr);
+  return true;
 }
 
 template <typename ClassType, typename SizeType>

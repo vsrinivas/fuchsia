@@ -169,6 +169,18 @@ PCI_CONFIG_READ_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out_val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n");
 
+CREATE_AUTOMATION_TEST(ZxPciConfigReadAutomation, "zx_pci_config_read", ZX_OK,
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = rcx\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  clear_stored_values\n",
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = x3\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  clear_stored_values\n");
+
 // zx_pci_config_write tests.
 
 std::unique_ptr<SystemCallTest> ZxPciConfigWrite(int64_t result, std::string_view result_name,
@@ -269,6 +281,20 @@ PCI_CFG_PIO_RW_DISPLAY_TEST(ZxPciCfgPioRwWrite, ZX_OK, true,
                             "write: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m)\n"
                             "\x1B[32m0.000000\x1B[0m "
                             "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+CREATE_AUTOMATION_TEST(ZxPciCfgPioRwAutomation, "zx_pci_cfg_pio_rw", ZX_OK,
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = [xsp + 0x0]/64\n"
+                       "  stored_value(1) = r9. conditions: stored_value(0) == 0\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(1), 4. conditions: stored_value(0) == 0\n"
+                       "  clear_stored_values\n",
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = x7\n"
+                       "  stored_value(1) = x5. conditions: stored_value(0) == 0\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(1), 4. conditions: stored_value(0) == 0\n"
+                       "  clear_stored_values\n");
 
 // zx_pci_get_bar tests.
 
@@ -409,6 +435,18 @@ PCI_MAP_INTERRUPT_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
+CREATE_AUTOMATION_TEST(ZxPciMapInterruptAutomation, "zx_pci_map_interrupt", ZX_OK,
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = rdx\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  clear_stored_values\n",
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = x2\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  clear_stored_values\n");
+
 // zx_pci_query_irq_mode tests.
 
 std::unique_ptr<SystemCallTest> ZxPciQueryIrqMode(int64_t result, std::string_view result_name,
@@ -444,6 +482,18 @@ PCI_QUERY_IRQ_MODE_DISPLAY_TEST(
     "mode: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out_max_irqs: \x1B[32muint32\x1B[0m = \x1B[34m12\x1B[0m)\n");
+
+CREATE_AUTOMATION_TEST(ZxPciQueryIrqModeAutomation, "zx_pci_query_irq_mode", ZX_OK,
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = rdx\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  clear_stored_values\n",
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = x2\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  clear_stored_values\n");
 
 // zx_pci_set_irq_mode tests.
 

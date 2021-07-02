@@ -579,28 +579,7 @@ void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* zxdb_process, uint64_
       settings.type = debug_ipc::BreakpointType::kSoftware;
       settings.scope = zxdb::ExecutionScope(zxdb_process->GetTarget());
 
-      static const std::vector<debug_ipc::RegisterID> amd64_argument_indexes = {
-          debug_ipc::RegisterID::kX64_rdi, debug_ipc::RegisterID::kX64_rsi,
-          debug_ipc::RegisterID::kX64_rdx, debug_ipc::RegisterID::kX64_rcx,
-          debug_ipc::RegisterID::kX64_r8,  debug_ipc::RegisterID::kX64_r9};
-
-      static const std::vector<debug_ipc::RegisterID> arm64_argument_indexes = {
-          debug_ipc::RegisterID::kARMv8_x0, debug_ipc::RegisterID::kARMv8_x1,
-          debug_ipc::RegisterID::kARMv8_x2, debug_ipc::RegisterID::kARMv8_x3,
-          debug_ipc::RegisterID::kARMv8_x4, debug_ipc::RegisterID::kARMv8_x5,
-          debug_ipc::RegisterID::kARMv8_x6, debug_ipc::RegisterID::kARMv8_x7};
-      auto arch = session()->arch();
-      const std::vector<debug_ipc::RegisterID>* arg_index;
-      if (arch == debug_ipc::Arch::kX64) {
-        arg_index = &amd64_argument_indexes;
-      } else if (arch == debug_ipc::Arch::kArm64) {
-        arg_index = &arm64_argument_indexes;
-      } else {
-        FX_LOGS(ERROR) << "Unknown architecture";
-        return;
-      }
-
-      syscall.second->ComputeAutomation(*arg_index);
+      syscall.second->ComputeAutomation(session()->arch());
 
       settings.instructions = syscall.second->invoked_bp_instructions();
       if (settings.instructions.size() > 0) {
