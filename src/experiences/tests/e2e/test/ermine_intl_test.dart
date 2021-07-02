@@ -18,8 +18,10 @@ void main() {
     await setUi.setLocale(localeId);
   }
 
-  void findTextOnScreen(String text) {
-    expect(find.text(text).serialize()['text'], text);
+  Future<void> findTextOnScreen(String text) async {
+    final finder = find.text(text);
+    final result = await ermine.driver.getText(finder);
+    expect(result, text);
   }
 
   setUpAll(() async {
@@ -43,10 +45,10 @@ void main() {
 
   test('Locale can be switched and takes effect', () async {
     await setLocale('en-US');
-    findTextOnScreen('MEMORY');
+    await findTextOnScreen('Memory');
 
     // The text on screen is equivalent to US English "MEMORY".
     await setLocale('sr');
-    findTextOnScreen('МЕМОРИЈА');
+    await findTextOnScreen('МЕМОРИЈА');
   });
 }
