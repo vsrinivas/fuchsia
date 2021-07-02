@@ -402,7 +402,7 @@ success("RecursiveOptionalAndUnionUnderLimit") {
     }
     },
     bytes = {
-        v1, v2 = [
+        v1 = [
             num(1):4, padding:4, // ordinal, padding
             num(256):4, num(0):4, // num bytes, num handles
             repeat(0xff):8, // union data
@@ -490,7 +490,7 @@ encode_failure("RecursiveOptionalAndUnionExceedLimit") {
 decode_failure("RecursiveOptionalAndUnionExceedLimit") {
     type = RecursiveOptionalAndUnionStruct,
     bytes = {
-        v1, v2 = [
+        v1 = [
             num(1):4, padding:4, // ordinal, padding
             num(264):4, num(0):4, // num bytes, num handles
             repeat(0xff):8, // union data
@@ -570,7 +570,7 @@ success("RecursiveOptionalAndTableUnderLimit") {
     }
     },
     bytes = {
-        v1, v2 = [
+        v1 = [
             num(1):8, // table max ordinal
             repeat(0xff):8, // table vector body
             num(248):4, num(0):4, // num bytes, num handles
@@ -657,7 +657,7 @@ encode_failure("RecursiveOptionalAndTableExceedLimit") {
 decode_failure("RecursiveOptionalAndTableExceedLimit") {
     type = RecursiveOptionalAndTableStruct,
     bytes = {
-        v1, v2 = [
+        v1 = [
             num(1):8, // table max ordinal
             repeat(0xff):8, // table vector body
             num(256):4, num(0):4, // num bytes, num handles

@@ -168,7 +168,7 @@ success("GoldenNullableUnionStructNull") {
         v: null,
     },
     bytes = {
-        v1, v2= [
+        v1 = [
             num(0):8,
             padding:8,
             repeat(0x00):8,
