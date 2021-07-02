@@ -277,7 +277,7 @@ impl Realm {
             .map_err(Error::FidlError)
     }
 
-    /// Returns a mutable reference to a component decl in the realm.
+    /// Returns a copy of a component decl in the realm.
     pub async fn get_decl(&mut self, moniker: &Moniker) -> Result<cm_rust::ComponentDecl, Error> {
         self.flush_routes().await?;
         let decl = self
