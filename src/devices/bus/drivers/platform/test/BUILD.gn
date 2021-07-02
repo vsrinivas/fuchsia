@@ -31,9 +31,9 @@ test("platform-bus") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-bind_rules("test-board-bind") {
+driver_bind_rules("test-board-bind") {
   rules = "test-board.bind"
-  output = "test-board-bind.h"
+  header_output = "test-board-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
@@ -74,9 +74,9 @@ driver_module("test-board") {
   ]
 }
 
-bind_rules("test-gpio-bind") {
+driver_bind_rules("test-gpio-bind") {
   rules = "test/test-gpio.bind"
-  output = "test-gpio-bind.h"
+  header_output = "test-gpio-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
@@ -100,9 +100,9 @@ driver_module("test-gpio") {
   ]
 }
 
-bind_rules("test-power-bind") {
+driver_bind_rules("test-power-bind") {
   rules = "test/test-power.bind"
-  output = "test-power-bind.h"
+  header_output = "test-power-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
@@ -126,9 +126,9 @@ driver_module("test-power") {
   ]
 }
 
-bind_rules("test-goldfish-address-space-bind") {
+driver_bind_rules("test-goldfish-address-space-bind") {
   rules = "test/test-goldfish-address-space.bind"
-  output = "test-goldfish-address-space-bind.h"
+  header_output = "test-goldfish-address-space-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
@@ -151,9 +151,9 @@ driver_module("test-goldfish-address-space") {
   ]
 }
 
-bind_rules("test-goldfish-pipe-bind") {
+driver_bind_rules("test-goldfish-pipe-bind") {
   rules = "test/test-goldfish-pipe.bind"
-  output = "test-goldfish-pipe-bind.h"
+  header_output = "test-goldfish-pipe-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
@@ -176,9 +176,9 @@ driver_module("test-goldfish-pipe") {
   ]
 }
 
-bind_rules("test-goldfish-sync-bind") {
+driver_bind_rules("test-goldfish-sync-bind") {
   rules = "test/test-goldfish-sync.bind"
-  output = "test-goldfish-sync-bind.h"
+  header_output = "test-goldfish-sync-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
@@ -201,9 +201,9 @@ driver_module("test-goldfish-sync") {
   ]
 }
 
-bind_rules("test-clock-bind") {
+driver_bind_rules("test-clock-bind") {
   rules = "test/test-clock.bind"
-  output = "test-clock-bind.h"
+  header_output = "test-clock-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
@@ -227,9 +227,9 @@ driver_module("test-clock") {
   ]
 }
 
-bind_rules("test-i2c-bind") {
+driver_bind_rules("test-i2c-bind") {
   rules = "test/test-i2c.bind"
-  output = "test-i2c-bind.h"
+  header_output = "test-i2c-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
@@ -253,9 +253,9 @@ driver_module("test-i2c") {
   ]
 }
 
-bind_rules("test-spi-bind") {
+driver_bind_rules("test-spi-bind") {
   rules = "test/test-spi.bind"
-  output = "test-spi-bind.h"
+  header_output = "test-spi-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
@@ -279,9 +279,9 @@ driver_module("test-spi") {
   ]
 }
 
-bind_rules("test-pwm-bind") {
+driver_bind_rules("test-pwm-bind") {
   rules = "test/test-pwm.bind"
-  output = "test-pwm-bind.h"
+  header_output = "test-pwm-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
@@ -304,9 +304,9 @@ driver_module("test-pwm") {
   ]
 }
 
-bind_rules("test-rpmb-bind") {
+driver_bind_rules("test-rpmb-bind") {
   rules = "test/test-rpmb.bind"
-  output = "test-rpmb-bind.h"
+  header_output = "test-rpmb-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
@@ -329,18 +329,18 @@ driver_module("test-rpmb") {
   ]
 }
 
-bind_rules("test-vreg-bind") {
+driver_bind_rules("test-vreg-bind") {
   rules = "test/test-vreg.bind"
-  output = "test-vreg-bind.h"
+  header_output = "test-vreg-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
   ]
 }
 
-bind_rules("test-pci-bind") {
+driver_bind_rules("test-pci-bind") {
   rules = "test/test-pci.bind"
-  output = "test-pci-bind.h"
+  header_output = "test-pci-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.pci",
     "//src/devices/bind/fuchsia.platform",
@@ -383,9 +383,9 @@ driver_module("test-vreg") {
   ]
 }
 
-bind_rules("test-composite-bind") {
+driver_bind_rules("test-composite-bind") {
   rules = "test/test-composite.bind"
-  output = "test-composite-bind.h"
+  header_output = "test-composite-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
@@ -420,8 +420,8 @@ driver_module("test-composite") {
   ]
 }
 
-bind_rules("test-child-2.proxy-bind") {
-  output = "test-child-2.proxy-bind.h"
+driver_bind_rules("test-child-2.proxy-bind") {
+  header_output = "test-child-2.proxy-bind.h"
   disable_autobind = true
 }
 
@@ -443,9 +443,9 @@ simple_drivers = [
 ]
 
 foreach(driver, simple_drivers) {
-  bind_rules("test-${driver}-bind") {
+  driver_bind_rules("test-${driver}-bind") {
     rules = "test/test-${driver}.bind"
-    output = "test-${driver}-bind.h"
+    header_output = "test-${driver}-bind.h"
     deps = [ "//src/devices/bind/test.platform" ]
   }
 
@@ -502,9 +502,9 @@ fidl("fuchsia.hardware.btitest") {
   sources = [ "bti.test.fidl" ]
 }
 
-bind_rules("test-bti-board-bind") {
+driver_bind_rules("test-bti-board-bind") {
   rules = "test-bti-board.bind"
-  output = "test-bti-board-bind.h"
+  header_output = "test-bti-board-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",
@@ -527,9 +527,9 @@ driver_module("test-bti-board") {
   ]
 }
 
-bind_rules("test-bti-bind") {
+driver_bind_rules("test-bti-bind") {
   rules = "test-bti.bind"
-  output = "test-bti-bind.h"
+  header_output = "test-bti-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 driver_module("test-bti") {
@@ -571,9 +571,9 @@ test("platform-bus-bti") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-bind_rules("test-power-sensor-bind") {
+driver_bind_rules("test-power-sensor-bind") {
   rules = "test/test-power-sensor.bind"
-  output = "test-power-sensor-bind.h"
+  header_output = "test-power-sensor-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/test.platform",

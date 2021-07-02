@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("tmp112-bind") {
+driver_bind_rules("tmp112-bind") {
   rules = "tmp112.bind"
-  output = "tmp112-bind.h"
+  header_output = "tmp112-bind.h"
   tests = "tmp112-bind-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",

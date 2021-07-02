@@ -12,9 +12,10 @@ driver_module("aml-rawnand") {
   ]
 }
 
-bind_rules("aml-rawnand-bind") {
+driver_bind_rules("aml-rawnand-bind") {
   rules = "aml-rawnand.bind"
-  output = "aml-rawnand-bind.h"
+  header_output = "aml-rawnand-bind.h"
+  bind_output = "aml-rawnand.bindbc"
   tests = "bind-tests.json"
   deps = [
     "//src/devices/bind/amlogic.platform",

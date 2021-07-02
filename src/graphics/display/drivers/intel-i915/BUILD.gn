@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("intel-i915-bind") {
+driver_bind_rules("intel-i915-bind") {
   rules = "intel-i915.bind"
-  output = "intel-i915-bind.h"
+  header_output = "intel-i915-bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }

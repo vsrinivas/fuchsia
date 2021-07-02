@@ -14,8 +14,9 @@ group("platform") {
   ]
 }
 
-bind_rules("platform-bus-bind") {
-  output = "platform-bus-bind.h"
+driver_bind_rules("platform-bus-bind") {
+  header_output = "platform-bus-bind.h"
+  bind_output = "platform-bus.bindbc"
   disable_autobind = true
 }
 

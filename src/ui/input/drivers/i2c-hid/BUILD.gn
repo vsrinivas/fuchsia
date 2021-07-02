@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("i2c_hid_bind") {
+driver_bind_rules("i2c_hid_bind") {
   rules = "i2c_hid.bind"
-  output = "i2c_hid_bind.h"
+  header_output = "i2c_hid_bind.h"
   tests = "tests.json"
   deps = [
     "//src/devices/bind/fuchsia.acpi",

@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("ltr-578als-bind") {
+driver_bind_rules("ltr-578als-bind") {
   rules = "ltr-578als.bind"
-  output = "ltr-578als-bind.h"
+  header_output = "ltr-578als-bind.h"
   tests = "ltr-578als-bind-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",

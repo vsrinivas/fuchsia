@@ -5,9 +5,9 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("intel_i2c_bind") {
+driver_bind_rules("intel_i2c_bind") {
   rules = "intel_i2c.bind"
-  output = "intel_i2c_bind.h"
+  header_output = "intel_i2c_bind.h"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.intel.pci",

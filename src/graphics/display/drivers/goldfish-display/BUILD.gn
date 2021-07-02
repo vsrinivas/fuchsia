@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("goldfish-display-bind") {
+driver_bind_rules("goldfish-display-bind") {
   rules = "goldfish-display.bind"
-  output = "goldfish-display-bind.h"
+  header_output = "goldfish-display-bind.h"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.goldfish" ]
 }

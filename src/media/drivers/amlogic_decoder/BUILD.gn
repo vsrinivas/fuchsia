@@ -34,18 +34,18 @@ if (target_cpu == "arm64") {
     ]
   }
 
-  bind_rules("amlogic_video_bind") {
+  driver_bind_rules("amlogic_video_bind") {
     rules = "amlogic_video.bind"
-    output = "amlogic_video_bind.h"
+    header_output = "amlogic_video_bind.h"
     tests = "bind_tests.json"
     deps = [ "//src/devices/bind/amlogic.platform" ]
   }
 
   # Note: This target uses the same source as above, the only difference is the addition of
   # `diasable_autobind = true`, and tests are omitted.
-  bind_rules("amlogic_video_test_bind") {
+  driver_bind_rules("amlogic_video_test_bind") {
     rules = "amlogic_video.bind"
-    output = "amlogic_video_test_bind.h"
+    header_output = "amlogic_video_test_bind.h"
     disable_autobind = true
     deps = [ "//src/devices/bind/amlogic.platform" ]
   }

@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("aml_spi_bind") {
+driver_bind_rules("aml_spi_bind") {
   rules = "aml_spi.bind"
-  output = "aml_spi_bind.h"
+  header_output = "aml_spi_bind.h"
+  bind_output = "aml-spi.bindbc"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/amlogic.platform",

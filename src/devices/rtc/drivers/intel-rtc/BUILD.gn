@@ -7,9 +7,9 @@ import("//build/config/fuchsia/rules.gni")
 
 assert(current_cpu == "x64")
 
-bind_rules("intel_rtc_bind") {
+driver_bind_rules("intel_rtc_bind") {
   rules = "intel_rtc.bind"
-  output = "intel_rtc_bind.h"
+  header_output = "intel_rtc_bind.h"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }

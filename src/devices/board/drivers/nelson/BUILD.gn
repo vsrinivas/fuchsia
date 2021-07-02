@@ -26,9 +26,9 @@ if (internal_access) {
   }
 }
 
-bind_rules("nelson-bind") {
+driver_bind_rules("nelson-bind") {
   rules = "nelson.bind"
-  output = "nelson-bind.h"
+  header_output = "nelson-bind.h"
   tests = "bind-tests.json"
   deps = [
     "//src/devices/bind/fuchsia.google.platform",

@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("aml_ram_bind") {
+driver_bind_rules("aml_ram_bind") {
   rules = "aml_ram.bind"
-  output = "aml_ram_bind.h"
+  header_output = "aml_ram_bind.h"
+  bind_output = "aml-ram.bindbc"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/amlogic.platform",

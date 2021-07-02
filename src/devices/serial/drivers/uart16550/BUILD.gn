@@ -71,9 +71,9 @@ define_common_lib("uart16550_lib_for_testing") {
   testonly = true
 }
 
-bind_rules("uart16550_bind") {
+driver_bind_rules("uart16550_bind") {
   rules = "uart16550.bind"
-  output = "uart16550_bind.h"
+  header_output = "uart16550_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }

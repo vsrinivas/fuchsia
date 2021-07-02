@@ -14,9 +14,10 @@ driver_module("skip-block") {
   ]
 }
 
-bind_rules("skip-block-bind") {
+driver_bind_rules("skip-block-bind") {
   rules = "skip-block.bind"
-  output = "skip-block-bind.h"
+  header_output = "skip-block-bind.h"
+  bind_output = "skip-block.bindbc"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.nand" ]
 }

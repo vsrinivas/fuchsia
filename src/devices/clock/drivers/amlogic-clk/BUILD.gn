@@ -12,9 +12,11 @@ group("tests") {
   deps = [ ":amlogic-clk-test" ]
 }
 
-bind_rules("aml-clk-bind") {
+driver_bind_rules("aml-clk-bind") {
   rules = "aml-clk.bind"
-  output = "aml-clk-bind.h"
+  header_output = "aml-clk-bind.h"
+  bind_output = "amlogic-clk.bindbc"
+
   tests = "bind-tests.json"
   deps = [
     "//src/devices/bind/amlogic.platform",

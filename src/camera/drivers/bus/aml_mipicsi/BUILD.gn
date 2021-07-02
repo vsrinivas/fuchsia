@@ -11,9 +11,9 @@ group("tests") {
   deps = [ ":aml_mipi_bind_test" ]
 }
 
-bind_rules("aml_mipi_bind") {
+driver_bind_rules("aml_mipi_bind") {
   rules = "aml_mipi.bind"
-  output = "bind.h"
+  header_output = "bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }

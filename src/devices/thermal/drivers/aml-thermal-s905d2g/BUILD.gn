@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("aml-thermal-s905d2g-bind") {
+driver_bind_rules("aml-thermal-s905d2g-bind") {
   rules = "aml-thermal.bind"
-  output = "aml-thermal-s905d2g-bind.h"
+  header_output = "aml-thermal-s905d2g-bind.h"
+  bind_output = "aml-thermal-s905d2g.bindbc"
   tests = "bind-tests.json"
   deps = [
     "//src/devices/bind/amlogic.platform",

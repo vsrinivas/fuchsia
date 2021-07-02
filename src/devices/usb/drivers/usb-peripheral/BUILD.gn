@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("usb_peripheral_bind") {
+driver_bind_rules("usb_peripheral_bind") {
   rules = "usb_peripheral.bind"
-  output = "usb_peripheral-bind.h"
+  header_output = "usb_peripheral-bind.h"
+  bind_output = "usb-peripheral.bindbc"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }

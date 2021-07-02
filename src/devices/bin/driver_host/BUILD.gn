@@ -88,9 +88,9 @@ shared_library("driver") {
   deps = [ ":common" ]
 }
 
-bind_rules("test-devhost-parent-bind") {
+driver_bind_rules("test-devhost-parent-bind") {
   rules = "test-devhost-parent.bind"
-  output = "test-devhost-parent-bind.h"
+  header_output = "test-devhost-parent-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
@@ -107,9 +107,9 @@ driver_module("driver-host-test-driver") {
   ]
 }
 
-bind_rules("test-devhost-child-bind") {
+driver_bind_rules("test-devhost-child-bind") {
   rules = "test-devhost-child.bind"
-  output = "test-devhost-child-bind.h"
+  header_output = "test-devhost-child-bind.h"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
@@ -130,9 +130,9 @@ fidl("fuchsia.device.restarttest") {
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
-bind_rules("driver-host-restart-bind") {
+driver_bind_rules("driver-host-restart-bind") {
   rules = "driver-host-restart.bind"
-  output = "driver-host-restart-bind.h"
+  header_output = "driver-host-restart-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
@@ -183,9 +183,9 @@ test("driver_host_test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-bind_rules("unit-test-fail-bind") {
+driver_bind_rules("unit-test-fail-bind") {
   rules = "unit-test-fail.bind"
-  output = "unit-test-fail-bind.h"
+  header_output = "unit-test-fail-bind.h"
   deps = [ "//src/devices/bind/fuchsia.test" ]
   disable_autobind = true
 }
@@ -200,9 +200,9 @@ driver_module("unit-test-fail") {
   ]
 }
 
-bind_rules("unit-test-pass-bind") {
+driver_bind_rules("unit-test-pass-bind") {
   rules = "unit-test-pass.bind"
-  output = "unit-test-pass-bind.h"
+  header_output = "unit-test-pass-bind.h"
   deps = [ "//src/devices/bind/fuchsia.test" ]
   disable_autobind = true
 }

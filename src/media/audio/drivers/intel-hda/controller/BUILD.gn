@@ -9,9 +9,9 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/unification/firmware.gni")
 
-bind_rules("ihda_controller_bind") {
+driver_bind_rules("ihda_controller_bind") {
   rules = "intel_hda.bind"
-  output = "intel_hda-bind.h"
+  header_output = "intel_hda-bind.h"
   deps = [ "//src/devices/bind/fuchsia.pci" ]
   tests = "bind_test.json"
 }

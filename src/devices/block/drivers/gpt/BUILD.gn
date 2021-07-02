@@ -15,10 +15,11 @@ group("tests") {
   ]
 }
 
-bind_rules("gpt_bind") {
+driver_bind_rules("gpt_bind") {
   disable_autobind = true
   rules = "gpt.bind"
-  output = "gpt_bind.h"
+  header_output = "gpt_bind.h"
+  bind_output = "gpt.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
 }

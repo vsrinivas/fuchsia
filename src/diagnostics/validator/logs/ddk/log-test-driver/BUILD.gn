@@ -8,9 +8,9 @@ import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
-bind_rules("log-test-driver-bind") {
+driver_bind_rules("log-test-driver-bind") {
   rules = "log-test.bind"
-  output = "log-test-bind.h"
+  header_output = "log-test-bind.h"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 

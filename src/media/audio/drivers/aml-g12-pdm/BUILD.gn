@@ -5,9 +5,10 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("aml_g12_pdm_bind") {
+driver_bind_rules("aml_g12_pdm_bind") {
   rules = "aml_g12_pdm.bind"
-  output = "aml_g12_pdm_bind.h"
+  header_output = "aml_g12_pdm_bind.h"
+  bind_output = "aml-g12-pdm.bindbc"
   tests = "tests.json"
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }

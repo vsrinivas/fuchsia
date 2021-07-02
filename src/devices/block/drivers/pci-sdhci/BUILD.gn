@@ -5,9 +5,9 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("pci-sdhci-bind") {
+driver_bind_rules("pci-sdhci-bind") {
   rules = "pci-sdhci.bind"
-  output = "pci-sdhci-bind.h"
+  header_output = "pci-sdhci-bind.h"
   tests = "pci-sdhci-bind-test.json"
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }

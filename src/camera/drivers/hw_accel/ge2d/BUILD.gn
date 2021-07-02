@@ -14,9 +14,9 @@ group("tests") {
   ]
 }
 
-bind_rules("ge2d_bind") {
+driver_bind_rules("ge2d_bind") {
   rules = "ge2d.bind"
-  output = "bind.h"
+  header_output = "bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }

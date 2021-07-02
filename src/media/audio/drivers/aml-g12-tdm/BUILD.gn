@@ -5,9 +5,10 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("aml-g12-tdm-bind") {
+driver_bind_rules("aml-g12-tdm-bind") {
   rules = "aml_tdm.bind"
-  output = "aml_tdm-bind.h"
+  header_output = "aml_tdm-bind.h"
+  bind_output = "aml-g12-tdm.bindbc"
   tests = "tests-stream.json"
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }
@@ -46,9 +47,10 @@ driver_module("aml-g12-tdm") {
   ]
 }
 
-bind_rules("aml-g12-tdm-dai-bind") {
+driver_bind_rules("aml-g12-tdm-dai-bind") {
   rules = "aml_tdm_dai.bind"
-  output = "aml_tdm_dai_bind.h"
+  header_output = "aml_tdm_dai_bind.h"
+  bind_output = "aml-g12-tdm-dai.bindbc"
   tests = "tests-dai.json"
   deps = [
     "//src/devices/bind/amlogic.platform",

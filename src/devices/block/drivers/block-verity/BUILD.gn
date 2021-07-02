@@ -119,10 +119,11 @@ test("config-test") {
   ]
 }
 
-bind_rules("bind") {
+driver_bind_rules("bind") {
   disable_autobind = true
   rules = "block-verity.bind"
-  output = "block-verity-bind.h"
+  header_output = "block-verity-bind.h"
+  bind_output = "block-verity.bindbc"
   deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
 }
 

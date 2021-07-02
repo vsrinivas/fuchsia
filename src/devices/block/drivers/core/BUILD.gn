@@ -56,9 +56,10 @@ fuchsia_unittest_package("core-unittest") {
   deps = [ ":core-unittest-bin" ]
 }
 
-bind_rules("block-core-bind") {
+driver_bind_rules("block-core-bind") {
   rules = "block-core.bind"
-  output = "block-core-bind.h"
+  header_output = "block-core-bind.h"
+  bind_output = "block.bindbc"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
 }

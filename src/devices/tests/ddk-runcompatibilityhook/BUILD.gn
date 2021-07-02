@@ -7,9 +7,9 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
-bind_rules("test-compatibility-hook-bind") {
+driver_bind_rules("test-compatibility-hook-bind") {
   rules = "test-compatibility-hook.bind"
-  output = "test-compatibility-hook-bind.h"
+  header_output = "test-compatibility-hook-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
@@ -30,9 +30,9 @@ driver_module("ddk-runcompatibilityhook-test") {
   ]
 }
 
-bind_rules("test-compatibility-hook-child-bind") {
+driver_bind_rules("test-compatibility-hook-child-bind") {
   rules = "test-compatibility-hook-child.bind"
-  output = "test-compatibility-hook-child-bind.h"
+  header_output = "test-compatibility-hook-child-bind.h"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 

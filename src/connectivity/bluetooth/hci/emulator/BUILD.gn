@@ -6,10 +6,10 @@ import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("bt-hci-emulator-bind") {
+driver_bind_rules("bt-hci-emulator-bind") {
   rules = "bt-hci-emulator.bind"
   disable_autobind = true
-  output = "bt-hci-emulator-bind.h"
+  header_output = "bt-hci-emulator-bind.h"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }

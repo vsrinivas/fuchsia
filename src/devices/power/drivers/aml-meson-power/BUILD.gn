@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("aml-meson-power-bind") {
+driver_bind_rules("aml-meson-power-bind") {
   rules = "aml-power.bind"
-  output = "aml-meson-power-bind.h"
+  header_output = "aml-meson-power-bind.h"
+  bind_output = "aml-meson-power.bindbc"
   tests = "bind-tests.json"
   deps = [
     "//src/devices/bind/amlogic.platform",

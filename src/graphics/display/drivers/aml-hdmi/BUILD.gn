@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("aml_hdmi_bind") {
+driver_bind_rules("aml_hdmi_bind") {
   rules = "aml-hdmi.bind"
-  output = "aml-hdmi-bind.h"
+  header_output = "aml-hdmi-bind.h"
   tests = "bind_tests.json"
 
   deps = [

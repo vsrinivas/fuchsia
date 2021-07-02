@@ -13,9 +13,9 @@ fuchsia_system_package("qmi-usb-transport") {
   allowed_in_extra_deps = true
 }
 
-bind_rules("qmi_usb_bind") {
+driver_bind_rules("qmi_usb_bind") {
   rules = "qmi_usb.bind"
-  output = "qmi_usb_bind.h"
+  header_output = "qmi_usb_bind.h"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.sierra.usb",

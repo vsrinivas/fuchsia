@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("registers_bind") {
+driver_bind_rules("registers_bind") {
   rules = "registers.bind"
-  output = "registers-bind.h"
+  header_output = "registers-bind.h"
+  bind_output = "registers.bindbc"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }

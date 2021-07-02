@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("optee-bind") {
+driver_bind_rules("optee-bind") {
   rules = "optee.bind"
-  output = "optee-bind.h"
+  header_output = "optee-bind.h"
+  bind_output = "optee.bindbc"
   tests = "optee-bind-test.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }

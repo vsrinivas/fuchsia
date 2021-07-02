@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("gpio_bind") {
+driver_bind_rules("gpio_bind") {
   rules = "gpio.bind"
-  output = "gpio_bind.h"
+  header_output = "gpio_bind.h"
+  bind_output = "gpio.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.gpio" ]
 }

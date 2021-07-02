@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("sdhci-bind") {
+driver_bind_rules("sdhci-bind") {
   rules = "sdhci.bind"
-  output = "sdhci-bind.h"
+  header_output = "sdhci-bind.h"
   tests = "sdhci-bind-test.json"
   deps = [ "//src/devices/bind/fuchsia.sdmmc" ]
 }

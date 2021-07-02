@@ -5,9 +5,9 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("dw_spi-bind") {
+driver_bind_rules("dw_spi-bind") {
   rules = "dw_spi.bind"
-  output = "dw_spi-bind.h"
+  header_output = "dw_spi-bind.h"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }

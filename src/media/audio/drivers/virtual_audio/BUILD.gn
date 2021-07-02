@@ -11,9 +11,9 @@ fuchsia_system_package("virtual_audio") {
   allowed_in_extra_deps = true
 }
 
-bind_rules("virtual_audio_bind") {
+driver_bind_rules("virtual_audio_bind") {
   rules = "virtual_audio.bind"
-  output = "virtual_audio_bind.h"
+  header_output = "virtual_audio_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }

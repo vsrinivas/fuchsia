@@ -6,9 +6,9 @@ import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("fake_ot_radio_bind") {
+driver_bind_rules("fake_ot_radio_bind") {
   rules = "fake-ot-radio.bind"
-  output = "fake_ot_radio_bind.h"
+  header_output = "fake_ot_radio_bind.h"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/test.platform" ]
 }

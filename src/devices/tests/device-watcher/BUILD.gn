@@ -8,9 +8,9 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
-bind_rules("test-bind") {
+driver_bind_rules("test-bind") {
   rules = "test-driver.bind"
-  output = "test-driver-bind.h"
+  header_output = "test-driver-bind.h"
 
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }

@@ -7,9 +7,9 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
-bind_rules("ddk-fidl-bind") {
+driver_bind_rules("ddk-fidl-bind") {
   rules = "ddk-fidl.bind"
-  output = "ddk-fidl-bind.h"
+  header_output = "ddk-fidl-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
@@ -34,9 +34,9 @@ driver_module("fidl-llcpp-driver") {
   ]
 }
 
-bind_rules("ddk-fidl-async-bind") {
+driver_bind_rules("ddk-fidl-async-bind") {
   rules = "ddk-fidl-async.bind"
-  output = "ddk-fidl-async-bind.h"
+  header_output = "ddk-fidl-async-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 

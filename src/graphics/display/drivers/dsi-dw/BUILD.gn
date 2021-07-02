@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("dsi_dw_bind") {
+driver_bind_rules("dsi_dw_bind") {
   rules = "dsi_dw.bind"
-  output = "dsi_dw_bind.h"
+  header_output = "dsi_dw_bind.h"
+  bind_output = "dsi-dw.bindbc"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }

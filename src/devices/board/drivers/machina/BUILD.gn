@@ -5,9 +5,9 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("machina_board_bind") {
+driver_bind_rules("machina_board_bind") {
   rules = "machina_board.bind"
-  output = "machina_board_bind.h"
+  header_output = "machina_board_bind.h"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.google.platform",

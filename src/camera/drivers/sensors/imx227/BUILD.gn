@@ -14,9 +14,9 @@ group("tests") {
   ]
 }
 
-bind_rules("imx227_bind") {
+driver_bind_rules("imx227_bind") {
   rules = "imx227.bind"
-  output = "bind.h"
+  header_output = "bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.sony.platform" ]
 }

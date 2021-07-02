@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("ssd1306-bind") {
+driver_bind_rules("ssd1306-bind") {
   rules = "ssd1306.bind"
-  output = "ssd1306-bind.h"
+  header_output = "ssd1306-bind.h"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }

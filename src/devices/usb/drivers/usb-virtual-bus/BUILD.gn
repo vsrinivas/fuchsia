@@ -8,9 +8,9 @@ import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
-bind_rules("usb-virtual-bus-bind") {
+driver_bind_rules("usb-virtual-bus-bind") {
   rules = "usb-virtual-bus.bind"
-  output = "usb-virtual-bus-bind.h"
+  header_output = "usb-virtual-bus-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
@@ -48,9 +48,9 @@ bind_library("fuchsia.usb.test") {
   source = "fuchsia.usb.test.bind"
 }
 
-bind_rules("usb-virtual-bus-tester-bind") {
+driver_bind_rules("usb-virtual-bus-tester-bind") {
   rules = "usb-virtual-bus-tester.bind"
-  output = "usb-virtual-bus-tester-bind.h"
+  header_output = "usb-virtual-bus-tester-bind.h"
   deps = [
     ":fuchsia.usb.test",
     "//src/devices/bind/fuchsia.usb",
@@ -84,9 +84,9 @@ driver_module("virtual-bus-tester") {
   ]
 }
 
-bind_rules("usb-virtual-bus-tester-function-bind") {
+driver_bind_rules("usb-virtual-bus-tester-function-bind") {
   rules = "usb-virtual-bus-tester-function.bind"
-  output = "usb-virtual-bus-tester-function-bind.h"
+  header_output = "usb-virtual-bus-tester-function-bind.h"
   deps = [
     ":fuchsia.usb.test",
     "//src/devices/bind/fuchsia.usb",

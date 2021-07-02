@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("spi_bind") {
+driver_bind_rules("spi_bind") {
   rules = "spi.bind"
-  output = "spi_bind.h"
+  header_output = "spi_bind.h"
+  bind_output = "spi.bindbc"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.spi" ]
 }

@@ -14,9 +14,10 @@ group("tests") {
   ]
 }
 
-bind_rules("aml_gpu_bind") {
+driver_bind_rules("aml_gpu_bind") {
   rules = "aml_gpu.bind"
-  output = "aml_gpu-bind.h"
+  header_output = "aml_gpu-bind.h"
+  bind_output = "aml-gpu.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }

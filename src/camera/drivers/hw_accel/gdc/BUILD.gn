@@ -15,9 +15,9 @@ group("tests") {
   ]
 }
 
-bind_rules("gdc_bind") {
+driver_bind_rules("gdc_bind") {
   rules = "gdc.bind"
-  output = "bind.h"
+  header_output = "bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.arm.platform" ]
 }

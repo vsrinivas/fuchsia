@@ -8,9 +8,10 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
-bind_rules("usb_mass_storage_bind") {
+driver_bind_rules("usb_mass_storage_bind") {
   rules = "usb_mass_storage.bind"
-  output = "usb_mass_storage_bind.h"
+  header_output = "usb_mass_storage_bind.h"
+  bind_output = "usb-mass-storage.bindbc"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.usb",

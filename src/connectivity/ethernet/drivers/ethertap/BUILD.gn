@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("ethertap_bind") {
+driver_bind_rules("ethertap_bind") {
   rules = "ethertap.bind"
-  output = "ethertap-bind.h"
+  header_output = "ethertap-bind.h"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }

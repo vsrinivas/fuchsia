@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("network-device_bind") {
+driver_bind_rules("network-device_bind") {
   rules = "network_device.bind"
-  output = "network_device_bind.h"
+  header_output = "network_device_bind.h"
+  bind_output = "network-device.bindbc"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.network" ]
 }

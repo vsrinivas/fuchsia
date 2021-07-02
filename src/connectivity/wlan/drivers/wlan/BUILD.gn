@@ -11,9 +11,9 @@ config("wlan_config") {
   include_dirs = [ "." ]
 }
 
-bind_rules("wlan_bind") {
+driver_bind_rules("wlan_bind") {
   rules = "wlan.bind"
-  output = "wlan_bind.h"
+  header_output = "wlan_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.wlan" ]
 }

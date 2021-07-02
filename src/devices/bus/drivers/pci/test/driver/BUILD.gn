@@ -6,9 +6,9 @@ import("//build/bind/bind.gni")
 
 # These bind rules are here because the bind_test interferes with
 # the isolated_devmgr_unittest_package.
-bind_rules("fake_pci_bus_driver_bind") {
+driver_bind_rules("fake_pci_bus_driver_bind") {
   rules = "fake_pci_bus_driver.bind"
-  output = "fake_pci_bus_driver_bind.h"
+  header_output = "fake_pci_bus_driver_bind.h"
   tests = "fake_pci_bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
@@ -16,9 +16,9 @@ bind_rules("fake_pci_bus_driver_bind") {
   ]
 }
 
-bind_rules("pci_protocol_test_driver_bind") {
+driver_bind_rules("pci_protocol_test_driver_bind") {
   rules = "pci_protocol_test_driver.bind"
-  output = "pci_protocol_test_driver_bind.h"
+  header_output = "pci_protocol_test_driver_bind.h"
   tests = "pci_protocol_bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }

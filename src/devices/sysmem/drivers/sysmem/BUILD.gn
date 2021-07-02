@@ -16,9 +16,10 @@ group("tests") {
   ]
 }
 
-bind_rules("sysmem_bind") {
+driver_bind_rules("sysmem_bind") {
   rules = "sysmem.bind"
-  output = "sysmem-bind.h"
+  header_output = "sysmem-bind.h"
+  bind_output = "sysmem.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }

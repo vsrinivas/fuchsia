@@ -168,9 +168,9 @@ isolated_devmgr_component("virtual-audio-devmgr") {
   ]
 }
 
-bind_rules("crash-device-bind") {
+driver_bind_rules("crash-device-bind") {
   rules = "crash-device.bind"
-  output = "crash-device-bind.h"
+  header_output = "crash-device-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 

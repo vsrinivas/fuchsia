@@ -13,9 +13,9 @@ fidl("fuchsia.device.power.test") {
   public_deps = [ "//sdk/fidl/fuchsia.device" ]
 }
 
-bind_rules("test-power-bind") {
+driver_bind_rules("test-power-bind") {
   rules = "test-power.bind"
-  output = "test-power-bind.h"
+  header_output = "test-power-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
@@ -37,9 +37,9 @@ driver_module("ddk-power-test") {
   ]
 }
 
-bind_rules("test-power-child-bind") {
+driver_bind_rules("test-power-child-bind") {
   rules = "test-power-child.bind"
-  output = "test-power-child-bind.h"
+  header_output = "test-power-child-bind.h"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 

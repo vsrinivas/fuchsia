@@ -12,9 +12,9 @@ group("tests") {
   deps = [ ":netdevice-migration-tests" ]
 }
 
-bind_rules("netdevice-migration-bind") {
+driver_bind_rules("netdevice-migration-bind") {
   rules = "netdevice_migration.bind"
-  output = "netdevice_migration_bind.h"
+  header_output = "netdevice_migration_bind.h"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.ethernet" ]
 }

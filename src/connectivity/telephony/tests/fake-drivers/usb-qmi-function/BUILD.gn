@@ -12,9 +12,9 @@ fuchsia_system_package("usb-qmi-function") {
   deps = [ ":qmi_function" ]
 }
 
-bind_rules("usb_qmi_function_bind") {
+driver_bind_rules("usb_qmi_function_bind") {
   rules = "usb_qmi_function.bind"
-  output = "usb_qmi_function_bind.h"
+  header_output = "usb_qmi_function_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }

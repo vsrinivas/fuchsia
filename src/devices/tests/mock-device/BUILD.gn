@@ -6,9 +6,9 @@ import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
 
-bind_rules("mock-device-bind") {
+driver_bind_rules("mock-device-bind") {
   rules = "mock-device.bind"
-  output = "mock-device-bind.h"
+  header_output = "mock-device-bind.h"
   deps = [ "//src/devices/bind/fuchsia.test" ]
   disable_autobind = true
 }

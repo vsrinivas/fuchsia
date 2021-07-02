@@ -11,9 +11,9 @@ group("tests") {
   deps = [ ":fake-display-bind_test" ]
 }
 
-bind_rules("fake-display-bind") {
+driver_bind_rules("fake-display-bind") {
   rules = "fake-display.bind"
-  output = "fake-display-bind.h"
+  header_output = "fake-display-bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }

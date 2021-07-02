@@ -5,9 +5,10 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("serial_bind") {
+driver_bind_rules("serial_bind") {
   rules = "serial.bind"
-  output = "serial_bind.h"
+  header_output = "serial_bind.h"
+  bind_output = "serial.bindbc"
   tests = "tests/tests.json"
   deps = [ "//src/devices/bind/fuchsia.serial" ]
 }

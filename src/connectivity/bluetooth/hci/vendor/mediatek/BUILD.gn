@@ -8,9 +8,9 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/unification/firmware.gni")
 
-bind_rules("bt-hci-mediatek-bind") {
+driver_bind_rules("bt-hci-mediatek-bind") {
   rules = "bt-hci-mediatek.bind"
-  output = "bt-hci-mediatek-bind.h"
+  header_output = "bt-hci-mediatek-bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.mediatek.sdio" ]
 }

@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("sy-buck-bind") {
+driver_bind_rules("sy-buck-bind") {
   rules = "sy-buck.bind"
-  output = "sy-buck-bind.h"
+  header_output = "sy-buck-bind.h"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.silergy.platform" ]
 }

@@ -6,9 +6,9 @@ import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("wlantapctl_bind") {
+driver_bind_rules("wlantapctl_bind") {
   rules = "wlantapctl.bind"
-  output = "wlantapctl_bind.h"
+  header_output = "wlantapctl_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }

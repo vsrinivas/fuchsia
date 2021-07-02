@@ -32,9 +32,9 @@ simple_drivers = [
 tests = []
 
 foreach(driver, simple_drivers) {
-  bind_rules("simple-$driver-bind") {
+  driver_bind_rules("simple-$driver-bind") {
     rules = "simple-$driver.bind"
-    output = "simple-$driver-bind.h"
+    header_output = "simple-$driver-bind.h"
     tests = "${driver}_bind_tests.json"
     deps = [ "//src/devices/bind/fuchsia.pci" ]
   }

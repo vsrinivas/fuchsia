@@ -35,9 +35,9 @@ driver_module("msd_vsi_test") {
   ]
 }
 
-bind_rules("msd_vsi_bind") {
+driver_bind_rules("msd_vsi_bind") {
   rules = "msd_vsi.bind"
-  output = "bind.h"
+  header_output = "bind.h"
   tests = "tests/bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
@@ -45,9 +45,9 @@ bind_rules("msd_vsi_bind") {
   ]
 }
 
-bind_rules("msd_vsi_test_bind") {
+driver_bind_rules("msd_vsi_test_bind") {
   rules = "msd_vsi.bind"
-  output = "test_bind.h"
+  header_output = "test_bind.h"
   disable_autobind = true
   deps = [
     "//src/devices/bind/fuchsia.platform",

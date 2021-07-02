@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("usb_xhci_bind") {
+driver_bind_rules("usb_xhci_bind") {
   rules = "usb_xhci.bind"
-  output = "usb_xhci_bind.h"
+  header_output = "usb_xhci_bind.h"
+  bind_output = "xhci.bindbc"
   tests = "tests.json"
   deps = [
     "//src/devices/bind/fuchsia.pci",

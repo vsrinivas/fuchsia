@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("aml_usb_phy_bind") {
+driver_bind_rules("aml_usb_phy_bind") {
   rules = "aml_usb_phy.bind"
-  output = "aml_usb_phy_bind.h"
+  header_output = "aml_usb_phy_bind.h"
+  bind_output = "aml-usb-phy-v2.bindbc"
   tests = "test_bind.json"
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }

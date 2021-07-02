@@ -8,9 +8,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("focaltech_touch_bind") {
+driver_bind_rules("focaltech_touch_bind") {
   rules = "focaltech_touch.bind"
-  output = "focaltech_touch_bind.h"
+  header_output = "focaltech_touch_bind.h"
+  bind_output = "focaltech.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }

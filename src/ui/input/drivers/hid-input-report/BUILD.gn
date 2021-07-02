@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("hid_input_report_bind") {
+driver_bind_rules("hid_input_report_bind") {
   rules = "hid_input_report.bind"
-  output = "hid_input_report_bind.h"
+  header_output = "hid_input_report_bind.h"
+  bind_output = "hid-input-report.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.hid" ]
 }

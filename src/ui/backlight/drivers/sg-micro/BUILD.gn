@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("sgm37603a-bind") {
+driver_bind_rules("sgm37603a-bind") {
   rules = "sgm37603a.bind"
-  output = "sgm37603a-bind.h"
+  header_output = "sgm37603a-bind.h"
   tests = "sgm37603a-bind-test.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }

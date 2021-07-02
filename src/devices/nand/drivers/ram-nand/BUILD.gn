@@ -7,9 +7,9 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
-bind_rules("ram-nand-bind") {
+driver_bind_rules("ram-nand-bind") {
   rules = "ram-nand.bind"
-  output = "ram-nand-bind.h"
+  header_output = "ram-nand-bind.h"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.misc" ]
 }

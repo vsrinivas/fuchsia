@@ -30,9 +30,9 @@ driver_module("msd_intel_test") {
   ]
 }
 
-bind_rules("msd_intel_bind") {
+driver_bind_rules("msd_intel_bind") {
   rules = "msd_intel.bind"
-  output = "msd_intel_bind.h"
+  header_output = "msd_intel_bind.h"
   tests = "tests/bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.intel.gpucore" ]
 }

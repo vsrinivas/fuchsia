@@ -5,9 +5,10 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("root_drivers_bind") {
+driver_bind_rules("root_drivers_bind") {
   rules = "root_drivers.bind"
-  output = "root_drivers_bind.h"
+  header_output = "root_drivers_bind.h"
+  bind_output = "builtin.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.root" ]
 }

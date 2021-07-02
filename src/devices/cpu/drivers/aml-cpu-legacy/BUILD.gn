@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("aml-cpu-legacy-bind") {
+driver_bind_rules("aml-cpu-legacy-bind") {
   rules = "aml-cpu-legacy.bind"
-  output = "aml-cpu-legacy-bind.h"
+  header_output = "aml-cpu-legacy-bind.h"
+  bind_output = "aml-cpu-legacy.bindbc"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.google.platform" ]
 }

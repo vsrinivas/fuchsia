@@ -26,9 +26,10 @@ group("tests") {
   deps = [ ":my-driver-cpp-tests" ]
 }
 
-bind_rules("bind") {
+driver_bind_rules("bind") {
   rules = "my_driver_cpp.bind"
-  output = "my_driver_cpp-bind.h"
+  header_output = "my_driver_cpp-bind.h"
+  bind_output = "my_driver_cpp.bindbc"
 }
 
 driver_module("driver") {

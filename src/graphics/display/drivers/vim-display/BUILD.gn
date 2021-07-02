@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("vim-display-bind") {
+driver_bind_rules("vim-display-bind") {
   rules = "vim-display.bind"
-  output = "vim-display-bind.h"
+  header_output = "vim-display-bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/khadas.platform" ]
 }

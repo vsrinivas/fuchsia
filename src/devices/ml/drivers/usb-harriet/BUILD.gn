@@ -5,9 +5,10 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("usb_harriet_bind") {
+driver_bind_rules("usb_harriet_bind") {
   rules = "usb_harriet.bind"
-  output = "usb_harriet_bind.h"
+  header_output = "usb_harriet_bind.h"
+  bind_output = "usb-harriet.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }

@@ -6,9 +6,9 @@ import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
 
-bind_rules("qemu_bus_bind") {
+driver_bind_rules("qemu_bus_bind") {
   rules = "qemu_bus.bind"
-  output = "qemu_bus_bind.h"
+  header_output = "qemu_bus_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }

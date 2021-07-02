@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("bind") {
+driver_bind_rules("bind") {
   rules = "usb-hub-rewrite.bind"
-  output = "usb_hub_rewrite_bind.h"
+  header_output = "usb_hub_rewrite_bind.h"
+  bind_output = "usb-hub-rewrite.bindbc"
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 

@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("aml-pwm-regulator-bind") {
+driver_bind_rules("aml-pwm-regulator-bind") {
   rules = "aml-pwm-regulator.bind"
-  output = "aml-pwm-regulator-bind.h"
+  header_output = "aml-pwm-regulator-bind.h"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }

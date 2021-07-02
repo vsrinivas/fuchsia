@@ -59,9 +59,9 @@ source_set("user_pci") {
   ]
 }
 
-bind_rules("pci_bind") {
+driver_bind_rules("pci_bind") {
   rules = "pci.bind"
-  output = "pci_bind.h"
+  header_output = "pci_bind.h"
   tests = "pci_bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.pci",

@@ -15,9 +15,9 @@ fidl("fuchsia.device.inspect.test") {
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
-bind_rules("inspect-test-bind") {
+driver_bind_rules("inspect-test-bind") {
   rules = "inspect-test.bind"
-  output = "inspect-test-bind.h"
+  header_output = "inspect-test-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 

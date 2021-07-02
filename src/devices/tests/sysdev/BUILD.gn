@@ -6,8 +6,8 @@ import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/dist/renamed_binary.gni")
 
-bind_rules("sysdev-bind") {
-  output = "sysdev-bind.h"
+driver_bind_rules("sysdev-bind") {
+  header_output = "sysdev-bind.h"
   disable_autobind = true
 }
 

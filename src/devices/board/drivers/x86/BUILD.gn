@@ -48,9 +48,10 @@ source_set("smbios") {
   ]
 }
 
-bind_rules("x64-bind") {
+driver_bind_rules("x64-bind") {
   rules = "x64.bind"
-  output = "x64-bind.h"
+  header_output = "x64-bind.h"
+  bind_output = "platform-bus-x64.bindbc"
   tests = "bind-tests.json"
   deps = [
     "//src/devices/bind/fuchsia.intel.platform",

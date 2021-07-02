@@ -9,9 +9,10 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
-bind_rules("ethernet_usb_cdc_ecm_bind") {
+driver_bind_rules("ethernet_usb_cdc_ecm_bind") {
   rules = "ethernet_usb_cdc_ecm.bind"
-  output = "ethernet_usb_cdc_ecm-bind.h"
+  header_output = "ethernet_usb_cdc_ecm-bind.h"
+  bind_output = "usb-cdc-ecm.bindbc"
   tests = "bind-tests.json"
   deps = [
     "//src/devices/bind/fuchsia.usb",

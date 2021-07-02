@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("nelson-brownout-protection-bind") {
+driver_bind_rules("nelson-brownout-protection-bind") {
   rules = "nelson-brownout-protection.bind"
-  output = "nelson-brownout-protection-bind.h"
+  header_output = "nelson-brownout-protection-bind.h"
   tests = "nelson-brownout-protection-bind-test.json"
   deps = [ "//src/devices/bind/fuchsia.google.platform" ]
 }

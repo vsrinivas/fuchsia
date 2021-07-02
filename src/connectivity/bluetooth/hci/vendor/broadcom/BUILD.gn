@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("bcm_hci_bind") {
+driver_bind_rules("bcm_hci_bind") {
   rules = "bcm_hci.bind"
-  output = "bcm_hci_bind.h"
+  header_output = "bcm_hci_bind.h"
+  bind_output = "bt-hci-broadcom.bindbc"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.bluetooth",

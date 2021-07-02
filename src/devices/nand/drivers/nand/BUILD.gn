@@ -5,9 +5,10 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("nand-bind") {
+driver_bind_rules("nand-bind") {
   rules = "nand.bind"
-  output = "nand-bind.h"
+  header_output = "nand-bind.h"
+  bind_output = "nand.bindbc"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.rawnand" ]
 }

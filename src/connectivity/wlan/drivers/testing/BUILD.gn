@@ -13,10 +13,10 @@ group("testing") {
   ]
 }
 
-bind_rules("wlanphy_test_bind") {
+driver_bind_rules("wlanphy_test_bind") {
   disable_autobind = true
   rules = "wlanphy_test.bind"
-  output = "wlanphy_test_bind.h"
+  header_output = "wlanphy_test_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }

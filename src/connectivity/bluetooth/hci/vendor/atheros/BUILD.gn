@@ -8,9 +8,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/dist/resource.gni")
 
-bind_rules("bt_hci_atheros_bind") {
+driver_bind_rules("bt_hci_atheros_bind") {
   rules = "bt_hci_atheros.bind"
-  output = "bt_hci_atheros_bind.h"
+  header_output = "bt_hci_atheros_bind.h"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.bluetooth",

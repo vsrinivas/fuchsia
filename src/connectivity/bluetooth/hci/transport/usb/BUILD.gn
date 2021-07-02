@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("bt_transport_usb_bind") {
+driver_bind_rules("bt_transport_usb_bind") {
   rules = "bt_transport_usb.bind"
-  output = "bt_transport_usb_bind.h"
+  header_output = "bt_transport_usb_bind.h"
+  bind_output = "bt-transport-usb.bindbc"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.usb",

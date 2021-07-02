@@ -30,9 +30,9 @@ driver_module("msd_arm_test") {
   ]
 }
 
-bind_rules("msd_arm_bind") {
+driver_bind_rules("msd_arm_bind") {
   rules = "msd_arm.bind"
-  output = "bind.h"
+  header_output = "bind.h"
   tests = "tests/bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.arm.platform",
@@ -44,9 +44,9 @@ magma_pdev_entry("msd_arm_entry") {
   deps = [ ":msd_arm_bind" ]
 }
 
-bind_rules("msd_arm_test_bind") {
+driver_bind_rules("msd_arm_test_bind") {
   rules = "msd_arm.bind"
-  output = "test_bind.h"
+  header_output = "test_bind.h"
   disable_autobind = true
   deps = [
     "//src/devices/bind/fuchsia.arm.platform",

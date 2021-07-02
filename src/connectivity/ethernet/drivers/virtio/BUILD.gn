@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("virtio_ethernet_bind") {
+driver_bind_rules("virtio_ethernet_bind") {
   rules = "virtio_ethernet.bind"
-  output = "virtio_ethernet-bind.h"
+  header_output = "virtio_ethernet-bind.h"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }

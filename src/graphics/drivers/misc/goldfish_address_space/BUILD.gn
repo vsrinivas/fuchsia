@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("goldfish_address_space-bind") {
+driver_bind_rules("goldfish_address_space-bind") {
   rules = "goldfish_address_space.bind"
-  output = "goldfish_address_space-bind.h"
+  header_output = "goldfish_address_space-bind.h"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }

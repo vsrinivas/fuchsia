@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("ti-lp8556-bind") {
+driver_bind_rules("ti-lp8556-bind") {
   rules = "ti-lp8556.bind"
-  output = "ti-lp8556-bind.h"
+  header_output = "ti-lp8556-bind.h"
+  bind_output = "ti-lp8556.bindbc"
   tests = "ti-lp8556-bind-test.json"
   deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
 }

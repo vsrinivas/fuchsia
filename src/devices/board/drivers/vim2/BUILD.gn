@@ -5,9 +5,9 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("vim2-bind") {
+driver_bind_rules("vim2-bind") {
   rules = "vim2.bind"
-  output = "vim2-bind.h"
+  header_output = "vim2-bind.h"
   tests = "bind-tests.json"
   deps = [
     "//src/devices/bind/fuchsia.khadas.platform",

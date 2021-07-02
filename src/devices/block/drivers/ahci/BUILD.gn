@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("ahci_bind") {
+driver_bind_rules("ahci_bind") {
   rules = "ahci.bind"
-  output = "ahci_bind.h"
+  header_output = "ahci_bind.h"
   tests = "tests.json"
   deps = [
     "//src/devices/bind/fuchsia.pci",

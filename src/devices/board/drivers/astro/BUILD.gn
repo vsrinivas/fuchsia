@@ -14,9 +14,10 @@ if (internal_access) {
   }
 }
 
-bind_rules("astro-bind") {
+driver_bind_rules("astro-bind") {
   rules = "astro.bind"
-  output = "astro-bind.h"
+  header_output = "astro-bind.h"
+  bind_output = "astro.bindbc"
   tests = "bind-tests.json"
   deps = [
     "//src/devices/bind/fuchsia.google.platform",

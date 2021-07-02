@@ -8,9 +8,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("gt92xx_bind") {
+driver_bind_rules("gt92xx_bind") {
   rules = "gt92xx.bind"
-  output = "gt92xx_bind.h"
+  header_output = "gt92xx_bind.h"
+  bind_output = "goodix.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.google.platform" ]
 }

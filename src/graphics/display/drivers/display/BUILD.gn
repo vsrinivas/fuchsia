@@ -5,9 +5,10 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("display_bind") {
+driver_bind_rules("display_bind") {
   rules = "display.bind"
-  output = "display-bind.h"
+  header_output = "display-bind.h"
+  bind_output = "display.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.hardware.display" ]
 }

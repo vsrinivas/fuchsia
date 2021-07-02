@@ -7,9 +7,9 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
-bind_rules("metadata-test-bind") {
+driver_bind_rules("metadata-test-bind") {
   disable_autobind = true
-  output = "metadata-test-bind.h"
+  header_output = "metadata-test-bind.h"
 }
 
 driver_module("driver") {

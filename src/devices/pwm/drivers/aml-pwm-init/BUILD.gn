@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("aml-pwm-init-bind") {
+driver_bind_rules("aml-pwm-init-bind") {
   rules = "aml-pwm-init.bind"
-  output = "aml-pwm-init-bind.h"
+  header_output = "aml-pwm-init-bind.h"
+  bind_output = "aml-pwm-init.bindbc"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }

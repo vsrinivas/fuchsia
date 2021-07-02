@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("goldfish-sync-bind") {
+driver_bind_rules("goldfish-sync-bind") {
   rules = "goldfish_sync.bind"
-  output = "goldfish_sync-bind.h"
+  header_output = "goldfish_sync-bind.h"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }

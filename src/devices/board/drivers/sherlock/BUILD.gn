@@ -13,9 +13,10 @@ config("rndis") {
   defines = [ "ENABLE_RNDIS=1" ]
 }
 
-bind_rules("sherlock-bind") {
+driver_bind_rules("sherlock-bind") {
   rules = "sherlock.bind"
-  output = "sherlock-bind.h"
+  header_output = "sherlock-bind.h"
+  bind_output = "sherlock.bindbc"
   tests = "sherlock-bind-tests.json"
   deps = [
     "//src/devices/bind/fuchsia.google.platform",

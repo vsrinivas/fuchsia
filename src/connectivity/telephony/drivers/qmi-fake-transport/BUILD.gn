@@ -15,9 +15,9 @@ fuchsia_system_package("qmi-fake-transport") {
   allowed_in_extra_deps = true
 }
 
-bind_rules("qmi_fake_bind") {
+driver_bind_rules("qmi_fake_bind") {
   rules = "qmi_fake.bind"
-  output = "qmi_fake_bind.h"
+  header_output = "qmi_fake_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/test.platform" ]
 }

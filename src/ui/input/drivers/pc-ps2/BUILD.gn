@@ -5,9 +5,9 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("i8042_bind") {
+driver_bind_rules("i8042_bind") {
   rules = "i8042.bind"
-  output = "i8042_bind.h"
+  header_output = "i8042_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }

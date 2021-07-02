@@ -14,9 +14,9 @@ group("tests") {
   ]
 }
 
-bind_rules("camera_controller_bind") {
+driver_bind_rules("camera_controller_bind") {
   rules = "camera_controller.bind"
-  output = "bind.h"
+  header_output = "bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.composite" ]
 }

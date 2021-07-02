@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("vim3_mcu_bind") {
+driver_bind_rules("vim3_mcu_bind") {
   rules = "vim3_mcu.bind"
-  output = "vim3_mcu_bind.h"
+  header_output = "vim3_mcu_bind.h"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",

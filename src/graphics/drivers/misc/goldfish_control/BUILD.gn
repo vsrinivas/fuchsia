@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("goldfish_control_composite-bind") {
+driver_bind_rules("goldfish_control_composite-bind") {
   rules = "goldfish_control_composite.bind"
-  output = "goldfish_control_composite-bind.h"
+  header_output = "goldfish_control_composite-bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.google.platform" ]
 }

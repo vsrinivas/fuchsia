@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("virtio_block_bind") {
+driver_bind_rules("virtio_block_bind") {
   rules = "virtio_block.bind"
-  output = "virtio_block_bind.h"
+  header_output = "virtio_block_bind.h"
   tests = "block_bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }
@@ -55,9 +55,9 @@ source_set("scsi_lib") {
   ]
 }
 
-bind_rules("virtio_scsi_bind") {
+driver_bind_rules("virtio_scsi_bind") {
   rules = "virtio_scsi.bind"
-  output = "virtio_scsi_bind.h"
+  header_output = "virtio_scsi_bind.h"
   tests = "scsi_bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }

@@ -14,9 +14,9 @@ config("fuchsia_config") {
   ]
 }
 
-bind_rules("iwlwifi_bind") {
+driver_bind_rules("iwlwifi_bind") {
   rules = "iwlwifi.bind"
-  output = "iwlwifi-bind.h"
+  header_output = "iwlwifi-bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }

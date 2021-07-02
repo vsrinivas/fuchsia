@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("tcs3400_light_bind") {
+driver_bind_rules("tcs3400_light_bind") {
   rules = "tcs3400_light.bind"
-  output = "tcs3400_light_bind.h"
+  header_output = "tcs3400_light_bind.h"
+  bind_output = "ams-light.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.ams.platform" ]
 }

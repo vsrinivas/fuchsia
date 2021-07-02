@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("nandpart-bind") {
+driver_bind_rules("nandpart-bind") {
   rules = "nandpart.bind"
-  output = "nandpart-bind.h"
+  header_output = "nandpart-bind.h"
+  bind_output = "nandpart.bindbc"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.nand" ]
 }

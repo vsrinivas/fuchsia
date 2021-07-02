@@ -8,9 +8,9 @@ import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
-bind_rules("test-environment-bind") {
+driver_bind_rules("test-environment-bind") {
   rules = "test-environment.bind"
-  output = "test-environment-bind.h"
+  header_output = "test-environment-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 

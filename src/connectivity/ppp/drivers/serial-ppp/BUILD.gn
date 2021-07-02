@@ -65,9 +65,9 @@ fuchsia_unittest_package("serial-ppp-driver-test") {
   deps = [ ":driver-test" ]
 }
 
-bind_rules("serial-ppp-bind") {
+driver_bind_rules("serial-ppp-bind") {
   rules = "serial-ppp.bind"
-  output = "serial-ppp-bind.h"
+  header_output = "serial-ppp-bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.serial" ]
 }

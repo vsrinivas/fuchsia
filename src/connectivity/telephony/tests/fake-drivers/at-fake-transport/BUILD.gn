@@ -12,9 +12,9 @@ fuchsia_system_package("at-fake-transport") {
   deps = [ ":fake_at_driver" ]
 }
 
-bind_rules("at_fake_bind") {
+driver_bind_rules("at_fake_bind") {
   rules = "at_fake.bind"
-  output = "at_fake_bind.h"
+  header_output = "at_fake_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/test.platform" ]
 }

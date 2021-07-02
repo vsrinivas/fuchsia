@@ -15,9 +15,10 @@ group("tests") {
   ]
 }
 
-bind_rules("power-bind") {
+driver_bind_rules("power-bind") {
   rules = "power.bind"
-  output = "power-bind.h"
+  header_output = "power-bind.h"
+  bind_output = "power.bindbc"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }

@@ -64,10 +64,11 @@ driver_module("zxcrypt") {
   ]
 }
 
-bind_rules("bind") {
+driver_bind_rules("bind") {
   disable_autobind = true
   rules = "zxcrypt.bind"
-  output = "zxcrypt-bind.h"
+  header_output = "zxcrypt-bind.h"
+  bind_output = "zxcrypt.bindbc"
   deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
 }
 

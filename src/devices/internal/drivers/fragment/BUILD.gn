@@ -6,8 +6,9 @@ import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
 
-bind_rules("fragment-bind") {
-  output = "fragment-bind.h"
+driver_bind_rules("fragment-bind") {
+  header_output = "fragment-bind.h"
+  bind_output = "fragment.bindbc"
   rules = "fragment.bind"
 }
 
@@ -77,8 +78,9 @@ driver_module("fragment") {
   ]
 }
 
-bind_rules("fragment-proxy-bind") {
-  output = "fragment-proxy-bind.h"
+driver_bind_rules("fragment-proxy-bind") {
+  header_output = "fragment-proxy-bind.h"
+  bind_output = "fragment-proxy.bindbc"
   rules = "fragment-proxy.bind"
 }
 

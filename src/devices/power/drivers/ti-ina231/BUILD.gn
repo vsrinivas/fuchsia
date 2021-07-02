@@ -29,9 +29,10 @@ group("common") {
   ]
 }
 
-bind_rules("bind") {
+driver_bind_rules("bind") {
   rules = "ti-ina231.bind"
-  output = "ti-ina231-bind.h"
+  header_output = "ti-ina231-bind.h"
+  bind_output = "ti-ina231.bindbc"
   tests = "ti-ina231-bind-test.json"
   deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
 }

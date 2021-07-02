@@ -44,9 +44,9 @@ bind_library("stringbind.lib") {
   source = "stringbindlib.bind"
 }
 
-bind_rules("parent-driver-bind") {
+driver_bind_rules("parent-driver-bind") {
   rules = "parent-driver.bind"
-  output = "parent-driver-bind.h"
+  header_output = "parent-driver-bind.h"
   disable_autobind = true
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
@@ -69,9 +69,9 @@ driver_module("parent-driver") {
   ]
 }
 
-bind_rules("child-driver-bind") {
+driver_bind_rules("child-driver-bind") {
   rules = "child-driver.bind"
-  output = "child-driver-bind.h"
+  header_output = "child-driver-bind.h"
   deps = [
     ":stringbind.lib",
     "//src/devices/bind/fuchsia.test",

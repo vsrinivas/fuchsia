@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("shtv3-bind") {
+driver_bind_rules("shtv3-bind") {
   rules = "shtv3.bind"
-  output = "shtv3-bind.h"
+  header_output = "shtv3-bind.h"
   tests = "shtv3-bind-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",

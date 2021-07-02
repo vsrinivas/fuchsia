@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("hidctl_bind") {
+driver_bind_rules("hidctl_bind") {
   rules = "hidctl.bind"
-  output = "hidctl_bind.h"
+  header_output = "hidctl_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/test.platform" ]
 }

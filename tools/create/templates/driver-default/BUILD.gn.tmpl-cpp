@@ -22,9 +22,10 @@ group("tests") {
   deps = [ ":{{PROJECT_NAME}}-tests" ]
 }
 
-bind_rules("bind") {
+driver_bind_rules("bind") {
   rules = "{{snake_case PROJECT_NAME}}.bind"
-  output = "{{snake_case PROJECT_NAME}}-bind.h"
+  header_output = "{{snake_case PROJECT_NAME}}-bind.h"
+  bind_output = "{{snake_case PROJECT_NAME}}.bindbc"
 }
 
 driver_module("driver") {

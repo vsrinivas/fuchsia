@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("amlogic_display_bind") {
+driver_bind_rules("amlogic_display_bind") {
   rules = "amlogic-display.bind"
-  output = "amlogic-display-bind.h"
+  header_output = "amlogic-display-bind.h"
+  bind_output = "amlogic-display.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }

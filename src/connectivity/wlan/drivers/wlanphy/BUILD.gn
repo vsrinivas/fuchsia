@@ -29,9 +29,10 @@ wlanphy_deps = [
   "//zircon/system/ulib/async-loop:async-loop-default",
 ]
 
-bind_rules("wlanphy_bind") {
+driver_bind_rules("wlanphy_bind") {
   rules = "wlanphy.bind"
-  output = "wlanphy-bind.h"
+  header_output = "wlanphy-bind.h"
+  bind_output = "wlanphy.bindbc"
   tests = "wlanphy_bind_test.json"
   deps = [ "//src/devices/bind/fuchsia.wlan" ]
 }

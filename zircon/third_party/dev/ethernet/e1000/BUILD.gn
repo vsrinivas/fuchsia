@@ -9,9 +9,9 @@ bind_library("fuchsia.intel.e1000") {
   source = "fuchsia.intel.e1000.bind"
 }
 
-bind_rules("e1000_bind") {
+driver_bind_rules("e1000_bind") {
   rules = "e1000.bind"
-  output = "e1000_bind.h"
+  header_output = "e1000_bind.h"
   tests = "bind-tests.json"
   deps = [
     ":fuchsia.intel.e1000",

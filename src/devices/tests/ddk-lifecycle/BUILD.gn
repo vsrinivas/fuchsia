@@ -13,9 +13,9 @@ fidl("fuchsia.device.lifecycle.test") {
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
-bind_rules("test-lifecycle-bind") {
+driver_bind_rules("test-lifecycle-bind") {
   rules = "test-lifecycle.bind"
-  output = "test-lifecycle-bind.h"
+  header_output = "test-lifecycle-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 

@@ -37,9 +37,9 @@ if (internal_access) {
   }
 }
 
-bind_rules("ft8201-bind") {
+driver_bind_rules("ft8201-bind") {
   rules = "ft8201.bind"
-  output = "ft8201-bind.h"
+  header_output = "ft8201-bind.h"
   tests = "ft8201-bind-test.json"
   deps = [
     "//src/devices/bind/fuchsia.focaltech.platform",

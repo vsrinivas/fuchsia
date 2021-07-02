@@ -5,9 +5,9 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("test_bind") {
+driver_bind_rules("test_bind") {
   rules = "test.bind"
-  output = "test_bind.h"
+  header_output = "test_bind.h"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.test",

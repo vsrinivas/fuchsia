@@ -65,10 +65,8 @@ fuchsia_package("package") {
   deps = [ ":component" ]
 }
 
-bind_rules("test-bind") {
+driver_bind_rules("test-bind") {
   rules = "test.bind"
-  driver_url = "fuchsia-pkg://my-test-driver#meta/my-driver.cm"
-  output_bytecode = true
 }
 
 fuchsia_driver_component("test-bind-component") {
@@ -77,10 +75,8 @@ fuchsia_driver_component("test-bind-component") {
   deps = [ ":test-bind" ]
 }
 
-bind_rules("test-bind2") {
+driver_bind_rules("test-bind2") {
   rules = "test2.bind"
-  driver_url = "fuchsia-pkg://my-test-driver#meta/my-driver2.cm"
-  output_bytecode = true
 }
 
 fuchsia_driver_component("test-bind2-component") {

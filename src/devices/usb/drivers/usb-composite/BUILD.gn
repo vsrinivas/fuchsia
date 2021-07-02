@@ -5,9 +5,10 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("usb_composite_bind") {
+driver_bind_rules("usb_composite_bind") {
   rules = "usb_composite.bind"
-  output = "usb_composite_bind.h"
+  header_output = "usb_composite_bind.h"
+  bind_output = "usb-composite.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }

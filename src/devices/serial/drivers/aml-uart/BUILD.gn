@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("aml_uart_bind") {
+driver_bind_rules("aml_uart_bind") {
   rules = "aml_uart.bind"
-  output = "aml_uart_bind.h"
+  header_output = "aml_uart_bind.h"
+  bind_output = "aml-uart.bindbc"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }

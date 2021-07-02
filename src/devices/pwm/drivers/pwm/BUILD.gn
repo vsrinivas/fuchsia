@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("pwm-bind") {
+driver_bind_rules("pwm-bind") {
   rules = "pwm.bind"
-  output = "pwm-bind.h"
+  header_output = "pwm-bind.h"
+  bind_output = "pwm.bindbc"
   tests = "bind-tests.json"
   deps = [ "//src/devices/bind/fuchsia.pwm" ]
 }

@@ -7,9 +7,9 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("max98373-bind") {
+driver_bind_rules("max98373-bind") {
   rules = "max98373.bind"
-  output = "max98373-bind.h"
+  header_output = "max98373-bind.h"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.maxim.platform" ]
 }

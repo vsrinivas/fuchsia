@@ -6,9 +6,9 @@ import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("virtio_console_bind") {
+driver_bind_rules("virtio_console_bind") {
   rules = "virtio_console.bind"
-  output = "virtio_console_bind.h"
+  header_output = "virtio_console_bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }

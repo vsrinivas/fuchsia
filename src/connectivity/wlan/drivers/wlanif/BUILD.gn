@@ -42,9 +42,10 @@ source_set("lib_source") {
   public_deps = all_deps
 }
 
-bind_rules("wlanif_bind") {
+driver_bind_rules("wlanif_bind") {
   rules = "wlanif.bind"
-  output = "wlanif-bind.h"
+  header_output = "wlanif-bind.h"
+  bind_output = "wlanif.bindbc"
   deps = [ "//src/devices/bind/fuchsia.wlan" ]
 }
 

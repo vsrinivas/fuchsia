@@ -5,9 +5,9 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("max98927_bind") {
+driver_bind_rules("max98927_bind") {
   rules = "max98927.bind"
-  output = "max98927_bind.h"
+  header_output = "max98927_bind.h"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }

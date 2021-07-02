@@ -7,9 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
-bind_rules("aml-sdmmc-bind") {
+driver_bind_rules("aml-sdmmc-bind") {
   rules = "aml-sdmmc.bind"
-  output = "aml-sdmmc-bind.h"
+  header_output = "aml-sdmmc-bind.h"
+  bind_output = "aml-sdmmc.bindbc"
   tests = "aml-sdmmc-bind-test.json"
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }

@@ -39,9 +39,9 @@ isolated_devmgr_unittest_package("bind-test-v2") {
   ]
 }
 
-bind_rules("bind-v2") {
+driver_bind_rules("bind-v2") {
   rules = "bind-test-v2.bind"
-  output = "bind-test-v2-bind.h"
+  header_output = "bind-test-v2-bind.h"
   disable_autobind = true
   disable_new_bytecode = false
   deps = [ "//src/devices/bind/fuchsia.test" ]

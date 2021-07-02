@@ -7,9 +7,10 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
-bind_rules("cdc_acm_bind") {
+driver_bind_rules("cdc_acm_bind") {
   rules = "cdc_acm.bind"
-  output = "cdc_acm_bind.h"
+  header_output = "cdc_acm_bind.h"
+  bind_output = "usb-cdc-acm.bindbc"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.usb",
@@ -41,9 +42,9 @@ driver_module("usb-cdc-acm") {
   ]
 }
 
-bind_rules("usb_cdc_acm_function_bind") {
+driver_bind_rules("usb_cdc_acm_function_bind") {
   rules = "usb_cdc_acm_function.bind"
-  output = "usb_cdc_acm_function_bind.h"
+  header_output = "usb_cdc_acm_function_bind.h"
   tests = "function_bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.usb",
