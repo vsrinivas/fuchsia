@@ -6,6 +6,7 @@ use {
     anyhow::{anyhow, Result},
     chrono::prelude::*,
     std::{
+        collections::HashMap,
         fs::File,
         io::{copy, Seek, SeekFrom, Write},
         path::PathBuf,
@@ -16,24 +17,23 @@ use {
     },
 };
 
-const DOCTOR_OUTPUT_NAME: &str = "doctor_output.txt";
 const FILE_MAX_BYTES: i64 = 4_000_000; // 4MB
 
 pub trait Recorder {
     fn add_sources(&mut self, source_files: Vec<PathBuf>);
 
-    fn add_output(&mut self, s: String);
+    fn add_content(&mut self, file_name: &str, content: String);
 
     fn generate(&self, output_dir: PathBuf) -> Result<PathBuf>;
 }
 pub struct DoctorRecorder {
+    resource: HashMap<String, String>,
     source_files: Vec<PathBuf>,
-    doctor_output: String,
 }
 
 impl DoctorRecorder {
     pub fn new() -> Self {
-        Self { source_files: vec![], doctor_output: String::new() }
+        Self { resource: HashMap::new(), source_files: vec![] }
     }
 
     fn copy_file(&self, source: &PathBuf, zip: &mut ZipWriter<File>) -> Result<()> {
@@ -60,8 +60,12 @@ impl Recorder for DoctorRecorder {
         self.source_files.extend(source_files.into_iter());
     }
 
-    fn add_output(&mut self, s: String) {
-        self.doctor_output.push_str(&s);
+    fn add_content(&mut self, file_name: &str, content: String) {
+        let _ = self
+            .resource
+            .entry(file_name.to_string())
+            .and_modify(|e| e.push_str(&content))
+            .or_insert(content);
     }
 
     fn generate(&self, output_dir: PathBuf) -> Result<PathBuf> {
@@ -85,11 +89,14 @@ impl Recorder for DoctorRecorder {
             }
         }
 
-        zip.start_file(
-            DOCTOR_OUTPUT_NAME,
-            FileOptions::default().compression_method(CompressionMethod::Stored),
-        )?;
-        zip.write(self.doctor_output.as_bytes()).map_err(|e| anyhow!(e))?;
+        for (file_name, resource) in self.resource.iter() {
+            zip.start_file(
+                file_name,
+                FileOptions::default().compression_method(CompressionMethod::Stored),
+            )?;
+            zip.write(resource.as_bytes()).map_err(|e| anyhow!(e))?;
+        }
+
         zip.finish().map_err(|e| anyhow!(e))?;
 
         Ok(output_path)
@@ -111,6 +118,7 @@ mod test {
     };
 
     const FAKE_OUTPUT: &str = "doctor doctor";
+    const DOCTOR_OUTPUT_NAME: &str = "doctor_output.txt";
     const FILE_CONTENTS: &[u8] = b"fake log file";
     const FILE_NAME: &str = "log.txt";
     const NON_EXISTENT_FILE_NAME: &str = "does_not_exist.txt";
@@ -133,7 +141,7 @@ mod test {
 
         let mut rec = DoctorRecorder::new();
         rec.add_sources(vec![f1path, f2path]);
-        rec.add_output(FAKE_OUTPUT.to_string());
+        rec.add_content(DOCTOR_OUTPUT_NAME, FAKE_OUTPUT.to_string());
 
         let path = rec.generate(root)?;
         let mut zip = ZipArchive::new(File::open(path)?)?;

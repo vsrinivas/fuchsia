@@ -33,6 +33,7 @@ mod daemon_manager;
 mod recorder;
 
 const DEFAULT_TARGET_CONFIG: &str = "target.default";
+const DOCTOR_OUTPUT_FILENAME: &str = "doctor_output.txt";
 
 macro_rules! success_or_continue {
     ($fut:expr, $handler:ident, $v:ident, $e:expr) => {
@@ -254,7 +255,7 @@ impl DoctorStepHandler for DefaultDoctorStepHandler {
         print!("{}", step);
         stdout().flush()?;
         let mut r = self.recorder.lock().await;
-        r.add_output(format!("{}", step));
+        r.add_content(DOCTOR_OUTPUT_FILENAME, format!("{}", step));
         Ok(())
     }
 
@@ -263,7 +264,7 @@ impl DoctorStepHandler for DefaultDoctorStepHandler {
     async fn output_step(&self, step: StepType) -> Result<()> {
         println!("{}", step);
         let mut r = self.recorder.lock().await;
-        r.add_output(format!("{}\n", step));
+        r.add_content(DOCTOR_OUTPUT_FILENAME, format!("{}\n", step));
         Ok(())
     }
 
@@ -271,7 +272,7 @@ impl DoctorStepHandler for DefaultDoctorStepHandler {
     async fn result(&self, result: StepResult) -> Result<()> {
         println!("{}", result);
         let mut r = self.recorder.lock().await;
-        r.add_output(format!("{}\n", result));
+        r.add_content(DOCTOR_OUTPUT_FILENAME, format!("{}\n", result));
         Ok(())
     }
 }
@@ -784,7 +785,7 @@ mod test {
             assert_eq!(source_set, expected_set);
         }
 
-        fn add_output(&mut self, _s: String) {
+        fn add_content(&mut self, _filename: &str, _content: String) {
             // Do nothing, we don't verify output in tests.
         }
 
@@ -807,7 +808,7 @@ mod test {
             panic!("add_sources should not be called.")
         }
 
-        fn add_output(&mut self, _s: String) {
+        fn add_content(&mut self, _filename: &str, _content: String) {
             // Do nothing, we don't verify output in tests.
         }
 
