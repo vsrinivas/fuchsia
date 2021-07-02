@@ -1,35 +1,50 @@
-# Fuchsia emulator (FEMU)
+# Fuchsia emulator
 
-The Fuchsia emulator (FEMU) allows you to test Fuchsia components and applications without needing a Fuchsia device.
-FEMU is included in Fuchsia source, and it’s downloaded by `jiri` as part of `jiri update` or `jiri run-hooks`.
-It’s fetched into the Fuchsia directory `/prebuilt/third_party/aemu`.
+The Fuchsia emulator (FEMU) is the default emulator for Fuchsia. FEMU allows you
+to test Fuchsia components and applications without a physical Fuchsia device.
 
-You can call FEMU with `fx` using `fx vdl`. Alternatively,
-you can call FEMU from the Fuchsia IDK using `fvdl`.
+FEMU is included in the Fuchsia source tree. FEMU is downloaded (or updated) by
+`jiri`, as part of `jiri update` or `jiri run-hooks`, and is fetched into the
+`/prebuilt/third_party/aemu` directory of your Fuchsia source tree.
 
-## FEMU and other emulators {#femu-and-other-emulators}
+You can launch FEMU using the `fx vdl` command, or using the `fvdl` command in
+the Fuchsia SDK.
 
-FEMU is the default emulator for Fuchsia. FEMU is based on the
-[Android Emulator (AEMU)](https://developer.android.com/studio/run/emulator), which is a fork of
-[QEMU](https://www.qemu.org/). Due to legacy issues, there may be references to AEMU in the code and documentation.
+## FEMU, AEMU, and QEMU {#femu-aemu-and-qemu}
 
-In some instances, such as [emulating Zircon](#emulating-zircon), you must use QEMU instead.
+FEMU is based on the
+[Android Emulator (AEMU)](https://developer.android.com/studio/run/emulator){:.external},
+which is a fork of [QEMU](https://www.qemu.org/){:.external} – in some
+instances, such as [emulating Zircon](#emulating-zircon), you need to use QEMU
+instead.
 
+Due to legacy issues, there may be references to AEMU in the code and
+documentation.
 
-## FEMU Features {#femu-features}
+### Emulating Zircon {#emulating-zircon}
 
-FEMU looks and behaves like a Fuchsia device, with the exception that no paving is required.
+If you only want to emulate Zircon, you must use `fx qemu` instead. Read
+[Debugging the Kernel using QEMU](/docs/development/debugging/qemu.md) to learn
+more. This is for kernel developers. Most Fuchsia developers do not need to use
+this workflow.
 
-FEMU features include:
+## Features
 
-*   **GUI Support:** You can run Fuchsia with the GUI (by default) or without the GUI
-    (using the `--headless` argument).
+FEMU looks and behaves like a Fuchsia device, except that no paving or flashing
+is required with FEMU.
+
+The features of FEMU include:
+
+*   **GUI Support:** You can run Fuchsia with the GUI (by default) or without
+    the GUI (using the `--headless` argument).
 *   **GPU Support:** You can run with the host’s GPU (by default) with full
-    [Vulkan](/docs/concepts/graphics/magma/vulkan.md) support, or you can choose
-    software rendering using [SwiftShader](https://swiftshader.googlesource.com/SwiftShader/).
-*   **Remote Development:** You can use a remote desktop with FEMU, either with Chrome Remote Desktop
-     or from the command line using [fx emu-remote](https://fuchsia.dev/reference/tools/fx/cmd/emu-remote)
-     command.
+    [Vulkan](/docs/concepts/graphics/magma/vulkan.md){:.exyernal} support, or
+    you can choose software rendering using
+    [SwiftShader](https://swiftshader.googlesource.com/SwiftShader/){:.external}.
+*   **Remote Development:** You can use a remote desktop with FEMU, either with
+    Chrome Remote Desktop or from the command line using
+    [fx emu-remote](https://fuchsia.dev/reference/tools/fx/cmd/emu-remote)
+    command.
 
 To see full list of supported flags:
 
@@ -37,76 +52,99 @@ To see full list of supported flags:
 fx vdl start --help
 ```
 
-To configure these features, see the [Set up and start FEMU](/docs/get-started/set_up_femu.md)
-page.
+The Fuchsia SDK's `fvdl` command supports the same flags as `fx vdl`.
 
-If you’re using the Fuchsia IDK, `fvdl` supports the same flags as `fx vdl`
+## Image and board support {#image-and-board-support}
 
-
-## FEMU limitations {#femu-limitations}
-
-### FEMU image and board support {#femu-image-and-board-support}
-
-When setting up FEMU using `fx set`, FEMU only supports the following boards:
+When setting up FEMU using `fx set`, FEMU supports the following boards:
 
 *   `qemu-x64`
 *   `qemu-arm64`
 
-When using the Fuchsia IDK to set up FEMU, you are limited to the following pre-built images:
+With the Fuchsia SDK, FEMU supports the following pre-built images:
 
 *   `qemu-x64`
 *   `workstation.qemu-x64-release`
 *   `qemu-arm64`
 
-Note: ARM64 support (`qemu-arm64`) is very limited and not recommended.
+ARM64 support (`qemu-arm64`) is very limited and not recommended.
 
-### FEMU networking  {#femu-networking}
+## Networking
 
-On Linux, Fuchsia Emulator should generally be run with the `-N` flag that provides networking through an
-emulated NIC. Instructions for setting up networking for FEMU is in
-[Setting up the Fuchsia Emulator](/docs/get-started/set_up_femu.md).
+On Linux, FEMU should generally be run with the `-N` flag that
+provides networking through an emulated NIC.
 
-Note: Without `-N`, your emulator won't be discoverable using `fx list-devices`. However, you can manually set the SSH address and use `fx` tools to interact with your emulator.
+Note: Instructions for setting up
+networking for FEMU is in the
+[Start the Fuchsia Emulator](/docs/get-started/set_up_femu.md) guide.
 
-If starting the emulator without `-N` (i.e `fx vdl start`), an available TCP port from the host will be
-picked and forwarded to the emulator's SSH port. When the emulator launches successfully, instruction to set `fx` tools with the correct SSH port are printed in the terminal output. 
-Then, you can manually set the SSH device:
+Without `-N`, your emulator is not discoverable using `ffx target list`
+(or`fx list-devices`). However, you can manually set the SSH address and
+use `fx` tools to interact with your emulator.
 
+If starting the emulator without `-N` (that is, `fx vdl start`), an available TCP
+port from the host is picked and forwarded to the emulator's SSH port. When
+the emulator launches successfully, an additional instruction, which uses
+`fx set-device` with the correct SSH port, is printed in the terminal output:
 
 ```posix-terminal
 fx set-device 127.0.0.1:{{ '<var>' }}SSH_PORT{{ '</var>' }}
 ```
+Using ths command above,  you can manually set the SSH device.
 
-To verify `fx` is using the correct port:
+To verify that your `fx` tool is using the correct port, run the
+following command:
 
 ```posix-terminal
 fx status
 ```
 
-You should see the SSH address printed next to `Device name`. To SSH into the emulator:
+You should see the SSH address printed next to `Device name`.
+
+To SSH into the emulator, run the following command:
 
 ```posix-terminal
 fx ssh
 ```
 
-### Emulating Zircon {#emulating-zircon}
+## Supported hardware for graphics acceleration {#supported-hardware}
 
-If you only want to emulate Zircon, you must use `fx qemu` instead. Read
-[Debugging the Kernel using QEMU](/docs/development/debugging/qemu.md) to
-learn more. This is for kernel developers. Most Fuchsia developers do not need
-to use this workflow.
+FEMU currently supports a limited set of GPUs on macOS and Linux for
+hardware graphics acceleration. FEMU uses a software renderer fallback
+for unsupported GPUs.
 
+<table>
+  <tbody>
+    <tr>
+      <th>Operating System</th>
+      <th>GPU Manufacturer</th>
+      <th>OS / Driver Version</th>
+    </tr>
+    <tr>
+      <td>Linux</td>
+      <td>Nvidia Quadro</td>
+      <td>Nvidia Linux Drivers <a href="https://www.nvidia.com/download/driverResults.aspx/160175/en-us">440.100</a>+</td>
+    </tr>
+    <tr>
+      <td>macOS</td>
+      <td><a href="https://support.apple.com/en-us/HT204349#intelhd">Intel HD Graphics</a></td>
+      <td>macOS version 10.15+</td>
+    </tr>
+    <tr>
+      <td>macOS</td>
+      <td>AMD Radeon Pro</td>
+      <td>macOS version 10.15+</td>
+    </tr>
+  </tbody>
+</table>
 
-## FEMU common usage  {#femu-common-usage}
+## Common usage {#common-usage}
 
-To use FEMU, you must first
-[download the Fuchsia source](/docs/get-started/get_fuchsia_source.md)
-and [build Fuchsia](/docs/get-started/build_fuchsia.md).
+To launch FEMU, complete the [Get started with Fuchsia](/docs/get-started/README.md) guide.
 
-Alternatively, you can use the Fuchsia IDK and use pre-built system images.
+Alternatively, you can use the Fuchsia SDK and use pre-built system images.
 
-Then you can use FEMU to do the following:
+Once you're able to launch FEMU, you can perform the following tasks:
 
-*   [Set up and start FEMU](/docs/get-started/set_up_femu.md)
 *   [Test components](/docs/development/run/run-test-component.md)
 *   [Run end-to-end tests](/docs/development/testing/run_an_end_to_end_test.md)

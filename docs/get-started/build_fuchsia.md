@@ -1,14 +1,21 @@
 # Configure and build Fuchsia {#configure-and-build-fuchsia}
 
-This document describes how to set up and build Fuchsia.
+This guide provide instructions on how to set up and build Fuchsia.
+
+The steps are:
+
+1. [Prerequisites](#prerequisites).
+1. [Set your build configuration](#set-your-build-configuration).
+1. [Speed up the build (Optional)](#speed-up-the-build).
+1. [Build Fuchsia](#build-fuchsia).
 
 ## Prerequisites
 
-Before you can set up and build Fuchsia, you need to follow the steps in
-[get the Fuchsia source code](/docs/get-started/get_fuchsia_source.md)
-to download Fuchsia source code and set up your environment variables.
+Before you can set up and build Fuchsia, you need to complete the
+[Download the Fuchsia source code](/docs/get-started/get_fuchsia_source.md)
+guide to download Fuchsia source code and set up your environment variables.
 
-## Set build configuration
+## Set your build configuration {#set-your-build-configuration}
 
 To set your build configuration for Fuchsia, run the following command:
 
@@ -44,7 +51,7 @@ fx set core.x64
 See [Configure a build](/docs/development/build/fx.md#configure-a-build) for
 more product and board options.
 
-### Speed up the build {#speed-up-the-build}
+## Speed up the build (Optional) {#speed-up-the-build}
 
 Note: This step is optional.
 
@@ -53,7 +60,7 @@ To reduce the time it takes to build Fuchsia, you can do any of the following:
 *   [Speed up the build with Goma](#speed-up-the-build-with-goma)
 *   [Speed up the build with ccache](#speed-up-the-build-with-ccache)
 
-#### Speed up the build with Goma {#speed-up-the-build-with-goma}
+### Speed up the build with Goma {#speed-up-the-build-with-goma}
 
 [Goma](https://chromium.googlesource.com/infra/goma/server/){:.external} is a
 distributed compiler service for open source projects such as Chrome, Android
@@ -64,7 +71,7 @@ Goma client on your machine:
 fx goma
 ```
 
-#### Speed up the build with ccache {#speed-up-the-build-with-ccache}
+### Speed up the build with ccache {#speed-up-the-build-with-ccache}
 
 If you do not have access to Goma, but want to accelerate the Fuchsia build
 locally, use <code>[ccache](https://ccache.dev/){:.external}</code> to cache
@@ -97,7 +104,7 @@ To override the default behavior, pass the following flags to `fx set`:
     fx set core.x64 --no-ccache
     ```
 
-## Build Fuchsia
+## Build Fuchsia {#build-fuchsia}
 
 Note: Building Fuchsia can take up to 90 minutes.
 

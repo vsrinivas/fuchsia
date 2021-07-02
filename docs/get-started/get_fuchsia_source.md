@@ -1,4 +1,4 @@
-# Get Fuchsia source code
+# Download the Fuchsia source code
 
 This guide provides instructions on how to set up the Fuchsia development
 environment on your machine for building Fuchsia from source.

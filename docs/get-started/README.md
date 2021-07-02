@@ -1,42 +1,36 @@
-# Fuchsia getting started
+# Get started with Fuchsia
 
-Welcome to Fuchsia! This guide walks you through the steps to get Fuchsia source code,
-build Fuchsia, and run Fuchsia on an emulator or hardware device.
+Welcome to Fuchsia!
 
-## Get Fuchsia source and build Fuchsia
+This guide provides instructions on how to download the Fuchsia source code,
+build a Fuchsia system image, and start Fuchsia on an emulator.
 
-To download the Fuchsia source code and set up your build environment, follow
-these instructions:
+Note: If you want to run Fuchsia on a hardware device, see
+[Install Fuchsia on a device](/docs/development/hardware/paving.md) after
+completing Step 2 below.
 
- * [Get Fuchsia source code](/docs/get-started/get_fuchsia_source.md)
- * [Build Fuchsia](/docs/get-started/build_fuchsia.md)
+The steps are:
 
-## Set up Fuchsia 
+1.  [Download the Fuchsia source code](/docs/get-started/get_fuchsia_source.md)
+1.  [Configure and build Fuchsia](/docs/get-started/build_fuchsia.md)
+1.  [Start the Fuchsia emulator](/docs/get-started/set_up_femu.md).
+1.  [Explore Fuchsia](/docs/get-started/explore_fuchsia.md)
 
-### Fuchsia emulator (FEMU)
+## Appendices
 
-To set up and run the Fuchsia emulator (FEMU), see
-[Set up the Fuchsia emulator (FEMU)](/docs/get-started/set_up_femu.md).
+### Learn more about Fuchsia
 
-### Fuchsia on a device
+If you want to further explore Fuchsia, check out the following resources first:
 
-To set up a hardware device, follow the steps in
-[Installing Fuchsia on a device](/docs/development/hardware/paving.md)
-and [Build and pave quickstart](/docs/development/build/build_and_pave_quickstart.md).
+*   [Build and pave quickstart](/docs/development/build/build_and_pave_quickstart.md).
+*   [Run an example Fuchsia component](/docs/development/run/run-examples.md)
+*   [Fuchsia workflow tips and questions](/docs/development/source_code/workflow_tips_and_faq.md)
+*   [Configure editors](/docs/development/editors/)
+*   [Contribute to Fuchsia source code](/docs/development/source_code/contribute_changes.md)
+*   [Find a starter project](/docs/contribute/open_projects/)
 
-## Explore Fuchsia
+### Get started with Zircon
 
-You can explore Fuchsia further in the following guides:
-
- *   [Explore Fuchsia basics](/docs/get-started/explore_fuchsia.md)
- *   [Run an example Fuchsia component](/docs/development/run/run-examples.md)
- *   [Fuchsia workflow tips and questions](/docs/development/source_code/workflow_tips_and_faq.md)
- *   [Configure editors](/docs/development/editors/)
- *   [Contribute to Fuchsia source code](/docs/development/source_code/contribute_changes.md)
- *   [Find a starter project](/docs/contribute/open_projects/)
-
-## Contribute to Zircon
-
-Fuchsia source code includes [Zircon](/docs/concepts/kernel/README.md), the core platform
-that underpins Fuchsia. To work on Zircon, see
+The Fuchsia source code includes [Zircon](/docs/concepts/kernel/README.md), the
+core platform that underpins Fuchsia. To work on Zircon, see
 [Getting started with Zircon](/docs/development/kernel/getting_started.md).

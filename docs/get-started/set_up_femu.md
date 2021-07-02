@@ -1,13 +1,13 @@
-# Set up and start the Fuchsia emulator (FEMU)
+# Start the Fuchsia emulator
 
-This guide provides instructions on how to set up and run the Fuchsia emulator (FEMU),
-including networking and GPU support setup.
+This guide provides instructions on how to set up and launch the
+Fuchsia emulator (FEMU).
 
 The steps are:
 
 1. [Prerequisites](#prerequisites).
 1. [Build Fuchisa for FEMU](#build-fuchsia-for-femu).
-1. [Enable KVM (Optional)](#enable-kvm).
+1. [Enable VM acceleration (Optional)](#enable-vm-acceleration).
 1. [Start FEMU](#start-femu).
 1. [Discover FEMU](#discover-femu).
 
@@ -41,10 +41,11 @@ To build a FEMU Fuchsia image, do the following:
 For more information on supported boards and products, see the
 [Fuchsia emulator (FEMU)][femu-overview] overview page.
 
-## Enable KVM (Optional) {#enable-kvm}
+## Enable VM acceleration (Optional) {#enable-vm-acceleration}
 
-(**Linux only**) If KVM is supported on your machine, update permission
-to enable KVM.
+(**Linux only**) Most Linux machines support VM acceleration through KVM.
+If KVM is available on your machine, update your group permission to
+enable KVM.
 
 * {Linux}
 
@@ -173,6 +174,14 @@ For the next steps, check out the following resources:
 
 This section provides additional FEMU options.
 
+### See all available flags
+
+To see a full list of supported flags:
+
+```posix-terminal
+fx vdl start --help
+```
+
 ### Input options
 
 By default FEMU uses multi-touch input. You can add the argument
@@ -217,37 +226,6 @@ These are the valid commands and options:
    <td><code>fx vdl start --software-gpu</code></td>
   </tr>
 </tbody></table>
-
-### Supported hardware for graphics acceleration {#supported-hardware}
-
-FEMU currently supports a limited set of GPUs on macOS and Linux for
-hardware graphics acceleration. FEMU uses a software renderer fallback
-for unsupported GPUs.
-
-<table>
-  <tbody>
-    <tr>
-      <th>Operating System</th>
-      <th>GPU Manufacturer</th>
-      <th>OS / Driver Version</th>
-    </tr>
-    <tr>
-      <td>Linux</td>
-      <td>Nvidia Quadro</td>
-      <td>Nvidia Linux Drivers <a href="https://www.nvidia.com/download/driverResults.aspx/160175/en-us">440.100</a>+</td>
-    </tr>
-    <tr>
-      <td>macOS</td>
-      <td><a href="https://support.apple.com/en-us/HT204349#intelhd">Intel HD Graphics</a></td>
-      <td>macOS version 10.15+</td>
-    </tr>
-    <tr>
-      <td>macOS</td>
-      <td>AMD Radeon Pro</td>
-      <td>macOS version 10.15+</td>
-    </tr>
-  </tbody>
-</table>
 
 ### Reboot FEMU {#reboot-femu}
 
