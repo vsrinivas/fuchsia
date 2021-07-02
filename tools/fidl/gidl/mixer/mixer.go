@@ -7,6 +7,7 @@ package mixer
 import (
 	"fmt"
 	"math"
+	"strconv"
 
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -292,8 +293,24 @@ func (decl *BitsDecl) IsFlexible() bool {
 }
 
 func (decl *BitsDecl) conforms(value gidlir.Value, ctx context) error {
-	// TODO(fxbug.dev/7847): Require a valid bits member when strict
-	return decl.Underlying.conforms(value, ctx)
+	err := decl.Underlying.conforms(value, ctx)
+	if err != nil {
+		return err
+	}
+	valueNum, ok := value.(uint64)
+	if !ok {
+		panic(fmt.Sprintf("bits value must be uint64, got %T", value))
+	}
+	if decl.bitsDecl.IsStrict() {
+		mask, err := strconv.ParseUint(decl.bitsDecl.Mask, 10, 64)
+		if err != nil {
+			panic(fmt.Sprintf("cannot parse bits mask: %s", decl.bitsDecl.Mask))
+		}
+		if valueNum&mask != valueNum {
+			return fmt.Errorf("value %d is invalid for strict bits %s", value, decl.Name())
+		}
+	}
+	return nil
 }
 
 type EnumDecl struct {
@@ -311,8 +328,20 @@ func (decl *EnumDecl) IsFlexible() bool {
 }
 
 func (decl *EnumDecl) conforms(value gidlir.Value, ctx context) error {
-	// TODO(fxbug.dev/7847): Require a valid enum member when strict
-	return decl.Underlying.conforms(value, ctx)
+	err := decl.Underlying.conforms(value, ctx)
+	if err != nil {
+		return err
+	}
+	if decl.enumDecl.IsStrict() {
+		str := fmt.Sprintf("%d", value)
+		for _, member := range decl.enumDecl.Members {
+			if str == member.Value.Value {
+				return nil
+			}
+		}
+		return fmt.Errorf("value %d is invalid for strict enum %s", value, decl.Name())
+	}
+	return nil
 }
 
 // StructDecl describes a struct declaration.

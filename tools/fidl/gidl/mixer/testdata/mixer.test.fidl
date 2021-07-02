@@ -3,11 +3,19 @@ library test.mixer;
 
 using zx;
 
-bits ExampleBits : uint8 {
+flexible bits ExampleFlexibleBits : uint8 {
     B = 1;
 };
 
-enum ExampleEnum : uint8 {
+strict bits ExampleStrictBits : uint8 {
+    B = 1;
+};
+
+flexible enum ExampleFlexibleEnum : uint8 {
+    E = 1;
+};
+
+strict enum ExampleStrictEnum : uint8 {
     E = 1;
 };
 
@@ -20,7 +28,7 @@ table ExampleTable {
     2: reserved;
 };
 
-union ExampleStrictUnion {
+strict union ExampleStrictUnion {
     1: string s;
 };
 

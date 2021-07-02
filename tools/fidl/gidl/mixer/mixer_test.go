@@ -522,8 +522,8 @@ func TestHandleDeclConforms(t *testing.T) {
 	)
 }
 
-func TestBitsDeclConforms(t *testing.T) {
-	decl, ok := testSchema(t).lookupDeclByName("ExampleBits", false)
+func TestStrictBitsConforms(t *testing.T) {
+	decl, ok := testSchema(t).lookupDeclByName("ExampleStrictBits", false)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -532,8 +532,40 @@ func TestBitsDeclConforms(t *testing.T) {
 		context{},
 		bitsDecl,
 		[]conformTest{
-			// Underlying type for ExampleBits is uint8.
+			// The only valid bit of ExampleStrictBits is `B = 1`.
 			conformOk{uint64(0)},
+			conformOk{uint64(1)},
+			conformFail{uint64(2), "invalid for strict bits"},
+			conformFail{uint64(255), "invalid for strict bits"},
+			// Underlying type for ExampleStrictBits is uint8.
+			conformFail{uint64(256), "out of range"},
+			conformFail{int64(256), "out of range"},
+			conformFail{int64(-1), "out of range"},
+			conformFail{nil, "expecting int64 or uint64"},
+			conformFail{0, "expecting int64 or uint64"},
+			conformFail{uint(0), "expecting int64 or uint64"},
+			conformFail{int8(0), "expecting int64 or uint64"},
+			conformFail{uint8(0), "expecting int64 or uint64"},
+			conformFail{"foo", "expecting int64 or uint64"},
+			conformFail{1.5, "expecting int64 or uint64"},
+		},
+	)
+}
+
+func TestFlexibleBitsDeclConforms(t *testing.T) {
+	decl, ok := testSchema(t).lookupDeclByName("ExampleFlexibleBits", false)
+	if !ok {
+		t.Fatalf("lookupDeclByName failed")
+	}
+	bitsDecl := decl.(*BitsDecl)
+	checkConforms(t,
+		context{},
+		bitsDecl,
+		[]conformTest{
+			// Underlying type for ExampleFlexibleBits is uint8.
+			conformOk{uint64(0)},
+			conformOk{uint64(1)},
+			conformOk{uint64(2)},
 			conformOk{uint64(255)},
 			conformFail{uint64(256), "out of range"},
 			conformFail{int64(256), "out of range"},
@@ -549,8 +581,8 @@ func TestBitsDeclConforms(t *testing.T) {
 	)
 }
 
-func TestEnumDeclConforms(t *testing.T) {
-	decl, ok := testSchema(t).lookupDeclByName("ExampleEnum", false)
+func TestStrictEnumDeclConforms(t *testing.T) {
+	decl, ok := testSchema(t).lookupDeclByName("ExampleStrictEnum", false)
 	if !ok {
 		t.Fatalf("lookupDeclByName failed")
 	}
@@ -559,8 +591,40 @@ func TestEnumDeclConforms(t *testing.T) {
 		context{},
 		enumDecl,
 		[]conformTest{
-			// Underlying type for ExampleEnum is uint8.
+			// The only valid member of ExampleStrictEnum is `E = 1`.
+			conformFail{uint64(0), "invalid for strict enum"},
+			conformOk{uint64(1)},
+			conformFail{uint64(2), "invalid for strict enum"},
+			conformFail{uint64(255), "invalid for strict enum"},
+			// Underlying type for ExampleStrictEnum is uint8.
+			conformFail{uint64(256), "out of range"},
+			conformFail{int64(256), "out of range"},
+			conformFail{int64(-1), "out of range"},
+			conformFail{nil, "expecting int64 or uint64"},
+			conformFail{0, "expecting int64 or uint64"},
+			conformFail{uint(0), "expecting int64 or uint64"},
+			conformFail{int8(0), "expecting int64 or uint64"},
+			conformFail{uint8(0), "expecting int64 or uint64"},
+			conformFail{"foo", "expecting int64 or uint64"},
+			conformFail{1.5, "expecting int64 or uint64"},
+		},
+	)
+}
+
+func TestFlexibleEnumDeclConforms(t *testing.T) {
+	decl, ok := testSchema(t).lookupDeclByName("ExampleFlexibleEnum", false)
+	if !ok {
+		t.Fatalf("lookupDeclByName failed")
+	}
+	enumDecl := decl.(*EnumDecl)
+	checkConforms(t,
+		context{},
+		enumDecl,
+		[]conformTest{
+			// Underlying type for ExampleFlexibleEnum is uint8.
 			conformOk{uint64(0)},
+			conformOk{uint64(1)},
+			conformOk{uint64(2)},
 			conformOk{uint64(255)},
 			conformFail{uint64(256), "out of range"},
 			conformFail{int64(256), "out of range"},
