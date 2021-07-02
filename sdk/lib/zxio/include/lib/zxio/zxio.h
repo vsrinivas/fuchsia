@@ -12,6 +12,8 @@
 
 __BEGIN_CDECLS
 
+#define ZXIO_EXPORT __EXPORT
+
 // Overview
 //
 // The zxio library provides an ergonomic C interface to the fuchsia.io family
@@ -49,17 +51,18 @@ __BEGIN_CDECLS
 // |storage|.
 //
 // May block to communicate with the server about the state of the object.
-zx_status_t zxio_create(zx_handle_t handle, zxio_storage_t* storage);
+ZXIO_EXPORT zx_status_t zxio_create(zx_handle_t handle, zxio_storage_t* storage);
 
 // Like zxio_create for channel objects expecting an incoming
 // fuchsia.io.Node/OnOpen event such as from zxio_open_async.
 //
 // Always consumes |handle|. |handle| must refer to a channel object.
-zx_status_t zxio_create_with_on_open(zx_handle_t handle, zxio_storage_t* storage);
+ZXIO_EXPORT zx_status_t zxio_create_with_on_open(zx_handle_t handle, zxio_storage_t* storage);
 
 // Like zxio_create but the caller provides information about the handle.
-zx_status_t zxio_create_with_info(zx_handle_t handle, const zx_info_handle_basic_t* chandle_info,
-                                  zxio_storage_t* storage);
+ZXIO_EXPORT zx_status_t zxio_create_with_info(zx_handle_t handle,
+                                              const zx_info_handle_basic_t* chandle_info,
+                                              zxio_storage_t* storage);
 
 // Attempt to close |io|.
 //
@@ -67,7 +70,7 @@ zx_status_t zxio_create_with_info(zx_handle_t handle, const zx_info_handle_basic
 // errors.
 //
 // Always consumes |io|.
-zx_status_t zxio_close(zxio_t* io);
+ZXIO_EXPORT zx_status_t zxio_close(zxio_t* io);
 
 // Extracts the underlying |zx_handle_t| for |io| if one exists. Does not
 // terminate the connection with the server.
@@ -76,7 +79,7 @@ zx_status_t zxio_close(zxio_t* io);
 //
 // Does not consume |io|. However, after this method returns, future I/O on this
 // object are guaranteed to return |ZX_ERR_BAD_HANDLE|.
-zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_handle);
+ZXIO_EXPORT zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_handle);
 
 // Access the primary |zx_handle_t| for |io| if one exists.
 //
@@ -96,15 +99,15 @@ zx_status_t zxio_borrow(zxio_t* io, zx_handle_t* out_handle);
 // Does not block.
 //
 // Does not consume |io|.
-zx_status_t zxio_clone(zxio_t* io, zx_handle_t* out_handle);
+ZXIO_EXPORT zx_status_t zxio_clone(zxio_t* io, zx_handle_t* out_handle);
 
 // Wait for |signals| to be asserted for |io|.
 //
 // Returns |ZX_ERR_TIMED_OUT| if |deadline| passes before any of the |signals|
 // are asserted for |io|. Returns the set of signals that were actually observed
 // via |observed|.
-zx_status_t zxio_wait_one(zxio_t* io, zxio_signals_t signals, zx_time_t deadline,
-                          zxio_signals_t* out_observed);
+ZXIO_EXPORT zx_status_t zxio_wait_one(zxio_t* io, zxio_signals_t signals, zx_time_t deadline,
+                                      zxio_signals_t* out_observed);
 
 // Translate |zxio_signals_t| into |zx_signals_t| for |io|.
 //
@@ -113,25 +116,26 @@ zx_status_t zxio_wait_one(zxio_t* io, zxio_signals_t signals, zx_time_t deadline
 //
 // Use |zxio_wait_end| to translate the observed |zx_signals_t| back into
 // |zxio_signals_t|.
-void zxio_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
-                     zx_signals_t* out_zx_signals);
+ZXIO_EXPORT void zxio_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
+                                 zx_signals_t* out_zx_signals);
 
 // Translate |zx_signals_t| into |zxio_signals_t| for |io|.
 //
 // Typically used with |zxio_wait_begin| to wait asynchronously on a
 // |zx_handle_t| and to interpret the observed |zx_signals|.
-void zxio_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals);
+ZXIO_EXPORT void zxio_wait_end(zxio_t* io, zx_signals_t zx_signals,
+                               zxio_signals_t* out_zxio_signals);
 
 // Synchronizes updates to the file to the underlying media, if it exists.
-zx_status_t zxio_sync(zxio_t* io);
+ZXIO_EXPORT zx_status_t zxio_sync(zxio_t* io);
 
 // Returns information about the file.
-zx_status_t zxio_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr);
+ZXIO_EXPORT zx_status_t zxio_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr);
 
 // Update information about the file.
 //
 // The presence of a particular field in |attr| indicates it is to be updated.
-zx_status_t zxio_attr_set(zxio_t* io, const zxio_node_attributes_t* attr);
+ZXIO_EXPORT zx_status_t zxio_attr_set(zxio_t* io, const zxio_node_attributes_t* attr);
 
 // File
 
@@ -140,64 +144,64 @@ zx_status_t zxio_attr_set(zxio_t* io, const zxio_node_attributes_t* attr);
 // The seek offset is moved forward by the actual number of bytes read.
 //
 // The actual number of bytes read is returned in |out_actual|.
-zx_status_t zxio_read(zxio_t* io, void* buffer, size_t capacity, zxio_flags_t flags,
-                      size_t* out_actual);
+ZXIO_EXPORT zx_status_t zxio_read(zxio_t* io, void* buffer, size_t capacity, zxio_flags_t flags,
+                                  size_t* out_actual);
 
 // Attempt to read |capacity| bytes into |buffer| at |offset|.
 //
 // Does not affect the seek offset.
 //
 // The actual number of bytes read is returned in |out_actual|.
-zx_status_t zxio_read_at(zxio_t* io, zx_off_t offset, void* buffer, size_t capacity,
-                         zxio_flags_t flags, size_t* out_actual);
+ZXIO_EXPORT zx_status_t zxio_read_at(zxio_t* io, zx_off_t offset, void* buffer, size_t capacity,
+                                     zxio_flags_t flags, size_t* out_actual);
 
 // Attempt to write |capacity| bytes into |buffer| at the current seek offset.
 //
 // The seek offset is moved forward by the actual number of bytes written.
 //
 // The actual number of bytes written is returned in |out_actual|.
-zx_status_t zxio_write(zxio_t* io, const void* buffer, size_t capacity, zxio_flags_t flags,
-                       size_t* out_actual);
+ZXIO_EXPORT zx_status_t zxio_write(zxio_t* io, const void* buffer, size_t capacity,
+                                   zxio_flags_t flags, size_t* out_actual);
 
 // Attempt to write |capacity| bytes into |buffer| at |offset|.
 //
 // Does not affect the seek offset.
 //
 // The actual number of bytes written is returned in |out_actual|.
-zx_status_t zxio_write_at(zxio_t* io, zx_off_t offset, const void* buffer, size_t capacity,
-                          zxio_flags_t flags, size_t* out_actual);
+ZXIO_EXPORT zx_status_t zxio_write_at(zxio_t* io, zx_off_t offset, const void* buffer,
+                                      size_t capacity, zxio_flags_t flags, size_t* out_actual);
 
 // Attempt to read bytes into the buffers described by |vector|.
 //
 // The seek offset is moved forward by the actual number of bytes read.
 //
 // The actual number of bytes read is returned in |out_actual|.
-zx_status_t zxio_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                       zxio_flags_t flags, size_t* out_actual);
+ZXIO_EXPORT zx_status_t zxio_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                   zxio_flags_t flags, size_t* out_actual);
 
 // Attempt to read bytes into the buffers described by |vector| at |offest|.
 //
 // Does not affect the seek offset.
 //
 // The actual number of bytes read is returned in |out_actual|.
-zx_status_t zxio_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                          size_t vector_count, zxio_flags_t flags, size_t* out_actual);
+ZXIO_EXPORT zx_status_t zxio_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                      size_t vector_count, zxio_flags_t flags, size_t* out_actual);
 
 // Attempt to write bytes into the buffers described by |vector|.
 //
 // The seek offset is moved forward by the actual number of bytes written.
 //
 // The actual number of bytes written is returned in |out_actual|.
-zx_status_t zxio_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                        zxio_flags_t flags, size_t* out_actual);
+ZXIO_EXPORT zx_status_t zxio_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                    zxio_flags_t flags, size_t* out_actual);
 
 // Attempt to write bytes into the buffers described by |vector| at |offest|.
 //
 // Does not affect the seek offset.
 //
 // The actual number of bytes written is returned in |out_actual|.
-zx_status_t zxio_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                           size_t vector_count, zxio_flags_t flags, size_t* out_actual);
+ZXIO_EXPORT zx_status_t zxio_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                       size_t vector_count, zxio_flags_t flags, size_t* out_actual);
 
 // Modify the seek offset.
 //
@@ -205,10 +209,11 @@ zx_status_t zxio_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector
 //
 // The resulting seek offset relative to the start of the file is returned in
 // |out_offset|.
-zx_status_t zxio_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset, size_t* out_offset);
+ZXIO_EXPORT zx_status_t zxio_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
+                                  size_t* out_offset);
 
 // Shrink the file size to |length| bytes.
-zx_status_t zxio_truncate(zxio_t* io, uint64_t length);
+ZXIO_EXPORT zx_status_t zxio_truncate(zxio_t* io, uint64_t length);
 
 // Returns the flags associated with the file.
 //
@@ -216,7 +221,7 @@ zx_status_t zxio_truncate(zxio_t* io, uint64_t length);
 // |zxio_flags_set|.
 //
 // See io.fidl for the available |flags|.
-zx_status_t zxio_flags_get(zxio_t* io, uint32_t* out_flags);
+ZXIO_EXPORT zx_status_t zxio_flags_get(zxio_t* io, uint32_t* out_flags);
 
 // Modifies the flags associated with the file.
 //
@@ -225,7 +230,7 @@ zx_status_t zxio_flags_get(zxio_t* io, uint32_t* out_flags);
 //  * |fuchsia::io::OPEN_FLAG_APPEND|.
 //
 // See io.fidl for the available |flags|.
-zx_status_t zxio_flags_set(zxio_t* io, uint32_t flags);
+ZXIO_EXPORT zx_status_t zxio_flags_set(zxio_t* io, uint32_t flags);
 
 // Gets a token associated with a directory connection.
 //
@@ -233,13 +238,14 @@ zx_status_t zxio_flags_set(zxio_t* io, uint32_t flags);
 // in operations involving multiple nodes e.g. rename.
 //
 // See the io.fidl documentation on |fuchsia.io/Directory.GetToken|.
-zx_status_t zxio_token_get(zxio_t* io, zx_handle_t* out_token);
+ZXIO_EXPORT zx_status_t zxio_token_get(zxio_t* io, zx_handle_t* out_token);
 
 // Acquires a VMO representing this file, if there is one, with the requested
 // access rights.
 //
 // |flags| are |fuchsia.io/VMO_FLAG_*|.
-zx_status_t zxio_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo, size_t* out_size);
+ZXIO_EXPORT zx_status_t zxio_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
+                                     size_t* out_size);
 
 // Get a read-only VMO containing the whole contents of the file.
 //
@@ -249,7 +255,7 @@ zx_status_t zxio_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo, size_
 //
 // If non-null, |out_size| will hold the size of the file. Note that the size of
 // the vmo as queried from the kernel would be rounded up to the page boundary.
-zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
+ZXIO_EXPORT zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
 
 // Get a read-only VMO containing the whole contents of the file.
 //
@@ -258,7 +264,7 @@ zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size
 //
 // If non-null, |out_size| will hold the size of the file. Note that the size of
 // the vmo as queried from the kernel would be rounded up to the page boundary.
-zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
+ZXIO_EXPORT zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
 
 // Get a read-only handle to the exact VMO used by the file system server to
 // represent the file.
@@ -268,7 +274,7 @@ zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo, size_t* out_siz
 //
 // If non-null, |out_size| will hold the size of the file. Note that the size of
 // the vmo as queried from the kernel would be rounded up to the page boundary.
-zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
+ZXIO_EXPORT zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
 
 // Get a read + execute VMO as a clone of the underlying VMO in this file.
 // This function will fail rather than copying the contents if it cannot clone,
@@ -277,11 +283,11 @@ zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo, size_t* out_siz
 //
 // If non-null, |out_size| will hold the size of the file. Note that the size of
 // the vmo as queried from the kernel would be rounded up to the page boundary.
-zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
+ZXIO_EXPORT zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
 
 // Queries the number of bytes available to read from this object without
 // blocking.
-zx_status_t zxio_get_read_buffer_available(zxio_t* io, size_t* out_available);
+ZXIO_EXPORT zx_status_t zxio_get_read_buffer_available(zxio_t* io, size_t* out_available);
 
 // Shuts a given IO object down for reading, writing, or both.
 //
@@ -300,8 +306,8 @@ zx_status_t zxio_shutdown(zxio_t* io, zxio_shutdown_options_t options);
 // This call blocks on the remote server.
 //
 // See io.fidl for the available |flags| and |mode|.
-zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,
-                      size_t path_len, zxio_storage_t* storage);
+ZXIO_EXPORT zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode,
+                                  const char* path, size_t path_len, zxio_storage_t* storage);
 
 // Open a new object relative to the given |directory|.
 //
@@ -314,8 +320,8 @@ zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode, const ch
 // zxio_create_with_on_open().
 //
 // See io.fidl for the available |flags| and |mode|.
-zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,
-                            size_t path_len, zx_handle_t request);
+ZXIO_EXPORT zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint32_t mode,
+                                        const char* path, size_t path_len, zx_handle_t request);
 
 // Adds a inotify filter on a file/directory relative to the given |directory|.
 // The events on server side are communicated to the client via |socket|.
@@ -323,26 +329,27 @@ zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint32_t mode, co
 // by the the client.
 //
 // See io.fidl/io2.fidl for the available |mask|.
-zx_status_t zxio_add_inotify_filter(zxio_t* io, const char* path, size_t path_len, uint32_t mask,
-                                    uint32_t watch_descriptor, zx_handle_t socket);
+ZXIO_EXPORT zx_status_t zxio_add_inotify_filter(zxio_t* io, const char* path, size_t path_len,
+                                                uint32_t mask, uint32_t watch_descriptor,
+                                                zx_handle_t socket);
 
 // Remove a file relative to the given directory.  |flags| has the same values and semantics as
 // POSIX's unlinkat |flags| argument.
-zx_status_t zxio_unlink(zxio_t* directory, const char* name, int flags);
+ZXIO_EXPORT zx_status_t zxio_unlink(zxio_t* directory, const char* name, int flags);
 
 // Attempts to rename |old_path| relative to |old_directory| to |new_path|
 // relative to the directory represented by |new_directory_token|.
 //
 // |old_directory| and |new_directory_token| may be aliased.
-zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path,
-                        zx_handle_t new_directory_token, const char* new_path);
+ZXIO_EXPORT zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path,
+                                    zx_handle_t new_directory_token, const char* new_path);
 
 // Attempts to link |src_path| relative to |src_directory| to |dst_path| relative to
 // the directory represented by |dst_directory_token|.
 //
 // |src_directory| and |dst_directory_token| may be aliased.
-zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, zx_handle_t dst_directory_token,
-                      const char* dst_path);
+ZXIO_EXPORT zx_status_t zxio_link(zxio_t* src_directory, const char* src_path,
+                                  zx_handle_t dst_directory_token, const char* dst_path);
 
 // Directory iterator
 
@@ -365,7 +372,8 @@ typedef struct zxio_dirent_iterator {
 //
 // The initialized iterator should be destroyed by calling
 // |zxio_dirent_iterator_destroy| when no longer used.
-zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory);
+ZXIO_EXPORT zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator,
+                                                  zxio_t* directory);
 
 // Read a |zxio_dirent_t| from the given |iterator|.
 //
@@ -383,29 +391,30 @@ zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* 
 //
 // |iterator| must have been previously initialized via
 // |zxio_dirent_iterator_init|.
-zx_status_t zxio_dirent_iterator_next(zxio_dirent_iterator_t* iterator, zxio_dirent_t** out_entry);
+ZXIO_EXPORT zx_status_t zxio_dirent_iterator_next(zxio_dirent_iterator_t* iterator,
+                                                  zxio_dirent_t** out_entry);
 
 // Destroys a |zxio_dirent_iterator_t|, freeing associated resources.
 //
 // After destruction, another |zxio_dirent_iterator_init| call might be made on
 // the corresponding directory.
-void zxio_dirent_iterator_destroy(zxio_dirent_iterator_t* iterator);
+ZXIO_EXPORT void zxio_dirent_iterator_destroy(zxio_dirent_iterator_t* iterator);
 
 // Terminals
 
 // Return in |tty| whether or not |io| represents a TTY object (should
 // line buffer for stdio, etc).
-zx_status_t zxio_isatty(zxio_t* io, bool* tty);
+ZXIO_EXPORT zx_status_t zxio_isatty(zxio_t* io, bool* tty);
 
 // Gets the window size in characters for the tty in |io|.
 //
 // Returns ZX_ERR_NOT_SUPPORTED if |io| does not support setting the window size.
-zx_status_t zxio_get_window_size(zxio_t* io, uint32_t* width, uint32_t* height);
+ZXIO_EXPORT zx_status_t zxio_get_window_size(zxio_t* io, uint32_t* width, uint32_t* height);
 
 // Sets the window size in characters for the tty in |io|.
 //
 // Returns ZX_ERR_NOT_SUPPORTED if |io| does not support setting the window size.
-zx_status_t zxio_set_window_size(zxio_t* io, uint32_t width, uint32_t height);
+ZXIO_EXPORT zx_status_t zxio_set_window_size(zxio_t* io, uint32_t width, uint32_t height);
 
 __END_CDECLS
 

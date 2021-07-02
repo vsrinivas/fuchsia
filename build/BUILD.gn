@@ -76,6 +76,10 @@ group("non_hermetic_deps") {
     "//zircon/kernel/lib/version/*",
   ]
 
+  # TODO(http://fxbug.dev/68780): Remove entry when extract_imported_symbols
+  # is fixed.
+  visibility += [ "//sdk/lib/zxio:zxio_standalone_extract_imported_symbols" ]
+
   # See: fxrev.dev/528291
   visibility += [ "//build/rust/*" ]
 

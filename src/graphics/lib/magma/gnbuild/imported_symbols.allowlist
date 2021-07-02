@@ -480,6 +480,7 @@ zx_stream_readv_at
 zx_stream_seek
 zx_stream_writev
 zx_stream_writev_at
+zx_system_get_page_size
 zx_system_get_physmem
 zx_thread_create
 zx_thread_self

@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/extract_imported_symbols.gni")
+import("//build/cpp/extract_public_symbols.gni")
 import("//build/cpp/library_headers.gni")
+import("//build/cpp/verify_imported_symbols.gni")
+import("//build/cpp/verify_public_symbols.gni")
 
 library_headers("headers") {
   headers = [
@@ -37,7 +41,7 @@ library_headers("inception") {
   ]
 }
 
-static_library("zxio") {
+source_set("zxio") {
   sources = [
     "create.cc",
     "debuglog.cc",
@@ -66,10 +70,68 @@ static_library("zxio") {
   ]
 }
 
-static_library("zxio_complete") {
-  complete_static_lib = true
+shared_library("zxio_standalone") {
+  visibility = [ ":*" ]
 
-  deps = [ ":zxio" ]
+  public_deps = [ ":zxio" ]
+
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
+  version_script = "zxio_standalone.ld"
+  inputs = [ version_script ]
+  ldflags =
+      [ "-Wl,--version-script=" + rebase_path(version_script, root_build_dir) ]
+}
+
+generated_imported_symbols_list =
+    "$target_gen_dir/zxio_standalone.imported_symbols.list"
+generated_public_symbols_list =
+    "$target_gen_dir/zxio_standalone.public_symbols.list"
+
+shared_out_dir =
+    get_label_info(":zxio_standalone($shlib_toolchain)", "root_out_dir")
+zxio_standalone_library = "$shared_out_dir/libzxio_standalone.so"
+
+extract_imported_symbols("zxio_standalone_extract_imported_symbols") {
+  library = zxio_standalone_library
+  symbols = generated_imported_symbols_list
+
+  deps = [ ":zxio_standalone($shlib_toolchain)" ]
+}
+
+verify_imported_symbols("zxio_standalone_verify_imported_symbols") {
+  current = generated_imported_symbols_list
+  allowlist = rebase_path("zxio_standalone.imported_symbols.allowlist")
+  library_name = "zxio_standalone"
+
+  deps = [ ":zxio_standalone_extract_imported_symbols" ]
+}
+
+extract_public_symbols("zxio_standalone_extract_public_symbols") {
+  library = zxio_standalone_library
+  symbols = generated_public_symbols_list
+
+  deps = [ ":zxio_standalone($shlib_toolchain)" ]
+}
+
+verify_public_symbols("zxio_standalone_verify_public_symbols") {
+  current = generated_public_symbols_list
+  reference = rebase_path("zxio_standalone.public_symbols.reference")
+  library_name = "zxio_standalone"
+
+  deps = [ ":zxio_standalone_extract_public_symbols" ]
+}
+
+group("standalone") {
+  public_deps = [ ":zxio_standalone" ]
+
+  deps = [ ":zxio_standalone_verify_public_symbols" ]
+
+  # Only verify the imported symbols in uninstrumented variants as some variants
+  # such as ASan / UBSan insert additional runtime dependencies.
+  if (!toolchain_variant.instrumented) {
+    deps += [ ":zxio_standalone_verify_imported_symbols" ]
+  }
 }
 
 group("tests") {

@@ -7,7 +7,10 @@ import("//build/test.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":zxio-unittest-package" ]
+  deps = [
+    ":zxio-standalone-package",
+    ":zxio-unittest-package",
+  ]
 }
 
 test("zxio") {
@@ -61,7 +64,26 @@ test("zxio") {
   ]
 }
 
+test("standalone") {
+  sources = [ "standalone_main.c" ]
+
+  disable_syslog_backend = true
+
+  deps = [ "//sdk/lib/zxio:standalone" ]
+  configs -= [ "//build/config/fuchsia:fdio_config" ]
+  configs += [ "//build/config/fuchsia:no_cpp_standard_library" ]
+}
+
 fuchsia_unittest_package("zxio-unittest-package") {
   manifest = "meta/zxio_test.cmx"
   deps = [ ":zxio" ]
+}
+
+fuchsia_unittest_component("zxio-standalone") {
+  manifest = "meta/standalone_test.cmx"
+  deps = [ ":standalone" ]
+}
+
+fuchsia_test_package("zxio-standalone-package") {
+  test_components = [ ":zxio-standalone" ]
 }
