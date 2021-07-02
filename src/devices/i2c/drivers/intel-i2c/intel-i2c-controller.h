@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
 #define SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
 
+#include <fuchsia/hardware/acpi/cpp/banjo.h>
+#include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/device.h>
@@ -135,8 +137,9 @@ using IntelI2cControllerType = ddk::Device<IntelI2cController, ddk::Initializabl
 class IntelI2cController : public IntelI2cControllerType,
                            public ddk::I2cImplProtocol<IntelI2cController, ddk::base_protocol> {
  public:
-  explicit IntelI2cController(zx_device_t* parent)
-      : IntelI2cControllerType(parent), pci_(parent, "pci") {}
+  explicit IntelI2cController(zx_device_t* parent,
+                              fidl::WireSyncClient<fuchsia_hardware_acpi::Device> acpi)
+      : IntelI2cControllerType(parent), pci_(parent, "pci"), acpi_(std::move(acpi)) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -181,6 +184,7 @@ class IntelI2cController : public IntelI2cControllerType,
   zx_status_t Init();
   ddk::Pci pci_;
   pci_irq_mode_t irq_mode_;
+  fidl::WireSyncClient<fuchsia_hardware_acpi::Device> acpi_;
 
   thrd_t irq_thread_;
   zx::interrupt irq_handle_;
@@ -198,8 +202,7 @@ class IntelI2cController : public IntelI2cControllerType,
   zx_status_t SetBusFrequency(const uint32_t frequency);
 
   zx_status_t AddSubordinates();
-  zx_status_t AddSubordinate(const uint8_t width, const uint16_t address,
-                             const zx_device_prop_t* props, const uint32_t propcount);
+  zx_status_t AddSubordinate(const uint8_t width, const uint16_t address);
 
   static uint32_t ComputeSclHcnt(const uint32_t controller_freq, const uint32_t t_high_nanos,
                                  const uint32_t t_r_nanos);

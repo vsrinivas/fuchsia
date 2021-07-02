@@ -249,10 +249,6 @@ zx::status<> DeviceBuilder::BuildComposite(zx_device_t* platform_bus,
     DeviceBuilder* parent = pair.first;
     size_t child_index = pair.second;
     BusType type = parent->GetBusType();
-    if (type == BusType::kI2c) {
-      // TODO(fxbug.dev/78833): delete this and publish composites for devices which are i2c.
-      return zx::ok();
-    }
     // Fragments are named <protocol>NNN, e.g. "i2c000", "i2c001".
     fragment_names[bus_index] = fbl::StringPrintf("%s%03u", BusTypeToString(type),
                                                   parent_types.emplace(type, 0).first->second++);

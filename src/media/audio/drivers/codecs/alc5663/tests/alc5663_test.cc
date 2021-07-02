@@ -272,10 +272,13 @@ struct FakeAlc5663Hardware {
 
 // Set up the fake DDK instance `ddk` to export the given I2C protocol.
 FakeAlc5663Hardware CreateFakeAlc5663() {
+  static constexpr size_t kNumBindFragments = 1;
   FakeAlc5663Hardware result{};
 
   // Create the fake DDK.
   result.fake_ddk = std::make_unique<fake_ddk::Bind>();
+  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumBindFragments],
+                                                kNumBindFragments);
 
   // Create the fake hardware device.
   result.codec = std::make_unique<FakeAlc5663>();
@@ -284,8 +287,12 @@ FakeAlc5663Hardware CreateFakeAlc5663() {
   //
   // Set up a fake parent I2C bus which exposes to the driver a way to talk to
   // the fake hardware.
+
   auto proto = result.codec->GetProto();
-  result.fake_ddk->SetProtocol(ZX_PROTOCOL_I2C, &proto);
+  fragments[0].name = "i2c000";
+  fragments[0].protocols.emplace_back(
+      fake_ddk::ProtocolEntry{ZX_PROTOCOL_I2C, {proto.ops, proto.ctx}});
+  result.fake_ddk->SetFragments(std::move(fragments));
 
   // Expose the parent device.
   result.parent = fake_ddk::kFakeParent;

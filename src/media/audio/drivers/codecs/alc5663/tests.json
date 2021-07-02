@@ -8,9 +8,9 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.realtek.platform.BIND_PLATFORM_DEV_DID.ALC5663",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.realtek.platform.BIND_PLATFORM_DEV_VID.REALTEK",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.i2c.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_ACPI_BUS_TYPE": "fuchsia.acpi.BIND_ACPI_BUS_TYPE.I2C",
+            "fuchsia.acpi.hid": "\"10EC5663\"",
+            "fuchsia.BIND_COMPOSITE": "1"
         },
         "expected": "match",
         "name": "Match"

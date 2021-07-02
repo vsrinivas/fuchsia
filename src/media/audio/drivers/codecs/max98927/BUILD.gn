@@ -9,10 +9,7 @@ bind_rules("max98927_bind") {
   rules = "max98927.bind"
   output = "max98927_bind.h"
   tests = "tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.maxim.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }
 
 driver_module("max98927") {

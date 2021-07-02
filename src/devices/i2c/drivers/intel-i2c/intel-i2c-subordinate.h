@@ -27,32 +27,21 @@ class IntelI2cSubordinate {
  public:
   static std::unique_ptr<IntelI2cSubordinate> Create(IntelI2cController* controller,
                                                      uint8_t chip_address_width,
-                                                     uint16_t chip_address, uint32_t i2c_class,
-                                                     uint16_t vendor_id, uint16_t device_id);
+                                                     uint16_t chip_address);
 
   zx_status_t Transfer(const IntelI2cSubordinateSegment* segments, int segment_count);
   uint8_t GetChipAddressWidth() const { return chip_address_width_; }
   uint16_t GetChipAddress() const { return chip_address_; }
-  uint32_t GetI2cClass() const { return i2c_class_; }
-  uint16_t vendor_id() const { return vendor_id_; }
-  uint16_t device_id() const { return device_id_; }
 
  private:
   IntelI2cSubordinate(IntelI2cController* controller, const uint8_t chip_address_width,
-                      const uint16_t chip_address, const uint32_t i2c_class,
-                      const uint16_t vendor_id, const uint16_t device_id)
+                      const uint16_t chip_address)
       : controller_(controller),
         chip_address_width_(chip_address_width),
-        chip_address_(chip_address),
-        i2c_class_(i2c_class),
-        vendor_id_(vendor_id),
-        device_id_(device_id) {}
+        chip_address_(chip_address) {}
   IntelI2cController* controller_;
   const uint8_t chip_address_width_;
   const uint16_t chip_address_;
-  const uint32_t i2c_class_;
-  const uint16_t vendor_id_;
-  const uint16_t device_id_;
 };
 
 }  // namespace intel_i2c

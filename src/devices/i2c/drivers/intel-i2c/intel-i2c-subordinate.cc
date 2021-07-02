@@ -45,16 +45,16 @@ bool WaitFor(const fit::function<bool()>& condition, const zx::duration poll_int
       condition, [] {}, poll_interval);
 }
 
-std::unique_ptr<IntelI2cSubordinate> IntelI2cSubordinate::Create(
-    IntelI2cController* controller, const uint8_t chip_address_width, const uint16_t chip_address,
-    const uint32_t i2c_class, const uint16_t vendor_id, const uint16_t device_id) {
+std::unique_ptr<IntelI2cSubordinate> IntelI2cSubordinate::Create(IntelI2cController* controller,
+                                                                 const uint8_t chip_address_width,
+                                                                 const uint16_t chip_address) {
   if (chip_address_width != kI2c7BitAddress && chip_address_width != kI2c10BitAddress) {
     zxlogf(ERROR, "Bad address width.");
     return nullptr;
   }
 
-  return std::unique_ptr<IntelI2cSubordinate>(new IntelI2cSubordinate(
-      controller, chip_address_width, chip_address, i2c_class, vendor_id, device_id));
+  return std::unique_ptr<IntelI2cSubordinate>(
+      new IntelI2cSubordinate(controller, chip_address_width, chip_address));
 }
 
 zx_status_t IntelI2cSubordinate::Transfer(const IntelI2cSubordinateSegment* segments,

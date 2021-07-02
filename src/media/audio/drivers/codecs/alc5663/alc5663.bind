@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using fuchsia.i2c;
-using fuchsia.realtek.platform;
+using fuchsia.acpi;
 
-fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.realtek.platform.BIND_PLATFORM_DEV_VID.REALTEK;
-accept fuchsia.BIND_PLATFORM_DEV_DID {
-  fuchsia.realtek.platform.BIND_PLATFORM_DEV_DID.ALC5663
-}
+fuchsia.BIND_ACPI_BUS_TYPE == fuchsia.acpi.BIND_ACPI_BUS_TYPE.I2C;
+fuchsia.acpi.hid == "10EC5663";
+fuchsia.BIND_COMPOSITE == 1;

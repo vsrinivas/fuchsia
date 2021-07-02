@@ -156,6 +156,9 @@ void Device::DdkInit(ddk::InitTxn txn) {
     case BusType::kSpi:
       result = DdkAddMetadata(DEVICE_METADATA_SPI_CHANNELS, metadata_.data(), metadata_.size());
       break;
+    case BusType::kI2c:
+      result = DdkAddMetadata(DEVICE_METADATA_I2C_CHANNELS, metadata_.data(), metadata_.size());
+      break;
     default:
       break;
   }

@@ -173,7 +173,7 @@ zx_status_t Alc5514Device::Initialize() {
 }
 
 zx_status_t Alc5514Device::Bind() {
-  zx_status_t st = device_get_protocol(parent(), ZX_PROTOCOL_I2C, &i2c_);
+  zx_status_t st = device_get_fragment_protocol(parent(), "i2c000", ZX_PROTOCOL_I2C, &i2c_);
   if (st != ZX_OK) {
     zxlogf(ERROR, "alc5514: could not get I2C protocol: %d", st);
     return st;

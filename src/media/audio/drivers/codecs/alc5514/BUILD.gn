@@ -9,10 +9,7 @@ bind_rules("alc5514_bind") {
   rules = "alc5514.bind"
   output = "alc5514_bind.h"
   tests = "tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.realtek.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }
 
 driver_module("alc5514") {

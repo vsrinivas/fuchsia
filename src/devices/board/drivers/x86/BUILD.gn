@@ -79,7 +79,6 @@ driver_module("platform-bus-x86") {
     "acpi-nswalk.cc",
     "debug.cc",
     "goldfish-control.cc",
-    "i2c.cc",
     "init.cc",
     "iommu-driver-tests.cc",
     "methods.cc",

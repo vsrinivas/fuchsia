@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/i2c/c/fidl.h>
 #include <fuchsia/hardware/i2c/llcpp/fidl.h>
@@ -69,8 +70,22 @@ constexpr size_t MAX_TRANSFER_SIZE = (UINT16_MAX - 1);
 constexpr uint32_t kIntelDesignwareCompType = 0x44570140;
 
 zx_status_t IntelI2cController::Create(void* ctx, zx_device_t* parent) {
+  fidl::ClientEnd<fuchsia_hardware_acpi::Device> client;
+  auto server_end = fidl::CreateEndpoints(&client);
+  if (server_end.is_error()) {
+    return server_end.error_value();
+  }
+
+  ddk::AcpiProtocolClient acpi(parent, "acpi");
+  if (!acpi.is_valid()) {
+    zxlogf(ERROR, "Failed to get ACPI fragment from parent %s", device_get_name(parent));
+    return ZX_ERR_BAD_STATE;
+  }
+  acpi.ConnectServer(server_end->TakeChannel());
+  fidl::WireSyncClient<fuchsia_hardware_acpi::Device> wire_client(std::move(client));
   fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<IntelI2cController>(new (&ac) IntelI2cController(parent));
+  auto dev = std::unique_ptr<IntelI2cController>(
+      new (&ac) IntelI2cController(parent, std::move(wire_client)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -205,44 +220,6 @@ void IntelI2cController::DdkInit(ddk::InitTxn txn) {
     return;
   }
 
-  fbl::AutoLock lock(&mutex_);
-
-  // TODO(fxbug.dev/78833): we should stop publishing this from here, and instead use information
-  // from ACPI to configure our children.
-  fidl::FidlAllocator allocator;
-  fidl::VectorView<fuchsia_hardware_i2c::wire::I2CChannel> i2c_channels(allocator,
-                                                                        subordinates_.size());
-  size_t i = 0;
-  for (auto const& it : subordinates_) {
-    auto& chan = i2c_channels[i++];
-    auto& subordinate = it.second;
-    chan.Allocate(allocator);
-
-    chan.set_vid(allocator, subordinate->vendor_id());
-    chan.set_did(allocator, subordinate->device_id());
-    chan.set_address(allocator, subordinate->GetChipAddress());
-    chan.set_i2c_class(allocator, subordinate->GetI2cClass());
-  }
-  fuchsia_hardware_i2c::wire::I2CBusMetadata metadata(allocator);
-  metadata.set_channels(allocator, i2c_channels);
-
-  fidl::OwnedEncodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> encoded(&metadata);
-  if (!encoded.ok()) {
-    zxlogf(ERROR, "encoding device metadata failed: %s\n", encoded.status_string());
-    txn.Reply(ZX_ERR_INTERNAL);
-    return;
-  }
-
-  auto message = encoded.GetOutgoingMessage().CopyBytes();
-
-  status = DdkAddMetadata(DEVICE_METADATA_I2C_CHANNELS, message.data(), message.size());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "adding device metadata failed: %s\n", zx_status_get_string(status));
-    txn.Reply(status);
-    return;
-  }
-
-  zxlogf(INFO, "i2c published %lu subordinates", subordinates_.size());
   txn.Reply(ZX_OK);
 }
 
@@ -288,7 +265,13 @@ zx_status_t IntelI2cController::I2cImplTransact(const uint32_t bus_id, const i2c
   return status;
 }
 
-uint32_t IntelI2cController::I2cImplGetBusBase() { return 0; }
+uint32_t IntelI2cController::I2cImplGetBusBase() {
+  auto result = acpi_.GetBusId();
+  if (result.ok() && result->result.is_response()) {
+    return result->result.response().bus_id;
+  }
+  return UINT32_MAX;
+}
 uint32_t IntelI2cController::I2cImplGetBusCount() { return 1; }
 
 zx_status_t IntelI2cController::I2cImplGetMaxTransferSize(const uint32_t bus_id, size_t* out_size) {
@@ -311,9 +294,7 @@ uint8_t IntelI2cController::ExtractRxFifoDepthFromParam(const uint32_t param) {
 
 uint32_t IntelI2cController::ChipAddrMask(const int width) { return ((1 << width) - 1); }
 
-zx_status_t IntelI2cController::AddSubordinate(const uint8_t width, const uint16_t address,
-                                               const zx_device_prop_t* props,
-                                               const uint32_t propcount) {
+zx_status_t IntelI2cController::AddSubordinate(const uint8_t width, const uint16_t address) {
   if ((width != kI2c7BitAddress && width != kI2c10BitAddress) ||
       (address & ~ChipAddrMask(width)) != 0) {
     return ZX_ERR_INVALID_ARGS;
@@ -327,22 +308,7 @@ zx_status_t IntelI2cController::AddSubordinate(const uint8_t width, const uint16
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  uint32_t i2c_class = 0;
-
-  uint16_t vendor_id = 0;
-  uint16_t device_id = 0;
-  for (uint32_t i = 0; i < propcount; i++) {
-    if (props[i].id == BIND_I2C_CLASS) {
-      i2c_class = props[i].value;
-    } else if (props[i].id == BIND_I2C_VID) {
-      vendor_id = static_cast<uint16_t>(props[i].value);
-    } else if (props[i].id == BIND_I2C_DID) {
-      device_id = static_cast<uint16_t>(props[i].value);
-    }
-  }
-
-  auto subordinate =
-      IntelI2cSubordinate::Create(this, width, address, i2c_class, vendor_id, device_id);
+  auto subordinate = IntelI2cSubordinate::Create(this, width, address);
 
   if (subordinate == nullptr) {
     zxlogf(ERROR, "Failed to create subordinate.");
@@ -791,8 +757,7 @@ zx_status_t IntelI2cController::DeviceSpecificInit(const uint16_t device_id) {
 zx_status_t IntelI2cController::AddSubordinates() {
   // Try to fetch our metadata so that we know who is on the bus.
   size_t metadata_size;
-  zx_status_t status = device_get_fragment_metadata(
-      parent(), "pci", DEVICE_METADATA_ACPI_I2C_DEVICES, nullptr, 0, &metadata_size);
+  zx_status_t status = DdkGetMetadataSize(DEVICE_METADATA_I2C_CHANNELS, &metadata_size);
 
   if ((status == ZX_ERR_NOT_FOUND) || ((status == ZX_OK) && !metadata_size)) {
     // No metadata means that there are no devices on this bus.  For now, we do
@@ -808,41 +773,44 @@ zx_status_t IntelI2cController::AddSubordinates() {
     return status;
   }
 
-  if (metadata_size % sizeof(acpi_i2c_device_t)) {
-    zxlogf(ERROR, "i2c: metadata size %zu is not a multiple of device size %zu", metadata_size,
-           sizeof(acpi_i2c_device_t));
-    return ZX_ERR_INTERNAL;
+  auto buffer_deleter = std::make_unique<uint8_t[]>(metadata_size);
+  auto buffer = buffer_deleter.get();
+  size_t actual;
+  status =
+      device_get_metadata(zxdev(), DEVICE_METADATA_I2C_CHANNELS, buffer, metadata_size, &actual);
+  if (status != ZX_OK || actual != metadata_size) {
+    zxlogf(ERROR, "%s: device_get_metadata failed %d", __func__, status);
+    return (status == ZX_OK) ? ZX_ERR_INTERNAL : status;
   }
 
-  size_t count = metadata_size / sizeof(acpi_i2c_device_t);
-  std::vector<acpi_i2c_device_t> devices(count);
+  fidl::DecodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> decoded(buffer, metadata_size);
+  if (!decoded.ok()) {
+    zxlogf(ERROR, "%s: Failed to deserialize metadata.", __func__);
+    return decoded.status();
+  }
 
-  status = device_get_fragment_metadata(parent(), "pci", DEVICE_METADATA_ACPI_I2C_DEVICES,
-                                        devices.data(), metadata_size, nullptr);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c: failed to fetch metadata (status %d)", status);
-    return status;
+  fuchsia_hardware_i2c::wire::I2CBusMetadata* metadata = decoded.PrimaryObject();
+  if (!metadata->has_channels()) {
+    // One day we might put the bus in a lower power state.
+    zxlogf(INFO, "%s: no channels supplied.", __func__);
+    return ZX_OK;
   }
 
   uint32_t bus_speed = 0;
+  for (auto const& child : metadata->channels()) {
+    zxlogf(INFO, "i2c: got child bus_controller=%d ten_bit=%d address=0x%x bus_speed=%u, bus_id=%u",
+           child.is_bus_controller(), child.is_ten_bit(), child.address(), child.bus_speed(),
+           child.bus_id());
 
-  for (auto const& child : devices) {
-    zxlogf(DEBUG,
-           "i2c: got child[%zu] bus_controller=%d ten_bit=%d address=0x%x bus_speed=%u"
-           " protocol_id=0x%08x\n",
-           count--, child.is_bus_controller, child.ten_bit, child.address, child.bus_speed,
-           child.protocol_id);
-
-    if (bus_speed && bus_speed != child.bus_speed) {
+    if (bus_speed && bus_speed != child.bus_speed()) {
       zxlogf(ERROR, "i2c: cannot add devices with different bus speeds (%u, %u)", bus_speed,
-             child.bus_speed);
+             child.bus_speed());
     }
     if (!bus_speed) {
-      SetBusFrequency(child.bus_speed);
-      bus_speed = child.bus_speed;
+      SetBusFrequency(child.bus_speed());
+      bus_speed = child.bus_speed();
     }
-    AddSubordinate(child.ten_bit ? kI2c10BitAddress : kI2c7BitAddress, child.address, child.props,
-                   child.propcount);
+    AddSubordinate(child.is_ten_bit() ? kI2c10BitAddress : kI2c7BitAddress, child.address());
   }
 
   return ZX_OK;

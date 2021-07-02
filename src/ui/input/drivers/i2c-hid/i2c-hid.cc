@@ -554,7 +554,7 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* parent) {
   zx_status_t status;
   auto dev = std::make_unique<I2cHidbus>(parent);
 
-  ddk::I2cChannel i2c(parent);
+  ddk::I2cChannel i2c(parent, "i2c000");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "I2c-Hid: Could not get i2c protocol");
     return ZX_ERR_NOT_SUPPORTED;

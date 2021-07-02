@@ -400,12 +400,10 @@ zx_status_t Alc5663Device::AddChildToParent(std::unique_ptr<Alc5663Device> devic
 
 zx_status_t Alc5663Device::Bind(zx_device_t* parent, Alc5663Device** created_device) {
   // Get access to the I2C protocol.
-  ddk::I2cChannel channel;
-  zx_status_t result = ddk::I2cChannel::CreateFromDevice(parent, &channel);
-  if (result != ZX_OK) {
-    zxlogf(ERROR, "alc5663: could not get I2C protocol from parent device: %s",
-           zx_status_get_string(result));
-    return result;
+  ddk::I2cChannel channel(parent, "i2c000");
+  if (!channel.is_valid()) {
+    zxlogf(ERROR, "alc5663: could not get I2C protocol from parent device.");
+    return ZX_ERR_NOT_FOUND;
   }
 
   // Create the codec device.

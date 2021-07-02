@@ -1,18 +1,18 @@
 [
-  {
-    "name": "Protocol",
-    "expected": "abort",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_ACPI_BUS_TYPE": "fuchsia.acpi.BIND_ACPI_BUS_TYPE.I2C",
+            "fuchsia.acpi.first_cid": "\"PNP0C50\"",
+            "fuchsia.BIND_COMPOSITE": "1"
+        },
+        "expected": "match",
+        "name": "I2C device"
     }
-  },
-
-  {
-    "name": "I2C device",
-    "expected": "match",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.i2c.BIND_PROTOCOL.DEVICE",
-      "fuchsia.BIND_I2C_CLASS" : "fuchsia.i2c.BIND_I2C_CLASS.HID"
-    }
-  }
 ]

@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 using fuchsia.i2c;
+using fuchsia.acpi;
 
-fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_I2C_CLASS == fuchsia.i2c.BIND_I2C_CLASS.HID;
+fuchsia.BIND_ACPI_BUS_TYPE == fuchsia.acpi.BIND_ACPI_BUS_TYPE.I2C;
+fuchsia.acpi.first_cid == "PNP0C50";
+fuchsia.BIND_COMPOSITE == 1;
