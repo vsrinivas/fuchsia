@@ -33,7 +33,7 @@ def main():
             ],
             capture_output=True,
             encoding="UTF-8",
-        ).stdout.strip() or "origin/master")
+        ).stdout.strip() or "origin/main")
     local_commit = subprocess.check_output(
         ["git", "rev-list", "HEAD", upstream, "--"],
         encoding="UTF-8").splitlines()[0]
