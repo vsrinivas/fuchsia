@@ -249,6 +249,7 @@ func (c *Client) Run(ctx context.Context) {
 	for {
 		if err := func() error {
 			acquisitionTimeout := info.Acquisition
+			txnStart := c.now()
 
 			// Adjust the timeout to make sure client is not stuck in retransmission
 			// when it should transition to the next state. This can only happen for
@@ -263,16 +264,12 @@ func (c *Client) Run(ctx context.Context) {
 				c.stats.InitAcquire.Increment()
 			case renewing:
 				c.stats.RenewAcquire.Increment()
-				// Instead of `time.Until`, use `now` stored on the client so
-				// it can be stubbed out in test for consistency.
-				if tilRebind := info.RebindTime.Sub(c.now()); tilRebind < acquisitionTimeout {
+				if tilRebind := info.RebindTime.Sub(txnStart); tilRebind < acquisitionTimeout {
 					acquisitionTimeout = tilRebind
 				}
 			case rebinding:
 				c.stats.RebindAcquire.Increment()
-				// Instead of `time.Until`, use `now` stored on the client so
-				// it can be stubbed out in test for consistency.
-				if tilLeaseExpire := info.LeaseExpiration.Sub(c.now()); tilLeaseExpire < acquisitionTimeout {
+				if tilLeaseExpire := info.LeaseExpiration.Sub(txnStart); tilLeaseExpire < acquisitionTimeout {
 					acquisitionTimeout = tilLeaseExpire
 				}
 			default:
@@ -429,7 +426,7 @@ func (c *Client) Run(ctx context.Context) {
 				}
 			}
 
-			c.assign(&info, info.Acquired, cfg, c.now())
+			c.assign(&info, info.Acquired, cfg, txnStart)
 
 			return nil
 		}(); err != nil {

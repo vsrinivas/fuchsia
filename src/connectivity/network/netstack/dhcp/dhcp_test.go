@@ -552,6 +552,8 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 			// Nak the first address acquisition and let the client retry.
 			nakNthReq: 1,
 			durations: []time.Duration{
+				// Start first acquisition.
+				0,
 				// Fail acquisition due to NAK and backoff.
 				0,
 				// Successful acquisition.
@@ -1345,13 +1347,11 @@ func TestStateTransition(t *testing.T) {
 			typ:            testRenew,
 			acquireTimeout: defaultAcquireTimeout,
 			durations: []time.Duration{
-				// First acquisition.
+				// Start first transaction.
 				0,
 				// Transition to renew.
 				renewTime.Duration(),
-				// Calculate renew acquisition timeout.
-				0,
-				// Second acquisition from renew.
+				// Start second transaction in renew.
 				0,
 			},
 			expectedStateHistory: []dhcpClientState{
@@ -1368,17 +1368,15 @@ func TestStateTransition(t *testing.T) {
 			typ:            testRebind,
 			acquireTimeout: defaultAcquireTimeout,
 			durations: []time.Duration{
-				// First acquisition.
+				// Start first transaction.
 				0,
 				// Transition to renew.
 				renewTime.Duration(),
-				// Give renew acquisition 10ms timeout, and expect it to timeout.
+				// Start second transaction in renew, and expect it to timeout.
 				(rebindTime - renewTime).Duration() - 10*time.Millisecond,
 				// Transition to rebind.
 				10 * time.Millisecond,
-				// Calculate rebind acquisition timeout.
-				0,
-				// Second acquisition from rebind.
+				// Start third transaction in rebind.
 				0,
 			},
 			expectedStateHistory: []dhcpClientState{
@@ -1402,17 +1400,15 @@ func TestStateTransition(t *testing.T) {
 			// A large enough duration for the test to timeout.
 			acquireTimeout: 1000 * time.Hour,
 			durations: []time.Duration{
-				// First acquisition.
+				// Start first transaction.
 				0,
 				// Transition to renew.
 				renewTime.Duration(),
-				// Give renew acquisition 10ms timeout, and expect it to timeout.
+				// Start second transaction in renew, and expect it to timeout.
 				(rebindTime - renewTime).Duration() - 10*time.Millisecond,
 				// Transition to rebind.
 				10 * time.Millisecond,
-				// Calculate rebind acquisition timeout.
-				0,
-				// Second acquisition from rebind.
+				// Start third transaction in rebind.
 				0,
 			},
 			expectedStateHistory: []dhcpClientState{
@@ -1431,19 +1427,19 @@ func TestStateTransition(t *testing.T) {
 			typ:            testLeaseExpire,
 			acquireTimeout: defaultAcquireTimeout,
 			durations: []time.Duration{
-				// First acquisition.
+				// Start first transaction.
 				0,
 				// Transition to renew.
 				renewTime.Duration(),
-				// Give renew acquisition 10ms timeout, and expect it to timeout.
+				// Start second transaction in renew, and expect it to timeout.
 				(rebindTime - renewTime).Duration() - 10*time.Millisecond,
 				// Transition to rebind.
 				10 * time.Millisecond,
-				// Give rebind acquisition 10ms timeout, and expect it to timeout.
+				// Start third transaction in rebind, and expect it to timeout.
 				(leaseLength - rebindTime).Duration() - 10*time.Millisecond,
 				// Transition to lease expiration.
 				10 * time.Millisecond,
-				// Second acquisition after lease expiration.
+				// Start fourth transaction.
 				0,
 			},
 			expectedStateHistory: []dhcpClientState{
@@ -1470,19 +1466,19 @@ func TestStateTransition(t *testing.T) {
 			// A large enough duration for the test to timeout.
 			acquireTimeout: 1000 * time.Hour,
 			durations: []time.Duration{
-				// First acquisition.
+				// Start first transaction.
 				0,
 				// Transition to renew.
 				renewTime.Duration(),
-				// Give renew acquisition 10ms timeout, and expect it to timeout.
+				// Start second transaction in renew, and expect it to timeout.
 				(rebindTime - renewTime).Duration() - 10*time.Millisecond,
 				// Transition to rebind.
 				10 * time.Millisecond,
-				// Give rebind acquisition 10ms timeout, and expect it to timeout.
+				// Start third transaction in renew, and expect it to timeout.
 				(leaseLength - rebindTime).Duration() - 10*time.Millisecond,
 				// Transition to lease expiration.
 				10 * time.Millisecond,
-				// Second acquisition after lease expiration.
+				// Start fourth transaction.
 				0,
 			},
 			expectedStateHistory: []dhcpClientState{
@@ -1662,15 +1658,21 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	// the client is correctly staying in the init selecting state.
 	const wantInitCount = 10
 	durations := []time.Duration{
-		0, // first acquisition
-		// Transition to lease expiration: this will cause the client to go into
-		// init once.
+		// Start first transaction.
+		0,
+		// Transition to lease expiration when scheduling state transition timer:
+		// this will cause the client to go into init once.
 		leaseLength.Duration(),
 	}
 	// Make the client enter init N-1 more times.
 	for i := 0; i < wantInitCount-1; i++ {
+		// Start new transaction in initSelecting.
+		durations = append(durations, 0)
+		// Schedule state transition timeout.
 		durations = append(durations, 0)
 	}
+	// Start the N+1th transaction where the Nth InitAcquire increment occurs.
+	durations = append(durations, 0)
 
 	clientTransitionsDone := make(chan struct{})
 	c.now = stubTimeNow(ctx, time.Time{}, durations, clientTransitionsDone)
