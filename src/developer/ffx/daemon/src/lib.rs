@@ -24,10 +24,10 @@ mod fastboot;
 mod logger;
 mod manual_targets;
 mod onet;
-mod ssh;
 mod target_control;
 mod zedboot;
 
+pub mod ssh;
 pub mod target;
 pub use constants::{get_socket, LOG_FILE_PREFIX};
 

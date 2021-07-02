@@ -12,7 +12,7 @@ use {
 mod cipd;
 mod graphic_utils;
 mod images;
-mod portpicker;
+pub mod portpicker;
 mod tools;
 mod types;
 pub mod vdl_files;
