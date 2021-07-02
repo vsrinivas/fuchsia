@@ -77,13 +77,13 @@ zx_status_t Tcs3400Device::FillInputRpt() {
     fbl::AutoLock lock(&i2c_lock_);
     // Read lower byte first, the device holds upper byte of a sample in a shadow register after
     // a lower byte read
-    status = i2c_.WriteReadSync(&i.reg_l, 1, &buf_l, 1);
+    status = ReadReg(i.reg_l, buf_l);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Tcs3400Device::FillInputRpt: i2c_write_read_sync failed: %d", status);
       input_rpt_.state = HID_USAGE_SENSOR_STATE_ERROR_VAL;
       return status;
     }
-    status = i2c_.WriteReadSync(&i.reg_h, 1, &buf_h, 1);
+    status = ReadReg(i.reg_h, buf_h);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Tcs3400Device::FillInputRpt: i2c_write_read_sync failed: %d", status);
       input_rpt_.state = HID_USAGE_SENSOR_STATE_ERROR_VAL;
@@ -173,7 +173,7 @@ int Tcs3400Device::Thread() {
           };
           for (const auto& i : setup) {
             fbl::AutoLock lock(&i2c_lock_);
-            status = i2c_.WriteSync(&i.cmd, sizeof(setup[0]));
+            status = WriteReg(i.cmd, i.val);
             if (status != ZX_OK) {
               zxlogf(ERROR, "Tcs3400Device::Thread: i2c_write_sync failed: %d", status);
               break;  // do not exit thread, future transactions may succeed
@@ -209,8 +209,7 @@ int Tcs3400Device::Thread() {
         // rearm interrupt at the device level
         {
           fbl::AutoLock lock(&i2c_lock_);
-          uint8_t cmd[] = {TCS_I2C_AICLEAR, 0x00};
-          status = i2c_.WriteSync(cmd, sizeof(cmd));
+          status = WriteReg(TCS_I2C_AICLEAR, 0x00);
           if (status != ZX_OK) {
             zxlogf(ERROR, "Tcs3400Device::Thread: i2c_write_sync failed: %d", status);
             // Continue on error, future transactions may succeed
@@ -397,9 +396,8 @@ zx_status_t Tcs3400Device::InitGain(uint8_t gain) {
   if (gain == 64) reg = 3;
   // clang-format on
 
-  const uint8_t command[2] = {TCS_I2C_CONTROL, reg};
   fbl::AutoLock lock(&i2c_lock_);
-  auto status = i2c_.WriteSync(command, countof(command));
+  auto status = WriteReg(TCS_I2C_CONTROL, reg);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s Setting gain failed %d", __FILE__, status);
     return status;
@@ -430,8 +428,7 @@ zx_status_t Tcs3400Device::InitMetadata() {
   zxlogf(DEBUG, "atime (%u)", atime_);
   {
     fbl::AutoLock lock(&i2c_lock_);
-    const uint8_t command[2] = {TCS_I2C_ATIME, atime_};
-    status = i2c_.WriteSync(command, countof(command));
+    status = WriteReg(TCS_I2C_ATIME, atime_);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s Setting integration time failed %d", __FILE__, status);
       return status;
@@ -461,6 +458,30 @@ zx_status_t Tcs3400Device::InitMetadata() {
     return status;
   }
   return ZX_OK;
+}
+
+zx_status_t Tcs3400Device::ReadReg(uint8_t reg, uint8_t& output_value) {
+  uint8_t write_buffer[] = {reg};
+  constexpr uint8_t kNumberOfRetries = 2;
+  constexpr zx::duration kRetryDelay = zx::msec(1);
+  auto ret = i2c_.WriteReadSyncRetries(write_buffer, countof(write_buffer), &output_value,
+                                       sizeof(uint8_t), kNumberOfRetries, kRetryDelay);
+  if (ret.status != ZX_OK) {
+    zxlogf(ERROR, "I2C write reg 0x%02X error %d, %d retries", reg, ret.status, ret.retries);
+  }
+  return ret.status;
+}
+
+zx_status_t Tcs3400Device::WriteReg(uint8_t reg, uint8_t value) {
+  uint8_t write_buffer[] = {reg, value};
+  constexpr uint8_t kNumberOfRetries = 2;
+  constexpr zx::duration kRetryDelay = zx::msec(1);
+  auto ret =
+      i2c_.WriteSyncRetries(write_buffer, countof(write_buffer), kNumberOfRetries, kRetryDelay);
+  if (ret.status != ZX_OK) {
+    zxlogf(ERROR, "I2C write reg 0x%02X error %d, %d retries", reg, ret.status, ret.retries);
+  }
+  return ret.status;
 }
 
 zx_status_t Tcs3400Device::Bind() {

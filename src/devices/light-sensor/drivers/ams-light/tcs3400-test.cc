@@ -5,11 +5,11 @@
 #include "tcs3400.h"
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <lib/ddk/metadata.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/metadata/light-sensor.h>
 #include <zxtest/zxtest.h>
 
@@ -30,8 +30,10 @@ struct Tcs3400Test : public zxtest::Test {
 
     mock_i2c::MockI2c mock_i2c;
     mock_i2c
-        .ExpectWriteStop({0x81, atime_register})   // integration time (ATIME).
-        .ExpectWriteStop({0x8f, again_register});  // control (for AGAIN).
+        .ExpectWriteStop({0x81, atime_register}, ZX_ERR_INTERNAL)  // error, will retry.
+        .ExpectWriteStop({0x81, atime_register}, ZX_ERR_INTERNAL)  // error, will retry.
+        .ExpectWriteStop({0x81, atime_register}, ZX_OK)            // integration time (ATIME).
+        .ExpectWriteStop({0x8f, again_register});                  // control (for AGAIN).
 
     ddk::I2cChannel i2c(mock_i2c.GetProto());
     ddk::GpioProtocolClient gpio;
@@ -62,6 +64,28 @@ TEST_F(Tcs3400Test, IntegrationTime) {
   SetIntegrationTest(610, 0x02);
   SetIntegrationTest(608, 0x03);
   SetIntegrationTest(3, 0xFF);
+}
+
+TEST(Tcs3400Test, TooManyI2cErrors) {
+  fake_ddk::Bind tester;
+  metadata::LightSensorParams parameters = {};
+  parameters.gain = 64;
+  parameters.integration_time_ms = 612;  // For atime = 0x01.
+
+  mock_i2c::MockI2c mock_i2c;
+  mock_i2c
+      .ExpectWriteStop({0x81, 0x01}, ZX_ERR_INTERNAL)   // error, will retry.
+      .ExpectWriteStop({0x81, 0x01}, ZX_ERR_INTERNAL)   // error, will retry.
+      .ExpectWriteStop({0x81, 0x01}, ZX_ERR_INTERNAL);  // error, we are done.
+
+  ddk::I2cChannel i2c(mock_i2c.GetProto());
+  ddk::GpioProtocolClient gpio;
+  zx::port port;
+  ASSERT_OK(zx::port::create(0, &port));
+  Tcs3400Device device(fake_ddk::kFakeParent, std::move(i2c), gpio, std::move(port));
+
+  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &parameters, sizeof(metadata::LightSensorParams));
+  EXPECT_NOT_OK(device.InitMetadata());
 }
 
 TEST(Tcs3400Test, InputReport) {
