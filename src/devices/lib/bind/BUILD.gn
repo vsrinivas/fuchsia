@@ -30,24 +30,6 @@ rustc_staticlib("bind-lib") {
   sources = [ "src/ffi.rs" ]
 }
 
-rustc_binary("bin") {
-  name = "bind_debugger"
-  edition = "2018"
-
-  with_unit_tests = true
-
-  deps = [
-    ":lib",
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:structopt",
-  ]
-
-  sources = [ "src/main.rs" ]
-}
-
 rustc_library("lib") {
   name = "bind"
   edition = "2018"
@@ -139,9 +121,4 @@ group("tests") {
     ":bind-fuzzers",
     ":bind_tests",
   ]
-}
-
-fuchsia_package_with_single_component("bind_debugger") {
-  deps = [ ":bin" ]
-  manifest = "meta/bind_debugger.cmx"
 }

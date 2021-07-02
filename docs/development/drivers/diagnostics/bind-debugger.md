@@ -82,9 +82,7 @@ lines delimited by `/*` and `*/`.
 The debugger is run using its package URL. For example:
 
 ```
-fx run fuchsia-pkg://fuchsia.com/bind_debugger#meta/bind_debugger.cmx \
-    /system/driver/bt-hci-intel.so \
-    class/bt-transport/000
+ffx driver debug-bind /system/driver/bt-hci-intel.so class/bt-transport/000
 ```
 
 The command takes the path of the driver to debug and the path of the device to
