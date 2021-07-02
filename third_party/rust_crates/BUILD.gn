@@ -284,6 +284,10 @@ group("http") {
   deps = [ ":http-v0_2_1" ]
 }
 
+group("humansize") {
+  deps = [ ":humansize-v1_1_1" ]
+}
+
 group("hyper") {
   deps = [ ":hyper-v0_13_6" ]
 }
@@ -4263,6 +4267,27 @@ rust_library("httparse-v1_3_3") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=httparse_simd",
+  ]
+}
+
+rust_library("humansize-v1_1_1") {
+  crate_name = "humansize"
+  crate_root = "//third_party/rust_crates/vendor/humansize/src/lib.rs"
+  output_name = "humansize-c6e531eb85c12cc1"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=c6e531eb85c12cc1",
+    "-Cextra-filename=-c6e531eb85c12cc1",
   ]
 }
 
