@@ -306,6 +306,9 @@ impl ops::Drop for TaskOwner {
 pub struct Task {
     pub id: pid_t,
 
+    // The command of this task.
+    pub command: RwLock<CString>,
+
     /// The thread group to which this task belongs.
     pub thread_group: Arc<ThreadGroup>,
 
@@ -367,6 +370,7 @@ impl Task {
     /// function directly.
     fn new(
         id: pid_t,
+        comm: CString,
         thread_group: Arc<ThreadGroup>,
         parent: pid_t,
         thread: zx::Thread,
@@ -380,6 +384,7 @@ impl Task {
         TaskOwner {
             task: Arc::new(Task {
                 id,
+                command: RwLock::new(comm),
                 thread_group,
                 parent,
                 children: RwLock::new(HashSet::new()),
@@ -406,7 +411,7 @@ impl Task {
     /// task.
     pub fn create_process(
         kernel: &Arc<Kernel>,
-        name: &CString,
+        comm: &CString,
         parent: pid_t,
         files: Arc<FdTable>,
         fs: Arc<FsContext>,
@@ -415,11 +420,10 @@ impl Task {
     ) -> Result<TaskOwner, Errno> {
         let (process, root_vmar) = kernel
             .job
-            .create_child_process(name.as_bytes())
+            .create_child_process(comm.as_bytes())
             .map_err(Errno::from_status_like_fdio)?;
-        let thread = process
-            .create_thread("initial-thread".as_bytes())
-            .map_err(Errno::from_status_like_fdio)?;
+        let thread =
+            process.create_thread(comm.as_bytes()).map_err(Errno::from_status_like_fdio)?;
 
         // TODO: Stop giving MemoryManager a duplicate of the process handle once a process
         // handle is not needed to implement read_memory or write_memory.
@@ -431,6 +435,7 @@ impl Task {
 
         let task_owner = Self::new(
             id,
+            comm.clone(),
             Arc::new(ThreadGroup::new(kernel.clone(), process, id)),
             parent,
             thread,
@@ -464,13 +469,14 @@ impl Task {
         let thread = self
             .thread_group
             .process
-            .create_thread("child-thread".as_bytes())
+            .create_thread(self.command.read().as_bytes())
             .map_err(Errno::from_status_like_fdio)?;
 
         let mut pids = self.thread_group.kernel.pids.write();
         let id = pids.allocate_pid();
         let task_owner = Self::new(
             id,
+            self.command.read().clone(),
             Arc::clone(&self.thread_group),
             self.parent,
             thread,
@@ -549,7 +555,7 @@ impl Task {
         } else {
             child = Self::create_process(
                 &self.thread_group.kernel,
-                &CString::new("cloned-child").unwrap(),
+                &self.command.read(),
                 self.id,
                 files,
                 fs,
@@ -606,6 +612,7 @@ impl Task {
         // TODO: The termination signal is reset to SIGCHLD.
 
         self.thread_group.set_name(path)?;
+        *self.command.write() = path.to_owned();
         Ok(load_executable(self, executable, argv, environ)?)
     }
 

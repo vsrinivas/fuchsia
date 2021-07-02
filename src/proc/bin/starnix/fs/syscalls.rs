@@ -182,6 +182,7 @@ fn open_internal(
         return Err(ENOENT);
     }
     strace!(
+        task,
         "open_internal({}, {}, {:#x}, {:#o})",
         dir_fd,
         String::from_utf8_lossy(path),

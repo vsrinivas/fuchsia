@@ -81,7 +81,7 @@ pub fn sys_execve(
     // TODO: What is the maximum size for an argument?
     let argv = read_c_string_vector(&ctx.task.mm, user_argv, &mut buf)?;
     let environ = read_c_string_vector(&ctx.task.mm, user_environ, &mut buf)?;
-    strace!("execve({:?}, argv={:?}, environ={:?})", path, argv, environ);
+    strace!(ctx.task, "execve({:?}, argv={:?}, environ={:?})", path, argv, environ);
     let start_info = ctx.task.exec(&path, &argv, &environ)?;
     ctx.registers = start_info.to_registers();
     Ok(SUCCESS)

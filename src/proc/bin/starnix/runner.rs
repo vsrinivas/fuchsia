@@ -108,6 +108,7 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
         let regs = &ctx.registers;
         let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
         strace!(
+            task,
             "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})",
             SyscallDecl::from_number(syscall_number).name,
             args.0,
@@ -119,7 +120,7 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
         );
         match dispatch_syscall(&mut ctx, syscall_number, args) {
             Ok(SyscallResult::Exit(error_code)) => {
-                strace!("-> exit {:#x}", error_code);
+                strace!(task, "-> exit {:#x}", error_code);
                 // TODO: Set the error_code on the Zircon process object. Currently missing a way
                 //       to do this in Zircon. Might be easier in the new execution model.
                 if let Some(parent) = task.get_task(task.parent) {
@@ -130,16 +131,16 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
                 return Ok(error_code);
             }
             Ok(SyscallResult::Success(return_value)) => {
-                strace!("-> {:#x}", return_value);
+                strace!(task, "-> {:#x}", return_value);
                 ctx.registers.rax = return_value;
             }
             Ok(SyscallResult::SigReturn) => {
                 // Do not modify the register state of the thread. The sigreturn syscall has
                 // restored the proper register state for the thread to continue with.
-                strace!("-> sigreturn");
+                strace!(task, "-> sigreturn");
             }
             Err(errno) => {
-                strace!("!-> {}", errno);
+                strace!(task, "!-> {}", errno);
                 ctx.registers.rax = (-errno.value()) as u64;
             }
         }
