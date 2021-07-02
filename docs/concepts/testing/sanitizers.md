@@ -200,6 +200,8 @@ Areas for future work:
 *   [MemorySanitizer][llvm-msan]{:.external} (MSan): detecting reads from
     uninitialized memory.
 
+See also: [sanitizers in the 2021 roadmap][sanitizers-2021-roadmap].
+
 [enable-pmm-checker]:  /docs/gen/boot-options.md#kernel_pmm_checker_enable_bool
 [ffi]: https://doc.rust-lang.org/nomicon/ffi.html
 [ftrivial-rfc]: https://lists.llvm.org/pipermail/cfe-dev/2018-November/060172.html
@@ -221,6 +223,7 @@ Areas for future work:
 [rfc-0078]: /docs/contribute/governance/rfcs/0078_kernel_coverage_for_fuchsia_fuzzing.md
 [rust-leaks]: https://doc.rust-lang.org/nomicon/leaking.html
 [safestack]: /docs/concepts/kernel/safestack.md
+[sanitizers-2021-roadmap]: /docs/contribute/roadmap/2021/invest_in_sanitizers.md
 [shadowcallstack]: /docs/concepts/kernel/shadow_call_stack.md
 [syzkaller]: https://github.com/google/syzkaller
 [test-coverage]: /docs/concepts/testing/coverage.md
