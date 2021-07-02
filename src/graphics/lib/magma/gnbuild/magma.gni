@@ -184,6 +184,9 @@ template("magma_vulkan_icd") {
 #
 #   resource_target_name (optional):
 #     [label] Name of a "resource" target to output that includes the manifest files.
+#
+#   resource_path (optional):
+#     [label] Directory where the "resource" target should output the manifest file to.
 
 template("icd_config_data") {
   assert(defined(invoker.icds))
@@ -210,9 +213,13 @@ template("icd_config_data") {
   }
   if (defined(invoker.resource_target_name)) {
     resource_target_name = invoker.resource_target_name
+    resource_path = "data/icd.d"
+    if (defined(invoker.resource_path)) {
+      resource_path = invoker.resource_path
+    }
     resource(resource_target_name) {
       sources = manifest_files
-      outputs = [ "data/icd.d/{{source_file_part}}" ]
+      outputs = [ "${resource_path}/{{source_file_part}}" ]
     }
   }
   config_data(target_name) {

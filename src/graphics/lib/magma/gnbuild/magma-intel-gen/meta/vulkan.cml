@@ -21,7 +21,7 @@
             from: "self",
             as: "metadata",
             rights: [ "r*" ],
-            subdir: "data",
+            subdir: "meta/metadata",
         },
     ],
 }

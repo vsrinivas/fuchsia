@@ -1,6 +1,6 @@
 {
     "file_path": "lib/libvulkan_intel.so",
     "library_path": "libvulkan_intel.so",
-    "manifest_path": "data/icd.d/libvulkan_intel.json",
+    "manifest_path": "meta/icd.d/libvulkan_intel.json",
     "version": 1
 }

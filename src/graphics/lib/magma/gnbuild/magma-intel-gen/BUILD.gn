@@ -52,7 +52,7 @@ if (target_cpu == "x64") {
 
   resource("vulkan_metadata") {
     sources = [ "metadata.json" ]
-    outputs = [ "data/metadata.json" ]
+    outputs = [ "meta/metadata/metadata.json" ]
   }
 
   if (bootfs_only) {
@@ -79,6 +79,7 @@ if (target_cpu == "x64") {
         manifest = "$target_gen_dir/vulkan/icd.d/libvulkan_intel.json"
       },
     ]
+    resource_path = "meta/icd.d"
     resource_target_name = "magma-intel-gen-config-resource"
   }
 

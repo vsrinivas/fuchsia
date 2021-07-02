@@ -24,8 +24,12 @@ containing a single `metadata.json` file.
 
 An ICD is generally contained in its own [package]. In that case, the
 `contents` directory would be the root of the package, and the `metadata`
-directory would be the `data/` directory in the package. The loader
+directory would be the `meta/metadata/` directory in the package. The loader
 doesn't enforce this layout, however.
+
+`metadata.json` and `manifest.json` should ideally be stored under the [`meta`
+directory in the package][meta-far], since that directory is most efficient at
+storing small files.
 
 ### ICD shared libraries
 
@@ -64,14 +68,14 @@ manifest][component-manifest] `.cml` file similar to the following:
             from: "self",
             as: "metadata",
             rights: [ "r*" ],
-            subdir: "data",
+            subdir: "meta/metadata",
         },
     ],
 }
 ```
 
 The "icd_runner" runner automatically exports the directories from the
-package. This CML assumes the metadata is at `data/metadata.json` in the
+package. This CML assumes the metadata is at `meta/metadata/metadata.json` in the
 package. That can be changed by modifying the `subdir` property of the
 `metadata` entry.
 
@@ -86,7 +90,7 @@ metadata.json is a single JSON file that describes the ICD to the loader. Exampl
 {
     "file_path": "lib/libvulkan_example.so",
     "version": 1,
-    "manifest_path": "data/icd.d/libvulkan_example.json"
+    "manifest_path": "meta/icd.d/libvulkan_example.json"
 }
 ```
 
@@ -103,3 +107,4 @@ metadata.json is a single JSON file that describes the ICD to the loader. Exampl
 [package]: /docs/concepts/packages/package.md
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [loaderinterface]: https://github.com/KhronosGroup/Vulkan-Loader/blob/master/loader/LoaderAndLayerInterface.md
+[meta-far]: /docs/concepts/packages/package.md#meta-far
