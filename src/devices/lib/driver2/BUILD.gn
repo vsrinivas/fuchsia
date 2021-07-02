@@ -21,6 +21,8 @@ source_set("lib") {
 
 source_set("llcpp") {
   sources = [
+    "devfs_exporter.cc",
+    "devfs_exporter.h",
     "inspect.cc",
     "inspect.h",
     "logger.cc",
@@ -34,6 +36,7 @@ source_set("llcpp") {
   public_deps = [
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
     "//sdk/fidl/fuchsia.data:fuchsia.data_llcpp",
+    "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fdio",
@@ -53,6 +56,7 @@ source_set("llcpp") {
 executable("llcpp_test") {
   testonly = true
   sources = [
+    "devfs_exporter_test.cc",
     "logger_test.cc",
     "namespace_test.cc",
     "promise_test.cc",
@@ -70,6 +74,7 @@ executable("llcpp_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/svc",
   ]
 }
 
