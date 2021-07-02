@@ -56,7 +56,7 @@ reserved_pio_space_t reserved_pio_entries[kMaxReservedPioEntries];
 static uint8_t reserved_pio_count = 0;
 
 void mark_mmio_region_to_reserve(uint64_t base, size_t len) {
-  ZX_DEBUG_ASSERT(reserved_pio_count < kMaxReservedMmioEntries);
+  ZX_DEBUG_ASSERT(reserved_mmio_count < kMaxReservedMmioEntries);
   reserved_mmio_entries[reserved_mmio_count].base = base;
   reserved_mmio_entries[reserved_mmio_count].len = len;
   reserved_mmio_count++;
