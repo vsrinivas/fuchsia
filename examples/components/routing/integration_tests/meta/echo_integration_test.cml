@@ -1,0 +1,36 @@
+// [START example_snippet]
+{
+    children: [
+        {
+            name: "driver",
+            url: "fuchsia-pkg://fuchsia.com/echo_integration_test#meta/echo_integration_test_driver.cm",
+        },
+        {
+            name: "echo_server",
+            url: "fuchsia-pkg://fuchsia.com/echo_integration_test#meta/echo_server.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#driver",
+                "#echo_server",
+            ],
+        },
+        {
+            protocol: [ "fidl.examples.routing.echo.Echo" ],
+            from: "#echo_server",
+            to: [ "#driver" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#driver",
+        },
+    ],
+}
+
+// [END example_snippet]

@@ -120,8 +120,5 @@ fuchsia_test_package("hello-world-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":hello-world-tests",
-    "integration_tests:hello-world-integration-test",
-  ]
+  deps = [ ":hello-world-tests" ]
 }
