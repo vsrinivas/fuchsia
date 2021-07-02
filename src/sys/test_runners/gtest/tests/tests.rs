@@ -49,11 +49,12 @@ async fn launch_and_run_test_with_custom_args() {
     let (events, _logs) = run_test(test_url, run_options).await.unwrap();
 
     let expected_events = vec![
+        RunEvent::suite_started(),
         RunEvent::case_found("TestArg.TestArg"),
         RunEvent::case_started("TestArg.TestArg"),
         RunEvent::case_stopped("TestArg.TestArg", CaseStatus::Passed),
         RunEvent::case_finished("TestArg.TestArg"),
-        RunEvent::suite_finished(SuiteStatus::Passed),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
     ];
     assert_eq!(expected_events, events);
 }
@@ -138,7 +139,8 @@ async fn launch_and_run_empty_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/empty_test.cm";
     let (events, _logs) = run_test(test_url, default_options()).await.unwrap();
 
-    let expected_events = vec![RunEvent::suite_finished(SuiteStatus::Passed)];
+    let expected_events =
+        vec![RunEvent::suite_started(), RunEvent::suite_stopped(SuiteStatus::Passed)];
 
     assert_eq!(expected_events, events);
 }
@@ -149,11 +151,12 @@ async fn launch_and_test_echo_test() {
     let (events, _logs) = run_test(test_url, default_options()).await.unwrap();
 
     let expected_events = vec![
+        RunEvent::suite_started(),
         RunEvent::case_found("EchoTest.TestEcho"),
         RunEvent::case_started("EchoTest.TestEcho"),
         RunEvent::case_stopped("EchoTest.TestEcho", CaseStatus::Passed),
         RunEvent::case_finished("EchoTest.TestEcho"),
-        RunEvent::suite_finished(SuiteStatus::Passed),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
     ];
     assert_eq!(expected_events, events);
 }
@@ -166,7 +169,7 @@ async fn test_parallel_execution() {
     let (events, _logs) = run_test(test_url, run_options).await.unwrap();
     let events = events.into_iter().group_by_test_case_unordered();
 
-    let mut expected_events = vec![];
+    let mut expected_events = vec![RunEvent::suite_started()];
 
     for i in 1..=5 {
         let s = format!("EchoTest.TestEcho{}", i);
@@ -177,7 +180,7 @@ async fn test_parallel_execution() {
             RunEvent::case_finished(&s),
         ])
     }
-    expected_events.push(RunEvent::suite_finished(SuiteStatus::Passed));
+    expected_events.push(RunEvent::suite_stopped(SuiteStatus::Passed));
     let expected_events = expected_events.into_iter().group_by_test_case_unordered();
     assert_events_eq(&expected_events, &events);
 }

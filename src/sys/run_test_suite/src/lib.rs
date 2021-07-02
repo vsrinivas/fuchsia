@@ -13,7 +13,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_test_manager::{
         self as ftest_manager, CaseArtifact, CaseFinished, CaseFound, CaseStarted, CaseStopped,
-        RunBuilderProxy, SuiteArtifact, SuiteFinished,
+        RunBuilderProxy, SuiteArtifact, SuiteStopped,
     },
     fuchsia_async as fasync,
     futures::{channel::mpsc, join, prelude::*, stream::LocalBoxStream},
@@ -438,9 +438,10 @@ async fn collect_results_for_suite(
                                 panic!("unknown artifact")
                             }
                         },
-                        ftest_manager::SuiteEventPayload::SuiteFinished(SuiteFinished {
-                            status,
-                        }) => {
+                        ftest_manager::SuiteEventPayload::SuiteStarted(_) => {
+                            // Do nothing, in the future this event is used to record timing
+                        }
+                        ftest_manager::SuiteEventPayload::SuiteStopped(SuiteStopped { status }) => {
                             successful_completion = true;
                             outcome = match status {
                                 ftest_manager::SuiteStatus::Passed => Outcome::Passed,

@@ -51,11 +51,12 @@ async fn launch_and_test_echo_test() {
     let events = run_test(test_url, false, Some(10), vec![]).await.unwrap();
 
     let expected_events = vec![
+        RunEvent::suite_started(),
         RunEvent::case_found("TestEcho"),
         RunEvent::case_started("TestEcho"),
         RunEvent::case_stopped("TestEcho", CaseStatus::Passed),
         RunEvent::case_finished("TestEcho"),
-        RunEvent::suite_finished(SuiteStatus::Passed),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
     ];
     assert_eq!(expected_events, events);
 }
@@ -65,7 +66,8 @@ async fn launch_and_test_file_with_no_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/empty_go_test.cm";
     let events = run_test(test_url, false, Some(10), vec![]).await.unwrap();
 
-    let expected_events = vec![RunEvent::suite_finished(SuiteStatus::Passed)];
+    let expected_events =
+        vec![RunEvent::suite_started(), RunEvent::suite_stopped(SuiteStatus::Passed)];
     assert_eq!(expected_events, events);
 }
 
@@ -74,7 +76,8 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
     let mut events =
         run_test(test_url, false, parallel, vec!["-my_custom_flag_2".to_owned()]).await.unwrap();
 
-    assert_eq!(events.pop(), Some(RunEvent::suite_finished(SuiteStatus::Failed)));
+    assert_eq!(events.remove(0), RunEvent::suite_started());
+    assert_eq!(events.pop(), Some(RunEvent::suite_stopped(SuiteStatus::Failed)));
 
     #[derive(Debug)]
     enum RunEventMatch {
@@ -275,7 +278,7 @@ async fn test_parallel_execution() {
         .into_iter()
         .group_by_test_case_unordered();
 
-    let mut expected_events = vec![];
+    let mut expected_events = vec![RunEvent::suite_started()];
     for i in 1..=5 {
         let s = format!("Test{}", i);
         expected_events.extend(vec![
@@ -285,7 +288,7 @@ async fn test_parallel_execution() {
             RunEvent::case_finished(&s),
         ])
     }
-    expected_events.push(RunEvent::suite_finished(SuiteStatus::Passed));
+    expected_events.push(RunEvent::suite_stopped(SuiteStatus::Passed));
     let expected_events = expected_events.into_iter().group_by_test_case_unordered();
     assert_eq!(events, expected_events);
 }

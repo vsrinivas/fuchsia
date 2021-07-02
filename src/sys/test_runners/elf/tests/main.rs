@@ -33,6 +33,7 @@ async fn launch_and_run_passing_test() {
     let events = run_test(test_url, default_options()).await.unwrap().into_iter().group();
 
     let expected_events = vec![
+        RunEvent::suite_started(),
         RunEvent::case_found("main"),
         RunEvent::case_started("main"),
         RunEvent::case_stdout("main", "stdout msg1"),
@@ -41,7 +42,7 @@ async fn launch_and_run_passing_test() {
         RunEvent::case_stderr("main", "stderr msg2"),
         RunEvent::case_stopped("main", CaseStatus::Passed),
         RunEvent::case_finished("main"),
-        RunEvent::suite_finished(SuiteStatus::Passed),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
     ]
     .into_iter()
     .group();
@@ -55,11 +56,12 @@ async fn launch_and_run_failing_test() {
     let events = run_test(test_url, default_options()).await.unwrap();
 
     let expected_events = vec![
+        RunEvent::suite_started(),
         RunEvent::case_found("main"),
         RunEvent::case_started("main"),
         RunEvent::case_stopped("main", CaseStatus::Failed),
         RunEvent::case_finished("main"),
-        RunEvent::suite_finished(SuiteStatus::Failed),
+        RunEvent::suite_stopped(SuiteStatus::Failed),
     ];
     assert_eq!(events, expected_events);
 }
@@ -72,12 +74,13 @@ async fn launch_and_run_test_with_custom_args() {
     let events = run_test(test_url, options).await.unwrap();
 
     let expected_events = vec![
+        RunEvent::suite_started(),
         RunEvent::case_found("main"),
         RunEvent::case_started("main"),
         RunEvent::case_stdout("main", "Got argv[1]=\"expected_arg\""),
         RunEvent::case_stopped("main", CaseStatus::Passed),
         RunEvent::case_finished("main"),
-        RunEvent::suite_finished(SuiteStatus::Passed),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
     ];
     assert_eq!(expected_events, events);
 }

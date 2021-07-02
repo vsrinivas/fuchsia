@@ -18,11 +18,12 @@ async fn launch_and_test_echo_test() {
     let (events, _logs) = run_test(test_url, false, Some(10), vec![]).await.unwrap();
 
     let expected_events = vec![
+        RunEvent::suite_started(),
         RunEvent::case_found("test_echo"),
         RunEvent::case_started("test_echo"),
         RunEvent::case_stopped("test_echo", CaseStatus::Passed),
         RunEvent::case_finished("test_echo"),
-        RunEvent::suite_finished(SuiteStatus::Passed),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
     ];
     assert_eq!(expected_events, events);
 }
@@ -32,7 +33,8 @@ async fn launch_and_test_file_with_no_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/no_rust_tests.cm";
     let (events, _logs) = run_test(test_url, false, Some(10), vec![]).await.unwrap();
 
-    let expected_events = vec![RunEvent::suite_finished(SuiteStatus::Passed)];
+    let expected_events =
+        vec![RunEvent::suite_started(), RunEvent::suite_stopped(SuiteStatus::Passed)];
     assert_eq!(expected_events, events);
 }
 async fn launch_and_run_sample_test_internal(parallel: u16) {
@@ -43,6 +45,7 @@ async fn launch_and_run_sample_test_internal(parallel: u16) {
             .unwrap();
 
     let expected_events = vec![
+        RunEvent::suite_started(),
         RunEvent::case_found("my_tests::failing_test"),
         RunEvent::case_started("my_tests::failing_test"),
         RunEvent::case_stopped("my_tests::failing_test", CaseStatus::Failed),
@@ -74,12 +77,12 @@ async fn launch_and_run_sample_test_internal(parallel: u16) {
         RunEvent::case_started("my_tests::test_custom_arguments"),
         RunEvent::case_stopped("my_tests::test_custom_arguments", CaseStatus::Passed),
         RunEvent::case_finished("my_tests::test_custom_arguments"),
-        RunEvent::suite_finished(SuiteStatus::Failed),
+        RunEvent::suite_stopped(SuiteStatus::Failed),
     ]
     .into_iter()
     .group_by_test_case_unordered();
 
-    assert_eq!(events.last().unwrap(), &RunEvent::suite_finished(SuiteStatus::Failed));
+    assert_eq!(events.last().unwrap(), &RunEvent::suite_stopped(SuiteStatus::Failed));
 
     let (failing_test_logs, events_without_failing_test_logs): (Vec<RunEvent>, Vec<RunEvent>) =
         events.into_iter().partition(|x| match x {
@@ -185,7 +188,7 @@ async fn test_parallel_execution() {
     let (events, _logs) = run_test(test_url, false, Some(100), vec![]).await.unwrap();
     let events = events.into_iter().group_by_test_case_unordered();
 
-    let mut expected_events = vec![];
+    let mut expected_events = vec![RunEvent::suite_started()];
 
     for i in 1..=5 {
         let s = format!("test_echo{}", i);
@@ -196,7 +199,7 @@ async fn test_parallel_execution() {
             RunEvent::case_finished(&s),
         ])
     }
-    expected_events.push(RunEvent::suite_finished(SuiteStatus::Passed));
+    expected_events.push(RunEvent::suite_stopped(SuiteStatus::Passed));
     let expected_events = expected_events.into_iter().group_by_test_case_unordered();
     assert_eq!(expected_events, events);
 }

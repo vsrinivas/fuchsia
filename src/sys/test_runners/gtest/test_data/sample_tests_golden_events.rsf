@@ -11,6 +11,7 @@
     };
 
     vec![
+        RunEvent::suite_started(),
         RunEvent::case_found("SampleTest1.SimpleFail"),
         RunEvent::case_started("SampleTest1.SimpleFail"),
         RunEvent::case_stdout(
@@ -110,6 +111,6 @@
         RunEvent::case_stopped("WriteToStdout.TestFail", CaseStatus::Failed),
         RunEvent::case_finished("WriteToStdout.TestFail"),
 
-        RunEvent::suite_finished(SuiteStatus::Failed),
+        RunEvent::suite_stopped(SuiteStatus::Failed),
     ]
 }

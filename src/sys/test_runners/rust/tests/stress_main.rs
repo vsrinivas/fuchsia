@@ -16,7 +16,7 @@ async fn launch_and_run_hugetest() {
     let (events, _logs) = run_test(test_url, false, Some(100), vec![]).await.unwrap();
     let events = events.into_iter().group_by_test_case_unordered();
 
-    let mut expected_events = vec![];
+    let mut expected_events = vec![RunEvent::suite_started()];
 
     for i in 1..=1000 {
         let s = format!("test_{}", i);
@@ -27,7 +27,7 @@ async fn launch_and_run_hugetest() {
             RunEvent::case_finished(s),
         ])
     }
-    expected_events.push(RunEvent::suite_finished(SuiteStatus::Passed));
+    expected_events.push(RunEvent::suite_stopped(SuiteStatus::Passed));
     let expected_events = expected_events.into_iter().group_by_test_case_unordered();
     assert_eq!(expected_events, events);
 }

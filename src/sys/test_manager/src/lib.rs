@@ -349,6 +349,8 @@ async fn run_suite(
 
         let run_options = get_invocation_options(options);
 
+        sender.send(Ok(SuiteEvents::suite_started().into())).await.unwrap();
+
         loop {
             const INVOCATIONS_CHUNK: usize = 50;
             let chunk = invocations_iter.by_ref().take(INVOCATIONS_CHUNK).collect::<Vec<_>>();
@@ -410,7 +412,8 @@ enum SuiteEventPayload {
     CaseStdout(u32, zx::Socket),
     CaseStderr(u32, zx::Socket),
     SuiteSyslog(ftest_manager::Syslog),
-    SuiteFinished(SuiteStatus),
+    SuiteStarted,
+    SuiteStopped(SuiteStatus),
 }
 struct SuiteEvents {
     timestamp: i64,
@@ -473,9 +476,14 @@ impl Into<FidlSuiteEvent> for SuiteEvents {
                 })),
                 ..FidlSuiteEvent::EMPTY
             },
-            SuiteEventPayload::SuiteFinished(status) => FidlSuiteEvent {
+            SuiteEventPayload::SuiteStarted => FidlSuiteEvent {
                 timestamp: Some(self.timestamp),
-                payload: Some(FidlSuiteEventPayload::SuiteFinished(ftest_manager::SuiteFinished {
+                payload: Some(FidlSuiteEventPayload::SuiteStarted(ftest_manager::SuiteStarted {})),
+                ..FidlSuiteEvent::EMPTY
+            },
+            SuiteEventPayload::SuiteStopped(status) => FidlSuiteEvent {
+                timestamp: Some(self.timestamp),
+                payload: Some(FidlSuiteEventPayload::SuiteStopped(ftest_manager::SuiteStopped {
                     status,
                 })),
                 ..FidlSuiteEvent::EMPTY
@@ -534,10 +542,17 @@ impl SuiteEvents {
         }
     }
 
+    fn suite_started() -> Self {
+        Self {
+            timestamp: zx::Time::get_monotonic().into_nanos(),
+            payload: SuiteEventPayload::SuiteStarted,
+        }
+    }
+
     fn suite_finished(status: SuiteStatus) -> Self {
         Self {
             timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: SuiteEventPayload::SuiteFinished(status),
+            payload: SuiteEventPayload::SuiteStopped(status),
         }
     }
 
@@ -1626,7 +1641,7 @@ mod tests {
         assert_matches!(event.timestamp, Some(_));
         assert_eq!(
             event.payload,
-            Some(FidlSuiteEventPayload::SuiteFinished(ftest_manager::SuiteFinished {
+            Some(FidlSuiteEventPayload::SuiteStopped(ftest_manager::SuiteStopped {
                 status: SuiteStatus::Failed,
             }))
         );

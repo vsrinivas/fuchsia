@@ -212,18 +212,21 @@ async fn launch_and_test_sample_test() {
             .collect::<Vec<Vec<String>>>()
     );
 
-    let expected_events: Vec<RunEvent> = vec![
+    let mut expected_events = vec![RunEvent::suite_started()];
+    expected_events.extend(
+        vec![
             "bootstrap/archivist:root",
             "bootstrap/archivist:root/event_stats/recent_events/*:event WHERE [a] Count(Filter(Fn([b], b == 'START'), a)) > 0",
             "bootstrap/archivist:root/event_stats:components_seen_running WHERE [a] a > 1"
-    ]
-    .into_iter()
-    .map(|case_name| vec![
-         RunEvent::case_found(case_name),RunEvent::case_started(case_name),
-         RunEvent::case_stopped(case_name, CaseStatus::Passed),RunEvent::case_finished(case_name)
-    ])
-    .flatten()
-    .chain(vec![RunEvent::suite_finished(SuiteStatus::Passed)].into_iter()).collect::<_>();
+        ]
+            .into_iter()
+            .map(|case_name| vec![
+                RunEvent::case_found(case_name),RunEvent::case_started(case_name),
+                RunEvent::case_stopped(case_name, CaseStatus::Passed),RunEvent::case_finished(case_name)
+            ])
+        .flatten()
+    );
+    expected_events.push(RunEvent::suite_stopped(SuiteStatus::Passed));
 
     // Compare events, ignoring stdout messages.
     assert_eq!(
@@ -287,7 +290,9 @@ async fn example_test_success(test_url: &'static str, accessor_service: &'static
             .collect::<Vec<Vec<String>>>()
     );
 
-    let expected_events: Vec<RunEvent> =
+    let mut expected_events = vec![RunEvent::suite_started()];
+
+    expected_events.extend(
         vec!["example:root:value WHERE [a] And(a >= 5, a < 10)", "example:root:version"]
             .into_iter()
             .map(|case_name| {
@@ -298,9 +303,9 @@ async fn example_test_success(test_url: &'static str, accessor_service: &'static
                     RunEvent::case_finished(case_name),
                 ]
             })
-            .flatten()
-            .chain(vec![RunEvent::suite_finished(SuiteStatus::Passed)].into_iter())
-            .collect::<_>();
+            .flatten(),
+    );
+    expected_events.push(RunEvent::suite_stopped(SuiteStatus::Passed));
 
     // Compare events, ignoring stdout messages.
     assert_eq!(
@@ -376,7 +381,8 @@ async fn example_test_failure(
         );
     }
 
-    let expected_events: Vec<RunEvent> =
+    let mut expected_events: Vec<RunEvent> = vec![RunEvent::suite_started()];
+    expected_events.extend(
         vec!["example:root:value WHERE [a] And(a >= 5, a < 10)", "example:root:version"]
             .into_iter()
             .zip(expected_results.into_iter())
@@ -388,9 +394,9 @@ async fn example_test_failure(
                     RunEvent::case_finished(case_name),
                 ]
             })
-            .flatten()
-            .chain(vec![RunEvent::suite_finished(SuiteStatus::Failed)].into_iter())
-            .collect::<_>();
+            .flatten(),
+    );
+    expected_events.push(RunEvent::suite_stopped(SuiteStatus::Failed));
 
     // Compare events, ignoring stdout messages.
     assert_eq!(

@@ -120,10 +120,10 @@ impl SuiteEvent {
         }
     }
 
-    pub fn suite_finished(timestamp: Option<i64>, status: ftest_manager::SuiteStatus) -> Self {
+    pub fn suite_stopped(timestamp: Option<i64>, status: ftest_manager::SuiteStatus) -> Self {
         SuiteEvent {
             timestamp,
-            payload: SuiteEventPayload::RunEvent(RunEvent::suite_finished(status)),
+            payload: SuiteEventPayload::RunEvent(RunEvent::suite_stopped(status)),
         }
     }
 
@@ -155,7 +155,8 @@ pub enum RunEvent {
     CaseStderr { name: String, stderr_message: String },
     CaseStopped { name: String, status: ftest_manager::CaseStatus },
     CaseFinished { name: String },
-    SuiteFinished { status: ftest_manager::SuiteStatus },
+    SuiteStarted,
+    SuiteStopped { status: ftest_manager::SuiteStatus },
 }
 
 impl RunEvent {
@@ -203,8 +204,12 @@ impl RunEvent {
         Self::CaseFinished { name: name.into() }
     }
 
-    pub fn suite_finished(status: ftest_manager::SuiteStatus) -> Self {
-        Self::SuiteFinished { status }
+    pub fn suite_started() -> Self {
+        Self::SuiteStarted
+    }
+
+    pub fn suite_stopped(status: ftest_manager::SuiteStatus) -> Self {
+        Self::SuiteStopped { status }
     }
     /// Returns the name of the test case to which the event belongs, if applicable.
     pub fn test_case_name(&self) -> Option<&String> {
@@ -215,7 +220,7 @@ impl RunEvent {
             | RunEvent::CaseStderr { name, .. }
             | RunEvent::CaseStopped { name, .. }
             | RunEvent::CaseFinished { name } => Some(name),
-            RunEvent::SuiteFinished { .. } => None,
+            RunEvent::SuiteStarted | RunEvent::SuiteStopped { .. } => None,
         }
     }
 
@@ -461,9 +466,16 @@ impl FidlSuiteEventProcessor {
                     panic!("not supported")
                 }
             },
-            FidlSuiteEventPayload::SuiteFinished(sf) => SuiteEvent {
+            FidlSuiteEventPayload::SuiteStarted(_started) => SuiteEvent {
                 timestamp,
-                payload: SuiteEventPayload::RunEvent(RunEvent::SuiteFinished { status: sf.status }),
+                payload: SuiteEventPayload::RunEvent(RunEvent::SuiteStarted),
+            }
+            .into(),
+            FidlSuiteEventPayload::SuiteStopped(stopped) => SuiteEvent {
+                timestamp,
+                payload: SuiteEventPayload::RunEvent(RunEvent::SuiteStopped {
+                    status: stopped.status,
+                }),
             }
             .into(),
         };

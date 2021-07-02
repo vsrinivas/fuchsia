@@ -141,8 +141,8 @@ async fn calling_kill_should_kill_test() {
     // make sure that test never finished
     for event in events {
         match event {
-            RunEvent::SuiteFinished { .. } => {
-                panic!("should not receive SuiteFinished event as the test was killed. ")
+            RunEvent::SuiteStopped { .. } => {
+                panic!("should not receive SuiteStopped event as the test was killed. ")
             }
             _ => {}
         }
@@ -182,8 +182,8 @@ async fn calling_builder_kill_should_kill_test() {
     // make sure that test never finished
     for event in events {
         match event {
-            RunEvent::SuiteFinished { .. } => {
-                panic!("should not receive SuiteFinished event as the test was killed. ")
+            RunEvent::SuiteStopped { .. } => {
+                panic!("should not receive SuiteStopped event as the test was killed. ")
             }
             _ => {}
         }
@@ -218,14 +218,14 @@ async fn calling_stop_should_stop_test() {
         .into_iter()
         .filter_map(|e| match e.payload {
             test_manager_test_lib::SuiteEventPayload::RunEvent(e) => match e {
-                RunEvent::SuiteFinished { .. } => Some(e),
+                RunEvent::SuiteStopped { .. } => Some(e),
                 _ => None,
             },
             _ => None,
         })
         .collect::<Vec<_>>();
 
-    assert_eq!(events, vec![RunEvent::suite_finished(SuiteStatus::Stopped)]);
+    assert_eq!(events, vec![RunEvent::suite_stopped(SuiteStatus::Stopped)]);
 }
 
 fn default_run_option() -> ftest_manager::RunOptions {
@@ -246,11 +246,12 @@ async fn launch_and_test_echo_test() {
     let (events, logs) = run_single_test(test_url, default_run_option()).await.unwrap();
 
     let expected_events = vec![
+        RunEvent::suite_started(),
         RunEvent::case_found("EchoTest"),
         RunEvent::case_started("EchoTest"),
         RunEvent::case_stopped("EchoTest", CaseStatus::Passed),
         RunEvent::case_finished("EchoTest"),
-        RunEvent::suite_finished(SuiteStatus::Passed),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
     ];
 
     assert_eq!(logs, Vec::<String>::new());
@@ -266,7 +267,7 @@ async fn launch_and_test_no_on_finished() {
     let events = events.into_iter().group_by_test_case_unordered();
 
     let test_cases = ["Example.Test1", "Example.Test2", "Example.Test3"];
-    let mut expected_events = vec![];
+    let mut expected_events = vec![RunEvent::suite_started()];
     for case in test_cases {
         expected_events.push(RunEvent::case_found(case));
         expected_events.push(RunEvent::case_started(case));
@@ -277,7 +278,7 @@ async fn launch_and_test_no_on_finished() {
         expected_events.push(RunEvent::case_stopped(case, CaseStatus::Passed));
         expected_events.push(RunEvent::case_finished(case));
     }
-    expected_events.push(RunEvent::suite_finished(SuiteStatus::DidNotFinish));
+    expected_events.push(RunEvent::suite_stopped(SuiteStatus::DidNotFinish));
     let expected_events = expected_events.into_iter().group_by_test_case_unordered();
 
     assert_eq!(&expected_events, &events);
@@ -310,6 +311,7 @@ async fn filter_test() {
     let events = events.into_iter().group_by_test_case_unordered();
 
     let expected_events = vec![
+        RunEvent::suite_started(),
         RunEvent::case_found("SampleTest2.SimplePass"),
         RunEvent::case_started("SampleTest2.SimplePass"),
         RunEvent::case_stopped("SampleTest2.SimplePass", CaseStatus::Passed),
@@ -322,7 +324,7 @@ async fn filter_test() {
         RunEvent::case_started("SampleFixture.Test2"),
         RunEvent::case_stopped("SampleFixture.Test2", CaseStatus::Passed),
         RunEvent::case_finished("SampleFixture.Test2"),
-        RunEvent::suite_finished(SuiteStatus::Passed),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
     ]
     .into_iter()
     .group_by_test_case_unordered();

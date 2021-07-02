@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.test.manager;
 
 using fuchsia.developer.remotecontrol;
@@ -133,12 +132,33 @@ protocol RunController {
     /// are in progress.
     Kill();
 
-    // Iterator over events for the run.
+    /// Iterator over events for the run. This method is a hanging get; it
+    /// returns an empty vector only when there will be no further events
+    /// (the run completed).
     GetEvents() -> (vector<RunEvent>:MAX events);
 };
 
-// Placeholder for future events.
 resource table RunEvent {
+    // The monotonic timestamp for the event.
+    1: zx.time timestamp;
+    2: RunEventPayload payload;
+};
+
+/// Various events for run execution. The first event for a test run will
+/// always be `run_started`. `run_stopped` fires when the test run stops
+/// and will always fire after `run_started`.
+resource union RunEventPayload {
+    /// The test run started execution.
+    1: RunStarted run_started;
+    /// The test run stopped executing.
+    2: RunStopped run_stopped;
+};
+
+struct RunStarted {
+};
+
+struct RunStopped {
+    // possibly include result in the future
 };
 
 /// The server end will disconnect after all the suite run has finished and
@@ -172,9 +192,8 @@ resource table SuiteEvent {
 /// First event for a test case will always be `case_found` and last will be
 /// `case_finished`. Events `case_started` and `case_artifact` can come in any
 /// order. There can be some `case_artifact` between `case_stopped` and
-/// `case_finished`. `suite_finished` event will always fire when the whole
-/// suite has finished executing and `suite_artifact` may be fired anytime
-/// before `suite_finished`.
+/// `case_finished`. `suite_stopped` event will always fire when the whole
+/// suite has finished executing. Note `suite_artifact` may fire at any time.
 resource union SuiteEventPayload {
     /// A case was found.
     1: CaseFound case_found;
@@ -197,8 +216,13 @@ resource union SuiteEventPayload {
     /// Artifact from a suite.
     6: SuiteArtifact suite_artifact;
 
-    /// Suite run finished executing
-    7: SuiteFinished suite_finished;
+    /// Suite started execution
+    7: SuiteStarted suite_started;
+
+    /// Suite run stopped executing, includes the result of the suite. The
+    /// client might still get artifacts pertaining to this suite after this
+    /// event.
+    8: SuiteStopped suite_stopped;
 };
 
 /// Test case identifier. Unique in a suite run.
@@ -267,7 +291,10 @@ struct CaseFinished {
     TestCaseId identifier;
 };
 
-struct SuiteFinished {
+struct SuiteStarted {
+};
+
+struct SuiteStopped {
     SuiteStatus status;
 };
 
