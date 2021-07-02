@@ -176,7 +176,7 @@ static struct mdns_buf pkt;
 bool mdns_send(struct mdns_header* hdr, struct mdns_record* records) {
   if (!mdns_write_packet(hdr, records, &pkt))
     return false;
-  if (udp6_send(pkt.data, pkt.used, &ip6_ll_all_nodes, MDNS_PORT, MDNS_PORT))
+  if (udp6_send(pkt.data, pkt.used, &ip6_mdns_broadcast, MDNS_PORT, MDNS_PORT))
     return false;
   return true;
 }

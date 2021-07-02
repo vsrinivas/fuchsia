@@ -31,6 +31,11 @@ const ip6_addr ip6_ll_all_nodes = {
     .x = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 };
 
+// standard broadcast address for mDNS.
+const ip6_addr ip6_mdns_broadcast = {
+    .x = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFB},
+};
+
 // Convert MAC Address to IPv6 Link Local Address
 // aa:bb:cc:dd:ee:ff => FF80::aabb:ccFF:FEdd:eeff
 // bit 2 (U/L) of the mac is inverted

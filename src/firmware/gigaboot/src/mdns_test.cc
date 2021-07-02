@@ -19,6 +19,7 @@ __BEGIN_CDECLS
 mac_addr ll_mac_addr;
 ip6_addr ll_ip6_addr;
 const ip6_addr ip6_ll_all_nodes{.x = {}};
+const ip6_addr ip6_mdns_broadcast{.x = {}};
 int udp6_send(const void *data, size_t len, const ip6_addr *daddr, uint16_t dport, uint16_t sport) {
   abort();
 }

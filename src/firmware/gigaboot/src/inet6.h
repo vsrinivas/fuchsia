@@ -42,6 +42,7 @@ struct ip6_addr_t {
 } __attribute__((packed));
 
 extern const ip6_addr ip6_ll_all_nodes;
+extern const ip6_addr ip6_mdns_broadcast;
 
 #define ETH_IP4 0x0800
 #define ETH_ARP 0x0806
