@@ -1178,33 +1178,6 @@ func compareInterfaceAddresses(t *testing.T, got, want []tcpip.AddressWithPrefix
 	}
 }
 
-func TestNetstackImpl_GetInterfaces(t *testing.T) {
-	ns, _ := newNetstack(t)
-	ni := &netstackImpl{ns: ns}
-
-	t.Cleanup(addNoopEndpoint(t, ns, "").Remove)
-
-	ifaces, err := ni.GetInterfaces(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if l := len(ifaces); l == 0 {
-		t.Fatalf("got len(GetInterfaces()) = %d, want != %d", l, l)
-	}
-
-	var expectedAddr fidlnet.IpAddress
-	expectedAddr.SetIpv4(fidlnet.Ipv4Address{})
-	for _, iface := range ifaces {
-		if iface.Addr != expectedAddr {
-			t.Errorf("got interface %+v, want Addr = %+v", iface, expectedAddr)
-		}
-		if iface.Netmask != expectedAddr {
-			t.Errorf("got interface %+v, want NetMask = %+v", iface, expectedAddr)
-		}
-	}
-}
-
 // Test adding a list of both IPV4 and IPV6 addresses and then removing them
 // again one-by-one.
 func TestListInterfaceAddresses(t *testing.T) {

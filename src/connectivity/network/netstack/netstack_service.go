@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -10,13 +11,11 @@ import (
 	"context"
 	"errors"
 	"net"
-	"sort"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -27,86 +26,10 @@ import (
 	"fidl/fuchsia/netstack"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/header"
-	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
-	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
-	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 type netstackImpl struct {
 	ns *Netstack
-}
-
-// GetInterfaces returns a list of interfaces.
-func (ni *netstackImpl) GetInterfaces(fidl.Context) ([]netstack.NetInterface, error) {
-	nicInfos := ni.ns.stack.NICInfo()
-	interfaces := make([]netstack.NetInterface, 0, len(nicInfos))
-	for _, nicInfo := range nicInfos {
-		ifs := nicInfo.Context.(*ifState)
-
-		var ipv6addrs []fidlnet.Subnet
-		for _, address := range nicInfo.ProtocolAddresses {
-			if address.Protocol == ipv6.ProtocolNumber {
-				ipv6addrs = append(ipv6addrs, fidlnet.Subnet{
-					Addr:      fidlconv.ToNetIpAddress(address.AddressWithPrefix.Address),
-					PrefixLen: uint8(address.AddressWithPrefix.PrefixLen),
-				})
-			}
-		}
-
-		var flags netstack.Flags
-		ifs.mu.Lock()
-		if ifs.IsUpLocked() {
-			flags |= netstack.FlagsUp
-		}
-		if ifs.mu.dhcp.enabled {
-			flags |= netstack.FlagsDhcp
-		}
-		metric := uint32(ifs.mu.metric)
-		ifs.mu.Unlock()
-
-		netInterface := netstack.NetInterface{
-			Id:        uint32(ifs.nicid),
-			Flags:     flags,
-			Metric:    metric,
-			Name:      nicInfo.Name,
-			Hwaddr:    []uint8(ifs.endpoint.LinkAddress()[:]),
-			Ipv6addrs: ipv6addrs,
-		}
-
-		if ifs.endpoint.Capabilities()&tcpipstack.CapabilityLoopback != 0 {
-			netInterface.Features |= ethernet.FeaturesLoopback
-		}
-
-		if client, ok := ifs.controller.(*eth.Client); ok {
-			netInterface.Features |= client.Info.Features
-		}
-
-		addrWithPrefix, err := ifs.ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber)
-		if err != nil {
-			_ = syslog.Warnf("stack.GetMainNICAddress(%d, ipv4.ProtocolNumber): %s", ifs.nicid, err)
-		}
-
-		if addrWithPrefix == (tcpip.AddressWithPrefix{}) {
-			addrWithPrefix = tcpip.AddressWithPrefix{Address: header.IPv4Any, PrefixLen: 0}
-		}
-		mask := net.CIDRMask(addrWithPrefix.PrefixLen, len(addrWithPrefix.Address)*8)
-		broadaddr := []byte(addrWithPrefix.Address)
-		for i := range broadaddr {
-			broadaddr[i] |= ^mask[i]
-		}
-		netInterface.Addr = fidlconv.ToNetIpAddress(addrWithPrefix.Address)
-		netInterface.Netmask = fidlconv.ToNetIpAddress(tcpip.Address(mask))
-		netInterface.Broadaddr = fidlconv.ToNetIpAddress(tcpip.Address(broadaddr))
-
-		interfaces = append(interfaces, netInterface)
-	}
-
-	sort.Slice(interfaces, func(i, j int) bool {
-		return interfaces[i].Id < interfaces[j].Id
-	})
-
-	return interfaces, nil
 }
 
 func (ni *netstackImpl) GetRouteTable(fidl.Context) ([]netstack.RouteTableEntry, error) {

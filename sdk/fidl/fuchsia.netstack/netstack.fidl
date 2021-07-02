@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.netstack;
 
 using fuchsia.hardware.ethernet;
@@ -35,47 +34,6 @@ struct InterfaceConfig {
     uint32 metric;
 };
 
-/// Flags describe an interface's runtime configuration.
-// TODO(https://fxbug.dev/75555): Migrate callers and remove this.
-[Deprecated = "Use fuchsia.net.interfaces/Watcher"]
-bits Flags : uint32 {
-    /// Set if the interface is up.
-    UP = 0x01;
-    // Set if DHCP is enabled on the interface.
-    DHCP = 0x02;
-};
-
-/// https://linux.die.net/man/7/netdevice
-// TODO(https://fxbug.dev/75555): Migrate callers and remove this.
-[Deprecated = "Use fuchsia.net.interfaces/Watcher"]
-struct NetInterface {
-    uint32 id;
-    Flags flags;
-    fuchsia.hardware.ethernet.Features features;
-    uint32 configuration;
-    uint32 metric;
-    fuchsia.posix.socket.interface_name name;
-    /// addr is one of the interface's IPv4 addresses, even if the interface
-    /// holds multiple. No guarantees are made about which address is used when
-    /// an interface has multiple IPv4 addresses.
-    ///
-    /// If the interface does not have an IPv4 address, addr is the unspecified
-    /// IPv4 address (0.0.0.0).
-    fuchsia.net.IpAddress addr;
-    /// netmask is addr's corresponding network mask.
-    ///
-    /// If the interface does not have an IPv4 address, netmask is the 0 netmask
-    /// (0.0.0.0).
-    fuchsia.net.IpAddress netmask;
-    /// netmask is addr's corresponding network's broadcast address.
-    ///
-    /// If the interface does not have an IPv4 address, broadaddr is the
-    /// unspecified IPv4 address (0.0.0.0).
-    fuchsia.net.IpAddress broadaddr;
-    vector<fuchsia.net.Subnet>:MAX ipv6addrs;
-    bytes hwaddr;
-};
-
 struct RouteTableEntry {
     fuchsia.net.IpAddress destination;
     fuchsia.net.IpAddress netmask;
@@ -91,11 +49,6 @@ struct SocketAddress {
 
 [Discoverable]
 protocol Netstack {
-    /// Returns the list of registered network interfaces.
-    // TODO(https://fxbug.dev/75555): Migrate callers and remove this.
-    [Deprecated = "Use fuchsia.net.interfaces/Watcher"]
-    GetInterfaces() -> (vector<NetInterface>:MAX interfaces);
-
     /// Returns current route table.
     GetRouteTable() -> (vector<RouteTableEntry>:MAX rt);
 
