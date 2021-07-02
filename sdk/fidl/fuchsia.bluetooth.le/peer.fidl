@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth as bt;
@@ -34,6 +33,9 @@ table ScanData {
     /// NOTE: Bluetooth advertising compresses schemas over the air to save space. See
     /// https://www.bluetooth.com/specifications/assigned-numbers/uri-scheme-name-string-mapping.
     6: vector<string:MAX_URI_LENGTH>:MAX uris;
+
+    /// The monotonic time when this scan data was received.
+    7: zx.time timestamp;
 };
 
 /// Represents a Bluetooth Low Energy peer that may act in the broadcaster, peripheral, or central
