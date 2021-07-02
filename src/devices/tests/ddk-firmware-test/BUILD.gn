@@ -50,7 +50,7 @@ driver_module("ddk-firmware-test") {
 }
 
 fuchsia_driver_component("ddk-firmware-test-driver") {
-  bind_path = "bind/test-driver-bind.bindbc"
+  bind_path = "meta/bind/test-driver-bind.bindbc"
   driver_path = "driver/ddk-firmware-test.so"
   deps = [ ":ddk-firmware-test" ]
 }

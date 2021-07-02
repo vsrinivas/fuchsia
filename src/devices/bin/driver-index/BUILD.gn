@@ -72,7 +72,7 @@ bind_rules("test-bind") {
 }
 
 fuchsia_driver_component("test-bind-component") {
-  bind_path = "bind/test-bind.bindbc"
+  bind_path = "meta/bind/test-bind.bindbc"
   driver_path = "driver/not-real.so"
   deps = [ ":test-bind" ]
 }
@@ -84,7 +84,7 @@ bind_rules("test-bind2") {
 }
 
 fuchsia_driver_component("test-bind2-component") {
-  bind_path = "bind/test-bind2.bindbc"
+  bind_path = "meta/bind/test-bind2.bindbc"
   driver_path = "driver/not-real2.so"
   deps = [ ":test-bind2" ]
 }
