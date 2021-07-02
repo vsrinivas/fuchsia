@@ -4,12 +4,15 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::{DiscoverableService, ServiceMarker},
+    fidl::endpoints::{create_proxy, DiscoverableService, ServerEnd, ServiceMarker},
+    fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_component_test::mock::MockHandles,
     futures::{channel::mpsc, SinkExt, StreamExt, TryStream, TryStreamExt},
     log::info,
+    std::sync::Arc,
+    vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope},
 };
 
 // #! Library for common utilities (mocks, definitions) for the manifest integration tests.
@@ -68,10 +71,25 @@ where
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |req_stream: S::RequestStream| {
         let sender_clone = sender.clone();
+        info!("Received connection for {}", S::SERVICE_NAME);
         fasync::Task::local(process_request_stream::<S, _>(req_stream, sender_clone)).detach();
     });
 
     fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
+}
+
+/// Spawns a VFS handler for the provided `dir`.
+pub fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> DirectoryProxy {
+    let (client_end, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+    let scope = ExecutionScope::new();
+    dir.open(
+        scope,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        0,
+        vfs::path::Path::empty(),
+        ServerEnd::new(server_end.into_channel()),
+    );
+    client_end
 }

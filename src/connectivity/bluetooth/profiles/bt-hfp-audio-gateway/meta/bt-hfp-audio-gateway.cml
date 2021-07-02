@@ -20,6 +20,11 @@
     ],
     use: [
         {
+            directory: "dev-dai",
+            rights: [ "rw*" ],
+            path: "/dev/class/dai",
+        },
+        {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
                 "fuchsia.media.AudioDeviceEnumerator",

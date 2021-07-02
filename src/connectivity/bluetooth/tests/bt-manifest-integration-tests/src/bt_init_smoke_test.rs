@@ -4,16 +4,15 @@
 
 use {
     anyhow::Error,
-    bt_manifest_integration_lib::add_fidl_service_handler,
+    bt_manifest_integration_lib::{add_fidl_service_handler, spawn_vfs},
     fdio,
-    fidl::endpoints::{create_proxy, DiscoverableService, Proxy, ServerEnd},
+    fidl::endpoints::{DiscoverableService, Proxy},
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileProxy},
     fidl_fuchsia_bluetooth_gatt as fbgatt, fidl_fuchsia_bluetooth_le as fble,
     fidl_fuchsia_bluetooth_rfcomm_test::{RfcommTestMarker, RfcommTestProxy},
     fidl_fuchsia_bluetooth_snoop::{SnoopMarker, SnoopRequestStream},
     fidl_fuchsia_bluetooth_sys::{AccessMarker, AccessProxy, HostWatcherMarker, HostWatcherProxy},
     fidl_fuchsia_device::{NameProviderMarker, NameProviderRequestStream},
-    fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_stash::SecureStoreMarker,
     fuchsia_async as fasync,
@@ -24,8 +23,7 @@ use {
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     log::{error, info},
-    std::sync::Arc,
-    vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, pseudo_directory},
+    vfs::pseudo_directory,
 };
 
 const BT_INIT_URL: &str = "fuchsia-pkg://fuchsia.com/bt-init-smoke-test#meta/test-bt-init.cm";
@@ -162,19 +160,6 @@ fn route_from_bt_init_to_mock_client<S: DiscoverableService>(builder: &mut Realm
             vec![RouteEndpoint::component(MOCK_CLIENT_MONIKER)],
         )
         .expect(&format!("failed routing {} from bt-init to mock client", S::SERVICE_NAME));
-}
-
-fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> DirectoryProxy {
-    let (client_end, server_end) = create_proxy::<DirectoryMarker>().unwrap();
-    let scope = ExecutionScope::new();
-    dir.open(
-        scope,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
-        0,
-        vfs::path::Path::empty(),
-        ServerEnd::new(server_end.into_channel()),
-    );
-    client_end
 }
 
 /// Tests that the v2 bt-init component has the correct topology and verifies
