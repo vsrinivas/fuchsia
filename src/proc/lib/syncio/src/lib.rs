@@ -6,6 +6,8 @@ use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
 use fuchsia_zircon as zx;
 
+mod zxio;
+
 // TODO: We need a more comprehensive error strategy.
 // Our dependencies create elaborate error objects, but Starnix would prefer
 // this library produce zx::Status errors for easier conversion to Errno.
@@ -226,6 +228,31 @@ mod test {
         let info = vmo.basic_info()?;
         assert_eq!(zx::Rights::READ, info.rights & zx::Rights::READ);
         assert_eq!(zx::Rights::EXECUTE, info.rights & zx::Rights::EXECUTE);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_directory_open_zxio_async() -> Result<(), Error> {
+        let pkg_proxy = directory::open_in_namespace(
+            "/pkg",
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        )
+        .expect("failed to open /pkg");
+        let zx_channel = pkg_proxy
+            .into_channel()
+            .expect("failed to convert proxy into channel")
+            .into_zx_channel();
+        let storage = zxio::zxio_storage_t::default();
+        let status = unsafe {
+            zxio::zxio_create(
+                zx_channel.into_raw(),
+                &storage as *const zxio::zxio_storage_t as *mut zxio::zxio_storage_t,
+            )
+        };
+        assert_eq!(status, zx::sys::ZX_OK);
+        let io = &storage.io as *const zxio::zxio_t as *mut zxio::zxio_t;
+        let close_status = unsafe { zxio::zxio_close(io) };
+        assert_eq!(close_status, zx::sys::ZX_OK);
         Ok(())
     }
 }

@@ -14,6 +14,7 @@ library_headers("headers") {
     "lib/zxio/extensions.h",
     "lib/zxio/null.h",
     "lib/zxio/ops.h",
+    "lib/zxio/posix_mode.h",
     "lib/zxio/types.h",
     "lib/zxio/zxio.h",
   ]
