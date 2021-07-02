@@ -21,9 +21,8 @@ toc:
 # - title: "Access"
 #   path: /docs/reference/diagnostics/access.md
 
-# TODO(fxbug.dev/60811)
-# - title: "Selectors"
-#   path: /docs/reference/diagnostics/selectors.md
+- title: "Selectors"
+  path: /docs/reference/diagnostics/selectors.md
 
 # TODO(fxbug.dev/60812)
 # - title: "Product Integration"

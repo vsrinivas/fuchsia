@@ -20,8 +20,7 @@ match the service(s) of interest.
 
 Many `ffx` commands that interact with components or services take component
 selectors as a parameter. Component selectors in `ffx` use the same syntax as
-the component selectors in the
-[diagnostics library](https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#Selector).
+the [diagnostics selectors][selectors].
 
 Here are some example selectors, all of which select the Remote Control Service:
 
@@ -36,7 +35,7 @@ core/*:expose:fuchsia.developer.remotecontrol.R*
 
 #### Selector segments
 
-There are three constituent segments of a selector:
+There are three constituent segments of a [selector][selectors]:
 `<component moniker>:<node selector>:<property selector>`. Each is discussed
 below. The wildcard (`*`) is valid in each segment of a selector.
 
@@ -68,3 +67,5 @@ Consider this example:
 
 You may optionally omit the property selector: `core/remote-control:out` is
 equivalent to `core/remote-control:out:*`.
+
+[selectors]: /docs/reference/diagnostics/selectors.md
