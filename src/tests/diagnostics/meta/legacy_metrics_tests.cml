@@ -2,7 +2,7 @@
     include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
     program: {
         accessor: "LEGACY",
-        timeout_seconds: "30",
+        timeout_seconds: "60",
         cases: [
             // Archivist stats are not present, because legacy metrics filters are active.
             "bootstrap/archivist:root/all_archive_accessor:archive_accessor_connections_opened WHERE [a] Missing(a)",

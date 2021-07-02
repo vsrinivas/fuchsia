@@ -2,7 +2,7 @@
     include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
     program: {
         accessor: "FEEDBACK",
-        timeout_seconds: "30",
+        timeout_seconds: "60",
         cases: [
             // Archivist reports that it is healthy over the feedback pipeline.
             "bootstrap/archivist:root/fuchsia.inspect.Health:status WHERE [a] a == 'OK'",

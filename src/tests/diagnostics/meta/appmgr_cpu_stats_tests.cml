@@ -2,7 +2,7 @@
     include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
     program: {
         accessor: "ALL",
-        timeout_seconds: "30",
+        timeout_seconds: "60",
         cases: [
             // Appmgr is using less than 2MB of inspect space for measurements
             "core/appmgr:root/cpu_stats/measurements/@inspect:current_size WHERE [a] a < 2*1024*1024",

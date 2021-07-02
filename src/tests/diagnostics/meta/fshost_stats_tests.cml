@@ -2,7 +2,7 @@
     include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
     program: {
         accessor: "ALL",
-        timeout_seconds: "30",
+        timeout_seconds: "60",
         cases: [
             // Paged and unpaged reads have a non-zero number of total bytes.
             "bootstrap/fshost:root/*paged_read_stats/*:read_bytes WHERE [a] Fold(Fn([cur, prev], cur + prev), a, 0) > 0",

@@ -2,7 +2,7 @@
     include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
     program: {
         accessor: "ALL",
-        timeout_seconds: "30",
+        timeout_seconds: "60",
         cases: [
             // Archivist reports metrics for feedback pipeline.
             "bootstrap/archivist:root/all_archive_accessor:*",

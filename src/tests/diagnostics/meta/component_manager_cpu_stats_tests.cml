@@ -2,7 +2,7 @@
     include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
     program: {
         accessor: "ALL",
-        timeout_seconds: "5",
+        timeout_seconds: "60",
         cases: [
             // Ensure that component manager has at least one CPU sample
             // and that all present samples are greater than 0.

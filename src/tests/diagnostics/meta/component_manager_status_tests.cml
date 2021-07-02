@@ -2,7 +2,7 @@
     include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
     program: {
         accessor: "ALL",
-        timeout_seconds: "30",
+        timeout_seconds: "60",
         cases: [
             // Component manager reports that it is healthy.
             "<component_manager>:root/fuchsia.inspect.Health:status WHERE [a] a == 'OK'",
