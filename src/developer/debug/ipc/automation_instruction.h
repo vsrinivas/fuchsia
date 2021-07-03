@@ -105,6 +105,32 @@ struct AutomationOperand {
     value_ = value;
   }
 
+  // If the operand is a kRegister, this changes it to a kRegisterTimesConstant with value as the
+  // constant. Otherwise, the register becomes kZero.
+  void MultiplyValue(uint32_t value) {
+    if (kind_ == AutomationOperandKind::kRegister) {
+      kind_ = AutomationOperandKind::kRegisterTimesConstant;
+      value_ = value;
+    } else {
+      kind_ = AutomationOperandKind::kZero;
+      index_ = 0;
+      value_ = 0;
+    }
+  }
+
+  // If the operand is a kRegister, this changes it to a kIndirectUInt32 with value as the offset.
+  // Otherwise, the register becomes kZero.
+  void IndirectValue32(uint32_t value) {
+    if (kind_ == AutomationOperandKind::kRegister) {
+      kind_ = AutomationOperandKind::kIndirectUInt32;
+      value_ = value;
+    } else {
+      kind_ = AutomationOperandKind::kZero;
+      index_ = 0;
+      value_ = 0;
+    }
+  }
+
   debug_ipc::RegisterID register_index() const {
     return static_cast<debug_ipc::RegisterID>(index_);
   }

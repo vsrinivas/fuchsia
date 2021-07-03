@@ -264,6 +264,23 @@ WRITE_ABORTED_TEST(ZxChannelWriteAborted, ZX_OK,
                    "\n\x1B[32m1\x1B[0m \x1B[32mStop monitoring\x1B[0m \x1B[34mtest_3141\x1B[0m "
                    "koid \x1B[31m3141\x1B[0m\n");
 
+CREATE_AUTOMATION_TEST(
+    ZxChannelWriteAutomation, "zx_channel_write", ZX_OK,
+    "Invoked bp instructions:\n"
+    "  loop_load_memory rdx, rcx, [loop_offset + 0x0]/64, [loop_offset + 0x8]/32, 16."
+    " conditions: (rsi & 0x2) != 0x0\n"
+    "  load_memory rdx, rcx. conditions: (rsi & 0x2) == 0x0\n"
+    "  load_memory r8, r9 * 4\n"
+    "Exit bp instructions:\n"
+    "  clear_stored_values\n",
+    "Invoked bp instructions:\n"
+    "  loop_load_memory x2, x3, [loop_offset + 0x0]/64, [loop_offset + 0x8]/32, 16."
+    " conditions: (x1 & 0x2) != 0x0\n"
+    "  load_memory x2, x3. conditions: (x1 & 0x2) == 0x0\n"
+    "  load_memory x4, x5 * 4\n"
+    "Exit bp instructions:\n"
+    "  clear_stored_values\n");
+
 // zx_channel_read tests.
 
 std::unique_ptr<SystemCallTest> ZxChannelRead(int64_t result, std::string_view result_name,

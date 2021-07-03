@@ -506,7 +506,7 @@ class SyscallArgument : public SyscallArgumentBaseTyped<Type> {
     } else {
       // This will only happen on X64 when we have more than 6 arguments. The last two arguments are
       // placed on the stack.
-      operand.InitStackSlot((index() - 7) * 8);
+      operand.InitStackSlot((index() - argument_indexes.size()) * 8);
     }
     return operand;
   }
@@ -564,7 +564,7 @@ class SyscallPointerArgument : public SyscallArgumentBaseTyped<Type> {
     } else {
       // This will only happen on X64 when we have more than 6 arguments. The last two arguments are
       // placed on the stack.
-      operand.InitStackSlot((index() - (argument_indexes.size() + 1)) * 8);
+      operand.InitStackSlot((index() - argument_indexes.size()) * 8);
     }
     return operand;
   }
@@ -1435,6 +1435,11 @@ class SyscallFidlMessage : public SyscallFidlMessageBase {
       }
     }
   }
+
+  bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+                                 bool is_invoked,
+                                 const std::vector<debug_ipc::AutomationCondition>& conditions,
+                                 Syscall& syscall) override;
 
  private:
   const std::unique_ptr<Access<HandleType>> handles_;
@@ -2677,6 +2682,89 @@ SyscallInputOutputObjectArray<ClassType, SizeType>::GenerateValue(SyscallDecoder
     vector_value->AddValue(class_definition_->GenerateValue(object + i, decoder->arch()));
   }
   return vector_value;
+}
+
+template <typename HandleType>
+bool SyscallFidlMessage<HandleType>::GetAutomationInstructions(
+    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall) {
+  debug_ipc::AutomationOperand data_id = bytes()->ComputeAutomationOperand(argument_indexes);
+  if (data_id.kind() == debug_ipc::AutomationOperandKind::kZero) {
+    return false;
+  }
+  debug_ipc::AutomationOperand data_size = num_bytes()->ComputeAutomationOperand(argument_indexes);
+  if (data_id.index() == data_size.index()) {
+    return false;
+  }
+
+  debug_ipc::AutomationInstruction data_instr;
+  if (is_invoked) {
+    debug_ipc::AutomationOperand fidl_options =
+        options()->ComputeAutomationOperand(argument_indexes);
+
+    debug_ipc::AutomationCondition is_iovec;
+    is_iovec.InitMaskAndNotEquals(fidl_options, 0, ZX_CHANNEL_WRITE_USE_IOVEC);
+
+    debug_ipc::AutomationCondition is_not_iovec;
+    is_not_iovec.InitMaskAndEquals(fidl_options, 0, ZX_CHANNEL_WRITE_USE_IOVEC);
+
+    std::vector<debug_ipc::AutomationCondition> conditions_iovec;
+    conditions_iovec.insert(conditions_iovec.begin(), conditions.begin(), conditions.end());
+    conditions_iovec.emplace_back(is_iovec);
+
+    std::vector<debug_ipc::AutomationCondition> conditions_not_iovec;
+    conditions_not_iovec.insert(conditions_not_iovec.begin(), conditions.begin(), conditions.end());
+    conditions_not_iovec.emplace_back(is_not_iovec);
+
+    data_instr.InitLoadMemory(data_id, data_size, conditions_not_iovec);
+
+    debug_ipc::AutomationOperand iovec_pointer_offset;
+    iovec_pointer_offset.InitIndirectUInt64Loop(0);
+
+    debug_ipc::AutomationOperand iovec_length_offset;
+    iovec_length_offset.InitIndirectUInt32Loop(8);
+
+    debug_ipc::AutomationInstruction data_instr_iovec;
+    data_instr_iovec.InitLoopLoadMemory(data_id, data_size, iovec_pointer_offset,
+                                        iovec_length_offset, sizeof(zx_channel_iovec),
+                                        conditions_iovec);
+    syscall.AddAutomationInstruction(is_invoked, data_instr_iovec);
+  } else {
+    syscall.EnsureOutputValue(&data_id, conditions);
+    data_size.IndirectValue32(0);
+
+    data_instr.InitLoadMemory(data_id, data_size, conditions);
+  }
+
+  bool is_fully_valid = true;
+
+  if (data_id.kind() != debug_ipc::AutomationOperandKind::kZero &&
+      data_size.kind() != debug_ipc::AutomationOperandKind::kZero) {
+    syscall.AddAutomationInstruction(is_invoked, data_instr);
+  } else {
+    is_fully_valid = false;
+  }
+
+  debug_ipc::AutomationOperand handles_id = handles_->ComputeAutomationOperand(argument_indexes);
+  debug_ipc::AutomationOperand handles_size =
+      num_handles_->ComputeAutomationOperand(argument_indexes);
+
+  if (!is_invoked) {
+    syscall.EnsureOutputValue(&handles_id, conditions);
+    handles_size.IndirectValue32(0);
+  }
+
+  handles_size.MultiplyValue(static_cast<uint32_t>(sizeof(HandleType)));
+  debug_ipc::AutomationInstruction handles_instr;
+  handles_instr.InitLoadMemory(handles_id, handles_size, conditions);
+
+  if (handles_id.kind() != debug_ipc::AutomationOperandKind::kZero &&
+      handles_size.kind() != debug_ipc::AutomationOperandKind::kZero) {
+    syscall.AddAutomationInstruction(is_invoked, handles_instr);
+  } else {
+    is_fully_valid = false;
+  }
+  return is_fully_valid;
 }
 
 }  // namespace fidlcat

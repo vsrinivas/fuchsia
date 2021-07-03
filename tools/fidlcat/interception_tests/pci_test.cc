@@ -284,7 +284,7 @@ PCI_CFG_PIO_RW_DISPLAY_TEST(ZxPciCfgPioRwWrite, ZX_OK, true,
 
 CREATE_AUTOMATION_TEST(ZxPciCfgPioRwAutomation, "zx_pci_cfg_pio_rw", ZX_OK,
                        "Invoked bp instructions:\n"
-                       "  stored_value(0) = [xsp + 0x0]/64\n"
+                       "  stored_value(0) = [xsp + 0x8]/64\n"
                        "  stored_value(1) = r9. conditions: stored_value(0) == 0\n"
                        "Exit bp instructions:\n"
                        "  load_memory stored_value(1), 4. conditions: stored_value(0) == 0\n"

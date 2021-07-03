@@ -537,8 +537,8 @@ TEST_F(InterceptionWorkflowTestX64, SyscallsAutomated) {
       "zx_channel_create fully automated\n"
       "zx_channel_read partially automated\n"
       "zx_channel_read_etc partially automated\n"
-      "zx_channel_write not automated\n"
-      "zx_channel_write_etc not automated\n"
+      "zx_channel_write fully automated\n"
+      "zx_channel_write_etc fully automated\n"
       "zx_clock_adjust doesn't need automation\n"
       "zx_clock_get fully automated\n"
       "zx_clock_get_monotonic doesn't need automation\n"
@@ -679,10 +679,10 @@ TEST_F(InterceptionWorkflowTestX64, SyscallsAutomated) {
       "zx_vmo_set_cache_policy doesn't need automation\n"
       "zx_vmo_set_size doesn't need automation\n"
       "zx_vmo_write fully automated\n";
-  uint32_t expected_fully_automated = 64;
+  uint32_t expected_fully_automated = 66;
   uint32_t expected_cant_be_automated = 58;
   uint32_t expected_partially_automated = 17;
-  uint32_t expected_not_automated = 14;
+  uint32_t expected_not_automated = 12;
   EXPECT_EQ(actual_fully_automated, expected_fully_automated);
   EXPECT_EQ(actual_cant_be_automated, expected_cant_be_automated);
   EXPECT_EQ(actual_partially_automated, expected_partially_automated);
