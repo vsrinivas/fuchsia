@@ -22,6 +22,7 @@ rustc_library("ext4-read-only") {
     "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:rust-crypto",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",

@@ -26,7 +26,7 @@ pub fn construct_fs(source: Buffer) -> Result<Arc<dyn DirectoryEntry>, Construct
         ConstructFsError::VmoReadError(Status::NO_SPACE);
     }
 
-    let mut parser = Parser::new(VmoReader::new(Arc::new(source)));
+    let parser = Parser::new(VmoReader::new(Arc::new(source)));
 
     match parser.build_fuchsia_tree() {
         Ok(tree) => Ok(tree),

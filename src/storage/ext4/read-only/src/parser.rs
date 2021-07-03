@@ -41,6 +41,7 @@ use {
             MIN_EXT4_SIZE, ROOT_INODE_NUM,
         },
     },
+    once_cell::sync::OnceCell,
     std::{
         mem::size_of,
         path::{Component, Path},
@@ -57,7 +58,7 @@ assert_eq_size!(u64, usize);
 
 pub struct Parser<T: Reader> {
     reader: Arc<T>,
-    super_block: Option<Arc<SuperBlock>>,
+    super_block: OnceCell<Arc<SuperBlock>>,
 }
 
 /// EXT4 Parser
@@ -69,7 +70,7 @@ pub struct Parser<T: Reader> {
 /// let tree = parser.build_fuchsia_tree()
 impl<T: 'static + Reader> Parser<T> {
     pub fn new(reader: T) -> Self {
-        Parser { reader: Arc::new(reader), super_block: None }
+        Parser { reader: Arc::new(reader), super_block: OnceCell::new() }
     }
 
     /// Returns the Super Block.
@@ -79,31 +80,17 @@ impl<T: 'static + Reader> Parser<T> {
     ///
     /// We never need to re-parse the super block in this read-only
     /// implementation.
-    fn super_block(&mut self) -> Result<Arc<SuperBlock>, ParsingError> {
-        // Neither Option helper works here:
-        // - `get_or_insert` will still call `SuperBlock::parse` first, and
-        // thus call every time.
-        // - `get_or_insert_with` will not be able to propagate a ParsingError
-        // back to here.
-
-        // Writing our own logic instead.
-        match &self.super_block {
-            Some(val) => Ok(val.clone()),
-            None => {
-                let sb = SuperBlock::parse(self.reader.clone())?;
-                self.super_block = Some(sb.clone());
-                Ok(sb)
-            }
-        }
+    fn super_block(&self) -> Result<Arc<SuperBlock>, ParsingError> {
+        Ok(self.super_block.get_or_try_init(|| SuperBlock::parse(self.reader.clone()))?.clone())
     }
 
     /// Reads block size from the Super Block.
-    fn block_size(&mut self) -> Result<usize, ParsingError> {
+    fn block_size(&self) -> Result<usize, ParsingError> {
         self.super_block()?.block_size()
     }
 
     /// Reads full raw data from a given block number.
-    fn block(&mut self, block_number: u64) -> Result<Box<[u8]>, ParsingError> {
+    fn block(&self, block_number: u64) -> Result<Box<[u8]>, ParsingError> {
         if block_number == 0 {
             return Err(ParsingError::InvalidAddress(
                 InvalidAddressErrorType::Lower,
@@ -124,7 +111,7 @@ impl<T: 'static + Reader> Parser<T> {
     }
 
     /// Reads the INode at the given inode number.
-    fn inode(&mut self, inode_number: u32) -> Result<Arc<INode>, ParsingError> {
+    pub fn inode(&self, inode_number: u32) -> Result<Arc<INode>, ParsingError> {
         if inode_number < 1 {
             // INode number 0 is not allowed per ext4 spec.
             return Err(ParsingError::InvalidInode(inode_number));
@@ -181,16 +168,12 @@ impl<T: 'static + Reader> Parser<T> {
     }
 
     /// Helper function to get the root directory INode.
-    fn root_inode(&mut self) -> Result<Arc<INode>, ParsingError> {
+    pub fn root_inode(&self) -> Result<Arc<INode>, ParsingError> {
         self.inode(ROOT_INODE_NUM)
     }
 
     /// Read all raw data from a given extent leaf node.
-    fn extent_data(
-        &mut self,
-        extent: &Extent,
-        mut allowance: usize,
-    ) -> Result<Vec<u8>, ParsingError> {
+    fn extent_data(&self, extent: &Extent, mut allowance: usize) -> Result<Vec<u8>, ParsingError> {
         let block_number = extent.target_block_num();
         let block_count = extent.e_len.get();
         let block_size = self.block_size()?;
@@ -218,10 +201,7 @@ impl<T: 'static + Reader> Parser<T> {
     /// Errors if the Inode does not map to a Directory.
     ///
     /// Currently only supports a single block of DirEntrys, with only one extent entry.
-    fn entries_from_inode(
-        &mut self,
-        inode: Arc<INode>,
-    ) -> Result<Vec<Arc<DirEntry2>>, ParsingError> {
+    fn entries_from_inode(&self, inode: Arc<INode>) -> Result<Vec<Arc<DirEntry2>>, ParsingError> {
         let root_extent = inode.root_extent_header()?;
         // TODO(vfcc): Will use entry_count when we support having N entries.
         let block_size = self.block_size()?;
@@ -275,7 +255,7 @@ impl<T: 'static + Reader> Parser<T> {
     /// Root doesn't have a DirEntry2.
     ///
     /// When dynamic loading of files is supported, this is the required mechanism.
-    pub fn entry_at_path(&mut self, path: &Path) -> Result<Arc<DirEntry2>, ParsingError> {
+    pub fn entry_at_path(&self, path: &Path) -> Result<Arc<DirEntry2>, ParsingError> {
         let root_inode = self.root_inode()?;
         let root_entries = self.entries_from_inode(root_inode)?;
         let mut entry_map = DirEntry2::as_hash_map(root_entries)?;
@@ -324,7 +304,7 @@ impl<T: 'static + Reader> Parser<T> {
     /// Read all raw data for a given file (directory entry).
     ///
     /// Currently does not support extent trees, only basic "flat" trees.
-    pub fn read_file(&mut self, entry: Arc<DirEntry2>) -> Result<Vec<u8>, ParsingError> {
+    pub fn read_file(&self, entry: Arc<DirEntry2>) -> Result<Vec<u8>, ParsingError> {
         let inode = self.inode(entry.e2d_ino.get())?;
         let root_extent = inode.root_extent_header()?;
         let entry_count = root_extent.eh_ecount.get();
@@ -385,13 +365,13 @@ impl<T: 'static + Reader> Parser<T> {
     /// Returns Ok(true) if it has indexed its subtree successfully. Otherwise, if the receiver
     /// chooses to cancel indexing early, an Ok(false) is returned and propagated up.
     pub fn index<R>(
-        &mut self,
+        &self,
         inode: Arc<INode>,
         prefix: Vec<&str>,
         receiver: &mut R,
     ) -> Result<bool, ParsingError>
     where
-        R: FnMut(&mut Parser<T>, Vec<&str>, Arc<DirEntry2>) -> Result<bool, ParsingError>,
+        R: FnMut(&Parser<T>, Vec<&str>, Arc<DirEntry2>) -> Result<bool, ParsingError>,
     {
         let entries = self.entries_from_inode(inode)?;
         for entry in entries {
@@ -417,7 +397,7 @@ impl<T: 'static + Reader> Parser<T> {
     }
 
     /// Returns a `Simple` filesystem as built by `TreeBuilder.build()`.
-    pub fn build_fuchsia_tree(&mut self) -> Result<Arc<immutable::Simple>, ParsingError> {
+    pub fn build_fuchsia_tree(&self) -> Result<Arc<immutable::Simple>, ParsingError> {
         let root_inode = self.root_inode()?;
         let mut tree = TreeBuilder::empty_dir();
 
@@ -456,7 +436,7 @@ mod tests {
     #[test]
     fn list_root_1_file() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
-        let mut parser = super::Parser::new(VecReader::new(data));
+        let parser = super::Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
         let root_inode = parser.root_inode().expect("Parse INode");
         let entries = parser.entries_from_inode(root_inode).expect("List entries");
@@ -471,7 +451,7 @@ mod tests {
     #[test]
     fn list_root() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
-        let mut parser = super::Parser::new(VecReader::new(data));
+        let parser = super::Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
         let root_inode = parser.root_inode().expect("Parse INode");
         let entries = parser.entries_from_inode(root_inode).expect("List entries");
@@ -486,7 +466,7 @@ mod tests {
     #[test]
     fn get_from_path() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
-        let mut parser = super::Parser::new(VecReader::new(data));
+        let parser = super::Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
 
         let entry = parser.entry_at_path(Path::new("/inner")).expect("Entry at path");
@@ -501,7 +481,7 @@ mod tests {
     #[test]
     fn read_file() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
-        let mut parser = super::Parser::new(VecReader::new(data));
+        let parser = super::Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
 
         let entry = parser.entry_at_path(Path::new("file1")).expect("Entry at path");
@@ -517,14 +497,14 @@ mod tests {
     #[test]
     fn fail_inode_zero() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
-        let mut parser = super::Parser::new(VecReader::new(data));
+        let parser = super::Parser::new(VecReader::new(data));
         assert!(parser.inode(0).is_err());
     }
 
     #[test]
     fn index() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
-        let mut parser = super::Parser::new(VecReader::new(data));
+        let parser = super::Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
 
         let mut count = 0;
@@ -549,7 +529,7 @@ mod tests {
     #[test]
     fn check_data() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
-        let mut parser = super::Parser::new(VecReader::new(data));
+        let parser = super::Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
 
         let root_inode = parser.root_inode().expect("Root inode");
