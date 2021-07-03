@@ -52,6 +52,7 @@ constexpr uint64_t kExpectedDeviceId = 65535;
 constexpr char kExpectedFirmwareRevision[] = "0.0.0.1";
 constexpr char kExpectedFirmwareRevisionLocal[] = "prerelease-1";
 constexpr char kExpectedSerialNumber[] = "dummy_serial_number";
+constexpr char kExpectedSerialNumberLocal[] = "ABCD1234";
 constexpr char kExpectedPairingCode[] = "ABC123";
 constexpr uint16_t kMaxFirmwareRevisionSize = ConfigurationManager::kMaxFirmwareRevisionLength + 1;
 constexpr uint16_t kMaxSerialNumberSize = ConfigurationManager::kMaxSerialNumberLength + 1;
@@ -463,8 +464,7 @@ TEST_F(ConfigurationManagerTest, GetPairingCode) {
   size_t pairing_code_len;
   EXPECT_EQ(ConfigurationMgr().GetPairingCode(pairing_code, sizeof(pairing_code), pairing_code_len),
             WEAVE_NO_ERROR);
-  EXPECT_EQ(pairing_code_len,
-            strnlen(kExpectedPairingCode, WeaveDeviceDescriptor::kMaxPairingCodeLength) + 1);
+  EXPECT_EQ(pairing_code_len, strlen(kExpectedPairingCode));
   EXPECT_STREQ(pairing_code, kExpectedPairingCode);
 }
 
@@ -761,24 +761,17 @@ TEST_F(ConfigurationManagerTest, GetTestCert) {
 TEST_F(ConfigurationManagerTest, GetLocalSerialNumber) {
   char serial_num[kMaxSerialNumberSize];
   size_t serial_num_len;
-  std::string expected_serial("ABCD1234");
 
   fake_hwinfo().EnableSerialNum(false);
-  // Create a new context and set a new delegate so that
-  // the disablehwinwoserialnum takes effect.
-  sys::testing::ComponentContextProvider context_provider;
-  context_provider.service_directory_provider()->AddService(fake_hwinfo().GetHandler(dispatcher()));
-  context_provider.service_directory_provider()->AddService(
-      fake_weave_factory_data_manager().GetHandler(dispatcher()));
-  context_provider.service_directory_provider()->AddService(
-      fake_weave_factory_store_provider().GetHandler(dispatcher()));
-  PlatformMgrImpl().SetComponentContextForProcess(context_provider.TakeContext());
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
-  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
+
+  auto delegate =
+      reinterpret_cast<ConfigurationManagerDelegateImpl*>(ConfigurationMgrImpl().GetDelegate());
+  EXPECT_EQ(delegate->Init(), WEAVE_NO_ERROR);
   EXPECT_EQ(ConfigurationMgr().GetSerialNumber(serial_num, sizeof(serial_num), serial_num_len),
             WEAVE_NO_ERROR);
-  EXPECT_STREQ(serial_num, expected_serial.c_str());
+  EXPECT_STREQ(serial_num, kExpectedSerialNumberLocal);
 }
 
 TEST_F(ConfigurationManagerTest, IsThreadEnabled) {

@@ -104,14 +104,15 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueStr(const std::string& key, char*
     return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
   }
   const std::string string_value(config_value.GetString());
-  *out_size = string_value.size() + 1;
+  *out_size = string_value.size();
   if (value == nullptr) {
     return WEAVE_NO_ERROR;
   }
-  if (value_size < *out_size) {
+  if (value_size < (*out_size + 1)) {
     return WEAVE_ERROR_BUFFER_TOO_SMALL;
   }
   strncpy(value, string_value.c_str(), *out_size);
+  value[*out_size] = 0;
   return WEAVE_NO_ERROR;
 }
 

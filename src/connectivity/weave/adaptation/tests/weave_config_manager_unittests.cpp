@@ -155,16 +155,17 @@ TEST_F(WeaveConfigManagerTest, ReadWriteString) {
 
   char read_value[256];
   size_t read_value_size = 0;
+  std::memset(read_value, 0xFF, sizeof(read_value));
   EXPECT_EQ(weave_config_manager().ReadConfigValueStr(kTestKeyString, nullptr, 0, &read_value_size),
             WEAVE_NO_ERROR);
-  EXPECT_EQ(read_value_size, kTestValStringSize);
+  EXPECT_EQ(read_value_size, strlen(kTestKeyString));
 
   // Reset read_value_size to confirm it gets verified again in the following check.
   read_value_size = 0;
   EXPECT_EQ(weave_config_manager().ReadConfigValueStr(kTestKeyString, read_value,
                                                       kTestValStringSize, &read_value_size),
             WEAVE_NO_ERROR);
-  EXPECT_EQ(read_value_size, kTestValStringSize);
+  EXPECT_EQ(read_value_size, strlen(kTestKeyString));
   EXPECT_EQ(memcmp(kTestValString, read_value, read_value_size), 0);
 
   EXPECT_EQ(
