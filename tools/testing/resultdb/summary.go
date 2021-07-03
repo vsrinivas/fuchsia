@@ -149,7 +149,11 @@ func testDetailsToResultSink(tags []*resultpb.StringPair, testDetail *runtests.T
 		}
 	}
 
-	r.SummaryHtml = `<pre><text-artifact artifact-id="triage_output" inv-level/></pre>`
+	r.SummaryHtml = `<details><summary>triage_output</summary>
+	<pre><text-artifact artifact-id="triage_output" inv-level/></pre>
+	</details>
+	`
+
 	r.Expected = determineExpected(testStatus, resultpb.TestStatus_STATUS_UNSPECIFIED)
 	return &r, nil
 }
