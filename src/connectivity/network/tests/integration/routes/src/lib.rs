@@ -5,8 +5,8 @@
 #![cfg(test)]
 
 use anyhow::Context as _;
-use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
+use netemul::Endpoint as _;
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
 use netstack_testing_common::Result;
 use std::convert::TryFrom as _;
@@ -58,9 +58,10 @@ async fn test_resolve_loopback_route() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_resolve_route() {
-    const HOST_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
     const GATEWAY_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
     const GATEWAY_IP_V6: fidl_fuchsia_net::Subnet = fidl_subnet!("3080::1/64");
+    const GATEWAY_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:01:02:03:04:05");
+    const HOST_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
     const HOST_IP_V6: fidl_fuchsia_net::Subnet = fidl_subnet!("3080::2/64");
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
@@ -114,9 +115,10 @@ async fn test_resolve_route() {
         .expect("failed to connect to fuchsia.net.interfaces/State");
 
     let gateway_ep = gateway
-        .join_network::<netemul::NetworkDevice, _>(
+        .join_network_with(
             &net,
             "gateway",
+            netemul::NetworkDevice::make_config(netemul::DEFAULT_MTU, Some(GATEWAY_MAC)),
             &netemul::InterfaceConfig::StaticIp(GATEWAY_IP_V4),
         )
         .await
@@ -139,20 +141,6 @@ async fn test_resolve_route() {
     )
     .await
     .expect("failed to observe gateway IPv6 address assignment");
-
-    let gateway_mac = fidl_fuchsia_net::MacAddress {
-        octets: gateway
-            .connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()
-            .expect("failed to connect to gateway stack")
-            .get_interface_info(gateway_ep.id())
-            .await
-            .squash_result()
-            .expect("get interface info error")
-            .properties
-            .mac
-            .expect("can't get gateway MAC")
-            .octets,
-    };
 
     let routes = host
         .connect_to_service::<fidl_fuchsia_net_routes::StateMarker>()
@@ -181,7 +169,7 @@ async fn test_resolve_route() {
                    source_address: fidl_fuchsia_net::IpAddress| async move {
         let gateway_node = || fidl_fuchsia_net_routes::Destination {
             address: Some(gateway),
-            mac: Some(gateway_mac),
+            mac: Some(GATEWAY_MAC),
             interface_id: Some(interface_id),
             source_address: Some(source_address),
             ..fidl_fuchsia_net_routes::Destination::EMPTY

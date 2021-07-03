@@ -215,7 +215,7 @@ async fn test_no_duplicate_interface_names() -> Result {
 }
 
 // TODO(https://fxbug.dev/75553): Remove this test when fuchsia.net.interfaces is supported in N3
-// and test_add_interface can be parameterized on Netstack.
+// and test_add_remove_interface can be parameterized on Netstack.
 #[variants_test]
 async fn add_ethernet_interface<N: Netstack>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new()?;
@@ -325,16 +325,22 @@ async fn set_remove_interface_address_errors() -> Result {
     let name = "set_remove_interface_address_errors";
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (realm, stack) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
+    let (realm, netstack) = sandbox
+        .new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker, _>(name)
         .context("failed to create realm")?;
-    let netstack = realm
-        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
-        .context("failed to connect to netstack")?;
 
-    let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
-    let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
-    let next_id = max_id + 1;
+    let interface_state = realm
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("connect to fuchsia.net.interfaces/State service")?;
+    let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        HashMap::new(),
+    )
+    .await
+    .context("failed to get existing interfaces")?;
+    let next_id = 1 + interfaces.keys().max().ok_or(anyhow::format_err!(
+        "failed to find any network interfaces (at least loopback should be present)"
+    ))?;
     let next_id = next_id.try_into().with_context(|| format!("{} overflows id", next_id))?;
 
     let mut addr = fidl_ip!("0.0.0.0");
@@ -484,64 +490,57 @@ async fn disable_interface_loopback() -> Result {
     let name = "disable_interface_loopback";
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_realm, stack) = sandbox
+    let (realm, stack) = sandbox
         .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
         .context("failed to create realm")?;
 
-    let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
-    let loopback = interfaces
-        .iter()
-        .find(|interface| {
-            interface
-                .properties
-                .features
-                .contains(fidl_fuchsia_hardware_ethernet::Features::Loopback)
-        })
-        .ok_or(anyhow::format_err!("failed to find loopback interface"))?;
-    assert_eq!(
-        loopback.properties.administrative_status,
-        fidl_fuchsia_net_stack::AdministrativeStatus::Enabled
-    );
-    let () = exec_fidl!(stack.disable_interface(loopback.id), "failed to disable interface")?;
-    let info = exec_fidl!(stack.get_interface_info(loopback.id), "failed to get interface info")?;
-    assert_eq!(
-        info.properties.administrative_status,
-        fidl_fuchsia_net_stack::AdministrativeStatus::Disabled
-    );
-    Ok(())
-}
+    let interface_state = realm
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("connect to fuchsia.net.interfaces/State service")?;
 
-/// Tests fuchsia.net.stack/Stack.del_ethernet_interface.
-#[variants_test]
-async fn test_remove_interface<E: netemul::Endpoint>(name: &str) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_realm, stack, device) = sandbox
-        .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .await
-        .context("failed to create netstack realm")?;
+    let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+        .context("failed to get interface event stream")?;
+    pin_utils::pin_mut!(stream);
 
-    let id = device.add_to_stack(&stack).await.context("failed to add device")?;
+    let loopback_id = match stream.try_next().await {
+        Ok(Some(fidl_fuchsia_net_interfaces::Event::Existing(
+            fidl_fuchsia_net_interfaces::Properties {
+                id: Some(id),
+                device_class:
+                    Some(fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                        fidl_fuchsia_net_interfaces::Empty {},
+                    )),
+                online: Some(true),
+                ..
+            },
+        ))) => id,
+        event => panic!("got {:?}, want loopback interface existing event", event),
+    };
 
-    let () = stack
-        .del_ethernet_interface(id)
-        .await
-        .squash_result()
-        .context("failed to delete device")?;
+    let () = match stream.try_next().await {
+        Ok(Some(fidl_fuchsia_net_interfaces::Event::Idle(
+            fidl_fuchsia_net_interfaces::Empty {},
+        ))) => (),
+        event => panic!("got {:?}, want idle event", event),
+    };
 
-    let ifs = stack.list_interfaces().await.context("failed to list interfaces")?;
+    let () = exec_fidl!(stack.disable_interface(loopback_id), "failed to disable interface")?;
 
-    assert_eq!(ifs.into_iter().find(|info| info.id == id), None);
+    let () = match stream.try_next().await {
+        Ok(Some(fidl_fuchsia_net_interfaces::Event::Changed(
+            fidl_fuchsia_net_interfaces::Properties { id: Some(id), online: Some(false), .. },
+        ))) if id == loopback_id => (),
+        event => panic!("got {:?}, want loopback interface offline event", event),
+    };
 
     Ok(())
 }
 
 #[variants_test]
-async fn test_add_interface<E: netemul::Endpoint>(name: &str) -> Result {
+async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let (realm, stack, device) = sandbox
-        .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(
-            name.ethertap_compatible_name(),
-        )
+        .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(name)
         .await
         .context("failed to create netstack realm")?;
 
@@ -550,11 +549,33 @@ async fn test_add_interface<E: netemul::Endpoint>(name: &str) -> Result {
     let interface_state = realm
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
+    let (watcher, watcher_server) =
+        ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
+    let () = interface_state
+        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, watcher_server)
+        .context("failed to initialize interface watcher")?;
+
+    let mut if_map = HashMap::new();
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
-        &mut HashMap::new(),
+        fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+        &mut if_map,
         // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
         |if_map| if_map.contains_key(&id).then(|| ()),
+    )
+    .await
+    .context("failed to observe interface addition")?;
+
+    let () = stack
+        .del_ethernet_interface(id)
+        .await
+        .squash_result()
+        .context("failed to delete device")?;
+
+    let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
+        fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+        &mut if_map,
+        // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
+        |if_map| (!if_map.contains_key(&id)).then(|| ()),
     )
     .await
     .context("failed to observe interface addition")?;
