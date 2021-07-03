@@ -692,10 +692,8 @@ void MinidumpRemoteAPI::ThreadStatus(
   reply.record.state = debug_ipc::ThreadRecord::State::kCoreDump;
   reply.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
 
-  size_t stack_size = 0;
   unwinder::Memory* stack_memory = nullptr;
   if (auto stack = thread->Stack()) {
-    stack_size = stack->Size();
     stack_memory = memory_->GetMemoryRegion(stack->Address());
   }
 
