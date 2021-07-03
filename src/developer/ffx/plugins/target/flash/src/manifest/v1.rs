@@ -105,9 +105,9 @@ impl Flash for FlashManifest {
                 .await
                 .map_err(|_| ffx_error!("{}", REBOOT_ERR))?;
         }
+        stage_oem_files(writer, file_resolver, false, &cmd.oem_stage, &fastboot_proxy).await?;
         flash_partitions(writer, file_resolver, &product.partitions, &fastboot_proxy).await?;
         stage_oem_files(writer, file_resolver, true, &product.oem_files, &fastboot_proxy).await?;
-        stage_oem_files(writer, file_resolver, false, &cmd.oem_stage, &fastboot_proxy).await?;
         if fastboot_proxy.erase("misc").await?.is_err() {
             log::debug!("Could not erase misc partition");
         }
