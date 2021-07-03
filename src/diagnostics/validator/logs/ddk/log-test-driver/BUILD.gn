@@ -14,10 +14,6 @@ driver_bind_rules("log-test-driver-bind") {
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-bind_library("log.test.bind") {
-  source = "log-test-driver.bind"
-}
-
 source_set("common") {
   configs += [ "//build/config:all_source" ]
   sources = [ "log-tester.cc" ]
