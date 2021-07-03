@@ -158,8 +158,12 @@ zx_status_t dh_send_init(Device* dev_ptr) {
 zx_status_t dh_send_suspend(Device* dev_ptr, uint32_t flags) {
   auto dev = fbl::RefPtr(dev_ptr);
   dev->device_controller()->Suspend(flags, [dev](zx_status_t status) {
-    LOGF(INFO, "Suspended device %p '%s': %s", dev.get(), dev->name().data(),
-         zx_status_get_string(status));
+    if (status == ZX_OK) {
+      LOGF(DEBUG, "Suspended device %p '%s'successfully", dev.get(), dev->name().data());
+    } else {
+      LOGF(ERROR, "Failed to suspended device %p '%s': %s", dev.get(), dev->name().data(),
+           zx_status_get_string(status));
+    }
     dev->CompleteSuspend(status);
   });
   return ZX_OK;
