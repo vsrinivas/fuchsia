@@ -661,21 +661,19 @@ class Compressor final {
 
     template <typename T1, typename T2>
     void Update(T1 get_buffer, T2 put_buffer, const iovec& input) {
-      auto buffer = get_buffer(ZSTD_compressBound(input.iov_len));
-      ZSTD_outBuffer out = {
-          buffer.data.get(),
-          buffer.size,
-          0,
-      };
-      ZSTD_inBuffer in = {
-          input.iov_base,
-          input.iov_len,
-          0,
-      };
-      do {
-        ZstdCall("compress", ZSTD_compressStream2, ctx_, &out, &in, ZSTD_e_continue);
-      } while (in.pos < in.size);
-      put_buffer(std::move(buffer), out.pos);
+      ZSTD_inBuffer in = {input.iov_base, input.iov_len, 0};
+      while (in.pos < in.size) {
+        // In streaming mode, the size of the overhead of headers can result in
+        // the compressed data being larger than ZSTD_compressBound().
+        // Accordingly, we iteratively request new output buffers as they are
+        // filled.
+        auto buffer = get_buffer(ZSTD_compressBound(in.size - in.pos));
+        ZSTD_outBuffer out = {buffer.data.get(), buffer.size, 0};
+        do {
+          ZstdCall("compress", ZSTD_compressStream2, ctx_, &out, &in, ZSTD_e_continue);
+        } while (in.pos < in.size && out.pos < out.size);
+        put_buffer(std::move(buffer), out.pos);
+      }
     }
 
     template <typename T1, typename T2>
