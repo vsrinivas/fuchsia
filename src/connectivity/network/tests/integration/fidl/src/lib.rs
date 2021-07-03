@@ -4,8 +4,7 @@
 
 #![cfg(test)]
 
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryInto as _;
 
 use fidl_fuchsia_logger;
@@ -55,7 +54,7 @@ async fn set_interface_status_unknown_interface() -> Result {
         HashMap::new(),
     )
     .await
-    .context("failed to observe interface addition")?;
+    .context("failed to get existing interfaces")?;
 
     let next_id = 1 + interfaces.keys().max().ok_or(anyhow::format_err!(
         "failed to find any network interfaces (at least loopback should be present)"
@@ -160,8 +159,9 @@ async fn test_no_duplicate_interface_names() -> Result {
     const IFNAME: &'static str = "testif";
     const TOPOPATH: &'static str = "/fake/topopath";
     const FILEPATH: &'static str = "/fake/filepath";
+
     // Add the first ep to the stack so it takes over the name.
-    let _nicid = netstack
+    let _id: u32 = netstack
         .add_ethernet_device(
             TOPOPATH,
             &mut fidl_fuchsia_netstack::InterfaceConfig {
@@ -214,6 +214,8 @@ async fn test_no_duplicate_interface_names() -> Result {
     Ok(())
 }
 
+// TODO(https://fxbug.dev/75553): Remove this test when fuchsia.net.interfaces is supported in N3
+// and test_add_interface can be parameterized on Netstack.
 #[variants_test]
 async fn add_ethernet_interface<N: Netstack>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new()?;
@@ -335,7 +337,7 @@ async fn add_remove_interface_address_errors() -> Result {
             interface_address.prefix_len,
         )
         .await
-        .context("failed to call add interface address")?;
+        .context("failed to call remove interface address")?;
     assert_eq!(
         error,
         fidl_fuchsia_netstack::NetErr {
@@ -360,7 +362,7 @@ async fn add_remove_interface_address_errors() -> Result {
             interface_address.prefix_len,
         )
         .await
-        .context("failed to call add interface address")?;
+        .context("failed to call remove interface address")?;
     assert_eq!(
         error,
         fidl_fuchsia_netstack::NetErr {
@@ -441,6 +443,7 @@ async fn test_log_packets() -> Result {
     Ok(())
 }
 
+// TODO(https://fxbug.dev/75554): Remove when {list_interfaces,get_interface_info} are removed.
 #[variants_test]
 async fn get_interface_info_not_found<N: Netstack>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
@@ -530,7 +533,8 @@ async fn test_add_interface<E: netemul::Endpoint>(name: &str) -> Result {
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut HashMap::new(),
-        |if_map| if if_map.contains_key(&id) { Some(()) } else { None },
+        // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
+        |if_map| if_map.contains_key(&id).then(|| ()),
     )
     .await
     .context("failed to observe interface addition")?;
@@ -571,7 +575,8 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
         &mut if_map,
-        |if_map| if if_map.contains_key(&id) { Some(()) } else { None },
+        // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
+        |if_map| if_map.contains_key(&id).then(|| ()),
     )
     .await
     .context("failed to observe interface addition")?;
@@ -584,11 +589,8 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -
         fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
         &mut if_map,
         |if_map| {
-            if !if_map.contains_key(&id) {
-                Some(())
-            } else {
-                None
-            }
+            // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
+            (!if_map.contains_key(&id)).then(|| ())
         },
     )
     .await
@@ -663,11 +665,8 @@ async fn test_down_close_race<E: netemul::Endpoint>(name: &str) -> Result {
             fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
             &mut if_map,
             |if_map| {
-                if !if_map.contains_key(&id) {
-                    Some(())
-                } else {
-                    None
-                }
+                // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
+                (!if_map.contains_key(&id)).then(|| ())
             },
         )
         .await
@@ -783,11 +782,8 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
             fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
             &mut if_map,
             |if_map| {
-                if !if_map.contains_key(&id) {
-                    Some(())
-                } else {
-                    None
-                }
+                // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
+                (!if_map.contains_key(&id)).then(|| ())
             },
         );
 
