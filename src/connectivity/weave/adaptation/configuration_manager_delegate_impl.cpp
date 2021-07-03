@@ -80,6 +80,8 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::Init() {
   auto context = PlatformMgrImpl().GetComponentContextForProcess();
   bool fail_safe_armed = false;
 
+  FX_CHECK(context->svc()->Connect(buildinfo_provider_.NewRequest()) == ZX_OK)
+      << "Failed to connect to buildinfo device service.";
   FX_CHECK(context->svc()->Connect(hwinfo_device_.NewRequest()) == ZX_OK)
       << "Failed to connect to hwinfo device service.";
   FX_CHECK(context->svc()->Connect(weave_factory_data_manager_.NewRequest()) == ZX_OK)
@@ -115,7 +117,12 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::Init() {
     return err;
   }
 
-  err = GetAndStoreHWInfo();
+  err = GetAndStoreSerialNumber();
+  if (err != WEAVE_NO_ERROR && err != WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
+    return err;
+  }
+
+  err = GetAndStoreFirmwareRevision();
   if (err != WEAVE_NO_ERROR && err != WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
     return err;
   }
@@ -178,8 +185,7 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetManufacturerDeviceCertificate(u
 }
 
 bool ConfigurationManagerDelegateImpl::IsFullyProvisioned() {
-  return ConnectivityMgr().IsWiFiStationProvisioned() &&
-         ConfigurationMgr().IsPairedToAccount() &&
+  return ConnectivityMgr().IsWiFiStationProvisioned() && ConfigurationMgr().IsPairedToAccount() &&
          ConfigurationMgr().IsMemberOfFabric() &&
          (!IsThreadEnabled() || ConnectivityMgr().IsThreadProvisioned());
 }
@@ -228,8 +234,17 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetProductId(uint16_t& product_id)
 
 WEAVE_ERROR ConfigurationManagerDelegateImpl::GetFirmwareRevision(char* buf, size_t buf_size,
                                                                   size_t& out_len) {
-  return device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_FirmwareRevision, buf, buf_size,
-                                          &out_len);
+  if (firmware_revision_.empty()) {
+    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+  }
+
+  if (buf_size < firmware_revision_.size()) {
+    return WEAVE_ERROR_BUFFER_TOO_SMALL;
+  }
+
+  memcpy(buf, firmware_revision_.data(), firmware_revision_.size());
+  out_len = firmware_revision_.size();
+  return WEAVE_NO_ERROR;
 }
 
 WEAVE_ERROR ConfigurationManagerDelegateImpl::GetBleDeviceNamePrefix(char* device_name_prefix,
@@ -265,7 +280,7 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetDeviceDescriptorTLV(uint8_t* bu
       ->_GetDeviceDescriptorTLV(buf, buf_size, encoded_len);
 }
 
-WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreHWInfo() {
+WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreSerialNumber() {
   fuchsia::hwinfo::DeviceInfo device_info;
   WEAVE_ERROR err;
   char serial[ConfigurationManager::kMaxSerialNumberLength + 1];
@@ -280,6 +295,27 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreHWInfo() {
     return impl_->StoreSerialNumber(serial, serial_size);
   }
   return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+}
+
+WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreFirmwareRevision() {
+  fuchsia::buildinfo::BuildInfo build_info;
+  zx_status_t status = buildinfo_provider_->GetBuildInfo(&build_info);
+  if (status == ZX_OK && build_info.has_version()) {
+    firmware_revision_ = build_info.version();
+    return WEAVE_NO_ERROR;
+  }
+
+  size_t firmware_revision_out = 0;
+  firmware_revision_.resize(ConfigurationManager::kMaxFirmwareRevisionLength);
+  WEAVE_ERROR err = device_info_->ReadConfigValueStr(
+      kDeviceInfoConfigKey_FirmwareRevision, firmware_revision_.data(), firmware_revision_.size(),
+      &firmware_revision_out);
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
+  firmware_revision_.resize(firmware_revision_out);
+  return WEAVE_NO_ERROR;
 }
 
 WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStorePairingCode() {

@@ -4,6 +4,7 @@
 #ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_CONFIGURATION_MANAGER_DELEGATE_IMPL_H_
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_CONFIGURATION_MANAGER_DELEGATE_IMPL_H_
 
+#include <fuchsia/buildinfo/cpp/fidl.h>
 #include <fuchsia/factory/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/weave/cpp/fidl.h>
@@ -74,8 +75,10 @@ class NL_DLL_EXPORT ConfigurationManagerDelegateImpl : public ConfigurationManag
   using WeaveConfigReader = ::nl::Weave::DeviceLayer::Internal::WeaveConfigReader;
   using Key = ::nl::Weave::Platform::PersistedStorage::Key;
 
-  // Stores information from fuchsia.hwinfo into the configuration store.
-  WEAVE_ERROR GetAndStoreHWInfo();
+  // Stores firmware revision from fuchsia.buildinfo into the configuration store.
+  WEAVE_ERROR GetAndStoreFirmwareRevision();
+  // Stores serial number from fuchsia.hwinfo into the configuration store.
+  WEAVE_ERROR GetAndStoreSerialNumber();
   // Stores the pairing code from fuchsia.factory into the configuration store.
   WEAVE_ERROR GetAndStorePairingCode();
   // Stores the manufacturer device cert into the configuration store.
@@ -85,7 +88,9 @@ class NL_DLL_EXPORT ConfigurationManagerDelegateImpl : public ConfigurationManag
   zx_status_t GetDeviceIdFromFactory(const char* path, uint64_t* factory_device_id);
 
   GroupKeyStoreImpl group_key_store_;
+  std::string firmware_revision_;
 
+  fuchsia::buildinfo::ProviderSyncPtr buildinfo_provider_;
   fuchsia::hwinfo::DeviceSyncPtr hwinfo_device_;
   fuchsia::factory::WeaveFactoryStoreProviderSyncPtr factory_store_provider_;
   fuchsia::weave::FactoryDataManagerSyncPtr weave_factory_data_manager_;

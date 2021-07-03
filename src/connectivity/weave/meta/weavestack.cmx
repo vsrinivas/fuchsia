@@ -13,6 +13,7 @@
         "services": [
             "fuchsia.bluetooth.gatt.Server",
             "fuchsia.bluetooth.le.Peripheral",
+            "fuchsia.buildinfo.Provider",
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.hwinfo.Device",
             "fuchsia.lowpan.device.Lookup",

@@ -13,6 +13,7 @@
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.ipp>
 // clang-format on
 
+#include <fuchsia/buildinfo/cpp/fidl_test_base.h>
 #include <fuchsia/factory/cpp/fidl_test_base.h>
 #include <fuchsia/hwinfo/cpp/fidl_test_base.h>
 #include <fuchsia/io/cpp/fidl_test_base.h>
@@ -48,7 +49,8 @@ using nl::Weave::Profiles::Security::AppKeys::WeaveGroupKey;
 constexpr uint16_t kExpectedVendorId = 5050;
 constexpr uint16_t kExpectedProductId = 60209;
 constexpr uint64_t kExpectedDeviceId = 65535;
-constexpr char kExpectedFirmwareRevision[] = "prerelease-1";
+constexpr char kExpectedFirmwareRevision[] = "0.0.0.1";
+constexpr char kExpectedFirmwareRevisionLocal[] = "prerelease-1";
 constexpr char kExpectedSerialNumber[] = "dummy_serial_number";
 constexpr char kExpectedPairingCode[] = "ABC123";
 constexpr uint16_t kMaxFirmwareRevisionSize = ConfigurationManager::kMaxFirmwareRevisionLength + 1;
@@ -83,14 +85,41 @@ WeaveGroupKey CreateGroupKey(uint32_t key_id, uint8_t key_byte = 0,
 
 }  // namespace
 
-// This fake class hosts device protocol in the backgroud thread
+class FakeBuildInfo : public fuchsia::buildinfo::testing::Provider_TestBase {
+ public:
+  void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
+
+  void GetBuildInfo(GetBuildInfoCallback callback) override {
+    fuchsia::buildinfo::BuildInfo build_info;
+    if (enable_version_) {
+      build_info.set_version(kExpectedFirmwareRevision);
+    }
+    callback(std::move(build_info));
+  }
+
+  fidl::InterfaceRequestHandler<fuchsia::buildinfo::Provider> GetHandler(
+      async_dispatcher_t* dispatcher = nullptr) {
+    dispatcher_ = dispatcher;
+    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::buildinfo::Provider> request) {
+      binding_.Bind(std::move(request), dispatcher);
+    };
+  }
+
+  void EnableVersion(bool enable) { enable_version_ = enable; }
+
+ private:
+  fidl::Binding<fuchsia::buildinfo::Provider> binding_{this};
+  async_dispatcher_t* dispatcher_;
+  bool enable_version_ = true;
+};
+
 class FakeHwinfo : public fuchsia::hwinfo::testing::Device_TestBase {
  public:
   void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
 
   void GetInfo(fuchsia::hwinfo::Device::GetInfoCallback callback) override {
     fuchsia::hwinfo::DeviceInfo device_info;
-    if (!disable_serial) {
+    if (enable_serial) {
       device_info.set_serial_number(kExpectedSerialNumber);
     }
     callback(std::move(device_info));
@@ -104,12 +133,12 @@ class FakeHwinfo : public fuchsia::hwinfo::testing::Device_TestBase {
     };
   }
 
-  void DisableSerialNum() { disable_serial = true; }
+  void EnableSerialNum(bool enable) { enable_serial = enable; }
 
  private:
   fidl::Binding<fuchsia::hwinfo::Device> binding_{this};
   async_dispatcher_t* dispatcher_;
-  bool disable_serial = false;
+  bool enable_serial = true;
 };
 
 class FakeWeaveFactoryDataManager : public fuchsia::weave::testing::FactoryDataManager_TestBase {
@@ -265,6 +294,8 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
  public:
   ConfigurationManagerTest() {
     context_provider_.service_directory_provider()->AddService(
+        fake_buildinfo_.GetHandler(dispatcher()));
+    context_provider_.service_directory_provider()->AddService(
         fake_hwinfo_.GetHandler(dispatcher()));
     context_provider_.service_directory_provider()->AddService(
         fake_weave_factory_data_manager_.GetHandler(dispatcher()));
@@ -320,8 +351,6 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
     return CopyFile(kConfigDataPath + src_filename, kDataPath + dst_filename);
   }
 
-  void DisableHwInfoSerialNum() { fake_hwinfo_.DisableSerialNum(); }
-
  protected:
   // Add a fake directory to the resource that will be destroyed only after the
   // background loop has completed. There is no interface for removing a fake
@@ -331,6 +360,7 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
     return *resource().fake_dirs.back();
   }
 
+  FakeBuildInfo& fake_buildinfo() { return fake_buildinfo_; }
   FakeHwinfo& fake_hwinfo() { return fake_hwinfo_; }
   FakeWeaveFactoryDataManager& fake_weave_factory_data_manager() {
     return fake_weave_factory_data_manager_;
@@ -341,6 +371,7 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
   ThreadStackManagerTestDelegateImpl* thread_mgr() { return thread_mgr_; }
 
  private:
+  FakeBuildInfo fake_buildinfo_;
   FakeHwinfo fake_hwinfo_;
   FakeWeaveFactoryDataManager fake_weave_factory_data_manager_;
   FakeWeaveFactoryStoreProvider fake_weave_factory_store_provider_;
@@ -383,6 +414,23 @@ TEST_F(ConfigurationManagerTest, GetFirmwareRevision) {
       ConfigurationMgr().GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), out_len),
       WEAVE_NO_ERROR);
   EXPECT_EQ(strncmp(firmware_revision, kExpectedFirmwareRevision, out_len), 0);
+}
+
+TEST_F(ConfigurationManagerTest, GetFirmwareRevisionLocal) {
+  char firmware_revision[kMaxFirmwareRevisionSize];
+  size_t out_len = 0;
+
+  fake_buildinfo().EnableVersion(false);
+  ConfigurationMgrImpl().SetDelegate(nullptr);
+  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+
+  auto delegate =
+      reinterpret_cast<ConfigurationManagerDelegateImpl*>(ConfigurationMgrImpl().GetDelegate());
+  EXPECT_EQ(delegate->Init(), WEAVE_NO_ERROR);
+  EXPECT_EQ(
+      ConfigurationMgr().GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), out_len),
+      WEAVE_NO_ERROR);
+  EXPECT_EQ(strncmp(firmware_revision, kExpectedFirmwareRevisionLocal, out_len), 0);
 }
 
 TEST_F(ConfigurationManagerTest, GetSerialNumber) {
@@ -714,7 +762,8 @@ TEST_F(ConfigurationManagerTest, GetLocalSerialNumber) {
   char serial_num[kMaxSerialNumberSize];
   size_t serial_num_len;
   std::string expected_serial("ABCD1234");
-  DisableHwInfoSerialNum();
+
+  fake_hwinfo().EnableSerialNum(false);
   // Create a new context and set a new delegate so that
   // the disablehwinwoserialnum takes effect.
   sys::testing::ComponentContextProvider context_provider;
