@@ -242,62 +242,63 @@ async fn add_ethernet_interface<N: Netstack>(name: &str) -> Result {
     Ok(())
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn add_del_interface_address() -> Result {
-    let name = "add_del_interface_address";
-
+// TODO(https://fxbug.dev/75553): switch to fuchsia.net.interfaces when supported in N3.
+#[variants_test]
+async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_realm, stack) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .context("failed to create realm")?;
+    let (_realm, stack, device) = sandbox
+        .new_netstack_and_device::<N, netemul::Ethernet, fidl_fuchsia_net_stack::StackMarker, _>(
+            name,
+        )
+        .await?;
+    let id = device.add_to_stack(&stack).await?;
 
-    let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
-    let loopback = interfaces
-        .iter()
-        .find(|interface| {
-            interface
-                .properties
-                .features
-                .contains(fidl_fuchsia_hardware_ethernet::Features::Loopback)
-        })
-        .ok_or(anyhow::format_err!("failed to find loopback"))?;
+    // Netstack3 doesn't allow addresses to be added while link is down.
+    let () =
+        stack.enable_interface(id).await.squash_result().context("failed to enable interface")?;
+    let () = device.set_link_up(true).await.context("failed to bring device up")?;
+    loop {
+        let info = exec_fidl!(stack.get_interface_info(id), "failed to get interface")?;
+        if info.properties.physical_status == net_stack::PhysicalStatus::Up {
+            break;
+        }
+    }
+
     let mut interface_address = fidl_subnet!("1.1.1.1/32");
     let res = stack
-        .add_interface_address(loopback.id, &mut interface_address)
+        .add_interface_address(id, &mut interface_address)
         .await
         .context("failed to call add interface address")?;
     assert_eq!(res, Ok(()));
 
     // Should be an error the second time.
     let res = stack
-        .add_interface_address(loopback.id, &mut interface_address)
+        .add_interface_address(id, &mut interface_address)
         .await
         .context("failed to call add interface address")?;
-    assert_eq!(res, Err(fidl_fuchsia_net_stack::Error::BadState));
+    assert_eq!(res, Err(fidl_fuchsia_net_stack::Error::AlreadyExists));
 
-    let loopback =
-        exec_fidl!(stack.get_interface_info(loopback.id), "failed to get loopback interface")?;
+    let info = exec_fidl!(stack.get_interface_info(id), "failed to get interface")?;
 
     assert!(
-        loopback.properties.addresses.iter().find(|addr| *addr == &interface_address).is_some(),
+        info.properties.addresses.contains(&interface_address),
         "couldn't find {:#?} in {:#?}",
         interface_address,
-        loopback.properties.addresses
+        info.properties.addresses
     );
 
     let res = stack
-        .del_interface_address(loopback.id, &mut interface_address)
+        .del_interface_address(id, &mut interface_address)
         .await
         .context("failed to call del interface address")?;
     assert_eq!(res, Ok(()));
-    let loopback =
-        exec_fidl!(stack.get_interface_info(loopback.id), "failed to get loopback interface")?;
+    let info = exec_fidl!(stack.get_interface_info(id), "failed to get interface")?;
 
     assert!(
-        loopback.properties.addresses.iter().find(|addr| *addr == &interface_address).is_none(),
+        !info.properties.addresses.contains(&interface_address),
         "did not expect to find {:#?} in {:#?}",
         interface_address,
-        loopback.properties.addresses
+        info.properties.addresses
     );
 
     Ok(())

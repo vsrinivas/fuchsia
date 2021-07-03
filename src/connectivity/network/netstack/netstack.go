@@ -9,9 +9,11 @@ package netstack
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
+	"syscall/zx"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
@@ -418,36 +420,48 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolA
 
 // addInterfaceAddress returns whether the NIC corresponding to the supplied
 // tcpip.NICID was found or false and an error.
-func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) (bool, error) {
+func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) zx.Status {
 	route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
 	_ = syslog.Infof("adding static IP %s to NIC %d, creating subnet route %s with metric=<not-set>, dynamic=false", addr.AddressWithPrefix, nic, route)
 
-	info, ok := ns.stack.NICInfo()[nic]
-	if !ok {
-		return false, nil
+	if info, ok := ns.stack.NICInfo()[nic]; ok {
+		if a, addrFound := findAddress(info.ProtocolAddresses, addr); addrFound {
+			if a.AddressWithPrefix.PrefixLen == addr.AddressWithPrefix.PrefixLen {
+				return zx.ErrAlreadyExists
+			}
+			// Same address but different prefix. Remove the address and re-add it
+			// with the new prefix (below).
+			switch err := ns.stack.RemoveAddress(nic, addr.AddressWithPrefix.Address); err.(type) {
+			case nil:
+			case *tcpip.ErrUnknownNICID:
+				return zx.ErrNotFound
+			case *tcpip.ErrBadLocalAddress:
+				// We lost a race, the address was already removed.
+			default:
+				panic(fmt.Sprintf("NIC %d: failed to remove address %s: %s", nic, addr.AddressWithPrefix, err))
+			}
+		}
 	}
 
-	if a, addrFound := findAddress(info.ProtocolAddresses, addr); addrFound {
-		if a.AddressWithPrefix.PrefixLen == addr.AddressWithPrefix.PrefixLen {
-			return false, fmt.Errorf("address %s already exists on NIC ID %d", addr.AddressWithPrefix, nic)
-		}
-		// Same address but different prefix. Remove the address and re-add it
-		// with the new prefix (below).
-		if err := ns.stack.RemoveAddress(nic, addr.AddressWithPrefix.Address); err != nil {
-			return false, fmt.Errorf("NIC %d: failed to remove address %s: %s", nic, addr.AddressWithPrefix, err)
-		}
-	}
-
-	if err := ns.stack.AddProtocolAddress(nic, addr); err != nil {
-		return false, fmt.Errorf("error adding address %s to NIC ID %d: %s", addr.AddressWithPrefix, nic, err)
+	switch err := ns.stack.AddProtocolAddress(nic, addr); err.(type) {
+	case nil:
+	case *tcpip.ErrUnknownNICID:
+		return zx.ErrNotFound
+	case *tcpip.ErrDuplicateAddress:
+		return zx.ErrAlreadyExists
+	default:
+		panic(fmt.Sprintf("NIC %d: failed to add address %s: %s", nic, addr.AddressWithPrefix, err))
 	}
 
 	if err := ns.AddRoute(route, metricNotSet, false); err != nil {
-		return false, fmt.Errorf("error adding subnet route %s to NIC ID %d: %w", route, nic, err)
+		if !errors.Is(err, routes.ErrNoSuchNIC) {
+			panic(fmt.Sprintf("NIC %d: failed to add subnet route %s: %s", nic, route, err))
+		}
+		return zx.ErrNotFound
 	}
 
 	ns.onPropertiesChange(nic, nil)
-	return true, nil
+	return zx.ErrOk
 }
 
 func (ifs *ifState) updateMetric(metric routes.Metric) {

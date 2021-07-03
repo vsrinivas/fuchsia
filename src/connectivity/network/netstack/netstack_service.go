@@ -10,6 +10,7 @@ package netstack
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"syscall/zx"
 	"syscall/zx/fidl"
@@ -127,14 +128,16 @@ func (ni *netstackImpl) SetInterfaceAddress(_ fidl.Context, nicid uint32, addres
 		return netstack.NetErr{Status: netstack.StatusParseError, Message: "prefix length exceeds address length"}, nil
 	}
 
-	found, err := ni.ns.addInterfaceAddress(tcpip.NICID(nicid), protocolAddr)
-	if err != nil {
-		return netstack.NetErr{Status: netstack.StatusUnknownError, Message: err.Error()}, nil
-	}
-	if !found {
+	switch status := ni.ns.addInterfaceAddress(tcpip.NICID(nicid), protocolAddr); status {
+	case zx.ErrOk:
+		return netstack.NetErr{Status: netstack.StatusOk}, nil
+	case zx.ErrNotFound:
 		return netstack.NetErr{Status: netstack.StatusUnknownInterface}, nil
+	case zx.ErrAlreadyExists:
+		return netstack.NetErr{Status: netstack.StatusUnknownError, Message: status.String()}, nil
+	default:
+		panic(fmt.Sprintf("NIC %d: failed to add address %s: %s", nicid, protocolAddr.AddressWithPrefix, status))
 	}
-	return netstack.NetErr{Status: netstack.StatusOk}, nil
 }
 
 func (ni *netstackImpl) RemoveInterfaceAddress(_ fidl.Context, nicid uint32, address fidlnet.IpAddress, prefixLen uint8) (netstack.NetErr, error) {

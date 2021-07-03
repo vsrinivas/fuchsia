@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -9,6 +10,7 @@ package netstack
 import (
 	"context"
 	"fmt"
+	"syscall/zx"
 	"testing"
 	"time"
 
@@ -131,11 +133,11 @@ func TestInterfacesChangeEvent(t *testing.T) {
 			if err := ifs.Up(); err != nil {
 				t.Fatalf("ifs.Up(): %s", err)
 			}
-			if nicFound, err := ns.addInterfaceAddress(ifs.nicid, tcpip.ProtocolAddress{
+			if status := ns.addInterfaceAddress(ifs.nicid, tcpip.ProtocolAddress{
 				Protocol:          ipv6.ProtocolNumber,
 				AddressWithPrefix: test.addr,
-			}); !nicFound || err != nil {
-				t.Fatalf("failed to add address: nicFound=%t, err=%s", nicFound, err)
+			}); status != zx.ErrOk {
+				t.Fatalf("failed to add address: %s", status)
 			}
 
 			request, watcher, err := interfaces.NewWatcherWithCtxInterfaceRequest()

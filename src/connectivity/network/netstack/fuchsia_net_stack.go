@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"sort"
 	"sync/atomic"
+	"syscall/zx"
 	"syscall/zx/fidl"
 
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -265,20 +266,20 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAd
 		return result
 	}
 
-	found, err := ns.addInterfaceAddress(tcpip.NICID(id), protocolAddr)
-	if err != nil {
-		_ = syslog.Warnf("(*Netstack).addInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, err)
-		result.SetErr(stack.ErrorBadState)
+	switch status := ns.addInterfaceAddress(tcpip.NICID(id), protocolAddr); status {
+	case zx.ErrOk:
+		result.SetResponse(stack.StackAddInterfaceAddressResponse{})
 		return result
-	}
-
-	if !found {
+	case zx.ErrNotFound:
 		result.SetErr(stack.ErrorNotFound)
 		return result
+	case zx.ErrAlreadyExists:
+		_ = syslog.Warnf("(*Netstack).addInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, status)
+		result.SetErr(stack.ErrorAlreadyExists)
+		return result
+	default:
+		panic(fmt.Sprintf("NIC %d: failed to add address %s: %s", id, protocolAddr.AddressWithPrefix, status))
 	}
-
-	result.SetResponse(stack.StackAddInterfaceAddressResponse{})
-	return result
 }
 
 func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackDelInterfaceAddressResult {
