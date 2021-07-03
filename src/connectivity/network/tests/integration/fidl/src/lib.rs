@@ -278,6 +278,22 @@ async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
         .context("failed to call add interface address")?;
     assert_eq!(res, Err(fidl_fuchsia_net_stack::Error::AlreadyExists));
 
+    let res = stack
+        .add_interface_address(id + 1, &mut interface_address)
+        .await
+        .context("failed to call add interface address")?;
+    assert_eq!(res, Err(fidl_fuchsia_net_stack::Error::NotFound));
+
+    let error = stack
+        .add_interface_address(
+            id,
+            &mut fidl_fuchsia_net::Subnet { prefix_len: 43, ..interface_address },
+        )
+        .await
+        .context("failed to call add interface address")?
+        .unwrap_err();
+    assert_eq!(error, fidl_fuchsia_net_stack::Error::InvalidArgs);
+
     let info = exec_fidl!(stack.get_interface_info(id), "failed to get interface")?;
 
     assert!(
@@ -305,8 +321,8 @@ async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn add_remove_interface_address_errors() -> Result {
-    let name = "add_remove_interface_address_errors";
+async fn set_remove_interface_address_errors() -> Result {
+    let name = "set_remove_interface_address_errors";
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let (realm, stack) = sandbox
@@ -318,25 +334,27 @@ async fn add_remove_interface_address_errors() -> Result {
 
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
-    let mut interface_address = fidl_subnet!("0.0.0.0/0");
+    let next_id = max_id + 1;
+    let next_id = next_id.try_into().with_context(|| format!("{} overflows id", next_id))?;
 
-    // Don't crash on interface not found.
+    let mut addr = fidl_ip!("0.0.0.0");
 
-    let error = stack
-        .add_interface_address(max_id + 1, &mut interface_address)
-        .await
-        .context("failed to call add interface address")?
-        .unwrap_err();
-    assert_eq!(error, fidl_fuchsia_net_stack::Error::NotFound);
-
-    let next_id = (max_id + 1).try_into().with_context(|| format!("{} overflows id", max_id))?;
+    let prefix_len = 0;
 
     let error = netstack
-        .remove_interface_address(
-            next_id,
-            &mut interface_address.addr,
-            interface_address.prefix_len,
-        )
+        .set_interface_address(next_id, &mut addr, prefix_len)
+        .await
+        .context("failed to call set interface address")?;
+    assert_eq!(
+        error,
+        fidl_fuchsia_netstack::NetErr {
+            status: fidl_fuchsia_netstack::Status::UnknownInterface,
+            message: "".to_string(),
+        },
+    );
+
+    let error = netstack
+        .remove_interface_address(next_id, &mut addr, prefix_len)
         .await
         .context("failed to call remove interface address")?;
     assert_eq!(
@@ -347,21 +365,22 @@ async fn add_remove_interface_address_errors() -> Result {
         },
     );
 
-    // Don't crash on invalid prefix length.
-    interface_address.prefix_len = 43;
-    let error = stack
-        .add_interface_address(max_id, &mut interface_address)
-        .await
-        .context("failed to call add interface address")?
-        .unwrap_err();
-    assert_eq!(error, fidl_fuchsia_net_stack::Error::InvalidArgs);
+    let prefix_len = 43;
 
     let error = netstack
-        .remove_interface_address(
-            next_id,
-            &mut interface_address.addr,
-            interface_address.prefix_len,
-        )
+        .set_interface_address(next_id, &mut addr, prefix_len)
+        .await
+        .context("failed to call set interface address")?;
+    assert_eq!(
+        error,
+        fidl_fuchsia_netstack::NetErr {
+            status: fidl_fuchsia_netstack::Status::ParseError,
+            message: "prefix length exceeds address length".to_string(),
+        },
+    );
+
+    let error = netstack
+        .remove_interface_address(next_id, &mut addr, prefix_len)
         .await
         .context("failed to call remove interface address")?;
     assert_eq!(
