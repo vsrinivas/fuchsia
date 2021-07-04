@@ -35,8 +35,7 @@ struct InterfaceConfig {
 };
 
 struct RouteTableEntry {
-    fuchsia.net.IpAddress destination;
-    fuchsia.net.IpAddress netmask;
+    fuchsia.net.Subnet destination;
     fuchsia.net.IpAddress? gateway;
     uint32 nicid;
     uint32 metric;

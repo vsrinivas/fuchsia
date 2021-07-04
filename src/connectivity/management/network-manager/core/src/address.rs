@@ -103,18 +103,6 @@ pub fn to_ip_addr(addr: fnet::IpAddress) -> IpAddr {
     }
 }
 
-/// Converts a subnet mask given as a set of octets to a scalar prefix length.
-pub fn subnet_mask_to_prefix_length(addr: fnet::IpAddress) -> u8 {
-    match addr {
-        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
-            (!u32::from_be_bytes(addr)).leading_zeros() as u8
-        }
-        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
-            (!u128::from_be_bytes(addr)).leading_zeros() as u8
-        }
-    }
-}
-
 /// Strips the host part from a given `address` and `prefix`.
 fn strip_host(address: &IpAddr, prefix: u8) -> IpAddr {
     match address {
@@ -148,34 +136,6 @@ fn strip_host(address: &IpAddr, prefix: u8) -> IpAddr {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn v4(addr: [u8; 4]) -> fnet::IpAddress {
-        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr })
-    }
-
-    fn v6(addr: [u8; 16]) -> fnet::IpAddress {
-        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr })
-    }
-
-    #[test]
-    fn test_to_prefix() {
-        assert_eq!(subnet_mask_to_prefix_length(v4([255, 255, 255, 255])), 32);
-        assert_eq!(subnet_mask_to_prefix_length(v4([255, 255, 255, 0])), 24);
-        assert_eq!(subnet_mask_to_prefix_length(v4([255, 128, 0, 0])), 9);
-        assert_eq!(subnet_mask_to_prefix_length(v4([0, 0, 0, 0])), 0);
-        assert_eq!(
-            subnet_mask_to_prefix_length(v6([
-                255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
-            ])),
-            128
-        );
-        assert_eq!(
-            subnet_mask_to_prefix_length(v6([
-                255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0,
-            ])),
-            64
-        );
-    }
 
     #[test]
     fn test_from_ipaddress_to_lifipaddr() {

@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
@@ -43,24 +42,22 @@ func (ni *netstackImpl) GetRouteTable(fidl.Context) ([]netstack.RouteTableEntry,
 			gatewayPtr = &gateway
 		}
 		out = append(out, netstack.RouteTableEntry{
-			Destination: fidlconv.ToNetIpAddress(e.Route.Destination.ID()),
-			Netmask:     fidlconv.ToNetIpAddress(tcpip.Address(e.Route.Destination.Mask())),
-			Gateway:     gatewayPtr,
-			Nicid:       uint32(e.Route.NIC),
-			Metric:      uint32(e.Metric),
+			Destination: fidlnet.Subnet{
+				Addr:      fidlconv.ToNetIpAddress(e.Route.Destination.ID()),
+				PrefixLen: uint8(e.Route.Destination.Prefix()),
+			},
+			Gateway: gatewayPtr,
+			Nicid:   uint32(e.Route.NIC),
+			Metric:  uint32(e.Metric),
 		})
 	}
 	return out, nil
 }
 
 func routeToNs(r netstack.RouteTableEntry) tcpip.Route {
-	prefixLen, _ := net.IPMask(fidlconv.ToTCPIPAddress(r.Netmask)).Size()
 	route := tcpip.Route{
-		Destination: fidlconv.ToTCPIPSubnet(fidlnet.Subnet{
-			Addr:      r.Destination,
-			PrefixLen: uint8(prefixLen),
-		}),
-		NIC: tcpip.NICID(r.Nicid),
+		Destination: fidlconv.ToTCPIPSubnet(r.Destination),
+		NIC:         tcpip.NICID(r.Nicid),
 	}
 	if g := r.Gateway; g != nil {
 		route.Gateway = fidlconv.ToTCPIPAddress(*g)

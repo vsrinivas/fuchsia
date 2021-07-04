@@ -198,8 +198,7 @@ async fn test_resolve_route() {
         let () = fuchsia_zircon::ok(
             route_transaction
                 .add_route(&mut fidl_fuchsia_netstack::RouteTableEntry {
-                    destination: unspecified,
-                    netmask: unspecified,
+                    destination: fidl_fuchsia_net::Subnet { addr: unspecified, prefix_len: 0 },
                     gateway: Some(Box::new(gateway)),
                     nicid: u32::try_from(interface_id).expect("interface ID doesn't fit u32"),
                     metric: 100,
@@ -304,8 +303,7 @@ async fn test_resolve_default_route_while_dhcp_is_running() {
     let () = fuchsia_zircon::ok(
         route_transaction
             .add_route(&mut fidl_fuchsia_netstack::RouteTableEntry {
-                destination: UNSPECIFIED_IP,
-                netmask: UNSPECIFIED_IP,
+                destination: fidl_fuchsia_net::Subnet { addr: UNSPECIFIED_IP, prefix_len: 0 },
                 gateway: Some(Box::new(GATEWAY_ADDR)),
                 nicid: u32::try_from(ep.id()).expect("interface ID doesn't fit u32"),
                 metric: 100,

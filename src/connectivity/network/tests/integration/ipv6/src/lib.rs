@@ -705,33 +705,48 @@ async fn router_and_prefix_discovery<E: netemul::Endpoint>(
 
     // Test that the default router should be discovered after it is advertised.
     let () = check_route_table(&netstack, |route_table| {
-        route_table.iter().any(|netstack::RouteTableEntry { destination, gateway, .. }| {
-            (match destination {
-                net::IpAddress::Ipv4(net::Ipv4Address { addr: _ }) => false,
-                net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
-                    net_types_ip::Ipv6Addr::new(*addr) == net_types_ip::Ipv6::UNSPECIFIED_ADDRESS
-                }
-            }) && (match gateway.as_deref() {
-                None | Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: _ })) => false,
-                Some(net::IpAddress::Ipv6(net::Ipv6Address { addr })) => {
-                    net_types_ip::Ipv6Addr::new(*addr) == ipv6_consts::LINK_LOCAL_ADDR
-                }
-            })
-        })
+        route_table.iter().any(
+            |netstack::RouteTableEntry {
+                 destination: net::Subnet { addr, prefix_len: _ },
+                 gateway,
+                 ..
+             }| {
+                (match addr {
+                    net::IpAddress::Ipv4(net::Ipv4Address { addr: _ }) => false,
+                    net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
+                        net_types_ip::Ipv6Addr::new(*addr)
+                            == net_types_ip::Ipv6::UNSPECIFIED_ADDRESS
+                    }
+                }) && (match gateway.as_deref() {
+                    None | Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: _ })) => false,
+                    Some(net::IpAddress::Ipv6(net::Ipv6Address { addr })) => {
+                        net_types_ip::Ipv6Addr::new(*addr) == ipv6_consts::LINK_LOCAL_ADDR
+                    }
+                })
+            },
+        )
     })
     .await;
 
     // Test that the prefix should be discovered after it is advertised.
     let () = check_route_table(&netstack, |route_table| {
-        route_table.iter().any(|netstack::RouteTableEntry { destination, nicid, .. }| {
-            if let net::IpAddress::Ipv6(dest) = destination {
-                let destination = net_types_ip::Ipv6Addr::new(dest.addr);
-                if destination == ipv6_consts::PREFIX.network() && u64::from(*nicid) == iface.id() {
-                    return true;
+        route_table.iter().any(
+            |netstack::RouteTableEntry {
+                 destination: net::Subnet { addr, prefix_len: _ },
+                 nicid,
+                 ..
+             }| {
+                if let net::IpAddress::Ipv6(net::Ipv6Address { addr }) = addr {
+                    let destination = net_types_ip::Ipv6Addr::new(*addr);
+                    if destination == ipv6_consts::PREFIX.network()
+                        && u64::from(*nicid) == iface.id()
+                    {
+                        return true;
+                    }
                 }
-            }
-            false
-        })
+                false
+            },
+        )
     })
     .await;
 }

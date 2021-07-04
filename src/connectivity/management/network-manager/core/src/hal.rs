@@ -5,7 +5,7 @@
 //! A simple port manager.
 
 use {
-    crate::address::{subnet_mask_to_prefix_length, to_ip_addr, LifIpAddr},
+    crate::address::{to_ip_addr, LifIpAddr},
     crate::error,
     crate::lifmgr::{self, DhcpAddressPool},
     crate::oir,
@@ -128,14 +128,18 @@ impl From<&ForwardingEntry> for Route {
 
 impl From<&netstack::RouteTableEntry> for Route {
     fn from(r: &netstack::RouteTableEntry) -> Self {
+        let netstack::RouteTableEntry {
+            destination: fnet::Subnet { addr, prefix_len },
+            gateway,
+            nicid,
+            metric,
+        } = r;
+        let nicid: u64 = (*nicid).into();
         Route {
-            target: LifIpAddr {
-                address: to_ip_addr(r.destination),
-                prefix: subnet_mask_to_prefix_length(r.netmask),
-            },
-            gateway: r.gateway.as_ref().map(|g| to_ip_addr(**g)),
-            port_id: Some(StackPortId::from(r.nicid as u64).into()),
-            metric: Some(r.metric),
+            target: LifIpAddr { address: to_ip_addr(*addr), prefix: *prefix_len },
+            gateway: gateway.as_ref().map(|g| to_ip_addr(**g)),
+            port_id: Some(StackPortId::from(nicid).into()),
+            metric: Some(*metric),
         }
     }
 }
@@ -1092,8 +1096,7 @@ mod tests {
     fn test_route_from_routetableentry2() {
         assert_eq!(
             Route::from(&netstack::RouteTableEntry {
-                destination: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 0] }),
-                netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 254, 0] }),
+                destination: fidl_subnet!("1.2.3.0/23"),
                 gateway: Some(Box::new(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
                     addr: [1, 2, 3, 1]
                 }))),
@@ -1111,8 +1114,7 @@ mod tests {
 
         assert_eq!(
             Route::from(&netstack::RouteTableEntry {
-                destination: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 0] }),
-                netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 254, 0] }),
+                destination: fidl_subnet!("1.2.3.0/23"),
                 gateway: None,
                 nicid: 3,
                 metric: 50,
@@ -1128,12 +1130,7 @@ mod tests {
 
         assert_eq!(
             Route::from(&netstack::RouteTableEntry {
-                destination: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                    addr: [0x26, 0x20, 0, 0, 0x10, 0, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-                }),
-                netmask: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                    addr: [255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0],
-                }),
+                destination: fidl_subnet!("2620:0:1000:5000::/64"),
                 gateway: Some(Box::new(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                     addr: [
                         0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x0, 0x5e, 0xff, 0xfe, 0x0, 0x02, 0x65
@@ -1153,12 +1150,7 @@ mod tests {
 
         assert_eq!(
             Route::from(&netstack::RouteTableEntry {
-                destination: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                    addr: [0x26, 0x20, 0, 0, 0x10, 0, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-                }),
-                netmask: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                    addr: [255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                }),
+                destination: fidl_subnet!("2620:0:1000:5000::/56"),
                 gateway: None,
                 nicid: 3,
                 metric: 50,

@@ -361,17 +361,19 @@ async fn do_route<C: NetCliDepsConnector>(
             let mut t = Table::new();
             t.set_format(format::FormatBuilder::new().padding(2, 2).build());
 
-            t.set_titles(row!["Destination", "Netmask", "Gateway", "NICID", "Metric"]);
+            t.set_titles(row!["Destination", "Gateway", "NICID", "Metric"]);
             for entry in response {
-                let route = fidl_fuchsia_netstack_ext::RouteTableEntry::from(entry);
-                let gateway_str = match route.gateway {
+                let fidl_fuchsia_netstack_ext::RouteTableEntry {
+                    destination,
+                    gateway,
+                    nicid,
+                    metric,
+                } = entry.into();
+                let gateway = match gateway {
                     None => "-".to_string(),
                     Some(g) => format!("{}", g),
                 };
-                let () = add_row(
-                    &mut t,
-                    row![route.destination, route.netmask, gateway_str, route.nicid, route.metric],
-                );
+                let () = add_row(&mut t, row![destination, gateway, nicid, metric]);
             }
 
             let _lines_printed: usize = t.printstd();

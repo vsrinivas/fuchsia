@@ -72,12 +72,15 @@ func TestRouteTableTransactions(t *testing.T) {
 			t.Fatal("Cannot create gateway IP")
 		}
 		gateway := toIpAddress(gatewayAddress)
+		prefixLen, _ := destinationSubnet.Mask.Size()
 		newRouteTableEntry := netstack.RouteTableEntry{
-			Destination: toIpAddress(destinationSubnet.IP),
-			Netmask:     toIpAddress(net.IP(destinationSubnet.Mask)),
-			Gateway:     &gateway,
-			Nicid:       uint32(ifs.nicid),
-			Metric:      100,
+			Destination: netfidl.Subnet{
+				Addr:      toIpAddress(destinationSubnet.IP),
+				PrefixLen: uint8(prefixLen),
+			},
+			Gateway: &gateway,
+			Nicid:   uint32(ifs.nicid),
+			Metric:  100,
 		}
 
 		success, err = transactionInterface.AddRoute(context.Background(), newRouteTableEntry)

@@ -547,6 +547,17 @@ pub enum RouteEnum {
     Del(RouteDel),
 }
 
+fn subnet_mask_to_prefix_length(addr: std::net::IpAddr) -> u8 {
+    use core::convert::TryInto as _;
+
+    match addr {
+        std::net::IpAddr::V4(addr) => (!u32::from_be_bytes(addr.octets())).leading_zeros(),
+        std::net::IpAddr::V6(addr) => (!u128::from_be_bytes(addr.octets())).leading_zeros(),
+    }
+    .try_into()
+    .unwrap()
+}
+
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "list")]
 /// lists devices
@@ -563,6 +574,7 @@ macro_rules! route_struct {
             pub destination: std::net::IpAddr,
             #[argh(option)]
             /// the netmask corresponding to destination
+            // TODO(https://fxbug.dev/80235): parse CIDR instead.
             pub netmask: std::net::IpAddr,
             #[argh(option)]
             /// the ip address of the first hop router
@@ -579,8 +591,10 @@ macro_rules! route_struct {
             fn into(self) -> fidl_fuchsia_netstack::RouteTableEntry {
                 let Self { destination, netmask, gateway, nicid, metric } = self;
                 fidl_fuchsia_netstack::RouteTableEntry {
-                    destination: fidl_fuchsia_net_ext::IpAddress(destination).into(),
-                    netmask: fidl_fuchsia_net_ext::IpAddress(netmask).into(),
+                    destination: fidl_fuchsia_net::Subnet {
+                        addr: fidl_fuchsia_net_ext::IpAddress(destination).into(),
+                        prefix_len: subnet_mask_to_prefix_length(netmask),
+                    },
                     gateway: gateway
                         .map(|gateway| Box::new(fidl_fuchsia_net_ext::IpAddress(gateway).into())),
                     nicid,

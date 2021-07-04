@@ -14,7 +14,7 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::TryStreamExt,
-    net_declare::fidl_ip,
+    net_declare::fidl_subnet,
     prettytable::{cell, format, row, Table},
     std::collections::HashMap,
     std::convert::TryFrom,
@@ -111,14 +111,12 @@ fn get_interface_id(
 }
 
 async fn add_route_table_entry(
-    dest: fidl_fuchsia_net::IpAddress,
-    netmask: fidl_fuchsia_net::IpAddress,
+    destination: fidl_fuchsia_net::Subnet,
     nicid: u64,
     route_proxy: &fidl_fuchsia_netstack::RouteTableTransactionProxy,
 ) -> Result<(), Error> {
     let mut entry = RouteTableEntry {
-        destination: dest,
-        netmask: netmask,
+        destination,
         gateway: None,
         nicid: u32::try_from(nicid)?,
         metric: ENTRY_METRICS,
@@ -172,49 +170,28 @@ async fn run_fuchsia_node() -> Result<(), Error> {
 
     // routing rules for weave tun
     let () = add_route_table_entry(
-        fidl_ip!("fdce:da10:7616:6:6616:6600:4734:b051"),
-        fidl_ip!("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"),
+        fidl_subnet!("fdce:da10:7616:6:6616:6600:4734:b051/128"),
         weave_if_id,
         &route_proxy,
     )
     .await
     .context("adding routing table entry for weave tun")?;
-    let () = add_route_table_entry(
-        fidl_ip!("fdce:da10:7616::"),
-        fidl_ip!("ffff:ffff:ffff::"),
-        weave_if_id,
-        &route_proxy,
-    )
-    .await
-    .context("adding routing table entry for weave tun")?;
+    let () = add_route_table_entry(fidl_subnet!("fdce:da10:7616::/48"), weave_if_id, &route_proxy)
+        .await
+        .context("adding routing table entry for weave tun")?;
 
     // routing rules for wpan
-    let () = add_route_table_entry(
-        fidl_ip!("fdce:da10:7616:6::"),
-        fidl_ip!("ffff:ffff:ffff:ffff::"),
-        wpan_if_id,
-        &route_proxy,
-    )
-    .await
-    .context("adding routing table entry for wpan")?;
-    let () = add_route_table_entry(
-        fidl_ip!("fdd3:b786:54dc::"),
-        fidl_ip!("ffff:ffff:ffff:ffff::"),
-        wpan_if_id,
-        &route_proxy,
-    )
-    .await
-    .context("adding routing table entry for wpan")?;
+    let () = add_route_table_entry(fidl_subnet!("fdce:da10:7616:6::/64"), wpan_if_id, &route_proxy)
+        .await
+        .context("adding routing table entry for wpan")?;
+    let () = add_route_table_entry(fidl_subnet!("fdd3:b786:54dc::/64"), wpan_if_id, &route_proxy)
+        .await
+        .context("adding routing table entry for wpan")?;
 
     // routing rules for wlan
-    let () = add_route_table_entry(
-        fidl_ip!("fdce:da10:7616:1::"),
-        fidl_ip!("ffff:ffff:ffff:ffff::"),
-        wlan_if_id,
-        &route_proxy,
-    )
-    .await
-    .context("adding routing table entry for wlan")?;
+    let () = add_route_table_entry(fidl_subnet!("fdce:da10:7616:1::/64"), wlan_if_id, &route_proxy)
+        .await
+        .context("adding routing table entry for wlan")?;
 
     fx_log_info!("successfully added entries to route table");
 
@@ -223,14 +200,15 @@ async fn run_fuchsia_node() -> Result<(), Error> {
     let mut t = Table::new();
     t.set_format(format::FormatBuilder::new().padding(2, 2).build());
 
-    t.set_titles(row!["Destination", "Netmask", "Gateway", "NICID", "Metric"]);
+    t.set_titles(row!["Destination", "Gateway", "NICID", "Metric"]);
     for entry in route_table {
-        let route = fidl_fuchsia_netstack_ext::RouteTableEntry::from(entry);
-        let gateway_str = match route.gateway {
+        let fidl_fuchsia_netstack_ext::RouteTableEntry { destination, gateway, nicid, metric } =
+            entry.into();
+        let gateway = match gateway {
             None => "-".to_string(),
             Some(g) => format!("{}", g),
         };
-        t.add_row(row![route.destination, route.netmask, gateway_str, route.nicid, route.metric]);
+        t.add_row(row![destination, gateway, nicid, metric]);
     }
 
     fx_log_info!("{}", t.printstd());

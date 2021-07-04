@@ -210,8 +210,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             .context("error starting route table transaction")?;
 
         let mut entry = RouteTableEntry {
-            destination: unspec_addr,
-            netmask: unspec_addr,
+            destination: fidl_fuchsia_net::Subnet { addr: unspec_addr, prefix_len: 0 },
             gateway: Some(Box::new(gw_addr)),
             nicid: nicid_u32,
             metric: 0,

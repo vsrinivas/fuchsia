@@ -265,25 +265,14 @@ PlatformResult AddRemoveHostRoute(InterfaceType interface_type, const Inet::IPPr
 
   // Construct route table entry to add or remove.
   fuchsia::netstack::RouteTableEntry route_table_entry;
-  fuchsia::net::IpAddress destination;
-  fuchsia::net::IpAddress netmask;
+  fuchsia::net::Subnet destination;
 
   fuchsia::net::Ipv6Address ipv6_addr;
   std::memcpy(ipv6_addr.addr.data(), (uint8_t *)(prefix.IPAddr.Addr), ipv6_addr.addr.size());
-  destination.set_ipv6(ipv6_addr);
-
-  fuchsia::net::Ipv6Address subnet_addr;
-  size_t subnet_addr_size_bytes = prefix.Length / 8;
-  if (subnet_addr_size_bytes >= subnet_addr.addr.size()) {
-    FX_LOGS(ERROR) << "Unexpected prefix /" << prefix.Length;
-    return kPlatformResultFailure;
-  }
-  std::memset(subnet_addr.addr.data(), 0, subnet_addr.addr.size());
-  std::memset(subnet_addr.addr.data(), 0xFF, subnet_addr_size_bytes);
-  netmask.set_ipv6(subnet_addr);
+  destination.addr.set_ipv6(ipv6_addr);
+  destination.prefix_len = prefix.Length;
 
   route_table_entry.destination = std::move(destination);
-  route_table_entry.netmask = std::move(netmask);
   route_table_entry.nicid = interface_id.value();
   switch (priority) {
     case RoutePriority::kRoutePriorityHigh:

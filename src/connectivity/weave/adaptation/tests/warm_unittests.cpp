@@ -315,14 +315,14 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
 
   void DelRoute(::fuchsia::netstack::RouteTableEntry route_table_entry,
                 DelRouteCallback callback) override {
-    auto it = std::remove_if(route_table_.begin(), route_table_.end(),
-                             [&](const ::fuchsia::netstack::RouteTableEntry& entry) {
-                               return route_table_entry.nicid == entry.nicid &&
-                                      route_table_entry.metric == entry.metric &&
-                                      CompareIpAddress(route_table_entry.destination,
-                                                       entry.destination) &&
-                                      CompareIpAddress(route_table_entry.netmask, entry.netmask);
-                             });
+    auto it = std::remove_if(
+        route_table_.begin(), route_table_.end(),
+        [&](const ::fuchsia::netstack::RouteTableEntry& entry) {
+          return route_table_entry.nicid == entry.nicid &&
+                 route_table_entry.metric == entry.metric &&
+                 CompareIpAddress(route_table_entry.destination.addr, entry.destination.addr) &&
+                 route_table_entry.destination.prefix_len == entry.destination.prefix_len;
+        });
     if (it == route_table_.end()) {
       callback(ZX_ERR_NOT_FOUND);
       return;
@@ -372,7 +372,7 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
     auto it = std::find_if(
         route_table_.begin(), route_table_.end(), [&](const RouteTableEntry& route_table_entry) {
           return nicid == route_table_entry.nicid && metric == route_table_entry.metric &&
-                 CompareIpAddress(addr, route_table_entry.destination);
+                 CompareIpAddress(addr, route_table_entry.destination.addr);
         });
 
     return it != route_table_.end();

@@ -374,28 +374,15 @@ async fn inspect_routing_table() -> Result {
     assert!(!routing_table.is_empty());
     println!("Got routing table: {:#?}", routing_table);
 
-    let subnet_mask_to_prefix_length = |addr: fidl_fuchsia_net::IpAddress| -> u8 {
-        match addr {
-            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr }) => {
-                (!u32::from_be_bytes(addr)).leading_zeros() as u8
-            }
-            fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address { addr }) => {
-                (!u128::from_be_bytes(addr)).leading_zeros() as u8
-            }
-        }
-    };
-
     use fuchsia_inspect::testing::{AnyProperty, TreeAssertion};
     let mut routing_table_assertion = TreeAssertion::new("Routes", true);
     for (i, route) in routing_table.into_iter().enumerate() {
         let index = &i.to_string();
-        let fidl_fuchsia_netstack::RouteTableEntry { destination, netmask, gateway, nicid, metric } =
-            route;
+        let fidl_fuchsia_netstack::RouteTableEntry { destination, gateway, nicid, metric } = route;
         let route_assertion = fuchsia_inspect::tree_assertion!(var index: {
             "Destination": format!(
-                "{}/{}",
-                fidl_fuchsia_net_ext::IpAddress::from(destination),
-                subnet_mask_to_prefix_length(netmask),
+                "{}",
+                fidl_fuchsia_net_ext::Subnet::from(destination),
             ),
             "Gateway": match gateway {
                 Some(addr) => fidl_fuchsia_net_ext::IpAddress::from(*addr).to_string(),
