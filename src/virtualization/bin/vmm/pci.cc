@@ -101,19 +101,6 @@ constexpr uint64_t kPciMmioBarSize     = 0x100000;
 constexpr uint32_t kPciGlobalIrqAssigments[kPciMaxDevices] = {32, 33, 34, 35, 36, 37, 38, 39,
                                                               40, 41, 42, 43, 44, 45, 46, 47};
 
-// A PciBar::Callback that simply returns "ZX_ERR_NOT_SUPPORTED".
-//
-// Thread safe.
-class UnsupportedPciBarCallback : public PciBar::Callback {
- public:
-  constexpr UnsupportedPciBarCallback() = default;
-  zx_status_t Read(uint64_t offset, IoValue* value) override { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t Write(uint64_t offset, const IoValue& value) override { return ZX_ERR_NOT_SUPPORTED; }
-};
-
-// Singleton instance of UnsupportedPciBarCallback that can be shared by multiple users.
-UnsupportedPciBarCallback unsupported_callback;
-
 }  // namespace
 
 PciBar::PciBar(PciDevice* device, uint64_t size, TrapType trap_type, Callback* callback)
@@ -205,12 +192,7 @@ static constexpr PciDevice::Attributes kRootComplexAttributes = {
     .device_class = (PCI_CLASS_BRIDGE_HOST << 16),
 };
 
-PciRootComplex::PciRootComplex(const Attributes& attrs) : PciDevice(attrs) {
-  zx::status<size_t> bar =
-      AddBar(PciBar(this, /*size=*/0x10, TrapType::MMIO_SYNC, &unsupported_callback));
-  // Device setup is deterministic: it will always fail or always succeed.
-  ZX_DEBUG_ASSERT(bar.is_ok());
-}
+PciRootComplex::PciRootComplex(const Attributes& attrs) : PciDevice(attrs) {}
 
 PciBus::PciBus(Guest* guest, InterruptController* interrupt_controller)
     : guest_(guest),
