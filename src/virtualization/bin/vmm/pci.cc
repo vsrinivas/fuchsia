@@ -125,8 +125,6 @@ PciBar::PciBar(PciDevice* device, uint64_t size, TrapType trap_type, Callback* c
   set_addr(0);  // Initialise the `pci_config_reg_` registers.
 }
 
-PciBar::PciBar() : PciBar(nullptr, /*size=*/0, TrapType::PIO_SYNC, &unsupported_callback) {}
-
 uint32_t PciBar::AspaceType() const {
   switch (trap_type_) {
     case TrapType::MMIO_SYNC:
@@ -208,7 +206,10 @@ static constexpr PciDevice::Attributes kRootComplexAttributes = {
 };
 
 PciRootComplex::PciRootComplex(const Attributes& attrs) : PciDevice(attrs) {
-  bar_[0] = PciBar(this, /*size=*/0x10, TrapType::MMIO_SYNC, &unsupported_callback);
+  zx::status<size_t> bar =
+      AddBar(PciBar(this, /*size=*/0x10, TrapType::MMIO_SYNC, &unsupported_callback));
+  // Device setup is deterministic: it will always fail or always succeed.
+  ZX_DEBUG_ASSERT(bar.is_ok());
 }
 
 PciBus::PciBus(Guest* guest, InterruptController* interrupt_controller)
@@ -263,15 +264,9 @@ zx_status_t PciBus::Connect(PciDevice* device, async_dispatcher_t* dispatcher, b
   size_t slot = next_open_slot_++;
 
   // Initialize BAR registers.
-  for (uint8_t bar_num = 0; bar_num < kPciMaxBars; ++bar_num) {
-    // Skip unimplemented bars.
-    if (!device->is_bar_implemented(bar_num)) {
-      break;
-    }
-
-    PciBar* bar = &device->bar_[bar_num];
-    bar->set_addr(mmio_base_);
-    mmio_base_ += align(bar->size(), PAGE_SIZE);
+  for (PciBar& bar : device->bars_) {
+    bar.set_addr(mmio_base_);
+    mmio_base_ += align(bar.size(), PAGE_SIZE);
   }
   if (mmio_base_ >= kPciMmioBarPhysBase + kPciMmioBarSize) {
     FX_LOGS(ERROR) << "No PCI MMIO address space available";
@@ -468,6 +463,14 @@ zx_status_t PciDevice::AddCapability(fbl::Span<const uint8_t> payload) {
   return ZX_OK;
 }
 
+zx::status<size_t> PciDevice::AddBar(PciBar bar) {
+  if (bars_.size() >= kPciMaxBars) {
+    return zx::error(ZX_ERR_NO_RESOURCES);
+  }
+  bars_.emplace_back(std::move(bar));
+  return zx::ok(bars_.size() - 1);
+}
+
 zx_status_t PciDevice::ReadCapability(size_t offset, uint32_t* out) const {
   // Ensure our read is aligned.
   if (!is_aligned(offset, sizeof(uint32_t))) {
@@ -533,12 +536,12 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
       const uint64_t pci_reg = (reg - kPciRegisterBar0) / 4;
       const uint64_t bar_num = pci_reg / 2;
       const size_t index = pci_reg % 2;
-      if (bar_num >= kPciMaxBars) {
-        return pci_read_unimplemented_register(value);
-      }
 
       std::lock_guard<std::mutex> lock(mutex_);
-      *value = bar_[bar_num].pci_config_reg(index);
+      if (bar_num >= bars_.size()) {
+        return pci_read_unimplemented_register(value);
+      }
+      *value = bars_[bar_num].pci_config_reg(index);
       return ZX_OK;
     }
     //  -------------------------------------------------------------
@@ -626,12 +629,12 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
       const uint64_t pci_reg = (reg - kPciRegisterBar0) / 4;
       const uint64_t bar_num = pci_reg / 2;
       const size_t slot = pci_reg % 2;
-      if (bar_num >= kPciMaxBars) {
-        return pci_write_unimplemented_register();
-      }
 
       std::lock_guard<std::mutex> lock(mutex_);
-      bar_[bar_num].set_pci_config_reg(slot, value.u32);
+      if (bar_num >= bars_.size()) {
+        return pci_write_unimplemented_register();
+      }
+      bars_[bar_num].set_pci_config_reg(slot, value.u32);
       return ZX_OK;
     }
     default:
@@ -640,17 +643,13 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
 }
 
 zx_status_t PciDevice::SetupBarTraps(Guest* guest, bool skip_bell, async_dispatcher_t* dispatcher) {
-  for (uint8_t i = 0; i < kPciMaxBars; ++i) {
-    PciBar* bar = &bar_[i];
-    if (!is_bar_implemented(i)) {
-      break;
-    }
-    if (skip_bell && bar->trap_type() == TrapType::MMIO_BELL) {
+  for (PciBar& bar : bars_) {
+    if (skip_bell && bar.trap_type() == TrapType::MMIO_BELL) {
       continue;
     }
 
     zx_status_t status =
-        guest->CreateMapping(bar->trap_type(), bar->addr(), bar->size(), 0, bar, dispatcher);
+        guest->CreateMapping(bar.trap_type(), bar.addr(), bar.size(), 0, &bar, dispatcher);
     if (status != ZX_OK) {
       return status;
     }

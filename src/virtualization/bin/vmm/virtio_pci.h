@@ -16,12 +16,12 @@
 
 // Virtio PCI Bar Layout.
 //
-// Expose all read/write fields on BAR0 using a strongly ordered mapping.
-// Map the Queue notify region to BAR1 with a BELL type that does not require
-// the guest to decode any instruction fields. The queue to notify can be
-// inferred based on the address accessed alone.
+// Expose all read/write fields on one BAR using a strongly ordered
+// mapping. Map the Queue notify region to a second BAR with a BELL type
+// that does not require the guest to decode any instruction fields. The
+// queue to notify can be inferred based on the address accessed alone.
 //
-//          BAR0                BAR1
+//       CONFIG BAR          NOTIFY BAR
 //      ------------  00h   ------------  00h
 //     | Virtio PCI |      |  Queue 0   |
 //     |   Common   |      |   Notify   |
@@ -35,10 +35,6 @@
 //     |            |      |   Notify   |
 //      ------------        ------------
 // These structures are defined in Virtio 1.0 Section 4.1.4.
-static constexpr uint8_t kVirtioPciBar = 0;
-static constexpr uint8_t kVirtioPciNotifyBar = 1;
-static_assert(kVirtioPciBar < kPciMaxBars && kVirtioPciNotifyBar < kPciMaxBars,
-              "Not enough BAR registers available");
 
 // We initialize Virtio devices with a ring size so that a sensible size is set,
 // even if they do not configure one themselves.
@@ -144,6 +140,10 @@ class VirtioPci : public PciDevice {
     return (device_config_->device_features & driver_features_ & features) == features;
   }
 
+  // Get the BAR for the device's configuration region / notification region.
+  const PciBar& config_bar() const { return *bar(config_bar_); }
+  const PciBar& notify_bar() const { return *bar(notify_bar_); }
+
  private:
   // Routes callbacks from the configuration PCI BAR.
   class ConfigBarCallback : public PciBar::Callback {
@@ -191,6 +191,12 @@ class VirtioPci : public PciDevice {
   // Callback objects for BAR accesses.
   ConfigBarCallback config_bar_callback_{this};
   NotifyBarCallback notify_bar_callback_{this};
+
+  // Notify bar and config bar indices.
+  //
+  // These values are constant after class initialisation.
+  size_t config_bar_;
+  size_t notify_bar_;
 
   // Device feature bits.
   //

@@ -204,11 +204,13 @@ class VirtioComponentDevice : public VirtioDevice<DeviceId, NumQueues, ConfigTyp
     if (status != ZX_OK) {
       return status;
     }
-    if (!this->pci_.is_bar_implemented(kVirtioPciNotifyBar)) {
-      return ZX_ERR_UNAVAILABLE;
-    }
-    const PciBar* bar = this->pci_.bar(kVirtioPciNotifyBar);
-    start_info->trap = {.addr = bar->addr(), .size = align(bar->size(), PAGE_SIZE)};
+
+    // Communicate the allocated notify BAR address/size to the component.
+    const PciBar& bar = this->pci_.notify_bar();
+    ZX_DEBUG_ASSERT(bar.addr() != 0);  // BAR address should have been allocated by now.
+    start_info->trap = {.addr = bar.addr(), .size = align(bar.size(), PAGE_SIZE)};
+
+    // Give the component access to the guest and guest memory.
     status = guest.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE, &start_info->guest);
     if (status != ZX_OK) {
       return status;

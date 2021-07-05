@@ -447,12 +447,30 @@ zx_status_t VirtioPci::ConfigBarWrite(uint64_t addr, const IoValue& value) {
 }
 
 zx_status_t VirtioPci::SetupCaps() {
+  // Install the device configuration BAR.
+  zx::status<size_t> config_bar =
+      AddBar(PciBar(this, kVirtioPciDeviceCfgBase + device_config_->config_size,
+                    TrapType::MMIO_SYNC, &config_bar_callback_));
+  if (config_bar.is_error()) {
+    return config_bar.error_value();
+  }
+  config_bar_ = config_bar.value();
+
+  // Install the device notification BAR.
+  size_t notify_size = device_config_->num_queues * kQueueNotifyMultiplier;
+  zx::status<size_t> notify_bar =
+      AddBar(PciBar(this, notify_size, TrapType::MMIO_BELL, &notify_bar_callback_));
+  if (notify_bar.is_error()) {
+    return notify_bar.error_value();
+  }
+  notify_bar_ = notify_bar.value();
+
   // Common configuration capability.
   zx_status_t status = AddCapability(virtio_pci_cap_t{
       .cap_vndr = kPciCapTypeVendorSpecific,
       .cap_len = sizeof(virtio_pci_cap_t),
       .cfg_type = VIRTIO_PCI_CAP_COMMON_CFG,
-      .bar = kVirtioPciBar * kPciBar64BitMultiplier,
+      .bar = static_cast<uint8_t>(config_bar.value() * kPciBar64BitMultiplier),
       .offset = kVirtioPciCommonCfgBase,
       .length = kVirtioPciCommonCfgSize,
   });
@@ -461,15 +479,13 @@ zx_status_t VirtioPci::SetupCaps() {
   }
 
   // Notify configuration.
-  size_t notify_size = device_config_->num_queues * kQueueNotifyMultiplier;
-  bar_[kVirtioPciNotifyBar] = PciBar(this, notify_size, TrapType::MMIO_BELL, &notify_bar_callback_);
   status = AddCapability(virtio_pci_notify_cap_t{
       .cap =
           {
               .cap_vndr = kPciCapTypeVendorSpecific,
               .cap_len = sizeof(virtio_pci_notify_cap_t),
               .cfg_type = VIRTIO_PCI_CAP_NOTIFY_CFG,
-              .bar = kVirtioPciNotifyBar * kPciBar64BitMultiplier,
+              .bar = static_cast<uint8_t>(notify_bar.value() * kPciBar64BitMultiplier),
               .offset = kVirtioPciNotifyCfgBase,
               .length = static_cast<uint32_t>(notify_size),
           },
@@ -484,7 +500,7 @@ zx_status_t VirtioPci::SetupCaps() {
       .cap_vndr = kPciCapTypeVendorSpecific,
       .cap_len = sizeof(virtio_pci_cap_t),
       .cfg_type = VIRTIO_PCI_CAP_ISR_CFG,
-      .bar = kVirtioPciBar * kPciBar64BitMultiplier,
+      .bar = static_cast<uint8_t>(config_bar.value() * kPciBar64BitMultiplier),
       .offset = kVirtioPciIsrCfgBase,
       .length = kVirtioPciIsrCfgSize,
   });
@@ -497,7 +513,7 @@ zx_status_t VirtioPci::SetupCaps() {
       .cap_vndr = kPciCapTypeVendorSpecific,
       .cap_len = sizeof(virtio_pci_cap_t),
       .cfg_type = VIRTIO_PCI_CAP_DEVICE_CFG,
-      .bar = kVirtioPciBar * kPciBar64BitMultiplier,
+      .bar = static_cast<uint8_t>(config_bar.value() * kPciBar64BitMultiplier),
       .offset = kVirtioPciDeviceCfgBase,
       .length = static_cast<uint32_t>(device_config_->config_size),
   });
@@ -508,9 +524,6 @@ zx_status_t VirtioPci::SetupCaps() {
   // Note VIRTIO_PCI_CAP_PCI_CFG is not implemented.
   // This one is more complex since it is writable and doesn't seem to be
   // used by Linux or Zircon.
-
-  bar_[kVirtioPciBar] = PciBar(this, kVirtioPciDeviceCfgBase + device_config_->config_size,
-                               TrapType::MMIO_SYNC, &config_bar_callback_);
 
   return ZX_OK;
 }

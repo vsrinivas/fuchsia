@@ -5,11 +5,13 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_PCI_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_PCI_H_
 
+#include <lib/zx/status.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <array>
 #include <mutex>
+#include <vector>
 
 #include <fbl/array.h>
 #include <fbl/span.h>
@@ -76,9 +78,6 @@ class PciBar : public IoHandler {
     virtual zx_status_t Read(uint64_t offset, IoValue* value) = 0;
     virtual zx_status_t Write(uint64_t offset, const IoValue& value) = 0;
   };
-
-  // Construct an empty BAR, with both registers set to 0.
-  PciBar();
 
   // Construct a BAR of the given type, size, and ID.
   PciBar(PciDevice* device, uint64_t size, TrapType trap_type, Callback* callback);
@@ -164,14 +163,10 @@ class PciDevice {
   // Return a human-readable name for this device, for debugging and logging.
   std::string_view name() { return attrs_.name; }
 
-  // Determines if the given base address register is implemented for this
-  // device.
-  bool is_bar_implemented(size_t bar) const { return bar < kPciMaxBars && bar_[bar].size() > 0; }
-
   // Returns a pointer to a base address register for this device.
   //
   // Returns nullptr if the register is not implemented.
-  const PciBar* bar(size_t n) const { return is_bar_implemented(n) ? &bar_[n] : nullptr; }
+  const PciBar* bar(size_t n) const { return n < bars_.size() ? &bars_[n] : nullptr; }
 
   // Install the given POD type as a PCI capability.
   //
@@ -188,15 +183,18 @@ class PciDevice {
     return AddCapability(fbl::Span(reinterpret_cast<const uint8_t*>(&capability), sizeof(T)));
   }
 
+  // Install the given PciBar in the next available slot, returning the index
+  // the PciBar was installed at.
+  //
+  // Returns ZX_ERR_NO_RESOURCES if all BARs have already been used.
+  zx::status<size_t> AddBar(PciBar bar);
+
   // Return static device attributes.
   const Attributes& attrs() const { return attrs_; }
 
  protected:
   explicit PciDevice(const Attributes& attrs);
   virtual ~PciDevice() = default;
-
-  // Base address registers.
-  PciBar bar_[kPciMaxBars] = {};
 
  private:
   friend class PciBus;
@@ -216,6 +214,9 @@ class PciDevice {
   virtual bool HasPendingInterrupt() const = 0;
 
   mutable std::mutex mutex_;
+
+  // Base address registers.
+  std::vector<PciBar> bars_;
 
   // Static attributes for this device.
   const Attributes attrs_;
