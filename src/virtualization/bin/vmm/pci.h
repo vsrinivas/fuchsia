@@ -168,6 +168,13 @@ class PciDevice {
   // Returns nullptr if the register is not implemented.
   const PciBar* bar(size_t n) const { return n < bars_.size() ? &bars_[n] : nullptr; }
 
+  // Return static device attributes.
+  const Attributes& attrs() const { return attrs_; }
+
+ protected:
+  explicit PciDevice(const Attributes& attrs);
+  virtual ~PciDevice() = default;
+
   // Install the given POD type as a PCI capability.
   //
   // Capabilities types must have a size aligned to 32-bits.
@@ -188,13 +195,6 @@ class PciDevice {
   //
   // Returns ZX_ERR_NO_RESOURCES if all BARs have already been used.
   zx::status<size_t> AddBar(PciBar bar);
-
-  // Return static device attributes.
-  const Attributes& attrs() const { return attrs_; }
-
- protected:
-  explicit PciDevice(const Attributes& attrs);
-  virtual ~PciDevice() = default;
 
  private:
   friend class PciBus;
