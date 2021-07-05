@@ -155,14 +155,22 @@ zx_status_t Vcpu::ArchHandleIo(const zx_packet_guest_io_t& io, uint64_t trap_key
 
   zx_status_t status =
       io.input ? ArchHandleInput(io, device_mapping) : ArchHandleOutput(io, device_mapping);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << std::hex << "Device '" << device_mapping->handler()->Name()
-                   << "' returned status " << zx_status_get_string(status)
-                   << " while attempting to handle IO port " << (io.input ? "read" : "write")
-                   << " on port 0x" << io.port << " (mapping offset 0x"
-                   << (io.port - device_mapping->base()) << ").";
-    return status;
+
+  // Print a warning for unknown errors.
+  switch (status) {
+    case ZX_OK:
+    case ZX_ERR_CANCELED:
+    case ZX_ERR_STOP:
+      break;
+
+    default:
+      FX_LOGS(ERROR) << std::hex << "Device '" << device_mapping->handler()->Name()
+                     << "' returned status " << zx_status_get_string(status)
+                     << " while attempting to handle IO port " << (io.input ? "read" : "write")
+                     << " on port 0x" << io.port << " (mapping offset 0x"
+                     << (io.port - device_mapping->base()) << ")";
+      break;
   }
 
-  return ZX_OK;
+  return status;
 }

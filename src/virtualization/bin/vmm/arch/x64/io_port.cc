@@ -165,7 +165,9 @@ zx_status_t Pm1Handler::Write(uint64_t addr, const IoValue& value) {
       uint16_t slp_type = bits_shift(value.u16, 12, 10);
       if (slp_en != 0) {
         // Only power-off transitions are supported.
-        if (slp_type == kSlpTyp5) {
+        if (slp_type != kSlpTyp5) {
+          FX_LOGS(ERROR) << "Unsupported sleep state transition. Guest requested sleep type "
+                         << slp_type;
           return ZX_ERR_NOT_SUPPORTED;
         }
 
