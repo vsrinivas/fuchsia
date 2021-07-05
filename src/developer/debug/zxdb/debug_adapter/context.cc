@@ -5,6 +5,7 @@
 #include "context.h"
 
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
@@ -65,6 +66,7 @@ DebugAdapterContext::~DebugAdapterContext() {
     session()->thread_observers().RemoveObserver(this);
     session()->process_observers().RemoveObserver(this);
   }
+  DeleteAllBreakpoints();
 }
 
 void DebugAdapterContext::Init() {
@@ -416,6 +418,45 @@ void DebugAdapterContext::DeleteVariablesIdsForFrameId(int64_t id) {
       it++;
     }
   }
+}
+
+void DebugAdapterContext::StoreBreakpointForSource(const std::string& source, Breakpoint* bp) {
+  FX_DCHECK(bp);
+  source_to_bp_[source].push_back(bp->GetWeakPtr());
+}
+
+std::vector<fxl::WeakPtr<Breakpoint>>* DebugAdapterContext::GetBreakpointsForSource(
+    const std::string& source) {
+  if (auto it = source_to_bp_.find(source); it != source_to_bp_.end()) {
+    return &it->second;
+  }
+  // Not found
+  return nullptr;
+}
+
+void DebugAdapterContext::DeleteBreakpointsForSource(const std::string& source) {
+  auto it = source_to_bp_.find(source);
+  if (it == source_to_bp_.end()) {
+    return;
+  }
+
+  for (auto& bp : it->second) {
+    if (bp) {
+      session()->system().DeleteBreakpoint(bp.get());
+    }
+  }
+  source_to_bp_.erase(it);
+}
+
+void DebugAdapterContext::DeleteAllBreakpoints() {
+  for (auto& it : source_to_bp_) {
+    for (auto& bp : it.second) {
+      if (bp) {
+        session()->system().DeleteBreakpoint(bp.get());
+      }
+    }
+  }
+  source_to_bp_.clear();
 }
 
 }  // namespace zxdb

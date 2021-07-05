@@ -34,29 +34,36 @@ dap::ResponseOrError<dap::SetBreakpointsResponse> OnRequestBreakpoint(
   dap::SetBreakpointsResponse response;
   size_t numBreakpoints = 0;
 
+  auto file = GetFile(req.source);
+  if (file.empty()) {
+    return response;
+  }
+
+  // Delete all existing breakpoints in the file if any.
+  ctx->DeleteBreakpointsForSource(file);
+
+  // Add the specified breakpoints.
   if (req.breakpoints.has_value()) {
     auto const& breakpoints = req.breakpoints.value();
     numBreakpoints = breakpoints.size();
 
-    auto file = GetFile(req.source);
-    if (!file.empty()) {
-      for (size_t i = 0; i < numBreakpoints; i++) {
-        auto& request_bp = breakpoints[i];
+    for (size_t i = 0; i < numBreakpoints; i++) {
+      auto& request_bp = breakpoints[i];
 
-        Breakpoint* breakpoint = ctx->session()->system().CreateNewBreakpoint();
-        BreakpointSettings settings;
+      Breakpoint* breakpoint = ctx->session()->system().CreateNewBreakpoint();
+      BreakpointSettings settings;
 
-        std::vector<InputLocation> locations;
-        locations.push_back(InputLocation(FileLine(file, request_bp.line)));
-        settings.locations = locations;
-        breakpoint->SetSettings(settings);
+      std::vector<InputLocation> locations;
+      locations.emplace_back(FileLine(file, request_bp.line));
+      settings.locations = locations;
+      breakpoint->SetSettings(settings);
+      ctx->StoreBreakpointForSource(file, breakpoint);
 
-        dap::Breakpoint response_bp;
-        response_bp.verified = false;
-        response_bp.source = req.source;
-        response_bp.line = request_bp.line;
-        response.breakpoints.push_back(response_bp);
-      }
+      dap::Breakpoint response_bp;
+      response_bp.verified = false;
+      response_bp.source = req.source;
+      response_bp.line = request_bp.line;
+      response.breakpoints.push_back(response_bp);
     }
   }
   return response;

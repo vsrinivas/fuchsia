@@ -23,6 +23,8 @@
 namespace zxdb {
 
 class Session;
+class Breakpoint;
+
 class DebugAdapterServer;
 class DebugAdapterReader;
 class DebugAdapterWriter;
@@ -101,6 +103,15 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
   VariablesRecord* VariablesRecordForID(int64_t id);
   void DeleteVariablesIdsForFrameId(int64_t id);
 
+  // Helper methods to get/set breakpoint to source file mapping.
+  void StoreBreakpointForSource(const std::string& source, Breakpoint* bp);
+  std::vector<fxl::WeakPtr<Breakpoint>>* GetBreakpointsForSource(const std::string& source);
+
+  // TODO(fxbug.dev/69392): These 2 method deletes all breakpoints added by the debug adapter.
+  // Breakpoints added from console are not deleted.
+  void DeleteBreakpointsForSource(const std::string& source);
+  void DeleteAllBreakpoints();
+
  private:
   Session* const session_;
   const std::unique_ptr<dap::Session> dap_;
@@ -122,6 +133,14 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
   int64_t next_variables_id_ = 1;
 
   DestroyConnectionCallback destroy_connection_cb_;
+
+  // This mapping is temporarily added to store all breakpoints added by debug adapter client. Once
+  // http://fxbug.dev/69392 is fixed, this can removed in favor of using System::GetBreakpoints API
+  // i.e. with breakpoint event, debug adapter client can be made aware of additional breakpoints
+  // (from say zxdb console) and hence breakpoint list maintained by system will be identical to
+  // this map in terms of the entries. One could traverse the entire system breakpoint list to get
+  // breakpoints related to a source file instead of having to maintain a separate map.
+  std::map<std::string, std::vector<fxl::WeakPtr<Breakpoint>>> source_to_bp_;
 
   void Init();
 };
