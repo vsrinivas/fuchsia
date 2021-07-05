@@ -9,7 +9,6 @@
 #include <fbl/unique_fd.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
-#include "src/storage/fs_test/minfs_test.h"
 
 namespace minfs {
 namespace {
@@ -32,7 +31,8 @@ TEST_P(MountStateTest, ReadWriteWithJournal) {
   ASSERT_EQ(result.value().mount_state->use_journal, true);
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MountStateTest, testing::ValuesIn(fs_test::AllTestMinfs()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MountStateTest,
+                         testing::ValuesIn(fs_test::AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

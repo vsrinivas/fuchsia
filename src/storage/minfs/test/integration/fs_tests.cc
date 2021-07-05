@@ -107,7 +107,7 @@ void FillPartition(const TestFilesystem& fs, int fd, uint32_t max_remaining_bloc
 // Tests using MinfsFvmTest will only run with FVM.
 class MinfsFvmTest : public BaseFilesystemTest {
  public:
-  MinfsFvmTest(const TestFilesystemOptions& options = TestFilesystemOptions::DefaultMinfs())
+  MinfsFvmTest(const TestFilesystemOptions& options = OptionsWithDescription("MinfsWithFvm"))
       : BaseFilesystemTest(options) {}
 
  protected:
@@ -159,7 +159,7 @@ class MinfsFvmTest : public BaseFilesystemTest {
 class MinfsFvmTestWith8MiBSliceSize : public MinfsFvmTest {
  public:
   static TestFilesystemOptions GetOptions() {
-    auto options = TestFilesystemOptions::DefaultMinfs();
+    auto options = OptionsWithDescription("MinfsWithFvm");
     options.fvm_slice_size = 8'388'608;
     return options;
   }
@@ -170,7 +170,7 @@ class MinfsFvmTestWith8MiBSliceSize : public MinfsFvmTest {
 // Tests using MinfsWithoutFvmTest will only run without FVM.
 class MinfsWithoutFvmTest : public BaseFilesystemTest {
  public:
-  MinfsWithoutFvmTest() : BaseFilesystemTest(TestFilesystemOptions::MinfsWithoutFvm()) {}
+  MinfsWithoutFvmTest() : BaseFilesystemTest(OptionsWithDescription("MinfsWithoutFvm")) {}
 
  protected:
   void GetAllocations(zx::vmo* out_vmo, uint64_t* out_count) const {
@@ -632,9 +632,7 @@ TEST_F(MinfsWithoutFvmTest, GetAllocatedRegions) {
   ASSERT_EQ(total_blocks, actual_blocks);
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MinfsTest,
-                         testing::Values(TestFilesystemOptions::DefaultMinfs(),
-                                         TestFilesystemOptions::MinfsWithoutFvm()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MinfsTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

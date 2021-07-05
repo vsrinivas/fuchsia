@@ -201,8 +201,9 @@ group("tests") {
   testonly = true
   deps = [
     "allocator/test:minfs-allocator-tests",
+    "test:minfs-fs-tests",
     "test:minfs-fuzzers",
-    "test:minfs-tests",
+    "test:minfs-slow-fs-tests",
     "test/host:minfs_host($host_toolchain)",
     "//src/storage/testing:storage-isolated-devmgr",
   ]

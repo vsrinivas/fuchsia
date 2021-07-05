@@ -35,13 +35,13 @@
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
 
+#include "sdk/lib/syslog/cpp/macros.h"
 #include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/fs_test/blobfs_test.h"
 #include "src/storage/fs_test/json_filesystem.h"
-#include "src/storage/fs_test/minfs_test.h"
 #include "src/storage/testing/fvm.h"
 
 namespace fs_test {
@@ -407,22 +407,6 @@ zx::status<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystem
   return zx::ok(std::make_pair(std::move(ram_device), std::move(device_path)));
 }
 
-TestFilesystemOptions TestFilesystemOptions::DefaultMinfs() {
-  return TestFilesystemOptions{.description = "MinfsWithFvm",
-                               .use_fvm = true,
-                               .device_block_size = 512,
-                               .device_block_count = 131'072,
-                               .fvm_slice_size = 32'768,
-                               .filesystem = &MinfsFilesystem::SharedInstance()};
-}
-
-TestFilesystemOptions TestFilesystemOptions::MinfsWithoutFvm() {
-  TestFilesystemOptions minfs_with_no_fvm = TestFilesystemOptions::DefaultMinfs();
-  minfs_with_no_fvm.description = "MinfsWithoutFvm";
-  minfs_with_no_fvm.use_fvm = false;
-  return minfs_with_no_fvm;
-}
-
 TestFilesystemOptions TestFilesystemOptions::DefaultMemfs() {
   return TestFilesystemOptions{.description = "Memfs",
                                .filesystem = &MemfsFilesystem::SharedInstance()};
@@ -458,11 +442,6 @@ std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options
   return out << options.description;
 }
 
-std::vector<TestFilesystemOptions> AllTestMinfs() {
-  return std::vector<TestFilesystemOptions>{TestFilesystemOptions::DefaultMinfs(),
-                                            TestFilesystemOptions::MinfsWithoutFvm()};
-}
-
 std::vector<TestFilesystemOptions> AllTestFilesystems() {
   static const std::vector<TestFilesystemOptions>* options = [] {
     const char kConfigFile[] = "/pkg/config/config.json";
@@ -471,21 +450,34 @@ std::vector<TestFilesystemOptions> AllTestFilesystems() {
       json_parser::JSONParser parser;
       auto config = parser.ParseFromFile(std::string(kConfigFile));
       std::string name = config["name"].GetString();
-      name[0] = toupper(name[0]);
-      return new std::vector<TestFilesystemOptions>{TestFilesystemOptions{
-          .description = name,
-          .use_fvm = false,
-          .device_block_size = 512,
-          .device_block_count = 131'072,
-          .filesystem =
-              JsonFilesystem::NewFilesystem(config).value().release(),  // Deliberate leak.
-      }};
+
+      auto filesystem = JsonFilesystem::NewFilesystem(config).value();
+      auto options = new std::vector<TestFilesystemOptions>;
+      auto iter = config.FindMember("options");
+      if (iter == config.MemberEnd()) {
+        name[0] = toupper(name[0]);
+        options->push_back(TestFilesystemOptions{.description = name,
+                                                 .use_fvm = false,
+                                                 .device_block_size = 512,
+                                                 .device_block_count = 131'072,
+                                                 .filesystem = filesystem.get()});
+      } else {
+        for (size_t i = 0; i < iter->value.Size(); ++i) {
+          const auto& opt = iter->value[i];
+          options->push_back(TestFilesystemOptions{.description = opt["description"].GetString(),
+                                                   .use_fvm = opt["use_fvm"].GetBool(),
+                                                   .device_block_size = 512,
+                                                   .device_block_count = 131'072,
+                                                   .fvm_slice_size = 32'768,
+                                                   .filesystem = filesystem.get()});
+        }
+      }
+      filesystem.release();  // Deliberate leak.
+      return options;
     } else {
       // Note: blobfs is intentionally absent, since it is not intended to run as part of the
       // fs_test suite.
       return new std::vector<TestFilesystemOptions>{
-          TestFilesystemOptions::DefaultMinfs(),
-          TestFilesystemOptions::MinfsWithoutFvm(),
           TestFilesystemOptions::DefaultMemfs(),
           TestFilesystemOptions::DefaultFatfs(),
       };
@@ -493,6 +485,16 @@ std::vector<TestFilesystemOptions> AllTestFilesystems() {
   }();
 
   return *options;
+}
+
+TestFilesystemOptions OptionsWithDescription(std::string_view description) {
+  for (const auto& options : AllTestFilesystems()) {
+    if (options.description == description) {
+      return options;
+    }
+  }
+  FX_LOGS(FATAL) << "No test options with description: " << description;
+  abort();
 }
 
 std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
@@ -516,60 +518,6 @@ zx::status<> FilesystemInstance::Unmount(const std::string& mount_path) {
     return status;
   }
   return FsUnbind(mount_path);
-}
-
-// -- Minfs --
-
-class MinfsInstance : public FilesystemInstance {
- public:
-  MinfsInstance(RamDevice device, std::string device_path)
-      : device_(std::move(device)), device_path_(std::move(device_path)) {}
-
-  virtual zx::status<> Format(const TestFilesystemOptions& options) override {
-    return FsFormat(device_path_, DISK_FORMAT_MINFS, default_mkfs_options);
-  }
-
-  zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) override {
-    return FsMount(device_path_, mount_path, DISK_FORMAT_MINFS, options);
-  }
-
-  zx::status<> Fsck() override {
-    fsck_options_t options{
-        .verbose = false,
-        .never_modify = true,
-        .always_modify = false,
-        .force = true,
-    };
-    return zx::make_status(
-        fsck(device_path_.c_str(), DISK_FORMAT_MINFS, &options, launch_stdio_sync));
-  }
-
-  zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
-
-  storage::RamDisk* GetRamDisk() override { return std::get_if<storage::RamDisk>(&device_); }
-
-  ramdevice_client::RamNand* GetRamNand() override {
-    return std::get_if<ramdevice_client::RamNand>(&device_);
-  }
-
- private:
-  RamDevice device_;
-  std::string device_path_;
-};
-
-std::unique_ptr<FilesystemInstance> MinfsFilesystem::Create(RamDevice device,
-                                                            std::string device_path) const {
-  return std::make_unique<MinfsInstance>(std::move(device), std::move(device_path));
-}
-
-zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Open(
-    const TestFilesystemOptions& options) const {
-  auto result = OpenRamDevice(options);
-  if (result.is_error()) {
-    return result.take_error();
-  }
-  auto [ram_nand, device_path] = std::move(result).value();
-  return zx::ok(std::make_unique<MinfsInstance>(std::move(ram_nand), std::move(device_path)));
 }
 
 // -- Memfs --

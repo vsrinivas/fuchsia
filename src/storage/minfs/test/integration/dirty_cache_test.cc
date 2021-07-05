@@ -23,7 +23,6 @@
 
 #include "src/storage/fs_test/fs_test.h"
 #include "src/storage/fs_test/fs_test_fixture.h"
-#include "src/storage/fs_test/minfs_test.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_private.h"
 
@@ -280,6 +279,7 @@ TEST_P(DirtyCacheTest, FewCleanFewDirtyFiles) {
 }
 
 }  // namespace
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, DirtyCacheTest, testing::ValuesIn(fs_test::AllTestMinfs()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, DirtyCacheTest,
+                         testing::ValuesIn(fs_test::AllTestFilesystems()),
                          testing::PrintToStringParamName());
 }  // namespace minfs

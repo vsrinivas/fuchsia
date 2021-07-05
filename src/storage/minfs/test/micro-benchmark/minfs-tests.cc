@@ -50,7 +50,7 @@ class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
  public:
   static fs_test::TestFilesystemOptions GetOptionsFromProperties(
       const MinfsProperties& properties) {
-    fs_test::TestFilesystemOptions options = fs_test::TestFilesystemOptions::MinfsWithoutFvm();
+    fs_test::TestFilesystemOptions options = fs_test::OptionsWithDescription("MinfsWithoutFvm");
     options.device_block_size = properties.DeviceSizes().block_size;
     options.device_block_count = properties.DeviceSizes().block_count;
     return options;

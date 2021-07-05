@@ -27,7 +27,6 @@
 #include "src/storage/extractor/cpp/extractor.h"
 #include "src/storage/fs_test/fs_test.h"
 #include "src/storage/fs_test/fs_test_fixture.h"
-#include "src/storage/fs_test/minfs_test.h"
 #include "src/storage/minfs/format.h"
 
 namespace extractor {
@@ -299,7 +298,7 @@ TEST_P(MinfsExtractionTest, DumpDirectoryWithNoPii) {
 TEST_P(MinfsExtractionTest, DumpDirectoryWithPii) { DirectoryTestRunner(this, /*dump_pii=*/true); }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MinfsExtractionTest,
-                         testing::ValuesIn(fs_test::AllTestMinfs()),
+                         testing::ValuesIn(fs_test::AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

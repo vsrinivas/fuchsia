@@ -17,9 +17,14 @@ class JsonFilesystem : public FilesystemImplWithDefaultMake<JsonFilesystem> {
   static zx::status<std::unique_ptr<JsonFilesystem>> NewFilesystem(
       const rapidjson::Document& config);
 
-  JsonFilesystem(Traits traits, disk_format_t format)
-      : traits_(std::move(traits)), format_(format) {}
+  JsonFilesystem(Traits traits, disk_format_t format, bool use_directory_admin_to_unmount)
+      : traits_(std::move(traits)),
+        format_(format),
+        use_directory_admin_to_unmount_(use_directory_admin_to_unmount) {}
   virtual ~JsonFilesystem() = default;
+
+  disk_format_t format() const { return format_; }
+  bool use_directory_admin_to_unmount() const { return use_directory_admin_to_unmount_; }
 
   const Traits& GetTraits() const override { return traits_; }
 
@@ -30,8 +35,9 @@ class JsonFilesystem : public FilesystemImplWithDefaultMake<JsonFilesystem> {
       const TestFilesystemOptions& options) const override;
 
  private:
-  Traits traits_;
-  disk_format_t format_;
+  const Traits traits_;
+  const disk_format_t format_;
+  const bool use_directory_admin_to_unmount_ = false;
 };
 
 }  // namespace fs_test

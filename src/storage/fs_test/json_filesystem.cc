@@ -30,35 +30,42 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
           .in_memory = false,
           .is_case_sensitive = true,
           .supports_sparse_files = true,
-          .supports_fsck_after_every_transaction = false,
+          .supports_fsck_after_every_transaction =
+              GetBoolOrDefault(config, "supports_fsck_after_every_transaction", false),
+          .has_directory_size_limit = GetBoolOrDefault(config, "has_directory_size_limit", false),
       },
-      format));
+      format, GetBoolOrDefault(config, "use_directory_admin_to_unmount", false)));
 }
 
 class JsonInstance : public FilesystemInstance {
  public:
-  JsonInstance(disk_format_t format, RamDevice device, std::string device_path)
-      : format_(format), device_(std::move(device)), device_path_(std::move(device_path)) {}
+  JsonInstance(const JsonFilesystem* filesystem, RamDevice device, std::string device_path)
+      : filesystem_(*filesystem),
+        device_(std::move(device)),
+        device_path_(std::move(device_path)) {}
 
   virtual zx::status<> Format(const TestFilesystemOptions& options) override {
-    return FsFormat(device_path_, format_, default_mkfs_options);
+    return FsFormat(device_path_, filesystem_.format(), default_mkfs_options);
   }
 
   zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) override {
-    // For now, don't support admin.  TODO(csuter): figure out why this doesn't work. fs-management
-    // seems to not support the new layout.
     mount_options_t new_options = options;
-    new_options.admin = false;
-    return FsMount(device_path_, mount_path, format_, new_options, &outgoing_directory_);
+    new_options.admin = filesystem_.use_directory_admin_to_unmount();
+    return FsMount(device_path_, mount_path, filesystem_.format(), new_options,
+                   &outgoing_directory_);
   }
 
   zx::status<> Unmount(const std::string& mount_path) override {
-    zx::status<> status = FsAdminUnmount(mount_path, outgoing_directory_);
-    if (status.is_error()) {
-      return status;
+    if (filesystem_.use_directory_admin_to_unmount()) {
+      return FilesystemInstance::Unmount(mount_path);
+    } else {
+      zx::status<> status = FsAdminUnmount(mount_path, outgoing_directory_);
+      if (status.is_error()) {
+        return status;
+      }
+      outgoing_directory_.reset();
+      return zx::ok();
     }
-    outgoing_directory_.reset();
-    return zx::ok();
   }
 
   zx::status<> Fsck() override {
@@ -68,7 +75,8 @@ class JsonInstance : public FilesystemInstance {
         .always_modify = false,
         .force = true,
     };
-    return zx::make_status(fsck(device_path_.c_str(), format_, &options, launch_stdio_sync));
+    return zx::make_status(
+        fsck(device_path_.c_str(), filesystem_.format(), &options, launch_stdio_sync));
   }
 
   zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
@@ -80,7 +88,7 @@ class JsonInstance : public FilesystemInstance {
   }
 
  private:
-  disk_format_t format_;
+  const JsonFilesystem& filesystem_;
   RamDevice device_;
   std::string device_path_;
   zx::channel outgoing_directory_;
@@ -88,7 +96,7 @@ class JsonInstance : public FilesystemInstance {
 
 std::unique_ptr<FilesystemInstance> JsonFilesystem::Create(RamDevice device,
                                                            std::string device_path) const {
-  return std::make_unique<JsonInstance>(format_, std::move(device), std::move(device_path));
+  return std::make_unique<JsonInstance>(this, std::move(device), std::move(device_path));
 }
 
 zx::status<std::unique_ptr<FilesystemInstance>> JsonFilesystem::Open(
@@ -99,7 +107,7 @@ zx::status<std::unique_ptr<FilesystemInstance>> JsonFilesystem::Open(
   }
   auto [ram_device, device_path] = std::move(result).value();
   return zx::ok(
-      std::make_unique<JsonInstance>(format_, std::move(ram_device), std::move(device_path)));
+      std::make_unique<JsonInstance>(this, std::move(ram_device), std::move(device_path)));
 }
 
 }  // namespace fs_test

@@ -16,7 +16,7 @@ namespace {
 
 class PowerTest : public fs_test::BaseFilesystemTest {
  public:
-  PowerTest() : BaseFilesystemTest(fs_test::TestFilesystemOptions::DefaultMinfs()) {}
+  PowerTest() : BaseFilesystemTest(fs_test::OptionsWithDescription("MinfsWithFvm")) {}
 };
 
 TEST_F(PowerTest, Basics) {

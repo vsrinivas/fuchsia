@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
+import("//src/storage/fs_test/suite.gni")
 
 group("tests") {
   testonly = true
@@ -39,6 +40,7 @@ fuchsia_component("disk-extractor-unit-test-component") {
   deps = [
     ":disk_extractor_unit_test",
     "//src/storage/bin/minfs",
+    "//src/storage/minfs/test:minfs_fs_test_config",
   ]
 }
 

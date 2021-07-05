@@ -7,7 +7,7 @@
 #include <fbl/unique_fd.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
-#include "src/storage/fs_test/minfs_test.h"
+#include "src/storage/minfs/format.h"
 
 namespace minfs {
 namespace {
@@ -48,7 +48,8 @@ TEST_P(SuperblockTest, RepairCorruptSuperblock) {
   ASSERT_EQ(kMinfsMagic0, info.magic0);
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, SuperblockTest, testing::ValuesIn(fs_test::AllTestMinfs()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, SuperblockTest,
+                         testing::ValuesIn(fs_test::AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 enum class Comparison {
@@ -84,7 +85,7 @@ void FsyncFilesystem(const std::string& mount_path) {
 
 class SuperblockTestNoFvm : public fs_test::BaseFilesystemTest {
  public:
-  SuperblockTestNoFvm() : BaseFilesystemTest(fs_test::TestFilesystemOptions::MinfsWithoutFvm()) {}
+  SuperblockTestNoFvm() : BaseFilesystemTest(fs_test::OptionsWithDescription("MinfsWithoutFvm")) {}
 };
 
 // Tests alloc_*_counts write frequency difference for backup superblock.

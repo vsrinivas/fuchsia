@@ -7,6 +7,11 @@
             "description": "Path to the filesystem binary",
             "type": "string"
         },
+        "has_directory_size_limit": {
+            "default": false,
+            "description": "True if the filesystem has a directory size limit (unrelated to available disk space)",
+            "type": "boolean"
+        },
         "max_file_size": {
             "description": "The maximum file size supported",
             "exclusiveMinimum": 0,
@@ -17,6 +22,33 @@
             "description": "Name of the filesystem",
             "minLength": 1,
             "type": "string"
+        },
+        "options": {
+            "description": "A list of test options to be applied to the filesystem",
+            "items": {
+                "properties": {
+                    "description": {
+                        "description": "Name given to this set of options",
+                        "type": "string"
+                    },
+                    "use_fvm": {
+                        "description": "True if FVM should be used",
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "description",
+                    "use_fvm"
+                ],
+                "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+        },
+        "supports_fsck_after_every_transaction": {
+            "default": false,
+            "description": "True if the filesystem supports the fsck_after_every_transaction mount option",
+            "type": "boolean"
         },
         "supports_hard_links": {
             "default": false,
@@ -37,6 +69,11 @@
             "description": "Timestamp granularity in nanoseconds",
             "exclusiveMinimum": 0,
             "type": "integer"
+        },
+        "use_directory_admin_to_unmount": {
+            "default": false,
+            "description": "True if the DirectoryAdmin protocol (legacy) should be used to unmount",
+            "type": "boolean"
         }
     },
     "required": [

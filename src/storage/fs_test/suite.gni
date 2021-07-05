@@ -8,36 +8,53 @@ import("//build/json/validate_json.gni")
 import("//build/test.gni")
 import("//src/storage/testing/isolated_devmgr.gni")
 
+# Generates config that will work with the filesystem test framework.
+template("fs_test_config") {
+  name = target_name
+  generated_resource("${name}_fs_test_config") {
+    contents = {
+      forward_variables_from(invoker, "*")
+    }
+    if (!defined(contents.name)) {
+      contents.name = name
+    }
+    if (!defined(contents.binary_path)) {
+      contents.binary_path = "/pkg/bin/${name}"
+    }
+    output_conversion = "json"
+    outputs = [ "config/config.json" ]
+  }
+
+  config_outputs = get_target_outputs(":${name}_fs_test_config")
+
+  validate_json("${name}_validate_fs_test_config") {
+    data = config_outputs[0]
+    schema = "//src/storage/fs_test/fs_test.schema.json"
+    deps = [ ":${name}_fs_test_config" ]
+  }
+}
+
 # Instantiates a filesystem test suite.
 #
-#   config (required)
+#   config (optional)
 #     Configures the test suite.  See //src/storage/fs_test/fs_test.schema.json for the schema.  The
-#     name and binary_path properties will be derived from the target name if not specified.
+#     name and binary_path properties will be derived from the target name if not specified.  If not
+#     specified, the caller should ensure suitable config is included via deps.
 #
 #   deps (required)
-#     This should include the filesystem binary.
+#     This should include the filesystem binary and the config file if not specified above.
+#
+#   omit_components (optional)
+#     Omit test components from the package.
+#
+#   extra_components (optional)
+#     Additional test components to be included in the package.
 template("fs_test_suite") {
   suite_name = target_name
 
   if (defined(invoker.config)) {
-    generated_resource("${suite_name}_config") {
-      contents = invoker.config
-      if (!defined(contents.name)) {
-        contents.name = suite_name
-      }
-      if (!defined(contents.binary_path)) {
-        contents.binary_path = "/pkg/bin/${suite_name}"
-      }
-      output_conversion = "json"
-      outputs = [ "config/config.json" ]
-    }
-
-    config_outputs = get_target_outputs(":${suite_name}_config")
-
-    validate_json("${suite_name}_validate_config") {
-      data = config_outputs[0]
-      schema = "//src/storage/fs_test/fs_test.schema.json"
-      deps = [ ":${suite_name}_config" ]
+    fs_test_config(suite_name) {
+      forward_variables_from(invoker.config, "*")
     }
   }
 
@@ -177,8 +194,8 @@ template("fs_test_suite") {
     }
     if (defined(invoker.config)) {
       deps += [
-        ":${suite_name}_config",
-        ":${suite_name}_validate_config",
+        ":${suite_name}_fs_test_config",
+        ":${suite_name}_validate_fs_test_config",
       ]
     }
     test_specs = {
@@ -218,8 +235,84 @@ template("fs_test_suite") {
       ":${suite_name}-unlink-tests",
       ":${suite_name}-watcher-tests",
     ]
+
     if (defined(invoker.omit_components)) {
       test_components -= invoker.omit_components
+    }
+
+    if (defined(invoker.extra_components)) {
+      test_components += invoker.extra_components
+    }
+  }
+}
+
+# Instantiates filesystem tests that take longer to run.  This takes the same arguments as
+# fs_test_suite.
+template("slow_fs_test_suite") {
+  suite_name = target_name
+
+  if (defined(invoker.config)) {
+    fs_test_config(suite_name) {
+      forward_variables_from(invoker.config, "*")
+    }
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-directory-large-tests") {
+    deps = [ "//src/storage/fs_test:directory_large_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-max-file-tests") {
+    deps = [ "//src/storage/fs_test:max_file_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-sparse-large-tests") {
+    deps = [ "//src/storage/fs_test:sparse_large_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-truncate-large-tests") {
+    deps = [ "//src/storage/fs_test:truncate_large_tests" ]
+  }
+
+  fuchsia_test_package("${suite_name}-slow-fs-tests") {
+    deps = []
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+    if (defined(invoker.config)) {
+      deps += [
+        ":${suite_name}_fs_test_config",
+        ":${suite_name}_validate_fs_test_config",
+      ]
+    }
+    test_specs = {
+      environments = [
+        {
+          dimensions = emu_env.dimensions
+          tags = [ "slow" ]
+        },
+      ]
+      log_settings = {
+        max_severity = "ERROR"
+      }
+    }
+
+    test_components = [
+      ":${suite_name}-directory-large-tests",
+      ":${suite_name}-max-file-tests",
+      ":${suite_name}-sparse-large-tests",
+      ":${suite_name}-truncate-large-tests",
+    ]
+
+    if (defined(invoker.omit_components)) {
+      test_components -= invoker.omit_components
+    }
+
+    if (defined(invoker.extra_components)) {
+      test_components += invoker.extra_components
     }
   }
 }

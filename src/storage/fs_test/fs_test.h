@@ -37,8 +37,6 @@ class Filesystem;
 using RamDevice = std::variant<storage::RamDisk, ramdevice_client::RamNand>;
 
 struct TestFilesystemOptions {
-  static TestFilesystemOptions DefaultMinfs();
-  static TestFilesystemOptions MinfsWithoutFvm();
   static TestFilesystemOptions DefaultMemfs();
   static TestFilesystemOptions DefaultFatfs();
   static TestFilesystemOptions DefaultBlobfs();
@@ -85,6 +83,7 @@ std::vector<TestFilesystemOptions> AllTestFilesystems();
 // Provides the ability to map and filter all test file systems, using the supplied function.
 std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
     std::function<std::optional<TestFilesystemOptions>(const TestFilesystemOptions&)>);
+TestFilesystemOptions OptionsWithDescription(std::string_view description);
 
 // Returns device and device path.
 zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(const TestFilesystemOptions& options);
@@ -129,6 +128,7 @@ class Filesystem {
     bool supports_fsck_after_every_transaction = false;
     bool has_directory_size_limit = false;
     bool is_journaled = true;
+    bool supports_fs_query = true;
   };
 
   virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(

@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
+import("//src/storage/fs_test/suite.gni")
 import("//src/storage/testing/isolated_devmgr.gni")
 
 test("minfs_unit") {
@@ -202,7 +203,7 @@ test("fs_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("minfs-fs-tests") {
+storage_isolated_devmgr_unittest_v2_component("minfs-integration-fs-tests") {
   deps = [ ":fs_tests" ]
 }
 
@@ -243,21 +244,46 @@ storage_isolated_devmgr_unittest_v2_component("minfs-micro-benchmark-test") {
   deps = [ ":minfs_micro_benchmark" ]
 }
 
-fuchsia_test_package("minfs-tests") {
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
+fs_test_config("minfs") {
+  timestamp_granularity = 1
+  supports_hard_links = true
+  supports_resize = true
+  max_file_size = 4294950912
+  use_directory_admin_to_unmount = true
+  has_directory_size_limit = true
+  supports_fsck_after_every_transaction = true
+  options = [
+    {
+      description = "MinfsWithFvm"
+      use_fvm = true
+    },
+    {
+      description = "MinfsWithoutFvm"
+      use_fvm = false
+    },
+  ]
+}
 
-  test_components = [
+fs_test_suite("minfs") {
+  deps = [
+    ":minfs_fs_test_config",
+    ":minfs_validate_fs_test_config",
+    "//src/storage/bin/minfs",
+  ]
+  extra_components = [
     ":minfs-dirty-cache-integration-test",
-    ":minfs-fs-tests",
+    ":minfs-integration-fs-tests",
     ":minfs-integration-test",
     ":minfs-micro-benchmark-test",
     ":minfs-power-test",
     ":minfs-unit-test",
   ]
+}
 
-  deps = [ "//src/storage/bin/minfs" ]
+slow_fs_test_suite("minfs") {
+  deps = [
+    ":minfs_fs_test_config",
+    ":minfs_validate_fs_test_config",
+    "//src/storage/bin/minfs",
+  ]
 }
