@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
   Uart uart(guest_controller.SerialSocket());
   status = uart.Init(&guest);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create UART at " << status;
+    FX_PLOGS(ERROR, status) << "Failed to create UART";
     return status;
   }
   platform_devices.push_back(&uart);
@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
   status = interrupt_controller.Init();
 #endif
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create interrupt controller " << status;
+    FX_PLOGS(ERROR, status) << "Failed to create interrupt controller";
     return status;
   }
   platform_devices.push_back(&interrupt_controller);
@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
   Pl031 pl031;
   status = pl031.Init(&guest);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create PL031 RTC " << status;
+    FX_PLOGS(ERROR, status) << "Failed to create PL031 RTC";
     return status;
   }
   platform_devices.push_back(&pl031);
@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
   IoPort io_port;
   status = io_port.Init(&guest);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create IO ports " << status;
+    FX_PLOGS(ERROR, status) << "Failed to create IO ports";
     return status;
   }
 #endif
@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
   PciBus bus(&guest, &interrupt_controller);
   status = bus.Init(device_loop.dispatcher());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create PCI bus " << status;
+    FX_PLOGS(ERROR, status) << "Failed to create PCI bus";
     return status;
   }
   platform_devices.push_back(&bus);
@@ -175,11 +175,12 @@ int main(int argc, char** argv) {
   if (cfg.virtio_balloon()) {
     status = bus.Connect(balloon.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to connect balloon device";
       return status;
     }
     status = balloon.Start(guest.object(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to start balloon device " << status;
+      FX_PLOGS(ERROR, status) << "Failed to start balloon device";
       return status;
     }
   }
@@ -190,12 +191,13 @@ int main(int argc, char** argv) {
     auto block = std::make_unique<VirtioBlock>(guest.phys_mem(), block_device.mode);
     status = bus.Connect(block->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to connect block device";
       return status;
     }
     status = block->Start(guest.object(), std::move(block_device.id), block_device.format,
                           std::move(block_device.file), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to start block device " << status;
+      FX_PLOGS(ERROR, status) << "Failed to start block device";
       return status;
     }
     block_devices.push_back(std::move(block));
@@ -206,12 +208,13 @@ int main(int argc, char** argv) {
   if (cfg.virtio_console()) {
     status = bus.Connect(console.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to connect console device";
       return status;
     }
     status = console.Start(guest.object(), guest_controller.SerialSocket(), launcher.get(),
                            device_loop.dispatcher());
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to start console device " << status;
+      FX_PLOGS(ERROR, status) << "Failed to start console device";
       return status;
     }
   }
@@ -223,10 +226,12 @@ int main(int argc, char** argv) {
     // Setup keyboard device.
     status = bus.Connect(input_keyboard.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to connect keyboard device";
       return status;
     }
     status = input_keyboard.Start(guest.object(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to start keyboard device";
       return status;
     }
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::KeyboardListener> keyboard_listener;
@@ -235,10 +240,12 @@ int main(int argc, char** argv) {
     // Setup pointer device.
     status = bus.Connect(input_pointer.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to connect mouse device";
       return status;
     }
     status = input_pointer.Start(guest.object(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to start mouse device";
       return status;
     }
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::PointerListener> pointer_listener;
@@ -247,11 +254,13 @@ int main(int argc, char** argv) {
     // Setup GPU device.
     status = bus.Connect(gpu.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to connect GPU device";
       return status;
     }
     status = gpu.Start(guest.object(), std::move(keyboard_listener), std::move(pointer_listener),
                        launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to start GPU device";
       return status;
     }
   }
@@ -261,11 +270,12 @@ int main(int argc, char** argv) {
   if (cfg.virtio_rng()) {
     status = bus.Connect(rng.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to connect RNG device";
       return status;
     }
     status = rng.Start(guest.object(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to start RNG device " << status;
+      FX_PLOGS(ERROR, status) << "Failed to start RNG device";
       return status;
     }
   }
@@ -277,11 +287,12 @@ int main(int argc, char** argv) {
   if (cfg.virtio_vsock()) {
     status = bus.Connect(vsock.pci_device(), vsock_loop.dispatcher(), false);
     if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to connect Vsock device";
       return status;
     }
     status = vsock_loop.StartThread("vsock-handler");
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to create vsock async worker " << status;
+      FX_PLOGS(ERROR, status) << "Failed to create vsock async worker";
       return status;
     }
   }
@@ -382,12 +393,13 @@ int main(int argc, char** argv) {
     auto net = std::make_unique<VirtioNet>(guest.phys_mem());
     status = bus.Connect(net->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to connect Ethernet device";
       return status;
     }
     status = net->Start(guest.object(), net_device.mac_address, net_device.enable_bridge,
                         launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
-      FX_LOGS(INFO) << "Could not open Ethernet device " << status;
+      FX_PLOGS(ERROR, status) << "Could not open Ethernet device";
       return status;
     }
     net_devices.push_back(std::move(net));
@@ -396,7 +408,7 @@ int main(int argc, char** argv) {
 #if __x86_64__
   status = create_page_table(guest.phys_mem());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create page table " << status;
+    FX_PLOGS(ERROR, status) << "Failed to create page table";
     return status;
   }
 
@@ -408,7 +420,7 @@ int main(int argc, char** argv) {
   };
   status = create_acpi_table(acpi_cfg, guest.phys_mem());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create ACPI table " << status;
+    FX_PLOGS(ERROR, status) << "Failed to create ACPI table";
     return status;
   }
 #endif  // __x86_64__
@@ -437,30 +449,30 @@ int main(int argc, char** argv) {
       return ZX_ERR_INVALID_ARGS;
   }
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to load kernel " << status;
+    FX_PLOGS(ERROR, status) << "Failed to load kernel";
     return status;
   }
 
   // Setup primary VCPU.
   status = guest.StartVcpu(0 /* id */, entry, boot_ptr, &loop);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to start VCPU-0 " << status;
+    FX_PLOGS(ERROR, status) << "Failed to start VCPU-0";
     loop.Quit();
   }
 
   status = guest_controller.AddPublicService(context.get());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to add public service " << status;
+    FX_PLOGS(ERROR, status) << "Failed to add guest controller public service";
     loop.Quit();
   }
   status = balloon.AddPublicService(context.get());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to add public service " << status;
+    FX_PLOGS(ERROR, status) << "Failed to add balloon public service";
     loop.Quit();
   }
   status = gpu.AddPublicService(context.get());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to add public service " << status;
+    FX_PLOGS(ERROR, status) << "Failed to add GPU public service";
     loop.Quit();
   }
 
@@ -468,7 +480,7 @@ int main(int argc, char** argv) {
   // devices.
   status = device_loop.StartThread("device-worker");
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create async worker " << status;
+    FX_PLOGS(ERROR, status) << "Failed to create async worker";
     return status;
   }
 
