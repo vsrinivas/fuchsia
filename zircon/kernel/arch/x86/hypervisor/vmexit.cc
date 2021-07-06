@@ -58,26 +58,22 @@ static_assert(sizeof(kHypVendorId) - 1 == kHypVendorIdLength, "");
 
 static constexpr uint64_t kKvmFeatureNoIoDelay = 1u << 1;
 
-static void dump_guest_state(const AutoVmcs& vmcs, const GuestState& guest_state,
-                             const ExitInfo& exit_info, zx_status_t status) {
-  vmcs.Printf("VM exit handler for %s (%u) returned %d\n", exit_reason_name(exit_info.exit_reason),
-              static_cast<uint32_t>(exit_info.exit_reason), status);
+static void dump_guest_state(const GuestState& guest_state, const ExitInfo& exit_info) {
+  dprintf(INFO, " RAX: %#18lx  RCX: %#18lx  RDX: %#18lx  RBX: %#18lx\n", guest_state.rax,
+          guest_state.rcx, guest_state.rdx, guest_state.rbx);
+  dprintf(INFO, " RBP: %#18lx  RSI: %#18lx  RDI: %#18lx\n", guest_state.rbp, guest_state.rsi,
+          guest_state.rdi);
+  dprintf(INFO, "  R8: %#18lx   R9: %#18lx  R10: %#18lx  R11: %#18lx\n", guest_state.r8,
+          guest_state.r9, guest_state.r10, guest_state.r11);
+  dprintf(INFO, " R12: %#18lx  R13: %#18lx  R14: %#18lx  R15: %#18lx\n", guest_state.r12,
+          guest_state.r13, guest_state.r14, guest_state.r15);
+  dprintf(INFO, " RIP: %#18lx  CR2: %#18lx XCR0: %#18lx\n", exit_info.guest_rip, guest_state.cr2,
+          guest_state.xcr0);
 
-  vmcs.Printf(" RAX: %#18lx  RCX: %#18lx  RDX: %#18lx  RBX: %#18lx\n", guest_state.rax,
-              guest_state.rcx, guest_state.rdx, guest_state.rbx);
-  vmcs.Printf(" RBP: %#18lx  RSI: %#18lx  RDI: %#18lx\n", guest_state.rbp, guest_state.rsi,
-              guest_state.rdi);
-  vmcs.Printf("  R8: %#18lx   R9: %#18lx  R10: %#18lx  R11: %#18lx\n", guest_state.r8,
-              guest_state.r9, guest_state.r10, guest_state.r11);
-  vmcs.Printf(" R12: %#18lx  R13: %#18lx  R14: %#18lx  R15: %#18lx\n", guest_state.r12,
-              guest_state.r13, guest_state.r14, guest_state.r15);
-  vmcs.Printf(" RIP: %#18lx  CR2: %#18lx XCR0: %#18lx\n", exit_info.guest_rip, guest_state.cr2,
-              guest_state.xcr0);
-
-  vmcs.Printf("entry failure: %d\n", exit_info.entry_failure);
-  vmcs.Printf("exit qualification: %#lx\n", exit_info.exit_qualification);
-  vmcs.Printf("exit instruction length: %#x\n", exit_info.exit_instruction_length);
-  vmcs.Printf("guest physical address: %#lx\n", exit_info.guest_physical_address);
+  dprintf(INFO, "entry failure: %d\n", exit_info.entry_failure);
+  dprintf(INFO, "exit qualification: %#lx\n", exit_info.exit_qualification);
+  dprintf(INFO, "exit instruction length: %#x\n", exit_info.exit_instruction_length);
+  dprintf(INFO, "guest physical address: %#lx\n", exit_info.guest_physical_address);
 }
 
 extern "C" void x86_call_external_interrupt_handler(uint64_t vector);
@@ -514,14 +510,14 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
                                          zx_port_packet_t* packet) {
   IoInfo io_info(exit_info.exit_qualification);
   if (io_info.string || io_info.repeat) {
-    vmcs->Printf("Unsupported IO instruction\n");
+    dprintf(INFO, "Unsupported IO instruction\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   hypervisor::Trap* trap;
   zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_IO, io_info.port, &trap);
   if (status != ZX_OK) {
-    vmcs->Printf("Unhandled IO port %s %#x\n", io_info.input ? "in" : "out", io_info.port);
+    dprintf(INFO, "Unhandled IO port %s %#x\n", io_info.input ? "in" : "out", io_info.port);
     return status;
   }
   next_rip(exit_info, vmcs);
@@ -598,7 +594,7 @@ static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     default:
       // Issue a general protection fault for write only and unimplemented
       // registers.
-      vmcs->Printf("Unhandled x2APIC rdmsr %#lx\n", guest_state->rcx);
+      dprintf(INFO, "Unhandled x2APIC rdmsr %#lx\n", guest_state->rcx);
       local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
@@ -662,7 +658,7 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
     case kX2ApicMsrBase ... kX2ApicMsrMax:
       return handle_apic_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
     default:
-      vmcs->Printf("Unhandled rdmsr %#lx\n", guest_state->rcx);
+      dprintf(INFO, "Unhandled rdmsr %#lx\n", guest_state->rcx);
       local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
@@ -724,7 +720,7 @@ static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs,
   InterruptCommandRegister icr(static_cast<uint32_t>(guest_state.rdx),
                                static_cast<uint32_t>(guest_state.rax));
   if (icr.destination_mode == InterruptDestinationMode::LOGICAL) {
-    vmcs->Printf("Logical IPI destination mode is not supported\n");
+    dprintf(INFO, "Logical IPI destination mode is not supported\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
   switch (icr.delivery_mode) {
@@ -751,7 +747,7 @@ static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs,
       next_rip(exit_info, vmcs);
       return ZX_ERR_NEXT;
     default:
-      vmcs->Printf("Unsupported IPI delivery mode %#x\n", static_cast<uint8_t>(icr.delivery_mode));
+      dprintf(INFO, "Unsupported IPI delivery mode %#x\n", static_cast<uint8_t>(icr.delivery_mode));
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -817,7 +813,7 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     default:
       // Issue a general protection fault for read only and unimplemented
       // registers.
-      vmcs->Printf("Unhandled x2APIC wrmsr %#lx\n", guest_state.rcx);
+      dprintf(INFO, "Unhandled x2APIC wrmsr %#lx\n", guest_state.rcx);
       local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
@@ -901,7 +897,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case kKvmBootTime:
       return handle_kvm_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pv_clock, gpas);
     default:
-      vmcs->Printf("Unhandled wrmsr %#lx\n", guest_state.rcx);
+      dprintf(INFO, "Unhandled wrmsr %#lx\n", guest_state.rcx);
       local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
@@ -1067,7 +1063,7 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
 
   status = gpas->PageFault(guest_paddr);
   if (status != ZX_OK) {
-    vmcs->Printf("Unhandled EPT violation %#lx\n", exit_info.guest_physical_address);
+    dprintf(CRITICAL, "Unhandled EPT violation %#lx\n", exit_info.guest_physical_address);
   }
   return status;
 }
@@ -1126,13 +1122,13 @@ static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
   switch (info.type) {
     case VmCallType::CLOCK_PAIRING: {
       if (info.arg[1] != 0) {
-        vmcs->Printf("CLOCK_PAIRING hypercall doesn't support clock type %lu\n", info.arg[1]);
+        dprintf(INFO, "CLOCK_PAIRING hypercall doesn't support clock type %lu\n", info.arg[1]);
         guest_state->rax = VmCallStatus::NOT_SUPPORTED;
         break;
       }
       zx_status_t status = pv_clock_populate_offset(gpas, info.arg[0]);
       if (status != ZX_OK) {
-        vmcs->Printf("Populating lock offset failed with %d\n", status);
+        dprintf(INFO, "Populating lock offset failed with %d\n", status);
         guest_state->rax = VmCallStatus::FAULT;
         break;
       }
@@ -1140,9 +1136,8 @@ static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
       break;
     }
     default:
-      vmcs->Printf("Unknown hypercall %lu (arg0=%#lx, arg1=%#lx, arg2=%#lx, arg3=%#lx)\n",
-                   static_cast<uint64_t>(info.type), info.arg[0], info.arg[1], info.arg[2],
-                   info.arg[3]);
+      dprintf(INFO, "Unknown hypercall %lu (arg0=%#lx, arg1=%#lx, arg2=%#lx, arg3=%#lx)\n",
+              static_cast<uint64_t>(info.type), info.arg[0], info.arg[1], info.arg[2], info.arg[3]);
       guest_state->rax = VmCallStatus::UNKNOWN_HYPERCALL;
       break;
   }
@@ -1243,7 +1238,10 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
       break;
   }
   if (status != ZX_OK && status != ZX_ERR_NEXT && status != ZX_ERR_CANCELED) {
-    dump_guest_state(*vmcs, *guest_state, exit_info, status);
+    dprintf(CRITICAL, "VM exit handler for %s (%u) returned %d\n",
+            exit_reason_name(exit_info.exit_reason), static_cast<uint32_t>(exit_info.exit_reason),
+            status);
+    dump_guest_state(*guest_state, exit_info);
   }
   return status;
 }

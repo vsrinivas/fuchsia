@@ -120,19 +120,6 @@ void AutoVmcs::Invalidate() {
   }
 }
 
-void AutoVmcs::Printf(const char* msg, ...) const {
-  if (vmcs_address_ != 0) {
-    arch_set_blocking_disallowed(false);
-  }
-  va_list args;
-  va_start(args, msg);
-  vprintf(msg, args);
-  va_end(args);
-  if (vmcs_address_ != 0) {
-    arch_set_blocking_disallowed(true);
-  }
-}
-
 void AutoVmcs::InterruptWindowExiting(bool enable) {
   DEBUG_ASSERT(vmcs_address_ != 0);
   uint32_t controls = Read(VmcsField32::PROCBASED_CTLS);
@@ -227,15 +214,16 @@ zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
   uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
   uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(true_msr, 63, 32));
   if ((allowed_1 & set) != set) {
-    Printf("Failed to set VMCS controls %#x\n", static_cast<uint>(controls));
+    dprintf(INFO, "Failed to set VMCS controls %#x\n", static_cast<uint>(controls));
     return ZX_ERR_NOT_SUPPORTED;
   }
   if ((~allowed_0 & clear) != clear) {
-    Printf("Failed to clear VMCS controls %#x\n", static_cast<uint>(controls));
+    dprintf(INFO, "Failed to clear VMCS controls %#x\n", static_cast<uint>(controls));
     return ZX_ERR_NOT_SUPPORTED;
   }
   if ((set & clear) != 0) {
-    Printf("Failed to set and clear the same VMCS controls %#x\n", static_cast<uint>(controls));
+    dprintf(INFO, "Failed to set and clear the same VMCS controls %#x\n",
+            static_cast<uint>(controls));
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -947,7 +935,7 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
   };
 
   if (vector > X86_INT_VIRT && vector < X86_INT_PLATFORM_BASE) {
-    vmcs->Printf("Invalid interrupt vector: %u\n", vector);
+    dprintf(INFO, "Invalid interrupt vector: %u\n", vector);
     return ZX_ERR_NOT_SUPPORTED;
   } else if ((vector >= X86_INT_PLATFORM_BASE && !can_inject_external_int()) ||
              (vector == X86_INT_NMI && !can_inject_nmi())) {
@@ -1025,7 +1013,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     if (status != ZX_OK) {
       ktrace_vcpu_exit(VCPU_FAILURE, vmcs.Read(VmcsFieldXX::GUEST_RIP));
       uint64_t error = vmcs.Read(VmcsField32::INSTRUCTION_ERROR);
-      vmcs.Printf("VCPU resume failed: %#lx\n", error);
+      dprintf(INFO, "VCPU resume failed: %#lx\n", error);
     } else {
       vmx_state_.resume = true;
       status = vmexit_handler(&vmcs, &vmx_state_.guest_state, &local_apic_state_, &pv_clock_state_,
