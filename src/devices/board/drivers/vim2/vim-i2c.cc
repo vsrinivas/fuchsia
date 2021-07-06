@@ -8,7 +8,6 @@
 #include <lib/ddk/platform-defs.h>
 #include <limits.h>
 
-#include <ddk/metadata/i2c.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
 

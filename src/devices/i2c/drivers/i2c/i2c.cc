@@ -14,7 +14,6 @@
 
 #include <memory>
 
-#include <ddk/metadata/i2c.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/mutex.h>
 

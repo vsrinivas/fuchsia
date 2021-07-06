@@ -8,7 +8,6 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <ddk/metadata/i2c.h>
 #include <ddk/metadata/power.h>
 #include <soc/aml-common/aml-power.h>
 #include <soc/aml-t931/t931-gpio.h>

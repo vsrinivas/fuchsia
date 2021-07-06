@@ -11,7 +11,6 @@
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <ddk/metadata/i2c.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/mutex.h>
 

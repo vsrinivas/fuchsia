@@ -7,7 +7,6 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <ddk/metadata/i2c.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 

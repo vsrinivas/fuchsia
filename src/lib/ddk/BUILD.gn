@@ -68,7 +68,6 @@ sdk_static_library("ddk") {
 
 library_headers("ddk-metadata-headers") {
   headers = [
-    "lib/ddk/binding_priv.h",  # for i2c.h
     "ddk/metadata/bad-block.h",
     "ddk/metadata/buttons.h",
     "ddk/metadata/camera.h",
@@ -76,7 +75,6 @@ library_headers("ddk-metadata-headers") {
     "ddk/metadata/display.h",
     "ddk/metadata/gpio.h",
     "ddk/metadata/gpt.h",
-    "ddk/metadata/i2c.h",
     "ddk/metadata/init-step.h",
     "ddk/metadata/lights.h",
     "ddk/metadata/nand.h",

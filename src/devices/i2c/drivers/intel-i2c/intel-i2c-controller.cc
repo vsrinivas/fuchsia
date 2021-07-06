@@ -33,7 +33,6 @@
 #include <memory>
 #include <vector>
 
-#include <ddk/metadata/i2c.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 

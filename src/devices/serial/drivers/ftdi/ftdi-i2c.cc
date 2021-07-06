@@ -16,8 +16,6 @@
 
 #include <vector>
 
-#include <ddk/metadata/i2c.h>
-
 #include "ftdi.h"
 
 namespace ftdi_mpsse {
