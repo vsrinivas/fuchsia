@@ -227,6 +227,9 @@ fuchsia_test_package("virtualization_core_tests_pkg") {
   test_components = [ ":virtualization_core_tests_cmp" ]
   test_specs = {
     environments = guest_environments
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 
@@ -260,6 +263,9 @@ fuchsia_test_package("virtualization_block_tests_pkg") {
   test_components = [ ":virtualization_block_tests_cmp" ]
   test_specs = {
     environments = guest_environments
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 
@@ -293,6 +299,9 @@ fuchsia_test_package("virtualization_gpu_tests_pkg") {
   test_components = [ ":virtualization_gpu_tests_cmp" ]
   test_specs = {
     environments = guest_environments
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 
@@ -324,6 +333,9 @@ fuchsia_test_package("virtualization_input_tests_pkg") {
   test_components = [ ":virtualization_input_tests_cmp" ]
   test_specs = {
     environments = guest_environments
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 
@@ -357,6 +369,9 @@ fuchsia_test_package("virtualization_net_tests_pkg") {
   test_components = [ ":virtualization_net_tests_cmp" ]
   test_specs = {
     environments = guest_environments
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 
@@ -389,6 +404,9 @@ fuchsia_test_package("virtualization_vsock_tests_pkg") {
   test_components = [ ":virtualization_vsock_tests_cmp" ]
   test_specs = {
     environments = guest_environments
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 
@@ -464,6 +482,9 @@ fuchsia_test_package("hypervisor_tests_pkg") {
       sherlock_env,
       vim3_env,
     ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 
@@ -561,5 +582,8 @@ fuchsia_test_package("termina_integration_tests") {
   test_components = [ ":termina_integration_tests_cmp" ]
   test_specs = {
     environments = [ nuc_env ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
