@@ -319,5 +319,7 @@ INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MaxFileSizeTest,
                          testing::ValuesIn(GetCombinationWithSparseFileSupport()),
                          GetParamDescription);
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MaxFileSizeTest);
+
 }  // namespace
 }  // namespace fs_test

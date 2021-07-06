@@ -63,5 +63,7 @@ INSTANTIATE_TEST_SUITE_P(/*no prefix*/, SparseAllocationTest,
                          testing::ValuesIn(AllTestFilesystemsWithCustomDisk()),
                          testing::PrintToStringParamName());
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(SparseAllocationTest);
+
 }  // namespace
 }  // namespace fs_test
