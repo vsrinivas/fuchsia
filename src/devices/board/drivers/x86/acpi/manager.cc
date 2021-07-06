@@ -93,7 +93,7 @@ acpi::status<> Manager::PublishDevices(zx_device_t* platform_bus) {
       continue;
     }
 
-    auto status = d->Build(platform_bus, allocator_);
+    auto status = d->Build(acpi_, platform_bus, allocator_);
     if (status.is_error()) {
       return acpi::error(AE_ERROR);
     }

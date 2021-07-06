@@ -3,11 +3,284 @@
 // found in the LICENSE file.
 deprecated_syntax;
 library fuchsia.hardware.acpi;
+
 using zx;
+
+/// ACPI Object Types.
+/// See ACPI spec v6.4, 19.6.96 - ObjectType (Get Object Type).
+flexible enum ObjectType {
+    ANY = 0;
+    INTEGER = 1;
+    STRING = 2;
+    BUFFER = 3;
+    PACKAGE = 4;
+    FIELD_UNIT = 5;
+    DEVICE = 6;
+    EVENT = 7;
+    METHOD = 8;
+    MUTEX = 9;
+    OPERATION_REGION = 10;
+    POWER_RESOURCE = 11;
+    THERMAL_ZONE = 13;
+    BUFFER_FIELD = 14;
+    DEBUG_OBJECT = 16;
+};
+
+/// ACPI status codes.
+// These are identical to the ACPICA errors at
+// //third_party/acpica/include/acpica/acexcep.h.
+flexible enum Status {
+    /// Success.
+    OK = 0;
+    /// Unknown error occurred.
+    ERROR = 0x01;
+    /// Couldn't find ACPI tables.
+    NO_ACPI_TABLES = 0x02;
+    /// No namespace loaded.
+    NO_NAMESPACE = 0x03;
+    /// Ran out of memory.
+    NO_MEMORY = 0x04;
+    /// Requested entity not found.
+    NOT_FOUND = 0x05;
+    /// Required entity does not exist.
+    NOT_EXIST = 0x06;
+    /// Entity already exists.
+    ALREADY_EXISTS = 0x07;
+    /// Incorrect object type.
+    TYPE = 0x08;
+    /// Required object is missing.
+    NULL_OBJECT = 0x09;
+    /// Requested object does not exist.
+    NULL_ENTRY = 0x0a;
+    /// Provided buffer was too small.
+    BUFFER_OVERFLOW = 0x0b;
+    /// Internal stack overflow.
+    STACK_OVERFLOW = 0x0c;
+    /// Internal stack underflow.
+    STACK_UNDERFLOW = 0x0d;
+    /// Not implemented.
+    NOT_IMPLEMENTED = 0x0e;
+    /// Not supported.
+    NOT_SUPPORTED = 0x0f;
+    /// A predefined limit was exceeded.
+    LIMIT = 0x10;
+    /// A timeout expired.
+    TIME = 0x11;
+    /// A mutex was acquired in improper order.
+    ACQUIRE_DEADLOCK = 0x12;
+    /// A mutex was released in improper order.
+    RELEASE_DEADLOCK = 0x13;
+    /// Attempted to release a mutex without acquiring it.
+    NOT_ACQUIRED = 0x14;
+    /// Attempted to acquire a mutex twice.
+    ALREADY_ACQUIRED = 0x15;
+    /// Hardware did not respond to an I/O operation.
+    NO_HARDWARE_RESPONSE = 0x16;
+    /// There is no global lock.
+    NO_GLOBAL_LOCK = 0x17;
+    /// A control method was aborted.
+    ABORT_METHOD = 0x18;
+    /// Attempt was made to install a handler that is already installed.
+    SAME_HANDLER = 0x19;
+    /// A handler for this operation is not installed.
+    NO_HANDLER = 0x1a;
+    /// There are no more Owner IDs available for ACPI tables or control methods.
+    OWNER_ID_LIMIT = 0x1b;
+    /// The interface is not part of the current subsystem configuration.
+    NOT_CONFIGURED = 0x1c;
+    /// Permission denied for the requested operation.
+    ACCESS = 0x1d;
+    /// An I/O error occurred.
+    IO_ERROR = 0x1e;
+    /// Overflow during string-to-integer conversion.
+    NUMERIC_OVERFLOW = 0x1f;
+    /// Overflow during ASCII hex-to-binary conversion.
+    HEX_OVERFLOW = 0x20;
+    /// Overflow during ASCII decimal-to-binary conversion.
+    DECIMAL_OVERFLOW = 0x21;
+    /// Overflow during ASCII octal-to-binary conversion.
+    OCTAL_OVERFLOW = 0x22;
+    /// Reached the end of the table.
+    END_OF_TABLE = 0x23;
+
+    /// Invalid paramter supplied.
+    BAD_PARAMETER = 0x1001;
+    /// Invalid character in a name.
+    BAD_CHARACTER = 0x1002;
+    /// Invalid character in a pathname.
+    BAD_PATHNAME = 0x1003;
+    /// Package or buffer contained incorrect data.
+    BAD_DATA = 0x1004;
+    /// Invalid character in a hex constant.
+    BAD_HEX_CONSTANT = 0x1005;
+    /// Invalid character in an octal constant.
+    BAD_OCTAL_CONSTANT = 0x1006;
+    /// Invalid character in a decimal constant.
+    BAD_DECIMAL_CONSTANT = 0x1007;
+    /// Too few arguments passed to a method.
+    MISSING_ARGUMENTS = 0x1008;
+    /// Illegal null I/O addres.
+    BAD_ADDRESS = 0x1009;
+
+    /// Bad ACPI table signature.
+    BAD_TABLE_SIGNATURE = 0x2001;
+    /// Invalid field in ACPI table header.
+    BAD_TABLE_HEADER = 0x2002;
+    /// ACPI table checksum is incorrect.
+    BAD_TABLE_CHECKSUM = 0x2003;
+    /// Invalid value found in an ACPI table.
+    BAD_TABLE_VALUE = 0x2004;
+    /// The FADT or FACS has an improper length.
+    INVALID_TABLE_LENGTH = 0x2005;
+
+    /// Invalid AML opcode.
+    AML_BAD_OPCODE = 0x3001;
+    /// Missing operand.
+    AML_NO_OPERAND = 0x3002;
+    /// Operand has incorrect type.
+    AML_OPERAND_TYPE = 0x3003;
+    /// Operand has inappropriate or invalid value.
+    AML_OPERAND_VALUE = 0x3004;
+    /// Method tried to use uninitialized local variable.
+    AML_UNINITIALIZED_LOCAL = 0x3005;
+    /// Method tried to use uninitialized argument.
+    AML_UNINITIALIZED_ARG = 0x3006;
+    /// Method tried to use an empty package element.
+    AML_UNINITIALIZED_ELEMENT = 0x3007;
+    /// Overflow during numeric conversion.
+    AML_NUMERIC_OVERFLOW = 0x3008;
+    /// Tried to access beyond the end of an Operation Region.
+    AML_REGION_LIMIT = 0x3009;
+    /// Tried to access beyond the end of a buffer.
+    AML_BUFFER_LIMIT = 0x300a;
+    /// Tried to access beyond the end of a package.
+    AML_PACKAGE_LIMIT = 0x300b;
+    /// Tried to divide by zero.
+    AML_DIVIDE_BY_ZERO = 0x300c;
+    /// ACPI name contains invalid characters.
+    AML_BAD_NAME = 0x300d;
+    /// Couldn't resolve a reference.
+    AML_NAME_NOT_FOUND = 0x300e;
+    /// Internal error within the AML interpreter.
+    AML_INTERNAL = 0x300f;
+    /// Operation Region SpaceID is invalid.
+    AML_INVALID_SPACE_ID = 0x3010;
+    /// String is longer than 200 characters.
+    AML_STRING_LIMIT = 0x3011;
+    /// Method did not return a required value.
+    AML_NO_RETURN_VALUE = 0x3012;
+    /// Method reached maximum reentrancy limit.
+    AML_METHOD_LIMIT = 0x3013;
+    /// A thread tried to release a mutex it doesn't own.
+    AML_NOT_OWNER = 0x3014;
+    /// Mutex SyncLevel release mismatch.
+    AML_MUTEX_ORDER = 0x3015;
+    /// Attempt to release mutex that was not previously acquired.
+    AML_MUTEX_NOT_ACQUIRED = 0x3016;
+    /// Invalid resource type in resource list.
+    AML_INVALID_RESOURCE_TYPE = 0x3017;
+    /// Invalid Argx/Localx (x too large).
+    AML_INVALID_INDEX = 0x3018;
+    /// Bank value or Index value beyond the range of a register.
+    AML_REGISTER_LIMIT = 0x3019;
+    /// Break or Continue without a While.
+    AML_NO_WHILE = 0x301a;
+    /// Unaligned memory transfer on platform that doesn't support this.
+    AML_ALIGNMENT = 0x301b;
+    /// No End Tag in a resource list.
+    AML_NO_RESOURCE_END_TAG = 0x301c;
+    /// Invalid value in a resource.
+    AML_BAD_RESOURCE_VALUE = 0x301d;
+    /// Two references refer to each other.
+    AML_CIRCULAR_REFERENCE = 0x301e;
+    /// The length of a resource descriptor in the AML is incorrect.
+    AML_BAD_RESOURCE_LENGTH = 0x301f;
+    /// A memory, I/O, or PCI configuration address is invalid.
+    AML_ILLEGAL_ADDRESS = 0x3020;
+    /// An AML While loop exceeded the maximum execution time.
+    AML_LOOP_TIMEOUT = 0x3021;
+    /// A namespace node is uninitialized or unresolved.
+    AML_UNINITIALIZED_NODE = 0x3022;
+    /// A target operand of an incorrect type was encountered.
+    AML_TARGET_TYPE = 0x3023;
+    /// Violation of a fixed ACPI protocol.
+    AML_PROTOCOL = 0x3024;
+    /// The length of the buffer is invalid/incorrect.
+    AML_BUFFER_LENGTH = 0x3025;
+};
+
+/// Type that should be returned by |Device.EvaluateObject|.
+flexible enum EvaluateObjectMode {
+    /// Return an Object.
+    PLAIN_OBJECT = 0;
+    /// Treat the returned buffer as a resource template. Parse it and return
+    /// any resources that are found.
+    PARSE_RESOURCES = 1;
+};
+
+/// A handle to an arbitrary path in the ACPI tree.
+struct Handle {
+    /// Type of the object this handle refers to.
+    ObjectType object_type;
+    /// Relative path to the object this handle refers to.
+    string:MAX path;
+};
+
+/// Represents a Processor declaration.
+struct Processor {
+    uint32 id;
+    uint64 pblk_address;
+    uint32 pblk_length;
+};
+
+/// Represents a PowerResource.
+struct PowerResource {
+    /// Deepest system sleep level that must be maintained to keep this resource
+    /// on.
+    uint32 system_level;
+    /// Resource order that this power resource belongs to.
+    uint32 resource_order;
+};
+
+// TODO(fxbug.dev/35218): This is a hack to work around the fact that FIDL
+// doesn't like unions with recursive types.
+struct ObjectList {
+    vector<Object>:MAX? value;
+};
+
+/// Represents an object passed to or returned by
+/// fuchsia.hardware.acpi/Device.EvaluateMethod().
+flexible union Object {
+    1: uint64 integer_val;
+    2: string:MAX string_val;
+    3: bytes buffer_val;
+    4: ObjectList package_val;
+    5: Handle reference_val;
+    6: Processor processor_val;
+    7: PowerResource power_resource_val;
+};
+
+/// This type will eventually include resource types returned by passing
+/// EvaluteObjectMode.PARSE_RESOURCES to Device.EvaluteObject().
+flexible resource union EncodedObject {
+    1: Object object;
+};
+
+/// Maximum number of arguments that can be passed to a method.
+/// ACPI Spec 6.4, Section 19.6.84 "Method (Declare Control Method)".
+const uint32 MAX_METHOD_ARG = 7;
 
 /// Provides access to an ACPI device.
 protocol Device {
     /// If ACPI has determined this device is a bus, returns the bus ID.
     /// Otherwise returns ZX_ERR_BAD_STATE.
     GetBusId() -> (uint32 bus_id) error zx.status;
+
+    /// Evaluate the object at the given |path|, relative to this device, with |parameters| as
+    /// arguments.
+    /// |mode| determines how the return value is treated.
+    /// Paths cannot be absolute, and must only refer to children of this
+    /// device.
+    /// |result| is the result of the evaluation. See |fuchsia.acpi/EncodedObject| for more information.
+    EvaluateObject(string:MAX path, EvaluateObjectMode mode, vector<Object>:MAX_METHOD_ARG? parameters) -> (EncodedObject result) error Status;
 };

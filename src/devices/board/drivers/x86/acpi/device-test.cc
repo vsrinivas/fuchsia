@@ -45,7 +45,7 @@ class AcpiDeviceTest : public zxtest::Test {
 
 TEST_F(AcpiDeviceTest, TestBanjoConnectServer) {
   auto device =
-      std::make_unique<acpi::Device>(mock_root_.get(), ACPI_ROOT_OBJECT, mock_root_.get());
+      std::make_unique<acpi::Device>(&acpi_, mock_root_.get(), ACPI_ROOT_OBJECT, mock_root_.get());
   SetUpFidlServer(std::move(device));
 
   auto result = fidl_client_.GetBusId();
@@ -56,7 +56,7 @@ TEST_F(AcpiDeviceTest, TestBanjoConnectServer) {
 
 TEST_F(AcpiDeviceTest, TestBanjoConnectServerTwice) {
   auto device =
-      std::make_unique<acpi::Device>(mock_root_.get(), ACPI_ROOT_OBJECT, mock_root_.get());
+      std::make_unique<acpi::Device>(&acpi_, mock_root_.get(), ACPI_ROOT_OBJECT, mock_root_.get());
   SetUpFidlServer(std::move(device));
   {
     auto result = fidl_client_.GetBusId();
@@ -84,8 +84,9 @@ TEST_F(AcpiDeviceTest, TestBanjoConnectServerTwice) {
 }
 
 TEST_F(AcpiDeviceTest, TestGetBusId) {
-  auto device = std::make_unique<acpi::Device>(mock_root_.get(), ACPI_ROOT_OBJECT, mock_root_.get(),
-                                               std::vector<uint8_t>(), acpi::BusType::kI2c, 37);
+  auto device =
+      std::make_unique<acpi::Device>(&acpi_, mock_root_.get(), ACPI_ROOT_OBJECT, mock_root_.get(),
+                                     std::vector<uint8_t>(), acpi::BusType::kI2c, 37);
   SetUpFidlServer(std::move(device));
 
   auto result = fidl_client_.GetBusId();

@@ -134,7 +134,7 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator
   return result;
 }
 
-zx::status<zx_device_t*> DeviceBuilder::Build(zx_device_t* platform_bus,
+zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Acpi* acpi, zx_device_t* platform_bus,
                                               fidl::AnyAllocator& allocator) {
   if (parent_->zx_device_ == nullptr) {
     zxlogf(ERROR, "Parent has not been added to the tree yet!");
@@ -151,10 +151,10 @@ zx::status<zx_device_t*> DeviceBuilder::Build(zx_device_t* platform_bus,
       zxlogf(ERROR, "Error while encoding metadata for '%s': %s", name(), metadata.status_string());
       return metadata.take_error();
     }
-    device = std::make_unique<Device>(parent_->zx_device_, handle_, platform_bus,
+    device = std::make_unique<Device>(acpi, parent_->zx_device_, handle_, platform_bus,
                                       std::move(*metadata), bus_type_, GetBusId());
   } else {
-    device = std::make_unique<Device>(parent_->zx_device_, handle_, platform_bus);
+    device = std::make_unique<Device>(acpi, parent_->zx_device_, handle_, platform_bus);
   }
 
   // Narrow our custom type down to zx_device_str_prop_t.
@@ -179,7 +179,7 @@ zx::status<zx_device_t*> DeviceBuilder::Build(zx_device_t* platform_bus,
     return zx::error(result);
   }
   zx_device_ = device.release()->zxdev();
-  auto status = BuildComposite(platform_bus, str_props_for_ddkadd);
+  auto status = BuildComposite(acpi, platform_bus, str_props_for_ddkadd);
   if (status.is_error()) {
     zxlogf(WARNING, "failed to publish composite acpi device '%s-composite': %d", name(),
            status.error_value());
@@ -223,7 +223,7 @@ zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata(fidl::AnyAllo
       bus_children_);
 }
 
-zx::status<> DeviceBuilder::BuildComposite(zx_device_t* platform_bus,
+zx::status<> DeviceBuilder::BuildComposite(acpi::Acpi* acpi, zx_device_t* platform_bus,
                                            std::vector<zx_device_str_prop_t>& str_props) {
   if (!has_address_ || buses_.empty()) {
     // If a device doesn't have any bus resources or doesn't have an address on any of its buses,
@@ -295,7 +295,8 @@ zx::status<> DeviceBuilder::BuildComposite(zx_device_t* platform_bus,
   // TODO(fxbug.dev/79923): re-enable this in tests once mock_ddk supports composites.
   auto composite_name = fbl::StringPrintf("%s-composite", name());
   // Don't worry about any metadata, since it's present in the "acpi" parent.
-  auto composite_device = std::make_unique<Device>(parent_->zx_device_, handle_, platform_bus);
+  auto composite_device =
+      std::make_unique<Device>(acpi, parent_->zx_device_, handle_, platform_bus);
   zx_status_t status = composite_device->DdkAddComposite(composite_name.data(), &composite_desc);
 
   if (status == ZX_OK) {

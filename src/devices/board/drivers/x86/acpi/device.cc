@@ -12,6 +12,7 @@
 
 #include <fbl/auto_lock.h>
 
+#include "src/devices/board/drivers/x86/acpi/fidl.h"
 #include "src/devices/board/drivers/x86/include/errors.h"
 #include "src/devices/board/drivers/x86/include/sysmem.h"
 #include "src/devices/lib/iommu/iommu.h"
@@ -336,6 +337,17 @@ void Device::GetBusId(GetBusIdRequestView request, GetBusIdCompleter::Sync& comp
     completer.ReplyError(ZX_ERR_BAD_STATE);
   } else {
     completer.ReplySuccess(bus_id_);
+  }
+}
+
+void Device::EvaluateObject(EvaluateObjectRequestView request,
+                            EvaluateObjectCompleter::Sync& completer) {
+  auto helper = EvaluateObjectFidlHelper::FromRequest(acpi_, acpi_handle_, request);
+  auto result = helper.Evaluate();
+  if (result.is_error()) {
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status(result.error_value()));
+  } else {
+    completer.Reply(result.value());
   }
 }
 }  // namespace acpi

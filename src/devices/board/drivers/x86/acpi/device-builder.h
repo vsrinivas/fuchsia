@@ -88,7 +88,8 @@ class DeviceBuilder {
     return builder;
   }
 
-  zx::status<zx_device_t*> Build(zx_device_t* platform_bus, fidl::AnyAllocator& allocator);
+  zx::status<zx_device_t*> Build(acpi::Acpi* acpi, zx_device_t* platform_bus,
+                                 fidl::AnyAllocator& allocator);
 
   void SetBusType(BusType t) {
     ZX_ASSERT(bus_type_ == kUnknown || bus_type_ == t);
@@ -144,7 +145,7 @@ class DeviceBuilder {
 
  private:
   zx::status<std::vector<uint8_t>> FidlEncodeMetadata(fidl::AnyAllocator& allocator);
-  zx::status<> BuildComposite(zx_device_t* platform_bus,
+  zx::status<> BuildComposite(acpi::Acpi* acpi, zx_device_t* platform_bus,
                               std::vector<zx_device_str_prop_t>& str_props);
   std::vector<zx_bind_inst_t> GetFragmentBindInsnsForChild(size_t child_index);
   std::vector<zx_bind_inst_t> GetFragmentBindInsnsForSelf();

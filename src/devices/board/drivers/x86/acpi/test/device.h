@@ -34,6 +34,9 @@ class Device {
   // with the exception of searching parents for single-component paths.
   Device* FindByPath(std::string path);
 
+  // Return this device's absolute path.
+  std::string GetAbsolutePath();
+
   const std::vector<std::unique_ptr<Device>>& children() { return children_; }
   const std::vector<ACPI_RESOURCE>& resources() { return resources_; }
   const std::optional<std::string>& hid() { return hid_; }

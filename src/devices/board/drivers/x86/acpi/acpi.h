@@ -58,6 +58,9 @@ class Acpi {
   // Get the handle retrieved by resolving the given pathname from |parent|.
   virtual acpi::status<ACPI_HANDLE> GetHandle(ACPI_HANDLE parent, const char* pathname) = 0;
 
+  // Get the absolute path to the given object.
+  virtual acpi::status<std::string> GetPath(ACPI_HANDLE object) = 0;
+
   acpi::status<uint8_t> CallBbn(ACPI_HANDLE obj);
   acpi::status<uint16_t> CallSeg(ACPI_HANDLE obj);
 };

@@ -82,26 +82,29 @@ using DeviceType = ddk::Device<::acpi::Device, ddk::Initializable,
                                ddk::Messageable<fuchsia_hardware_acpi::Device>::Mixin>;
 class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_protocol> {
  public:
-  Device(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus)
+  Device(acpi::Acpi* acpi, zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus)
       : DeviceType{parent},
         loop_(&kAsyncLoopConfigNeverAttachToThread),
+        acpi_{acpi},
         acpi_handle_{acpi_handle},
         platform_bus_{platform_bus} {}
 
-  Device(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus,
+  Device(acpi::Acpi* acpi, zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus,
          std::vector<uint8_t> metadata, BusType bus_type, uint32_t bus_id)
       : DeviceType{parent},
         loop_(&kAsyncLoopConfigNeverAttachToThread),
+        acpi_{acpi},
         acpi_handle_{acpi_handle},
         platform_bus_{platform_bus},
         metadata_{std::move(metadata)},
         bus_type_{bus_type},
         bus_id_{bus_id} {}
 
-  Device(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus,
+  Device(acpi::Acpi* acpi, zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus,
          std::vector<pci_bdf_t> pci_bdfs)
       : DeviceType{parent},
         loop_(&kAsyncLoopConfigNeverAttachToThread),
+        acpi_{acpi},
         acpi_handle_{acpi_handle},
         platform_bus_{platform_bus},
         pci_bdfs_{std::move(pci_bdfs)} {}
@@ -124,12 +127,15 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
 
   // FIDL impls
   void GetBusId(GetBusIdRequestView request, GetBusIdCompleter::Sync& completer) override;
+  void EvaluateObject(EvaluateObjectRequestView request,
+                      EvaluateObjectCompleter::Sync& completer) override;
 
   std::vector<pci_bdf_t>& pci_bdfs() { return pci_bdfs_; }
 
  private:
   bool started_loop_ = false;
   async::Loop loop_;
+  acpi::Acpi* acpi_;
   // Handle to the corresponding ACPI node
   ACPI_HANDLE acpi_handle_;
 

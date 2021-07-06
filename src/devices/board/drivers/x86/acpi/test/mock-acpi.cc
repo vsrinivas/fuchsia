@@ -137,4 +137,8 @@ acpi::status<acpi::UniquePtr<ACPI_OBJECT>> MockAcpi::EvaluateObject(
   return acpi::error(AE_NOT_FOUND);
 }
 
+acpi::status<std::string> MockAcpi::GetPath(ACPI_HANDLE object) {
+  Device* device = ToDevice(object);
+  return acpi::ok(device->GetAbsolutePath());
+}
 }  // namespace acpi::test

@@ -4,6 +4,7 @@
 
 #include "acpi-impl.h"
 
+#include <string>
 #include <vector>
 
 namespace acpi {
@@ -92,6 +93,17 @@ acpi::status<ACPI_HANDLE> AcpiImpl::GetHandle(ACPI_HANDLE parent, const char* pa
   }
 
   return acpi::ok(out);
+}
+
+acpi::status<std::string> AcpiImpl::GetPath(ACPI_HANDLE object) {
+  AcpiBuffer<char> out;
+  ACPI_STATUS status = AcpiGetName(object, ACPI_FULL_PATHNAME, &out);
+  if (status != AE_OK) {
+    return acpi::error(status);
+  }
+
+  std::string ret(static_cast<char*>(out.Pointer));
+  return acpi::ok(std::move(ret));
 }
 
 }  // namespace acpi

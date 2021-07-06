@@ -39,6 +39,7 @@ source_set("acpi") {
     "acpi.cc",
     "device-builder.cc",
     "device.cc",
+    "fidl.cc",
     "manager.cc",
     "resources.cc",
   ]
@@ -52,6 +53,8 @@ test("acpi-test") {
     "device-builder.cc",
     "device-test.cc",
     "device.cc",
+    "fidl-test.cc",
+    "fidl.cc",
     "manager-test.cc",
     "manager.cc",
     "resources.cc",

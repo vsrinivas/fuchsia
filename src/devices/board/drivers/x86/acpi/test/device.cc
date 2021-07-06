@@ -50,4 +50,20 @@ Device* Device::FindByPathInternal(std::string path) {
   }
   return nullptr;
 }
+
+std::string Device::GetAbsolutePath() {
+  std::string ret = name_;
+  Device* cur = parent_;
+  while (cur) {
+    if (cur->parent_) {
+      // If we have a parent, then separate names by '.'.
+      ret = cur->name_ + "." + ret;
+    } else {
+      // The root node is called '\' and doesn't need a separator.
+      ret = cur->name_ + ret;
+    }
+    cur = cur->parent_;
+  }
+  return ret;
+}
 }  // namespace acpi::test

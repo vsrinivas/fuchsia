@@ -40,6 +40,8 @@ class MockAcpi : public Acpi {
 
   acpi::status<ACPI_HANDLE> GetHandle(ACPI_HANDLE parent, const char* pathname) override;
 
+  acpi::status<std::string> GetPath(ACPI_HANDLE object) override;
+
  private:
   Device* ToDevice(ACPI_HANDLE hnd) {
     // NOLINTNEXTLINE - ACPI_ROOT_OBJECT makes clang-tidy complain.
