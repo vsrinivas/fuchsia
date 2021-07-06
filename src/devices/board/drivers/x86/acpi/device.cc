@@ -343,7 +343,8 @@ void Device::GetBusId(GetBusIdRequestView request, GetBusIdCompleter::Sync& comp
 void Device::EvaluateObject(EvaluateObjectRequestView request,
                             EvaluateObjectCompleter::Sync& completer) {
   auto helper = EvaluateObjectFidlHelper::FromRequest(acpi_, acpi_handle_, request);
-  auto result = helper.Evaluate();
+  fidl::FidlAllocator<> alloc;
+  auto result = helper.Evaluate(alloc);
   if (result.is_error()) {
     completer.ReplyError(fuchsia_hardware_acpi::wire::Status(result.error_value()));
   } else {

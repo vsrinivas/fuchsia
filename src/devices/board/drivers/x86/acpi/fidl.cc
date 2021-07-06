@@ -7,6 +7,8 @@
 #include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 
+#include "lib/fidl/llcpp/message.h"
+
 namespace acpi {
 
 namespace {
@@ -48,6 +50,45 @@ ACPI_OBJECT_TYPE FidlTypeToAcpiType(fuchsia_hardware_acpi::wire::ObjectType type
   zxlogf(ERROR, "Unknown ACPI object type %d", int(type));
   return ACPI_TYPE_ANY;
 }
+
+fuchsia_hardware_acpi::wire::ObjectType AcpiTypeToFidlType(ACPI_OBJECT_TYPE type) {
+  using ObjectType = fuchsia_hardware_acpi::wire::ObjectType;
+  switch (type) {
+    case ACPI_TYPE_ANY:
+      return ObjectType::kAny;
+    case ACPI_TYPE_BUFFER:
+      return ObjectType::kBuffer;
+    case ACPI_TYPE_BUFFER_FIELD:
+      return ObjectType::kBufferField;
+    case ACPI_TYPE_DEBUG_OBJECT:
+      return ObjectType::kDebugObject;
+    case ACPI_TYPE_DEVICE:
+      return ObjectType::kDevice;
+    case ACPI_TYPE_EVENT:
+      return ObjectType::kEvent;
+    case ACPI_TYPE_FIELD_UNIT:
+      return ObjectType::kFieldUnit;
+    case ACPI_TYPE_INTEGER:
+      return ObjectType::kInteger;
+    case ACPI_TYPE_METHOD:
+      return ObjectType::kMethod;
+    case ACPI_TYPE_MUTEX:
+      return ObjectType::kMutex;
+    case ACPI_TYPE_REGION:
+      return ObjectType::kOperationRegion;
+    case ACPI_TYPE_PACKAGE:
+      return ObjectType::kPackage;
+    case ACPI_TYPE_POWER:
+      return ObjectType::kPowerResource;
+    case ACPI_TYPE_STRING:
+      return ObjectType::kString;
+    case ACPI_TYPE_THERMAL:
+      return ObjectType::kThermalZone;
+  }
+  zxlogf(ERROR, "Unknown ACPI object type %d", type);
+  return ObjectType::Unknown();
+}
+
 }  // namespace
 
 EvaluateObjectFidlHelper EvaluateObjectFidlHelper::FromRequest(acpi::Acpi* acpi, ACPI_HANDLE device,
@@ -57,7 +98,7 @@ EvaluateObjectFidlHelper EvaluateObjectFidlHelper::FromRequest(acpi::Acpi* acpi,
 }
 
 acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult>
-EvaluateObjectFidlHelper::Evaluate() {
+EvaluateObjectFidlHelper::Evaluate(fidl::AnyAllocator& alloc) {
   auto path = ValidateAndLookupPath(request_path_.data());
   if (path.is_error()) {
     return path.take_error();
@@ -68,7 +109,17 @@ EvaluateObjectFidlHelper::Evaluate() {
     return result.take_error();
   }
 
-  return acpi::error(AE_NOT_IMPLEMENTED);
+  auto value = acpi_->EvaluateObject(nullptr, path->data(), result.value());
+  if (value.is_error()) {
+    return value.take_error();
+  }
+
+  auto fidl_val = EncodeReturnValue(alloc, value.value().get());
+  if (fidl_val.is_error()) {
+    return fidl_val.take_error();
+  }
+
+  return acpi::ok(fidl_val.value());
 }
 
 acpi::status<std::string> EvaluateObjectFidlHelper::ValidateAndLookupPath(const char* request_path,
@@ -114,9 +165,102 @@ acpi::status<std::vector<ACPI_OBJECT>> EvaluateObjectFidlHelper::DecodeParameter
 }
 
 acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult>
-EvaluateObjectFidlHelper::EncodeReturnValue(ACPI_OBJECT* value) {
-  // TODO(fxbug.dev/79172): implement this.
-  return acpi::error(AE_NOT_IMPLEMENTED);
+EvaluateObjectFidlHelper::EncodeReturnValue(fidl::AnyAllocator& alloc, ACPI_OBJECT* value) {
+  auto result = EncodeObject(alloc, value);
+  if (result.is_error()) {
+    return result.take_error();
+  }
+
+  // TODO(fxbug.dev/79172): put the data in a VMO if it's too big.
+  fuchsia_hardware_acpi::wire::EncodedObject encoded;
+  encoded.set_object(alloc, result.value());
+
+  fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResponse response;
+  response.result = encoded;
+  fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult ret;
+  ret.set_response(alloc, response);
+  return acpi::ok(ret);
+}
+
+acpi::status<fuchsia_hardware_acpi::wire::Object> EvaluateObjectFidlHelper::EncodeObject(
+    fidl::AnyAllocator& alloc, ACPI_OBJECT* value) {
+  fuchsia_hardware_acpi::wire::Object result;
+  switch (value->Type) {
+    case ACPI_TYPE_INTEGER: {
+      result.set_integer_val(alloc, value->Integer.Value);
+      break;
+    }
+    case ACPI_TYPE_STRING: {
+      fidl::StringView sv;
+      sv.Set(alloc, cpp17::string_view(value->String.Pointer, value->String.Length));
+      result.set_string_val(alloc, sv);
+      break;
+    }
+    case ACPI_TYPE_PACKAGE: {
+      fidl::VectorView<fuchsia_hardware_acpi::wire::Object> view;
+      view.Allocate(alloc, value->Package.Count);
+      for (size_t i = 0; i < value->Package.Count; i++) {
+        auto ret = EncodeObject(alloc, &value->Package.Elements[i]);
+        if (ret.is_error()) {
+          return ret.take_error();
+        }
+        view[i] = ret.value();
+      }
+      fuchsia_hardware_acpi::wire::ObjectList list;
+      list.value = view;
+      result.set_package_val(alloc, list);
+      break;
+    }
+    case ACPI_TYPE_BUFFER: {
+      fidl::VectorView<uint8_t> data;
+      data.Allocate(alloc, value->Buffer.Length);
+      memcpy(data.mutable_data(), value->Buffer.Pointer, value->Buffer.Length);
+      result.set_buffer_val(alloc, data);
+      break;
+    }
+    case ACPI_TYPE_POWER: {
+      fuchsia_hardware_acpi::wire::PowerResource power;
+      power.resource_order = value->PowerResource.ResourceOrder;
+      power.system_level = value->PowerResource.SystemLevel;
+      result.set_power_resource_val(alloc, power);
+      break;
+    }
+    case ACPI_TYPE_PROCESSOR: {
+      fuchsia_hardware_acpi::wire::Processor processor;
+      processor.id = value->Processor.ProcId;
+      processor.pblk_address = value->Processor.PblkAddress;
+      processor.pblk_length = value->Processor.PblkLength;
+      result.set_processor_val(alloc, processor);
+      break;
+    }
+    case ACPI_TYPE_LOCAL_REFERENCE: {
+      auto handle_path = acpi_->GetPath(value->Reference.Handle);
+      if (handle_path.is_error()) {
+        return handle_path.take_error();
+      }
+      auto my_path = acpi_->GetPath(device_handle_);
+      if (my_path.is_error()) {
+        return my_path.take_error();
+      }
+      if (strncmp(my_path->data(), handle_path->data(), my_path->size()) != 0) {
+        zxlogf(WARNING, "EvaluateObject returned a reference to an external object: %s",
+               handle_path->data());
+        return acpi::error(AE_ACCESS);
+      }
+
+      fuchsia_hardware_acpi::wire::Handle hnd;
+      hnd.object_type = AcpiTypeToFidlType(value->Reference.ActualType);
+      fidl::StringView sv;
+      sv.Set(alloc, cpp17::string_view(handle_path.value()));
+      hnd.path = sv;
+      result.set_reference_val(alloc, hnd);
+      break;
+    }
+    default:
+      zxlogf(ERROR, "Unexpected return type from EvaluateObject: %d", value->Type);
+      return acpi::error(AE_NOT_IMPLEMENTED);
+  }
+  return acpi::ok(result);
 }
 
 acpi::status<> EvaluateObjectFidlHelper::DecodeObject(
@@ -129,8 +273,8 @@ acpi::status<> EvaluateObjectFidlHelper::DecodeObject(
       break;
     }
     case Tag::kStringVal: {
-      // ACPI strings need to be null terminated. FIDL strings aren't, so we have to make copies of
-      // them.
+      // ACPI strings need to be null terminated. FIDL strings aren't, so we have to make copies
+      // of them.
       allocated_strings_.emplace_front(
           std::string(obj.string_val().data(), obj.string_val().size()));
       out->String.Type = ACPI_TYPE_STRING;

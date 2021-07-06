@@ -59,6 +59,65 @@ void CheckEq(ACPI_OBJECT value, ACPI_OBJECT expected) {
       ASSERT_FALSE(true, "Unexpected object type");
   }
 }
+
+void CheckEq(facpi::Object value, facpi::Object expected) {
+  using Tag = fuchsia_hardware_acpi::wire::Object::Tag;
+  ASSERT_EQ(value.which(), expected.which());
+  switch (value.which()) {
+    case Tag::kIntegerVal: {
+      ASSERT_EQ(value.integer_val(), expected.integer_val());
+      break;
+    }
+    case Tag::kStringVal: {
+      ASSERT_EQ(value.string_val().size(), expected.string_val().size());
+      ASSERT_BYTES_EQ(value.string_val().data(), expected.string_val().data(),
+                      value.string_val().size());
+      break;
+    }
+    case Tag::kPackageVal: {
+      auto &val_list = value.package_val().value;
+      auto &exp_list = expected.package_val().value;
+      ASSERT_EQ(val_list.count(), exp_list.count());
+      for (size_t i = 0; i < val_list.count(); i++) {
+        ASSERT_NO_FATAL_FAILURES(CheckEq(val_list[i], exp_list[i]));
+      }
+      break;
+    }
+    case Tag::kBufferVal: {
+      auto &val = value.buffer_val();
+      auto &exp = expected.buffer_val();
+      ASSERT_EQ(val.count(), exp.count());
+      ASSERT_BYTES_EQ(val.data(), exp.data(), val.count());
+      break;
+    }
+    case Tag::kPowerResourceVal: {
+      auto &val = value.power_resource_val();
+      auto &exp = expected.power_resource_val();
+      ASSERT_EQ(val.resource_order, exp.resource_order);
+      ASSERT_EQ(val.system_level, exp.system_level);
+      break;
+    }
+    case Tag::kProcessorVal: {
+      auto &val = value.processor_val();
+      auto &exp = expected.processor_val();
+      ASSERT_EQ(val.id, exp.id);
+      ASSERT_EQ(val.pblk_address, exp.pblk_address);
+      ASSERT_EQ(val.pblk_length, exp.pblk_length);
+      break;
+    }
+    case Tag::kReferenceVal: {
+      auto &val = value.reference_val();
+      auto &exp = expected.reference_val();
+      ASSERT_EQ(val.path.size(), exp.path.size());
+      ASSERT_BYTES_EQ(val.path.data(), exp.path.data(), val.path.size());
+      ASSERT_EQ(val.object_type, exp.object_type);
+      break;
+    }
+    case Tag::kUnknown:
+      ASSERT_TRUE(false);
+  }
+}
+
 }  // namespace
 
 class FidlEvaluateObjectTest : public zxtest::Test {
@@ -346,4 +405,179 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeParameters) {
   for (size_t i = 0; i < countof(expected); i++) {
     ASSERT_NO_FATAL_FAILURES(CheckEq(value[i], expected[i]), "param %zd", i);
   }
+}
+
+TEST_F(FidlEvaluateObjectTest, TestEncodeInt) {
+  acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
+                                        fidl::VectorView<facpi::Object>(nullptr, 0));
+  fidl::FidlAllocator<> alloc;
+  ACPI_OBJECT obj = {.Integer = {.Type = ACPI_TYPE_INTEGER, .Value = 320}};
+  auto result = helper.EncodeObject(alloc, &obj);
+  ASSERT_OK(result.zx_status_value());
+
+  facpi::Object expected;
+  expected.set_integer_val(alloc, 320);
+  ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
+}
+
+TEST_F(FidlEvaluateObjectTest, TestEncodeString) {
+  acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
+                                        fidl::VectorView<facpi::Object>(nullptr, 0));
+  fidl::FidlAllocator<> alloc;
+  ACPI_OBJECT obj = {.String = {
+                         .Type = ACPI_TYPE_STRING,
+                         .Length = 3,
+                         .Pointer = const_cast<char *>("abc"),
+                     }};
+  auto result = helper.EncodeObject(alloc, &obj);
+  ASSERT_OK(result.zx_status_value());
+
+  facpi::Object expected;
+  expected.set_string_val(alloc, "abc");
+  ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
+}
+
+TEST_F(FidlEvaluateObjectTest, TestEncodeBuffer) {
+  acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
+                                        fidl::VectorView<facpi::Object>(nullptr, 0));
+  fidl::FidlAllocator<> alloc;
+  static constexpr uint8_t kBuffer[] = {0x12, 0x34, 0x56, 0x78, 0x76, 0x54, 0x32, 0x10};
+  ACPI_OBJECT obj = {.Buffer = {
+                         .Type = ACPI_TYPE_BUFFER,
+                         .Length = countof(kBuffer),
+                         .Pointer = const_cast<uint8_t *>(kBuffer),
+                     }};
+  auto result = helper.EncodeObject(alloc, &obj);
+  ASSERT_OK(result.zx_status_value());
+
+  facpi::Object expected;
+  expected.set_buffer_val(alloc, fidl::VectorView<uint8_t>::FromExternal(
+                                     const_cast<uint8_t *>(kBuffer), countof(kBuffer)));
+  ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
+}
+
+TEST_F(FidlEvaluateObjectTest, TestEncodeProcessorVal) {
+  acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
+                                        fidl::VectorView<facpi::Object>(nullptr, 0));
+
+  fidl::FidlAllocator<> alloc;
+  ACPI_OBJECT obj = {
+      .Processor =
+          {
+              .Type = ACPI_TYPE_PROCESSOR,
+              .ProcId = 7,
+              .PblkAddress = 0xd00dfeed,
+              .PblkLength = 0xabc,
+          },
+  };
+  auto result = helper.EncodeObject(alloc, &obj);
+  ASSERT_OK(result.zx_status_value());
+  facpi::Object expected;
+  facpi::Processor processor;
+  processor.pblk_address = 0xd00dfeed;
+  processor.pblk_length = 0xabc;
+  processor.id = 7;
+  expected.set_processor_val(alloc, processor);
+
+  ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
+}
+
+TEST_F(FidlEvaluateObjectTest, TestEncodeReference) {
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
+
+  acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot()->FindByPath("\\_SB_"),
+                                        "\\_SB_", fidl::VectorView<facpi::Object>(nullptr, 0));
+  fidl::FidlAllocator<> alloc;
+  ACPI_OBJECT obj = {.Reference = {
+                         .Type = ACPI_TYPE_LOCAL_REFERENCE,
+                         .ActualType = ACPI_TYPE_DEVICE,
+                         .Handle = acpi_.GetDeviceRoot()->FindByPath("\\_SB_.PCI0.I2C0"),
+                     }};
+  facpi::Object expected;
+  facpi::Handle ref;
+  ref.object_type = facpi::ObjectType::kDevice;
+  ref.path = "\\_SB_.PCI0.I2C0";
+  expected.set_reference_val(alloc, ref);
+
+  auto result = helper.EncodeObject(alloc, &obj);
+  ASSERT_OK(result.zx_status_value());
+  ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
+}
+
+TEST_F(FidlEvaluateObjectTest, TestEncodeParentReferenceFails) {
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("PCI0")));
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.PCI0", std::make_unique<Device>("I2C0")));
+
+  acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot()->FindByPath("\\_SB_"),
+                                        "\\_SB_", fidl::VectorView<facpi::Object>(nullptr, 0));
+  ACPI_OBJECT obj = {.Reference = {
+                         .Type = ACPI_TYPE_LOCAL_REFERENCE,
+                         .ActualType = ACPI_TYPE_DEVICE,
+                         .Handle = acpi_.GetDeviceRoot(),
+                     }};
+  fidl::FidlAllocator<> alloc;
+  auto status = helper.EncodeObject(alloc, &obj);
+  ASSERT_EQ(status.status_value(), AE_ACCESS);
+}
+
+TEST_F(FidlEvaluateObjectTest, TestEncodePackage) {
+  acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
+                                        fidl::VectorView<facpi::Object>(nullptr, 0));
+  constexpr ACPI_OBJECT kObjects[2] = {
+      {.Integer =
+           {
+               .Type = ACPI_TYPE_INTEGER,
+               .Value = 32,
+           }},
+      {.String =
+           {
+               .Type = ACPI_TYPE_STRING,
+               .Length = 11,
+               .Pointer = const_cast<char *>("test string"),
+           }},
+  };
+  ACPI_OBJECT obj = {
+      .Package =
+          {
+              .Type = ACPI_TYPE_PACKAGE,
+              .Count = 2,
+              .Elements = const_cast<acpi_object *>(kObjects),
+          },
+  };
+  fidl::FidlAllocator<> alloc;
+
+  auto result = helper.EncodeObject(alloc, &obj);
+  ASSERT_OK(result.zx_status_value());
+  std::vector<facpi::Object> elements;
+  facpi::Object expected;
+  facpi::ObjectList list;
+
+  expected.set_integer_val(alloc, 32);
+  elements.emplace_back(expected);
+  expected.set_string_val(alloc, "test string");
+  elements.emplace_back(expected);
+
+  list.value = fidl::VectorView<facpi::Object>::FromExternal(elements);
+  expected.set_package_val(alloc, list);
+
+  ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
+}
+
+TEST_F(FidlEvaluateObjectTest, TestEncodeReturnValue) {
+  ACPI_OBJECT obj = {.Integer = {.Type = ACPI_TYPE_INTEGER, .Value = 47}};
+  acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
+                                        fidl::VectorView<facpi::Object>(nullptr, 0));
+
+  fidl::FidlAllocator<> alloc;
+  auto result = helper.EncodeReturnValue(alloc, &obj);
+  ASSERT_OK(result.zx_status_value());
+  ASSERT_FALSE(result.value().is_err());
+  auto object = result.value().response().result;
+  // Expect a value of this size to be encoded in-line.
+  fuchsia_hardware_acpi::wire::Object expected;
+  expected.set_integer_val(alloc, 47);
+  ASSERT_NO_FATAL_FAILURES(CheckEq(object.object(), expected));
 }
