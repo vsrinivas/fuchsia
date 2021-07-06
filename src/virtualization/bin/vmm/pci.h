@@ -80,6 +80,8 @@ class PciBar : public IoHandler {
   };
 
   // Construct a BAR of the given type, size, and ID.
+  //
+  // `size` will be rounded up to be a power of two, and at least PAGE_SIZE.
   PciBar(PciDevice* device, uint64_t size, TrapType trap_type, Callback* callback);
 
   // Get the size / type of the region.

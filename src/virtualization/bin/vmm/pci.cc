@@ -6,10 +6,13 @@
 
 #include <endian.h>
 #include <lib/pci/hw.h>
+#include <lib/stdcompat/bit.h>
 #include <lib/trace/event.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
+
+#include <algorithm>
 
 __BEGIN_CDECLS;
 #include <libfdt.h>
@@ -107,8 +110,10 @@ PciBar::PciBar(PciDevice* device, uint64_t size, TrapType trap_type, Callback* c
     : device_(device),
       callback_(callback),
       addr_(0),
-      size_(align(size, PAGE_SIZE)),
+      // BARs must have a power-of-two size. (PCI 3.0, Section 6.2.5.1)
+      size_(std::max(cpp20::bit_ceil(size), static_cast<size_t>(PAGE_SIZE))),
       trap_type_(trap_type) {
+  ZX_DEBUG_ASSERT(size > 0);
   set_addr(0);  // Initialise the `pci_config_reg_` registers.
 }
 
@@ -246,9 +251,18 @@ zx_status_t PciBus::Connect(PciDevice* device, async_dispatcher_t* dispatcher, b
   size_t slot = next_open_slot_++;
 
   // Initialize BAR registers.
+  //
+  // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.2.5.1: "[A]ll
+  // address spaces used are a power of two in size and are naturally
+  // aligned."
   for (PciBar& bar : device->bars_) {
+    // Naturally align the base of this BAR (i.e., align to its size),
+    // and also ensure it is on its own page.
+    mmio_base_ = align(mmio_base_, std::max(static_cast<uint64_t>(PAGE_SIZE), bar.size()));
+
+    // Assign an address.
     bar.set_addr(mmio_base_);
-    mmio_base_ += align(bar.size(), PAGE_SIZE);
+    mmio_base_ += bar.size();
   }
   if (mmio_base_ >= kPciMmioBarPhysBase + kPciMmioBarSize) {
     FX_LOGS(ERROR) << "No PCI MMIO address space available";

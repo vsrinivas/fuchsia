@@ -7,17 +7,6 @@
 
 #include <stdint.h>
 
-// From: https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-static inline constexpr uint32_t round_up_pow2(uint32_t v) {
-  v--;
-  v |= v >> 1;
-  v |= v >> 2;
-  v |= v >> 4;
-  v |= v >> 8;
-  v |= v >> 16;
-  return ++v;
-}
-
 template <typename T>
 static inline constexpr T bit_mask(size_t bits) {
   if (bits >= sizeof(T) * 8) {
