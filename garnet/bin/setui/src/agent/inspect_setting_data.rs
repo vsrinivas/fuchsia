@@ -169,11 +169,6 @@ impl InspectSettingAgent {
     /// setting values.
     async fn fetch_initial_values(&mut self) {
         for setting_type in self.setting_types.clone() {
-            // TODO(fxb/75788): Remove once we have PowerAgent
-            if setting_type == SettingType::Power {
-                // Power doesn't handle Get request
-                continue;
-            }
             let mut receptor = self
                 .messenger_client
                 .message(

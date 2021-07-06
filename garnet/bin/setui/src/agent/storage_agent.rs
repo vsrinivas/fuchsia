@@ -240,7 +240,6 @@ where
                     panic!("SettingType::LightSensor does not support storage")
                 }
                 SettingType::NightMode => self.read::<NightModeInfo>(responder).await,
-                SettingType::Power => panic!("SettingType::Power does not support storage"),
                 SettingType::Privacy => self.read::<PrivacyInfo>(responder).await,
                 SettingType::Setup => self.read::<SetupInfo>(responder).await,
             },
@@ -307,9 +306,6 @@ mod tests {
 
         #[should_panic(expected = "SettingType::LightSensor does not support storage")]
         light_sensor_read(Setting::Type(SettingType::LightSensor)),
-
-        #[should_panic(expected = "SettingType::Power does not support storage")]
-        power_read(Setting::Type(SettingType::Power)),
 
         #[should_panic(expected = "SettingInfo::Device does not support storage")]
         device_write(Setting::Info(SettingInfo::Device(DeviceInfo::new("abc".into())))),

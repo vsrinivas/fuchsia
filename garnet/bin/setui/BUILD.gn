@@ -196,8 +196,6 @@ rustc_library("lib") {
     "src/policy/policy_handler.rs",
     "src/policy/policy_handler_factory_impl.rs",
     "src/policy/policy_proxy.rs",
-    "src/power.rs",
-    "src/power/power_controller.rs",
     "src/privacy.rs",
     "src/privacy/privacy_controller.rs",
     "src/privacy/privacy_fidl_handler.rs",

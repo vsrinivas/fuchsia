@@ -43,7 +43,6 @@ impl From<&SettingType> for Interface {
             SettingType::NightMode => Interface::NightMode,
             SettingType::Privacy => Interface::Privacy,
             SettingType::Setup => Interface::Setup,
-            SettingType::Power => Interface::Setup,
             _ => {
                 panic!("unsupported SettingType for Interface conversion: {:?}", item);
             }
@@ -142,10 +141,7 @@ impl Interface {
                 vec![Dependency::Entity(Entity::Handler(SettingType::Privacy))]
             }
             Interface::Setup => {
-                vec![
-                    Dependency::Entity(Entity::Handler(SettingType::Setup)),
-                    Dependency::Entity(Entity::Handler(SettingType::Power)),
-                ]
+                vec![Dependency::Entity(Entity::Handler(SettingType::Setup))]
             }
         }
     }

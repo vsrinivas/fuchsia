@@ -120,8 +120,6 @@ generate_inspect! {
         // Night mode requests.
         SetNightModeInfo(NightModeInfo),
 
-        // Power requests.
-        Reboot,
 
         // Restores settings to outside dependencies.
         Restore,

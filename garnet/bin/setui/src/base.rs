@@ -48,7 +48,6 @@ pub enum SettingType {
     Light,
     LightSensor,
     NightMode,
-    Power,
     Privacy,
     Setup,
 }
@@ -227,7 +226,6 @@ pub fn get_default_setting_types() -> HashSet<SettingType> {
         SettingType::Accessibility,
         SettingType::Device,
         SettingType::Intl,
-        SettingType::Power,
         SettingType::Privacy,
         SettingType::Setup,
     ])
@@ -250,7 +248,6 @@ pub(crate) fn get_all_setting_types() -> HashSet<SettingType> {
         SettingType::Light,
         SettingType::LightSensor,
         SettingType::NightMode,
-        SettingType::Power,
         SettingType::Privacy,
         SettingType::Setup,
     ])

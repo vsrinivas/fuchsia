@@ -38,7 +38,6 @@ use {
     crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl,
     crate::policy::policy_proxy::PolicyProxy,
     crate::policy::PolicyType,
-    crate::power::power_controller::PowerController,
     crate::privacy::privacy_controller::PrivacyController,
     crate::service::message::Delegate,
     crate::service_context::GenerateService,
@@ -76,7 +75,6 @@ mod job;
 mod light;
 mod night_mode;
 mod policy;
-mod power;
 mod privacy;
 mod service;
 mod setup;
@@ -551,15 +549,6 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         controller_flags: &HashSet<ControllerFlag>,
         factory_handle: &mut SettingHandlerFactoryImpl,
     ) {
-        // Power
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::Power,
-            PowerController,
-            Handler::<PowerController>::spawn
-        );
         // Accessibility
         register_handler!(
             components,
