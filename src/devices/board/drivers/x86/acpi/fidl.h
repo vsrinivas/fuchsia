@@ -7,6 +7,8 @@
 
 #include <fuchsia/hardware/acpi/llcpp/fidl.h>
 
+#include <forward_list>
+
 #include <acpica/acpi.h>
 
 #include "src/devices/board/drivers/x86/acpi/acpi.h"
@@ -17,8 +19,12 @@ class EvaluateObjectFidlHelper {
  public:
   using EvaluateObjectRequestView =
       fidl::WireServer<fuchsia_hardware_acpi::Device>::EvaluateObjectRequestView;
-  EvaluateObjectFidlHelper(acpi::Acpi* acpi, ACPI_HANDLE device, std::string request_path)
-      : acpi_(acpi), device_handle_(device), request_path_(std::move(request_path)) {}
+  EvaluateObjectFidlHelper(acpi::Acpi* acpi, ACPI_HANDLE device, std::string request_path,
+                           fidl::VectorView<fuchsia_hardware_acpi::wire::Object> params)
+      : acpi_(acpi),
+        device_handle_(device),
+        request_path_(std::move(request_path)),
+        request_params_(params) {}
 
   static EvaluateObjectFidlHelper FromRequest(acpi::Acpi* acpi, ACPI_HANDLE device,
                                               EvaluateObjectRequestView& request);
@@ -31,20 +37,28 @@ class EvaluateObjectFidlHelper {
   // These methods are public for unit tests only.
   // Validate that the path supplied in the request is a child of the device,
   // and returns the absolute path to the supplied path.
-  acpi::status<std::string> ValidateAndLookupPath();
+  acpi::status<std::string> ValidateAndLookupPath(const char* request_path,
+                                                  ACPI_HANDLE* hnd = nullptr);
 
-  // Convert our FIDL parameters to ACPI_OBJECTs, and put them in the params_ vector.
-  acpi::status<> DecodeParameters();
+  // Convert the given FIDL parameters to ACPI_OBJECTs, and put them in the params_ vector.
+  acpi::status<std::vector<ACPI_OBJECT>> DecodeParameters(
+      fidl::VectorView<fuchsia_hardware_acpi::wire::Object>& request_params);
 
   // Take the given ACPI_OBJECT and turn it into a DeviceEvaluateObjectResult.
   acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult> EncodeReturnValue(
       ACPI_OBJECT* value);
+
+  acpi::status<> DecodeObject(const fuchsia_hardware_acpi::wire::Object& obj, ACPI_OBJECT* out);
 
  private:
   // State that comes from outside.
   acpi::Acpi* acpi_;
   ACPI_HANDLE device_handle_;
   std::string request_path_;
+  fidl::VectorView<fuchsia_hardware_acpi::wire::Object> request_params_;
+
+  std::forward_list<std::vector<ACPI_OBJECT>> allocated_packages_;
+  std::forward_list<std::string> allocated_strings_;
 };
 
 }  // namespace acpi
