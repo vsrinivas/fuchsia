@@ -18,7 +18,7 @@ template("fs_test_config") {
     if (!defined(contents.name)) {
       contents.name = name
     }
-    if (!defined(contents.binary_path)) {
+    if (!defined(contents.binary_path) && !defined(contents.disk_format)) {
       contents.binary_path = "/pkg/bin/${name}"
     }
     output_conversion = "json"

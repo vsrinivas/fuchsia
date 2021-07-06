@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/storage/fs_test/suite.gni")
 
 fatfs_deps = [
   "//sdk/fidl/fuchsia.fs:fuchsia.fs-rustc",
@@ -79,15 +80,6 @@ fuzzers_package("fuchsia-fatfs-fuzzer") {
   rust_fuzzers = [ ":fat-fuzzer" ]
 }
 
-group("tests") {
-  testonly = true
-  deps = [
-    ":fuchsia-fatfs-fuzzer",
-    ":fuchsia-fatfs-tests",
-    "//src/storage/fuchsia-fatfs/mounter:tests",
-  ]
-}
-
 rustc_binary("fatfs") {
   edition = "2018"
 
@@ -116,4 +108,62 @@ fuchsia_package("fuchsia-fatfs") {
 
 fuchsia_shell_package("fatfs-bin") {
   deps = [ ":fatfs" ]
+}
+
+# FAT has different filename rules compared to other filesystems, so we substitute the
+# filename tests in the test suite with a different set.
+test("fat_filename_tests") {
+  sources = [ "filename_tests.cc" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/storage/fs_test",
+  ]
+}
+
+storage_isolated_devmgr_unittest_v2_component("fatfs-fat-filename-tests") {
+  deps = [ ":fat_filename_tests" ]
+}
+
+fs_test_suite("fatfs") {
+  deps = [
+    "//src/storage/fuchsia-fatfs:fatfs",
+    "//zircon/third_party/uapp/fsck-msdosfs",
+    "//zircon/third_party/uapp/mkfs-msdosfs",
+  ]
+  config = {
+    disk_format = 4
+    is_case_sensitive = false
+    is_journaled = false
+    timestamp_granularity = 2000000000
+    supports_hard_links = false
+    supports_resize = false
+    supports_sparse_files = false
+    max_file_size = 4294967295
+    is_slow = true
+    sectors_per_cluster = 2
+    supports_watch_event_deleted = false
+  }
+
+  omit_components = [ ":fatfs-filename-tests" ]
+  extra_components = [ ":fatfs-fat-filename-tests" ]
+}
+
+slow_fs_test_suite("fatfs") {
+  deps = [
+    ":fatfs_fs_test_config",
+    "//src/storage/fuchsia-fatfs:fatfs",
+    "//zircon/third_party/uapp/fsck-msdosfs",
+    "//zircon/third_party/uapp/mkfs-msdosfs",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fatfs-fs-tests",
+    ":fatfs-slow-fs-tests",
+    ":fuchsia-fatfs-fuzzer",
+    ":fuchsia-fatfs-tests",
+    "//src/storage/fuchsia-fatfs/mounter:tests",
+  ]
 }

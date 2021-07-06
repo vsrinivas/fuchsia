@@ -20,8 +20,8 @@ std::vector<LargeTruncateTestParamType> GetTestCombinations(
           !options.filesystem->GetTraits().can_unmount) {
         continue;
       }
-      if (options.filesystem->GetTraits().name == "fatfs" && std::get<0>(variation) > (1 << 20)) {
-        // Fatfs is slow, so skip larger buffer sizes.
+      if (options.filesystem->GetTraits().is_slow && std::get<0>(variation) > (1 << 20)) {
+        // Skip larger buffer sizes on slow filesystems.
         continue;
       }
       options.device_block_count = 3 * (1LLU << 16);

@@ -215,6 +215,8 @@ INSTANTIATE_TEST_SUITE_P(
         })),
     testing::PrintToStringParamName());
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(RwFullDiskTest);
+
 // These tests will only work on a file system that supports sparse files.
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, RwSparseTest,
@@ -227,6 +229,8 @@ INSTANTIATE_TEST_SUITE_P(
           }
         })),
     testing::PrintToStringParamName());
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(RwSparseTest);
 
 }  // namespace
 }  // namespace fs_test

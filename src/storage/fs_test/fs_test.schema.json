@@ -2,14 +2,49 @@
     "$id": "https://fuchsia.dev/schema/src/storage/fs_test/fs_test.schema.json",
     "$schema": "https://json-schema.org/draft-2020-12/schema",
     "description": "Configuration for running a suite of filesystem tests",
+    "oneOf": [
+        {
+            "required": [
+                "binary_path",
+                "name",
+                "timestamp_granularity"
+            ]
+        },
+        {
+            "required": [
+                "disk_format",
+                "name",
+                "timestamp_granularity"
+            ]
+        }
+    ],
     "properties": {
         "binary_path": {
             "description": "Path to the filesystem binary",
             "type": "string"
         },
+        "disk_format": {
+            "description": "The format known to fs-management",
+            "type": "integer"
+        },
         "has_directory_size_limit": {
             "default": false,
             "description": "True if the filesystem has a directory size limit (unrelated to available disk space)",
+            "type": "boolean"
+        },
+        "is_case_sensitive": {
+            "default": true,
+            "description": "True if the filesystem is case sensitive",
+            "type": "boolean"
+        },
+        "is_journaled": {
+            "default": true,
+            "description": "True if the filesystem implements journaling and can recover from sudden failure",
+            "type": "boolean"
+        },
+        "is_slow": {
+            "default": false,
+            "description": "True if the filesystem is a slow filesystem, in which case some tests are tweaked so they can complete on time",
             "type": "boolean"
         },
         "max_file_size": {
@@ -45,6 +80,15 @@
             "minItems": 1,
             "type": "array"
         },
+        "sectors_per_cluster": {
+            "description": "If set, the sectors_per_cluster value to use when formatting a FAT filesystem",
+            "type": "integer"
+        },
+        "supports_fs_query": {
+            "default": true,
+            "description": "True if the filesystem supports fuchsia.fs/Query",
+            "type": "boolean"
+        },
         "supports_fsck_after_every_transaction": {
             "default": false,
             "description": "True if the filesystem supports the fsck_after_every_transaction mount option",
@@ -65,6 +109,16 @@
             "description": "True if the filesystem can expand in size when used within a volume manager like FVM",
             "type": "boolean"
         },
+        "supports_sparse_files": {
+            "default": true,
+            "description": "True if the filesystem supports sparse files",
+            "type": "boolean"
+        },
+        "supports_watch_event_deleted": {
+            "default": true,
+            "description": "True if the filesystem supports the WATCH_EVENT_DELETED event",
+            "type": "boolean"
+        },
         "timestamp_granularity": {
             "description": "Timestamp granularity in nanoseconds",
             "exclusiveMinimum": 0,
@@ -76,10 +130,5 @@
             "type": "boolean"
         }
     },
-    "required": [
-        "name",
-        "binary_path",
-        "timestamp_granularity"
-    ],
     "type": "object"
 }

@@ -252,6 +252,7 @@ fs_test_config("minfs") {
   use_directory_admin_to_unmount = true
   has_directory_size_limit = true
   supports_fsck_after_every_transaction = true
+  supports_watch_event_deleted = false
   options = [
     {
       description = "MinfsWithFvm"

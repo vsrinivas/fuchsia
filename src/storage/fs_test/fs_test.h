@@ -38,7 +38,6 @@ using RamDevice = std::variant<storage::RamDisk, ramdevice_client::RamNand>;
 
 struct TestFilesystemOptions {
   static TestFilesystemOptions DefaultMemfs();
-  static TestFilesystemOptions DefaultFatfs();
   static TestFilesystemOptions DefaultBlobfs();
   static TestFilesystemOptions BlobfsWithoutFvm();
 
@@ -124,11 +123,12 @@ class Filesystem {
     bool in_memory = false;
     bool is_case_sensitive = true;
     bool supports_sparse_files = true;
-    bool is_fat = false;
+    bool is_slow = false;
     bool supports_fsck_after_every_transaction = false;
     bool has_directory_size_limit = false;
     bool is_journaled = true;
     bool supports_fs_query = true;
+    bool supports_watch_event_deleted = true;
   };
 
   virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(
@@ -189,30 +189,7 @@ class MemfsFilesystem : public FilesystemImpl<MemfsFilesystem> {
         .in_memory = true,
         .is_case_sensitive = true,
         .supports_sparse_files = true,
-    };
-    return traits;
-  }
-};
-
-// Support for Fatfs.
-class FatFilesystem : public FilesystemImpl<FatFilesystem> {
- public:
-  zx::status<std::unique_ptr<FilesystemInstance>> Make(
-      const TestFilesystemOptions& options) const override;
-  const Traits& GetTraits() const override {
-    static Traits traits{
-        .name = "fatfs",
-        .can_unmount = true,
-        .timestamp_granularity = zx::sec(2),
-        .supports_hard_links = false,
-        .supports_mmap = false,
-        .supports_resize = false,
-        .max_file_size = 4'294'967'295,
-        .in_memory = false,
-        .is_case_sensitive = false,
-        .supports_sparse_files = false,
-        .is_fat = true,
-        .is_journaled = false,
+        .supports_watch_event_deleted = false,
     };
     return traits;
   }

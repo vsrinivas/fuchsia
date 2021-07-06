@@ -269,6 +269,8 @@ std::vector<TestFilesystemOptions> GetTestCombinations() {
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, PersistTest, testing::ValuesIn(GetTestCombinations()),
                          testing::PrintToStringParamName());
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(PersistTest);
+
 std::string PersistWithDataTestParamDescription(
     const testing::TestParamInfo<WithBufferSize>& param) {
   std::stringstream s;
@@ -281,6 +283,8 @@ INSTANTIATE_TEST_SUITE_P(/*no prefix*/, PersistWithDataTest,
                                           testing::Values(1, 100, 8192 - 1, 8192, 8192 + 1,
                                                           8192 * 128)),
                          PersistWithDataTestParamDescription);
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(PersistWithDataTest);
 
 std::string PersistRenameLoopTestParamDescription(
     const testing::TestParamInfo<PersistRenameLoopTestParam>& param) {
@@ -298,6 +302,8 @@ INSTANTIATE_TEST_SUITE_P(
                      testing::Values(std::make_tuple(2, 2), std::make_tuple(2, 100),
                                      std::make_tuple(15, 100), std::make_tuple(25, 500))),
     PersistRenameLoopTestParamDescription);
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(PersistRenameLoopTest);
 
 }  // namespace
 }  // namespace fs_test

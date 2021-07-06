@@ -190,6 +190,8 @@ INSTANTIATE_TEST_SUITE_P(
         testing::Values(SparseTestType::UnlinkThenClose, SparseTestType::CloseThenUnlink)),
     GetParamDescription);
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(SparseTruncateTest);
+
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, LargeTruncateTest,
     testing::Combine(testing::ValuesIn(AllTestFilesystems()),

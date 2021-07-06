@@ -64,7 +64,7 @@ INSTANTIATE_TEST_SUITE_P(
             // of the ram-disk rather than a directory size limit, so use a small ram-disk to keep
             // run-time reasonable, and do the same for other filesystems that don't have a
             // directory size limit.
-            options.device_block_count = options.filesystem->GetTraits().is_fat ? 256 : 4096;
+            options.device_block_count = options.filesystem->GetTraits().is_slow ? 256 : 4096;
           }
           return options;
         })),

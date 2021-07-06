@@ -30,7 +30,6 @@ static_library("fs_test") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/json_parser",
-    "//src/storage/fuchsia-fatfs:fatfs",
     "//src/storage/fvm",
     "//src/storage/memfs",
     "//src/storage/testing:storage_driver_test_support",
@@ -372,11 +371,7 @@ test("watcher_tests") {
 }
 
 fs_test_suite("core") {
-  deps = [
-    "//src/storage/bin/blobfs",
-    "//zircon/third_party/uapp/fsck-msdosfs",
-    "//zircon/third_party/uapp/mkfs-msdosfs",
-  ]
+  deps = [ "//src/storage/bin/blobfs" ]
 }
 
 test("directory_large_tests") {

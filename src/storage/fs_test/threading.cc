@@ -272,5 +272,7 @@ INSTANTIATE_TEST_SUITE_P(/*no prefix*/, ThreadingLinkTest,
                          testing::ValuesIn(GetThreadingLinkTestCombinations()),
                          testing::PrintToStringParamName());
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(ThreadingLinkTest);
+
 }  // namespace
 }  // namespace fs_test

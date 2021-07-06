@@ -412,14 +412,6 @@ TestFilesystemOptions TestFilesystemOptions::DefaultMemfs() {
                                .filesystem = &MemfsFilesystem::SharedInstance()};
 }
 
-TestFilesystemOptions TestFilesystemOptions::DefaultFatfs() {
-  return TestFilesystemOptions{.description = "Fatfs",
-                               .use_fvm = false,
-                               .device_block_size = 512,
-                               .device_block_count = 196'608,
-                               .filesystem = &FatFilesystem::SharedInstance()};
-}
-
 TestFilesystemOptions TestFilesystemOptions::DefaultBlobfs() {
   return TestFilesystemOptions{.description = "Blobfs",
                                .use_fvm = true,
@@ -459,7 +451,7 @@ std::vector<TestFilesystemOptions> AllTestFilesystems() {
         options->push_back(TestFilesystemOptions{.description = name,
                                                  .use_fvm = false,
                                                  .device_block_size = 512,
-                                                 .device_block_count = 131'072,
+                                                 .device_block_count = 196'608,
                                                  .filesystem = filesystem.get()});
       } else {
         for (size_t i = 0; i < iter->value.Size(); ++i) {
@@ -467,7 +459,7 @@ std::vector<TestFilesystemOptions> AllTestFilesystems() {
           options->push_back(TestFilesystemOptions{.description = opt["description"].GetString(),
                                                    .use_fvm = opt["use_fvm"].GetBool(),
                                                    .device_block_size = 512,
-                                                   .device_block_count = 131'072,
+                                                   .device_block_count = 196'608,
                                                    .fvm_slice_size = 32'768,
                                                    .filesystem = filesystem.get()});
         }
@@ -479,7 +471,6 @@ std::vector<TestFilesystemOptions> AllTestFilesystems() {
       // fs_test suite.
       return new std::vector<TestFilesystemOptions>{
           TestFilesystemOptions::DefaultMemfs(),
-          TestFilesystemOptions::DefaultFatfs(),
       };
     }
   }();
@@ -567,70 +558,6 @@ class MemfsInstance : public FilesystemInstance {
 zx::status<std::unique_ptr<FilesystemInstance>> MemfsFilesystem::Make(
     const TestFilesystemOptions& options) const {
   auto instance = std::make_unique<MemfsInstance>();
-  zx::status<> status = instance->Format(options);
-  if (status.is_error()) {
-    return status.take_error();
-  }
-  return zx::ok(std::move(instance));
-}
-
-// -- Fatfs --
-
-class FatfsInstance : public FilesystemInstance {
- public:
-  FatfsInstance(storage::RamDisk ram_disk, std::string device_path)
-      : ram_disk_(std::move(ram_disk)), device_path_(std::move(device_path)) {}
-
-  zx::status<> Format(const TestFilesystemOptions&) override {
-    mkfs_options_t mkfs_options = default_mkfs_options;
-    mkfs_options.sectors_per_cluster = 2;  // 1 KiB cluster size
-    return FsFormat(device_path_, DISK_FORMAT_FAT, mkfs_options);
-  }
-
-  zx::status<> Mount(const std::string& mount_path, const mount_options_t& base_options) override {
-    mount_options_t options = base_options;
-    // Fatfs doesn't support DirectoryAdmin.
-    options.admin = false;
-    return FsMount(device_path_, mount_path, DISK_FORMAT_FAT, options, &outgoing_directory_);
-  }
-
-  zx::status<> Unmount(const std::string& mount_path) override {
-    zx::status<> status = FsAdminUnmount(mount_path, outgoing_directory_);
-    if (status.is_error()) {
-      return status;
-    }
-    outgoing_directory_.reset();
-    return zx::ok();
-  }
-
-  zx::status<> Fsck() override {
-    fsck_options_t options{
-        .verbose = false,
-        .never_modify = true,
-        .always_modify = false,
-        .force = true,
-    };
-    return zx::make_status(
-        fsck(device_path_.c_str(), DISK_FORMAT_FAT, &options, launch_stdio_sync));
-  }
-
-  zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
-  zx::unowned_channel GetOutgoingDirectory() const override { return outgoing_directory_.borrow(); }
-
- private:
-  storage::RamDisk ram_disk_;
-  std::string device_path_;
-  zx::channel outgoing_directory_;
-};
-
-zx::status<std::unique_ptr<FilesystemInstance>> FatFilesystem::Make(
-    const TestFilesystemOptions& options) const {
-  auto ram_disk_or = CreateRamDisk(options);
-  if (ram_disk_or.is_error()) {
-    return ram_disk_or.take_error();
-  }
-  auto [ram_disk, device_path] = std::move(ram_disk_or).value();
-  auto instance = std::make_unique<FatfsInstance>(std::move(ram_disk), device_path);
   zx::status<> status = instance->Format(options);
   if (status.is_error()) {
     return status.take_error();

@@ -136,8 +136,7 @@ TEST_P(MaxFileSizeTest, WritingToMaxSupportedOffset) {
 }
 
 TEST_P(MaxFileTest, WritingBeyondMaxSupportedOffset) {
-  // Fat does not support sparse files. Maybe test is not worth the time spent writing a huge file.
-  if (fs().GetTraits().is_fat) {
+  if (!fs().GetTraits().supports_sparse_files) {
     return;
   }
   fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR));
@@ -146,8 +145,7 @@ TEST_P(MaxFileTest, WritingBeyondMaxSupportedOffset) {
 }
 
 TEST_P(MaxFileTest, TruncatingToMaxSupportedOffset) {
-  // Fat does not support sparse files. Maybe test is not worth the time spent writing a huge file.
-  if (fs().GetTraits().is_fat) {
+  if (!fs().GetTraits().supports_sparse_files) {
     return;
   }
   fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR));
@@ -156,8 +154,7 @@ TEST_P(MaxFileTest, TruncatingToMaxSupportedOffset) {
 }
 
 TEST_P(MaxFileTest, TruncatingBeyondMaxSupportedOffset) {
-  // Fat does not support sparse files. Maybe test is not worth the time spent writing a huge file.
-  if (fs().GetTraits().is_fat) {
+  if (!fs().GetTraits().supports_sparse_files) {
     return;
   }
   fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR));
@@ -279,7 +276,7 @@ std::vector<ParamType> GetTestCombinations() {
   std::vector<ParamType> test_combinations;
   for (TestFilesystemOptions options : AllTestFilesystems()) {
     // Fatfs is slow and there's no real benefit from having a larger ram-disk.
-    if (options.filesystem->GetTraits().name != "fatfs") {
+    if (!options.filesystem->GetTraits().is_slow) {
       // Use a larger ram-disk than the default so that the maximum transaction limit is exceeded
       // for during delayed data allocation on non-FVM-backed Minfs partitions.
       options.device_block_size = 512;

@@ -193,5 +193,7 @@ INSTANTIATE_TEST_SUITE_P(
         })),
     testing::PrintToStringParamName());
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(UnlinkSparseTest);
+
 }  // namespace
 }  // namespace fs_test

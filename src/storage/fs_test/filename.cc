@@ -12,11 +12,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <optional>
 #include <string>
 
-#include <fbl/string.h>
-#include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 
 #include "gtest/gtest.h"
@@ -26,8 +23,8 @@
 namespace fs_test {
 namespace {
 
-using FilenameNotFatTest = FilesystemTest;
-TEST_P(FilenameNotFatTest, TestOnlySpacePeriodNameSucceeds) {
+using FilenameTest = FilesystemTest;
+TEST_P(FilenameTest, TestOnlySpacePeriodNameSucceeds) {
   ASSERT_NO_FATAL_FAILURE(CheckCanCreateDirectory(this, "  .  ", false));
   ASSERT_NO_FATAL_FAILURE(CheckCanCreateDirectory(this, "  . ", false));
   ASSERT_NO_FATAL_FAILURE(CheckCanCreateDirectory(this, ".  . ", false));
@@ -36,64 +33,9 @@ TEST_P(FilenameNotFatTest, TestOnlySpacePeriodNameSucceeds) {
   ASSERT_NO_FATAL_FAILURE(CheckCanCreateDirectory(this, "     ", false));
 }
 
-using FilenameTestFat = FilesystemTest;
-TEST_P(FilenameTestFat, TestOnlySpacePeriodNameFails) {
-  ASSERT_EQ(mkdir(GetPath("  . ").c_str(), 0755), -1);
-  ASSERT_EQ(errno, EINVAL);
-  ASSERT_EQ(mkdir(GetPath(".  . ").c_str(), 0755), -1);
-  ASSERT_EQ(errno, EINVAL);
-  ASSERT_EQ(mkdir(GetPath(".  . .").c_str(), 0755), -1);
-  ASSERT_EQ(errno, EINVAL);
-  ASSERT_EQ(mkdir(GetPath(".....").c_str(), 0755), -1);
-  ASSERT_EQ(errno, EINVAL);
-  ASSERT_EQ(mkdir(GetPath("     ").c_str(), 0755), -1);
-  ASSERT_EQ(errno, EINVAL);
-}
-
-TEST_P(FilenameTestFat, TestTrailingDots) {
-  ASSERT_EQ(mkdir(GetPath("hello...").c_str(), 0755), -1);
-  ASSERT_EQ(errno, EINVAL);
-  ASSERT_EQ(mkdir(GetPath("hello..").c_str(), 0755), -1);
-  ASSERT_EQ(errno, EINVAL);
-}
-
-TEST_P(FilenameTestFat, TestLeadingTrailingSpaces) {
-  // Note that the spec says that leading spaces should be ignored, but neither Linux or Windows
-  // ignore them, so we expect them to be valid.
-  ASSERT_NO_FATAL_FAILURE(CheckCanCreateDirectory(this, " foo", false));
-  ASSERT_NO_FATAL_FAILURE(CheckCanCreateDirectory(this, "  foo", false));
-
-  // Trailing spaces are invalid.
-  ASSERT_EQ(mkdir(GetPath("foo  ").c_str(), 0755), -1);
-  ASSERT_EQ(errno, EINVAL);
-  ASSERT_EQ(mkdir(GetPath("foo ").c_str(), 0755), -1);
-  ASSERT_EQ(errno, EINVAL);
-  ASSERT_NO_FATAL_FAILURE(CheckCanCreateDirectory(this, "foo", false));
-}
-
 INSTANTIATE_TEST_SUITE_P(
-    /*no prefix*/, FilenameNotFatTest,
-    testing::ValuesIn(MapAndFilterAllTestFilesystems(
-        [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
-          if (options.filesystem->GetTraits().is_fat) {
-            return std::nullopt;
-          }
-          return options;
-        })),
+    /*no prefix*/, FilenameTest, testing::ValuesIn(AllTestFilesystems()),
     testing::PrintToStringParamName());
-
-INSTANTIATE_TEST_SUITE_P(
-    /*no prefix*/, FilenameTestFat,
-    testing::ValuesIn(MapAndFilterAllTestFilesystems(
-        [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
-          if (!options.filesystem->GetTraits().is_fat) {
-            return std::nullopt;
-          }
-          return options;
-        })),
-    testing::PrintToStringParamName());
-
-GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(FilenameTestFat);
 
 }  // namespace
 }  // namespace fs_test

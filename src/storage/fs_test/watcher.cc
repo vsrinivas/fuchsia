@@ -246,8 +246,7 @@ TEST_P(WatcherTest, Removed) {
 }
 
 TEST_P(WatcherTest, DirectoryDeleted) {
-  if (fs().GetTraits().name != "fxfs") {
-    // TODO(fxbug.dev/76762): Minfs and fatfs don't support WATCH_EVENT_DELETED
+  if (!fs().GetTraits().supports_watch_event_deleted) {
     std::cout << "Skipping " << fs().GetTraits().name << std::endl;
     return;
   }

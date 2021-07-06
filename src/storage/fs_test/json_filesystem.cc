@@ -15,9 +15,16 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
     const rapidjson::Document& config) {
   auto name = config["name"].GetString();
 
-  disk_format_t format = fs_management::CustomDiskFormat::Register(
-      std::make_unique<fs_management::CustomDiskFormat>(name, config["binary_path"].GetString()));
-
+  auto iter = config.FindMember("binary_path");
+  disk_format_t format;
+  if (iter == config.MemberEnd()) {
+    format = static_cast<disk_format_t>(config["disk_format"].GetInt64());
+  } else {
+    format = fs_management::CustomDiskFormat::Register(
+        std::make_unique<fs_management::CustomDiskFormat>(name, config["binary_path"].GetString()));
+  }
+  iter = config.FindMember("sectors_per_cluster");
+  const int sectors_per_cluster = iter == config.MemberEnd() ? 0 : iter->value.GetInt64();
   return zx::ok(std::make_unique<JsonFilesystem>(
       Traits{
           .name = config["name"].GetString(),
@@ -28,13 +35,19 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
           .supports_resize = GetBoolOrDefault(config, "supports_resize", false),
           .max_file_size = config["max_file_size"].GetInt64(),
           .in_memory = false,
-          .is_case_sensitive = true,
-          .supports_sparse_files = true,
+          .is_case_sensitive = GetBoolOrDefault(config, "is_case_sensitive", true),
+          .supports_sparse_files = GetBoolOrDefault(config, "supports_sparse_files", true),
+          .is_slow = GetBoolOrDefault(config, "is_slow", false),
           .supports_fsck_after_every_transaction =
               GetBoolOrDefault(config, "supports_fsck_after_every_transaction", false),
           .has_directory_size_limit = GetBoolOrDefault(config, "has_directory_size_limit", false),
+          .is_journaled = GetBoolOrDefault(config, "is_journaled", true),
+          .supports_fs_query = GetBoolOrDefault(config, "supports_fs_query", true),
+          .supports_watch_event_deleted =
+              GetBoolOrDefault(config, "supports_watch_event_deleted", true),
       },
-      format, GetBoolOrDefault(config, "use_directory_admin_to_unmount", false)));
+      format, GetBoolOrDefault(config, "use_directory_admin_to_unmount", false),
+      sectors_per_cluster));
 }
 
 class JsonInstance : public FilesystemInstance {
@@ -45,7 +58,9 @@ class JsonInstance : public FilesystemInstance {
         device_path_(std::move(device_path)) {}
 
   virtual zx::status<> Format(const TestFilesystemOptions& options) override {
-    return FsFormat(device_path_, filesystem_.format(), default_mkfs_options);
+    mkfs_options_t mkfs_options = default_mkfs_options;
+    mkfs_options.sectors_per_cluster = filesystem_.sectors_per_cluster();
+    return FsFormat(device_path_, filesystem_.format(), mkfs_options);
   }
 
   zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) override {

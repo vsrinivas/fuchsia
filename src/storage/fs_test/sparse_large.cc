@@ -48,7 +48,7 @@ std::vector<TestFilesystemOptions> AllTestFilesystemsWithCustomDisk() {
   for (TestFilesystemOptions options : AllTestFilesystems()) {
     // Fatfs doesn't support sparse files, is slow, and this test doesn't test more than other
     // tests, so skip it.
-    if (options.filesystem->GetTraits().name != "fatfs") {
+    if (options.filesystem->GetTraits().supports_sparse_files) {
       options.device_block_count = 1LLU << 24;
       options.device_block_size = 1LLU << 9;
       options.fvm_slice_size = 1LLU << 23;
