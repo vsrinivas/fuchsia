@@ -24,6 +24,7 @@ typedef ErrorCallback = void Function(String url, String error);
 class PresenterService extends GraphicalPresenter {
   late ViewPresentedCallback onViewPresented;
   late ViewDismissedCallback onViewDismissed;
+  late VoidCallback onPresenterDisposed;
   late ErrorCallback onError;
 
   PresenterService();
@@ -87,23 +88,23 @@ class PresenterService extends GraphicalPresenter {
     }
   }
 
-  // Holds the fidl bindings to this implementation of [GraphicalPresenter].
-  final List<GraphicalPresenterBinding> _bindings = [];
+  // Holds the fidl binding to this implementation of [GraphicalPresenter].
+  final _binding = GraphicalPresenterBinding();
+  bool _disposed = false;
 
   // Binds the request to this service.
   void bind(InterfaceRequest<GraphicalPresenter> request) {
-    final binding = GraphicalPresenterBinding();
-    binding
+    _binding
       ..bind(this, request)
       ..whenClosed.then((_) {
-        _bindings.remove(binding);
+        _disposed = true;
+        onPresenterDisposed();
       });
-    _bindings.add(binding);
   }
 
   void dispose() {
-    for (final binding in _bindings) {
-      binding.close(0);
+    if (!_disposed && !_binding.isClosed) {
+      _binding.close(0);
     }
   }
 }
@@ -134,6 +135,7 @@ class _ViewControllerImpl extends ViewController {
 
   @override
   Future<void> dismiss() async {
+    // ignore: unawaited_futures
     onDismiss.call();
     close();
   }

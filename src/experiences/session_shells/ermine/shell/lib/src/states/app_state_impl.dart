@@ -53,6 +53,7 @@ class AppStateImpl with Disposable implements AppState {
     _focusedView = startupService.hostView.asObservable();
     focusService.onFocusMoved = _onFocusMoved;
     presenterService
+      ..onPresenterDisposed = dispose
       ..onViewPresented = _onViewPresented
       ..onViewDismissed = _onViewDismissed
       ..onError = _onPresentError
@@ -86,7 +87,7 @@ class AppStateImpl with Disposable implements AppState {
     super.dispose();
 
     settingsState.dispose();
-    oobeState.dispose();
+    _oobeState?.dispose();
 
     startupService.dispose();
     focusService.dispose();
@@ -100,8 +101,9 @@ class AppStateImpl with Disposable implements AppState {
   @override
   late final SettingsState settingsState;
 
+  OobeState? _oobeState;
   @override
-  OobeState get oobeState => OobeState.fromEnv();
+  OobeState get oobeState => _oobeState ??= OobeState.fromEnv();
 
   @override
   late final theme = (() {
