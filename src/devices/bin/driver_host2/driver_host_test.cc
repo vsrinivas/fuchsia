@@ -33,7 +33,7 @@ namespace ftest = fuchsia_driverhost_test;
 using Completer = fidl::WireServer<fdf::DriverHost>::StartCompleter::Sync;
 using namespace inspect::testing;
 
-class fake_context : public fit::context {
+class FakeContext : public fit::context {
  public:
   fit::executor* executor() const override {
     EXPECT_TRUE(false);
@@ -201,7 +201,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
   }
 
   inspect::Hierarchy Inspect() {
-    fake_context context;
+    FakeContext context;
     auto inspector = driver_host_->Inspect()(context).take_value();
     return inspect::ReadFromInspector(inspector)(context).take_value();
   }

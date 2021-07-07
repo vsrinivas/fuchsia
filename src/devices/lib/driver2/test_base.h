@@ -6,10 +6,16 @@
 #define SRC_DEVICES_LIB_DRIVER2_TEST_BASE_H_
 
 #include <fuchsia/io/cpp/fidl_test_base.h>
+#include <lib/fit/promise.h>
 
 #include "src/devices/lib/driver2/namespace.h"
 
 namespace driver::testing {
+
+struct FakeContext : public fpromise::context {
+  fpromise::executor* executor() const override { return nullptr; }
+  fpromise::suspended_task suspend_task() override { return fpromise::suspended_task(); }
+};
 
 class Directory : public fuchsia::io::testing::Directory_TestBase {
  public:

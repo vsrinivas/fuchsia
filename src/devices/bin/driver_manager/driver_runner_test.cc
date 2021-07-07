@@ -31,7 +31,7 @@ namespace fsys = fuchsia::sys2;
 using namespace testing;
 using namespace inspect::testing;
 
-class fake_context : public fit::context {
+class FakeContext : public fit::context {
  public:
   fit::executor* executor() const override {
     EXPECT_TRUE(false);
@@ -341,7 +341,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   }
 
   inspect::Hierarchy Inspect(DriverRunner& driver_runner) {
-    fake_context context;
+    FakeContext context;
     auto inspector = driver_runner.Inspect()(context).take_value();
     return inspect::ReadFromInspector(inspector)(context).take_value();
   }

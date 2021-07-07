@@ -6,19 +6,12 @@
 
 #include <gtest/gtest.h>
 
-struct fake_context : fit::context {
-  fit::executor* executor() const override {
-    EXPECT_TRUE(false);
-    return nullptr;
-  }
-
-  fit::suspended_task suspend_task() override { return fit::suspended_task(); }
-};
+#include "src/devices/lib/driver2/test_base.h"
 
 // Test that driver::Continue() correctly returns fit::results, and can be
 // resumed using driver::ContinueWith.
 TEST(PromiseTest, Continue) {
-  fake_context context;
+  driver::testing::FakeContext context;
 
   auto success = fit::make_promise(driver::Continue(
       [](driver::ContinueWith<fit::result<>>& with) -> fit::result<> { return fit::ok(); }));

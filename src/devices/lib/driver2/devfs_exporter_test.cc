@@ -19,19 +19,6 @@ namespace fdfs = fuchsia::device::fs;
 namespace fio = fuchsia::io;
 namespace flogger = fuchsia_logger;
 
-class FakeContext : public fpromise::context {
- public:
-  fpromise::executor* executor() const override {
-    EXPECT_TRUE(false);
-    return nullptr;
-  }
-
-  fpromise::suspended_task suspend_task() override {
-    EXPECT_TRUE(false);
-    return fpromise::suspended_task();
-  }
-};
-
 class TestExporter : public fdfs::testing::Exporter_TestBase {
  public:
   using ExportHandler = fit::function<zx_status_t(std::string devfs_path, uint32_t protocol_id)>;
@@ -98,7 +85,7 @@ TEST(DevfsExporterTest, Create) {
 
   auto exported = exporter->Export<flogger::LogSink>("sys/log", 1);
   loop.RunUntilIdle();
-  FakeContext context;
+  driver::testing::FakeContext context;
   auto result = exported(context);
   ASSERT_TRUE(result.is_ok());
   EXPECT_EQ("sys/log", devfs_path);
@@ -133,7 +120,7 @@ TEST(DevfsExporterTest, Create_ServiceNotFound) {
   // Check export failure due to missing service.
   auto exported = exporter->Export<flogger::LogSink>("sys/log", 1);
   loop.RunUntilIdle();
-  FakeContext context;
+  driver::testing::FakeContext context;
   auto result = exported(context);
   ASSERT_TRUE(result.is_error());
 }
@@ -173,7 +160,7 @@ TEST(DevfsExporterTest, Create_ServiceFailure) {
 
   auto exported = exporter->Export<flogger::LogSink>("sys/log", 1);
   loop.RunUntilIdle();
-  FakeContext context;
+  driver::testing::FakeContext context;
   auto result = exported(context);
   ASSERT_TRUE(result.is_error());
 }
