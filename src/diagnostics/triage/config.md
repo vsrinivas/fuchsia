@@ -24,7 +24,7 @@ Each config file specifies four kinds of configuration: Selectors and Evals
 Each Select, Eval, Test, and Action has a name. Thus, the structure of a config
 file is:
 
-```JSON
+```json5
 {
     "select": {
         "select1": "type:component:node/path:property",
@@ -175,11 +175,20 @@ specified by providing the appropriate value for the `type` field.
 A `Warning` is an action that is used to raise an alert when a boolean condition
 is met.
 
-`Warning` supports the following fields: * `trigger`, a required field,
-specifies the name of a Metric that supplies a Boolean value. * `print`, a
-required field, specifies a string to output when the warning is raised.
+`Warning` supports the following fields:
 
-```JSON
+*   `trigger`, a required field, specifies the name of a Metric that supplies a
+    Boolean value.
+*   `print`, a required field, specifies a string to output when the warning is
+    raised.
+*   `tag`, an optional field, associates a tag with this Action.
+*   `file_bug`, an optional string field, specifies that a bug should be filed
+    and where. Triage does not file bugs directly; this field simply informs the
+    consumer (a human user or an automated pipeline). It can be a Monorail
+    component (e.g. "I18N>Fonts") or references to other issue trackers
+    understood by the consumer.
+
+```json5
     "actions": {
         "disk_usage_high": {
             "type": "Warning", "trigger": "disk_used / disk_total > 0.95", "print": "Disk usage is high!"
@@ -203,7 +212,7 @@ displayed as is. `format` supports the following values:
 
 * `percentage`: prints a float as a percentage value.
 
-```JSON
+```json5
     "actions": {
         "disk_usage": {
             "type": "Gauge", "value": "disk_used / disk_total", "format": "percentage"
@@ -222,7 +231,7 @@ Each Test specifies:
 The sample data is in the same format as an inspect.json file: an array of maps
 where each map contains `path` and `contents` fields.
 
-```JSON
+```json5
     "tests": {
         "test1": {
             "yes": ["action1", "action2"],
