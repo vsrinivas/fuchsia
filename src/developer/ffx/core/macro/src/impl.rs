@@ -531,8 +531,12 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
             if injector.is_experiment(#key).await {
                 #implementation
             } else {
-                println!("This is an experimental subcommand.  To enable this subcommand run 'ffx config set {} true'", #key);
-                ffx_core::PluginResult::from(Ok(())).into()
+                // The user did not opt-in for the feature. This will exit with a non-zero status
+                // after displaying the error message.
+                errors::ffx_bail!(
+                    "This is an experimental subcommand.  To enable this subcommand run 'ffx config set {} true'",
+                    #key
+                )
             }
         }
     } else {
@@ -1337,7 +1341,7 @@ mod test {
     #[test]
     fn test_mapped_proxy_works_with_both_options_and_results() -> Result<(), Error> {
         let proxies: ProxyMap = parse_quote! {
-            TestProxy= "test:expose:anything",
+            TestProxy = "test:expose:anything",
             TestProxy2 = "test:expose:anything"
         };
         let input: ItemFn = parse_quote! {
@@ -1352,7 +1356,7 @@ mod test {
     #[test]
     fn test_both_known_and_mapped_proxy_works_with_both_options_and_results() -> Result<(), Error> {
         let proxies: ProxyMap = parse_quote! {
-            TestProxy= "test:expose:anything",
+            TestProxy = "test:expose:anything",
             TestProxy2 = "test:expose:anything"
         };
         let input: ItemFn = parse_quote! {
