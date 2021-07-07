@@ -19,11 +19,21 @@
         "minimum": 0,
         "maximum": 65535
       },
+      "vendor-id-description": {
+        "description": "Vendor ID Description",
+	"type": "string",
+	"maxLength": 256
+      },
       "product-id": {
         "description": "Product ID",
         "type": "integer",
         "minimum": 0,
         "maximum": 65535
+      },
+      "product-id-description": {
+        "description": "Product ID Description",
+	"type": "string",
+	"maxLength": 256
       },
       "firmware-revision": {
         "description": "Firmware Revision",

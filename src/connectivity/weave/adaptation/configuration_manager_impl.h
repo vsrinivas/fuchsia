@@ -84,8 +84,14 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
     // Populates |product_id| with the weave product ID.
     virtual WEAVE_ERROR GetProductId(uint16_t& product_id) = 0;
 
+    // Populates |product_id_description| with the weave product ID.
+    virtual WEAVE_ERROR GetProductIdDescription(char* buf, size_t buf_size, size_t& out_len) = 0;
+
     // Populates |vendor_id| with the weave vendor ID.
     virtual WEAVE_ERROR GetVendorId(uint16_t& vendor_id) = 0;
+
+    // Populates |vendor_id_description| with the weave vendor ID.
+    virtual WEAVE_ERROR GetVendorIdDescription(char* buf, size_t buf_size, size_t& out_len) = 0;
 
     // Gets the instance of group key store used by this ConfigurationManager.
     virtual GroupKeyStoreBase* GetGroupKeyStore(void) = 0;
@@ -232,7 +238,9 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
   WEAVE_ERROR _GetManufacturerDeviceCertificate(uint8_t* buf, size_t buf_size, size_t& out_len);
   WEAVE_ERROR _GetPrimaryWiFiMACAddress(uint8_t* mac_address);
   WEAVE_ERROR _GetProductId(uint16_t& product_id);
+  WEAVE_ERROR _GetProductIdDescription(char* buf, size_t buf_size, size_t& out_len);
   WEAVE_ERROR _GetVendorId(uint16_t& vendor_id);
+  WEAVE_ERROR _GetVendorIdDescription(char* buf, size_t buf_size, size_t& out_len);
   WEAVE_ERROR _GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len);
   WEAVE_ERROR _SetFailSafeArmed(bool fail_safe_armed);
   WEAVE_ERROR _StoreFabricId(uint64_t fabric_id);

@@ -49,12 +49,22 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetProductId(uint16_t& product_id) {
   return delegate_->GetProductId(product_id);
 }
 
+WEAVE_ERROR ConfigurationManagerImpl::_GetProductIdDescription(char* buf, size_t buf_size,
+                                                               size_t& out_len) {
+  return delegate_->GetProductIdDescription(buf, buf_size, out_len);
+}
+
 WEAVE_ERROR ConfigurationManagerImpl::_GetPrimaryWiFiMACAddress(uint8_t* mac_address) {
   return delegate_->GetPrimaryWiFiMACAddress(mac_address);
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_GetVendorId(uint16_t& vendor_id) {
   return delegate_->GetVendorId(vendor_id);
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::_GetVendorIdDescription(char* buf, size_t buf_size,
+                                                              size_t& out_len) {
+  return delegate_->GetVendorIdDescription(buf, buf_size, out_len);
 }
 
 bool ConfigurationManagerImpl::_IsFullyProvisioned() { return delegate_->IsFullyProvisioned(); }

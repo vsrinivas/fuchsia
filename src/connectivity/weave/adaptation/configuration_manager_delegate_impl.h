@@ -35,7 +35,9 @@ class NL_DLL_EXPORT ConfigurationManagerDelegateImpl : public ConfigurationManag
   WEAVE_ERROR GetManufacturerDeviceCertificate(uint8_t* buf, size_t buf_size,
                                                size_t& out_len) override;
   WEAVE_ERROR GetProductId(uint16_t& product_id) override;
+  WEAVE_ERROR GetProductIdDescription(char* buf, size_t buf_size, size_t& out_len) override;
   WEAVE_ERROR GetVendorId(uint16_t& vendor_id) override;
+  WEAVE_ERROR GetVendorIdDescription(char* buf, size_t buf_size, size_t& out_len) override;
   bool IsFullyProvisioned() override;
   bool IsPairedToAccount() override;
   bool IsMemberOfFabric() override;

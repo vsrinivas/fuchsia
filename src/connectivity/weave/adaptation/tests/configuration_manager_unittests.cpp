@@ -47,7 +47,9 @@ using nl::Weave::Profiles::Security::AppKeys::WeaveGroupKey;
 // Below expected values are from testdata JSON files and should be
 // consistent with the file for the related tests to pass.
 constexpr uint16_t kExpectedVendorId = 5050;
+constexpr char kExpectedVendorIdDescription[] = "Fuchsia Vendor";
 constexpr uint16_t kExpectedProductId = 60209;
+constexpr char kExpectedProductIdDescription[] = "Fuchsia Product";
 constexpr uint64_t kExpectedDeviceId = 65535;
 constexpr char kExpectedFirmwareRevision[] = "0.0.0.1";
 constexpr char kExpectedFirmwareRevisionLocal[] = "prerelease-1";
@@ -402,10 +404,28 @@ TEST_F(ConfigurationManagerTest, GetVendorId) {
   EXPECT_EQ(vendor_id, kExpectedVendorId);
 }
 
+TEST_F(ConfigurationManagerTest, GetVendorIdDescription) {
+  char vendor_id_description[ConfigurationManager::kMaxVendorIdDescriptionLength + 1];
+  size_t out_len;
+  EXPECT_EQ(ConfigurationMgr().GetVendorIdDescription(vendor_id_description,
+                                                      sizeof(vendor_id_description), out_len),
+            WEAVE_NO_ERROR);
+  EXPECT_STREQ(vendor_id_description, kExpectedVendorIdDescription);
+}
+
 TEST_F(ConfigurationManagerTest, GetProductId) {
   uint16_t product_id;
   EXPECT_EQ(ConfigurationMgr().GetProductId(product_id), WEAVE_NO_ERROR);
   EXPECT_EQ(product_id, kExpectedProductId);
+}
+
+TEST_F(ConfigurationManagerTest, GetProductIdDescription) {
+  char product_id_description[ConfigurationManager::kMaxProductIdDescriptionLength + 1];
+  size_t out_len;
+  EXPECT_EQ(ConfigurationMgr().GetProductIdDescription(product_id_description,
+                                                       sizeof(product_id_description), out_len),
+            WEAVE_NO_ERROR);
+  EXPECT_STREQ(product_id_description, kExpectedProductIdDescription);
 }
 
 TEST_F(ConfigurationManagerTest, GetFirmwareRevision) {

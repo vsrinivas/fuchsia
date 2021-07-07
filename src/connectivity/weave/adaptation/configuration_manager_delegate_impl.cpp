@@ -50,9 +50,11 @@ constexpr char kDeviceInfoConfigKey_MfrDeviceCertPath[] = "mfr-device-cert-path"
 constexpr char kDeviceInfoConfigKey_MfrDeviceCertAllowLocal[] = "mfr-device-cert-allow-local";
 constexpr char kDeviceInfoConfigKey_PrivateKeyPath[] = "mfr-private-key-path";
 constexpr char kDeviceInfoConfigKey_ProductId[] = "product-id";
+constexpr char kDeviceInfoConfigKey_ProductIdDescription[] = "product-id-description";
 constexpr char kDeviceInfoConfigKey_SerialNumber[] = "serial-number";
 constexpr char kDeviceInfoConfigKey_ThreadJoinableDurationSec[] = "thread-joinable-duration-sec";
 constexpr char kDeviceInfoConfigKey_VendorId[] = "vendor-id";
+constexpr char kDeviceInfoConfigKey_VendorIdDescription[] = "vendor-id-description";
 constexpr char kDeviceInfoConfigKey_AppletPaths[] = "applet-paths";
 
 // Maximum number of chars in hex for a uint64_t.
@@ -228,8 +230,20 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetVendorId(uint16_t& vendor_id) {
   return device_info_->ReadConfigValue(kDeviceInfoConfigKey_VendorId, &vendor_id);
 }
 
+WEAVE_ERROR ConfigurationManagerDelegateImpl::GetVendorIdDescription(char* buf, size_t buf_size,
+                                                                     size_t& out_len) {
+  return device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_VendorIdDescription, buf, buf_size,
+                                          &out_len);
+}
+
 WEAVE_ERROR ConfigurationManagerDelegateImpl::GetProductId(uint16_t& product_id) {
   return device_info_->ReadConfigValue(kDeviceInfoConfigKey_ProductId, &product_id);
+}
+
+WEAVE_ERROR ConfigurationManagerDelegateImpl::GetProductIdDescription(char* buf, size_t buf_size,
+                                                                      size_t& out_len) {
+  return device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_ProductIdDescription, buf, buf_size,
+                                          &out_len);
 }
 
 WEAVE_ERROR ConfigurationManagerDelegateImpl::GetFirmwareRevision(char* buf, size_t buf_size,

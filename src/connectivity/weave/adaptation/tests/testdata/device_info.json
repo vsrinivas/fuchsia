@@ -1,16 +1,22 @@
 {
-    "vendor-id" : 5050,
-    "product-id" : 60209,
-    "firmware-revision" : "prerelease-1",
-    "pairing-code" : "ABC123",
-    "device-id-path" : "test_device_id",
-    "mfr-device-cert-path": "test_mfr_cert",
-    "enable-woble" : true,
-    "enable-thread" : true,
-    "thread-joinable-duration-sec": 1234,
-    "ble-device-name-prefix" : "Fuchsia",
-    "mfr-private-key-path" : "test_mfr_private_key",
-    "serial-number": "ABCD1234",
+    "applet-paths": [
+        "test1",
+        "test2",
+        "test3"
+    ],
+    "ble-device-name-prefix": "Fuchsia",
+    "device-id-path": "test_device_id",
+    "enable-thread": true,
+    "enable-woble": true,
+    "firmware-revision": "prerelease-1",
     "mfr-device-cert-allow-local": true,
-    "applet-paths" : ["test1", "test2", "test3"]
+    "mfr-device-cert-path": "test_mfr_cert",
+    "mfr-private-key-path": "test_mfr_private_key",
+    "pairing-code": "ABC123",
+    "product-id": 60209,
+    "product-id-description": "Fuchsia Product",
+    "serial-number": "ABCD1234",
+    "thread-joinable-duration-sec": 1234,
+    "vendor-id": 5050,
+    "vendor-id-description": "Fuchsia Vendor"
 }
