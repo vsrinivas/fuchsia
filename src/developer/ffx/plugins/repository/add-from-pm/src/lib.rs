@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
+    anyhow::{Context, Result},
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_repository_add_from_pm_args::AddFromPmCommand,
@@ -13,7 +13,11 @@ use {
 
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
 pub async fn add_from_pm(cmd: AddFromPmCommand, repos: RepositoryRegistryProxy) -> Result<()> {
-    let repo_spec = RepositorySpec::Pm { path: cmd.pm_repo_path };
+    let full_path = cmd
+        .pm_repo_path
+        .canonicalize()
+        .with_context(|| format!("failed to canonicalize {:?}", cmd.pm_repo_path))?;
+    let repo_spec = RepositorySpec::Pm { path: full_path };
 
     match repos.add_repository(&cmd.name, &mut repo_spec.into()).await? {
         Ok(()) => Ok(()),
@@ -37,6 +41,8 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_from_pm() {
+        let tmp = tempfile::tempdir().unwrap();
+
         let (sender, receiver) = channel();
         let mut sender = Some(sender);
         let repos = setup_fake_repos(move |req| match req {
@@ -46,19 +52,21 @@ mod test {
             }
             other => panic!("Unexpected request: {:?}", other),
         });
+
         add_from_pm(
-            AddFromPmCommand { name: "MyRepo".to_owned(), pm_repo_path: "a/b".into() },
+            AddFromPmCommand { name: "MyRepo".to_owned(), pm_repo_path: tmp.path().to_path_buf() },
             repos,
         )
         .await
         .unwrap();
+
         let got = receiver.await.unwrap();
         assert_eq!(
             got,
             (
                 "MyRepo".to_owned(),
                 RepositorySpec::Pm(PmRepositorySpec {
-                    path: Some("a/b".to_owned()),
+                    path: Some(tmp.path().to_str().unwrap().to_string()),
                     ..PmRepositorySpec::EMPTY
                 })
             )

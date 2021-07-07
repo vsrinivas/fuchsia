@@ -1,0 +1,168 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {
+    anyhow::Result,
+    ffx_core::ffx_plugin,
+    ffx_repository_packages_args::PackagesCommand,
+    fidl,
+    fidl_fuchsia_developer_bridge::{RepositoryPackagesIteratorMarker, RepositoryRegistryProxy},
+    humansize::{file_size_opts, FileSize},
+    prettytable::{cell, format::TableFormat, row, Row, Table},
+    std::io::{stdout, Write},
+};
+
+const MAX_HASH: usize = 11;
+
+#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
+pub async fn packages(cmd: PackagesCommand, repos: RepositoryRegistryProxy) -> Result<()> {
+    packages_impl(cmd, repos, None, stdout()).await
+}
+
+async fn packages_impl<W: Write>(
+    cmd: PackagesCommand,
+    repos_proxy: RepositoryRegistryProxy,
+    table_format: Option<TableFormat>,
+    mut writer: W,
+) -> Result<()> {
+    let (client, server) = fidl::endpoints::create_endpoints::<RepositoryPackagesIteratorMarker>()?;
+    repos_proxy.list_packages(&cmd.name, server).await?.unwrap();
+    let client = client.into_proxy()?;
+
+    let mut table = Table::new();
+    table.set_titles(row!("NAME", "SIZE", "HASH"));
+    if let Some(fmt) = table_format {
+        table.set_format(fmt);
+    }
+
+    let mut rows = vec![];
+    loop {
+        let repos = client.next().await?;
+
+        if repos.is_empty() {
+            rows.sort_by_key(|r: &Row| r.get_cell(0).unwrap().get_content());
+            for row in rows.into_iter() {
+                table.add_row(row);
+            }
+            table.print(&mut writer)?;
+            return Ok(());
+        }
+
+        for repo in repos {
+            rows.push(row!(
+                repo.name.unwrap_or("<unknown>".to_string()),
+                repo.size
+                    .map(|s| s.file_size(file_size_opts::CONVENTIONAL).unwrap_or(format!("{}b", s)))
+                    .unwrap_or("<unknown>".to_string()),
+                repo.hash
+                    .map(|s| {
+                        if cmd.full_hash {
+                            s
+                        } else {
+                            let mut clone = s.clone();
+                            clone.truncate(MAX_HASH);
+                            clone.push_str("...");
+                            clone
+                        }
+                    })
+                    .unwrap_or("<unknown>".to_string())
+            ));
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use {
+        fidl_fuchsia_developer_bridge::{
+            RepositoryPackage, RepositoryPackagesIteratorRequest, RepositoryRegistryRequest,
+        },
+        fuchsia_async as fasync,
+        futures::StreamExt,
+        prettytable::format::FormatBuilder,
+    };
+
+    async fn setup_repo_proxy() -> RepositoryRegistryProxy {
+        setup_fake_repos(move |req| match req {
+            RepositoryRegistryRequest::ListPackages { name, iterator, responder } => {
+                assert_eq!(name, "devhost");
+
+                fasync::Task::spawn(async move {
+                    let mut sent = false;
+                    let mut iterator = iterator.into_stream().unwrap();
+                    while let Some(Ok(req)) = iterator.next().await {
+                        match req {
+                            RepositoryPackagesIteratorRequest::Next { responder } => {
+                                if !sent {
+                                    sent = true;
+                                    responder
+                                        .send(
+                                            &mut vec![
+                                                RepositoryPackage {
+                                                    name: Some("package1".to_string()),
+                                                    size: Some(1),
+                                                    hash: Some(
+                                                        "longhashlonghashlonghashlonghash"
+                                                            .to_string(),
+                                                    ),
+                                                    ..RepositoryPackage::EMPTY
+                                                },
+                                                RepositoryPackage {
+                                                    name: Some("package2".to_string()),
+                                                    size: Some(2048),
+                                                    hash: Some(
+                                                        "secondhashsecondhashsecondhash"
+                                                            .to_string(),
+                                                    ),
+                                                    ..RepositoryPackage::EMPTY
+                                                },
+                                            ]
+                                            .into_iter(),
+                                        )
+                                        .unwrap()
+                                } else {
+                                    responder.send(&mut vec![].into_iter()).unwrap()
+                                }
+                            }
+                        }
+                    }
+                })
+                .detach();
+                responder.send(&mut Ok(())).unwrap();
+            }
+            other => panic!("Unexpected request: {:?}", other),
+        })
+    }
+
+    async fn run_impl(cmd: PackagesCommand) -> String {
+        let repos = setup_repo_proxy().await;
+        let mut out = Vec::<u8>::new();
+        timeout::timeout(
+            std::time::Duration::from_millis(1000),
+            packages_impl(cmd, repos, Some(FormatBuilder::new().padding(1, 1).build()), &mut out),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+
+        String::from_utf8_lossy(&out).to_string()
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_package_list_truncated_hash() {
+        assert_eq!(run_impl(PackagesCommand {
+            name: "devhost".to_string(),
+            full_hash: false,
+        }).await.trim(), "NAME      SIZE  HASH \n package1  1 B   longhashlon... \n package2  2 KB  secondhashs...");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_package_list_full_hash() {
+        assert_eq!(run_impl(PackagesCommand {
+            name: "devhost".to_string(),
+            full_hash: true,
+        }).await.trim(), "NAME      SIZE  HASH \n package1  1 B   longhashlonghashlonghashlonghash \n package2  2 KB  secondhashsecondhashsecondhash");
+    }
+}

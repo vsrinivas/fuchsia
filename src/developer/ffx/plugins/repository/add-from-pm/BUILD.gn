@@ -13,6 +13,7 @@ ffx_plugin("ffx_repository_add_from_pm") {
     "//src/developer/ffx/lib/fidl-fuchsia-developer-bridge-ext",
     "//third_party/rust_crates:futures",
   ]
+  test_deps = [ "//third_party/rust_crates:tempfile" ]
 
   sources = [
     "src/args.rs",

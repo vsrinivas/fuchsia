@@ -1,0 +1,27 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_repository_packages") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+  deps = [
+    "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/developer/ffx/lib/pkg",
+    "//src/developer/ffx/lib/timeout:lib",
+    "//src/lib/fidl/rust/fidl",
+    "//src/sys/pkg/lib/tuf",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:humansize",
+    "//third_party/rust_crates:prettytable-rs",
+  ]
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
+}

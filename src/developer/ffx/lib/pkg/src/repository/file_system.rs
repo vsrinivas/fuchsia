@@ -116,7 +116,7 @@ impl RepositoryBackend for FileSystemRepository {
         TufFileSystemRepositoryBuilder::<Json>::new(self.repo_path.clone())
             .build()
             .map(|r| Box::new(r) as Box<dyn RepositoryProvider<Json>>)
-            .map_err(|e| anyhow::anyhow!(e).into())
+            .map_err(|e| anyhow::anyhow!("error getting TUF repo: {}", e).into())
     }
 }
 

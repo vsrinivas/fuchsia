@@ -192,7 +192,11 @@ impl Repository {
         name: &str,
         backend: Box<dyn RepositoryBackend + Send + Sync>,
     ) -> Result<Self, Error> {
-        let client = Arc::new(Mutex::new(Self::get_client(backend.get_tuf_repo()?).await?));
+        let client = Arc::new(Mutex::new(
+            Self::get_client(backend.get_tuf_repo().context("getting TUF repo")?)
+                .await
+                .context("getting TUF client")?,
+        ));
         Ok(Self {
             name: name.to_string(),
             id: RepositoryId::new(),
@@ -312,7 +316,10 @@ impl Repository {
             Client::with_trusted_root(Config::default(), &raw_signed_meta, metadata_repo, tuf_repo)
                 .await
                 .context("initializing client")?;
-        client.update().await.map_err(|e| Error::Other(anyhow::anyhow!(e)))?;
+        client
+            .update()
+            .await
+            .map_err(|e| Error::Other(anyhow::anyhow!("error updating metadata: {}", e)))?;
 
         Ok(client)
     }
