@@ -1,0 +1,24 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_package.gni")
+import("//build/images/args.gni")
+import("//src/sys/pkg/bin/pm/pm.gni")
+
+# Builds a package archive from a fuchsia_package() target.
+#
+# Parameters
+#
+#   package (required)
+#     A fuchsia_package() target defined earlier in the same file.
+#     Type: label
+template("fuchsia_package_archive") {
+  assert(defined(invoker.package), "package is required")
+
+  pm_archive(target_name) {
+    forward_variables_from(invoker, "*")
+
+    manifest = "${package}_manifest"
+  }
+}
