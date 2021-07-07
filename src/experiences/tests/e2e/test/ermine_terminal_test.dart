@@ -12,9 +12,9 @@ import 'package:test/test.dart';
 ///  - Close them by typing exit, keyboard shortcut and clicking close
 ///    button on the title bar of the view.
 void main() {
-  Sl4f sl4f;
-  ErmineDriver ermine;
-  Input input;
+  late Sl4f sl4f;
+  late ErmineDriver ermine;
+  late Input input;
 
   const componentUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
 
@@ -31,8 +31,8 @@ void main() {
   tearDownAll(() async {
     // Any of these may end up being null if the test fails in setup.
     await ermine.tearDown();
-    await sl4f?.stopServer();
-    sl4f?.close();
+    await sl4f.stopServer();
+    sl4f.close();
   });
 
   setUp(() async {
@@ -50,7 +50,7 @@ void main() {
     }, timeout: timeout);
   }
 
-  Future<List<Map<String, dynamic>>> _waitForViews(
+  Future<List<Map<String, dynamic>>?> _waitForViews(
       String componentUrl, int instances,
       {bool testForFocus = false,
       Duration timeout = const Duration(seconds: 30)}) async {
@@ -72,12 +72,8 @@ void main() {
   // instance is running.
   Future<String> waitForBuffer() {
     return ermine.waitFor(() async {
-      String result;
       final snapshot = await Inspect(sl4f).snapshotRoot('terminal.cmx');
-      if (snapshot != null) {
-        result = snapshot['grid'].toString();
-      }
-      return result;
+      return snapshot['grid'].toString();
     });
   }
 

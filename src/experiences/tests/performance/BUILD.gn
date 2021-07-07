@@ -18,6 +18,7 @@ _service_account =
     "fuchsia-e2e-auth@fuchsia-cloud-api-for-test.iam.gserviceaccount.com"
 
 dart_test("experiences_ermine_session_shell_performance_test") {
+  null_safe = true
   sources = [ "workstation_performance_navigation_test.dart" ]
 
   deps = [

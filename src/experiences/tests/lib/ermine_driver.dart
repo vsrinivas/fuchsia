@@ -6,6 +6,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
+// ignore_for_file: import_of_legacy_library_into_null_safe
+
 import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_input3/fidl_async.dart' hide KeyEvent;
 import 'package:flutter_driver/flutter_driver.dart';
@@ -37,7 +39,7 @@ class ErmineDriver {
   final Sl4f sl4f;
   final Component _component;
 
-  FlutterDriver _driver;
+  FlutterDriver? _driver;
   final FlutterDriverConnector _connector;
 
   /// Constructor.
@@ -46,7 +48,7 @@ class ErmineDriver {
         _component = Component(sl4f);
 
   /// The instance of [FlutterDriver] that is connected to Ermine flutter app.
-  FlutterDriver get driver => _driver;
+  FlutterDriver get driver => _driver!;
 
   /// The instance of [Component] that is connected to the DUT.
   Component get component => _component;
@@ -118,9 +120,9 @@ class ErmineDriver {
 
   /// Got to the Overview screen.
   Future<void> gotoOverview() async {
-    await _driver.requestData('overview');
-    await _driver.waitUntilNoTransientCallbacks(timeout: Duration(seconds: 2));
-    await _driver.waitFor(find.byValueKey('overview'));
+    await _driver!.requestData('overview');
+    await _driver!.waitUntilNoTransientCallbacks(timeout: Duration(seconds: 2));
+    await _driver!.waitFor(find.byValueKey('overview'));
   }
 
   /// Enters text into Ask bar.
@@ -176,7 +178,7 @@ class ErmineDriver {
     }
 
     final input = Input(sl4f);
-    return input.tap(point);
+    await input.tap(point);
   }
 
   /// Invoke a two key keyboard shortcut.
@@ -229,6 +231,7 @@ class ErmineDriver {
     // TODO(fxb/66577): Get the last isolate once it's supported by
     // [FlutterDriverConnector] in flutter_driver_sl4f.dart
     final browserIsolate = await browserConnector.isolate('simple-browser');
+    // ignore: unnecessary_null_comparison
     if (browserIsolate == null) {
       fail('couldn\'t find simple browser.');
     }
@@ -238,6 +241,7 @@ class ErmineDriver {
     // [FlutterDriverConnector] in flutter_driver_sl4f.dart
     final browserDriver =
         await browserConnector.driverForIsolate('simple-browser');
+    // ignore: unnecessary_null_comparison
     if (browserDriver == null) {
       fail('unable to connect to simple browser.');
     }
@@ -266,7 +270,7 @@ class ErmineDriver {
 
     // Expands the simple browser to be a full-sized screen, if required.
     if (fullscreen) {
-      await _driver.requestData('fullscreen');
+      await _driver!.requestData('fullscreen');
     }
 
     // Opens another tab other than the tab opened on browser's launch,
@@ -287,7 +291,7 @@ class ErmineDriver {
   Future<Rectangle> getViewRect(String viewUrl,
       [Duration timeout = waitForTimeout]) async {
     final component = await waitForView(viewUrl, timeout);
-    final viewport = component['viewport'];
+    final viewport = component!['viewport'];
     final viewRect =
         viewport.split(',').map((e) => double.parse(e).round()).toList();
 
@@ -296,13 +300,13 @@ class ErmineDriver {
 
   /// Finds the first launched component given its [viewUrl] and returns it's
   /// Inspect data. Waits for [timeout] duration for view to launch.
-  Future<Map<String, dynamic>> waitForView(String viewUrl,
+  Future<Map<String, dynamic>?> waitForView(String viewUrl,
       [Duration timeout = waitForTimeout]) async {
     return waitFor(() async {
-      await _driver.waitUntilNoTransientCallbacks(
-          timeout: Duration(seconds: 2));
-      final views = await launchedViews();
-      final view = views.firstWhere((view) => view['url'] == viewUrl,
+      await _driver!
+          .waitUntilNoTransientCallbacks(timeout: Duration(seconds: 2));
+      List<Map<String, dynamic>?> views = await launchedViews();
+      final view = views.firstWhere((view) => view!['url'] == viewUrl,
           orElse: () => null);
       return view;
     }, timeout: timeout);
@@ -312,9 +316,6 @@ class ErmineDriver {
   Future<List<Map<String, dynamic>>> launchedViews() async {
     final views = <Map<String, dynamic>>[];
     final snapshot = await Inspect(sl4f).snapshotRoot('ermine.cmx');
-    if (snapshot == null) {
-      return views;
-    }
     final workspace = snapshot['workspaces'];
     if (workspace == null) {
       return views;
@@ -339,7 +340,13 @@ class ErmineDriver {
   Future<Image> screenshot(Rectangle rect) async {
     final scenic = Scenic(sl4f);
     final image = await scenic.takeScreenshot();
-    return copyCrop(image, rect.left, rect.top, rect.width, rect.height);
+    return copyCrop(
+      image,
+      rect.left.toInt(),
+      rect.top.toInt(),
+      rect.width.toInt(),
+      rect.height.toInt(),
+    );
   }
 
   /// Returns a histogram, i.e. occurences of colors, in an image.
@@ -416,6 +423,9 @@ class ErmineDriver {
         reason: 'No such file or directory: $goldenFilePath');
 
     final goldenImage = decodePng(goldenFile.readAsBytesSync());
+    if (goldenImage == null) {
+      return 1;
+    }
     if (image.length != golden.length) {
       final resizedImage = copyResize(
         image,
@@ -443,10 +453,12 @@ class ErmineDriver {
   }
 
   /// A helper function to wait for completion of a computation within timeout.
+  /// The computation is repeated until it returns a boolean true or non-null
+  /// result.
   Future<T> waitFor<T>(WaitForCompletion<T> completion,
       {Duration timeout = waitForTimeout}) async {
     final end = DateTime.now().add(timeout);
-    T result;
+    late T result;
     while (DateTime.now().isBefore(end)) {
       result = await completion();
       if (result == null || result is bool && result == false) {

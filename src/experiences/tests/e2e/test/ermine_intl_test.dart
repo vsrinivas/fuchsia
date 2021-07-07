@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ignore_for_file: import_of_legacy_library_into_null_safe
 import 'package:ermine_driver/ermine_driver.dart';
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:sl4f/sl4f.dart';
@@ -10,9 +11,9 @@ import 'package:test/test.dart';
 /// Tests that the DUT running ermine can do the following:
 ///   - Change locale via setui_client and that change takes effect
 void main() {
-  Sl4f sl4f;
-  SetUi setUi;
-  ErmineDriver ermine;
+  late Sl4f sl4f;
+  late SetUi setUi;
+  late ErmineDriver ermine;
 
   Future<void> setLocale(String localeId) async {
     await setUi.setLocale(localeId);
@@ -39,8 +40,8 @@ void main() {
     await setLocale('en-US');
 
     await ermine.tearDown();
-    await sl4f?.stopServer();
-    sl4f?.close();
+    await sl4f.stopServer();
+    sl4f.close();
   });
 
   test('Locale can be switched and takes effect', () async {

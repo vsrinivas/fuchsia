@@ -8,8 +8,8 @@ import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
 void main() {
-  Sl4f sl4f;
-  ErmineDriver ermine;
+  late Sl4f sl4f;
+  late ErmineDriver ermine;
 
   setUp(() async {
     sl4f = Sl4f.fromEnvironment();
@@ -22,8 +22,8 @@ void main() {
   tearDown(() async {
     // Any of these may end up being null if the test fails in setup.
     await ermine.tearDown();
-    await sl4f?.stopServer();
-    sl4f?.close();
+    await sl4f.stopServer();
+    sl4f.close();
   });
 
   test('use ask to launch terminal and verify focus', () async {
@@ -39,7 +39,7 @@ void main() {
     // The inspect data should show that the view has focus.
     const componentUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
     final inspect = await ermine.waitForView(componentUrl);
-    expect(inspect['focused'], isTrue);
+    expect(inspect!['focused'], isTrue);
 
     // Close the terminal view.
     await ermine.driver.requestData('close');

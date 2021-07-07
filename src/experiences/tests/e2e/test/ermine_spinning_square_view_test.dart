@@ -14,8 +14,8 @@ import 'package:test/test.dart';
 ///  - Launch `spinning_square_view` ephemeral package.
 ///  - Verify it is show by taking its screenshot.
 void main() {
-  Sl4f sl4f;
-  ErmineDriver ermine;
+  late Sl4f sl4f;
+  late ErmineDriver ermine;
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
@@ -28,12 +28,12 @@ void main() {
   tearDownAll(() async {
     // Any of these may end up being null if the test fails in setup.
     await ermine.tearDown();
-    await sl4f?.stopServer();
-    sl4f?.close();
+    await sl4f.stopServer();
+    sl4f.close();
   });
 
   // Take a screenshot until it's non-black or timeout.
-  Future<Image> screenshotUntilNotBlack(Rectangle rect,
+  Future<Image?> screenshotUntilNotBlack(Rectangle rect,
       {Duration timeout = const Duration(seconds: 30)}) async {
     final end = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(end)) {
@@ -64,7 +64,8 @@ void main() {
     // Give the view couple of seconds to draw before taking its screenshot.
     await Future.delayed(Duration(seconds: 2));
     final screenshot = await screenshotUntilNotBlack(viewRect);
-    final histogram = ermine.histogram(screenshot);
+    expect(screenshot, isNotNull);
+    final histogram = ermine.histogram(screenshot!);
 
     // spinning_square_view displays a red square on purple background.
     const purple = 0xffb73a67; //  (0xAABBGGRR)
@@ -73,7 +74,7 @@ void main() {
     expect(histogram.keys.length >= 2, isTrue);
     expect(histogram[purple], isNotNull);
     expect(histogram[red], isNotNull);
-    expect(histogram[purple] > histogram[red], isTrue);
+    expect(histogram[purple]! > histogram[red]!, isTrue);
 
     // Close the view.
     await ermine.driver.requestData('close');

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ignore_for_file: import_of_legacy_library_into_null_safe
+
 import 'dart:io';
 
 import 'package:ermine_driver/ermine_driver.dart';
@@ -35,14 +37,14 @@ const _yellowUrl = 'http://127.0.0.1:8080/yellow.html';
 const skipTests = [true, true, true, true, true];
 
 void main() {
-  sl4f.Dump dump;
-  Directory dumpDir;
-  ErmineDriver ermine;
-  sl4f.Input input;
+  late sl4f.Dump dump;
+  late Directory dumpDir;
+  late ErmineDriver ermine;
+  late sl4f.Input input;
   bool measureInputLatency = false;
-  sl4f.Performance performance;
-  sl4f.Sl4f sl4fDriver;
-  sl4f.WebDriverConnector webDriverConnector;
+  late sl4f.Performance performance;
+  late sl4f.Sl4f sl4fDriver;
+  late sl4f.WebDriverConnector webDriverConnector;
 
   final blueTabFinder = find.text('Blue Page');
   final greenTabFinder = find.text('Green Page');
@@ -51,7 +53,7 @@ void main() {
   final pinkTabFinder = find.text('Pink Page');
   final yellowTabFinder = find.text('Yellow Page');
 
-  final metricsSpecs = [
+  late final metricsSpecs = [
     sl4f.MetricsSpec(name: 'cpu'),
     if (measureInputLatency) sl4f.MetricsSpec(name: 'input_latency'),
     sl4f.MetricsSpec(name: 'memory'),

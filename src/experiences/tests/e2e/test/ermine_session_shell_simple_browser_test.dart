@@ -31,10 +31,10 @@ const testserverUrl =
 const skipTests = [false, true, true, true, true, true];
 
 void main() {
-  Sl4f sl4f;
-  ErmineDriver ermine;
-  WebDriverConnector webDriverConnector;
-  Input input;
+  late Sl4f sl4f;
+  late ErmineDriver ermine;
+  late WebDriverConnector webDriverConnector;
+  late Input input;
 
   // TODO(fxb/69334): Get rid of the space in the hint text.
   const newTabHintText = '     SEARCH';
@@ -96,10 +96,10 @@ void main() {
       print('Closed the browser');
     }
 
-    await webDriverConnector?.tearDown();
+    await webDriverConnector.tearDown();
     await ermine.tearDown();
-    await sl4f?.stopServer();
-    sl4f?.close();
+    await sl4f.stopServer();
+    sl4f.close();
   });
 
   Future<bool> _waitForTabArrangement(FlutterDriver browser,
@@ -116,8 +116,8 @@ void main() {
   /// the timeout expires. [NoSuchElementException] thrown by [findElement]
   /// in the meantime is ignored.
   /// Returns the [WebElement] if it finds one. Otherwise, returns null.
-  Future<WebElement> _waitForWebElement(WebDriver web, By by) async {
-    return await ermine.waitFor<WebElement>(() async {
+  Future<WebElement?> _waitForWebElement(WebDriver web, By by) async {
+    return await ermine.waitFor<WebElement?>(() async {
       try {
         final element = web.findElement(by);
         return element;
@@ -219,7 +219,7 @@ void main() {
     // Clicks the text link that opens next.html (page navigation)
     expect(
         await _repeatActionWaitingForAbsent(
-            browser, nextLink.click, indexTabFinder),
+            browser, nextLink!.click, indexTabFinder),
         isTrue,
         reason: 'Failed to click the Next link.');
     expect(await browser.getText(newTabFinder), isNotNull);
@@ -232,7 +232,7 @@ void main() {
     // Clicks the text link that opens index.html (page navigation)
     expect(
         await _repeatActionWaitingForAbsent(
-            browser, prevLink.click, nextTabFinder),
+            browser, prevLink!.click, nextTabFinder),
         isTrue,
         reason: 'Failed to click the Prev link.');
 
@@ -271,14 +271,14 @@ void main() {
     // Clicks + button to increase the number
     var digitLink = await _waitForWebElement(webdriver, By.id('target'));
     final addButton = await _waitForWebElement(webdriver, By.id('increase'));
-    expect(digitLink.text, '0');
-    addButton.click();
+    expect(digitLink!.text, '0');
+    addButton!.click();
     await ermine.waitFor(() async {
-      return digitLink.text == '1';
+      return digitLink!.text == '1';
     });
     addButton.click();
     await ermine.waitFor(() async {
-      return digitLink.text == '2';
+      return digitLink!.text == '2';
     });
     print('Clicked the + button next to the digit three times');
 
@@ -288,7 +288,7 @@ void main() {
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     digitLink = await _waitForWebElement(webdriver, By.id('target'));
     await ermine.waitFor(() async {
-      return digitLink.text == '0';
+      return digitLink!.text == '0';
     });
     print('Hit RFRSH');
 
@@ -297,7 +297,7 @@ void main() {
 
     // Clicks the text link that opens popup.html (popup page navigation)
     expect(
-        await _repeatActionWaitingFor(browser, popupLink.click, popupTabFinder,
+        await _repeatActionWaitingFor(browser, popupLink!.click, popupTabFinder,
             waitForTimeout: _timeoutThreeSec),
         isTrue,
         reason: 'Failed to click the Popup link.');
@@ -482,9 +482,9 @@ void main() {
 
     expect(textField, isNotNull);
 
-    textField.click();
+    textField!.click();
     await ermine.waitFor(() async {
-      return webdriver.activeElement.equals(textField);
+      return webdriver.activeElement!.equals(textField);
     }, timeout: _timeoutTenSec);
     print('The textfield is now focused.');
 
@@ -545,7 +545,7 @@ void main() {
       print('Start recording audio.');
       await record.startOutputSave();
       await Future.delayed(_timeoutOneSec);
-      playButton.click();
+      playButton!.click();
 
       // Waits for the audio being played to the end.
       await Future.delayed(Duration(seconds: 5));
@@ -591,14 +591,14 @@ void main() {
     // Clicks the + buttons
     var digitLink = await _waitForWebElement(webdriver, By.id('target'));
     final addButton = await _waitForWebElement(webdriver, By.id('increase'));
-    expect(digitLink.text, '0');
-    addButton.click();
+    expect(digitLink!.text, '0');
+    addButton!.click();
     await ermine.waitFor(() async {
-      return digitLink.text == '1';
+      return digitLink!.text == '1';
     });
     addButton.click();
     await ermine.waitFor(() async {
-      return digitLink.text == '2';
+      return digitLink!.text == '2';
     });
     print('Clicked the + button next to the digit three times');
 
@@ -606,7 +606,7 @@ void main() {
     await _invokeShortcut([Key.leftCtrl, Key.r]);
     digitLink = await _waitForWebElement(webdriver, By.id('target'));
     await ermine.waitFor(() async {
-      return digitLink.text == '0';
+      return digitLink!.text == '0';
     });
     print('Refreshed the page');
 
@@ -615,7 +615,7 @@ void main() {
     expect(nextLink, isNotNull);
     expect(
         await _repeatActionWaitingForAbsent(
-            browser, nextLink.click, indexTabFinder),
+            browser, nextLink!.click, indexTabFinder),
         isTrue,
         reason: 'Failed to click the Next link.');
     expect(await browser.getText(newTabFinder), isNotNull);

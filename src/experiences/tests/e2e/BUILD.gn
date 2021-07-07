@@ -26,6 +26,7 @@ host_test_data("scuba_goldens") {
 }
 
 dart_test("experiences_ermine_session_shell_e2e_test") {
+  null_safe = true
   sources = [
     "ermine_intl_test.dart",
     #    "ermine_session_shell_ask_test.dart",
@@ -73,6 +74,7 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
 }
 
 dart_test("experiences_ermine_smoke_e2e_test") {
+  null_safe = true
   sources = [ "ermine_smoke_test.dart" ]
 
   deps = [

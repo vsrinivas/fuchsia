@@ -6,6 +6,7 @@ import("//build/dart/dart_library.gni")
 import("//build/dart/test.gni")
 
 dart_library("ermine_driver") {
+  null_safe = true
   package_name = "ermine_driver"
 
   source_dir = "lib"

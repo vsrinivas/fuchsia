@@ -14,9 +14,9 @@ import 'package:test/test.dart';
 /// Assumes the shortcuts listed in:
 /// http://cs/fuchsia/src/experiences/session_shells/ermine/shell/config/keyboard_shortcuts.json
 void main() {
-  Sl4f sl4f;
-  ErmineDriver ermine;
-  Input input;
+  late Sl4f sl4f;
+  late ErmineDriver ermine;
+  late Input input;
 
   const keyPressedDuration = Duration(milliseconds: 100);
   const keyReleasedDuration = Duration(milliseconds: 200);
@@ -35,8 +35,8 @@ void main() {
   tearDownAll(() async {
     // Any of these may end up being null if the test fails in setup.
     await ermine.tearDown();
-    await sl4f?.stopServer();
-    sl4f?.close();
+    await sl4f.stopServer();
+    sl4f.close();
   });
 
   setUp(() async {
@@ -52,7 +52,7 @@ void main() {
     expect(
         await ermine.waitFor(() async {
           final view = await ermine.waitForView(terminalUrl);
-          return view['focused'] == true;
+          return view!['focused'] == true;
         }),
         isTrue);
     // Verify terminal is displaying a prompt.

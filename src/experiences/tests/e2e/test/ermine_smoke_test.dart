@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ignore_for_file: import_of_legacy_library_into_null_safe
+
 import 'package:ermine_driver/ermine_driver.dart';
 import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:flutter_driver/flutter_driver.dart';
@@ -12,8 +14,8 @@ import 'package:test/test.dart';
 ///  - Connect to ermine using Flutter Driver.
 ///  - Ensure its screenshot is not all black.
 void main() {
-  Sl4f sl4f;
-  ErmineDriver ermine;
+  late Sl4f sl4f;
+  late ErmineDriver ermine;
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
@@ -26,8 +28,8 @@ void main() {
   tearDownAll(() async {
     // Any of these may end up being null if the test fails in setup.
     await ermine.tearDown();
-    await sl4f?.stopServer();
-    sl4f?.close();
+    await sl4f.stopServer();
+    sl4f.close();
   });
 
   test('Screen should not be black', () async {

@@ -10,8 +10,8 @@ import 'package:test/test.dart';
 /// Tests that the DUT running ermine can do the following:
 ///  - Verify quickstatus memory setting is present
 void main() {
-  Sl4f sl4f;
-  ErmineDriver ermine;
+  late Sl4f sl4f;
+  late ErmineDriver ermine;
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
@@ -24,8 +24,8 @@ void main() {
   tearDownAll(() async {
     // Any of these may end up being null if the test fails in setup
     await ermine.tearDown();
-    await sl4f?.stopServer();
-    sl4f?.close();
+    await sl4f.stopServer();
+    sl4f.close();
   });
 
   test('verify channel setting present in quicksettings', () async {
