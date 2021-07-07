@@ -35,6 +35,7 @@ func readLatestVersion(ctx context.Context, t *testing.T) string {
 
 // TestStartFVDLSDK_downloadFromGCS tests starting FEMU using fvdl using images downloaded from GCS.
 func TestStartFVDLSDK_downloadFromGCS(t *testing.T) {
+	t.Skip("Skipping due to downloading from GCS causing flakes.")
 	setUp(t, false)
 	ctx := context.Background()
 	vdlOut := runVDLWithArgs(
