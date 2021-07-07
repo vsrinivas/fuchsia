@@ -69,10 +69,11 @@ impl RunReporter {
         let artifact_fn = Box::new(move |entity: &EntityId, artifact_type: &ArtifactType| {
             let unfiltered = reporter.new_artifact(entity, artifact_type)?;
             Ok(match artifact_type {
-                ArtifactType::Stdout | ArtifactType::Stderr => {
+                // All the artifact types are enumerated here as we expect future artifacts
+                // should not be filtered.
+                ArtifactType::Stdout | ArtifactType::Stderr | ArtifactType::Syslog => {
                     Box::new(AnsiFilterWriter::new(unfiltered)) as Box<DynArtifact>
                 }
-                ArtifactType::Syslog => Box::new(unfiltered) as Box<DynArtifact>,
             })
         });
         Ok(Self { reporter: reporter_dyn, artifact_fn })

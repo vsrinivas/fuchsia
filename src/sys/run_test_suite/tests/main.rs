@@ -785,7 +785,7 @@ async fn test_logging_component_min_severity() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_stdout_ansi() {
+async fn test_stdout_and_log_ansi() {
     let mut output: Vec<u8> = vec![];
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
@@ -799,7 +799,10 @@ async fn test_stdout_ansi() {
         .await
         .expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	stdout_ansi_test
+    let expected_output = "[RUNNING]	log_ansi_test
+[TIMESTAMP][PID][TID][<root>][stdout_ansi_test] INFO: \u{1b}[31mred log\u{1b}[0m
+[PASSED]	log_ansi_test
+[RUNNING]	stdout_ansi_test
 \u{1b}[31mred stdout\u{1b}[0m
 [PASSED]	stdout_ansi_test
 ";
@@ -809,7 +812,7 @@ async fn test_stdout_ansi() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_stdout_filter_ansi() {
+async fn test_stdout_and_log_filter_ansi() {
     let mut output: Vec<u8> = vec![];
     let mut ansi_filter = output::AnsiFilterWriter::new(&mut output);
     let mut reporter = output::RunReporter::new_noop();
@@ -833,7 +836,10 @@ async fn test_stdout_filter_ansi() {
     };
     drop(ansi_filter);
 
-    let expected_output = "[RUNNING]	stdout_ansi_test
+    let expected_output = "[RUNNING]	log_ansi_test
+[TIMESTAMP][PID][TID][<root>][stdout_ansi_test] INFO: red log
+[PASSED]	log_ansi_test
+[RUNNING]	stdout_ansi_test
 red stdout
 [PASSED]	stdout_ansi_test
 ";
@@ -939,10 +945,19 @@ async fn test_stdout_to_directory() {
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
         directory::Outcome::Passed,
     )
-    .with_artifact("syslog.txt", "")
+    .with_matching_artifact("syslog.txt", |logs| {
+        assert_output!(
+            logs.as_bytes(),
+            "\n[TIMESTAMP][PID][TID][<root>][stdout_ansi_test] INFO: \u{1b}[31mred log\u{1b}[0m"
+        );
+    })
     .with_case(
         ExpectedTestCase::new("stdout_ansi_test", directory::Outcome::Passed)
             .with_artifact("stdout.txt", "\u{1b}[31mred stdout\u{1b}[0m\n"),
+    )
+    .with_case(
+        ExpectedTestCase::new("log_ansi_test", directory::Outcome::Passed)
+            .with_artifact("stdout.txt", ""),
     )];
 
     let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());

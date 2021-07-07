@@ -8,3 +8,9 @@ use ansi_term::Colour::Red;
 fn stdout_ansi_test() {
     println!("{}", Red.paint("red stdout"));
 }
+
+#[test]
+fn log_ansi_test() {
+    fuchsia_syslog::init().expect("initializing log");
+    log::info!("{}", Red.paint("red log"));
+}
