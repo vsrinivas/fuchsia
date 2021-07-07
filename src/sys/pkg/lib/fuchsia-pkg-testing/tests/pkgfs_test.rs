@@ -606,9 +606,9 @@ async fn test_pkgfs_with_system_image_meta_far_missing() {
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     assert_error_kind!(d.open_file("packages/system_image/0/meta"), io::ErrorKind::NotFound);
-    assert_error_kind!(
-        ls_simple(d.list_dir("system").unwrap()),
-        io::ErrorKind::Other, // Not supported
+    assert_eq!(
+        ls_simple(d.list_dir("system").unwrap()).unwrap_err().raw_os_error(),
+        Some(libc::EOPNOTSUPP),
     );
 
     drop(d);
@@ -1158,8 +1158,8 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
     assert_eq!(
         d.open_file("packages/example/0/a/b")
             .expect_err("shouldn't be able to open file in non-allowlisted package")
-            .kind(),
-        std::io::ErrorKind::Other
+            .raw_os_error(),
+        Some(libc::EBADF),
     );
 
     // The not_on_disk package wasn't in the allowlist but _isn't_ on the disk,

@@ -64,8 +64,7 @@ mod tests {
 
     use {
         crate::common_operations::pwrite,
-        crate::target::Error,
-        std::{fs::File, fs::OpenOptions, io::ErrorKind, os::unix::io::AsRawFd},
+        std::{fs::File, fs::OpenOptions, os::unix::io::AsRawFd},
     };
 
     #[test]
@@ -83,6 +82,7 @@ mod tests {
 
         let ret = pwrite(f.as_raw_fd(), &mut buffer, 0);
         assert!(ret.is_err());
-        assert_eq!(ret.err(), Some(Error::DoIoError(ErrorKind::Other)));
+        // TODO(https://fxbug.dev/80290) update test to use std::io::Error::raw_os_error
+        // assert_eq!(ret.err(), Some(Error::DoIoError(ErrorKind::Other)));
     }
 }

@@ -106,6 +106,7 @@ rustc_test("pkgfs_test") {
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:libc",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:openat",
     "//third_party/rust_crates:serde_json",
