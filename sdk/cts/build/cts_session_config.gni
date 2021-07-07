@@ -21,8 +21,13 @@ template("cts_session_config") {
     forward_variables_from(invoker, "*")
   }
 
-  cts_copy_to_sdk(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
-    sources = [ invoker.config ]
+  current_dir = get_label_info(":${target_name}", "dir")
+  is_prebuilt_cts =
+      string_replace(current_dir, "//prebuilt/cts", "") != current_dir
+  if (!is_prebuilt_cts) {
+    cts_copy_to_sdk(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      sources = [ invoker.config ]
+    }
   }
 }

@@ -150,8 +150,16 @@ cts_fuchsia_test_package("fidl_hlcpp_tests") {
 }
 
 if (is_host) {
+  # TODO(johnshamoon): Add cts_test() and do this in the template.
+  current_dir = get_label_info(":fidl_hlcpp_unit_tests_host", "dir")
+  is_prebuilt_cts =
+      string_replace(current_dir, "//prebuilt/cts", "") != current_dir
+
   test("fidl_hlcpp_unit_tests_host") {
     output_name = "fidl_hlcpp_unit_tests"
+    if (is_prebuilt_cts) {
+      output_dir = "${root_out_dir}/host_${current_cpu}/prebuilt/cts"
+    }
     deps = [
       ":host_test_sources",
       "//zircon/system/ulib/zxtest",
@@ -160,6 +168,9 @@ if (is_host) {
 
   test("fidl_hlcpp_conformance_tests_host") {
     output_name = "fidl_hlcpp_conformance_tests"
+    if (is_prebuilt_cts) {
+      output_dir = "${root_out_dir}/host_${current_cpu}/prebuilt/cts"
+    }
     deps = [
       ":conformance_test_sources",
       "//zircon/system/ulib/zxtest",

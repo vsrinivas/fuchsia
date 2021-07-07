@@ -57,27 +57,31 @@ template("cts_copy_to_sdk") {
 
   relative_path = invoker.sources
   relative_path = relative_path[0]
-  update_binary_names_target = "${target_name}_update_name"
   abspath = get_path_info(relative_path, "abspath")
-  output_path = "${root_gen_dir}/cts/${abspath}"
 
-  action(update_binary_names_target) {
-    script = "//sdk/cts/build/scripts/update_binary_names.py"
-    inputs = [ relative_path ]
-    outputs = [ output_path ]
-    args = [
-      "--source",
-      rebase_path(abspath),
-      "--dest",
-      rebase_path(output_path),
-      "--suffix",
-      "_canary",
-    ]
+  if (get_path_info(abspath, "extension") == "gn") {
+    transform_build_gn_target = "${target_name}_transform_build"
+    output_path = "${root_gen_dir}/cts/${abspath}"
+    action(transform_build_gn_target) {
+      script = "//sdk/cts/build/scripts/transform_build_gn.py"
+      inputs = [ relative_path ]
+      outputs = [ output_path ]
+      args = [
+        "--source",
+        rebase_path(abspath),
+        "--dest",
+        rebase_path(output_path),
+      ]
+    }
   }
 
   sdk_files = [
     {
-      source = output_path
+      if (defined(transform_build_gn_target)) {
+        source = output_path
+      } else {
+        source = relative_path
+      }
 
       # If file_base is empty, the resource file will actually be copied into
       # the '/' directory on the host instead of being copied into the SDK.
@@ -116,6 +120,8 @@ template("cts_copy_to_sdk") {
       }
     }
 
-    non_sdk_deps = [ ":${update_binary_names_target}" ]
+    if (defined(transform_build_gn_target)) {
+      non_sdk_deps = [ ":${transform_build_gn_target}" ]
+    }
   }
 }

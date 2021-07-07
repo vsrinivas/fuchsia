@@ -46,6 +46,7 @@ sdk_molecule("cts_tests") {
   category = "cts"
   deps = [
     ":build_sdk",
+    ":cts_deps",
     "tests:test_sdks",
     "//sdk/testing/fidl:test_sdks",
   ]
@@ -56,5 +57,11 @@ sdk_molecule("cts_tests") {
   if (is_cts_tot) {
     deps += [ "examples:test_sdks" ]
   }
+  testonly = true
+}
+
+sdk_molecule("cts_deps") {
+  category = "cts"
+  deps = [ "//zircon/public/sysroot/sdk:sysroot_sdk" ]
   testonly = true
 }

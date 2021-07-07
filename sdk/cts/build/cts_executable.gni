@@ -28,8 +28,6 @@ import("//sdk/cts/build/write_cts_file.gni")
 #     archive.
 #     Type: string
 template("cts_executable") {
-  assert(defined(invoker.output_name),
-         "output_name must be defined for binaries.")
   invoker_deps = []
   if (defined(invoker.deps)) {
     invoker_deps += invoker.deps
@@ -53,8 +51,15 @@ template("cts_executable") {
   write_cts_file(write_file_target) {
   }
 
+  current_dir = get_label_info(":${target_name}", "dir")
+  is_prebuilt_cts =
+      string_replace(current_dir, "//prebuilt/cts", "") != current_dir
+
   executable(target_name) {
     forward_variables_from(invoker, "*", [ "dest" ])
+    if (is_prebuilt_cts) {
+      output_dir = "${root_out_dir}/host_${current_cpu}/prebuilt/cts/"
+    }
     if (!defined(deps)) {
       deps = []
     }
@@ -68,20 +73,22 @@ template("cts_executable") {
     deps += [ ":$write_file_target" ]
   }
 
-  # TODO(75000): Remove non_cts_deps
-  # non_cts_deps should only be used as a stopgap to moving existing CTS tests
-  # into the CTS archive.
-  cts_source_library(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "dest",
-                             "non_cts_deps",
-                             "public",
-                             "public_deps",
-                             "sources",
-                             "testonly",
-                           ])
+  if (!is_prebuilt_cts) {
+    # TODO(75000): Remove non_cts_deps
+    # non_cts_deps should only be used as a stopgap to moving existing CTS tests
+    # into the CTS archive.
+    cts_source_library(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "dest",
+                               "non_cts_deps",
+                               "public",
+                               "public_deps",
+                               "sources",
+                               "testonly",
+                             ])
+    }
   }
 }
 

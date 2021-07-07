@@ -6,16 +6,11 @@ import("//sdk/cts/build/cts.gni")
 
 group("tests") {
   deps = [
+    "fdio:tests",
     "fidl/cpp:tests",
     "memfs:tests",
   ]
 
-  # TODO(jcecil): Move fdio tests above once issues are resolved.
-  path = get_label_info(":${target_name}", "dir")
-  is_cts_tot = string_replace(path, "//sdk/cts", "") != path
-  if (is_cts_tot) {
-    deps += [ "fdio:tests" ]
-  }
   testonly = true
 }
 
@@ -27,15 +22,10 @@ cts_copy_to_sdk("build") {
 sdk_molecule("test_sdks") {
   deps = [
     ":build_sdk",
+    "fdio:test_sdks",
     "fidl/cpp:test_sdks",
     "memfs:test_sdks",
   ]
 
-  # TODO(jcecil): Move fdio tests above once issues are resolved.
-  path = get_label_info(":${target_name}", "dir")
-  is_cts_tot = string_replace(path, "//sdk/cts", "") != path
-  if (is_cts_tot) {
-    deps += [ "fdio:test_sdks" ]
-  }
   testonly = true
 }

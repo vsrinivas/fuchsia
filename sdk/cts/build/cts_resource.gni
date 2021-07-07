@@ -57,13 +57,18 @@ template("cts_resource") {
     deps += [ ":$write_file_target" ]
   }
 
-  cts_copy_to_sdk(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "sources",
-                             "dest",
-                             "testonly",
-                           ])
+  current_dir = get_label_info(":${target_name}", "dir")
+  is_prebuilt_cts =
+      string_replace(current_dir, "//prebuilt/cts", "") != current_dir
+  if (!is_prebuilt_cts) {
+    cts_copy_to_sdk(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "sources",
+                               "dest",
+                               "testonly",
+                             ])
+    }
   }
 }

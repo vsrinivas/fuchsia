@@ -57,13 +57,18 @@ template("cts_fuchsia_component") {
     deps += [ ":$write_file_target" ]
   }
 
-  cts_copy_to_sdk(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "dest",
-                             "manifest",
-                             "testonly",
-                           ])
-    sources = [ manifest ]
+  current_dir = get_label_info(":${target_name}", "dir")
+  is_prebuilt_cts =
+      string_replace(current_dir, "//prebuilt/cts", "") != current_dir
+  if (!is_prebuilt_cts) {
+    cts_copy_to_sdk(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "dest",
+                               "manifest",
+                               "testonly",
+                             ])
+      sources = [ manifest ]
+    }
   }
 }
