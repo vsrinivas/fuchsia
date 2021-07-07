@@ -131,4 +131,8 @@ message Static {
 
   // Whether to set --export-rust-project GN flag.
   bool export_rust_project = 30;
+
+  // Whether to use rbe for running ninja. Will be ignored (and rbe will not
+  // be used) when building with some experimental toolchain versions.
+  bool enable_rbe = 31;
 }

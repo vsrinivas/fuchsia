@@ -91,9 +91,10 @@ func TestRunSteps(t *testing.T) {
 		}
 	})
 
-	t.Run("populates the gn_trace_path and use_goma fields", func(t *testing.T) {
+	t.Run("populates set_artifacts fields", func(t *testing.T) {
 		staticSpec := proto.Clone(staticSpec).(*fintpb.Static)
 		staticSpec.UseGoma = true
+		staticSpec.EnableRbe = true
 		runner := &fakeSubprocessRunner{
 			mockStdout: []byte("some stdout"),
 		}
@@ -107,6 +108,9 @@ func TestRunSteps(t *testing.T) {
 		}
 		if !artifacts.UseGoma {
 			t.Errorf("Expected runSteps to set use_goma")
+		}
+		if !artifacts.EnableRbe {
+			t.Errorf("Expected runSteps to set enable_rbe")
 		}
 	})
 

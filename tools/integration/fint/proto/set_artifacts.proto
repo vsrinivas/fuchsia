@@ -11,32 +11,35 @@ option go_package = "go.fuchsia.dev/fuchsia/tools/integration/fint/proto";
 // SetArtifacts contains information about the manifests and other metadata
 // produced by `fint set`.
 message SetArtifacts {
-    // A brief error log populated in case of a recognized failure mode (e.g.
-    // `gn gen` failure due to a broken build graph).
-    string failure_summary = 1;
+  // A brief error log populated in case of a recognized failure mode (e.g.
+  // `gn gen` failure due to a broken build graph).
+  string failure_summary = 1;
 
-    // The path to the `gn gen` tracelog.
-    string gn_trace_path = 2;
+  // The path to the `gn gen` tracelog.
+  string gn_trace_path = 2;
 
-    // Whether the caller can skip calling `fint build`, based on the changed
-    // files included in the context spec. Will always be false unless the
-    // static spec's `skip_if_unaffected` field is set.
-    bool skip_build = 3;
+  // Whether the caller can skip calling `fint build`, based on the changed
+  // files included in the context spec. Will always be false unless the
+  // static spec's `skip_if_unaffected` field is set.
+  bool skip_build = 3;
 
-    // Whether the caller should set up Goma before invoking `fint build`.
-    bool use_goma = 4;
+  // Whether the caller should set up Goma before invoking `fint build`.
+  bool use_goma = 4;
 
-    // Metadata contains `fint set` parameters that are needed for
-    // post-processing steps by users of fint. We expose all of these values as
-    // strings, even `optimize` and `target_arch` (which are enums in
-    // static.proto), to make processing easier for consumers.
-    message Metadata {
-        string board = 1;
-        string optimize = 2;
-        string product = 3;
-        string target_arch = 4;
-        repeated string variants = 5;
-    }
+  // Metadata contains `fint set` parameters that are needed for
+  // post-processing steps by users of fint. We expose all of these values as
+  // strings, even `optimize` and `target_arch` (which are enums in
+  // static.proto), to make processing easier for consumers.
+  message Metadata {
+    string board = 1;
+    string optimize = 2;
+    string product = 3;
+    string target_arch = 4;
+    repeated string variants = 5;
+  }
 
-    Metadata metadata = 5;
+  Metadata metadata = 5;
+
+  // Where the caller should set up reproxy (RBE) before invoking `find build`.
+  bool enable_rbe = 6;
 }

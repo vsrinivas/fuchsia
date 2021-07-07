@@ -79,6 +79,7 @@ func runSteps(
 			TargetArch: strings.ToLower(staticSpec.TargetArch.String()),
 			Variants:   staticSpec.Variants,
 		},
+		EnableRbe: staticSpec.EnableRbe,
 	}
 	if contextSpec.ArtifactDir != "" {
 		artifacts.GnTracePath = filepath.Join(contextSpec.ArtifactDir, "gn_trace.json")
@@ -213,6 +214,7 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 	}
 
 	vars["use_goma"] = staticSpec.UseGoma
+	vars["enable_rbe"] = staticSpec.EnableRbe
 
 	if staticSpec.Product != "" {
 		basename := filepath.Base(staticSpec.Product)
