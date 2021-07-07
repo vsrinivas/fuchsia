@@ -113,6 +113,7 @@ build_api_module("api") {
     ":platforms",
     ":prebuilt_binaries",
     ":prebuilt_package_flavors",
+    ":rbe_config",
     ":sdk_archives",
     ":test_durations",
     ":tests",
@@ -732,6 +733,14 @@ group("tool_paths.metadata") {
     "$rustc_tool_dir/rustc",
     "$rustc_tool_dir/rustdoc",
     "//garnet/bin/perfcompare",
+
+    # reclient is using fairly generic names (bootstrap, dumpstats). We may
+    # need to move these into their own group() at some point to namespace
+    # them.
+    "//prebuilt/proprietary/third_party/reclient/$host_platform/bootstrap",
+    "//prebuilt/proprietary/third_party/reclient/$host_platform/dumpstats",
+    "//prebuilt/proprietary/third_party/reclient/$host_platform/reproxy",
+    "//prebuilt/proprietary/third_party/reclient/$host_platform/rewrapper",
     "//prebuilt/sdk/bazel/bazel",
     "//prebuilt/third_party/clang/$host_platform/share/clang/clang-format-diff.py",
     "//prebuilt/third_party/clang/$host_platform/share/clang/clang-tidy-diff.py",
@@ -896,6 +905,36 @@ build_api_module("all_package_manifest_paths") {
   # This prevents us from leaking packages that aren't actually being pm published
   # (e.g. packages in the ZBI).
   walk_keys = [ "package_barrier" ]
+}
+
+# Describes the path to the Fuchsia RBE config file.
+# in file: "$root_build_dir/rbe_config.json"
+#
+# Paths are relative to $root_build_dir.
+#
+# Type: list(scope)
+#
+#   * path
+#     - Required: Path to where the file is found, relative to $root_build_dir.
+#     - Type: path relative to $root_build_dir
+#
+build_api_module("rbe_config") {
+  testonly = true
+  data_keys = [ "rbe_config" ]
+  rebase = root_build_dir
+  deps = [ ":rbe_config.metadata" ]
+}
+
+group("rbe_config.metadata") {
+  testonly = true
+  visibility = [ ":rbe_config" ]
+  metadata = {
+    rbe_config = [
+      {
+        path = "//build/rbe/fuchsia-re-client.cfg"
+      },
+    ]
+  }
 }
 
 ###
