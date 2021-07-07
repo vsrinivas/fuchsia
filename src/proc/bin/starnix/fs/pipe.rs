@@ -158,6 +158,7 @@ impl Drop for PipeReadEndpoint {
     fn drop(&mut self) {
         let mut pipe = self.pipe.lock();
         pipe.has_reader = false;
+        pipe.node.observers.notify(FdEvents::POLLOUT);
     }
 }
 

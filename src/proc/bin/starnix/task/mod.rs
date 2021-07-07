@@ -629,7 +629,7 @@ impl Task {
         if !user_tid.is_null() {
             let zero: pid_t = 0;
             self.mm.write_object(user_tid, &zero)?;
-            self.mm.futex.wake(user_tid.addr(), usize::MAX);
+            self.mm.futex.wake(user_tid.addr(), usize::MAX, FUTEX_BITSET_MATCH_ANY);
             *clear_child_tid = UserRef::default();
         }
         Ok(())

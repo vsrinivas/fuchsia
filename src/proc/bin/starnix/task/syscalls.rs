@@ -141,9 +141,8 @@ pub fn sys_exit(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResu
 
 pub fn sys_exit_group(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
     info!(target: "exit", "exit_group: pid={} error_code={}", ctx.task.get_pid(), error_code);
-    // TODO: Once we have more than one thread in a thread group, we'll need to exit them as well.
     *ctx.task.exit_code.lock() = Some(error_code);
-    Ok(SyscallResult::Exit(error_code))
+    Ok(SyscallResult::ExitGroup(error_code))
 }
 
 pub fn sys_sched_getscheduler(
@@ -335,7 +334,7 @@ pub fn sys_futex(
     value: u32,
     _utime: UserRef<timespec>,
     _addr2: UserAddress,
-    _value3: u32,
+    value3: u32,
 ) -> Result<SyscallResult, Errno> {
     // TODO: Distinguish between public and private futexes.
     let _is_private = op & FUTEX_PRIVATE_FLAG != 0;
@@ -350,10 +349,23 @@ pub fn sys_futex(
     match cmd {
         FUTEX_WAIT => {
             let deadline = zx::Time::INFINITE;
-            ctx.task.mm.futex.wait(&ctx.task.waiter, addr, value, deadline)?;
+            ctx.task.mm.futex.wait(&ctx.task, addr, value, FUTEX_BITSET_MATCH_ANY, deadline)?;
         }
         FUTEX_WAKE => {
-            ctx.task.mm.futex.wake(addr, value as usize);
+            ctx.task.mm.futex.wake(addr, value as usize, FUTEX_BITSET_MATCH_ANY);
+        }
+        FUTEX_WAIT_BITSET => {
+            if value3 == 0 {
+                return Err(EINVAL);
+            }
+            let deadline = zx::Time::INFINITE;
+            ctx.task.mm.futex.wait(&ctx.task, addr, value, value3, deadline)?;
+        }
+        FUTEX_WAKE_BITSET => {
+            if value3 == 0 {
+                return Err(EINVAL);
+            }
+            ctx.task.mm.futex.wake(addr, value as usize, value3);
         }
         _ => {
             not_implemented!("futex: command 0x{:x} not implemented.", cmd);

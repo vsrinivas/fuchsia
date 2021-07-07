@@ -12,9 +12,15 @@ use crate::types::UserAddress;
 /// to work with.
 #[derive(Debug, Eq, PartialEq)]
 pub enum SyscallResult {
-    /// The process exited as a result of the syscall. The associated `u64` represents the process'
-    /// exit code.
+    /// The task exited as a result of the syscall.
+    ///
+    /// The associated `i32` represents the task's exit code.
     Exit(i32),
+
+    /// The task group exited as a result of the syscall.
+    ///
+    /// The associated `i32` represents the task's exit code.
+    ExitGroup(i32),
 
     /// The syscall completed successfully. The associated `u64` is the return value from the
     /// syscall.
