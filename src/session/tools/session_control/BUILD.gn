@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/toolchain/variant_shared_library_redirect.gni")
 
 group("all") {
   deps = [ ":session_control" ]
