@@ -82,12 +82,14 @@ struct Transformer {
     sig: Signature,
     block: Box<Block>,
     logging: bool,
+    add_test_attr: bool,
 }
 
 struct Args {
     threads: usize,
     allow_stalls: bool,
     logging: bool,
+    add_test_attr: bool,
 }
 
 fn get_arg<T: Parse>(p: &ParseStream<'_>) -> syn::Result<T> {
@@ -113,7 +115,7 @@ fn get_bool_arg(p: &ParseStream<'_>, if_present: bool) -> syn::Result<bool> {
 
 impl Parse for Args {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        let mut args = Self { threads: 1, allow_stalls: true, logging: true };
+        let mut args = Self { threads: 1, allow_stalls: true, logging: true, add_test_attr: true };
 
         loop {
             if input.is_empty() {
@@ -125,6 +127,7 @@ impl Parse for Args {
                 "threads" => args.threads = get_base10_arg(&input)?,
                 "allow_stalls" => args.allow_stalls = get_bool_arg(&input, true)?,
                 "logging" => args.logging = get_bool_arg(&input, true)?,
+                "add_test_attr" => args.add_test_attr = get_bool_arg(&input, true)?,
                 x => return err(format!("unknown argument: {}", x)),
             }
             if input.is_empty() {
@@ -168,7 +171,14 @@ impl Transformer {
             (_, true, false, _) => return err("must be async to use >1 thread"),
         };
 
-        Ok(Transformer { executor, attrs, sig, block, logging: args.logging })
+        Ok(Transformer {
+            executor,
+            attrs,
+            sig,
+            block,
+            logging: args.logging,
+            add_test_attr: args.add_test_attr,
+        })
     }
 }
 
@@ -203,7 +213,7 @@ impl Finish for Transformer {
             }
         };
 
-        if self.executor.is_test() {
+        if self.executor.is_test() && self.add_test_attr {
             // Add test attribute to outer function.
             func_attrs.push(quote!(#[test]));
         }
@@ -293,15 +303,18 @@ pub fn component(args: TokenStream, input: TokenStream) -> TokenStream {
 /// If an async function is provided, a fuchsia-async Executor will be used to execute it.
 ///
 /// Arguments:
-///  - `threads`      - integer worker thread count for the test. Must be >0. Default 1.
-///  - `logging`      - boolean toggle for whether to initialize logging (or not). Default true.
-///                     This currently does nothing on host. On Fuchsia fuchsia-syslog is used.
-///  - `allow_stalls` - boolean toggle for whether the async test is allowed to stall during
-///                     execution (if true), or whether the function must complete without pausing
-///                     (if false).
-///                     `.await` is not a stall if something preceding the await will guarantee
-///                     that it finishes within one loop of the Executor. Defaults to true.
-///                     This argument is not currently available for host tests.
+///  - `threads`       - integer worker thread count for the test. Must be >0. Default 1.
+///  - `logging`       - boolean toggle for whether to initialize logging (or not). Default true.
+///                      This currently does nothing on host. On Fuchsia fuchsia-syslog is used.
+///  - `allow_stalls`  - boolean toggle for whether the async test is allowed to stall during
+///                      execution (if true), or whether the function must complete without pausing
+///                      (if false).
+///                      `.await` is not a stall if something preceding the await will guarantee
+///                      that it finishes within one loop of the Executor. Defaults to true.
+///                      This argument is not currently available for host tests.
+///  - `add_test_attr` - boolean toggle for whether to apply the `#[test]` attribute to the
+///                      function. When daisy-chaining with other proc macros, it may be desirable
+///                      to omit this attribute. Default true.
 ///
 /// The test function can return either () or a Result<(), E> where E is an error type.
 /// The test function can either take no arguments, or a single usize argument. If it takes an

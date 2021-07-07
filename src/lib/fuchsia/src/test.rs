@@ -27,6 +27,25 @@ mod test {
     #[fuchsia::test(logging = true)]
     fn empty_test_with_logging() {}
 
+    #[allow(dead_code)]
+    #[fuchsia::test(add_test_attr = false)]
+    fn empty_test_without_add_test_attr() {
+        // With `add_test_attr = false`, this function won't get a #[test] annotation, and therefore
+        // is expected to _not_ run during tests.
+        assert!(false)
+    }
+
+    #[test]
+    #[fuchsia::test(add_test_attr = false)]
+    fn empty_test_without_add_test_attr_with_explicit_test_attr_before() {}
+
+    #[fuchsia::test(add_test_attr = false)]
+    #[test]
+    fn empty_test_without_add_test_attr_with_explicit_test_attr_after() {}
+
+    #[fuchsia::test(add_test_attr = true)]
+    fn empty_test_with_add_test_attr() {}
+
     #[fuchsia::test]
     async fn empty_async_test() {}
 
@@ -104,6 +123,15 @@ mod test {
     #[fuchsia::test(allow_stalls = false, threads = 1)]
     async fn empty_very_singlethreaded_not_allow_stalls_test_with_result() -> Result<(), Error> {
         Ok(())
+    }
+
+    #[allow(dead_code)]
+    #[fuchsia::component(add_test_attr = true)]
+    fn empty_component_test_with_add_test_attr() {
+        // `add_test_attr = true` should only have an effect when using fuchsia::test, not
+        // fuchsia::component. With fuchsia::component, this function shouldn't get a #[test]
+        // annotation, and therefore is expected to _not_ run during tests.
+        assert!(false)
     }
 
     // We combine #[fuchsia::component] and #[test] here as a kludge to enable testing of the
