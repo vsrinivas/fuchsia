@@ -3,11 +3,16 @@
 // found in the LICENSE file.
 
 use {
+    crate::colors::ColorScheme,
     anyhow::Error,
-    carnelian::Size,
-    std::{cell::RefCell, fs::File, io::prelude::*, rc::Rc},
+    carnelian::{color::Color, Size},
+    std::{cell::RefCell, convert::From, fs::File, io::prelude::*, rc::Rc},
     term_model::{
-        clipboard::Clipboard, config::Config, event::EventListener, grid::Scroll, term::SizeInfo,
+        clipboard::Clipboard,
+        config::Config,
+        event::EventListener,
+        grid::Scroll,
+        term::{color::Rgb, SizeInfo},
         Term,
     },
 };
@@ -17,6 +22,19 @@ use {
 pub struct TermConfig;
 pub type TerminalConfig = Config<TermConfig>;
 
+fn make_term_color(color: &Color) -> Rgb {
+    Rgb { r: color.r, g: color.g, b: color.b }
+}
+
+impl From<ColorScheme> for TerminalConfig {
+    fn from(color_scheme: ColorScheme) -> Self {
+        let mut config = Self::default();
+        config.colors.primary.background = make_term_color(&color_scheme.back);
+        config.colors.primary.foreground = make_term_color(&color_scheme.front);
+        config
+    }
+}
+
 /// Wrapper around a term model instance and its associated PTY fd.
 pub struct Terminal<T> {
     term: Rc<RefCell<Term<T>>>,
@@ -25,7 +43,7 @@ pub struct Terminal<T> {
 }
 
 impl<T> Terminal<T> {
-    pub fn new(event_listener: T, pty_fd: File, title: String) -> Self {
+    pub fn new(event_listener: T, pty_fd: File, title: String, color_scheme: ColorScheme) -> Self {
         // Initial size info used before we know what the real size is.
         let cell_size = Size::new(8.0, 16.0);
         let size_info = SizeInfo {
@@ -37,19 +55,16 @@ impl<T> Terminal<T> {
             padding_y: 0.0,
             dpr: 1.0,
         };
-        let term = Rc::new(RefCell::new(Term::new(
-            &TerminalConfig::default(),
-            &size_info,
-            Clipboard::new(),
-            event_listener,
-        )));
+        let config = color_scheme.into();
+        let term =
+            Rc::new(RefCell::new(Term::new(&config, &size_info, Clipboard::new(), event_listener)));
 
         Self { term: Rc::clone(&term), pty_fd, title }
     }
 
     #[cfg(test)]
     fn new_for_test(event_listener: T, pty_fd: File) -> Self {
-        Self::new(event_listener, pty_fd, String::new())
+        Self::new(event_listener, pty_fd, String::new(), ColorScheme::default())
     }
 
     pub fn clone_term(&self) -> Rc<RefCell<Term<T>>> {

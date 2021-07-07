@@ -147,6 +147,7 @@ impl SessionManager {
 mod tests {
     use {
         super::*,
+        crate::colors::ColorScheme,
         fuchsia_async as fasync,
         term_model::event::{Event, EventListener},
     };
@@ -170,7 +171,7 @@ mod tests {
             pty_fd: File,
             title: String,
         ) -> Result<Terminal<Self::Listener>, Error> {
-            Ok(Terminal::new(TestListener::default(), pty_fd, title))
+            Ok(Terminal::new(TestListener::default(), pty_fd, title, ColorScheme::default()))
         }
         fn request_update(&self, _id: u32) {}
     }

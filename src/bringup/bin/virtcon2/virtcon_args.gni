@@ -9,5 +9,5 @@ declare_args() {
 
   # Path to file to use for boot animation
   virtcon_boot_animation_path =
-      "//src/bringup/bin/virtcon2/data/boot-animation-dark.riv"
+      "//src/bringup/bin/virtcon2/data/boot-animation.riv"
 }

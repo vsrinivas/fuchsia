@@ -4,7 +4,7 @@
 
 use {
     crate::args::{MAX_FONT_SIZE, MIN_FONT_SIZE},
-    crate::colors::ColorScheme,
+    crate::colors::{ColorScheme, DARK_COLOR_SCHEME, LIGHT_COLOR_SCHEME, SPECIAL_COLOR_SCHEME},
     crate::terminal::Terminal,
     crate::text_grid::{font_to_cell_size, TextGridFacet, TextGridMessages},
     anyhow::{anyhow, Error},
@@ -108,11 +108,11 @@ const STATUS_COLOR_DEFAULT: Color = Color { r: 170, g: 170, b: 170, a: 255 };
 const STATUS_COLOR_ACTIVE: Color = Color { r: 255, g: 255, b: 85, a: 255 };
 const STATUS_COLOR_UPDATED: Color = Color { r: 85, g: 255, b: 85, a: 255 };
 
-const CELL_PADDING_FACTOR: f32 = 1.0 / 15.0;
+const CELL_PADDING_FACTOR: f32 = 2.0 / 15.0;
 
 struct Animation {
     // Artboard has weak references to data owned by file.
-    _animation: rive::File,
+    _file: rive::File,
     artboard: rive::Object<rive::Artboard>,
     instance: rive::animation::LinearAnimationInstance,
     last_presentation_time: Option<zx::Time>,
@@ -159,21 +159,29 @@ impl VirtualConsoleViewAssistant {
         let font = load_font(PathBuf::from(FONT))?;
         let virtcon_mode = VirtconMode::Forced; // We always start out in forced mode.
         let (animation, desired_virtcon_mode) = if boot_animation {
-            let animation = load_rive(PathBuf::from(BOOT_ANIMATION))?;
-            let artboard = animation.artboard().ok_or_else(|| anyhow!("missing artboard"))?;
-            let first_animation = artboard
-                .as_ref()
+            let file = load_rive(PathBuf::from(BOOT_ANIMATION))?;
+            let artboard = file.artboard().ok_or_else(|| anyhow!("missing artboard"))?;
+            let artboard_ref = artboard.as_ref();
+            let color_scheme_name = match color_scheme {
+                DARK_COLOR_SCHEME => "dark",
+                LIGHT_COLOR_SCHEME => "light",
+                SPECIAL_COLOR_SCHEME => "special",
+                _ => "other",
+            };
+            // Find animation that matches color scheme or fallback to first animation
+            // if not found.
+            let animation = artboard_ref
                 .animations()
-                .next()
+                .find(|animation| {
+                    let name = animation.cast::<rive::animation::Animation>().as_ref().name();
+                    name == color_scheme_name
+                })
+                .or_else(|| artboard_ref.animations().next())
                 .ok_or_else(|| anyhow!("missing animation"))?;
-            let instance = rive::animation::LinearAnimationInstance::new(first_animation);
+            let instance = rive::animation::LinearAnimationInstance::new(animation);
             let last_presentation_time = None;
-            let animation = Some(Animation {
-                _animation: animation,
-                artboard,
-                instance,
-                last_presentation_time,
-            });
+            let animation =
+                Some(Animation { _file: file, artboard, instance, last_presentation_time });
 
             (animation, VirtconMode::Forced)
         } else {
@@ -548,7 +556,7 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 let textgrid = builder.facet(Box::new(TextGridFacet::new(
                     self.font.clone(),
                     font_size,
-                    self.color_scheme.front,
+                    self.color_scheme,
                     active_term,
                     status,
                     tab_width,

@@ -4,6 +4,7 @@
 
 use {
     crate::args::VirtualConsoleArgs,
+    crate::colors::ColorScheme,
     crate::session_manager::{SessionManager, SessionManagerClient},
     crate::terminal::Terminal,
     crate::view::{EventProxy, ViewMessages, VirtualConsoleViewAssistant},
@@ -23,6 +24,7 @@ const FIRST_SESSION_ID: u32 = 0;
 struct VirtualConsoleSessionManagerClient {
     app_context: AppContext,
     view_key: ViewKey,
+    color_scheme: ColorScheme,
 }
 
 impl SessionManagerClient for VirtualConsoleSessionManagerClient {
@@ -35,7 +37,7 @@ impl SessionManagerClient for VirtualConsoleSessionManagerClient {
         title: String,
     ) -> Result<Terminal<Self::Listener>, Error> {
         let event_proxy = EventProxy::new(&self.app_context, self.view_key, id);
-        let terminal = Terminal::new(event_proxy, pty_fd, title);
+        let terminal = Terminal::new(event_proxy, pty_fd, title, self.color_scheme);
         let terminal_clone = terminal.try_clone()?;
         self.app_context.queue_message(
             self.view_key,
@@ -114,7 +116,8 @@ impl AppAssistant for VirtualConsoleAppAssistant {
         if self.view_key == 0 {
             panic!("Trying to service session manager connection without a view.");
         }
-        let client = VirtualConsoleSessionManagerClient { app_context, view_key };
+        let color_scheme = self.args.color_scheme;
+        let client = VirtualConsoleSessionManagerClient { app_context, view_key, color_scheme };
         self.session_manager.bind(&client, channel);
         Ok(())
     }
