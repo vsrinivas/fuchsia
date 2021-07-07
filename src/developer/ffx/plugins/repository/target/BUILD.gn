@@ -7,7 +7,10 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 ffx_plugin("ffx_repository_target") {
   version = "0.1.0"
   edition = "2018"
-  plugin_deps = [ "register:ffx_repository_target_register" ]
+  plugin_deps = [
+    "deregister:ffx_repository_target_deregister",
+    "register:ffx_repository_target_register",
+  ]
 
   sources = [ "src/args.rs" ]
 }

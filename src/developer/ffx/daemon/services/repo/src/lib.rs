@@ -227,14 +227,57 @@ impl Repo {
         match transaction_proxy.commit().await {
             Ok(Ok(())) => Ok(()),
             Ok(Err(err)) => {
-                log::warn!("Committing rewrite rule returned failure. Error was: {:#?}", err);
-                Err(bridge::RepositoryError::RewriteEngineError)
+                log::warn!("failed to deregister repo {:?}: {:?}", repo_name, err);
+                return Err(bridge::RepositoryError::InternalError);
             }
             Err(err) => {
-                log::warn!("Failed to commit rewrite rule. Error was: {:#?}", err);
-                Err(bridge::RepositoryError::RewriteEngineError)
+                log::warn!("Failed to remove repo: {:?}", err);
+                return Err(bridge::RepositoryError::TargetCommunicationFailure);
             }
         }
+    }
+
+    async fn deregister_target(
+        &self,
+        cx: &Context,
+        repo_name: String,
+        target_identifier: Option<String>,
+    ) -> std::result::Result<(), bridge::RepositoryError> {
+        log::info!("Deregistering repository {:?} from target {:?}", repo_name, target_identifier);
+
+        let repo = self
+            .manager
+            .get(&repo_name)
+            .ok_or_else(|| bridge::RepositoryError::NoMatchingRepository)?;
+
+        let proxy = cx
+            .open_target_proxy::<RepositoryManagerMarker>(
+                target_identifier.clone(),
+                REPOSITORY_MANAGER_SELECTOR,
+            )
+            .await
+            .map_err(|err| {
+                log::warn!(
+                    "Failed to open target proxy with target name {:?}: {:#?}",
+                    target_identifier,
+                    err
+                );
+                bridge::RepositoryError::TargetCommunicationFailure
+            })?;
+
+        match proxy.remove(&repo.repo_url()).await {
+            Ok(Ok(())) => {}
+            Ok(Err(err)) => {
+                log::warn!("failed to deregister repo {:?}: {:?}", repo_name, err);
+                return Err(bridge::RepositoryError::InternalError);
+            }
+            Err(err) => {
+                log::warn!("Failed to remove repo: {:?}", err);
+                return Err(bridge::RepositoryError::TargetCommunicationFailure);
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -263,6 +306,16 @@ impl FidlService for Repo {
             }
             bridge::RepositoryRegistryRequest::RegisterTarget { target_info, responder } => {
                 responder.send(&mut self.register_target(cx, target_info).await)?;
+                Ok(())
+            }
+            bridge::RepositoryRegistryRequest::DeregisterTarget {
+                repository_name,
+                target_identifier,
+                responder,
+            } => {
+                responder.send(
+                    &mut self.deregister_target(cx, repository_name, target_identifier).await,
+                )?;
                 Ok(())
             }
             bridge::RepositoryRegistryRequest::ListPackages { name, iterator, responder } => {
@@ -438,9 +491,11 @@ mod tests {
         },
         fidl_fuchsia_pkg_rewrite::{EditTransactionRequest, EngineMarker, EngineRequest},
         services::testing::{FakeDaemon, FakeDaemonBuilder},
+        std::sync::{Arc, Mutex},
     };
 
     const REPO_NAME: &str = "some_repo";
+    const TARGET_NAME: &str = "some_target";
     const EMPTY_REPO_PATH: &str = "host_x64/test_data/ffx_daemon_service_repo/empty-repo";
 
     #[derive(Default)]
@@ -601,11 +656,33 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_add_register() {
+    async fn test_add_register_deregister() {
         ffx_config::init_config_test().unwrap();
 
+        #[derive(Debug, PartialEq)]
+        enum Event {
+            Add { repo: RepositoryConfig },
+            Remove { repo_url: String },
+        }
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let events_closure = Arc::clone(&events);
+
         let daemon = FakeDaemonBuilder::new()
-            .register_fidl_service::<FakeRepositoryManager>()
+            .register_instanced_service_closure::<RepositoryManagerMarker, _>(move |_cx, req| {
+                match req {
+                    RepositoryManagerRequest::Add { repo, responder } => {
+                        events_closure.lock().unwrap().push(Event::Add { repo });
+                        responder.send(&mut Ok(()))?;
+                        Ok(())
+                    }
+                    RepositoryManagerRequest::Remove { repo_url, responder } => {
+                        events_closure.lock().unwrap().push(Event::Remove { repo_url });
+                        responder.send(&mut Ok(()))?;
+                        Ok(())
+                    }
+                    _ => panic!("unexpected request: {:?}", req),
+                }
+            })
             .register_fidl_service::<FakeEngine>()
             .register_fidl_service::<Repo>()
             .build();
@@ -621,6 +698,22 @@ mod tests {
             .await
             .expect("communicated with proxy")
             .expect("target registration to succeed");
+
+        assert_eq!(
+            events.lock().unwrap().drain(..).collect::<Vec<_>>(),
+            vec![Event::Add { repo: test_repo_config() }]
+        );
+
+        proxy
+            .deregister_target(REPO_NAME, Some(TARGET_NAME))
+            .await
+            .expect("communicated with proxy")
+            .expect("target unregistration to succeed");
+
+        assert_eq!(
+            events.lock().unwrap().drain(..).collect::<Vec<_>>(),
+            vec![Event::Remove { repo_url: format!("fuchsia-pkg://{}", REPO_NAME) }]
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -715,6 +808,21 @@ mod tests {
                 .await
                 .unwrap()
                 .unwrap_err(),
+            bridge::RepositoryError::NoMatchingRepository
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_deregister_non_existent_repo() {
+        let daemon = FakeDaemonBuilder::new()
+            .register_fidl_service::<ErroringRepositoryManager>()
+            .register_fidl_service::<FakeEngine>()
+            .register_fidl_service::<Repo>()
+            .build();
+
+        let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+        assert_eq!(
+            proxy.deregister_target(REPO_NAME, Some(TARGET_NAME),).await.unwrap().unwrap_err(),
             bridge::RepositoryError::NoMatchingRepository
         );
     }

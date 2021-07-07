@@ -220,6 +220,10 @@ impl Repository {
         self.id
     }
 
+    pub fn repo_url(&self) -> String {
+        format!("fuchsia-pkg://{}", self.name)
+    }
+
     /// Stores the given function to be run when the repository is dropped.
     pub fn on_drop<F: FnOnce() + Send + Sync + 'static>(&self, f: F) {
         self.drop_handlers.lock().push(Box::new(f));
@@ -274,7 +278,7 @@ impl Repository {
             .collect::<Vec<_>>();
         let root_version = client.root_version();
         Ok(RepositoryConfig {
-            repo_url: Some(format!("fuchsia-pkg://{}", self.name)),
+            repo_url: Some(self.repo_url()),
             root_keys: Some(root_keys),
             root_version: Some(root_version),
             mirrors: Some(vec![MirrorConfig {

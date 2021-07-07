@@ -42,6 +42,15 @@ protocol RepositoryRegistry {
 
     RegisterTarget(RepositoryTarget target_info) -> () error RepositoryError;
 
+    /// Deregisters a repository from a target.
+    ///
+    /// `repo_name`: The configured name of the repository.
+    /// `target_identifier`: The target from which to deregister this repository.
+    DeregisterTarget(
+        string:MAX_NAME repository_name,
+        string:fuchsia.device.DEVICE_NAME_MAX? target_identifier
+        ) -> () error RepositoryError;
+
     /// List the packages in the repository named `name`.
     ListPackages(string:MAX_NAME name, request<RepositoryPackagesIterator> iterator) -> () error RepositoryError;
 };
