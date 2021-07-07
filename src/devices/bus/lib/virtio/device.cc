@@ -13,7 +13,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
+#include <array>
 #include <memory>
 #include <utility>
 
@@ -105,7 +107,9 @@ int Device::IrqThreadEntry(void* arg) {
 }
 
 void Device::StartIrqThread() {
-  thrd_create_with_name(&irq_thread_, IrqThreadEntry, this, "virtio-irq-thread");
+  std::array<char, ZX_MAX_NAME_LEN> name{};
+  snprintf(name.data(), name.size(), "%s-irq-worker", tag());
+  thrd_create_with_name(&irq_thread_, IrqThreadEntry, this, name.data());
 }
 
 zx_status_t Device::CopyDeviceConfig(void* _buf, size_t len) const {
