@@ -162,8 +162,13 @@ fs_test_suite("fxfs") {
 
   # For now, random-op-tests runs too slowly for the coverage build
   # TODO(jfsuliiv): Enable when performance is good enough
+  # TODO(fxbug.dev/80276): Re-enable directory-tests for coverage builder when
+  # test timeouts are fixed.
   if (is_coverage) {
-    omit_components = [ ":fxfs-random-op-tests" ]
+    omit_components = [
+      ":fxfs-random-op-tests",
+      ":fxfs-directory-tests",
+    ]
   }
 }
 
