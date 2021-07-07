@@ -40,14 +40,6 @@
 #   exclude_toolchain_tags: (optional)
 #     [list of strings]
 #
-#   extra_manifest: (optional)
-#     [GN path] If specified, this must be the path to an output file to be used
-#     with the extra_manifest argument of the deprecated package() template. This
-#     ensures that the library will be installed into any package() that depends
-#     on it. Note that creating a package with fuchsia_package() doesn't need
-#     this because it relies instead on normal metadata entries to retrieve the
-#     install locations of all binaries  it depends on.
-#
 #   output_dir, output_name, output_extension, testonly (optional)
 #     [string] or [boolean]: These must match the target library's definition, if
 #     it happens to set these arguments. This will ensure that variant selectors
@@ -203,17 +195,5 @@ template("variant_shared_library_redirect") {
   group(target_name) {
     testonly = testonly
     public_deps = [ _final_target ]
-  }
-
-  if (defined(invoker.extra_manifest)) {
-    generated_file("$target_name.extra_manifest_args") {
-      contents = [
-        "--entry-manifest=${_final_target}",
-        "--entry=lib/${_output_name}=" +
-            rebase_path("${_output_dir}/${_output_name}", root_build_dir),
-      ]
-      deps = [ _final_target ]
-      outputs = [ invoker.extra_manifest ]
-    }
   }
 }
