@@ -2563,6 +2563,7 @@ pub fn encode_in_envelope(
             )?;
             let mut bytes_written = (encoder.buf.len() - bytes_before) as u32;
             let mut handles_written = (encoder.handles.len() - handles_before) as u32;
+            debug_assert!(bytes_written % 8 == 0);
             bytes_written.encode(encoder, offset, recursion_depth)?;
             handles_written.encode(encoder, offset + 4, recursion_depth)?;
         }
@@ -2589,6 +2590,9 @@ pub fn decode_unknown_bytes(decoder: &mut Decoder<'_>, offset: usize) -> Result<
 
     match present {
         ALLOC_PRESENT_U64 => {
+            if num_bytes % 8 != 0 {
+                return Err(Error::InvalidNumBytesInEnvelope);
+            }
             if num_handles != 0 {
                 for _ in 0..num_handles {
                     decoder.drop_next_handle()?;
@@ -2628,9 +2632,14 @@ pub fn decode_unknown_data(
     present.decode(decoder, offset + 8)?;
 
     match present {
-        ALLOC_PRESENT_U64 => decoder.read_out_of_line(num_bytes as usize, |decoder, offset| {
-            decode_unknown_data_contents(decoder, offset, num_bytes, num_handles).map(Some)
-        }),
+        ALLOC_PRESENT_U64 => {
+            if num_bytes % 8 != 0 {
+                return Err(Error::InvalidNumBytesInEnvelope);
+            }
+            decoder.read_out_of_line(num_bytes as usize, |decoder, offset| {
+                decode_unknown_data_contents(decoder, offset, num_bytes, num_handles).map(Some)
+            })
+        }
         ALLOC_ABSENT_U64 => {
             if num_bytes != 0 {
                 Err(Error::InvalidNumBytesInEnvelope)
@@ -2883,6 +2892,9 @@ macro_rules! fidl_table {
                         let handles_before = decoder.remaining_handles();
                         match present {
                             $crate::encoding::ALLOC_PRESENT_U64 => {
+                                if num_bytes % 8 != 0 {
+                                    return Err($crate::Error::InvalidNumBytesInEnvelope);
+                                }
                                 decoder.read_out_of_line(
                                     decoder.inline_size_of::<$member_ty>(),
                                     |decoder, offset| {
@@ -2993,8 +3005,13 @@ pub fn decode_xunion_inline_portion(
 
     let mut present: u64 = 0;
     present.decode(decoder, offset + 16)?;
+
     match present {
-        ALLOC_PRESENT_U64 => (),
+        ALLOC_PRESENT_U64 => {
+            if num_bytes % 8 != 0 {
+                return Err(Error::InvalidNumBytesInEnvelope);
+            }
+        }
         ALLOC_ABSENT_U64 => {
             return Err(if num_bytes != 0 {
                 Error::InvalidNumBytesInEnvelope

@@ -241,3 +241,31 @@ encode_failure("StrictUnionUnknownValue") {
     },
     err = STRICT_UNION_UNKNOWN_FIELD,
 }
+
+decode_failure("FlexibleValueUnionUnknownBytesNonMultipleOf8") {
+    // TODO(fxbug.dev/80162): Check num_bytes%8==0 in Go.
+    bindings_denylist = [go],
+    type = TestFlexibleXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(123):8, // ordinal (unknown)
+            num(20):4, num(0):4, repeat(0xff):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
+
+decode_failure("FlexibleResourceUnionUnknownBytesNonMultipleOf8") {
+    // TODO(fxbug.dev/80162): Check num_bytes%8==0 in Go.
+    bindings_denylist = [go],
+    type = TestFlexibleResourceXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(123):8, // ordinal (unknown)
+            num(20):4, num(0):4, repeat(0xff):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}

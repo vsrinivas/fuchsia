@@ -669,6 +669,38 @@ success("ResourceTableUnknownTrailingHandlesStored") {
     }
 }
 
+decode_failure("ValueTableUnknownBytesNonMultipleOf8") {
+    // TODO(fxbug.dev/80162): Check num_bytes%8==0 in Go.
+    bindings_denylist = [go],
+    type = StructOfSimpleTable,
+    bytes = {
+        v1 = [
+            num(2):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(20):4, num(0):4, repeat(0xff):8, // envelope 2 (unknown)
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
+
+decode_failure("ResourceTableUnknownBytesNonMultipleOf8") {
+    // TODO(fxbug.dev/80162): Check num_bytes%8==0 in Go.
+    bindings_denylist = [go],
+    type = StructOfSimpleResourceTable,
+    bytes = {
+        v1 = [
+            num(2):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(20):4, num(0):4, repeat(0xff):8, // envelope 2 (unknown)
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
+
 success("InlineXUnionInStruct") {
     value = TestInlineXUnionInStruct {
         before: "before",
