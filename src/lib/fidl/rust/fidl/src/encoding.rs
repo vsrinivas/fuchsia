@@ -3073,7 +3073,7 @@ where
     #[inline]
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         decoder.debug_check_bounds::<Self>(offset);
-        let (ordinal, _, _) = decode_xunion_inline_portion(decoder, offset)?;
+        let (ordinal, num_bytes, num_handles) = decode_xunion_inline_portion(decoder, offset)?;
         let member_inline_size = match ordinal {
             1 => {
                 // If the inline size is 0, meaning the type is (), use an inline
@@ -3084,6 +3084,8 @@ where
             2 => decoder.inline_size_of::<E>(),
             _ => return Err(Error::UnknownUnionTag),
         };
+        let next_out_of_line = decoder.next_out_of_line();
+        let handles_before = decoder.remaining_handles();
         decoder.read_out_of_line(member_inline_size, |decoder, offset| {
             match ordinal {
                 1 => {
@@ -3123,7 +3125,14 @@ where
                 // Should be unreachable, since we already checked above.
                 ordinal => panic!("unexpected ordinal {:?}", ordinal),
             }
-        })
+        })?;
+        if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
+            return Err(Error::InvalidNumBytesInEnvelope);
+        }
+        if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
+            return Err(Error::InvalidNumHandlesInEnvelope);
+        }
+        Ok(())
     }
 }
 
@@ -4276,6 +4285,46 @@ mod test {
             match &encode_decode(ctx, &mut test_result_err) {
                 Err(err_code) if *err_code == 5 => {}
                 x => panic!("unexpected decoded value {:?}", x),
+            }
+        }
+    }
+
+    #[test]
+    fn result_validates_num_bytes() {
+        for ctx in CONTEXTS {
+            for ordinal in [1, 2] {
+                // Envelope should have num_bytes set to 8, not 16.
+                let bytes = [
+                    ordinal, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // ordinal
+                    0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 16 bytes, 0 handles
+                    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
+                    0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, // number, padding
+                ];
+                let mut out = std::result::Result::<u32, u32>::new_empty();
+                assert_matches!(
+                    Decoder::decode_with_context(ctx, &bytes, &mut [], &mut out),
+                    Err(Error::InvalidNumBytesInEnvelope)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn result_validates_num_handles() {
+        for ctx in CONTEXTS {
+            for ordinal in [1, 2] {
+                // Envelope should have num_handles set to 0, not 1.
+                let bytes = [
+                    ordinal, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // ordinal
+                    0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // 16 bytes, 1 handle
+                    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
+                    0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, // number, padding
+                ];
+                let mut out = std::result::Result::<u32, u32>::new_empty();
+                assert_matches!(
+                    Decoder::decode_with_context(ctx, &bytes, &mut [], &mut out),
+                    Err(Error::InvalidNumHandlesInEnvelope)
+                );
             }
         }
     }
