@@ -1,0 +1,28 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/environ",
+    },
+    children: [
+        {
+            name: "puppet",
+            url: "fuchsia-pkg://fuchsia.com/elf_runner_environ_test#meta/context.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.elf.test.Context",
+            from: "#puppet",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#puppet",
+        },
+    ],
+}

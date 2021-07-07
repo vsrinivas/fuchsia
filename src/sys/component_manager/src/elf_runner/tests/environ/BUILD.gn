@@ -1,0 +1,60 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+
+group("environ") {
+  testonly = true
+  deps = [ ":elf_runner_environ_test" ]
+}
+
+rustc_binary("context-bin") {
+  edition = "2018"
+  output_name = "context"
+  deps = [
+    "fidl:fuchsia.elf.test-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/context.rs" ]
+  source_root = "src/context.rs"
+}
+
+fuchsia_component("context-component") {
+  manifest = "meta/context.cml"
+  component_name = "context"
+  deps = [ ":context-bin" ]
+}
+
+rustc_test("test") {
+  name = "environ"
+
+  deps = [
+    "fidl:fuchsia.elf.test-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+fuchsia_component("environ_integration_test") {
+  testonly = true
+  manifest = "meta/environ.cml"
+  deps = [ ":test" ]
+}
+
+fuchsia_test_package("elf_runner_environ_test") {
+  test_components = [ ":environ_integration_test" ]
+
+  deps = [ ":context-component" ]
+}

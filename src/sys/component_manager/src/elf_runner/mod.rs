@@ -237,7 +237,7 @@ impl ElfRunner {
                 job: Some(job),
                 handle_infos: Some(handle_infos),
                 name_infos: None,
-                environs: None,
+                environs: elf_config.get_environ(),
                 launcher: &launcher,
                 loader_proxy_chan: None,
                 executable_vmo: None,

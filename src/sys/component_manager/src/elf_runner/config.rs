@@ -9,6 +9,7 @@ use {
 
 const CREATE_RAW_PROCESSES_KEY: &str = "job_policy_create_raw_processes";
 const CRITICAL_KEY: &str = "main_process_critical";
+const ENVIRON_KEY: &str = "environ";
 const FORWARD_STDOUT_KEY: &str = "forward_stdout_to";
 const FORWARD_STDERR_KEY: &str = "forward_stderr_to";
 const VMEX_KEY: &str = "job_policy_ambient_mark_vmo_exec";
@@ -31,6 +32,7 @@ pub struct ElfProgramConfig {
     create_raw_processes: bool,
     stdout_sink: StreamSink,
     stderr_sink: StreamSink,
+    environ: Option<Vec<String>>,
 }
 
 impl Default for StreamSink {
@@ -81,6 +83,9 @@ impl ElfProgramConfig {
         let stdout_sink = get_stream_sink(&program, FORWARD_STDOUT_KEY, url)?;
         let stderr_sink = get_stream_sink(&program, FORWARD_STDERR_KEY, url)?;
 
+        let environ = runner::get_environ(&program)
+            .map_err(|_err| ElfRunnerError::program_dictionary_error(ENVIRON_KEY, url))?;
+
         Ok(ElfProgramConfig {
             notify_lifecycle_stop,
             ambient_mark_vmo_exec,
@@ -88,6 +93,7 @@ impl ElfProgramConfig {
             create_raw_processes,
             stdout_sink,
             stderr_sink,
+            environ,
         })
     }
 
@@ -113,6 +119,10 @@ impl ElfProgramConfig {
 
     pub fn get_stderr_sink(&self) -> StreamSink {
         self.stderr_sink
+    }
+
+    pub fn get_environ(&self) -> Option<Vec<String>> {
+        self.environ.clone()
     }
 }
 
@@ -218,21 +228,23 @@ mod tests {
         };
     }
 
-    #[test_case("forward_stdout_to", "log", ElfProgramConfig { stdout_sink: StreamSink::Log, ..Default::default()} ; "when_stdout_log")]
-    #[test_case("forward_stdout_to", "none", ElfProgramConfig { stdout_sink: StreamSink::None, ..Default::default()} ; "when_stdout_none")]
-    #[test_case("forward_stderr_to", "log", ElfProgramConfig { stderr_sink: StreamSink::Log, ..Default::default()} ; "when_stderr_log")]
-    #[test_case("forward_stderr_to", "none", ElfProgramConfig { stderr_sink: StreamSink::None, ..Default::default()} ; "when_stderr_none")]
-    #[test_case("lifecycle.stop_event", "notify", ElfProgramConfig { notify_lifecycle_stop: true, ..Default::default()} ; "when_stop_event_notify")]
-    #[test_case("lifecycle.stop_event", "ignore", ElfProgramConfig { notify_lifecycle_stop: false, ..Default::default()} ; "when_stop_event_ignore")]
-    #[test_case("job_policy_ambient_mark_vmo_exec", "true", ElfProgramConfig { ambient_mark_vmo_exec: true, ..Default::default()} ; "when_ambient_mark_vmo_exec_true")]
-    #[test_case("job_policy_ambient_mark_vmo_exec", "false", ElfProgramConfig { ambient_mark_vmo_exec: false, ..Default::default()} ; "when_ambient_mark_vmo_exec_false")]
-    #[test_case("main_process_critical", "true", ElfProgramConfig { main_process_critical: true, ..Default::default()} ; "when_main_process_critical_true")]
-    #[test_case("main_process_critical", "false", ElfProgramConfig { main_process_critical: false, ..Default::default()} ; "when_main_process_critical_false")]
-    #[test_case("job_policy_create_raw_processes", "true", ElfProgramConfig { create_raw_processes: true, ..Default::default()} ; "when_create_raw_processes_true")]
-    #[test_case("job_policy_create_raw_processes", "false", ElfProgramConfig { create_raw_processes: false, ..Default::default()} ; "when_create_raw_processes_false")]
+    #[test_case("forward_stdout_to", new_string("log"), ElfProgramConfig { stdout_sink: StreamSink::Log, ..Default::default()} ; "when_stdout_log")]
+    #[test_case("forward_stdout_to", new_string("none"), ElfProgramConfig { stdout_sink: StreamSink::None, ..Default::default()} ; "when_stdout_none")]
+    #[test_case("forward_stderr_to", new_string("log"), ElfProgramConfig { stderr_sink: StreamSink::Log, ..Default::default()} ; "when_stderr_log")]
+    #[test_case("forward_stderr_to", new_string("none"), ElfProgramConfig { stderr_sink: StreamSink::None, ..Default::default()} ; "when_stderr_none")]
+    #[test_case("environ", new_empty_vec(), ElfProgramConfig { environ: None, ..Default::default()} ; "when_environ_empty")]
+    #[test_case("environ", new_vec(vec!["FOO=BAR"]), ElfProgramConfig { environ: Some(vec!["FOO=BAR".into()]), ..Default::default()} ; "when_environ_has_values")]
+    #[test_case("lifecycle.stop_event", new_string("notify"), ElfProgramConfig { notify_lifecycle_stop: true, ..Default::default()} ; "when_stop_event_notify")]
+    #[test_case("lifecycle.stop_event", new_string("ignore"), ElfProgramConfig { notify_lifecycle_stop: false, ..Default::default()} ; "when_stop_event_ignore")]
+    #[test_case("main_process_critical", new_string("true"), ElfProgramConfig { main_process_critical: true, ..Default::default()} ; "when_main_process_critical_true")]
+    #[test_case("main_process_critical", new_string("false"), ElfProgramConfig { main_process_critical: false, ..Default::default()} ; "when_main_process_critical_false")]
+    #[test_case("job_policy_ambient_mark_vmo_exec", new_string("true"), ElfProgramConfig { ambient_mark_vmo_exec: true, ..Default::default()} ; "when_ambient_mark_vmo_exec_true")]
+    #[test_case("job_policy_ambient_mark_vmo_exec", new_string("false"), ElfProgramConfig { ambient_mark_vmo_exec: false, ..Default::default()} ; "when_ambient_mark_vmo_exec_false")]
+    #[test_case("job_policy_create_raw_processes", new_string("true"), ElfProgramConfig { create_raw_processes: true, ..Default::default()} ; "when_create_raw_processes_true")]
+    #[test_case("job_policy_create_raw_processes", new_string("false"), ElfProgramConfig { create_raw_processes: false, ..Default::default()} ; "when_create_raw_processes_false")]
     fn test_parse_and_check_with_permissive_policy(
         key: &str,
-        value: &str,
+        value: fdata::DictionaryValue,
         expected: ElfProgramConfig,
     ) {
         let checker = ScopedPolicyChecker::new(
@@ -246,10 +258,14 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
-    #[test_case("job_policy_ambient_mark_vmo_exec", "true" , "ambient_mark_vmo_exec" ; "when_ambient_mark_vmo_exec_true")]
-    #[test_case("main_process_critical", "true", "main_process_critical" ; "when_main_process_critical_true")]
-    #[test_case("job_policy_create_raw_processes", "true", "create_raw_processes" ; "when_create_raw_processes_true")]
-    fn test_parse_and_check_with_restrictive_policy(key: &str, value: &str, policy: &str) {
+    #[test_case("job_policy_ambient_mark_vmo_exec", new_string("true") , "ambient_mark_vmo_exec" ; "when_ambient_mark_vmo_exec_true")]
+    #[test_case("main_process_critical", new_string("true"), "main_process_critical" ; "when_main_process_critical_true")]
+    #[test_case("job_policy_create_raw_processes", new_string("true"), "create_raw_processes" ; "when_create_raw_processes_true")]
+    fn test_parse_and_check_with_restrictive_policy(
+        key: &str,
+        value: fdata::DictionaryValue,
+        policy: &str,
+    ) {
         let checker = ScopedPolicyChecker::new(
             Arc::downgrade(&(*RESTRICTIVE_RUNTIME_CONFIG)),
             TEST_MONIKER.clone(),
@@ -261,40 +277,50 @@ mod tests {
         assert_error_is_disallowed_job_policy!(actual, policy);
     }
 
-    #[test_case("lifecycle.stop_event" ; "for_stop_event")]
-    #[test_case("job_policy_ambient_mark_vmo_exec" ; "for_ambient_mark_vmo_exec")]
-    #[test_case("main_process_critical" ; "for_main_process_critical")]
-    #[test_case("job_policy_create_raw_processes" ; "for_create_raw_processes")]
-    #[test_case("forward_stdout_to" ; "for_stdout")]
-    #[test_case("forward_stderr_to" ; "for_stderr")]
-    fn test_parse_and_check_with_invalid_value(key: &str) {
+    #[test_case("lifecycle.stop_event", new_empty_vec() ; "for_stop_event")]
+    #[test_case("job_policy_ambient_mark_vmo_exec", new_empty_vec() ; "for_ambient_mark_vmo_exec")]
+    #[test_case("main_process_critical", new_empty_vec() ; "for_main_process_critical")]
+    #[test_case("job_policy_create_raw_processes", new_empty_vec() ; "for_create_raw_processes")]
+    #[test_case("forward_stdout_to", new_empty_vec() ; "for_stdout")]
+    #[test_case("forward_stderr_to", new_empty_vec() ; "for_stderr")]
+    #[test_case("environ", new_empty_string() ; "for_environ")]
+    fn test_parse_and_check_with_invalid_value(key: &str, value: fdata::DictionaryValue) {
         // Use a permissive policy because we want to fail *iff* value set for
         // key is invalid.
         let checker = ScopedPolicyChecker::new(
             Arc::downgrade(&(*PERMISSIVE_RUNTIME_CONFIG)),
             TEST_MONIKER.clone(),
         );
-        let program = fdata::Dictionary {
-            entries: Some(vec![fdata::DictionaryEntry {
-                key: key.to_owned(),
-                // StrVec is an unexpected type and should yield an Error.
-                value: Some(Box::new(fdata::DictionaryValue::StrVec(vec![]))),
-            }]),
-            ..fdata::Dictionary::EMPTY
-        };
+        let program = new_program_stanza(key, value);
 
         let actual = ElfProgramConfig::parse_and_check(&program, &checker, TEST_URL);
 
         assert_is_program_dictionary_error!(actual, key);
     }
 
-    fn new_program_stanza(key: &str, value: &str) -> fdata::Dictionary {
+    fn new_program_stanza(key: &str, value: fdata::DictionaryValue) -> fdata::Dictionary {
         fdata::Dictionary {
             entries: Some(vec![fdata::DictionaryEntry {
                 key: key.to_owned(),
-                value: Some(Box::new(fdata::DictionaryValue::Str(value.to_owned()))),
+                value: Some(Box::new(value)),
             }]),
             ..fdata::Dictionary::EMPTY
         }
+    }
+
+    fn new_string(value: &str) -> fdata::DictionaryValue {
+        fdata::DictionaryValue::Str(value.to_owned())
+    }
+
+    fn new_vec(values: Vec<&str>) -> fdata::DictionaryValue {
+        fdata::DictionaryValue::StrVec(values.into_iter().map(str::to_owned).collect())
+    }
+
+    fn new_empty_string() -> fdata::DictionaryValue {
+        fdata::DictionaryValue::Str("".to_owned())
+    }
+
+    fn new_empty_vec() -> fdata::DictionaryValue {
+        fdata::DictionaryValue::StrVec(vec![])
     }
 }

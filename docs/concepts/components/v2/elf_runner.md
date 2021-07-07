@@ -89,7 +89,6 @@ manifest. Currently `stop` is the only method in the Lifecycle protocol.
         lifecycle: { stop_event: "notify" },
     }
 }
-
 ```
 
 The program should take the handle to the Lifecycle channel and serve the
@@ -132,6 +131,30 @@ processes by using [`zx_process_create`][process-create].
 
 For a detailed explanation of how processes are created, please see
 [Zircon program loading and dynamic linking][program-loading].
+
+### Environment Variables
+
+Environment variables can be set for ELF components by using the `environ`
+attribute. This field must be a vector of strings where each string contains
+the variable and value delimited by an equal sign. For example, the following
+sample code declares variables `FAVORITE_ANIMAL` and `FAVORITE_COLOR` to `cat`
+and `red`.
+
+```cml
+{
+    program: {
+        runner: "elf",
+        binary: "bin/echo",
+        environ: [
+            "FAVORITE_ANIMAL=cat",
+            "FAVORITE_COLOR=red",
+        ]
+    }
+}
+```
+
+Note: The value of the field can't be empty, therefor the string "foo=" is
+invalid.
 
 [glossary.component]: /docs/glossary/README.md#component
 [capability-routing]: component_manifests.md#capability-routing

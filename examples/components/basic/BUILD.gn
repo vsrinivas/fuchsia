@@ -73,6 +73,18 @@ rustc_binary("lifecycle_full_bin") {
   sources = [ "src/lifecycle_full.rs" ]
 }
 
+rustc_binary("echo_environ_bin") {
+  source_root = "src/echo_environ.rs"
+  name = "echo_environ"
+  edition = "2018"
+  deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/echo_environ.rs" ]
+}
+
 fuchsia_component("hello-world") {
   deps = [ ":hello_world_bin" ]
   manifest = "meta/hello-world.cml"
@@ -98,9 +110,15 @@ fuchsia_component("lifecycle-full") {
   manifest = "meta/lifecycle-full.cml"
 }
 
+fuchsia_component("echo-environ") {
+  deps = [ ":echo_environ_bin" ]
+  manifest = "meta/echo-environ.cml"
+}
+
 fuchsia_package("components-basic-example") {
   deps = [
     ":echo-args",
+    ":echo-environ",
     ":hello-world",
     ":lifecycle",
     ":lifecycle-full",

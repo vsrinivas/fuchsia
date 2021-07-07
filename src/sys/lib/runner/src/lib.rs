@@ -9,6 +9,10 @@ use {
     thiserror::Error,
 };
 
+const ARGS_KEY: &str = "args";
+const BINARY_KEY: &str = "binary";
+const ENVIRON_KEY: &str = "environ";
+
 /// An error encountered operating on `ComponentStartInfo`.
 #[derive(Debug, PartialEq, Eq, Error)]
 pub enum StartInfoError {
@@ -39,6 +43,9 @@ pub enum StartInfoProgramError {
 
     #[error("invalid value for key \"{0}\", expected one of \"{1}\", found \"{2}\"")]
     InvalidValue(String, String, String),
+
+    #[error("environ value at index \"{0}\" is invalid. Value must be format of 'VARIABLE=VALUE'")]
+    InvalidEnvironValue(usize),
 }
 
 /// Retrieves component URL from start_info or errors out if not found.
@@ -133,7 +140,7 @@ pub fn get_program_binary(
     start_info: &fcrunner::ComponentStartInfo,
 ) -> Result<String, StartInfoProgramError> {
     if let Some(program) = &start_info.program {
-        if let Some(val) = get_value(program, "binary") {
+        if let Some(val) = get_value(program, BINARY_KEY) {
             if let fdata::DictionaryValue::Str(bin) = val {
                 if !Path::new(bin).is_absolute() {
                     Ok(bin.to_string())
@@ -155,10 +162,33 @@ pub fn get_program_binary(
 pub fn get_program_args(
     start_info: &fcrunner::ComponentStartInfo,
 ) -> Result<Vec<String>, StartInfoProgramError> {
-    if let Some(vec) = get_program_strvec(start_info, "args") {
+    if let Some(vec) = get_program_strvec(start_info, ARGS_KEY) {
         Ok(vec.iter().map(|v| v.clone()).collect())
     } else {
         Ok(vec![])
+    }
+}
+
+pub fn get_environ(dict: &fdata::Dictionary) -> Result<Option<Vec<String>>, StartInfoProgramError> {
+    match get_value(dict, ENVIRON_KEY) {
+        Some(fdata::DictionaryValue::StrVec(values)) => {
+            if values.is_empty() {
+                return Ok(None);
+            }
+            for (i, value) in values.iter().enumerate() {
+                let parts: Vec<&str> = value.split("=").collect();
+                if parts.len() != 2 || parts.iter().any(|s| s.is_empty()) {
+                    return Err(StartInfoProgramError::InvalidEnvironValue(i));
+                }
+            }
+            Ok(Some(values.clone()))
+        }
+        Some(fdata::DictionaryValue::Str(_)) => Err(StartInfoProgramError::InvalidValue(
+            ENVIRON_KEY.to_owned(),
+            "vector of string".to_owned(),
+            "string".to_owned(),
+        )),
+        None => Ok(None),
     }
 }
 
@@ -209,6 +239,28 @@ mod tests {
     ) {
         let start_info = new_start_info(Some(new_program_stanza_with_vec("args", Vec::from(args))));
         assert_eq!(get_program_args(&start_info), expected);
+    }
+
+    #[test_case(fdata::DictionaryValue::StrVec(vec!["foo=bar".to_owned(), "bar=baz".to_owned()]), Ok(Some(vec!["foo=bar".to_owned(), "bar=baz".to_owned()])); "when_values_are_valid")]
+    #[test_case(fdata::DictionaryValue::StrVec(vec![]), Ok(None); "when_value_is_empty")]
+    #[test_case(fdata::DictionaryValue::StrVec(vec!["=bad".to_owned()]), Err(StartInfoProgramError::InvalidEnvironValue(0)); "for_environ_with_empty_left_hand_side")]
+    #[test_case(fdata::DictionaryValue::StrVec(vec!["bad=".to_owned()]), Err(StartInfoProgramError::InvalidEnvironValue(0)); "for_environ_with_empty_right_hand_side")]
+    #[test_case(fdata::DictionaryValue::StrVec(vec!["no_equal_sign".to_owned()]), Err(StartInfoProgramError::InvalidEnvironValue(0)); "for_environ_with_no_delimiter")]
+    #[test_case(fdata::DictionaryValue::StrVec(vec!["foo==bar".to_owned()]), Err(StartInfoProgramError::InvalidEnvironValue(0)); "for_environ_with_too_many_delimiters")]
+    #[test_case(fdata::DictionaryValue::Str("foo=bar".to_owned()), Err(StartInfoProgramError::InvalidValue(ENVIRON_KEY.to_owned(), "vector of string".to_owned(), "string".to_owned())); "for_environ_as_invalid_type")]
+    fn get_environ_test(
+        value: fdata::DictionaryValue,
+        expected: Result<Option<Vec<String>>, StartInfoProgramError>,
+    ) {
+        let program = fdata::Dictionary {
+            entries: Some(vec![fdata::DictionaryEntry {
+                key: ENVIRON_KEY.to_owned(),
+                value: Some(Box::new(value)),
+            }]),
+            ..fdata::Dictionary::EMPTY
+        };
+
+        assert_eq!(get_environ(&program), expected);
     }
 
     fn new_start_info(program: Option<fdata::Dictionary>) -> fcrunner::ComponentStartInfo {

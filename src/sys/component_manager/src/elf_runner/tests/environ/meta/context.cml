@@ -1,0 +1,20 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/context",
+        environ: [
+            "ENVIRONMENT=testing",
+            "threadcount=8",
+        ],
+    },
+    capabilities: [
+        { protocol: "fuchsia.elf.test.Context" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.elf.test.Context",
+            from: "self",
+        },
+    ],
+}

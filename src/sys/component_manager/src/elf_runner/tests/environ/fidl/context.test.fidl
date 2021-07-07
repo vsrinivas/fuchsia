@@ -1,0 +1,14 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.elf.test;
+
+const int32 MAX_ENV_VARS = 32;
+const int32 MAX_VAR_LEN = 132;
+
+[Discoverable]
+protocol Context {
+    /// Returns the environment set for this component.
+    GetEnviron() -> (vector<string:MAX_VAR_LEN>:MAX_ENV_VARS environ);
+};
