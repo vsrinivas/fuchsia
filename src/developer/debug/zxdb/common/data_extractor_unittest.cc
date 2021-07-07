@@ -76,7 +76,7 @@ TEST(DataExtractor, Numbers) {
   EXPECT_EQ(std::optional<uint32_t>(0x33323130), ext.Read<uint32_t>());
   EXPECT_EQ(std::optional<uint64_t>(0x4746454443424140), ext.Read<uint64_t>());
 
-  // Reading past the end sould leave the position unchanged (buffer is 15 bytes long).
+  // Reading past the end should leave the position unchanged (buffer is 15 bytes long).
   ext = DataExtractor(buffer);
   ext.Read<uint64_t>();
   EXPECT_EQ(8u, ext.cur());

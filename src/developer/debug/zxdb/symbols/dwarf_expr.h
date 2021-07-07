@@ -34,6 +34,8 @@ class DwarfExpr {
   explicit DwarfExpr(std::vector<uint8_t> data, UncachedLazySymbol source = UncachedLazySymbol())
       : data_(std::move(data)), source_(std::move(source)) {}
 
+  bool empty() const { return data_.empty(); }
+
   const std::vector<uint8_t>& data() const { return data_; }
   const UncachedLazySymbol& source() const { return source_; }
 

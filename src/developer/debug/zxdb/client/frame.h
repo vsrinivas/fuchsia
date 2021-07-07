@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace debug_ipc {
 struct Register;
@@ -31,6 +32,8 @@ class Frame : public ClientObject {
  public:
   explicit Frame(Session* session);
   virtual ~Frame();
+
+  fxl::WeakPtr<Frame> GetWeakPtr();
 
   // Guaranteed non-null.
   virtual Thread* GetThread() const = 0;
@@ -125,6 +128,8 @@ class Frame : public ClientObject {
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Frame);
+
+  fxl::WeakPtrFactory<Frame> weak_factory_;
 };
 
 }  // namespace zxdb

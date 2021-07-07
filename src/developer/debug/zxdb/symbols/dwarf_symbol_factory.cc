@@ -492,7 +492,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCallSiteParameter(const llvm::DWAR
 
   // Decode the register number. We currently expect the location to be exactly one DWARF opcode
   // indicating the register (see call_site_parameter.h for more).
-  std::optional<int> register_num;
+  std::optional<uint32_t> register_num;
   if (location && location->size() == 1) {
     uint8_t location_op = location->at(0);
     if (location_op >= llvm::dwarf::DW_OP_reg0 && location_op <= llvm::dwarf::DW_OP_reg31)

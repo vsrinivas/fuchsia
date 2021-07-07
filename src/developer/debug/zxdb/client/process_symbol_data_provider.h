@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_PROCESS_SYMBOL_DATA_PROVIDER_H_
 
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -16,13 +17,6 @@ class Process;
 // For that, see FrameSymbolDataProvider.
 class ProcessSymbolDataProvider : public SymbolDataProvider {
  public:
-  // Called by the process when it's being destroyed. This will remove the back-pointer to the
-  // process and all future requests for data will fail.
-  //
-  // This is necessary because this class is reference counted and may outlive the process due to
-  // in-progress operations.
-  virtual void Disown();
-
   // SymbolDataProvider overrides:
   debug_ipc::Arch GetArch() override;
   void GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback callback) override;
@@ -35,12 +29,13 @@ class ProcessSymbolDataProvider : public SymbolDataProvider {
   FRIEND_MAKE_REF_COUNTED(ProcessSymbolDataProvider);
   FRIEND_REF_COUNTED_THREAD_SAFE(ProcessSymbolDataProvider);
 
-  explicit ProcessSymbolDataProvider(Process* process);
+  explicit ProcessSymbolDataProvider(fxl::WeakPtr<Process> process);
   ~ProcessSymbolDataProvider() override;
 
+  fxl::WeakPtr<Process>& process() { return process_; }
+
  private:
-  // The associated process, possibly null if it has been disowned.
-  Process* process_;
+  fxl::WeakPtr<Process> process_;
   debug_ipc::Arch arch_;
 };
 

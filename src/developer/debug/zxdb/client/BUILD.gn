@@ -72,6 +72,8 @@ static_library("client") {
     "breakpoint_location_impl.cc",
     "breakpoint_location_impl.h",
     "breakpoint_settings.cc",
+    "call_site_symbol_data_provider.cc",
+    "call_site_symbol_data_provider.h",
     "client_eval_context_impl.cc",
     "client_object.cc",
     "cloud_storage_symbol_server.cc",
@@ -239,6 +241,7 @@ source_set("tests") {
   testonly = true
   sources = [
     "breakpoint_impl_unittest.cc",
+    "call_site_symbol_data_provider_unittest.cc",
     "client_eval_context_impl_unittest.cc",
     "disassembler_unittest.cc",
     "filter_unittest.cc",

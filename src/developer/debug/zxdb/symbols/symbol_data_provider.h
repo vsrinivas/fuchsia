@@ -58,6 +58,14 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
 
   virtual debug_ipc::Arch GetArch();
 
+  // Returns a SymbolDataProvider that will retrieve register values from the entrypoint of the
+  // current function.
+  //
+  // Returns null if there is no entrypoint (like maybe there's no current function) or can't have
+  // registers retrieved from it. This data provider is used to evaluate DW_OP_entry_value
+  // expressions.
+  virtual fxl::RefPtr<SymbolDataProvider> GetEntryDataProvider() const;
+
   // Request for synchronous register data if possible.
   //
   // If the value is not synchronously known, the return value will be std::nullopt. In this case,

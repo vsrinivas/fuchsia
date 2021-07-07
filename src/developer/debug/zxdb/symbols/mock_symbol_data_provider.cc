@@ -11,7 +11,6 @@
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 

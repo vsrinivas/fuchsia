@@ -15,10 +15,8 @@ class Frame;
 // memory read/write, this adds stack information and the instruction pointer.
 class FrameSymbolDataProvider : public ProcessSymbolDataProvider {
  public:
-  // ProcessSymbolDataProvider overrides:
-  void Disown() override;
-
   // SymbolDataProvider implementation:
+  fxl::RefPtr<SymbolDataProvider> GetEntryDataProvider() const override;
   std::optional<containers::array_view<uint8_t>> GetRegister(debug_ipc::RegisterID id) override;
   void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback) override;
   void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
@@ -31,11 +29,11 @@ class FrameSymbolDataProvider : public ProcessSymbolDataProvider {
   FRIEND_MAKE_REF_COUNTED(FrameSymbolDataProvider);
   FRIEND_REF_COUNTED_THREAD_SAFE(FrameSymbolDataProvider);
 
-  explicit FrameSymbolDataProvider(Frame* frame);
+  explicit FrameSymbolDataProvider(fxl::WeakPtr<Frame> frame);
   ~FrameSymbolDataProvider() override;
 
-  // The associated frame, possibly null if the frame has been disowned.
-  Frame* frame_;
+  // The associated frame, possibly null if the data provider has outlived the frame.
+  fxl::WeakPtr<Frame> frame_;
 };
 
 }  // namespace zxdb

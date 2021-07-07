@@ -136,9 +136,9 @@ OutputBuffer DumpCallReturn(ProcessSymbols* process_symbols, uint64_t address,
 
   SymbolContext symbol_context = func->GetSymbolContext(process_symbols);
 
-  const CallSite* call_site = func->GetCallSiteForReturnTo(symbol_context, address);
+  fxl::RefPtr<CallSite> call_site = func->GetCallSiteForReturnTo(symbol_context, address);
   if (call_site)
-    return FormatSymbol(process_symbols, call_site, opts);
+    return FormatSymbol(process_symbols, call_site.get(), opts);
 
   return OutputBuffer("No call site information for return to " + to_hex_string(address));
 }

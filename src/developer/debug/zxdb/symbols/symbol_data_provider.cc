@@ -52,12 +52,17 @@ Err NoFrameErr() { return Err("No stack frame to evaluate."); }
 
 debug_ipc::Arch SymbolDataProvider::GetArch() { return debug_ipc::Arch::kUnknown; }
 
+fxl::RefPtr<SymbolDataProvider> SymbolDataProvider::GetEntryDataProvider() const {
+  // Default to not known.
+  return fxl::RefPtr<SymbolDataProvider>();
+}
+
 std::optional<containers::array_view<uint8_t>> SymbolDataProvider::GetRegister(
     debug_ipc::RegisterID id) {
   return containers::array_view<uint8_t>();  // Known to be unknown.
 }
 
-void SymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID, GetRegisterCallback cb) {
+void SymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoFrameErr(), std::vector<uint8_t>()); });
 }

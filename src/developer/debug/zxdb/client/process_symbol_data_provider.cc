@@ -26,7 +26,7 @@ namespace {
 
 Err ProcessDestroyedErr() { return Err("Process destroyed."); }
 
-debug_ipc::Arch ArchForProcess(Process* process) {
+debug_ipc::Arch ArchForProcess(const fxl::WeakPtr<Process>& process) {
   if (!process)
     return debug_ipc::Arch::kUnknown;
   return process->session()->arch();
@@ -34,12 +34,10 @@ debug_ipc::Arch ArchForProcess(Process* process) {
 
 }  // namespace
 
-ProcessSymbolDataProvider::ProcessSymbolDataProvider(Process* process)
-    : process_(process), arch_(ArchForProcess(process)) {}
+ProcessSymbolDataProvider::ProcessSymbolDataProvider(fxl::WeakPtr<Process> process)
+    : process_(std::move(process)), arch_(ArchForProcess(process_)) {}
 
 ProcessSymbolDataProvider::~ProcessSymbolDataProvider() = default;
-
-void ProcessSymbolDataProvider::Disown() { process_ = nullptr; }
 
 debug_ipc::Arch ProcessSymbolDataProvider::GetArch() { return arch_; }
 

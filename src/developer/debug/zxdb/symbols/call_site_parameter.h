@@ -27,9 +27,10 @@ class CallSiteParameter : public Symbol {
   // If we see more complex expressions, we should probably add a real VariableLocation here for
   // uniform evaluation rather than pushing more decode logic into the DwarfSymbolFactory. Perhaps
   // this class could have a helper to decode it.
-  std::optional<int> location_register_num() const { return location_register_num_; }
+  std::optional<uint32_t> location_register_num() const { return location_register_num_; }
 
-  // The expression indicating the value of the location.
+  // The expression indicating the value of the location. This could be empty() if it's not
+  // specified in the symbols.
   const DwarfExpr& value_expr() const { return value_expr_; }
 
   // Additional information is also supported by DWARF which we have no current need for. These can
@@ -48,10 +49,10 @@ class CallSiteParameter : public Symbol {
   FRIEND_REF_COUNTED_THREAD_SAFE(CallSiteParameter);
   FRIEND_MAKE_REF_COUNTED(CallSiteParameter);
 
-  CallSiteParameter(std::optional<int> register_num, DwarfExpr value_expr)
+  CallSiteParameter(std::optional<uint32_t> register_num, DwarfExpr value_expr)
       : location_register_num_(register_num), value_expr_(std::move(value_expr)) {}
 
-  std::optional<int> location_register_num_;
+  std::optional<uint32_t> location_register_num_;
   DwarfExpr value_expr_;
 };
 

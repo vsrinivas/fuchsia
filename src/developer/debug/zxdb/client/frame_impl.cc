@@ -36,10 +36,7 @@ FrameImpl::FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame, L
   registers_[static_cast<size_t>(RegisterCategory::kGeneral)] = stack_frame.regs;
 }
 
-FrameImpl::~FrameImpl() {
-  if (symbol_data_provider_)
-    symbol_data_provider_->Disown();
-}
+FrameImpl::~FrameImpl() = default;
 
 Thread* FrameImpl::GetThread() const { return thread_; }
 
@@ -200,7 +197,7 @@ void FrameImpl::EnsureSymbolized() const {
 fxl::RefPtr<SymbolDataProvider> FrameImpl::GetSymbolDataProvider() const {
   if (!symbol_data_provider_) {
     symbol_data_provider_ =
-        fxl::MakeRefCounted<FrameSymbolDataProvider>(const_cast<FrameImpl*>(this));
+        fxl::MakeRefCounted<FrameSymbolDataProvider>(const_cast<FrameImpl*>(this)->GetWeakPtr());
   }
   return symbol_data_provider_;
 }

@@ -92,8 +92,8 @@ class CodeBlock : public Symbol {
 
   // Searches this code block and all descendents for a call site annotation matching the given
   // return address. Returns null if there is no call site record for this return address.
-  const CallSite* GetCallSiteForReturnTo(const SymbolContext& symbol_context,
-                                         TargetPointer absolute_return_address) const;
+  fxl::RefPtr<CallSite> GetCallSiteForReturnTo(const SymbolContext& symbol_context,
+                                               TargetPointer absolute_return_address) const;
 
   // Returns the chain of inline functions to the current code block.
   //

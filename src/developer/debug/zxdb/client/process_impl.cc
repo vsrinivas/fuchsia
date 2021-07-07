@@ -37,9 +37,6 @@ ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid, const std::string& n
       weak_factory_(this) {}
 
 ProcessImpl::~ProcessImpl() {
-  if (symbol_data_provider_)
-    symbol_data_provider_->Disown();
-
   // Send notifications for all destroyed threads.
   for (const auto& thread : threads_) {
     for (auto& observer : session()->thread_observers())
@@ -153,8 +150,8 @@ void ProcessImpl::ContinueUntil(std::vector<InputLocation> locations,
 
 fxl::RefPtr<SymbolDataProvider> ProcessImpl::GetSymbolDataProvider() const {
   if (!symbol_data_provider_) {
-    symbol_data_provider_ =
-        fxl::MakeRefCounted<ProcessSymbolDataProvider>(const_cast<ProcessImpl*>(this));
+    symbol_data_provider_ = fxl::MakeRefCounted<ProcessSymbolDataProvider>(
+        const_cast<ProcessImpl*>(this)->GetWeakPtr());
   }
   return symbol_data_provider_;
 }

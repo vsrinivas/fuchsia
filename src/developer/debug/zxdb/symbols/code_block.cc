@@ -85,8 +85,8 @@ const CodeBlock* CodeBlock::GetMostSpecificChild(const SymbolContext& symbol_con
   return this;
 }
 
-const CallSite* CodeBlock::GetCallSiteForReturnTo(const SymbolContext& symbol_context,
-                                                  TargetPointer absolute_return_address) const {
+fxl::RefPtr<CallSite> CodeBlock::GetCallSiteForReturnTo(
+    const SymbolContext& symbol_context, TargetPointer absolute_return_address) const {
   // Generally this will be called on a symbol from a Location so |this| could be an inline
   // function. Because of the difference between return addresses and where the call site
   // definitions are (see below), the call site may be on our parent. So always go to the physical
@@ -115,7 +115,7 @@ const CallSite* CodeBlock::GetCallSiteForReturnTo(const SymbolContext& symbol_co
       continue;
 
     if (call_site->return_pc() && *call_site->return_pc() == relative_return_address)
-      return call_site;
+      return RefPtrTo(call_site);
   }
   return nullptr;
 }

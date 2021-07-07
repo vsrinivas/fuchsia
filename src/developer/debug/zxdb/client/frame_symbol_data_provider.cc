@@ -33,14 +33,26 @@ Err RegisterUnavailableErr(debug_ipc::RegisterID id) {
 
 }  // namespace
 
-FrameSymbolDataProvider::FrameSymbolDataProvider(Frame* frame)
-    : ProcessSymbolDataProvider(frame->GetThread()->GetProcess()), frame_(frame) {}
+FrameSymbolDataProvider::FrameSymbolDataProvider(fxl::WeakPtr<Frame> frame)
+    : ProcessSymbolDataProvider(frame ? frame->GetThread()->GetProcess()->GetWeakPtr() : nullptr),
+      frame_(frame) {}
 
 FrameSymbolDataProvider::~FrameSymbolDataProvider() = default;
 
-void FrameSymbolDataProvider::Disown() {
-  ProcessSymbolDataProvider::Disown();
-  frame_ = nullptr;
+fxl::RefPtr<SymbolDataProvider> FrameSymbolDataProvider::GetEntryDataProvider() const {
+  if (!frame_)
+    return nullptr;
+
+  Stack& stack = frame_->GetThread()->GetStack();
+  auto frame_index_or = stack.IndexForFrame(frame_.get());
+  if (!frame_index_or)
+    return nullptr;
+
+  size_t prev_frame_index = *frame_index_or + 1;
+  if (prev_frame_index >= stack.size())
+    return nullptr;
+
+  return stack[prev_frame_index]->GetSymbolDataProvider();
 }
 
 std::optional<containers::array_view<uint8_t>> FrameSymbolDataProvider::GetRegister(RegisterID id) {

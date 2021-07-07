@@ -29,7 +29,7 @@ TEST_F(ProcessSymbolDataProviderTest, GetTLSSegment) {
   Session session;
   MockProcess process(&session);
   fxl::RefPtr<ProcessSymbolDataProvider> provider =
-      fxl::MakeRefCounted<ProcessSymbolDataProvider>(&process);
+      fxl::MakeRefCounted<ProcessSymbolDataProvider>(process.GetWeakPtr());
   SymbolContext symbol_context(kLoadAddress);
   fxl::RefPtr<MockModuleSymbols> module_syms = fxl::MakeRefCounted<MockModuleSymbols>("foo.so");
 

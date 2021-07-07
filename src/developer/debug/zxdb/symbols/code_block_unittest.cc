@@ -201,19 +201,22 @@ TEST(CodeBlock, GetCallSiteForReturnTo) {
   SymbolContext symbol_context(kLoadAddress);
 
   // Outside of any range.
-  EXPECT_EQ(nullptr, outer->GetCallSiteForReturnTo(symbol_context, 0x9999999999));
-  EXPECT_EQ(nullptr, outer->GetCallSiteForReturnTo(symbol_context, 0));
+  EXPECT_EQ(nullptr, outer->GetCallSiteForReturnTo(symbol_context, 0x9999999999).get());
+  EXPECT_EQ(nullptr, outer->GetCallSiteForReturnTo(symbol_context, 0).get());
 
   // Inside a code block but no matching call site.
-  EXPECT_EQ(nullptr, outer->GetCallSiteForReturnTo(symbol_context, kLoadAddress + 0x1001));
+  EXPECT_EQ(nullptr, outer->GetCallSiteForReturnTo(symbol_context, kLoadAddress + 0x1001).get());
 
   // Check all the call site addresses for matches.
-  EXPECT_EQ(first_child_cs1.get(), outer->GetCallSiteForReturnTo(
-                                       symbol_context, kLoadAddress + kFirstChildReturnAddress1));
-  EXPECT_EQ(first_child_cs2.get(), outer->GetCallSiteForReturnTo(
-                                       symbol_context, kLoadAddress + kFirstChildReturnAddress2));
-  EXPECT_EQ(second_child_cs.get(), outer->GetCallSiteForReturnTo(
-                                       symbol_context, kLoadAddress + kSecondChildReturnAddress));
+  EXPECT_EQ(first_child_cs1.get(),
+            outer->GetCallSiteForReturnTo(symbol_context, kLoadAddress + kFirstChildReturnAddress1)
+                .get());
+  EXPECT_EQ(first_child_cs2.get(),
+            outer->GetCallSiteForReturnTo(symbol_context, kLoadAddress + kFirstChildReturnAddress2)
+                .get());
+  EXPECT_EQ(second_child_cs.get(),
+            outer->GetCallSiteForReturnTo(symbol_context, kLoadAddress + kSecondChildReturnAddress)
+                .get());
 }
 
 }  // namespace zxdb
