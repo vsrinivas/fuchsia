@@ -11,7 +11,6 @@ import (
 	_ "github.com/dustin/go-humanize/english"
 	_ "github.com/fsnotify/fsnotify"
 	_ "github.com/golang/glog"
-	_ "github.com/golang/protobuf/proto"
 	_ "github.com/golang/protobuf/ptypes/empty"
 	_ "github.com/golang/protobuf/ptypes/struct"
 	_ "github.com/google/go-cmp/cmp"
