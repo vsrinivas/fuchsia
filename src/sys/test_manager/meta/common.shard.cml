@@ -1,7 +1,7 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         runner: "elf",
@@ -113,6 +113,8 @@
         {
             protocol: [
                 "fuchsia.hardware.display.Provider",
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sys.Environment",

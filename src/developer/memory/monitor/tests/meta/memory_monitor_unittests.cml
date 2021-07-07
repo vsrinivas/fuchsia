@@ -1,0 +1,19 @@
+{
+    include: [
+        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/memory_monitor_unittests",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
+            ],
+        },
+    ],
+}

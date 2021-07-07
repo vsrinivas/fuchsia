@@ -40,7 +40,7 @@ executable("memory_monitor_unittests") {
 }
 
 fuchsia_unittest_package("memory_monitor_tests") {
-  manifest = "meta/memory_monitor_unittests.cmx"
+  manifest = "meta/memory_monitor_unittests.cml"
   deps = [ ":memory_monitor_unittests" ]
 }
 

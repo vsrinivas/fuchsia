@@ -521,6 +521,8 @@
         // These capabilities are offered to test_manager for use by certain non-hermetic tests.
         {
             protocol: [
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
                 "fuchsia.process.Launcher",
                 "fuchsia.scheduler.ProfileProvider",
             ],
