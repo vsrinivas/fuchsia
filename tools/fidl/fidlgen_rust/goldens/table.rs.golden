@@ -195,3 +195,427 @@ fidl_table! {
     ],
     value_unknown_member: unknown_data,
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GreaterThan64OrdinalTable {
+    pub v1: Option<i64>,
+    pub v2: Option<i64>,
+    pub v3: Option<i64>,
+    pub v4: Option<i64>,
+    pub v5: Option<i64>,
+    pub v6: Option<i64>,
+    pub v7: Option<i64>,
+    pub v8: Option<i64>,
+    pub v9: Option<i64>,
+    pub v10: Option<i64>,
+    pub v11: Option<i64>,
+    pub v12: Option<i64>,
+    pub v13: Option<i64>,
+    pub v14: Option<i64>,
+    pub v15: Option<i64>,
+    pub v16: Option<i64>,
+    pub v17: Option<i64>,
+    pub v18: Option<i64>,
+    pub v19: Option<i64>,
+    pub v20: Option<i64>,
+    pub v21: Option<i64>,
+    pub v22: Option<i64>,
+    pub v23: Option<i64>,
+    pub v24: Option<i64>,
+    pub v25: Option<i64>,
+    pub v26: Option<i64>,
+    pub v27: Option<i64>,
+    pub v28: Option<i64>,
+    pub v29: Option<i64>,
+    pub v30: Option<i64>,
+    pub v31: Option<i64>,
+    pub v32: Option<i64>,
+    pub v33: Option<i64>,
+    pub v34: Option<i64>,
+    pub v35: Option<i64>,
+    pub v36: Option<i64>,
+    pub v37: Option<i64>,
+    pub v38: Option<i64>,
+    pub v39: Option<i64>,
+    pub v40: Option<i64>,
+    pub v41: Option<i64>,
+    pub v42: Option<i64>,
+    pub v43: Option<i64>,
+    pub v44: Option<i64>,
+    pub v45: Option<i64>,
+    pub v46: Option<i64>,
+    pub v47: Option<i64>,
+    pub v48: Option<i64>,
+    pub v49: Option<i64>,
+    pub v50: Option<i64>,
+    pub v51: Option<i64>,
+    pub v52: Option<i64>,
+    pub v53: Option<i64>,
+    pub v54: Option<i64>,
+    pub v55: Option<i64>,
+    pub v56: Option<i64>,
+    pub v57: Option<i64>,
+    pub v58: Option<i64>,
+    pub v59: Option<i64>,
+    pub v60: Option<i64>,
+    pub v61: Option<i64>,
+    pub v62: Option<i64>,
+    pub v63: Option<i64>,
+    pub v64: Option<i64>,
+    pub v65: Option<i64>,
+    pub v66: Option<i64>,
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..GreaterThan64OrdinalTable::EMPTY` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
+}
+
+impl GreaterThan64OrdinalTable {
+    /// An empty table with every field set to `None`.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self {
+        v1: None,
+        v2: None,
+        v3: None,
+        v4: None,
+        v5: None,
+        v6: None,
+        v7: None,
+        v8: None,
+        v9: None,
+        v10: None,
+        v11: None,
+        v12: None,
+        v13: None,
+        v14: None,
+        v15: None,
+        v16: None,
+        v17: None,
+        v18: None,
+        v19: None,
+        v20: None,
+        v21: None,
+        v22: None,
+        v23: None,
+        v24: None,
+        v25: None,
+        v26: None,
+        v27: None,
+        v28: None,
+        v29: None,
+        v30: None,
+        v31: None,
+        v32: None,
+        v33: None,
+        v34: None,
+        v35: None,
+        v36: None,
+        v37: None,
+        v38: None,
+        v39: None,
+        v40: None,
+        v41: None,
+        v42: None,
+        v43: None,
+        v44: None,
+        v45: None,
+        v46: None,
+        v47: None,
+        v48: None,
+        v49: None,
+        v50: None,
+        v51: None,
+        v52: None,
+        v53: None,
+        v54: None,
+        v55: None,
+        v56: None,
+        v57: None,
+        v58: None,
+        v59: None,
+        v60: None,
+        v61: None,
+        v62: None,
+        v63: None,
+        v64: None,
+        v65: None,
+        v66: None,
+        unknown_data: None,
+        __non_exhaustive: (),
+    };
+}
+
+impl fidl::encoding::Persistable for GreaterThan64OrdinalTable {}
+
+fidl_table! {
+    name: GreaterThan64OrdinalTable,
+    members: [
+        v1 {
+            ty: i64,
+            ordinal: 1,
+        },
+        v2 {
+            ty: i64,
+            ordinal: 2,
+        },
+        v3 {
+            ty: i64,
+            ordinal: 3,
+        },
+        v4 {
+            ty: i64,
+            ordinal: 4,
+        },
+        v5 {
+            ty: i64,
+            ordinal: 5,
+        },
+        v6 {
+            ty: i64,
+            ordinal: 6,
+        },
+        v7 {
+            ty: i64,
+            ordinal: 7,
+        },
+        v8 {
+            ty: i64,
+            ordinal: 8,
+        },
+        v9 {
+            ty: i64,
+            ordinal: 9,
+        },
+        v10 {
+            ty: i64,
+            ordinal: 10,
+        },
+        v11 {
+            ty: i64,
+            ordinal: 11,
+        },
+        v12 {
+            ty: i64,
+            ordinal: 12,
+        },
+        v13 {
+            ty: i64,
+            ordinal: 13,
+        },
+        v14 {
+            ty: i64,
+            ordinal: 14,
+        },
+        v15 {
+            ty: i64,
+            ordinal: 15,
+        },
+        v16 {
+            ty: i64,
+            ordinal: 16,
+        },
+        v17 {
+            ty: i64,
+            ordinal: 17,
+        },
+        v18 {
+            ty: i64,
+            ordinal: 18,
+        },
+        v19 {
+            ty: i64,
+            ordinal: 19,
+        },
+        v20 {
+            ty: i64,
+            ordinal: 20,
+        },
+        v21 {
+            ty: i64,
+            ordinal: 21,
+        },
+        v22 {
+            ty: i64,
+            ordinal: 22,
+        },
+        v23 {
+            ty: i64,
+            ordinal: 23,
+        },
+        v24 {
+            ty: i64,
+            ordinal: 24,
+        },
+        v25 {
+            ty: i64,
+            ordinal: 25,
+        },
+        v26 {
+            ty: i64,
+            ordinal: 26,
+        },
+        v27 {
+            ty: i64,
+            ordinal: 27,
+        },
+        v28 {
+            ty: i64,
+            ordinal: 28,
+        },
+        v29 {
+            ty: i64,
+            ordinal: 29,
+        },
+        v30 {
+            ty: i64,
+            ordinal: 30,
+        },
+        v31 {
+            ty: i64,
+            ordinal: 31,
+        },
+        v32 {
+            ty: i64,
+            ordinal: 32,
+        },
+        v33 {
+            ty: i64,
+            ordinal: 33,
+        },
+        v34 {
+            ty: i64,
+            ordinal: 34,
+        },
+        v35 {
+            ty: i64,
+            ordinal: 35,
+        },
+        v36 {
+            ty: i64,
+            ordinal: 36,
+        },
+        v37 {
+            ty: i64,
+            ordinal: 37,
+        },
+        v38 {
+            ty: i64,
+            ordinal: 38,
+        },
+        v39 {
+            ty: i64,
+            ordinal: 39,
+        },
+        v40 {
+            ty: i64,
+            ordinal: 40,
+        },
+        v41 {
+            ty: i64,
+            ordinal: 41,
+        },
+        v42 {
+            ty: i64,
+            ordinal: 42,
+        },
+        v43 {
+            ty: i64,
+            ordinal: 43,
+        },
+        v44 {
+            ty: i64,
+            ordinal: 44,
+        },
+        v45 {
+            ty: i64,
+            ordinal: 45,
+        },
+        v46 {
+            ty: i64,
+            ordinal: 46,
+        },
+        v47 {
+            ty: i64,
+            ordinal: 47,
+        },
+        v48 {
+            ty: i64,
+            ordinal: 48,
+        },
+        v49 {
+            ty: i64,
+            ordinal: 49,
+        },
+        v50 {
+            ty: i64,
+            ordinal: 50,
+        },
+        v51 {
+            ty: i64,
+            ordinal: 51,
+        },
+        v52 {
+            ty: i64,
+            ordinal: 52,
+        },
+        v53 {
+            ty: i64,
+            ordinal: 53,
+        },
+        v54 {
+            ty: i64,
+            ordinal: 54,
+        },
+        v55 {
+            ty: i64,
+            ordinal: 55,
+        },
+        v56 {
+            ty: i64,
+            ordinal: 56,
+        },
+        v57 {
+            ty: i64,
+            ordinal: 57,
+        },
+        v58 {
+            ty: i64,
+            ordinal: 58,
+        },
+        v59 {
+            ty: i64,
+            ordinal: 59,
+        },
+        v60 {
+            ty: i64,
+            ordinal: 60,
+        },
+        v61 {
+            ty: i64,
+            ordinal: 61,
+        },
+        v62 {
+            ty: i64,
+            ordinal: 62,
+        },
+        v63 {
+            ty: i64,
+            ordinal: 63,
+        },
+        v64 {
+            ty: i64,
+            ordinal: 64,
+        },
+        v65 {
+            ty: i64,
+            ordinal: 65,
+        },
+        v66 {
+            ty: i64,
+            ordinal: 66,
+        },
+    ],
+    value_unknown_member: unknown_data,
+}

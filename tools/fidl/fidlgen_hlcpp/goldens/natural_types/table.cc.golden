@@ -919,6 +919,4438 @@ zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
   return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }
 
+extern "C" const fidl_type_t fidl_test_table_GreaterThan64OrdinalTableTable;
+const fidl_type_t* GreaterThan64OrdinalTable::FidlType =
+    &fidl_test_table_GreaterThan64OrdinalTableTable;
+
+GreaterThan64OrdinalTable::GreaterThan64OrdinalTable() {}
+
+GreaterThan64OrdinalTable::GreaterThan64OrdinalTable(
+    GreaterThan64OrdinalTable&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&v1_value_.value, std::move(other.v1_value_.value));
+  }
+  if (field_presence_.IsSet<1>()) {
+    Construct(&v2_value_.value, std::move(other.v2_value_.value));
+  }
+  if (field_presence_.IsSet<2>()) {
+    Construct(&v3_value_.value, std::move(other.v3_value_.value));
+  }
+  if (field_presence_.IsSet<3>()) {
+    Construct(&v4_value_.value, std::move(other.v4_value_.value));
+  }
+  if (field_presence_.IsSet<4>()) {
+    Construct(&v5_value_.value, std::move(other.v5_value_.value));
+  }
+  if (field_presence_.IsSet<5>()) {
+    Construct(&v6_value_.value, std::move(other.v6_value_.value));
+  }
+  if (field_presence_.IsSet<6>()) {
+    Construct(&v7_value_.value, std::move(other.v7_value_.value));
+  }
+  if (field_presence_.IsSet<7>()) {
+    Construct(&v8_value_.value, std::move(other.v8_value_.value));
+  }
+  if (field_presence_.IsSet<8>()) {
+    Construct(&v9_value_.value, std::move(other.v9_value_.value));
+  }
+  if (field_presence_.IsSet<9>()) {
+    Construct(&v10_value_.value, std::move(other.v10_value_.value));
+  }
+  if (field_presence_.IsSet<10>()) {
+    Construct(&v11_value_.value, std::move(other.v11_value_.value));
+  }
+  if (field_presence_.IsSet<11>()) {
+    Construct(&v12_value_.value, std::move(other.v12_value_.value));
+  }
+  if (field_presence_.IsSet<12>()) {
+    Construct(&v13_value_.value, std::move(other.v13_value_.value));
+  }
+  if (field_presence_.IsSet<13>()) {
+    Construct(&v14_value_.value, std::move(other.v14_value_.value));
+  }
+  if (field_presence_.IsSet<14>()) {
+    Construct(&v15_value_.value, std::move(other.v15_value_.value));
+  }
+  if (field_presence_.IsSet<15>()) {
+    Construct(&v16_value_.value, std::move(other.v16_value_.value));
+  }
+  if (field_presence_.IsSet<16>()) {
+    Construct(&v17_value_.value, std::move(other.v17_value_.value));
+  }
+  if (field_presence_.IsSet<17>()) {
+    Construct(&v18_value_.value, std::move(other.v18_value_.value));
+  }
+  if (field_presence_.IsSet<18>()) {
+    Construct(&v19_value_.value, std::move(other.v19_value_.value));
+  }
+  if (field_presence_.IsSet<19>()) {
+    Construct(&v20_value_.value, std::move(other.v20_value_.value));
+  }
+  if (field_presence_.IsSet<20>()) {
+    Construct(&v21_value_.value, std::move(other.v21_value_.value));
+  }
+  if (field_presence_.IsSet<21>()) {
+    Construct(&v22_value_.value, std::move(other.v22_value_.value));
+  }
+  if (field_presence_.IsSet<22>()) {
+    Construct(&v23_value_.value, std::move(other.v23_value_.value));
+  }
+  if (field_presence_.IsSet<23>()) {
+    Construct(&v24_value_.value, std::move(other.v24_value_.value));
+  }
+  if (field_presence_.IsSet<24>()) {
+    Construct(&v25_value_.value, std::move(other.v25_value_.value));
+  }
+  if (field_presence_.IsSet<25>()) {
+    Construct(&v26_value_.value, std::move(other.v26_value_.value));
+  }
+  if (field_presence_.IsSet<26>()) {
+    Construct(&v27_value_.value, std::move(other.v27_value_.value));
+  }
+  if (field_presence_.IsSet<27>()) {
+    Construct(&v28_value_.value, std::move(other.v28_value_.value));
+  }
+  if (field_presence_.IsSet<28>()) {
+    Construct(&v29_value_.value, std::move(other.v29_value_.value));
+  }
+  if (field_presence_.IsSet<29>()) {
+    Construct(&v30_value_.value, std::move(other.v30_value_.value));
+  }
+  if (field_presence_.IsSet<30>()) {
+    Construct(&v31_value_.value, std::move(other.v31_value_.value));
+  }
+  if (field_presence_.IsSet<31>()) {
+    Construct(&v32_value_.value, std::move(other.v32_value_.value));
+  }
+  if (field_presence_.IsSet<32>()) {
+    Construct(&v33_value_.value, std::move(other.v33_value_.value));
+  }
+  if (field_presence_.IsSet<33>()) {
+    Construct(&v34_value_.value, std::move(other.v34_value_.value));
+  }
+  if (field_presence_.IsSet<34>()) {
+    Construct(&v35_value_.value, std::move(other.v35_value_.value));
+  }
+  if (field_presence_.IsSet<35>()) {
+    Construct(&v36_value_.value, std::move(other.v36_value_.value));
+  }
+  if (field_presence_.IsSet<36>()) {
+    Construct(&v37_value_.value, std::move(other.v37_value_.value));
+  }
+  if (field_presence_.IsSet<37>()) {
+    Construct(&v38_value_.value, std::move(other.v38_value_.value));
+  }
+  if (field_presence_.IsSet<38>()) {
+    Construct(&v39_value_.value, std::move(other.v39_value_.value));
+  }
+  if (field_presence_.IsSet<39>()) {
+    Construct(&v40_value_.value, std::move(other.v40_value_.value));
+  }
+  if (field_presence_.IsSet<40>()) {
+    Construct(&v41_value_.value, std::move(other.v41_value_.value));
+  }
+  if (field_presence_.IsSet<41>()) {
+    Construct(&v42_value_.value, std::move(other.v42_value_.value));
+  }
+  if (field_presence_.IsSet<42>()) {
+    Construct(&v43_value_.value, std::move(other.v43_value_.value));
+  }
+  if (field_presence_.IsSet<43>()) {
+    Construct(&v44_value_.value, std::move(other.v44_value_.value));
+  }
+  if (field_presence_.IsSet<44>()) {
+    Construct(&v45_value_.value, std::move(other.v45_value_.value));
+  }
+  if (field_presence_.IsSet<45>()) {
+    Construct(&v46_value_.value, std::move(other.v46_value_.value));
+  }
+  if (field_presence_.IsSet<46>()) {
+    Construct(&v47_value_.value, std::move(other.v47_value_.value));
+  }
+  if (field_presence_.IsSet<47>()) {
+    Construct(&v48_value_.value, std::move(other.v48_value_.value));
+  }
+  if (field_presence_.IsSet<48>()) {
+    Construct(&v49_value_.value, std::move(other.v49_value_.value));
+  }
+  if (field_presence_.IsSet<49>()) {
+    Construct(&v50_value_.value, std::move(other.v50_value_.value));
+  }
+  if (field_presence_.IsSet<50>()) {
+    Construct(&v51_value_.value, std::move(other.v51_value_.value));
+  }
+  if (field_presence_.IsSet<51>()) {
+    Construct(&v52_value_.value, std::move(other.v52_value_.value));
+  }
+  if (field_presence_.IsSet<52>()) {
+    Construct(&v53_value_.value, std::move(other.v53_value_.value));
+  }
+  if (field_presence_.IsSet<53>()) {
+    Construct(&v54_value_.value, std::move(other.v54_value_.value));
+  }
+  if (field_presence_.IsSet<54>()) {
+    Construct(&v55_value_.value, std::move(other.v55_value_.value));
+  }
+  if (field_presence_.IsSet<55>()) {
+    Construct(&v56_value_.value, std::move(other.v56_value_.value));
+  }
+  if (field_presence_.IsSet<56>()) {
+    Construct(&v57_value_.value, std::move(other.v57_value_.value));
+  }
+  if (field_presence_.IsSet<57>()) {
+    Construct(&v58_value_.value, std::move(other.v58_value_.value));
+  }
+  if (field_presence_.IsSet<58>()) {
+    Construct(&v59_value_.value, std::move(other.v59_value_.value));
+  }
+  if (field_presence_.IsSet<59>()) {
+    Construct(&v60_value_.value, std::move(other.v60_value_.value));
+  }
+  if (field_presence_.IsSet<60>()) {
+    Construct(&v61_value_.value, std::move(other.v61_value_.value));
+  }
+  if (field_presence_.IsSet<61>()) {
+    Construct(&v62_value_.value, std::move(other.v62_value_.value));
+  }
+  if (field_presence_.IsSet<62>()) {
+    Construct(&v63_value_.value, std::move(other.v63_value_.value));
+  }
+  if (field_presence_.IsSet<63>()) {
+    Construct(&v64_value_.value, std::move(other.v64_value_.value));
+  }
+  if (field_presence_.IsSet<64>()) {
+    Construct(&v65_value_.value, std::move(other.v65_value_.value));
+  }
+  if (field_presence_.IsSet<65>()) {
+    Construct(&v66_value_.value, std::move(other.v66_value_.value));
+  }
+  _unknown_data = std::move(other._unknown_data);
+}
+
+GreaterThan64OrdinalTable::~GreaterThan64OrdinalTable() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&v1_value_.value);
+  }
+  if (field_presence_.IsSet<1>()) {
+    Destruct(&v2_value_.value);
+  }
+  if (field_presence_.IsSet<2>()) {
+    Destruct(&v3_value_.value);
+  }
+  if (field_presence_.IsSet<3>()) {
+    Destruct(&v4_value_.value);
+  }
+  if (field_presence_.IsSet<4>()) {
+    Destruct(&v5_value_.value);
+  }
+  if (field_presence_.IsSet<5>()) {
+    Destruct(&v6_value_.value);
+  }
+  if (field_presence_.IsSet<6>()) {
+    Destruct(&v7_value_.value);
+  }
+  if (field_presence_.IsSet<7>()) {
+    Destruct(&v8_value_.value);
+  }
+  if (field_presence_.IsSet<8>()) {
+    Destruct(&v9_value_.value);
+  }
+  if (field_presence_.IsSet<9>()) {
+    Destruct(&v10_value_.value);
+  }
+  if (field_presence_.IsSet<10>()) {
+    Destruct(&v11_value_.value);
+  }
+  if (field_presence_.IsSet<11>()) {
+    Destruct(&v12_value_.value);
+  }
+  if (field_presence_.IsSet<12>()) {
+    Destruct(&v13_value_.value);
+  }
+  if (field_presence_.IsSet<13>()) {
+    Destruct(&v14_value_.value);
+  }
+  if (field_presence_.IsSet<14>()) {
+    Destruct(&v15_value_.value);
+  }
+  if (field_presence_.IsSet<15>()) {
+    Destruct(&v16_value_.value);
+  }
+  if (field_presence_.IsSet<16>()) {
+    Destruct(&v17_value_.value);
+  }
+  if (field_presence_.IsSet<17>()) {
+    Destruct(&v18_value_.value);
+  }
+  if (field_presence_.IsSet<18>()) {
+    Destruct(&v19_value_.value);
+  }
+  if (field_presence_.IsSet<19>()) {
+    Destruct(&v20_value_.value);
+  }
+  if (field_presence_.IsSet<20>()) {
+    Destruct(&v21_value_.value);
+  }
+  if (field_presence_.IsSet<21>()) {
+    Destruct(&v22_value_.value);
+  }
+  if (field_presence_.IsSet<22>()) {
+    Destruct(&v23_value_.value);
+  }
+  if (field_presence_.IsSet<23>()) {
+    Destruct(&v24_value_.value);
+  }
+  if (field_presence_.IsSet<24>()) {
+    Destruct(&v25_value_.value);
+  }
+  if (field_presence_.IsSet<25>()) {
+    Destruct(&v26_value_.value);
+  }
+  if (field_presence_.IsSet<26>()) {
+    Destruct(&v27_value_.value);
+  }
+  if (field_presence_.IsSet<27>()) {
+    Destruct(&v28_value_.value);
+  }
+  if (field_presence_.IsSet<28>()) {
+    Destruct(&v29_value_.value);
+  }
+  if (field_presence_.IsSet<29>()) {
+    Destruct(&v30_value_.value);
+  }
+  if (field_presence_.IsSet<30>()) {
+    Destruct(&v31_value_.value);
+  }
+  if (field_presence_.IsSet<31>()) {
+    Destruct(&v32_value_.value);
+  }
+  if (field_presence_.IsSet<32>()) {
+    Destruct(&v33_value_.value);
+  }
+  if (field_presence_.IsSet<33>()) {
+    Destruct(&v34_value_.value);
+  }
+  if (field_presence_.IsSet<34>()) {
+    Destruct(&v35_value_.value);
+  }
+  if (field_presence_.IsSet<35>()) {
+    Destruct(&v36_value_.value);
+  }
+  if (field_presence_.IsSet<36>()) {
+    Destruct(&v37_value_.value);
+  }
+  if (field_presence_.IsSet<37>()) {
+    Destruct(&v38_value_.value);
+  }
+  if (field_presence_.IsSet<38>()) {
+    Destruct(&v39_value_.value);
+  }
+  if (field_presence_.IsSet<39>()) {
+    Destruct(&v40_value_.value);
+  }
+  if (field_presence_.IsSet<40>()) {
+    Destruct(&v41_value_.value);
+  }
+  if (field_presence_.IsSet<41>()) {
+    Destruct(&v42_value_.value);
+  }
+  if (field_presence_.IsSet<42>()) {
+    Destruct(&v43_value_.value);
+  }
+  if (field_presence_.IsSet<43>()) {
+    Destruct(&v44_value_.value);
+  }
+  if (field_presence_.IsSet<44>()) {
+    Destruct(&v45_value_.value);
+  }
+  if (field_presence_.IsSet<45>()) {
+    Destruct(&v46_value_.value);
+  }
+  if (field_presence_.IsSet<46>()) {
+    Destruct(&v47_value_.value);
+  }
+  if (field_presence_.IsSet<47>()) {
+    Destruct(&v48_value_.value);
+  }
+  if (field_presence_.IsSet<48>()) {
+    Destruct(&v49_value_.value);
+  }
+  if (field_presence_.IsSet<49>()) {
+    Destruct(&v50_value_.value);
+  }
+  if (field_presence_.IsSet<50>()) {
+    Destruct(&v51_value_.value);
+  }
+  if (field_presence_.IsSet<51>()) {
+    Destruct(&v52_value_.value);
+  }
+  if (field_presence_.IsSet<52>()) {
+    Destruct(&v53_value_.value);
+  }
+  if (field_presence_.IsSet<53>()) {
+    Destruct(&v54_value_.value);
+  }
+  if (field_presence_.IsSet<54>()) {
+    Destruct(&v55_value_.value);
+  }
+  if (field_presence_.IsSet<55>()) {
+    Destruct(&v56_value_.value);
+  }
+  if (field_presence_.IsSet<56>()) {
+    Destruct(&v57_value_.value);
+  }
+  if (field_presence_.IsSet<57>()) {
+    Destruct(&v58_value_.value);
+  }
+  if (field_presence_.IsSet<58>()) {
+    Destruct(&v59_value_.value);
+  }
+  if (field_presence_.IsSet<59>()) {
+    Destruct(&v60_value_.value);
+  }
+  if (field_presence_.IsSet<60>()) {
+    Destruct(&v61_value_.value);
+  }
+  if (field_presence_.IsSet<61>()) {
+    Destruct(&v62_value_.value);
+  }
+  if (field_presence_.IsSet<62>()) {
+    Destruct(&v63_value_.value);
+  }
+  if (field_presence_.IsSet<63>()) {
+    Destruct(&v64_value_.value);
+  }
+  if (field_presence_.IsSet<64>()) {
+    Destruct(&v65_value_.value);
+  }
+  if (field_presence_.IsSet<65>()) {
+    Destruct(&v66_value_.value);
+  }
+}
+
+GreaterThan64OrdinalTable& GreaterThan64OrdinalTable::operator=(
+    GreaterThan64OrdinalTable&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      v1_value_.value = std::move(other.v1_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&v1_value_.value, std::move(other.v1_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&v1_value_.value);
+  }
+  if (other.field_presence_.IsSet<1>()) {
+    if (field_presence_.IsSet<1>()) {
+      v2_value_.value = std::move(other.v2_value_.value);
+    } else {
+      field_presence_.Set<1>();
+      Construct(&v2_value_.value, std::move(other.v2_value_.value));
+    }
+  } else if (field_presence_.IsSet<1>()) {
+    field_presence_.Clear<1>();
+    Destruct(&v2_value_.value);
+  }
+  if (other.field_presence_.IsSet<2>()) {
+    if (field_presence_.IsSet<2>()) {
+      v3_value_.value = std::move(other.v3_value_.value);
+    } else {
+      field_presence_.Set<2>();
+      Construct(&v3_value_.value, std::move(other.v3_value_.value));
+    }
+  } else if (field_presence_.IsSet<2>()) {
+    field_presence_.Clear<2>();
+    Destruct(&v3_value_.value);
+  }
+  if (other.field_presence_.IsSet<3>()) {
+    if (field_presence_.IsSet<3>()) {
+      v4_value_.value = std::move(other.v4_value_.value);
+    } else {
+      field_presence_.Set<3>();
+      Construct(&v4_value_.value, std::move(other.v4_value_.value));
+    }
+  } else if (field_presence_.IsSet<3>()) {
+    field_presence_.Clear<3>();
+    Destruct(&v4_value_.value);
+  }
+  if (other.field_presence_.IsSet<4>()) {
+    if (field_presence_.IsSet<4>()) {
+      v5_value_.value = std::move(other.v5_value_.value);
+    } else {
+      field_presence_.Set<4>();
+      Construct(&v5_value_.value, std::move(other.v5_value_.value));
+    }
+  } else if (field_presence_.IsSet<4>()) {
+    field_presence_.Clear<4>();
+    Destruct(&v5_value_.value);
+  }
+  if (other.field_presence_.IsSet<5>()) {
+    if (field_presence_.IsSet<5>()) {
+      v6_value_.value = std::move(other.v6_value_.value);
+    } else {
+      field_presence_.Set<5>();
+      Construct(&v6_value_.value, std::move(other.v6_value_.value));
+    }
+  } else if (field_presence_.IsSet<5>()) {
+    field_presence_.Clear<5>();
+    Destruct(&v6_value_.value);
+  }
+  if (other.field_presence_.IsSet<6>()) {
+    if (field_presence_.IsSet<6>()) {
+      v7_value_.value = std::move(other.v7_value_.value);
+    } else {
+      field_presence_.Set<6>();
+      Construct(&v7_value_.value, std::move(other.v7_value_.value));
+    }
+  } else if (field_presence_.IsSet<6>()) {
+    field_presence_.Clear<6>();
+    Destruct(&v7_value_.value);
+  }
+  if (other.field_presence_.IsSet<7>()) {
+    if (field_presence_.IsSet<7>()) {
+      v8_value_.value = std::move(other.v8_value_.value);
+    } else {
+      field_presence_.Set<7>();
+      Construct(&v8_value_.value, std::move(other.v8_value_.value));
+    }
+  } else if (field_presence_.IsSet<7>()) {
+    field_presence_.Clear<7>();
+    Destruct(&v8_value_.value);
+  }
+  if (other.field_presence_.IsSet<8>()) {
+    if (field_presence_.IsSet<8>()) {
+      v9_value_.value = std::move(other.v9_value_.value);
+    } else {
+      field_presence_.Set<8>();
+      Construct(&v9_value_.value, std::move(other.v9_value_.value));
+    }
+  } else if (field_presence_.IsSet<8>()) {
+    field_presence_.Clear<8>();
+    Destruct(&v9_value_.value);
+  }
+  if (other.field_presence_.IsSet<9>()) {
+    if (field_presence_.IsSet<9>()) {
+      v10_value_.value = std::move(other.v10_value_.value);
+    } else {
+      field_presence_.Set<9>();
+      Construct(&v10_value_.value, std::move(other.v10_value_.value));
+    }
+  } else if (field_presence_.IsSet<9>()) {
+    field_presence_.Clear<9>();
+    Destruct(&v10_value_.value);
+  }
+  if (other.field_presence_.IsSet<10>()) {
+    if (field_presence_.IsSet<10>()) {
+      v11_value_.value = std::move(other.v11_value_.value);
+    } else {
+      field_presence_.Set<10>();
+      Construct(&v11_value_.value, std::move(other.v11_value_.value));
+    }
+  } else if (field_presence_.IsSet<10>()) {
+    field_presence_.Clear<10>();
+    Destruct(&v11_value_.value);
+  }
+  if (other.field_presence_.IsSet<11>()) {
+    if (field_presence_.IsSet<11>()) {
+      v12_value_.value = std::move(other.v12_value_.value);
+    } else {
+      field_presence_.Set<11>();
+      Construct(&v12_value_.value, std::move(other.v12_value_.value));
+    }
+  } else if (field_presence_.IsSet<11>()) {
+    field_presence_.Clear<11>();
+    Destruct(&v12_value_.value);
+  }
+  if (other.field_presence_.IsSet<12>()) {
+    if (field_presence_.IsSet<12>()) {
+      v13_value_.value = std::move(other.v13_value_.value);
+    } else {
+      field_presence_.Set<12>();
+      Construct(&v13_value_.value, std::move(other.v13_value_.value));
+    }
+  } else if (field_presence_.IsSet<12>()) {
+    field_presence_.Clear<12>();
+    Destruct(&v13_value_.value);
+  }
+  if (other.field_presence_.IsSet<13>()) {
+    if (field_presence_.IsSet<13>()) {
+      v14_value_.value = std::move(other.v14_value_.value);
+    } else {
+      field_presence_.Set<13>();
+      Construct(&v14_value_.value, std::move(other.v14_value_.value));
+    }
+  } else if (field_presence_.IsSet<13>()) {
+    field_presence_.Clear<13>();
+    Destruct(&v14_value_.value);
+  }
+  if (other.field_presence_.IsSet<14>()) {
+    if (field_presence_.IsSet<14>()) {
+      v15_value_.value = std::move(other.v15_value_.value);
+    } else {
+      field_presence_.Set<14>();
+      Construct(&v15_value_.value, std::move(other.v15_value_.value));
+    }
+  } else if (field_presence_.IsSet<14>()) {
+    field_presence_.Clear<14>();
+    Destruct(&v15_value_.value);
+  }
+  if (other.field_presence_.IsSet<15>()) {
+    if (field_presence_.IsSet<15>()) {
+      v16_value_.value = std::move(other.v16_value_.value);
+    } else {
+      field_presence_.Set<15>();
+      Construct(&v16_value_.value, std::move(other.v16_value_.value));
+    }
+  } else if (field_presence_.IsSet<15>()) {
+    field_presence_.Clear<15>();
+    Destruct(&v16_value_.value);
+  }
+  if (other.field_presence_.IsSet<16>()) {
+    if (field_presence_.IsSet<16>()) {
+      v17_value_.value = std::move(other.v17_value_.value);
+    } else {
+      field_presence_.Set<16>();
+      Construct(&v17_value_.value, std::move(other.v17_value_.value));
+    }
+  } else if (field_presence_.IsSet<16>()) {
+    field_presence_.Clear<16>();
+    Destruct(&v17_value_.value);
+  }
+  if (other.field_presence_.IsSet<17>()) {
+    if (field_presence_.IsSet<17>()) {
+      v18_value_.value = std::move(other.v18_value_.value);
+    } else {
+      field_presence_.Set<17>();
+      Construct(&v18_value_.value, std::move(other.v18_value_.value));
+    }
+  } else if (field_presence_.IsSet<17>()) {
+    field_presence_.Clear<17>();
+    Destruct(&v18_value_.value);
+  }
+  if (other.field_presence_.IsSet<18>()) {
+    if (field_presence_.IsSet<18>()) {
+      v19_value_.value = std::move(other.v19_value_.value);
+    } else {
+      field_presence_.Set<18>();
+      Construct(&v19_value_.value, std::move(other.v19_value_.value));
+    }
+  } else if (field_presence_.IsSet<18>()) {
+    field_presence_.Clear<18>();
+    Destruct(&v19_value_.value);
+  }
+  if (other.field_presence_.IsSet<19>()) {
+    if (field_presence_.IsSet<19>()) {
+      v20_value_.value = std::move(other.v20_value_.value);
+    } else {
+      field_presence_.Set<19>();
+      Construct(&v20_value_.value, std::move(other.v20_value_.value));
+    }
+  } else if (field_presence_.IsSet<19>()) {
+    field_presence_.Clear<19>();
+    Destruct(&v20_value_.value);
+  }
+  if (other.field_presence_.IsSet<20>()) {
+    if (field_presence_.IsSet<20>()) {
+      v21_value_.value = std::move(other.v21_value_.value);
+    } else {
+      field_presence_.Set<20>();
+      Construct(&v21_value_.value, std::move(other.v21_value_.value));
+    }
+  } else if (field_presence_.IsSet<20>()) {
+    field_presence_.Clear<20>();
+    Destruct(&v21_value_.value);
+  }
+  if (other.field_presence_.IsSet<21>()) {
+    if (field_presence_.IsSet<21>()) {
+      v22_value_.value = std::move(other.v22_value_.value);
+    } else {
+      field_presence_.Set<21>();
+      Construct(&v22_value_.value, std::move(other.v22_value_.value));
+    }
+  } else if (field_presence_.IsSet<21>()) {
+    field_presence_.Clear<21>();
+    Destruct(&v22_value_.value);
+  }
+  if (other.field_presence_.IsSet<22>()) {
+    if (field_presence_.IsSet<22>()) {
+      v23_value_.value = std::move(other.v23_value_.value);
+    } else {
+      field_presence_.Set<22>();
+      Construct(&v23_value_.value, std::move(other.v23_value_.value));
+    }
+  } else if (field_presence_.IsSet<22>()) {
+    field_presence_.Clear<22>();
+    Destruct(&v23_value_.value);
+  }
+  if (other.field_presence_.IsSet<23>()) {
+    if (field_presence_.IsSet<23>()) {
+      v24_value_.value = std::move(other.v24_value_.value);
+    } else {
+      field_presence_.Set<23>();
+      Construct(&v24_value_.value, std::move(other.v24_value_.value));
+    }
+  } else if (field_presence_.IsSet<23>()) {
+    field_presence_.Clear<23>();
+    Destruct(&v24_value_.value);
+  }
+  if (other.field_presence_.IsSet<24>()) {
+    if (field_presence_.IsSet<24>()) {
+      v25_value_.value = std::move(other.v25_value_.value);
+    } else {
+      field_presence_.Set<24>();
+      Construct(&v25_value_.value, std::move(other.v25_value_.value));
+    }
+  } else if (field_presence_.IsSet<24>()) {
+    field_presence_.Clear<24>();
+    Destruct(&v25_value_.value);
+  }
+  if (other.field_presence_.IsSet<25>()) {
+    if (field_presence_.IsSet<25>()) {
+      v26_value_.value = std::move(other.v26_value_.value);
+    } else {
+      field_presence_.Set<25>();
+      Construct(&v26_value_.value, std::move(other.v26_value_.value));
+    }
+  } else if (field_presence_.IsSet<25>()) {
+    field_presence_.Clear<25>();
+    Destruct(&v26_value_.value);
+  }
+  if (other.field_presence_.IsSet<26>()) {
+    if (field_presence_.IsSet<26>()) {
+      v27_value_.value = std::move(other.v27_value_.value);
+    } else {
+      field_presence_.Set<26>();
+      Construct(&v27_value_.value, std::move(other.v27_value_.value));
+    }
+  } else if (field_presence_.IsSet<26>()) {
+    field_presence_.Clear<26>();
+    Destruct(&v27_value_.value);
+  }
+  if (other.field_presence_.IsSet<27>()) {
+    if (field_presence_.IsSet<27>()) {
+      v28_value_.value = std::move(other.v28_value_.value);
+    } else {
+      field_presence_.Set<27>();
+      Construct(&v28_value_.value, std::move(other.v28_value_.value));
+    }
+  } else if (field_presence_.IsSet<27>()) {
+    field_presence_.Clear<27>();
+    Destruct(&v28_value_.value);
+  }
+  if (other.field_presence_.IsSet<28>()) {
+    if (field_presence_.IsSet<28>()) {
+      v29_value_.value = std::move(other.v29_value_.value);
+    } else {
+      field_presence_.Set<28>();
+      Construct(&v29_value_.value, std::move(other.v29_value_.value));
+    }
+  } else if (field_presence_.IsSet<28>()) {
+    field_presence_.Clear<28>();
+    Destruct(&v29_value_.value);
+  }
+  if (other.field_presence_.IsSet<29>()) {
+    if (field_presence_.IsSet<29>()) {
+      v30_value_.value = std::move(other.v30_value_.value);
+    } else {
+      field_presence_.Set<29>();
+      Construct(&v30_value_.value, std::move(other.v30_value_.value));
+    }
+  } else if (field_presence_.IsSet<29>()) {
+    field_presence_.Clear<29>();
+    Destruct(&v30_value_.value);
+  }
+  if (other.field_presence_.IsSet<30>()) {
+    if (field_presence_.IsSet<30>()) {
+      v31_value_.value = std::move(other.v31_value_.value);
+    } else {
+      field_presence_.Set<30>();
+      Construct(&v31_value_.value, std::move(other.v31_value_.value));
+    }
+  } else if (field_presence_.IsSet<30>()) {
+    field_presence_.Clear<30>();
+    Destruct(&v31_value_.value);
+  }
+  if (other.field_presence_.IsSet<31>()) {
+    if (field_presence_.IsSet<31>()) {
+      v32_value_.value = std::move(other.v32_value_.value);
+    } else {
+      field_presence_.Set<31>();
+      Construct(&v32_value_.value, std::move(other.v32_value_.value));
+    }
+  } else if (field_presence_.IsSet<31>()) {
+    field_presence_.Clear<31>();
+    Destruct(&v32_value_.value);
+  }
+  if (other.field_presence_.IsSet<32>()) {
+    if (field_presence_.IsSet<32>()) {
+      v33_value_.value = std::move(other.v33_value_.value);
+    } else {
+      field_presence_.Set<32>();
+      Construct(&v33_value_.value, std::move(other.v33_value_.value));
+    }
+  } else if (field_presence_.IsSet<32>()) {
+    field_presence_.Clear<32>();
+    Destruct(&v33_value_.value);
+  }
+  if (other.field_presence_.IsSet<33>()) {
+    if (field_presence_.IsSet<33>()) {
+      v34_value_.value = std::move(other.v34_value_.value);
+    } else {
+      field_presence_.Set<33>();
+      Construct(&v34_value_.value, std::move(other.v34_value_.value));
+    }
+  } else if (field_presence_.IsSet<33>()) {
+    field_presence_.Clear<33>();
+    Destruct(&v34_value_.value);
+  }
+  if (other.field_presence_.IsSet<34>()) {
+    if (field_presence_.IsSet<34>()) {
+      v35_value_.value = std::move(other.v35_value_.value);
+    } else {
+      field_presence_.Set<34>();
+      Construct(&v35_value_.value, std::move(other.v35_value_.value));
+    }
+  } else if (field_presence_.IsSet<34>()) {
+    field_presence_.Clear<34>();
+    Destruct(&v35_value_.value);
+  }
+  if (other.field_presence_.IsSet<35>()) {
+    if (field_presence_.IsSet<35>()) {
+      v36_value_.value = std::move(other.v36_value_.value);
+    } else {
+      field_presence_.Set<35>();
+      Construct(&v36_value_.value, std::move(other.v36_value_.value));
+    }
+  } else if (field_presence_.IsSet<35>()) {
+    field_presence_.Clear<35>();
+    Destruct(&v36_value_.value);
+  }
+  if (other.field_presence_.IsSet<36>()) {
+    if (field_presence_.IsSet<36>()) {
+      v37_value_.value = std::move(other.v37_value_.value);
+    } else {
+      field_presence_.Set<36>();
+      Construct(&v37_value_.value, std::move(other.v37_value_.value));
+    }
+  } else if (field_presence_.IsSet<36>()) {
+    field_presence_.Clear<36>();
+    Destruct(&v37_value_.value);
+  }
+  if (other.field_presence_.IsSet<37>()) {
+    if (field_presence_.IsSet<37>()) {
+      v38_value_.value = std::move(other.v38_value_.value);
+    } else {
+      field_presence_.Set<37>();
+      Construct(&v38_value_.value, std::move(other.v38_value_.value));
+    }
+  } else if (field_presence_.IsSet<37>()) {
+    field_presence_.Clear<37>();
+    Destruct(&v38_value_.value);
+  }
+  if (other.field_presence_.IsSet<38>()) {
+    if (field_presence_.IsSet<38>()) {
+      v39_value_.value = std::move(other.v39_value_.value);
+    } else {
+      field_presence_.Set<38>();
+      Construct(&v39_value_.value, std::move(other.v39_value_.value));
+    }
+  } else if (field_presence_.IsSet<38>()) {
+    field_presence_.Clear<38>();
+    Destruct(&v39_value_.value);
+  }
+  if (other.field_presence_.IsSet<39>()) {
+    if (field_presence_.IsSet<39>()) {
+      v40_value_.value = std::move(other.v40_value_.value);
+    } else {
+      field_presence_.Set<39>();
+      Construct(&v40_value_.value, std::move(other.v40_value_.value));
+    }
+  } else if (field_presence_.IsSet<39>()) {
+    field_presence_.Clear<39>();
+    Destruct(&v40_value_.value);
+  }
+  if (other.field_presence_.IsSet<40>()) {
+    if (field_presence_.IsSet<40>()) {
+      v41_value_.value = std::move(other.v41_value_.value);
+    } else {
+      field_presence_.Set<40>();
+      Construct(&v41_value_.value, std::move(other.v41_value_.value));
+    }
+  } else if (field_presence_.IsSet<40>()) {
+    field_presence_.Clear<40>();
+    Destruct(&v41_value_.value);
+  }
+  if (other.field_presence_.IsSet<41>()) {
+    if (field_presence_.IsSet<41>()) {
+      v42_value_.value = std::move(other.v42_value_.value);
+    } else {
+      field_presence_.Set<41>();
+      Construct(&v42_value_.value, std::move(other.v42_value_.value));
+    }
+  } else if (field_presence_.IsSet<41>()) {
+    field_presence_.Clear<41>();
+    Destruct(&v42_value_.value);
+  }
+  if (other.field_presence_.IsSet<42>()) {
+    if (field_presence_.IsSet<42>()) {
+      v43_value_.value = std::move(other.v43_value_.value);
+    } else {
+      field_presence_.Set<42>();
+      Construct(&v43_value_.value, std::move(other.v43_value_.value));
+    }
+  } else if (field_presence_.IsSet<42>()) {
+    field_presence_.Clear<42>();
+    Destruct(&v43_value_.value);
+  }
+  if (other.field_presence_.IsSet<43>()) {
+    if (field_presence_.IsSet<43>()) {
+      v44_value_.value = std::move(other.v44_value_.value);
+    } else {
+      field_presence_.Set<43>();
+      Construct(&v44_value_.value, std::move(other.v44_value_.value));
+    }
+  } else if (field_presence_.IsSet<43>()) {
+    field_presence_.Clear<43>();
+    Destruct(&v44_value_.value);
+  }
+  if (other.field_presence_.IsSet<44>()) {
+    if (field_presence_.IsSet<44>()) {
+      v45_value_.value = std::move(other.v45_value_.value);
+    } else {
+      field_presence_.Set<44>();
+      Construct(&v45_value_.value, std::move(other.v45_value_.value));
+    }
+  } else if (field_presence_.IsSet<44>()) {
+    field_presence_.Clear<44>();
+    Destruct(&v45_value_.value);
+  }
+  if (other.field_presence_.IsSet<45>()) {
+    if (field_presence_.IsSet<45>()) {
+      v46_value_.value = std::move(other.v46_value_.value);
+    } else {
+      field_presence_.Set<45>();
+      Construct(&v46_value_.value, std::move(other.v46_value_.value));
+    }
+  } else if (field_presence_.IsSet<45>()) {
+    field_presence_.Clear<45>();
+    Destruct(&v46_value_.value);
+  }
+  if (other.field_presence_.IsSet<46>()) {
+    if (field_presence_.IsSet<46>()) {
+      v47_value_.value = std::move(other.v47_value_.value);
+    } else {
+      field_presence_.Set<46>();
+      Construct(&v47_value_.value, std::move(other.v47_value_.value));
+    }
+  } else if (field_presence_.IsSet<46>()) {
+    field_presence_.Clear<46>();
+    Destruct(&v47_value_.value);
+  }
+  if (other.field_presence_.IsSet<47>()) {
+    if (field_presence_.IsSet<47>()) {
+      v48_value_.value = std::move(other.v48_value_.value);
+    } else {
+      field_presence_.Set<47>();
+      Construct(&v48_value_.value, std::move(other.v48_value_.value));
+    }
+  } else if (field_presence_.IsSet<47>()) {
+    field_presence_.Clear<47>();
+    Destruct(&v48_value_.value);
+  }
+  if (other.field_presence_.IsSet<48>()) {
+    if (field_presence_.IsSet<48>()) {
+      v49_value_.value = std::move(other.v49_value_.value);
+    } else {
+      field_presence_.Set<48>();
+      Construct(&v49_value_.value, std::move(other.v49_value_.value));
+    }
+  } else if (field_presence_.IsSet<48>()) {
+    field_presence_.Clear<48>();
+    Destruct(&v49_value_.value);
+  }
+  if (other.field_presence_.IsSet<49>()) {
+    if (field_presence_.IsSet<49>()) {
+      v50_value_.value = std::move(other.v50_value_.value);
+    } else {
+      field_presence_.Set<49>();
+      Construct(&v50_value_.value, std::move(other.v50_value_.value));
+    }
+  } else if (field_presence_.IsSet<49>()) {
+    field_presence_.Clear<49>();
+    Destruct(&v50_value_.value);
+  }
+  if (other.field_presence_.IsSet<50>()) {
+    if (field_presence_.IsSet<50>()) {
+      v51_value_.value = std::move(other.v51_value_.value);
+    } else {
+      field_presence_.Set<50>();
+      Construct(&v51_value_.value, std::move(other.v51_value_.value));
+    }
+  } else if (field_presence_.IsSet<50>()) {
+    field_presence_.Clear<50>();
+    Destruct(&v51_value_.value);
+  }
+  if (other.field_presence_.IsSet<51>()) {
+    if (field_presence_.IsSet<51>()) {
+      v52_value_.value = std::move(other.v52_value_.value);
+    } else {
+      field_presence_.Set<51>();
+      Construct(&v52_value_.value, std::move(other.v52_value_.value));
+    }
+  } else if (field_presence_.IsSet<51>()) {
+    field_presence_.Clear<51>();
+    Destruct(&v52_value_.value);
+  }
+  if (other.field_presence_.IsSet<52>()) {
+    if (field_presence_.IsSet<52>()) {
+      v53_value_.value = std::move(other.v53_value_.value);
+    } else {
+      field_presence_.Set<52>();
+      Construct(&v53_value_.value, std::move(other.v53_value_.value));
+    }
+  } else if (field_presence_.IsSet<52>()) {
+    field_presence_.Clear<52>();
+    Destruct(&v53_value_.value);
+  }
+  if (other.field_presence_.IsSet<53>()) {
+    if (field_presence_.IsSet<53>()) {
+      v54_value_.value = std::move(other.v54_value_.value);
+    } else {
+      field_presence_.Set<53>();
+      Construct(&v54_value_.value, std::move(other.v54_value_.value));
+    }
+  } else if (field_presence_.IsSet<53>()) {
+    field_presence_.Clear<53>();
+    Destruct(&v54_value_.value);
+  }
+  if (other.field_presence_.IsSet<54>()) {
+    if (field_presence_.IsSet<54>()) {
+      v55_value_.value = std::move(other.v55_value_.value);
+    } else {
+      field_presence_.Set<54>();
+      Construct(&v55_value_.value, std::move(other.v55_value_.value));
+    }
+  } else if (field_presence_.IsSet<54>()) {
+    field_presence_.Clear<54>();
+    Destruct(&v55_value_.value);
+  }
+  if (other.field_presence_.IsSet<55>()) {
+    if (field_presence_.IsSet<55>()) {
+      v56_value_.value = std::move(other.v56_value_.value);
+    } else {
+      field_presence_.Set<55>();
+      Construct(&v56_value_.value, std::move(other.v56_value_.value));
+    }
+  } else if (field_presence_.IsSet<55>()) {
+    field_presence_.Clear<55>();
+    Destruct(&v56_value_.value);
+  }
+  if (other.field_presence_.IsSet<56>()) {
+    if (field_presence_.IsSet<56>()) {
+      v57_value_.value = std::move(other.v57_value_.value);
+    } else {
+      field_presence_.Set<56>();
+      Construct(&v57_value_.value, std::move(other.v57_value_.value));
+    }
+  } else if (field_presence_.IsSet<56>()) {
+    field_presence_.Clear<56>();
+    Destruct(&v57_value_.value);
+  }
+  if (other.field_presence_.IsSet<57>()) {
+    if (field_presence_.IsSet<57>()) {
+      v58_value_.value = std::move(other.v58_value_.value);
+    } else {
+      field_presence_.Set<57>();
+      Construct(&v58_value_.value, std::move(other.v58_value_.value));
+    }
+  } else if (field_presence_.IsSet<57>()) {
+    field_presence_.Clear<57>();
+    Destruct(&v58_value_.value);
+  }
+  if (other.field_presence_.IsSet<58>()) {
+    if (field_presence_.IsSet<58>()) {
+      v59_value_.value = std::move(other.v59_value_.value);
+    } else {
+      field_presence_.Set<58>();
+      Construct(&v59_value_.value, std::move(other.v59_value_.value));
+    }
+  } else if (field_presence_.IsSet<58>()) {
+    field_presence_.Clear<58>();
+    Destruct(&v59_value_.value);
+  }
+  if (other.field_presence_.IsSet<59>()) {
+    if (field_presence_.IsSet<59>()) {
+      v60_value_.value = std::move(other.v60_value_.value);
+    } else {
+      field_presence_.Set<59>();
+      Construct(&v60_value_.value, std::move(other.v60_value_.value));
+    }
+  } else if (field_presence_.IsSet<59>()) {
+    field_presence_.Clear<59>();
+    Destruct(&v60_value_.value);
+  }
+  if (other.field_presence_.IsSet<60>()) {
+    if (field_presence_.IsSet<60>()) {
+      v61_value_.value = std::move(other.v61_value_.value);
+    } else {
+      field_presence_.Set<60>();
+      Construct(&v61_value_.value, std::move(other.v61_value_.value));
+    }
+  } else if (field_presence_.IsSet<60>()) {
+    field_presence_.Clear<60>();
+    Destruct(&v61_value_.value);
+  }
+  if (other.field_presence_.IsSet<61>()) {
+    if (field_presence_.IsSet<61>()) {
+      v62_value_.value = std::move(other.v62_value_.value);
+    } else {
+      field_presence_.Set<61>();
+      Construct(&v62_value_.value, std::move(other.v62_value_.value));
+    }
+  } else if (field_presence_.IsSet<61>()) {
+    field_presence_.Clear<61>();
+    Destruct(&v62_value_.value);
+  }
+  if (other.field_presence_.IsSet<62>()) {
+    if (field_presence_.IsSet<62>()) {
+      v63_value_.value = std::move(other.v63_value_.value);
+    } else {
+      field_presence_.Set<62>();
+      Construct(&v63_value_.value, std::move(other.v63_value_.value));
+    }
+  } else if (field_presence_.IsSet<62>()) {
+    field_presence_.Clear<62>();
+    Destruct(&v63_value_.value);
+  }
+  if (other.field_presence_.IsSet<63>()) {
+    if (field_presence_.IsSet<63>()) {
+      v64_value_.value = std::move(other.v64_value_.value);
+    } else {
+      field_presence_.Set<63>();
+      Construct(&v64_value_.value, std::move(other.v64_value_.value));
+    }
+  } else if (field_presence_.IsSet<63>()) {
+    field_presence_.Clear<63>();
+    Destruct(&v64_value_.value);
+  }
+  if (other.field_presence_.IsSet<64>()) {
+    if (field_presence_.IsSet<64>()) {
+      v65_value_.value = std::move(other.v65_value_.value);
+    } else {
+      field_presence_.Set<64>();
+      Construct(&v65_value_.value, std::move(other.v65_value_.value));
+    }
+  } else if (field_presence_.IsSet<64>()) {
+    field_presence_.Clear<64>();
+    Destruct(&v65_value_.value);
+  }
+  if (other.field_presence_.IsSet<65>()) {
+    if (field_presence_.IsSet<65>()) {
+      v66_value_.value = std::move(other.v66_value_.value);
+    } else {
+      field_presence_.Set<65>();
+      Construct(&v66_value_.value, std::move(other.v66_value_.value));
+    }
+  } else if (field_presence_.IsSet<65>()) {
+    field_presence_.Clear<65>();
+    Destruct(&v66_value_.value);
+  }
+  _unknown_data = std::move(other._unknown_data);
+  return *this;
+}
+
+bool GreaterThan64OrdinalTable::IsEmpty() const {
+  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+}
+
+void GreaterThan64OrdinalTable::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_t));
+  auto next_unknown = _unknown_data.begin();
+  if (field_presence_.IsSet<0>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v1_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<1>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 2) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v2_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<2>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 3) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v3_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (3 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<3>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 4) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v4_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (4 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<4>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 5) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v5_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (5 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<5>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 6) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v6_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (6 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<6>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 7) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v7_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (7 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<7>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 8) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v8_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (8 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<8>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 9) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v9_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (9 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<9>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 10) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v10_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (10 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<10>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 11) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v11_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (11 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<11>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 12) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v12_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (12 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<12>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 13) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v13_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (13 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<13>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 14) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v14_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (14 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<14>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 15) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v15_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (15 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<15>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 16) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v16_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (16 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<16>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 17) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v17_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (17 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<17>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 18) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v18_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (18 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<18>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 19) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v19_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (19 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<19>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 20) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v20_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (20 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<20>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 21) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v21_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (21 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<21>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 22) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v22_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (22 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<22>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 23) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v23_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (23 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<23>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 24) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v24_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (24 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<24>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 25) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v25_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (25 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<25>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 26) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v26_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (26 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<26>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 27) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v27_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (27 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<27>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 28) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v28_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (28 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<28>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 29) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v29_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (29 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<29>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 30) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v30_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (30 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<30>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 31) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v31_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (31 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<31>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 32) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v32_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (32 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<32>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 33) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v33_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (33 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<33>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 34) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v34_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (34 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<34>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 35) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v35_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (35 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<35>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 36) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v36_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (36 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<36>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 37) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v37_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (37 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<37>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 38) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v38_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (38 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<38>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 39) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v39_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (39 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<39>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 40) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v40_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (40 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<40>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 41) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v41_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (41 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<41>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 42) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v42_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (42 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<42>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 43) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v43_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (43 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<43>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 44) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v44_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (44 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<44>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 45) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v45_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (45 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<45>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 46) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v46_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (46 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<46>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 47) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v47_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (47 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<47>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 48) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v48_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (48 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<48>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 49) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v49_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (49 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<49>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 50) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v50_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (50 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<50>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 51) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v51_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (51 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<51>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 52) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v52_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (52 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<52>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 53) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v53_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (53 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<53>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 54) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v54_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (54 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<54>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 55) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v55_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (55 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<55>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 56) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v56_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (56 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<56>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 57) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v57_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (57 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<57>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 58) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v58_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (58 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<58>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 59) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v59_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (59 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<59>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 60) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v60_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (60 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<60>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 61) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v61_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (61 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<61>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 62) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v62_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (62 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<62>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 63) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v63_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (63 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<63>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 64) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v64_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (64 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<64>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 65) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v65_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (65 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  if (field_presence_.IsSet<65>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 66) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+    ::fidl::Encode(
+        _encoder, &v66_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+    size_t envelope_base = base + (66 - 1) * sizeof(fidl_envelope_t);
+    uint64_t num_bytes_then_num_handles =
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
+        FIDL_ALLOC_PRESENT;
+  }
+  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
+  // the range of known ordinals)
+  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
+    size_t envelope_base = base + (curr->first - 1) * sizeof(fidl_envelope_t);
+    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
+  }
+}
+
+void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
+                                       GreaterThan64OrdinalTable* _value,
+                                       size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  size_t base;
+  size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v1(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v1();
+    }
+  } else {
+    goto done_1;
+  }
+  if (count >= 2) {
+    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v2(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v2();
+    }
+  } else {
+    goto done_2;
+  }
+  if (count >= 3) {
+    size_t envelope_base = base + (3 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v3(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v3();
+    }
+  } else {
+    goto done_3;
+  }
+  if (count >= 4) {
+    size_t envelope_base = base + (4 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v4(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v4();
+    }
+  } else {
+    goto done_4;
+  }
+  if (count >= 5) {
+    size_t envelope_base = base + (5 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v5(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v5();
+    }
+  } else {
+    goto done_5;
+  }
+  if (count >= 6) {
+    size_t envelope_base = base + (6 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v6(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v6();
+    }
+  } else {
+    goto done_6;
+  }
+  if (count >= 7) {
+    size_t envelope_base = base + (7 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v7(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v7();
+    }
+  } else {
+    goto done_7;
+  }
+  if (count >= 8) {
+    size_t envelope_base = base + (8 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v8(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v8();
+    }
+  } else {
+    goto done_8;
+  }
+  if (count >= 9) {
+    size_t envelope_base = base + (9 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v9(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v9();
+    }
+  } else {
+    goto done_9;
+  }
+  if (count >= 10) {
+    size_t envelope_base = base + (10 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v10(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v10();
+    }
+  } else {
+    goto done_10;
+  }
+  if (count >= 11) {
+    size_t envelope_base = base + (11 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v11(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v11();
+    }
+  } else {
+    goto done_11;
+  }
+  if (count >= 12) {
+    size_t envelope_base = base + (12 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v12(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v12();
+    }
+  } else {
+    goto done_12;
+  }
+  if (count >= 13) {
+    size_t envelope_base = base + (13 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v13(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v13();
+    }
+  } else {
+    goto done_13;
+  }
+  if (count >= 14) {
+    size_t envelope_base = base + (14 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v14(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v14();
+    }
+  } else {
+    goto done_14;
+  }
+  if (count >= 15) {
+    size_t envelope_base = base + (15 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v15(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v15();
+    }
+  } else {
+    goto done_15;
+  }
+  if (count >= 16) {
+    size_t envelope_base = base + (16 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v16(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v16();
+    }
+  } else {
+    goto done_16;
+  }
+  if (count >= 17) {
+    size_t envelope_base = base + (17 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v17(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v17();
+    }
+  } else {
+    goto done_17;
+  }
+  if (count >= 18) {
+    size_t envelope_base = base + (18 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v18(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v18();
+    }
+  } else {
+    goto done_18;
+  }
+  if (count >= 19) {
+    size_t envelope_base = base + (19 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v19(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v19();
+    }
+  } else {
+    goto done_19;
+  }
+  if (count >= 20) {
+    size_t envelope_base = base + (20 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v20(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v20();
+    }
+  } else {
+    goto done_20;
+  }
+  if (count >= 21) {
+    size_t envelope_base = base + (21 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v21(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v21();
+    }
+  } else {
+    goto done_21;
+  }
+  if (count >= 22) {
+    size_t envelope_base = base + (22 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v22(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v22();
+    }
+  } else {
+    goto done_22;
+  }
+  if (count >= 23) {
+    size_t envelope_base = base + (23 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v23(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v23();
+    }
+  } else {
+    goto done_23;
+  }
+  if (count >= 24) {
+    size_t envelope_base = base + (24 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v24(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v24();
+    }
+  } else {
+    goto done_24;
+  }
+  if (count >= 25) {
+    size_t envelope_base = base + (25 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v25(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v25();
+    }
+  } else {
+    goto done_25;
+  }
+  if (count >= 26) {
+    size_t envelope_base = base + (26 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v26(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v26();
+    }
+  } else {
+    goto done_26;
+  }
+  if (count >= 27) {
+    size_t envelope_base = base + (27 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v27(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v27();
+    }
+  } else {
+    goto done_27;
+  }
+  if (count >= 28) {
+    size_t envelope_base = base + (28 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v28(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v28();
+    }
+  } else {
+    goto done_28;
+  }
+  if (count >= 29) {
+    size_t envelope_base = base + (29 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v29(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v29();
+    }
+  } else {
+    goto done_29;
+  }
+  if (count >= 30) {
+    size_t envelope_base = base + (30 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v30(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v30();
+    }
+  } else {
+    goto done_30;
+  }
+  if (count >= 31) {
+    size_t envelope_base = base + (31 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v31(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v31();
+    }
+  } else {
+    goto done_31;
+  }
+  if (count >= 32) {
+    size_t envelope_base = base + (32 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v32(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v32();
+    }
+  } else {
+    goto done_32;
+  }
+  if (count >= 33) {
+    size_t envelope_base = base + (33 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v33(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v33();
+    }
+  } else {
+    goto done_33;
+  }
+  if (count >= 34) {
+    size_t envelope_base = base + (34 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v34(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v34();
+    }
+  } else {
+    goto done_34;
+  }
+  if (count >= 35) {
+    size_t envelope_base = base + (35 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v35(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v35();
+    }
+  } else {
+    goto done_35;
+  }
+  if (count >= 36) {
+    size_t envelope_base = base + (36 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v36(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v36();
+    }
+  } else {
+    goto done_36;
+  }
+  if (count >= 37) {
+    size_t envelope_base = base + (37 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v37(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v37();
+    }
+  } else {
+    goto done_37;
+  }
+  if (count >= 38) {
+    size_t envelope_base = base + (38 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v38(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v38();
+    }
+  } else {
+    goto done_38;
+  }
+  if (count >= 39) {
+    size_t envelope_base = base + (39 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v39(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v39();
+    }
+  } else {
+    goto done_39;
+  }
+  if (count >= 40) {
+    size_t envelope_base = base + (40 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v40(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v40();
+    }
+  } else {
+    goto done_40;
+  }
+  if (count >= 41) {
+    size_t envelope_base = base + (41 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v41(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v41();
+    }
+  } else {
+    goto done_41;
+  }
+  if (count >= 42) {
+    size_t envelope_base = base + (42 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v42(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v42();
+    }
+  } else {
+    goto done_42;
+  }
+  if (count >= 43) {
+    size_t envelope_base = base + (43 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v43(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v43();
+    }
+  } else {
+    goto done_43;
+  }
+  if (count >= 44) {
+    size_t envelope_base = base + (44 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v44(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v44();
+    }
+  } else {
+    goto done_44;
+  }
+  if (count >= 45) {
+    size_t envelope_base = base + (45 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v45(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v45();
+    }
+  } else {
+    goto done_45;
+  }
+  if (count >= 46) {
+    size_t envelope_base = base + (46 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v46(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v46();
+    }
+  } else {
+    goto done_46;
+  }
+  if (count >= 47) {
+    size_t envelope_base = base + (47 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v47(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v47();
+    }
+  } else {
+    goto done_47;
+  }
+  if (count >= 48) {
+    size_t envelope_base = base + (48 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v48(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v48();
+    }
+  } else {
+    goto done_48;
+  }
+  if (count >= 49) {
+    size_t envelope_base = base + (49 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v49(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v49();
+    }
+  } else {
+    goto done_49;
+  }
+  if (count >= 50) {
+    size_t envelope_base = base + (50 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v50(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v50();
+    }
+  } else {
+    goto done_50;
+  }
+  if (count >= 51) {
+    size_t envelope_base = base + (51 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v51(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v51();
+    }
+  } else {
+    goto done_51;
+  }
+  if (count >= 52) {
+    size_t envelope_base = base + (52 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v52(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v52();
+    }
+  } else {
+    goto done_52;
+  }
+  if (count >= 53) {
+    size_t envelope_base = base + (53 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v53(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v53();
+    }
+  } else {
+    goto done_53;
+  }
+  if (count >= 54) {
+    size_t envelope_base = base + (54 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v54(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v54();
+    }
+  } else {
+    goto done_54;
+  }
+  if (count >= 55) {
+    size_t envelope_base = base + (55 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v55(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v55();
+    }
+  } else {
+    goto done_55;
+  }
+  if (count >= 56) {
+    size_t envelope_base = base + (56 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v56(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v56();
+    }
+  } else {
+    goto done_56;
+  }
+  if (count >= 57) {
+    size_t envelope_base = base + (57 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v57(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v57();
+    }
+  } else {
+    goto done_57;
+  }
+  if (count >= 58) {
+    size_t envelope_base = base + (58 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v58(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v58();
+    }
+  } else {
+    goto done_58;
+  }
+  if (count >= 59) {
+    size_t envelope_base = base + (59 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v59(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v59();
+    }
+  } else {
+    goto done_59;
+  }
+  if (count >= 60) {
+    size_t envelope_base = base + (60 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v60(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v60();
+    }
+  } else {
+    goto done_60;
+  }
+  if (count >= 61) {
+    size_t envelope_base = base + (61 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v61(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v61();
+    }
+  } else {
+    goto done_61;
+  }
+  if (count >= 62) {
+    size_t envelope_base = base + (62 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v62(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v62();
+    }
+  } else {
+    goto done_62;
+  }
+  if (count >= 63) {
+    size_t envelope_base = base + (63 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v63(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v63();
+    }
+  } else {
+    goto done_63;
+  }
+  if (count >= 64) {
+    size_t envelope_base = base + (64 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v64(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v64();
+    }
+  } else {
+    goto done_64;
+  }
+  if (count >= 65) {
+    size_t envelope_base = base + (65 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v65(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v65();
+    }
+  } else {
+    goto done_65;
+  }
+  if (count >= 66) {
+    size_t envelope_base = base + (66 - 1) * sizeof(fidl_envelope_t);
+    uint64_t presence;
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
+    if (presence != 0) {
+      ::fidl::Decode(_decoder, _value->mutable_v66(),
+                     _decoder->GetOffset(presence));
+    } else {
+      _value->clear_v66();
+    }
+  } else {
+    goto done_66;
+  }
+
+  if (count > 66) {
+    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
+      if (IsOrdinalKnown(ordinal)) continue;
+
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_t);
+      fidl_envelope_t* envelope =
+          _decoder->GetPtr<fidl_envelope_t>(envelope_base);
+      if (envelope->presence != 0) {
+        auto result = _value->_unknown_data.emplace(
+            std::piecewise_construct, std::forward_as_tuple(ordinal),
+            std::forward_as_tuple());
+        auto iter = result.first;
+        iter->second.resize(envelope->num_bytes);
+        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
+                                           _decoder->GetOffset(envelope->data));
+      }
+    }
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_v1();
+done_2:
+  _value->clear_v2();
+done_3:
+  _value->clear_v3();
+done_4:
+  _value->clear_v4();
+done_5:
+  _value->clear_v5();
+done_6:
+  _value->clear_v6();
+done_7:
+  _value->clear_v7();
+done_8:
+  _value->clear_v8();
+done_9:
+  _value->clear_v9();
+done_10:
+  _value->clear_v10();
+done_11:
+  _value->clear_v11();
+done_12:
+  _value->clear_v12();
+done_13:
+  _value->clear_v13();
+done_14:
+  _value->clear_v14();
+done_15:
+  _value->clear_v15();
+done_16:
+  _value->clear_v16();
+done_17:
+  _value->clear_v17();
+done_18:
+  _value->clear_v18();
+done_19:
+  _value->clear_v19();
+done_20:
+  _value->clear_v20();
+done_21:
+  _value->clear_v21();
+done_22:
+  _value->clear_v22();
+done_23:
+  _value->clear_v23();
+done_24:
+  _value->clear_v24();
+done_25:
+  _value->clear_v25();
+done_26:
+  _value->clear_v26();
+done_27:
+  _value->clear_v27();
+done_28:
+  _value->clear_v28();
+done_29:
+  _value->clear_v29();
+done_30:
+  _value->clear_v30();
+done_31:
+  _value->clear_v31();
+done_32:
+  _value->clear_v32();
+done_33:
+  _value->clear_v33();
+done_34:
+  _value->clear_v34();
+done_35:
+  _value->clear_v35();
+done_36:
+  _value->clear_v36();
+done_37:
+  _value->clear_v37();
+done_38:
+  _value->clear_v38();
+done_39:
+  _value->clear_v39();
+done_40:
+  _value->clear_v40();
+done_41:
+  _value->clear_v41();
+done_42:
+  _value->clear_v42();
+done_43:
+  _value->clear_v43();
+done_44:
+  _value->clear_v44();
+done_45:
+  _value->clear_v45();
+done_46:
+  _value->clear_v46();
+done_47:
+  _value->clear_v47();
+done_48:
+  _value->clear_v48();
+done_49:
+  _value->clear_v49();
+done_50:
+  _value->clear_v50();
+done_51:
+  _value->clear_v51();
+done_52:
+  _value->clear_v52();
+done_53:
+  _value->clear_v53();
+done_54:
+  _value->clear_v54();
+done_55:
+  _value->clear_v55();
+done_56:
+  _value->clear_v56();
+done_57:
+  _value->clear_v57();
+done_58:
+  _value->clear_v58();
+done_59:
+  _value->clear_v59();
+done_60:
+  _value->clear_v60();
+done_61:
+  _value->clear_v61();
+done_62:
+  _value->clear_v62();
+done_63:
+  _value->clear_v63();
+done_64:
+  _value->clear_v64();
+done_65:
+  _value->clear_v65();
+done_66:
+  _value->clear_v66();
+  return;
+}
+
+zx_status_t GreaterThan64OrdinalTable::Clone(
+    GreaterThan64OrdinalTable* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(v1_value_.value, result->mutable_v1());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v1();
+  }
+  if (field_presence_.IsSet<1>()) {
+    zx_status_t _status = ::fidl::Clone(v2_value_.value, result->mutable_v2());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v2();
+  }
+  if (field_presence_.IsSet<2>()) {
+    zx_status_t _status = ::fidl::Clone(v3_value_.value, result->mutable_v3());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v3();
+  }
+  if (field_presence_.IsSet<3>()) {
+    zx_status_t _status = ::fidl::Clone(v4_value_.value, result->mutable_v4());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v4();
+  }
+  if (field_presence_.IsSet<4>()) {
+    zx_status_t _status = ::fidl::Clone(v5_value_.value, result->mutable_v5());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v5();
+  }
+  if (field_presence_.IsSet<5>()) {
+    zx_status_t _status = ::fidl::Clone(v6_value_.value, result->mutable_v6());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v6();
+  }
+  if (field_presence_.IsSet<6>()) {
+    zx_status_t _status = ::fidl::Clone(v7_value_.value, result->mutable_v7());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v7();
+  }
+  if (field_presence_.IsSet<7>()) {
+    zx_status_t _status = ::fidl::Clone(v8_value_.value, result->mutable_v8());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v8();
+  }
+  if (field_presence_.IsSet<8>()) {
+    zx_status_t _status = ::fidl::Clone(v9_value_.value, result->mutable_v9());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v9();
+  }
+  if (field_presence_.IsSet<9>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v10_value_.value, result->mutable_v10());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v10();
+  }
+  if (field_presence_.IsSet<10>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v11_value_.value, result->mutable_v11());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v11();
+  }
+  if (field_presence_.IsSet<11>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v12_value_.value, result->mutable_v12());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v12();
+  }
+  if (field_presence_.IsSet<12>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v13_value_.value, result->mutable_v13());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v13();
+  }
+  if (field_presence_.IsSet<13>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v14_value_.value, result->mutable_v14());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v14();
+  }
+  if (field_presence_.IsSet<14>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v15_value_.value, result->mutable_v15());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v15();
+  }
+  if (field_presence_.IsSet<15>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v16_value_.value, result->mutable_v16());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v16();
+  }
+  if (field_presence_.IsSet<16>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v17_value_.value, result->mutable_v17());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v17();
+  }
+  if (field_presence_.IsSet<17>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v18_value_.value, result->mutable_v18());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v18();
+  }
+  if (field_presence_.IsSet<18>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v19_value_.value, result->mutable_v19());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v19();
+  }
+  if (field_presence_.IsSet<19>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v20_value_.value, result->mutable_v20());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v20();
+  }
+  if (field_presence_.IsSet<20>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v21_value_.value, result->mutable_v21());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v21();
+  }
+  if (field_presence_.IsSet<21>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v22_value_.value, result->mutable_v22());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v22();
+  }
+  if (field_presence_.IsSet<22>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v23_value_.value, result->mutable_v23());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v23();
+  }
+  if (field_presence_.IsSet<23>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v24_value_.value, result->mutable_v24());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v24();
+  }
+  if (field_presence_.IsSet<24>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v25_value_.value, result->mutable_v25());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v25();
+  }
+  if (field_presence_.IsSet<25>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v26_value_.value, result->mutable_v26());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v26();
+  }
+  if (field_presence_.IsSet<26>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v27_value_.value, result->mutable_v27());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v27();
+  }
+  if (field_presence_.IsSet<27>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v28_value_.value, result->mutable_v28());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v28();
+  }
+  if (field_presence_.IsSet<28>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v29_value_.value, result->mutable_v29());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v29();
+  }
+  if (field_presence_.IsSet<29>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v30_value_.value, result->mutable_v30());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v30();
+  }
+  if (field_presence_.IsSet<30>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v31_value_.value, result->mutable_v31());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v31();
+  }
+  if (field_presence_.IsSet<31>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v32_value_.value, result->mutable_v32());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v32();
+  }
+  if (field_presence_.IsSet<32>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v33_value_.value, result->mutable_v33());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v33();
+  }
+  if (field_presence_.IsSet<33>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v34_value_.value, result->mutable_v34());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v34();
+  }
+  if (field_presence_.IsSet<34>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v35_value_.value, result->mutable_v35());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v35();
+  }
+  if (field_presence_.IsSet<35>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v36_value_.value, result->mutable_v36());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v36();
+  }
+  if (field_presence_.IsSet<36>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v37_value_.value, result->mutable_v37());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v37();
+  }
+  if (field_presence_.IsSet<37>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v38_value_.value, result->mutable_v38());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v38();
+  }
+  if (field_presence_.IsSet<38>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v39_value_.value, result->mutable_v39());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v39();
+  }
+  if (field_presence_.IsSet<39>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v40_value_.value, result->mutable_v40());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v40();
+  }
+  if (field_presence_.IsSet<40>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v41_value_.value, result->mutable_v41());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v41();
+  }
+  if (field_presence_.IsSet<41>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v42_value_.value, result->mutable_v42());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v42();
+  }
+  if (field_presence_.IsSet<42>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v43_value_.value, result->mutable_v43());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v43();
+  }
+  if (field_presence_.IsSet<43>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v44_value_.value, result->mutable_v44());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v44();
+  }
+  if (field_presence_.IsSet<44>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v45_value_.value, result->mutable_v45());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v45();
+  }
+  if (field_presence_.IsSet<45>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v46_value_.value, result->mutable_v46());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v46();
+  }
+  if (field_presence_.IsSet<46>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v47_value_.value, result->mutable_v47());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v47();
+  }
+  if (field_presence_.IsSet<47>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v48_value_.value, result->mutable_v48());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v48();
+  }
+  if (field_presence_.IsSet<48>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v49_value_.value, result->mutable_v49());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v49();
+  }
+  if (field_presence_.IsSet<49>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v50_value_.value, result->mutable_v50());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v50();
+  }
+  if (field_presence_.IsSet<50>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v51_value_.value, result->mutable_v51());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v51();
+  }
+  if (field_presence_.IsSet<51>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v52_value_.value, result->mutable_v52());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v52();
+  }
+  if (field_presence_.IsSet<52>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v53_value_.value, result->mutable_v53());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v53();
+  }
+  if (field_presence_.IsSet<53>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v54_value_.value, result->mutable_v54());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v54();
+  }
+  if (field_presence_.IsSet<54>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v55_value_.value, result->mutable_v55());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v55();
+  }
+  if (field_presence_.IsSet<55>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v56_value_.value, result->mutable_v56());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v56();
+  }
+  if (field_presence_.IsSet<56>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v57_value_.value, result->mutable_v57());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v57();
+  }
+  if (field_presence_.IsSet<57>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v58_value_.value, result->mutable_v58());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v58();
+  }
+  if (field_presence_.IsSet<58>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v59_value_.value, result->mutable_v59());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v59();
+  }
+  if (field_presence_.IsSet<59>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v60_value_.value, result->mutable_v60());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v60();
+  }
+  if (field_presence_.IsSet<60>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v61_value_.value, result->mutable_v61());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v61();
+  }
+  if (field_presence_.IsSet<61>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v62_value_.value, result->mutable_v62());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v62();
+  }
+  if (field_presence_.IsSet<62>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v63_value_.value, result->mutable_v63());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v63();
+  }
+  if (field_presence_.IsSet<63>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v64_value_.value, result->mutable_v64());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v64();
+  }
+  if (field_presence_.IsSet<64>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v65_value_.value, result->mutable_v65());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v65();
+  }
+  if (field_presence_.IsSet<65>()) {
+    zx_status_t _status =
+        ::fidl::Clone(v66_value_.value, result->mutable_v66());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_v66();
+  }
+  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+}
+
 extern "C" const fidl_type_t fidl_test_table_EmptyTableTable;
 const fidl_type_t* EmptyTable::FidlType = &fidl_test_table_EmptyTableTable;
 

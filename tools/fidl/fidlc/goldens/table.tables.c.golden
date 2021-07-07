@@ -7,6 +7,7 @@ __LOCAL extern const struct FidlCodedTable fidl_test_table_SimpleTableTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_table_ReverseOrdinalTableTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_table_OlderSimpleTableTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_table_NewerSimpleTableTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_table_GreaterThan64OrdinalTableTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_table_EmptyTableTable;
 
 
@@ -35,6 +36,76 @@ static const struct FidlTableField Fields32fidl_test_table_NewerSimpleTable[] = 
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=6u}
 };
 const struct FidlCodedTable fidl_test_table_NewerSimpleTableTable = {.tag=kFidlTypeTable, .fields=Fields32fidl_test_table_NewerSimpleTable, .field_count=3u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/NewerSimpleTable"};
+
+static const struct FidlTableField Fields41fidl_test_table_GreaterThan64OrdinalTable[] = {
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=1u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=2u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=3u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=4u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=5u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=6u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=7u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=8u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=9u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=10u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=11u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=12u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=13u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=14u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=15u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=16u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=17u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=18u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=19u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=20u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=21u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=22u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=23u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=24u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=25u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=26u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=27u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=28u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=29u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=30u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=31u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=32u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=33u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=34u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=35u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=36u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=37u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=38u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=39u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=40u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=41u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=42u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=43u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=44u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=45u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=46u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=47u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=48u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=49u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=50u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=51u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=52u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=53u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=54u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=55u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=56u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=57u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=58u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=59u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=60u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=61u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=62u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=63u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=64u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=65u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=66u}
+};
+const struct FidlCodedTable fidl_test_table_GreaterThan64OrdinalTableTable = {.tag=kFidlTypeTable, .fields=Fields41fidl_test_table_GreaterThan64OrdinalTable, .field_count=66u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/GreaterThan64OrdinalTable"};
 
 const struct FidlCodedTable fidl_test_table_EmptyTableTable = {.tag=kFidlTypeTable, .fields=NULL, .field_count=0u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/EmptyTable"};
 

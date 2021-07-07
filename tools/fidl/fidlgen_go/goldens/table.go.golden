@@ -304,3 +304,1732 @@ func (u *ReverseOrdinalTable) HasUnknownData() bool {
 func (u *ReverseOrdinalTable) GetUnknownData() map[uint64]_bindings.UnknownData {
 	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }
+
+type GreaterThan64OrdinalTable struct {
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_unknownData interface{}
+	V1            int64 `fidl_ordinal:"1"`
+	V1Present     bool
+	V2            int64 `fidl_ordinal:"2"`
+	V2Present     bool
+	V3            int64 `fidl_ordinal:"3"`
+	V3Present     bool
+	V4            int64 `fidl_ordinal:"4"`
+	V4Present     bool
+	V5            int64 `fidl_ordinal:"5"`
+	V5Present     bool
+	V6            int64 `fidl_ordinal:"6"`
+	V6Present     bool
+	V7            int64 `fidl_ordinal:"7"`
+	V7Present     bool
+	V8            int64 `fidl_ordinal:"8"`
+	V8Present     bool
+	V9            int64 `fidl_ordinal:"9"`
+	V9Present     bool
+	V10           int64 `fidl_ordinal:"10"`
+	V10Present    bool
+	V11           int64 `fidl_ordinal:"11"`
+	V11Present    bool
+	V12           int64 `fidl_ordinal:"12"`
+	V12Present    bool
+	V13           int64 `fidl_ordinal:"13"`
+	V13Present    bool
+	V14           int64 `fidl_ordinal:"14"`
+	V14Present    bool
+	V15           int64 `fidl_ordinal:"15"`
+	V15Present    bool
+	V16           int64 `fidl_ordinal:"16"`
+	V16Present    bool
+	V17           int64 `fidl_ordinal:"17"`
+	V17Present    bool
+	V18           int64 `fidl_ordinal:"18"`
+	V18Present    bool
+	V19           int64 `fidl_ordinal:"19"`
+	V19Present    bool
+	V20           int64 `fidl_ordinal:"20"`
+	V20Present    bool
+	V21           int64 `fidl_ordinal:"21"`
+	V21Present    bool
+	V22           int64 `fidl_ordinal:"22"`
+	V22Present    bool
+	V23           int64 `fidl_ordinal:"23"`
+	V23Present    bool
+	V24           int64 `fidl_ordinal:"24"`
+	V24Present    bool
+	V25           int64 `fidl_ordinal:"25"`
+	V25Present    bool
+	V26           int64 `fidl_ordinal:"26"`
+	V26Present    bool
+	V27           int64 `fidl_ordinal:"27"`
+	V27Present    bool
+	V28           int64 `fidl_ordinal:"28"`
+	V28Present    bool
+	V29           int64 `fidl_ordinal:"29"`
+	V29Present    bool
+	V30           int64 `fidl_ordinal:"30"`
+	V30Present    bool
+	V31           int64 `fidl_ordinal:"31"`
+	V31Present    bool
+	V32           int64 `fidl_ordinal:"32"`
+	V32Present    bool
+	V33           int64 `fidl_ordinal:"33"`
+	V33Present    bool
+	V34           int64 `fidl_ordinal:"34"`
+	V34Present    bool
+	V35           int64 `fidl_ordinal:"35"`
+	V35Present    bool
+	V36           int64 `fidl_ordinal:"36"`
+	V36Present    bool
+	V37           int64 `fidl_ordinal:"37"`
+	V37Present    bool
+	V38           int64 `fidl_ordinal:"38"`
+	V38Present    bool
+	V39           int64 `fidl_ordinal:"39"`
+	V39Present    bool
+	V40           int64 `fidl_ordinal:"40"`
+	V40Present    bool
+	V41           int64 `fidl_ordinal:"41"`
+	V41Present    bool
+	V42           int64 `fidl_ordinal:"42"`
+	V42Present    bool
+	V43           int64 `fidl_ordinal:"43"`
+	V43Present    bool
+	V44           int64 `fidl_ordinal:"44"`
+	V44Present    bool
+	V45           int64 `fidl_ordinal:"45"`
+	V45Present    bool
+	V46           int64 `fidl_ordinal:"46"`
+	V46Present    bool
+	V47           int64 `fidl_ordinal:"47"`
+	V47Present    bool
+	V48           int64 `fidl_ordinal:"48"`
+	V48Present    bool
+	V49           int64 `fidl_ordinal:"49"`
+	V49Present    bool
+	V50           int64 `fidl_ordinal:"50"`
+	V50Present    bool
+	V51           int64 `fidl_ordinal:"51"`
+	V51Present    bool
+	V52           int64 `fidl_ordinal:"52"`
+	V52Present    bool
+	V53           int64 `fidl_ordinal:"53"`
+	V53Present    bool
+	V54           int64 `fidl_ordinal:"54"`
+	V54Present    bool
+	V55           int64 `fidl_ordinal:"55"`
+	V55Present    bool
+	V56           int64 `fidl_ordinal:"56"`
+	V56Present    bool
+	V57           int64 `fidl_ordinal:"57"`
+	V57Present    bool
+	V58           int64 `fidl_ordinal:"58"`
+	V58Present    bool
+	V59           int64 `fidl_ordinal:"59"`
+	V59Present    bool
+	V60           int64 `fidl_ordinal:"60"`
+	V60Present    bool
+	V61           int64 `fidl_ordinal:"61"`
+	V61Present    bool
+	V62           int64 `fidl_ordinal:"62"`
+	V62Present    bool
+	V63           int64 `fidl_ordinal:"63"`
+	V63Present    bool
+	V64           int64 `fidl_ordinal:"64"`
+	V64Present    bool
+	V65           int64 `fidl_ordinal:"65"`
+	V65Present    bool
+	V66           int64 `fidl_ordinal:"66"`
+	V66Present    bool
+}
+
+func (u *GreaterThan64OrdinalTable) SetV1(v1 int64) {
+	u.V1 = v1
+	u.V1Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV1() int64 {
+	return u.V1
+}
+
+func (u *GreaterThan64OrdinalTable) GetV1WithDefault(_default int64) int64 {
+	if !u.HasV1() {
+		return _default
+	}
+	return u.V1
+}
+
+func (u *GreaterThan64OrdinalTable) HasV1() bool {
+	return u.V1Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV1() {
+	u.V1Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV2(v2 int64) {
+	u.V2 = v2
+	u.V2Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV2() int64 {
+	return u.V2
+}
+
+func (u *GreaterThan64OrdinalTable) GetV2WithDefault(_default int64) int64 {
+	if !u.HasV2() {
+		return _default
+	}
+	return u.V2
+}
+
+func (u *GreaterThan64OrdinalTable) HasV2() bool {
+	return u.V2Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV2() {
+	u.V2Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV3(v3 int64) {
+	u.V3 = v3
+	u.V3Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV3() int64 {
+	return u.V3
+}
+
+func (u *GreaterThan64OrdinalTable) GetV3WithDefault(_default int64) int64 {
+	if !u.HasV3() {
+		return _default
+	}
+	return u.V3
+}
+
+func (u *GreaterThan64OrdinalTable) HasV3() bool {
+	return u.V3Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV3() {
+	u.V3Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV4(v4 int64) {
+	u.V4 = v4
+	u.V4Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV4() int64 {
+	return u.V4
+}
+
+func (u *GreaterThan64OrdinalTable) GetV4WithDefault(_default int64) int64 {
+	if !u.HasV4() {
+		return _default
+	}
+	return u.V4
+}
+
+func (u *GreaterThan64OrdinalTable) HasV4() bool {
+	return u.V4Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV4() {
+	u.V4Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV5(v5 int64) {
+	u.V5 = v5
+	u.V5Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV5() int64 {
+	return u.V5
+}
+
+func (u *GreaterThan64OrdinalTable) GetV5WithDefault(_default int64) int64 {
+	if !u.HasV5() {
+		return _default
+	}
+	return u.V5
+}
+
+func (u *GreaterThan64OrdinalTable) HasV5() bool {
+	return u.V5Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV5() {
+	u.V5Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV6(v6 int64) {
+	u.V6 = v6
+	u.V6Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV6() int64 {
+	return u.V6
+}
+
+func (u *GreaterThan64OrdinalTable) GetV6WithDefault(_default int64) int64 {
+	if !u.HasV6() {
+		return _default
+	}
+	return u.V6
+}
+
+func (u *GreaterThan64OrdinalTable) HasV6() bool {
+	return u.V6Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV6() {
+	u.V6Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV7(v7 int64) {
+	u.V7 = v7
+	u.V7Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV7() int64 {
+	return u.V7
+}
+
+func (u *GreaterThan64OrdinalTable) GetV7WithDefault(_default int64) int64 {
+	if !u.HasV7() {
+		return _default
+	}
+	return u.V7
+}
+
+func (u *GreaterThan64OrdinalTable) HasV7() bool {
+	return u.V7Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV7() {
+	u.V7Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV8(v8 int64) {
+	u.V8 = v8
+	u.V8Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV8() int64 {
+	return u.V8
+}
+
+func (u *GreaterThan64OrdinalTable) GetV8WithDefault(_default int64) int64 {
+	if !u.HasV8() {
+		return _default
+	}
+	return u.V8
+}
+
+func (u *GreaterThan64OrdinalTable) HasV8() bool {
+	return u.V8Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV8() {
+	u.V8Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV9(v9 int64) {
+	u.V9 = v9
+	u.V9Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV9() int64 {
+	return u.V9
+}
+
+func (u *GreaterThan64OrdinalTable) GetV9WithDefault(_default int64) int64 {
+	if !u.HasV9() {
+		return _default
+	}
+	return u.V9
+}
+
+func (u *GreaterThan64OrdinalTable) HasV9() bool {
+	return u.V9Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV9() {
+	u.V9Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV10(v10 int64) {
+	u.V10 = v10
+	u.V10Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV10() int64 {
+	return u.V10
+}
+
+func (u *GreaterThan64OrdinalTable) GetV10WithDefault(_default int64) int64 {
+	if !u.HasV10() {
+		return _default
+	}
+	return u.V10
+}
+
+func (u *GreaterThan64OrdinalTable) HasV10() bool {
+	return u.V10Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV10() {
+	u.V10Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV11(v11 int64) {
+	u.V11 = v11
+	u.V11Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV11() int64 {
+	return u.V11
+}
+
+func (u *GreaterThan64OrdinalTable) GetV11WithDefault(_default int64) int64 {
+	if !u.HasV11() {
+		return _default
+	}
+	return u.V11
+}
+
+func (u *GreaterThan64OrdinalTable) HasV11() bool {
+	return u.V11Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV11() {
+	u.V11Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV12(v12 int64) {
+	u.V12 = v12
+	u.V12Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV12() int64 {
+	return u.V12
+}
+
+func (u *GreaterThan64OrdinalTable) GetV12WithDefault(_default int64) int64 {
+	if !u.HasV12() {
+		return _default
+	}
+	return u.V12
+}
+
+func (u *GreaterThan64OrdinalTable) HasV12() bool {
+	return u.V12Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV12() {
+	u.V12Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV13(v13 int64) {
+	u.V13 = v13
+	u.V13Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV13() int64 {
+	return u.V13
+}
+
+func (u *GreaterThan64OrdinalTable) GetV13WithDefault(_default int64) int64 {
+	if !u.HasV13() {
+		return _default
+	}
+	return u.V13
+}
+
+func (u *GreaterThan64OrdinalTable) HasV13() bool {
+	return u.V13Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV13() {
+	u.V13Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV14(v14 int64) {
+	u.V14 = v14
+	u.V14Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV14() int64 {
+	return u.V14
+}
+
+func (u *GreaterThan64OrdinalTable) GetV14WithDefault(_default int64) int64 {
+	if !u.HasV14() {
+		return _default
+	}
+	return u.V14
+}
+
+func (u *GreaterThan64OrdinalTable) HasV14() bool {
+	return u.V14Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV14() {
+	u.V14Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV15(v15 int64) {
+	u.V15 = v15
+	u.V15Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV15() int64 {
+	return u.V15
+}
+
+func (u *GreaterThan64OrdinalTable) GetV15WithDefault(_default int64) int64 {
+	if !u.HasV15() {
+		return _default
+	}
+	return u.V15
+}
+
+func (u *GreaterThan64OrdinalTable) HasV15() bool {
+	return u.V15Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV15() {
+	u.V15Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV16(v16 int64) {
+	u.V16 = v16
+	u.V16Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV16() int64 {
+	return u.V16
+}
+
+func (u *GreaterThan64OrdinalTable) GetV16WithDefault(_default int64) int64 {
+	if !u.HasV16() {
+		return _default
+	}
+	return u.V16
+}
+
+func (u *GreaterThan64OrdinalTable) HasV16() bool {
+	return u.V16Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV16() {
+	u.V16Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV17(v17 int64) {
+	u.V17 = v17
+	u.V17Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV17() int64 {
+	return u.V17
+}
+
+func (u *GreaterThan64OrdinalTable) GetV17WithDefault(_default int64) int64 {
+	if !u.HasV17() {
+		return _default
+	}
+	return u.V17
+}
+
+func (u *GreaterThan64OrdinalTable) HasV17() bool {
+	return u.V17Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV17() {
+	u.V17Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV18(v18 int64) {
+	u.V18 = v18
+	u.V18Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV18() int64 {
+	return u.V18
+}
+
+func (u *GreaterThan64OrdinalTable) GetV18WithDefault(_default int64) int64 {
+	if !u.HasV18() {
+		return _default
+	}
+	return u.V18
+}
+
+func (u *GreaterThan64OrdinalTable) HasV18() bool {
+	return u.V18Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV18() {
+	u.V18Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV19(v19 int64) {
+	u.V19 = v19
+	u.V19Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV19() int64 {
+	return u.V19
+}
+
+func (u *GreaterThan64OrdinalTable) GetV19WithDefault(_default int64) int64 {
+	if !u.HasV19() {
+		return _default
+	}
+	return u.V19
+}
+
+func (u *GreaterThan64OrdinalTable) HasV19() bool {
+	return u.V19Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV19() {
+	u.V19Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV20(v20 int64) {
+	u.V20 = v20
+	u.V20Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV20() int64 {
+	return u.V20
+}
+
+func (u *GreaterThan64OrdinalTable) GetV20WithDefault(_default int64) int64 {
+	if !u.HasV20() {
+		return _default
+	}
+	return u.V20
+}
+
+func (u *GreaterThan64OrdinalTable) HasV20() bool {
+	return u.V20Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV20() {
+	u.V20Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV21(v21 int64) {
+	u.V21 = v21
+	u.V21Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV21() int64 {
+	return u.V21
+}
+
+func (u *GreaterThan64OrdinalTable) GetV21WithDefault(_default int64) int64 {
+	if !u.HasV21() {
+		return _default
+	}
+	return u.V21
+}
+
+func (u *GreaterThan64OrdinalTable) HasV21() bool {
+	return u.V21Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV21() {
+	u.V21Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV22(v22 int64) {
+	u.V22 = v22
+	u.V22Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV22() int64 {
+	return u.V22
+}
+
+func (u *GreaterThan64OrdinalTable) GetV22WithDefault(_default int64) int64 {
+	if !u.HasV22() {
+		return _default
+	}
+	return u.V22
+}
+
+func (u *GreaterThan64OrdinalTable) HasV22() bool {
+	return u.V22Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV22() {
+	u.V22Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV23(v23 int64) {
+	u.V23 = v23
+	u.V23Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV23() int64 {
+	return u.V23
+}
+
+func (u *GreaterThan64OrdinalTable) GetV23WithDefault(_default int64) int64 {
+	if !u.HasV23() {
+		return _default
+	}
+	return u.V23
+}
+
+func (u *GreaterThan64OrdinalTable) HasV23() bool {
+	return u.V23Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV23() {
+	u.V23Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV24(v24 int64) {
+	u.V24 = v24
+	u.V24Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV24() int64 {
+	return u.V24
+}
+
+func (u *GreaterThan64OrdinalTable) GetV24WithDefault(_default int64) int64 {
+	if !u.HasV24() {
+		return _default
+	}
+	return u.V24
+}
+
+func (u *GreaterThan64OrdinalTable) HasV24() bool {
+	return u.V24Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV24() {
+	u.V24Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV25(v25 int64) {
+	u.V25 = v25
+	u.V25Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV25() int64 {
+	return u.V25
+}
+
+func (u *GreaterThan64OrdinalTable) GetV25WithDefault(_default int64) int64 {
+	if !u.HasV25() {
+		return _default
+	}
+	return u.V25
+}
+
+func (u *GreaterThan64OrdinalTable) HasV25() bool {
+	return u.V25Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV25() {
+	u.V25Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV26(v26 int64) {
+	u.V26 = v26
+	u.V26Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV26() int64 {
+	return u.V26
+}
+
+func (u *GreaterThan64OrdinalTable) GetV26WithDefault(_default int64) int64 {
+	if !u.HasV26() {
+		return _default
+	}
+	return u.V26
+}
+
+func (u *GreaterThan64OrdinalTable) HasV26() bool {
+	return u.V26Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV26() {
+	u.V26Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV27(v27 int64) {
+	u.V27 = v27
+	u.V27Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV27() int64 {
+	return u.V27
+}
+
+func (u *GreaterThan64OrdinalTable) GetV27WithDefault(_default int64) int64 {
+	if !u.HasV27() {
+		return _default
+	}
+	return u.V27
+}
+
+func (u *GreaterThan64OrdinalTable) HasV27() bool {
+	return u.V27Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV27() {
+	u.V27Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV28(v28 int64) {
+	u.V28 = v28
+	u.V28Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV28() int64 {
+	return u.V28
+}
+
+func (u *GreaterThan64OrdinalTable) GetV28WithDefault(_default int64) int64 {
+	if !u.HasV28() {
+		return _default
+	}
+	return u.V28
+}
+
+func (u *GreaterThan64OrdinalTable) HasV28() bool {
+	return u.V28Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV28() {
+	u.V28Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV29(v29 int64) {
+	u.V29 = v29
+	u.V29Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV29() int64 {
+	return u.V29
+}
+
+func (u *GreaterThan64OrdinalTable) GetV29WithDefault(_default int64) int64 {
+	if !u.HasV29() {
+		return _default
+	}
+	return u.V29
+}
+
+func (u *GreaterThan64OrdinalTable) HasV29() bool {
+	return u.V29Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV29() {
+	u.V29Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV30(v30 int64) {
+	u.V30 = v30
+	u.V30Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV30() int64 {
+	return u.V30
+}
+
+func (u *GreaterThan64OrdinalTable) GetV30WithDefault(_default int64) int64 {
+	if !u.HasV30() {
+		return _default
+	}
+	return u.V30
+}
+
+func (u *GreaterThan64OrdinalTable) HasV30() bool {
+	return u.V30Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV30() {
+	u.V30Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV31(v31 int64) {
+	u.V31 = v31
+	u.V31Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV31() int64 {
+	return u.V31
+}
+
+func (u *GreaterThan64OrdinalTable) GetV31WithDefault(_default int64) int64 {
+	if !u.HasV31() {
+		return _default
+	}
+	return u.V31
+}
+
+func (u *GreaterThan64OrdinalTable) HasV31() bool {
+	return u.V31Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV31() {
+	u.V31Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV32(v32 int64) {
+	u.V32 = v32
+	u.V32Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV32() int64 {
+	return u.V32
+}
+
+func (u *GreaterThan64OrdinalTable) GetV32WithDefault(_default int64) int64 {
+	if !u.HasV32() {
+		return _default
+	}
+	return u.V32
+}
+
+func (u *GreaterThan64OrdinalTable) HasV32() bool {
+	return u.V32Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV32() {
+	u.V32Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV33(v33 int64) {
+	u.V33 = v33
+	u.V33Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV33() int64 {
+	return u.V33
+}
+
+func (u *GreaterThan64OrdinalTable) GetV33WithDefault(_default int64) int64 {
+	if !u.HasV33() {
+		return _default
+	}
+	return u.V33
+}
+
+func (u *GreaterThan64OrdinalTable) HasV33() bool {
+	return u.V33Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV33() {
+	u.V33Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV34(v34 int64) {
+	u.V34 = v34
+	u.V34Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV34() int64 {
+	return u.V34
+}
+
+func (u *GreaterThan64OrdinalTable) GetV34WithDefault(_default int64) int64 {
+	if !u.HasV34() {
+		return _default
+	}
+	return u.V34
+}
+
+func (u *GreaterThan64OrdinalTable) HasV34() bool {
+	return u.V34Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV34() {
+	u.V34Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV35(v35 int64) {
+	u.V35 = v35
+	u.V35Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV35() int64 {
+	return u.V35
+}
+
+func (u *GreaterThan64OrdinalTable) GetV35WithDefault(_default int64) int64 {
+	if !u.HasV35() {
+		return _default
+	}
+	return u.V35
+}
+
+func (u *GreaterThan64OrdinalTable) HasV35() bool {
+	return u.V35Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV35() {
+	u.V35Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV36(v36 int64) {
+	u.V36 = v36
+	u.V36Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV36() int64 {
+	return u.V36
+}
+
+func (u *GreaterThan64OrdinalTable) GetV36WithDefault(_default int64) int64 {
+	if !u.HasV36() {
+		return _default
+	}
+	return u.V36
+}
+
+func (u *GreaterThan64OrdinalTable) HasV36() bool {
+	return u.V36Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV36() {
+	u.V36Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV37(v37 int64) {
+	u.V37 = v37
+	u.V37Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV37() int64 {
+	return u.V37
+}
+
+func (u *GreaterThan64OrdinalTable) GetV37WithDefault(_default int64) int64 {
+	if !u.HasV37() {
+		return _default
+	}
+	return u.V37
+}
+
+func (u *GreaterThan64OrdinalTable) HasV37() bool {
+	return u.V37Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV37() {
+	u.V37Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV38(v38 int64) {
+	u.V38 = v38
+	u.V38Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV38() int64 {
+	return u.V38
+}
+
+func (u *GreaterThan64OrdinalTable) GetV38WithDefault(_default int64) int64 {
+	if !u.HasV38() {
+		return _default
+	}
+	return u.V38
+}
+
+func (u *GreaterThan64OrdinalTable) HasV38() bool {
+	return u.V38Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV38() {
+	u.V38Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV39(v39 int64) {
+	u.V39 = v39
+	u.V39Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV39() int64 {
+	return u.V39
+}
+
+func (u *GreaterThan64OrdinalTable) GetV39WithDefault(_default int64) int64 {
+	if !u.HasV39() {
+		return _default
+	}
+	return u.V39
+}
+
+func (u *GreaterThan64OrdinalTable) HasV39() bool {
+	return u.V39Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV39() {
+	u.V39Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV40(v40 int64) {
+	u.V40 = v40
+	u.V40Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV40() int64 {
+	return u.V40
+}
+
+func (u *GreaterThan64OrdinalTable) GetV40WithDefault(_default int64) int64 {
+	if !u.HasV40() {
+		return _default
+	}
+	return u.V40
+}
+
+func (u *GreaterThan64OrdinalTable) HasV40() bool {
+	return u.V40Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV40() {
+	u.V40Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV41(v41 int64) {
+	u.V41 = v41
+	u.V41Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV41() int64 {
+	return u.V41
+}
+
+func (u *GreaterThan64OrdinalTable) GetV41WithDefault(_default int64) int64 {
+	if !u.HasV41() {
+		return _default
+	}
+	return u.V41
+}
+
+func (u *GreaterThan64OrdinalTable) HasV41() bool {
+	return u.V41Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV41() {
+	u.V41Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV42(v42 int64) {
+	u.V42 = v42
+	u.V42Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV42() int64 {
+	return u.V42
+}
+
+func (u *GreaterThan64OrdinalTable) GetV42WithDefault(_default int64) int64 {
+	if !u.HasV42() {
+		return _default
+	}
+	return u.V42
+}
+
+func (u *GreaterThan64OrdinalTable) HasV42() bool {
+	return u.V42Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV42() {
+	u.V42Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV43(v43 int64) {
+	u.V43 = v43
+	u.V43Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV43() int64 {
+	return u.V43
+}
+
+func (u *GreaterThan64OrdinalTable) GetV43WithDefault(_default int64) int64 {
+	if !u.HasV43() {
+		return _default
+	}
+	return u.V43
+}
+
+func (u *GreaterThan64OrdinalTable) HasV43() bool {
+	return u.V43Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV43() {
+	u.V43Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV44(v44 int64) {
+	u.V44 = v44
+	u.V44Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV44() int64 {
+	return u.V44
+}
+
+func (u *GreaterThan64OrdinalTable) GetV44WithDefault(_default int64) int64 {
+	if !u.HasV44() {
+		return _default
+	}
+	return u.V44
+}
+
+func (u *GreaterThan64OrdinalTable) HasV44() bool {
+	return u.V44Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV44() {
+	u.V44Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV45(v45 int64) {
+	u.V45 = v45
+	u.V45Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV45() int64 {
+	return u.V45
+}
+
+func (u *GreaterThan64OrdinalTable) GetV45WithDefault(_default int64) int64 {
+	if !u.HasV45() {
+		return _default
+	}
+	return u.V45
+}
+
+func (u *GreaterThan64OrdinalTable) HasV45() bool {
+	return u.V45Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV45() {
+	u.V45Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV46(v46 int64) {
+	u.V46 = v46
+	u.V46Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV46() int64 {
+	return u.V46
+}
+
+func (u *GreaterThan64OrdinalTable) GetV46WithDefault(_default int64) int64 {
+	if !u.HasV46() {
+		return _default
+	}
+	return u.V46
+}
+
+func (u *GreaterThan64OrdinalTable) HasV46() bool {
+	return u.V46Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV46() {
+	u.V46Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV47(v47 int64) {
+	u.V47 = v47
+	u.V47Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV47() int64 {
+	return u.V47
+}
+
+func (u *GreaterThan64OrdinalTable) GetV47WithDefault(_default int64) int64 {
+	if !u.HasV47() {
+		return _default
+	}
+	return u.V47
+}
+
+func (u *GreaterThan64OrdinalTable) HasV47() bool {
+	return u.V47Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV47() {
+	u.V47Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV48(v48 int64) {
+	u.V48 = v48
+	u.V48Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV48() int64 {
+	return u.V48
+}
+
+func (u *GreaterThan64OrdinalTable) GetV48WithDefault(_default int64) int64 {
+	if !u.HasV48() {
+		return _default
+	}
+	return u.V48
+}
+
+func (u *GreaterThan64OrdinalTable) HasV48() bool {
+	return u.V48Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV48() {
+	u.V48Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV49(v49 int64) {
+	u.V49 = v49
+	u.V49Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV49() int64 {
+	return u.V49
+}
+
+func (u *GreaterThan64OrdinalTable) GetV49WithDefault(_default int64) int64 {
+	if !u.HasV49() {
+		return _default
+	}
+	return u.V49
+}
+
+func (u *GreaterThan64OrdinalTable) HasV49() bool {
+	return u.V49Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV49() {
+	u.V49Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV50(v50 int64) {
+	u.V50 = v50
+	u.V50Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV50() int64 {
+	return u.V50
+}
+
+func (u *GreaterThan64OrdinalTable) GetV50WithDefault(_default int64) int64 {
+	if !u.HasV50() {
+		return _default
+	}
+	return u.V50
+}
+
+func (u *GreaterThan64OrdinalTable) HasV50() bool {
+	return u.V50Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV50() {
+	u.V50Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV51(v51 int64) {
+	u.V51 = v51
+	u.V51Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV51() int64 {
+	return u.V51
+}
+
+func (u *GreaterThan64OrdinalTable) GetV51WithDefault(_default int64) int64 {
+	if !u.HasV51() {
+		return _default
+	}
+	return u.V51
+}
+
+func (u *GreaterThan64OrdinalTable) HasV51() bool {
+	return u.V51Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV51() {
+	u.V51Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV52(v52 int64) {
+	u.V52 = v52
+	u.V52Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV52() int64 {
+	return u.V52
+}
+
+func (u *GreaterThan64OrdinalTable) GetV52WithDefault(_default int64) int64 {
+	if !u.HasV52() {
+		return _default
+	}
+	return u.V52
+}
+
+func (u *GreaterThan64OrdinalTable) HasV52() bool {
+	return u.V52Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV52() {
+	u.V52Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV53(v53 int64) {
+	u.V53 = v53
+	u.V53Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV53() int64 {
+	return u.V53
+}
+
+func (u *GreaterThan64OrdinalTable) GetV53WithDefault(_default int64) int64 {
+	if !u.HasV53() {
+		return _default
+	}
+	return u.V53
+}
+
+func (u *GreaterThan64OrdinalTable) HasV53() bool {
+	return u.V53Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV53() {
+	u.V53Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV54(v54 int64) {
+	u.V54 = v54
+	u.V54Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV54() int64 {
+	return u.V54
+}
+
+func (u *GreaterThan64OrdinalTable) GetV54WithDefault(_default int64) int64 {
+	if !u.HasV54() {
+		return _default
+	}
+	return u.V54
+}
+
+func (u *GreaterThan64OrdinalTable) HasV54() bool {
+	return u.V54Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV54() {
+	u.V54Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV55(v55 int64) {
+	u.V55 = v55
+	u.V55Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV55() int64 {
+	return u.V55
+}
+
+func (u *GreaterThan64OrdinalTable) GetV55WithDefault(_default int64) int64 {
+	if !u.HasV55() {
+		return _default
+	}
+	return u.V55
+}
+
+func (u *GreaterThan64OrdinalTable) HasV55() bool {
+	return u.V55Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV55() {
+	u.V55Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV56(v56 int64) {
+	u.V56 = v56
+	u.V56Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV56() int64 {
+	return u.V56
+}
+
+func (u *GreaterThan64OrdinalTable) GetV56WithDefault(_default int64) int64 {
+	if !u.HasV56() {
+		return _default
+	}
+	return u.V56
+}
+
+func (u *GreaterThan64OrdinalTable) HasV56() bool {
+	return u.V56Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV56() {
+	u.V56Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV57(v57 int64) {
+	u.V57 = v57
+	u.V57Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV57() int64 {
+	return u.V57
+}
+
+func (u *GreaterThan64OrdinalTable) GetV57WithDefault(_default int64) int64 {
+	if !u.HasV57() {
+		return _default
+	}
+	return u.V57
+}
+
+func (u *GreaterThan64OrdinalTable) HasV57() bool {
+	return u.V57Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV57() {
+	u.V57Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV58(v58 int64) {
+	u.V58 = v58
+	u.V58Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV58() int64 {
+	return u.V58
+}
+
+func (u *GreaterThan64OrdinalTable) GetV58WithDefault(_default int64) int64 {
+	if !u.HasV58() {
+		return _default
+	}
+	return u.V58
+}
+
+func (u *GreaterThan64OrdinalTable) HasV58() bool {
+	return u.V58Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV58() {
+	u.V58Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV59(v59 int64) {
+	u.V59 = v59
+	u.V59Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV59() int64 {
+	return u.V59
+}
+
+func (u *GreaterThan64OrdinalTable) GetV59WithDefault(_default int64) int64 {
+	if !u.HasV59() {
+		return _default
+	}
+	return u.V59
+}
+
+func (u *GreaterThan64OrdinalTable) HasV59() bool {
+	return u.V59Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV59() {
+	u.V59Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV60(v60 int64) {
+	u.V60 = v60
+	u.V60Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV60() int64 {
+	return u.V60
+}
+
+func (u *GreaterThan64OrdinalTable) GetV60WithDefault(_default int64) int64 {
+	if !u.HasV60() {
+		return _default
+	}
+	return u.V60
+}
+
+func (u *GreaterThan64OrdinalTable) HasV60() bool {
+	return u.V60Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV60() {
+	u.V60Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV61(v61 int64) {
+	u.V61 = v61
+	u.V61Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV61() int64 {
+	return u.V61
+}
+
+func (u *GreaterThan64OrdinalTable) GetV61WithDefault(_default int64) int64 {
+	if !u.HasV61() {
+		return _default
+	}
+	return u.V61
+}
+
+func (u *GreaterThan64OrdinalTable) HasV61() bool {
+	return u.V61Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV61() {
+	u.V61Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV62(v62 int64) {
+	u.V62 = v62
+	u.V62Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV62() int64 {
+	return u.V62
+}
+
+func (u *GreaterThan64OrdinalTable) GetV62WithDefault(_default int64) int64 {
+	if !u.HasV62() {
+		return _default
+	}
+	return u.V62
+}
+
+func (u *GreaterThan64OrdinalTable) HasV62() bool {
+	return u.V62Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV62() {
+	u.V62Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV63(v63 int64) {
+	u.V63 = v63
+	u.V63Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV63() int64 {
+	return u.V63
+}
+
+func (u *GreaterThan64OrdinalTable) GetV63WithDefault(_default int64) int64 {
+	if !u.HasV63() {
+		return _default
+	}
+	return u.V63
+}
+
+func (u *GreaterThan64OrdinalTable) HasV63() bool {
+	return u.V63Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV63() {
+	u.V63Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV64(v64 int64) {
+	u.V64 = v64
+	u.V64Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV64() int64 {
+	return u.V64
+}
+
+func (u *GreaterThan64OrdinalTable) GetV64WithDefault(_default int64) int64 {
+	if !u.HasV64() {
+		return _default
+	}
+	return u.V64
+}
+
+func (u *GreaterThan64OrdinalTable) HasV64() bool {
+	return u.V64Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV64() {
+	u.V64Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV65(v65 int64) {
+	u.V65 = v65
+	u.V65Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV65() int64 {
+	return u.V65
+}
+
+func (u *GreaterThan64OrdinalTable) GetV65WithDefault(_default int64) int64 {
+	if !u.HasV65() {
+		return _default
+	}
+	return u.V65
+}
+
+func (u *GreaterThan64OrdinalTable) HasV65() bool {
+	return u.V65Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV65() {
+	u.V65Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) SetV66(v66 int64) {
+	u.V66 = v66
+	u.V66Present = true
+}
+
+func (u *GreaterThan64OrdinalTable) GetV66() int64 {
+	return u.V66
+}
+
+func (u *GreaterThan64OrdinalTable) GetV66WithDefault(_default int64) int64 {
+	if !u.HasV66() {
+		return _default
+	}
+	return u.V66
+}
+
+func (u *GreaterThan64OrdinalTable) HasV66() bool {
+	return u.V66Present
+}
+
+func (u *GreaterThan64OrdinalTable) ClearV66() {
+	u.V66Present = false
+}
+
+func (u *GreaterThan64OrdinalTable) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *GreaterThan64OrdinalTable) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
+}

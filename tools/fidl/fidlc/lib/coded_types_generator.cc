@@ -384,6 +384,12 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
       auto union_decl = static_cast<const flat::Union*>(decl);
       auto type = named_coded_types_[decl->name].get();
       switch (wire_format) {
+        // TODO(fxbug.dev/79578) Add support for V2 wire format.
+        case WireFormat::kV2Header:
+          [[fallthrough]];
+        case WireFormat::kV2:
+          assert(false && "not yet supported");
+          break;
         case WireFormat::kV1Header:
           [[fallthrough]];
         case WireFormat::kV1NoEe: {
@@ -554,6 +560,12 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
       std::string union_name = NameCodedName(union_decl->name);
 
       switch (wire_format) {
+        // TODO(fxbug.dev/79578) Add support for V2 wire format.
+        case WireFormat::kV2Header:
+          [[fallthrough]];
+        case WireFormat::kV2:
+          assert(false && "not yet supported");
+          break;
         case WireFormat::kV1Header:
           [[fallthrough]];
         case WireFormat::kV1NoEe: {

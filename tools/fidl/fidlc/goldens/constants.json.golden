@@ -612,6 +612,10 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
           }
         },
         {
@@ -637,6 +641,10 @@
             }
           },
           "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 8,
             "padding": 0
           }
@@ -666,6 +674,10 @@
           "field_shape_v1": {
             "offset": 24,
             "padding": 3
+          },
+          "field_shape_v2": {
+            "offset": 24,
+            "padding": 3
           }
         },
         {
@@ -688,6 +700,10 @@
             "identifier": "fidl.test.constants/Enum.E"
           },
           "field_shape_v1": {
+            "offset": 28,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 28,
             "padding": 0
           }
@@ -714,11 +730,24 @@
           "field_shape_v1": {
             "offset": 32,
             "padding": 4
+          },
+          "field_shape_v2": {
+            "offset": 32,
+            "padding": 4
           }
         }
       ],
       "resource": false,
       "type_shape_v1": {
+        "inline_size": 40,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
         "inline_size": 40,
         "alignment": 8,
         "depth": 1,

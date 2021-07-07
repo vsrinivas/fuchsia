@@ -38,11 +38,24 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
           }
         }
       ],
       "resource": false,
       "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
         "inline_size": 8,
         "alignment": 4,
         "depth": 0,
@@ -81,11 +94,24 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
           }
         }
       ],
       "resource": false,
       "type_shape_v1": {
+        "inline_size": 400,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
         "inline_size": 400,
         "alignment": 4,
         "depth": 0,
@@ -136,6 +162,15 @@
         "max_out_of_line": 24,
         "has_padding": false,
         "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": false,
+        "has_flexible_envelope": true
       }
     },
     {
@@ -170,6 +205,15 @@
       "strict": false,
       "resource": false,
       "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 416,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
         "inline_size": 16,
         "alignment": 8,
         "depth": 2,
@@ -220,6 +264,15 @@
         "max_out_of_line": 8,
         "has_padding": true,
         "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
       }
     },
     {
@@ -255,6 +308,15 @@
       "resource": false,
       "type_shape_v1": {
         "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 400,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
         "alignment": 8,
         "depth": 1,
         "max_handles": 0,

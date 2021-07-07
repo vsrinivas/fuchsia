@@ -44,11 +44,24 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 7
+              },
+              "field_shape_v2": {
+                "offset": 16,
+                "padding": 7
               }
             }
           ],
           "maybe_request_payload": "fidl.test.emptystruct/EmptyProtocolSendRequest",
           "maybe_request_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v2": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -88,11 +101,24 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 7
+              },
+              "field_shape_v2": {
+                "offset": 16,
+                "padding": 7
               }
             }
           ],
           "maybe_response_payload": "fidl.test.emptystruct/EmptyProtocolReceiveRequest",
           "maybe_response_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v2": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -130,11 +156,24 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 7
+              },
+              "field_shape_v2": {
+                "offset": 16,
+                "padding": 7
               }
             }
           ],
           "maybe_request_payload": "fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest",
           "maybe_request_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v2": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -161,11 +200,24 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 7
+              },
+              "field_shape_v2": {
+                "offset": 16,
+                "padding": 7
               }
             }
           ],
           "maybe_response_payload": "fidl.test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
           "maybe_response_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v2": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -211,11 +263,24 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 7
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 7
           }
         }
       ],
       "resource": false,
       "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
         "inline_size": 8,
         "alignment": 8,
         "depth": 0,
@@ -255,11 +320,24 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 7
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 7
           }
         }
       ],
       "resource": false,
       "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
         "inline_size": 8,
         "alignment": 8,
         "depth": 0,
@@ -299,11 +377,24 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 7
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 7
           }
         }
       ],
       "resource": false,
       "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
         "inline_size": 8,
         "alignment": 8,
         "depth": 0,
@@ -343,11 +434,24 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 7
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 7
           }
         }
       ],
       "resource": false,
       "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
         "inline_size": 8,
         "alignment": 8,
         "depth": 0,
@@ -369,6 +473,15 @@
       "members": [],
       "resource": false,
       "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
         "inline_size": 1,
         "alignment": 1,
         "depth": 0,

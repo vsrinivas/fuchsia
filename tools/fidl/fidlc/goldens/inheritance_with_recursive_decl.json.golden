@@ -44,11 +44,24 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 4
+              },
+              "field_shape_v2": {
+                "offset": 16,
+                "padding": 4
               }
             }
           ],
           "maybe_request_payload": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
           "maybe_request_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v2": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -109,11 +122,24 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 4
+              },
+              "field_shape_v2": {
+                "offset": 16,
+                "padding": 4
               }
             }
           ],
           "maybe_request_payload": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
           "maybe_request_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v2": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -152,11 +178,24 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 4
+              },
+              "field_shape_v2": {
+                "offset": 16,
+                "padding": 4
               }
             }
           ],
           "maybe_request_payload": "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest",
           "maybe_request_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v2": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -203,11 +242,24 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 4
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 4
           }
         }
       ],
       "resource": true,
       "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
         "inline_size": 8,
         "alignment": 8,
         "depth": 0,
@@ -247,11 +299,24 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 4
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 4
           }
         }
       ],
       "resource": true,
       "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
         "inline_size": 8,
         "alignment": 8,
         "depth": 0,
@@ -291,11 +356,24 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 4
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 4
           }
         }
       ],
       "resource": true,
       "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
         "inline_size": 8,
         "alignment": 8,
         "depth": 0,

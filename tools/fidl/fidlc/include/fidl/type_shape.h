@@ -26,6 +26,10 @@ enum class WireFormat {
   kV1Header,  // The v1 wire format, except where request and response structs do not receive
               // any special treatment (e.g. having their size increased by 16 for the transactional
               // header)
+  kV2,        // The v2 wire format, using efficient envelopes.
+  kV2Header,  // The v2 wire format, except where request and response structs do not receive
+              // any special treatment (e.g. having their size increased by 16 for the transactional
+              // header)
 };
 
 struct TypeShape {

@@ -18,6 +18,8 @@ class OlderSimpleTable;
 
 class NewerSimpleTable;
 
+class GreaterThan64OrdinalTable;
+
 class EmptyTable;
 
 class SimpleTable final {
@@ -634,6 +636,2583 @@ class NewerSimpleTable final {
 
 using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
 
+class GreaterThan64OrdinalTable final {
+ public:
+  static const fidl_type_t* FidlType;
+  /// Returns whether no field is set.
+  bool IsEmpty() const;
+
+  const int64_t& v1() const {
+    ZX_ASSERT(field_presence_.IsSet<0>());
+    return v1_value_.value;
+  }
+  bool has_v1() const { return field_presence_.IsSet<0>(); }
+
+  int64_t* mutable_v1() {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&v1_value_.value);
+    }
+    return &v1_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v1(int64_t _value) {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&v1_value_.value, std::move(_value));
+    } else {
+      v1_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v1() {
+    if (!field_presence_.IsSet<0>()) {
+      return;
+    }
+    field_presence_.Clear<0>();
+    Destruct(&v1_value_.value);
+  }
+
+  const int64_t& v2() const {
+    ZX_ASSERT(field_presence_.IsSet<1>());
+    return v2_value_.value;
+  }
+  bool has_v2() const { return field_presence_.IsSet<1>(); }
+
+  int64_t* mutable_v2() {
+    if (!field_presence_.IsSet<1>()) {
+      field_presence_.Set<1>();
+      Construct(&v2_value_.value);
+    }
+    return &v2_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v2(int64_t _value) {
+    if (!field_presence_.IsSet<1>()) {
+      field_presence_.Set<1>();
+      Construct(&v2_value_.value, std::move(_value));
+    } else {
+      v2_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v2() {
+    if (!field_presence_.IsSet<1>()) {
+      return;
+    }
+    field_presence_.Clear<1>();
+    Destruct(&v2_value_.value);
+  }
+
+  const int64_t& v3() const {
+    ZX_ASSERT(field_presence_.IsSet<2>());
+    return v3_value_.value;
+  }
+  bool has_v3() const { return field_presence_.IsSet<2>(); }
+
+  int64_t* mutable_v3() {
+    if (!field_presence_.IsSet<2>()) {
+      field_presence_.Set<2>();
+      Construct(&v3_value_.value);
+    }
+    return &v3_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v3(int64_t _value) {
+    if (!field_presence_.IsSet<2>()) {
+      field_presence_.Set<2>();
+      Construct(&v3_value_.value, std::move(_value));
+    } else {
+      v3_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v3() {
+    if (!field_presence_.IsSet<2>()) {
+      return;
+    }
+    field_presence_.Clear<2>();
+    Destruct(&v3_value_.value);
+  }
+
+  const int64_t& v4() const {
+    ZX_ASSERT(field_presence_.IsSet<3>());
+    return v4_value_.value;
+  }
+  bool has_v4() const { return field_presence_.IsSet<3>(); }
+
+  int64_t* mutable_v4() {
+    if (!field_presence_.IsSet<3>()) {
+      field_presence_.Set<3>();
+      Construct(&v4_value_.value);
+    }
+    return &v4_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v4(int64_t _value) {
+    if (!field_presence_.IsSet<3>()) {
+      field_presence_.Set<3>();
+      Construct(&v4_value_.value, std::move(_value));
+    } else {
+      v4_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v4() {
+    if (!field_presence_.IsSet<3>()) {
+      return;
+    }
+    field_presence_.Clear<3>();
+    Destruct(&v4_value_.value);
+  }
+
+  const int64_t& v5() const {
+    ZX_ASSERT(field_presence_.IsSet<4>());
+    return v5_value_.value;
+  }
+  bool has_v5() const { return field_presence_.IsSet<4>(); }
+
+  int64_t* mutable_v5() {
+    if (!field_presence_.IsSet<4>()) {
+      field_presence_.Set<4>();
+      Construct(&v5_value_.value);
+    }
+    return &v5_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v5(int64_t _value) {
+    if (!field_presence_.IsSet<4>()) {
+      field_presence_.Set<4>();
+      Construct(&v5_value_.value, std::move(_value));
+    } else {
+      v5_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v5() {
+    if (!field_presence_.IsSet<4>()) {
+      return;
+    }
+    field_presence_.Clear<4>();
+    Destruct(&v5_value_.value);
+  }
+
+  const int64_t& v6() const {
+    ZX_ASSERT(field_presence_.IsSet<5>());
+    return v6_value_.value;
+  }
+  bool has_v6() const { return field_presence_.IsSet<5>(); }
+
+  int64_t* mutable_v6() {
+    if (!field_presence_.IsSet<5>()) {
+      field_presence_.Set<5>();
+      Construct(&v6_value_.value);
+    }
+    return &v6_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v6(int64_t _value) {
+    if (!field_presence_.IsSet<5>()) {
+      field_presence_.Set<5>();
+      Construct(&v6_value_.value, std::move(_value));
+    } else {
+      v6_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v6() {
+    if (!field_presence_.IsSet<5>()) {
+      return;
+    }
+    field_presence_.Clear<5>();
+    Destruct(&v6_value_.value);
+  }
+
+  const int64_t& v7() const {
+    ZX_ASSERT(field_presence_.IsSet<6>());
+    return v7_value_.value;
+  }
+  bool has_v7() const { return field_presence_.IsSet<6>(); }
+
+  int64_t* mutable_v7() {
+    if (!field_presence_.IsSet<6>()) {
+      field_presence_.Set<6>();
+      Construct(&v7_value_.value);
+    }
+    return &v7_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v7(int64_t _value) {
+    if (!field_presence_.IsSet<6>()) {
+      field_presence_.Set<6>();
+      Construct(&v7_value_.value, std::move(_value));
+    } else {
+      v7_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v7() {
+    if (!field_presence_.IsSet<6>()) {
+      return;
+    }
+    field_presence_.Clear<6>();
+    Destruct(&v7_value_.value);
+  }
+
+  const int64_t& v8() const {
+    ZX_ASSERT(field_presence_.IsSet<7>());
+    return v8_value_.value;
+  }
+  bool has_v8() const { return field_presence_.IsSet<7>(); }
+
+  int64_t* mutable_v8() {
+    if (!field_presence_.IsSet<7>()) {
+      field_presence_.Set<7>();
+      Construct(&v8_value_.value);
+    }
+    return &v8_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v8(int64_t _value) {
+    if (!field_presence_.IsSet<7>()) {
+      field_presence_.Set<7>();
+      Construct(&v8_value_.value, std::move(_value));
+    } else {
+      v8_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v8() {
+    if (!field_presence_.IsSet<7>()) {
+      return;
+    }
+    field_presence_.Clear<7>();
+    Destruct(&v8_value_.value);
+  }
+
+  const int64_t& v9() const {
+    ZX_ASSERT(field_presence_.IsSet<8>());
+    return v9_value_.value;
+  }
+  bool has_v9() const { return field_presence_.IsSet<8>(); }
+
+  int64_t* mutable_v9() {
+    if (!field_presence_.IsSet<8>()) {
+      field_presence_.Set<8>();
+      Construct(&v9_value_.value);
+    }
+    return &v9_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v9(int64_t _value) {
+    if (!field_presence_.IsSet<8>()) {
+      field_presence_.Set<8>();
+      Construct(&v9_value_.value, std::move(_value));
+    } else {
+      v9_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v9() {
+    if (!field_presence_.IsSet<8>()) {
+      return;
+    }
+    field_presence_.Clear<8>();
+    Destruct(&v9_value_.value);
+  }
+
+  const int64_t& v10() const {
+    ZX_ASSERT(field_presence_.IsSet<9>());
+    return v10_value_.value;
+  }
+  bool has_v10() const { return field_presence_.IsSet<9>(); }
+
+  int64_t* mutable_v10() {
+    if (!field_presence_.IsSet<9>()) {
+      field_presence_.Set<9>();
+      Construct(&v10_value_.value);
+    }
+    return &v10_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v10(int64_t _value) {
+    if (!field_presence_.IsSet<9>()) {
+      field_presence_.Set<9>();
+      Construct(&v10_value_.value, std::move(_value));
+    } else {
+      v10_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v10() {
+    if (!field_presence_.IsSet<9>()) {
+      return;
+    }
+    field_presence_.Clear<9>();
+    Destruct(&v10_value_.value);
+  }
+
+  const int64_t& v11() const {
+    ZX_ASSERT(field_presence_.IsSet<10>());
+    return v11_value_.value;
+  }
+  bool has_v11() const { return field_presence_.IsSet<10>(); }
+
+  int64_t* mutable_v11() {
+    if (!field_presence_.IsSet<10>()) {
+      field_presence_.Set<10>();
+      Construct(&v11_value_.value);
+    }
+    return &v11_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v11(int64_t _value) {
+    if (!field_presence_.IsSet<10>()) {
+      field_presence_.Set<10>();
+      Construct(&v11_value_.value, std::move(_value));
+    } else {
+      v11_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v11() {
+    if (!field_presence_.IsSet<10>()) {
+      return;
+    }
+    field_presence_.Clear<10>();
+    Destruct(&v11_value_.value);
+  }
+
+  const int64_t& v12() const {
+    ZX_ASSERT(field_presence_.IsSet<11>());
+    return v12_value_.value;
+  }
+  bool has_v12() const { return field_presence_.IsSet<11>(); }
+
+  int64_t* mutable_v12() {
+    if (!field_presence_.IsSet<11>()) {
+      field_presence_.Set<11>();
+      Construct(&v12_value_.value);
+    }
+    return &v12_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v12(int64_t _value) {
+    if (!field_presence_.IsSet<11>()) {
+      field_presence_.Set<11>();
+      Construct(&v12_value_.value, std::move(_value));
+    } else {
+      v12_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v12() {
+    if (!field_presence_.IsSet<11>()) {
+      return;
+    }
+    field_presence_.Clear<11>();
+    Destruct(&v12_value_.value);
+  }
+
+  const int64_t& v13() const {
+    ZX_ASSERT(field_presence_.IsSet<12>());
+    return v13_value_.value;
+  }
+  bool has_v13() const { return field_presence_.IsSet<12>(); }
+
+  int64_t* mutable_v13() {
+    if (!field_presence_.IsSet<12>()) {
+      field_presence_.Set<12>();
+      Construct(&v13_value_.value);
+    }
+    return &v13_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v13(int64_t _value) {
+    if (!field_presence_.IsSet<12>()) {
+      field_presence_.Set<12>();
+      Construct(&v13_value_.value, std::move(_value));
+    } else {
+      v13_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v13() {
+    if (!field_presence_.IsSet<12>()) {
+      return;
+    }
+    field_presence_.Clear<12>();
+    Destruct(&v13_value_.value);
+  }
+
+  const int64_t& v14() const {
+    ZX_ASSERT(field_presence_.IsSet<13>());
+    return v14_value_.value;
+  }
+  bool has_v14() const { return field_presence_.IsSet<13>(); }
+
+  int64_t* mutable_v14() {
+    if (!field_presence_.IsSet<13>()) {
+      field_presence_.Set<13>();
+      Construct(&v14_value_.value);
+    }
+    return &v14_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v14(int64_t _value) {
+    if (!field_presence_.IsSet<13>()) {
+      field_presence_.Set<13>();
+      Construct(&v14_value_.value, std::move(_value));
+    } else {
+      v14_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v14() {
+    if (!field_presence_.IsSet<13>()) {
+      return;
+    }
+    field_presence_.Clear<13>();
+    Destruct(&v14_value_.value);
+  }
+
+  const int64_t& v15() const {
+    ZX_ASSERT(field_presence_.IsSet<14>());
+    return v15_value_.value;
+  }
+  bool has_v15() const { return field_presence_.IsSet<14>(); }
+
+  int64_t* mutable_v15() {
+    if (!field_presence_.IsSet<14>()) {
+      field_presence_.Set<14>();
+      Construct(&v15_value_.value);
+    }
+    return &v15_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v15(int64_t _value) {
+    if (!field_presence_.IsSet<14>()) {
+      field_presence_.Set<14>();
+      Construct(&v15_value_.value, std::move(_value));
+    } else {
+      v15_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v15() {
+    if (!field_presence_.IsSet<14>()) {
+      return;
+    }
+    field_presence_.Clear<14>();
+    Destruct(&v15_value_.value);
+  }
+
+  const int64_t& v16() const {
+    ZX_ASSERT(field_presence_.IsSet<15>());
+    return v16_value_.value;
+  }
+  bool has_v16() const { return field_presence_.IsSet<15>(); }
+
+  int64_t* mutable_v16() {
+    if (!field_presence_.IsSet<15>()) {
+      field_presence_.Set<15>();
+      Construct(&v16_value_.value);
+    }
+    return &v16_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v16(int64_t _value) {
+    if (!field_presence_.IsSet<15>()) {
+      field_presence_.Set<15>();
+      Construct(&v16_value_.value, std::move(_value));
+    } else {
+      v16_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v16() {
+    if (!field_presence_.IsSet<15>()) {
+      return;
+    }
+    field_presence_.Clear<15>();
+    Destruct(&v16_value_.value);
+  }
+
+  const int64_t& v17() const {
+    ZX_ASSERT(field_presence_.IsSet<16>());
+    return v17_value_.value;
+  }
+  bool has_v17() const { return field_presence_.IsSet<16>(); }
+
+  int64_t* mutable_v17() {
+    if (!field_presence_.IsSet<16>()) {
+      field_presence_.Set<16>();
+      Construct(&v17_value_.value);
+    }
+    return &v17_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v17(int64_t _value) {
+    if (!field_presence_.IsSet<16>()) {
+      field_presence_.Set<16>();
+      Construct(&v17_value_.value, std::move(_value));
+    } else {
+      v17_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v17() {
+    if (!field_presence_.IsSet<16>()) {
+      return;
+    }
+    field_presence_.Clear<16>();
+    Destruct(&v17_value_.value);
+  }
+
+  const int64_t& v18() const {
+    ZX_ASSERT(field_presence_.IsSet<17>());
+    return v18_value_.value;
+  }
+  bool has_v18() const { return field_presence_.IsSet<17>(); }
+
+  int64_t* mutable_v18() {
+    if (!field_presence_.IsSet<17>()) {
+      field_presence_.Set<17>();
+      Construct(&v18_value_.value);
+    }
+    return &v18_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v18(int64_t _value) {
+    if (!field_presence_.IsSet<17>()) {
+      field_presence_.Set<17>();
+      Construct(&v18_value_.value, std::move(_value));
+    } else {
+      v18_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v18() {
+    if (!field_presence_.IsSet<17>()) {
+      return;
+    }
+    field_presence_.Clear<17>();
+    Destruct(&v18_value_.value);
+  }
+
+  const int64_t& v19() const {
+    ZX_ASSERT(field_presence_.IsSet<18>());
+    return v19_value_.value;
+  }
+  bool has_v19() const { return field_presence_.IsSet<18>(); }
+
+  int64_t* mutable_v19() {
+    if (!field_presence_.IsSet<18>()) {
+      field_presence_.Set<18>();
+      Construct(&v19_value_.value);
+    }
+    return &v19_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v19(int64_t _value) {
+    if (!field_presence_.IsSet<18>()) {
+      field_presence_.Set<18>();
+      Construct(&v19_value_.value, std::move(_value));
+    } else {
+      v19_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v19() {
+    if (!field_presence_.IsSet<18>()) {
+      return;
+    }
+    field_presence_.Clear<18>();
+    Destruct(&v19_value_.value);
+  }
+
+  const int64_t& v20() const {
+    ZX_ASSERT(field_presence_.IsSet<19>());
+    return v20_value_.value;
+  }
+  bool has_v20() const { return field_presence_.IsSet<19>(); }
+
+  int64_t* mutable_v20() {
+    if (!field_presence_.IsSet<19>()) {
+      field_presence_.Set<19>();
+      Construct(&v20_value_.value);
+    }
+    return &v20_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v20(int64_t _value) {
+    if (!field_presence_.IsSet<19>()) {
+      field_presence_.Set<19>();
+      Construct(&v20_value_.value, std::move(_value));
+    } else {
+      v20_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v20() {
+    if (!field_presence_.IsSet<19>()) {
+      return;
+    }
+    field_presence_.Clear<19>();
+    Destruct(&v20_value_.value);
+  }
+
+  const int64_t& v21() const {
+    ZX_ASSERT(field_presence_.IsSet<20>());
+    return v21_value_.value;
+  }
+  bool has_v21() const { return field_presence_.IsSet<20>(); }
+
+  int64_t* mutable_v21() {
+    if (!field_presence_.IsSet<20>()) {
+      field_presence_.Set<20>();
+      Construct(&v21_value_.value);
+    }
+    return &v21_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v21(int64_t _value) {
+    if (!field_presence_.IsSet<20>()) {
+      field_presence_.Set<20>();
+      Construct(&v21_value_.value, std::move(_value));
+    } else {
+      v21_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v21() {
+    if (!field_presence_.IsSet<20>()) {
+      return;
+    }
+    field_presence_.Clear<20>();
+    Destruct(&v21_value_.value);
+  }
+
+  const int64_t& v22() const {
+    ZX_ASSERT(field_presence_.IsSet<21>());
+    return v22_value_.value;
+  }
+  bool has_v22() const { return field_presence_.IsSet<21>(); }
+
+  int64_t* mutable_v22() {
+    if (!field_presence_.IsSet<21>()) {
+      field_presence_.Set<21>();
+      Construct(&v22_value_.value);
+    }
+    return &v22_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v22(int64_t _value) {
+    if (!field_presence_.IsSet<21>()) {
+      field_presence_.Set<21>();
+      Construct(&v22_value_.value, std::move(_value));
+    } else {
+      v22_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v22() {
+    if (!field_presence_.IsSet<21>()) {
+      return;
+    }
+    field_presence_.Clear<21>();
+    Destruct(&v22_value_.value);
+  }
+
+  const int64_t& v23() const {
+    ZX_ASSERT(field_presence_.IsSet<22>());
+    return v23_value_.value;
+  }
+  bool has_v23() const { return field_presence_.IsSet<22>(); }
+
+  int64_t* mutable_v23() {
+    if (!field_presence_.IsSet<22>()) {
+      field_presence_.Set<22>();
+      Construct(&v23_value_.value);
+    }
+    return &v23_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v23(int64_t _value) {
+    if (!field_presence_.IsSet<22>()) {
+      field_presence_.Set<22>();
+      Construct(&v23_value_.value, std::move(_value));
+    } else {
+      v23_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v23() {
+    if (!field_presence_.IsSet<22>()) {
+      return;
+    }
+    field_presence_.Clear<22>();
+    Destruct(&v23_value_.value);
+  }
+
+  const int64_t& v24() const {
+    ZX_ASSERT(field_presence_.IsSet<23>());
+    return v24_value_.value;
+  }
+  bool has_v24() const { return field_presence_.IsSet<23>(); }
+
+  int64_t* mutable_v24() {
+    if (!field_presence_.IsSet<23>()) {
+      field_presence_.Set<23>();
+      Construct(&v24_value_.value);
+    }
+    return &v24_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v24(int64_t _value) {
+    if (!field_presence_.IsSet<23>()) {
+      field_presence_.Set<23>();
+      Construct(&v24_value_.value, std::move(_value));
+    } else {
+      v24_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v24() {
+    if (!field_presence_.IsSet<23>()) {
+      return;
+    }
+    field_presence_.Clear<23>();
+    Destruct(&v24_value_.value);
+  }
+
+  const int64_t& v25() const {
+    ZX_ASSERT(field_presence_.IsSet<24>());
+    return v25_value_.value;
+  }
+  bool has_v25() const { return field_presence_.IsSet<24>(); }
+
+  int64_t* mutable_v25() {
+    if (!field_presence_.IsSet<24>()) {
+      field_presence_.Set<24>();
+      Construct(&v25_value_.value);
+    }
+    return &v25_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v25(int64_t _value) {
+    if (!field_presence_.IsSet<24>()) {
+      field_presence_.Set<24>();
+      Construct(&v25_value_.value, std::move(_value));
+    } else {
+      v25_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v25() {
+    if (!field_presence_.IsSet<24>()) {
+      return;
+    }
+    field_presence_.Clear<24>();
+    Destruct(&v25_value_.value);
+  }
+
+  const int64_t& v26() const {
+    ZX_ASSERT(field_presence_.IsSet<25>());
+    return v26_value_.value;
+  }
+  bool has_v26() const { return field_presence_.IsSet<25>(); }
+
+  int64_t* mutable_v26() {
+    if (!field_presence_.IsSet<25>()) {
+      field_presence_.Set<25>();
+      Construct(&v26_value_.value);
+    }
+    return &v26_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v26(int64_t _value) {
+    if (!field_presence_.IsSet<25>()) {
+      field_presence_.Set<25>();
+      Construct(&v26_value_.value, std::move(_value));
+    } else {
+      v26_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v26() {
+    if (!field_presence_.IsSet<25>()) {
+      return;
+    }
+    field_presence_.Clear<25>();
+    Destruct(&v26_value_.value);
+  }
+
+  const int64_t& v27() const {
+    ZX_ASSERT(field_presence_.IsSet<26>());
+    return v27_value_.value;
+  }
+  bool has_v27() const { return field_presence_.IsSet<26>(); }
+
+  int64_t* mutable_v27() {
+    if (!field_presence_.IsSet<26>()) {
+      field_presence_.Set<26>();
+      Construct(&v27_value_.value);
+    }
+    return &v27_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v27(int64_t _value) {
+    if (!field_presence_.IsSet<26>()) {
+      field_presence_.Set<26>();
+      Construct(&v27_value_.value, std::move(_value));
+    } else {
+      v27_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v27() {
+    if (!field_presence_.IsSet<26>()) {
+      return;
+    }
+    field_presence_.Clear<26>();
+    Destruct(&v27_value_.value);
+  }
+
+  const int64_t& v28() const {
+    ZX_ASSERT(field_presence_.IsSet<27>());
+    return v28_value_.value;
+  }
+  bool has_v28() const { return field_presence_.IsSet<27>(); }
+
+  int64_t* mutable_v28() {
+    if (!field_presence_.IsSet<27>()) {
+      field_presence_.Set<27>();
+      Construct(&v28_value_.value);
+    }
+    return &v28_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v28(int64_t _value) {
+    if (!field_presence_.IsSet<27>()) {
+      field_presence_.Set<27>();
+      Construct(&v28_value_.value, std::move(_value));
+    } else {
+      v28_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v28() {
+    if (!field_presence_.IsSet<27>()) {
+      return;
+    }
+    field_presence_.Clear<27>();
+    Destruct(&v28_value_.value);
+  }
+
+  const int64_t& v29() const {
+    ZX_ASSERT(field_presence_.IsSet<28>());
+    return v29_value_.value;
+  }
+  bool has_v29() const { return field_presence_.IsSet<28>(); }
+
+  int64_t* mutable_v29() {
+    if (!field_presence_.IsSet<28>()) {
+      field_presence_.Set<28>();
+      Construct(&v29_value_.value);
+    }
+    return &v29_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v29(int64_t _value) {
+    if (!field_presence_.IsSet<28>()) {
+      field_presence_.Set<28>();
+      Construct(&v29_value_.value, std::move(_value));
+    } else {
+      v29_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v29() {
+    if (!field_presence_.IsSet<28>()) {
+      return;
+    }
+    field_presence_.Clear<28>();
+    Destruct(&v29_value_.value);
+  }
+
+  const int64_t& v30() const {
+    ZX_ASSERT(field_presence_.IsSet<29>());
+    return v30_value_.value;
+  }
+  bool has_v30() const { return field_presence_.IsSet<29>(); }
+
+  int64_t* mutable_v30() {
+    if (!field_presence_.IsSet<29>()) {
+      field_presence_.Set<29>();
+      Construct(&v30_value_.value);
+    }
+    return &v30_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v30(int64_t _value) {
+    if (!field_presence_.IsSet<29>()) {
+      field_presence_.Set<29>();
+      Construct(&v30_value_.value, std::move(_value));
+    } else {
+      v30_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v30() {
+    if (!field_presence_.IsSet<29>()) {
+      return;
+    }
+    field_presence_.Clear<29>();
+    Destruct(&v30_value_.value);
+  }
+
+  const int64_t& v31() const {
+    ZX_ASSERT(field_presence_.IsSet<30>());
+    return v31_value_.value;
+  }
+  bool has_v31() const { return field_presence_.IsSet<30>(); }
+
+  int64_t* mutable_v31() {
+    if (!field_presence_.IsSet<30>()) {
+      field_presence_.Set<30>();
+      Construct(&v31_value_.value);
+    }
+    return &v31_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v31(int64_t _value) {
+    if (!field_presence_.IsSet<30>()) {
+      field_presence_.Set<30>();
+      Construct(&v31_value_.value, std::move(_value));
+    } else {
+      v31_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v31() {
+    if (!field_presence_.IsSet<30>()) {
+      return;
+    }
+    field_presence_.Clear<30>();
+    Destruct(&v31_value_.value);
+  }
+
+  const int64_t& v32() const {
+    ZX_ASSERT(field_presence_.IsSet<31>());
+    return v32_value_.value;
+  }
+  bool has_v32() const { return field_presence_.IsSet<31>(); }
+
+  int64_t* mutable_v32() {
+    if (!field_presence_.IsSet<31>()) {
+      field_presence_.Set<31>();
+      Construct(&v32_value_.value);
+    }
+    return &v32_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v32(int64_t _value) {
+    if (!field_presence_.IsSet<31>()) {
+      field_presence_.Set<31>();
+      Construct(&v32_value_.value, std::move(_value));
+    } else {
+      v32_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v32() {
+    if (!field_presence_.IsSet<31>()) {
+      return;
+    }
+    field_presence_.Clear<31>();
+    Destruct(&v32_value_.value);
+  }
+
+  const int64_t& v33() const {
+    ZX_ASSERT(field_presence_.IsSet<32>());
+    return v33_value_.value;
+  }
+  bool has_v33() const { return field_presence_.IsSet<32>(); }
+
+  int64_t* mutable_v33() {
+    if (!field_presence_.IsSet<32>()) {
+      field_presence_.Set<32>();
+      Construct(&v33_value_.value);
+    }
+    return &v33_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v33(int64_t _value) {
+    if (!field_presence_.IsSet<32>()) {
+      field_presence_.Set<32>();
+      Construct(&v33_value_.value, std::move(_value));
+    } else {
+      v33_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v33() {
+    if (!field_presence_.IsSet<32>()) {
+      return;
+    }
+    field_presence_.Clear<32>();
+    Destruct(&v33_value_.value);
+  }
+
+  const int64_t& v34() const {
+    ZX_ASSERT(field_presence_.IsSet<33>());
+    return v34_value_.value;
+  }
+  bool has_v34() const { return field_presence_.IsSet<33>(); }
+
+  int64_t* mutable_v34() {
+    if (!field_presence_.IsSet<33>()) {
+      field_presence_.Set<33>();
+      Construct(&v34_value_.value);
+    }
+    return &v34_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v34(int64_t _value) {
+    if (!field_presence_.IsSet<33>()) {
+      field_presence_.Set<33>();
+      Construct(&v34_value_.value, std::move(_value));
+    } else {
+      v34_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v34() {
+    if (!field_presence_.IsSet<33>()) {
+      return;
+    }
+    field_presence_.Clear<33>();
+    Destruct(&v34_value_.value);
+  }
+
+  const int64_t& v35() const {
+    ZX_ASSERT(field_presence_.IsSet<34>());
+    return v35_value_.value;
+  }
+  bool has_v35() const { return field_presence_.IsSet<34>(); }
+
+  int64_t* mutable_v35() {
+    if (!field_presence_.IsSet<34>()) {
+      field_presence_.Set<34>();
+      Construct(&v35_value_.value);
+    }
+    return &v35_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v35(int64_t _value) {
+    if (!field_presence_.IsSet<34>()) {
+      field_presence_.Set<34>();
+      Construct(&v35_value_.value, std::move(_value));
+    } else {
+      v35_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v35() {
+    if (!field_presence_.IsSet<34>()) {
+      return;
+    }
+    field_presence_.Clear<34>();
+    Destruct(&v35_value_.value);
+  }
+
+  const int64_t& v36() const {
+    ZX_ASSERT(field_presence_.IsSet<35>());
+    return v36_value_.value;
+  }
+  bool has_v36() const { return field_presence_.IsSet<35>(); }
+
+  int64_t* mutable_v36() {
+    if (!field_presence_.IsSet<35>()) {
+      field_presence_.Set<35>();
+      Construct(&v36_value_.value);
+    }
+    return &v36_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v36(int64_t _value) {
+    if (!field_presence_.IsSet<35>()) {
+      field_presence_.Set<35>();
+      Construct(&v36_value_.value, std::move(_value));
+    } else {
+      v36_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v36() {
+    if (!field_presence_.IsSet<35>()) {
+      return;
+    }
+    field_presence_.Clear<35>();
+    Destruct(&v36_value_.value);
+  }
+
+  const int64_t& v37() const {
+    ZX_ASSERT(field_presence_.IsSet<36>());
+    return v37_value_.value;
+  }
+  bool has_v37() const { return field_presence_.IsSet<36>(); }
+
+  int64_t* mutable_v37() {
+    if (!field_presence_.IsSet<36>()) {
+      field_presence_.Set<36>();
+      Construct(&v37_value_.value);
+    }
+    return &v37_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v37(int64_t _value) {
+    if (!field_presence_.IsSet<36>()) {
+      field_presence_.Set<36>();
+      Construct(&v37_value_.value, std::move(_value));
+    } else {
+      v37_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v37() {
+    if (!field_presence_.IsSet<36>()) {
+      return;
+    }
+    field_presence_.Clear<36>();
+    Destruct(&v37_value_.value);
+  }
+
+  const int64_t& v38() const {
+    ZX_ASSERT(field_presence_.IsSet<37>());
+    return v38_value_.value;
+  }
+  bool has_v38() const { return field_presence_.IsSet<37>(); }
+
+  int64_t* mutable_v38() {
+    if (!field_presence_.IsSet<37>()) {
+      field_presence_.Set<37>();
+      Construct(&v38_value_.value);
+    }
+    return &v38_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v38(int64_t _value) {
+    if (!field_presence_.IsSet<37>()) {
+      field_presence_.Set<37>();
+      Construct(&v38_value_.value, std::move(_value));
+    } else {
+      v38_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v38() {
+    if (!field_presence_.IsSet<37>()) {
+      return;
+    }
+    field_presence_.Clear<37>();
+    Destruct(&v38_value_.value);
+  }
+
+  const int64_t& v39() const {
+    ZX_ASSERT(field_presence_.IsSet<38>());
+    return v39_value_.value;
+  }
+  bool has_v39() const { return field_presence_.IsSet<38>(); }
+
+  int64_t* mutable_v39() {
+    if (!field_presence_.IsSet<38>()) {
+      field_presence_.Set<38>();
+      Construct(&v39_value_.value);
+    }
+    return &v39_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v39(int64_t _value) {
+    if (!field_presence_.IsSet<38>()) {
+      field_presence_.Set<38>();
+      Construct(&v39_value_.value, std::move(_value));
+    } else {
+      v39_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v39() {
+    if (!field_presence_.IsSet<38>()) {
+      return;
+    }
+    field_presence_.Clear<38>();
+    Destruct(&v39_value_.value);
+  }
+
+  const int64_t& v40() const {
+    ZX_ASSERT(field_presence_.IsSet<39>());
+    return v40_value_.value;
+  }
+  bool has_v40() const { return field_presence_.IsSet<39>(); }
+
+  int64_t* mutable_v40() {
+    if (!field_presence_.IsSet<39>()) {
+      field_presence_.Set<39>();
+      Construct(&v40_value_.value);
+    }
+    return &v40_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v40(int64_t _value) {
+    if (!field_presence_.IsSet<39>()) {
+      field_presence_.Set<39>();
+      Construct(&v40_value_.value, std::move(_value));
+    } else {
+      v40_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v40() {
+    if (!field_presence_.IsSet<39>()) {
+      return;
+    }
+    field_presence_.Clear<39>();
+    Destruct(&v40_value_.value);
+  }
+
+  const int64_t& v41() const {
+    ZX_ASSERT(field_presence_.IsSet<40>());
+    return v41_value_.value;
+  }
+  bool has_v41() const { return field_presence_.IsSet<40>(); }
+
+  int64_t* mutable_v41() {
+    if (!field_presence_.IsSet<40>()) {
+      field_presence_.Set<40>();
+      Construct(&v41_value_.value);
+    }
+    return &v41_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v41(int64_t _value) {
+    if (!field_presence_.IsSet<40>()) {
+      field_presence_.Set<40>();
+      Construct(&v41_value_.value, std::move(_value));
+    } else {
+      v41_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v41() {
+    if (!field_presence_.IsSet<40>()) {
+      return;
+    }
+    field_presence_.Clear<40>();
+    Destruct(&v41_value_.value);
+  }
+
+  const int64_t& v42() const {
+    ZX_ASSERT(field_presence_.IsSet<41>());
+    return v42_value_.value;
+  }
+  bool has_v42() const { return field_presence_.IsSet<41>(); }
+
+  int64_t* mutable_v42() {
+    if (!field_presence_.IsSet<41>()) {
+      field_presence_.Set<41>();
+      Construct(&v42_value_.value);
+    }
+    return &v42_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v42(int64_t _value) {
+    if (!field_presence_.IsSet<41>()) {
+      field_presence_.Set<41>();
+      Construct(&v42_value_.value, std::move(_value));
+    } else {
+      v42_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v42() {
+    if (!field_presence_.IsSet<41>()) {
+      return;
+    }
+    field_presence_.Clear<41>();
+    Destruct(&v42_value_.value);
+  }
+
+  const int64_t& v43() const {
+    ZX_ASSERT(field_presence_.IsSet<42>());
+    return v43_value_.value;
+  }
+  bool has_v43() const { return field_presence_.IsSet<42>(); }
+
+  int64_t* mutable_v43() {
+    if (!field_presence_.IsSet<42>()) {
+      field_presence_.Set<42>();
+      Construct(&v43_value_.value);
+    }
+    return &v43_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v43(int64_t _value) {
+    if (!field_presence_.IsSet<42>()) {
+      field_presence_.Set<42>();
+      Construct(&v43_value_.value, std::move(_value));
+    } else {
+      v43_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v43() {
+    if (!field_presence_.IsSet<42>()) {
+      return;
+    }
+    field_presence_.Clear<42>();
+    Destruct(&v43_value_.value);
+  }
+
+  const int64_t& v44() const {
+    ZX_ASSERT(field_presence_.IsSet<43>());
+    return v44_value_.value;
+  }
+  bool has_v44() const { return field_presence_.IsSet<43>(); }
+
+  int64_t* mutable_v44() {
+    if (!field_presence_.IsSet<43>()) {
+      field_presence_.Set<43>();
+      Construct(&v44_value_.value);
+    }
+    return &v44_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v44(int64_t _value) {
+    if (!field_presence_.IsSet<43>()) {
+      field_presence_.Set<43>();
+      Construct(&v44_value_.value, std::move(_value));
+    } else {
+      v44_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v44() {
+    if (!field_presence_.IsSet<43>()) {
+      return;
+    }
+    field_presence_.Clear<43>();
+    Destruct(&v44_value_.value);
+  }
+
+  const int64_t& v45() const {
+    ZX_ASSERT(field_presence_.IsSet<44>());
+    return v45_value_.value;
+  }
+  bool has_v45() const { return field_presence_.IsSet<44>(); }
+
+  int64_t* mutable_v45() {
+    if (!field_presence_.IsSet<44>()) {
+      field_presence_.Set<44>();
+      Construct(&v45_value_.value);
+    }
+    return &v45_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v45(int64_t _value) {
+    if (!field_presence_.IsSet<44>()) {
+      field_presence_.Set<44>();
+      Construct(&v45_value_.value, std::move(_value));
+    } else {
+      v45_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v45() {
+    if (!field_presence_.IsSet<44>()) {
+      return;
+    }
+    field_presence_.Clear<44>();
+    Destruct(&v45_value_.value);
+  }
+
+  const int64_t& v46() const {
+    ZX_ASSERT(field_presence_.IsSet<45>());
+    return v46_value_.value;
+  }
+  bool has_v46() const { return field_presence_.IsSet<45>(); }
+
+  int64_t* mutable_v46() {
+    if (!field_presence_.IsSet<45>()) {
+      field_presence_.Set<45>();
+      Construct(&v46_value_.value);
+    }
+    return &v46_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v46(int64_t _value) {
+    if (!field_presence_.IsSet<45>()) {
+      field_presence_.Set<45>();
+      Construct(&v46_value_.value, std::move(_value));
+    } else {
+      v46_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v46() {
+    if (!field_presence_.IsSet<45>()) {
+      return;
+    }
+    field_presence_.Clear<45>();
+    Destruct(&v46_value_.value);
+  }
+
+  const int64_t& v47() const {
+    ZX_ASSERT(field_presence_.IsSet<46>());
+    return v47_value_.value;
+  }
+  bool has_v47() const { return field_presence_.IsSet<46>(); }
+
+  int64_t* mutable_v47() {
+    if (!field_presence_.IsSet<46>()) {
+      field_presence_.Set<46>();
+      Construct(&v47_value_.value);
+    }
+    return &v47_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v47(int64_t _value) {
+    if (!field_presence_.IsSet<46>()) {
+      field_presence_.Set<46>();
+      Construct(&v47_value_.value, std::move(_value));
+    } else {
+      v47_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v47() {
+    if (!field_presence_.IsSet<46>()) {
+      return;
+    }
+    field_presence_.Clear<46>();
+    Destruct(&v47_value_.value);
+  }
+
+  const int64_t& v48() const {
+    ZX_ASSERT(field_presence_.IsSet<47>());
+    return v48_value_.value;
+  }
+  bool has_v48() const { return field_presence_.IsSet<47>(); }
+
+  int64_t* mutable_v48() {
+    if (!field_presence_.IsSet<47>()) {
+      field_presence_.Set<47>();
+      Construct(&v48_value_.value);
+    }
+    return &v48_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v48(int64_t _value) {
+    if (!field_presence_.IsSet<47>()) {
+      field_presence_.Set<47>();
+      Construct(&v48_value_.value, std::move(_value));
+    } else {
+      v48_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v48() {
+    if (!field_presence_.IsSet<47>()) {
+      return;
+    }
+    field_presence_.Clear<47>();
+    Destruct(&v48_value_.value);
+  }
+
+  const int64_t& v49() const {
+    ZX_ASSERT(field_presence_.IsSet<48>());
+    return v49_value_.value;
+  }
+  bool has_v49() const { return field_presence_.IsSet<48>(); }
+
+  int64_t* mutable_v49() {
+    if (!field_presence_.IsSet<48>()) {
+      field_presence_.Set<48>();
+      Construct(&v49_value_.value);
+    }
+    return &v49_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v49(int64_t _value) {
+    if (!field_presence_.IsSet<48>()) {
+      field_presence_.Set<48>();
+      Construct(&v49_value_.value, std::move(_value));
+    } else {
+      v49_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v49() {
+    if (!field_presence_.IsSet<48>()) {
+      return;
+    }
+    field_presence_.Clear<48>();
+    Destruct(&v49_value_.value);
+  }
+
+  const int64_t& v50() const {
+    ZX_ASSERT(field_presence_.IsSet<49>());
+    return v50_value_.value;
+  }
+  bool has_v50() const { return field_presence_.IsSet<49>(); }
+
+  int64_t* mutable_v50() {
+    if (!field_presence_.IsSet<49>()) {
+      field_presence_.Set<49>();
+      Construct(&v50_value_.value);
+    }
+    return &v50_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v50(int64_t _value) {
+    if (!field_presence_.IsSet<49>()) {
+      field_presence_.Set<49>();
+      Construct(&v50_value_.value, std::move(_value));
+    } else {
+      v50_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v50() {
+    if (!field_presence_.IsSet<49>()) {
+      return;
+    }
+    field_presence_.Clear<49>();
+    Destruct(&v50_value_.value);
+  }
+
+  const int64_t& v51() const {
+    ZX_ASSERT(field_presence_.IsSet<50>());
+    return v51_value_.value;
+  }
+  bool has_v51() const { return field_presence_.IsSet<50>(); }
+
+  int64_t* mutable_v51() {
+    if (!field_presence_.IsSet<50>()) {
+      field_presence_.Set<50>();
+      Construct(&v51_value_.value);
+    }
+    return &v51_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v51(int64_t _value) {
+    if (!field_presence_.IsSet<50>()) {
+      field_presence_.Set<50>();
+      Construct(&v51_value_.value, std::move(_value));
+    } else {
+      v51_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v51() {
+    if (!field_presence_.IsSet<50>()) {
+      return;
+    }
+    field_presence_.Clear<50>();
+    Destruct(&v51_value_.value);
+  }
+
+  const int64_t& v52() const {
+    ZX_ASSERT(field_presence_.IsSet<51>());
+    return v52_value_.value;
+  }
+  bool has_v52() const { return field_presence_.IsSet<51>(); }
+
+  int64_t* mutable_v52() {
+    if (!field_presence_.IsSet<51>()) {
+      field_presence_.Set<51>();
+      Construct(&v52_value_.value);
+    }
+    return &v52_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v52(int64_t _value) {
+    if (!field_presence_.IsSet<51>()) {
+      field_presence_.Set<51>();
+      Construct(&v52_value_.value, std::move(_value));
+    } else {
+      v52_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v52() {
+    if (!field_presence_.IsSet<51>()) {
+      return;
+    }
+    field_presence_.Clear<51>();
+    Destruct(&v52_value_.value);
+  }
+
+  const int64_t& v53() const {
+    ZX_ASSERT(field_presence_.IsSet<52>());
+    return v53_value_.value;
+  }
+  bool has_v53() const { return field_presence_.IsSet<52>(); }
+
+  int64_t* mutable_v53() {
+    if (!field_presence_.IsSet<52>()) {
+      field_presence_.Set<52>();
+      Construct(&v53_value_.value);
+    }
+    return &v53_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v53(int64_t _value) {
+    if (!field_presence_.IsSet<52>()) {
+      field_presence_.Set<52>();
+      Construct(&v53_value_.value, std::move(_value));
+    } else {
+      v53_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v53() {
+    if (!field_presence_.IsSet<52>()) {
+      return;
+    }
+    field_presence_.Clear<52>();
+    Destruct(&v53_value_.value);
+  }
+
+  const int64_t& v54() const {
+    ZX_ASSERT(field_presence_.IsSet<53>());
+    return v54_value_.value;
+  }
+  bool has_v54() const { return field_presence_.IsSet<53>(); }
+
+  int64_t* mutable_v54() {
+    if (!field_presence_.IsSet<53>()) {
+      field_presence_.Set<53>();
+      Construct(&v54_value_.value);
+    }
+    return &v54_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v54(int64_t _value) {
+    if (!field_presence_.IsSet<53>()) {
+      field_presence_.Set<53>();
+      Construct(&v54_value_.value, std::move(_value));
+    } else {
+      v54_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v54() {
+    if (!field_presence_.IsSet<53>()) {
+      return;
+    }
+    field_presence_.Clear<53>();
+    Destruct(&v54_value_.value);
+  }
+
+  const int64_t& v55() const {
+    ZX_ASSERT(field_presence_.IsSet<54>());
+    return v55_value_.value;
+  }
+  bool has_v55() const { return field_presence_.IsSet<54>(); }
+
+  int64_t* mutable_v55() {
+    if (!field_presence_.IsSet<54>()) {
+      field_presence_.Set<54>();
+      Construct(&v55_value_.value);
+    }
+    return &v55_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v55(int64_t _value) {
+    if (!field_presence_.IsSet<54>()) {
+      field_presence_.Set<54>();
+      Construct(&v55_value_.value, std::move(_value));
+    } else {
+      v55_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v55() {
+    if (!field_presence_.IsSet<54>()) {
+      return;
+    }
+    field_presence_.Clear<54>();
+    Destruct(&v55_value_.value);
+  }
+
+  const int64_t& v56() const {
+    ZX_ASSERT(field_presence_.IsSet<55>());
+    return v56_value_.value;
+  }
+  bool has_v56() const { return field_presence_.IsSet<55>(); }
+
+  int64_t* mutable_v56() {
+    if (!field_presence_.IsSet<55>()) {
+      field_presence_.Set<55>();
+      Construct(&v56_value_.value);
+    }
+    return &v56_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v56(int64_t _value) {
+    if (!field_presence_.IsSet<55>()) {
+      field_presence_.Set<55>();
+      Construct(&v56_value_.value, std::move(_value));
+    } else {
+      v56_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v56() {
+    if (!field_presence_.IsSet<55>()) {
+      return;
+    }
+    field_presence_.Clear<55>();
+    Destruct(&v56_value_.value);
+  }
+
+  const int64_t& v57() const {
+    ZX_ASSERT(field_presence_.IsSet<56>());
+    return v57_value_.value;
+  }
+  bool has_v57() const { return field_presence_.IsSet<56>(); }
+
+  int64_t* mutable_v57() {
+    if (!field_presence_.IsSet<56>()) {
+      field_presence_.Set<56>();
+      Construct(&v57_value_.value);
+    }
+    return &v57_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v57(int64_t _value) {
+    if (!field_presence_.IsSet<56>()) {
+      field_presence_.Set<56>();
+      Construct(&v57_value_.value, std::move(_value));
+    } else {
+      v57_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v57() {
+    if (!field_presence_.IsSet<56>()) {
+      return;
+    }
+    field_presence_.Clear<56>();
+    Destruct(&v57_value_.value);
+  }
+
+  const int64_t& v58() const {
+    ZX_ASSERT(field_presence_.IsSet<57>());
+    return v58_value_.value;
+  }
+  bool has_v58() const { return field_presence_.IsSet<57>(); }
+
+  int64_t* mutable_v58() {
+    if (!field_presence_.IsSet<57>()) {
+      field_presence_.Set<57>();
+      Construct(&v58_value_.value);
+    }
+    return &v58_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v58(int64_t _value) {
+    if (!field_presence_.IsSet<57>()) {
+      field_presence_.Set<57>();
+      Construct(&v58_value_.value, std::move(_value));
+    } else {
+      v58_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v58() {
+    if (!field_presence_.IsSet<57>()) {
+      return;
+    }
+    field_presence_.Clear<57>();
+    Destruct(&v58_value_.value);
+  }
+
+  const int64_t& v59() const {
+    ZX_ASSERT(field_presence_.IsSet<58>());
+    return v59_value_.value;
+  }
+  bool has_v59() const { return field_presence_.IsSet<58>(); }
+
+  int64_t* mutable_v59() {
+    if (!field_presence_.IsSet<58>()) {
+      field_presence_.Set<58>();
+      Construct(&v59_value_.value);
+    }
+    return &v59_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v59(int64_t _value) {
+    if (!field_presence_.IsSet<58>()) {
+      field_presence_.Set<58>();
+      Construct(&v59_value_.value, std::move(_value));
+    } else {
+      v59_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v59() {
+    if (!field_presence_.IsSet<58>()) {
+      return;
+    }
+    field_presence_.Clear<58>();
+    Destruct(&v59_value_.value);
+  }
+
+  const int64_t& v60() const {
+    ZX_ASSERT(field_presence_.IsSet<59>());
+    return v60_value_.value;
+  }
+  bool has_v60() const { return field_presence_.IsSet<59>(); }
+
+  int64_t* mutable_v60() {
+    if (!field_presence_.IsSet<59>()) {
+      field_presence_.Set<59>();
+      Construct(&v60_value_.value);
+    }
+    return &v60_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v60(int64_t _value) {
+    if (!field_presence_.IsSet<59>()) {
+      field_presence_.Set<59>();
+      Construct(&v60_value_.value, std::move(_value));
+    } else {
+      v60_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v60() {
+    if (!field_presence_.IsSet<59>()) {
+      return;
+    }
+    field_presence_.Clear<59>();
+    Destruct(&v60_value_.value);
+  }
+
+  const int64_t& v61() const {
+    ZX_ASSERT(field_presence_.IsSet<60>());
+    return v61_value_.value;
+  }
+  bool has_v61() const { return field_presence_.IsSet<60>(); }
+
+  int64_t* mutable_v61() {
+    if (!field_presence_.IsSet<60>()) {
+      field_presence_.Set<60>();
+      Construct(&v61_value_.value);
+    }
+    return &v61_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v61(int64_t _value) {
+    if (!field_presence_.IsSet<60>()) {
+      field_presence_.Set<60>();
+      Construct(&v61_value_.value, std::move(_value));
+    } else {
+      v61_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v61() {
+    if (!field_presence_.IsSet<60>()) {
+      return;
+    }
+    field_presence_.Clear<60>();
+    Destruct(&v61_value_.value);
+  }
+
+  const int64_t& v62() const {
+    ZX_ASSERT(field_presence_.IsSet<61>());
+    return v62_value_.value;
+  }
+  bool has_v62() const { return field_presence_.IsSet<61>(); }
+
+  int64_t* mutable_v62() {
+    if (!field_presence_.IsSet<61>()) {
+      field_presence_.Set<61>();
+      Construct(&v62_value_.value);
+    }
+    return &v62_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v62(int64_t _value) {
+    if (!field_presence_.IsSet<61>()) {
+      field_presence_.Set<61>();
+      Construct(&v62_value_.value, std::move(_value));
+    } else {
+      v62_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v62() {
+    if (!field_presence_.IsSet<61>()) {
+      return;
+    }
+    field_presence_.Clear<61>();
+    Destruct(&v62_value_.value);
+  }
+
+  const int64_t& v63() const {
+    ZX_ASSERT(field_presence_.IsSet<62>());
+    return v63_value_.value;
+  }
+  bool has_v63() const { return field_presence_.IsSet<62>(); }
+
+  int64_t* mutable_v63() {
+    if (!field_presence_.IsSet<62>()) {
+      field_presence_.Set<62>();
+      Construct(&v63_value_.value);
+    }
+    return &v63_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v63(int64_t _value) {
+    if (!field_presence_.IsSet<62>()) {
+      field_presence_.Set<62>();
+      Construct(&v63_value_.value, std::move(_value));
+    } else {
+      v63_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v63() {
+    if (!field_presence_.IsSet<62>()) {
+      return;
+    }
+    field_presence_.Clear<62>();
+    Destruct(&v63_value_.value);
+  }
+
+  const int64_t& v64() const {
+    ZX_ASSERT(field_presence_.IsSet<63>());
+    return v64_value_.value;
+  }
+  bool has_v64() const { return field_presence_.IsSet<63>(); }
+
+  int64_t* mutable_v64() {
+    if (!field_presence_.IsSet<63>()) {
+      field_presence_.Set<63>();
+      Construct(&v64_value_.value);
+    }
+    return &v64_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v64(int64_t _value) {
+    if (!field_presence_.IsSet<63>()) {
+      field_presence_.Set<63>();
+      Construct(&v64_value_.value, std::move(_value));
+    } else {
+      v64_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v64() {
+    if (!field_presence_.IsSet<63>()) {
+      return;
+    }
+    field_presence_.Clear<63>();
+    Destruct(&v64_value_.value);
+  }
+
+  const int64_t& v65() const {
+    ZX_ASSERT(field_presence_.IsSet<64>());
+    return v65_value_.value;
+  }
+  bool has_v65() const { return field_presence_.IsSet<64>(); }
+
+  int64_t* mutable_v65() {
+    if (!field_presence_.IsSet<64>()) {
+      field_presence_.Set<64>();
+      Construct(&v65_value_.value);
+    }
+    return &v65_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v65(int64_t _value) {
+    if (!field_presence_.IsSet<64>()) {
+      field_presence_.Set<64>();
+      Construct(&v65_value_.value, std::move(_value));
+    } else {
+      v65_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v65() {
+    if (!field_presence_.IsSet<64>()) {
+      return;
+    }
+    field_presence_.Clear<64>();
+    Destruct(&v65_value_.value);
+  }
+
+  const int64_t& v66() const {
+    ZX_ASSERT(field_presence_.IsSet<65>());
+    return v66_value_.value;
+  }
+  bool has_v66() const { return field_presence_.IsSet<65>(); }
+
+  int64_t* mutable_v66() {
+    if (!field_presence_.IsSet<65>()) {
+      field_presence_.Set<65>();
+      Construct(&v66_value_.value);
+    }
+    return &v66_value_.value;
+  }
+  GreaterThan64OrdinalTable& set_v66(int64_t _value) {
+    if (!field_presence_.IsSet<65>()) {
+      field_presence_.Set<65>();
+      Construct(&v66_value_.value, std::move(_value));
+    } else {
+      v66_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_v66() {
+    if (!field_presence_.IsSet<65>()) {
+      return;
+    }
+    field_presence_.Clear<65>();
+    Destruct(&v66_value_.value);
+  }
+
+  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
+    return _unknown_data;
+  }
+
+  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
+    auto ord = static_cast<uint64_t>(ordinal);
+    ZX_ASSERT(!IsOrdinalKnown(ord));
+    _unknown_data.insert({ord, std::move(data)});
+  }
+
+  GreaterThan64OrdinalTable();
+  GreaterThan64OrdinalTable(GreaterThan64OrdinalTable&& other);
+  ~GreaterThan64OrdinalTable();
+  GreaterThan64OrdinalTable& operator=(GreaterThan64OrdinalTable&& other);
+
+  static inline ::std::unique_ptr<GreaterThan64OrdinalTable> New() {
+    return ::std::make_unique<GreaterThan64OrdinalTable>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     GreaterThan64OrdinalTable* _value, size_t _offset);
+  zx_status_t Clone(GreaterThan64OrdinalTable* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    size_t max_ordinal =
+        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+    for (const auto& data : _unknown_data) {
+      if (data.first > max_ordinal) {
+        max_ordinal = data.first;
+      }
+    }
+    return max_ordinal;
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      case 8:
+      case 9:
+      case 10:
+      case 11:
+      case 12:
+      case 13:
+      case 14:
+      case 15:
+      case 16:
+      case 17:
+      case 18:
+      case 19:
+      case 20:
+      case 21:
+      case 22:
+      case 23:
+      case 24:
+      case 25:
+      case 26:
+      case 27:
+      case 28:
+      case 29:
+      case 30:
+      case 31:
+      case 32:
+      case 33:
+      case 34:
+      case 35:
+      case 36:
+      case 37:
+      case 38:
+      case 39:
+      case 40:
+      case 41:
+      case 42:
+      case 43:
+      case 44:
+      case 45:
+      case 46:
+      case 47:
+      case 48:
+      case 49:
+      case 50:
+      case 51:
+      case 52:
+      case 53:
+      case 54:
+      case 55:
+      case 56:
+      case 57:
+      case 58:
+      case 59:
+      case 60:
+      case 61:
+      case 62:
+      case 63:
+      case 64:
+      case 65:
+      case 66:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  ::fidl::internal::BitSet<66> field_presence_;
+  union ValueUnion_v1 {
+    ValueUnion_v1() {}
+    ~ValueUnion_v1() {}
+
+    int64_t value;
+  };
+  ValueUnion_v1 v1_value_;
+  union ValueUnion_v2 {
+    ValueUnion_v2() {}
+    ~ValueUnion_v2() {}
+
+    int64_t value;
+  };
+  ValueUnion_v2 v2_value_;
+  union ValueUnion_v3 {
+    ValueUnion_v3() {}
+    ~ValueUnion_v3() {}
+
+    int64_t value;
+  };
+  ValueUnion_v3 v3_value_;
+  union ValueUnion_v4 {
+    ValueUnion_v4() {}
+    ~ValueUnion_v4() {}
+
+    int64_t value;
+  };
+  ValueUnion_v4 v4_value_;
+  union ValueUnion_v5 {
+    ValueUnion_v5() {}
+    ~ValueUnion_v5() {}
+
+    int64_t value;
+  };
+  ValueUnion_v5 v5_value_;
+  union ValueUnion_v6 {
+    ValueUnion_v6() {}
+    ~ValueUnion_v6() {}
+
+    int64_t value;
+  };
+  ValueUnion_v6 v6_value_;
+  union ValueUnion_v7 {
+    ValueUnion_v7() {}
+    ~ValueUnion_v7() {}
+
+    int64_t value;
+  };
+  ValueUnion_v7 v7_value_;
+  union ValueUnion_v8 {
+    ValueUnion_v8() {}
+    ~ValueUnion_v8() {}
+
+    int64_t value;
+  };
+  ValueUnion_v8 v8_value_;
+  union ValueUnion_v9 {
+    ValueUnion_v9() {}
+    ~ValueUnion_v9() {}
+
+    int64_t value;
+  };
+  ValueUnion_v9 v9_value_;
+  union ValueUnion_v10 {
+    ValueUnion_v10() {}
+    ~ValueUnion_v10() {}
+
+    int64_t value;
+  };
+  ValueUnion_v10 v10_value_;
+  union ValueUnion_v11 {
+    ValueUnion_v11() {}
+    ~ValueUnion_v11() {}
+
+    int64_t value;
+  };
+  ValueUnion_v11 v11_value_;
+  union ValueUnion_v12 {
+    ValueUnion_v12() {}
+    ~ValueUnion_v12() {}
+
+    int64_t value;
+  };
+  ValueUnion_v12 v12_value_;
+  union ValueUnion_v13 {
+    ValueUnion_v13() {}
+    ~ValueUnion_v13() {}
+
+    int64_t value;
+  };
+  ValueUnion_v13 v13_value_;
+  union ValueUnion_v14 {
+    ValueUnion_v14() {}
+    ~ValueUnion_v14() {}
+
+    int64_t value;
+  };
+  ValueUnion_v14 v14_value_;
+  union ValueUnion_v15 {
+    ValueUnion_v15() {}
+    ~ValueUnion_v15() {}
+
+    int64_t value;
+  };
+  ValueUnion_v15 v15_value_;
+  union ValueUnion_v16 {
+    ValueUnion_v16() {}
+    ~ValueUnion_v16() {}
+
+    int64_t value;
+  };
+  ValueUnion_v16 v16_value_;
+  union ValueUnion_v17 {
+    ValueUnion_v17() {}
+    ~ValueUnion_v17() {}
+
+    int64_t value;
+  };
+  ValueUnion_v17 v17_value_;
+  union ValueUnion_v18 {
+    ValueUnion_v18() {}
+    ~ValueUnion_v18() {}
+
+    int64_t value;
+  };
+  ValueUnion_v18 v18_value_;
+  union ValueUnion_v19 {
+    ValueUnion_v19() {}
+    ~ValueUnion_v19() {}
+
+    int64_t value;
+  };
+  ValueUnion_v19 v19_value_;
+  union ValueUnion_v20 {
+    ValueUnion_v20() {}
+    ~ValueUnion_v20() {}
+
+    int64_t value;
+  };
+  ValueUnion_v20 v20_value_;
+  union ValueUnion_v21 {
+    ValueUnion_v21() {}
+    ~ValueUnion_v21() {}
+
+    int64_t value;
+  };
+  ValueUnion_v21 v21_value_;
+  union ValueUnion_v22 {
+    ValueUnion_v22() {}
+    ~ValueUnion_v22() {}
+
+    int64_t value;
+  };
+  ValueUnion_v22 v22_value_;
+  union ValueUnion_v23 {
+    ValueUnion_v23() {}
+    ~ValueUnion_v23() {}
+
+    int64_t value;
+  };
+  ValueUnion_v23 v23_value_;
+  union ValueUnion_v24 {
+    ValueUnion_v24() {}
+    ~ValueUnion_v24() {}
+
+    int64_t value;
+  };
+  ValueUnion_v24 v24_value_;
+  union ValueUnion_v25 {
+    ValueUnion_v25() {}
+    ~ValueUnion_v25() {}
+
+    int64_t value;
+  };
+  ValueUnion_v25 v25_value_;
+  union ValueUnion_v26 {
+    ValueUnion_v26() {}
+    ~ValueUnion_v26() {}
+
+    int64_t value;
+  };
+  ValueUnion_v26 v26_value_;
+  union ValueUnion_v27 {
+    ValueUnion_v27() {}
+    ~ValueUnion_v27() {}
+
+    int64_t value;
+  };
+  ValueUnion_v27 v27_value_;
+  union ValueUnion_v28 {
+    ValueUnion_v28() {}
+    ~ValueUnion_v28() {}
+
+    int64_t value;
+  };
+  ValueUnion_v28 v28_value_;
+  union ValueUnion_v29 {
+    ValueUnion_v29() {}
+    ~ValueUnion_v29() {}
+
+    int64_t value;
+  };
+  ValueUnion_v29 v29_value_;
+  union ValueUnion_v30 {
+    ValueUnion_v30() {}
+    ~ValueUnion_v30() {}
+
+    int64_t value;
+  };
+  ValueUnion_v30 v30_value_;
+  union ValueUnion_v31 {
+    ValueUnion_v31() {}
+    ~ValueUnion_v31() {}
+
+    int64_t value;
+  };
+  ValueUnion_v31 v31_value_;
+  union ValueUnion_v32 {
+    ValueUnion_v32() {}
+    ~ValueUnion_v32() {}
+
+    int64_t value;
+  };
+  ValueUnion_v32 v32_value_;
+  union ValueUnion_v33 {
+    ValueUnion_v33() {}
+    ~ValueUnion_v33() {}
+
+    int64_t value;
+  };
+  ValueUnion_v33 v33_value_;
+  union ValueUnion_v34 {
+    ValueUnion_v34() {}
+    ~ValueUnion_v34() {}
+
+    int64_t value;
+  };
+  ValueUnion_v34 v34_value_;
+  union ValueUnion_v35 {
+    ValueUnion_v35() {}
+    ~ValueUnion_v35() {}
+
+    int64_t value;
+  };
+  ValueUnion_v35 v35_value_;
+  union ValueUnion_v36 {
+    ValueUnion_v36() {}
+    ~ValueUnion_v36() {}
+
+    int64_t value;
+  };
+  ValueUnion_v36 v36_value_;
+  union ValueUnion_v37 {
+    ValueUnion_v37() {}
+    ~ValueUnion_v37() {}
+
+    int64_t value;
+  };
+  ValueUnion_v37 v37_value_;
+  union ValueUnion_v38 {
+    ValueUnion_v38() {}
+    ~ValueUnion_v38() {}
+
+    int64_t value;
+  };
+  ValueUnion_v38 v38_value_;
+  union ValueUnion_v39 {
+    ValueUnion_v39() {}
+    ~ValueUnion_v39() {}
+
+    int64_t value;
+  };
+  ValueUnion_v39 v39_value_;
+  union ValueUnion_v40 {
+    ValueUnion_v40() {}
+    ~ValueUnion_v40() {}
+
+    int64_t value;
+  };
+  ValueUnion_v40 v40_value_;
+  union ValueUnion_v41 {
+    ValueUnion_v41() {}
+    ~ValueUnion_v41() {}
+
+    int64_t value;
+  };
+  ValueUnion_v41 v41_value_;
+  union ValueUnion_v42 {
+    ValueUnion_v42() {}
+    ~ValueUnion_v42() {}
+
+    int64_t value;
+  };
+  ValueUnion_v42 v42_value_;
+  union ValueUnion_v43 {
+    ValueUnion_v43() {}
+    ~ValueUnion_v43() {}
+
+    int64_t value;
+  };
+  ValueUnion_v43 v43_value_;
+  union ValueUnion_v44 {
+    ValueUnion_v44() {}
+    ~ValueUnion_v44() {}
+
+    int64_t value;
+  };
+  ValueUnion_v44 v44_value_;
+  union ValueUnion_v45 {
+    ValueUnion_v45() {}
+    ~ValueUnion_v45() {}
+
+    int64_t value;
+  };
+  ValueUnion_v45 v45_value_;
+  union ValueUnion_v46 {
+    ValueUnion_v46() {}
+    ~ValueUnion_v46() {}
+
+    int64_t value;
+  };
+  ValueUnion_v46 v46_value_;
+  union ValueUnion_v47 {
+    ValueUnion_v47() {}
+    ~ValueUnion_v47() {}
+
+    int64_t value;
+  };
+  ValueUnion_v47 v47_value_;
+  union ValueUnion_v48 {
+    ValueUnion_v48() {}
+    ~ValueUnion_v48() {}
+
+    int64_t value;
+  };
+  ValueUnion_v48 v48_value_;
+  union ValueUnion_v49 {
+    ValueUnion_v49() {}
+    ~ValueUnion_v49() {}
+
+    int64_t value;
+  };
+  ValueUnion_v49 v49_value_;
+  union ValueUnion_v50 {
+    ValueUnion_v50() {}
+    ~ValueUnion_v50() {}
+
+    int64_t value;
+  };
+  ValueUnion_v50 v50_value_;
+  union ValueUnion_v51 {
+    ValueUnion_v51() {}
+    ~ValueUnion_v51() {}
+
+    int64_t value;
+  };
+  ValueUnion_v51 v51_value_;
+  union ValueUnion_v52 {
+    ValueUnion_v52() {}
+    ~ValueUnion_v52() {}
+
+    int64_t value;
+  };
+  ValueUnion_v52 v52_value_;
+  union ValueUnion_v53 {
+    ValueUnion_v53() {}
+    ~ValueUnion_v53() {}
+
+    int64_t value;
+  };
+  ValueUnion_v53 v53_value_;
+  union ValueUnion_v54 {
+    ValueUnion_v54() {}
+    ~ValueUnion_v54() {}
+
+    int64_t value;
+  };
+  ValueUnion_v54 v54_value_;
+  union ValueUnion_v55 {
+    ValueUnion_v55() {}
+    ~ValueUnion_v55() {}
+
+    int64_t value;
+  };
+  ValueUnion_v55 v55_value_;
+  union ValueUnion_v56 {
+    ValueUnion_v56() {}
+    ~ValueUnion_v56() {}
+
+    int64_t value;
+  };
+  ValueUnion_v56 v56_value_;
+  union ValueUnion_v57 {
+    ValueUnion_v57() {}
+    ~ValueUnion_v57() {}
+
+    int64_t value;
+  };
+  ValueUnion_v57 v57_value_;
+  union ValueUnion_v58 {
+    ValueUnion_v58() {}
+    ~ValueUnion_v58() {}
+
+    int64_t value;
+  };
+  ValueUnion_v58 v58_value_;
+  union ValueUnion_v59 {
+    ValueUnion_v59() {}
+    ~ValueUnion_v59() {}
+
+    int64_t value;
+  };
+  ValueUnion_v59 v59_value_;
+  union ValueUnion_v60 {
+    ValueUnion_v60() {}
+    ~ValueUnion_v60() {}
+
+    int64_t value;
+  };
+  ValueUnion_v60 v60_value_;
+  union ValueUnion_v61 {
+    ValueUnion_v61() {}
+    ~ValueUnion_v61() {}
+
+    int64_t value;
+  };
+  ValueUnion_v61 v61_value_;
+  union ValueUnion_v62 {
+    ValueUnion_v62() {}
+    ~ValueUnion_v62() {}
+
+    int64_t value;
+  };
+  ValueUnion_v62 v62_value_;
+  union ValueUnion_v63 {
+    ValueUnion_v63() {}
+    ~ValueUnion_v63() {}
+
+    int64_t value;
+  };
+  ValueUnion_v63 v63_value_;
+  union ValueUnion_v64 {
+    ValueUnion_v64() {}
+    ~ValueUnion_v64() {}
+
+    int64_t value;
+  };
+  ValueUnion_v64 v64_value_;
+  union ValueUnion_v65 {
+    ValueUnion_v65() {}
+    ~ValueUnion_v65() {}
+
+    int64_t value;
+  };
+  ValueUnion_v65 v65_value_;
+  union ValueUnion_v66 {
+    ValueUnion_v66() {}
+    ~ValueUnion_v66() {}
+
+    int64_t value;
+  };
+  ValueUnion_v66 v66_value_;
+  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
+};
+
+using GreaterThan64OrdinalTablePtr =
+    ::std::unique_ptr<GreaterThan64OrdinalTable>;
+
 class EmptyTable final {
  public:
   static const fidl_type_t* FidlType;
@@ -852,6 +3431,684 @@ struct Equality<::fidl::test::table::NewerSimpleTable> {
         return false;
       }
     } else if (_rhs.has_z()) {
+      return false;
+    }
+    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+  }
+};
+template <>
+struct CodingTraits<::fidl::test::table::GreaterThan64OrdinalTable>
+    : public EncodableCodingTraits<
+          ::fidl::test::table::GreaterThan64OrdinalTable, 16> {};
+
+inline zx_status_t Clone(
+    const ::fidl::test::table::GreaterThan64OrdinalTable& _value,
+    ::fidl::test::table::GreaterThan64OrdinalTable* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::fidl::test::table::GreaterThan64OrdinalTable> {
+  bool operator()(
+      const ::fidl::test::table::GreaterThan64OrdinalTable& _lhs,
+      const ::fidl::test::table::GreaterThan64OrdinalTable& _rhs) const {
+    if (_lhs.has_v1()) {
+      if (!_rhs.has_v1()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v1(), _rhs.v1())) {
+        return false;
+      }
+    } else if (_rhs.has_v1()) {
+      return false;
+    }
+    if (_lhs.has_v2()) {
+      if (!_rhs.has_v2()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v2(), _rhs.v2())) {
+        return false;
+      }
+    } else if (_rhs.has_v2()) {
+      return false;
+    }
+    if (_lhs.has_v3()) {
+      if (!_rhs.has_v3()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v3(), _rhs.v3())) {
+        return false;
+      }
+    } else if (_rhs.has_v3()) {
+      return false;
+    }
+    if (_lhs.has_v4()) {
+      if (!_rhs.has_v4()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v4(), _rhs.v4())) {
+        return false;
+      }
+    } else if (_rhs.has_v4()) {
+      return false;
+    }
+    if (_lhs.has_v5()) {
+      if (!_rhs.has_v5()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v5(), _rhs.v5())) {
+        return false;
+      }
+    } else if (_rhs.has_v5()) {
+      return false;
+    }
+    if (_lhs.has_v6()) {
+      if (!_rhs.has_v6()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v6(), _rhs.v6())) {
+        return false;
+      }
+    } else if (_rhs.has_v6()) {
+      return false;
+    }
+    if (_lhs.has_v7()) {
+      if (!_rhs.has_v7()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v7(), _rhs.v7())) {
+        return false;
+      }
+    } else if (_rhs.has_v7()) {
+      return false;
+    }
+    if (_lhs.has_v8()) {
+      if (!_rhs.has_v8()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v8(), _rhs.v8())) {
+        return false;
+      }
+    } else if (_rhs.has_v8()) {
+      return false;
+    }
+    if (_lhs.has_v9()) {
+      if (!_rhs.has_v9()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v9(), _rhs.v9())) {
+        return false;
+      }
+    } else if (_rhs.has_v9()) {
+      return false;
+    }
+    if (_lhs.has_v10()) {
+      if (!_rhs.has_v10()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v10(), _rhs.v10())) {
+        return false;
+      }
+    } else if (_rhs.has_v10()) {
+      return false;
+    }
+    if (_lhs.has_v11()) {
+      if (!_rhs.has_v11()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v11(), _rhs.v11())) {
+        return false;
+      }
+    } else if (_rhs.has_v11()) {
+      return false;
+    }
+    if (_lhs.has_v12()) {
+      if (!_rhs.has_v12()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v12(), _rhs.v12())) {
+        return false;
+      }
+    } else if (_rhs.has_v12()) {
+      return false;
+    }
+    if (_lhs.has_v13()) {
+      if (!_rhs.has_v13()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v13(), _rhs.v13())) {
+        return false;
+      }
+    } else if (_rhs.has_v13()) {
+      return false;
+    }
+    if (_lhs.has_v14()) {
+      if (!_rhs.has_v14()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v14(), _rhs.v14())) {
+        return false;
+      }
+    } else if (_rhs.has_v14()) {
+      return false;
+    }
+    if (_lhs.has_v15()) {
+      if (!_rhs.has_v15()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v15(), _rhs.v15())) {
+        return false;
+      }
+    } else if (_rhs.has_v15()) {
+      return false;
+    }
+    if (_lhs.has_v16()) {
+      if (!_rhs.has_v16()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v16(), _rhs.v16())) {
+        return false;
+      }
+    } else if (_rhs.has_v16()) {
+      return false;
+    }
+    if (_lhs.has_v17()) {
+      if (!_rhs.has_v17()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v17(), _rhs.v17())) {
+        return false;
+      }
+    } else if (_rhs.has_v17()) {
+      return false;
+    }
+    if (_lhs.has_v18()) {
+      if (!_rhs.has_v18()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v18(), _rhs.v18())) {
+        return false;
+      }
+    } else if (_rhs.has_v18()) {
+      return false;
+    }
+    if (_lhs.has_v19()) {
+      if (!_rhs.has_v19()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v19(), _rhs.v19())) {
+        return false;
+      }
+    } else if (_rhs.has_v19()) {
+      return false;
+    }
+    if (_lhs.has_v20()) {
+      if (!_rhs.has_v20()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v20(), _rhs.v20())) {
+        return false;
+      }
+    } else if (_rhs.has_v20()) {
+      return false;
+    }
+    if (_lhs.has_v21()) {
+      if (!_rhs.has_v21()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v21(), _rhs.v21())) {
+        return false;
+      }
+    } else if (_rhs.has_v21()) {
+      return false;
+    }
+    if (_lhs.has_v22()) {
+      if (!_rhs.has_v22()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v22(), _rhs.v22())) {
+        return false;
+      }
+    } else if (_rhs.has_v22()) {
+      return false;
+    }
+    if (_lhs.has_v23()) {
+      if (!_rhs.has_v23()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v23(), _rhs.v23())) {
+        return false;
+      }
+    } else if (_rhs.has_v23()) {
+      return false;
+    }
+    if (_lhs.has_v24()) {
+      if (!_rhs.has_v24()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v24(), _rhs.v24())) {
+        return false;
+      }
+    } else if (_rhs.has_v24()) {
+      return false;
+    }
+    if (_lhs.has_v25()) {
+      if (!_rhs.has_v25()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v25(), _rhs.v25())) {
+        return false;
+      }
+    } else if (_rhs.has_v25()) {
+      return false;
+    }
+    if (_lhs.has_v26()) {
+      if (!_rhs.has_v26()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v26(), _rhs.v26())) {
+        return false;
+      }
+    } else if (_rhs.has_v26()) {
+      return false;
+    }
+    if (_lhs.has_v27()) {
+      if (!_rhs.has_v27()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v27(), _rhs.v27())) {
+        return false;
+      }
+    } else if (_rhs.has_v27()) {
+      return false;
+    }
+    if (_lhs.has_v28()) {
+      if (!_rhs.has_v28()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v28(), _rhs.v28())) {
+        return false;
+      }
+    } else if (_rhs.has_v28()) {
+      return false;
+    }
+    if (_lhs.has_v29()) {
+      if (!_rhs.has_v29()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v29(), _rhs.v29())) {
+        return false;
+      }
+    } else if (_rhs.has_v29()) {
+      return false;
+    }
+    if (_lhs.has_v30()) {
+      if (!_rhs.has_v30()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v30(), _rhs.v30())) {
+        return false;
+      }
+    } else if (_rhs.has_v30()) {
+      return false;
+    }
+    if (_lhs.has_v31()) {
+      if (!_rhs.has_v31()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v31(), _rhs.v31())) {
+        return false;
+      }
+    } else if (_rhs.has_v31()) {
+      return false;
+    }
+    if (_lhs.has_v32()) {
+      if (!_rhs.has_v32()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v32(), _rhs.v32())) {
+        return false;
+      }
+    } else if (_rhs.has_v32()) {
+      return false;
+    }
+    if (_lhs.has_v33()) {
+      if (!_rhs.has_v33()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v33(), _rhs.v33())) {
+        return false;
+      }
+    } else if (_rhs.has_v33()) {
+      return false;
+    }
+    if (_lhs.has_v34()) {
+      if (!_rhs.has_v34()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v34(), _rhs.v34())) {
+        return false;
+      }
+    } else if (_rhs.has_v34()) {
+      return false;
+    }
+    if (_lhs.has_v35()) {
+      if (!_rhs.has_v35()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v35(), _rhs.v35())) {
+        return false;
+      }
+    } else if (_rhs.has_v35()) {
+      return false;
+    }
+    if (_lhs.has_v36()) {
+      if (!_rhs.has_v36()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v36(), _rhs.v36())) {
+        return false;
+      }
+    } else if (_rhs.has_v36()) {
+      return false;
+    }
+    if (_lhs.has_v37()) {
+      if (!_rhs.has_v37()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v37(), _rhs.v37())) {
+        return false;
+      }
+    } else if (_rhs.has_v37()) {
+      return false;
+    }
+    if (_lhs.has_v38()) {
+      if (!_rhs.has_v38()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v38(), _rhs.v38())) {
+        return false;
+      }
+    } else if (_rhs.has_v38()) {
+      return false;
+    }
+    if (_lhs.has_v39()) {
+      if (!_rhs.has_v39()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v39(), _rhs.v39())) {
+        return false;
+      }
+    } else if (_rhs.has_v39()) {
+      return false;
+    }
+    if (_lhs.has_v40()) {
+      if (!_rhs.has_v40()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v40(), _rhs.v40())) {
+        return false;
+      }
+    } else if (_rhs.has_v40()) {
+      return false;
+    }
+    if (_lhs.has_v41()) {
+      if (!_rhs.has_v41()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v41(), _rhs.v41())) {
+        return false;
+      }
+    } else if (_rhs.has_v41()) {
+      return false;
+    }
+    if (_lhs.has_v42()) {
+      if (!_rhs.has_v42()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v42(), _rhs.v42())) {
+        return false;
+      }
+    } else if (_rhs.has_v42()) {
+      return false;
+    }
+    if (_lhs.has_v43()) {
+      if (!_rhs.has_v43()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v43(), _rhs.v43())) {
+        return false;
+      }
+    } else if (_rhs.has_v43()) {
+      return false;
+    }
+    if (_lhs.has_v44()) {
+      if (!_rhs.has_v44()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v44(), _rhs.v44())) {
+        return false;
+      }
+    } else if (_rhs.has_v44()) {
+      return false;
+    }
+    if (_lhs.has_v45()) {
+      if (!_rhs.has_v45()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v45(), _rhs.v45())) {
+        return false;
+      }
+    } else if (_rhs.has_v45()) {
+      return false;
+    }
+    if (_lhs.has_v46()) {
+      if (!_rhs.has_v46()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v46(), _rhs.v46())) {
+        return false;
+      }
+    } else if (_rhs.has_v46()) {
+      return false;
+    }
+    if (_lhs.has_v47()) {
+      if (!_rhs.has_v47()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v47(), _rhs.v47())) {
+        return false;
+      }
+    } else if (_rhs.has_v47()) {
+      return false;
+    }
+    if (_lhs.has_v48()) {
+      if (!_rhs.has_v48()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v48(), _rhs.v48())) {
+        return false;
+      }
+    } else if (_rhs.has_v48()) {
+      return false;
+    }
+    if (_lhs.has_v49()) {
+      if (!_rhs.has_v49()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v49(), _rhs.v49())) {
+        return false;
+      }
+    } else if (_rhs.has_v49()) {
+      return false;
+    }
+    if (_lhs.has_v50()) {
+      if (!_rhs.has_v50()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v50(), _rhs.v50())) {
+        return false;
+      }
+    } else if (_rhs.has_v50()) {
+      return false;
+    }
+    if (_lhs.has_v51()) {
+      if (!_rhs.has_v51()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v51(), _rhs.v51())) {
+        return false;
+      }
+    } else if (_rhs.has_v51()) {
+      return false;
+    }
+    if (_lhs.has_v52()) {
+      if (!_rhs.has_v52()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v52(), _rhs.v52())) {
+        return false;
+      }
+    } else if (_rhs.has_v52()) {
+      return false;
+    }
+    if (_lhs.has_v53()) {
+      if (!_rhs.has_v53()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v53(), _rhs.v53())) {
+        return false;
+      }
+    } else if (_rhs.has_v53()) {
+      return false;
+    }
+    if (_lhs.has_v54()) {
+      if (!_rhs.has_v54()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v54(), _rhs.v54())) {
+        return false;
+      }
+    } else if (_rhs.has_v54()) {
+      return false;
+    }
+    if (_lhs.has_v55()) {
+      if (!_rhs.has_v55()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v55(), _rhs.v55())) {
+        return false;
+      }
+    } else if (_rhs.has_v55()) {
+      return false;
+    }
+    if (_lhs.has_v56()) {
+      if (!_rhs.has_v56()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v56(), _rhs.v56())) {
+        return false;
+      }
+    } else if (_rhs.has_v56()) {
+      return false;
+    }
+    if (_lhs.has_v57()) {
+      if (!_rhs.has_v57()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v57(), _rhs.v57())) {
+        return false;
+      }
+    } else if (_rhs.has_v57()) {
+      return false;
+    }
+    if (_lhs.has_v58()) {
+      if (!_rhs.has_v58()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v58(), _rhs.v58())) {
+        return false;
+      }
+    } else if (_rhs.has_v58()) {
+      return false;
+    }
+    if (_lhs.has_v59()) {
+      if (!_rhs.has_v59()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v59(), _rhs.v59())) {
+        return false;
+      }
+    } else if (_rhs.has_v59()) {
+      return false;
+    }
+    if (_lhs.has_v60()) {
+      if (!_rhs.has_v60()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v60(), _rhs.v60())) {
+        return false;
+      }
+    } else if (_rhs.has_v60()) {
+      return false;
+    }
+    if (_lhs.has_v61()) {
+      if (!_rhs.has_v61()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v61(), _rhs.v61())) {
+        return false;
+      }
+    } else if (_rhs.has_v61()) {
+      return false;
+    }
+    if (_lhs.has_v62()) {
+      if (!_rhs.has_v62()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v62(), _rhs.v62())) {
+        return false;
+      }
+    } else if (_rhs.has_v62()) {
+      return false;
+    }
+    if (_lhs.has_v63()) {
+      if (!_rhs.has_v63()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v63(), _rhs.v63())) {
+        return false;
+      }
+    } else if (_rhs.has_v63()) {
+      return false;
+    }
+    if (_lhs.has_v64()) {
+      if (!_rhs.has_v64()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v64(), _rhs.v64())) {
+        return false;
+      }
+    } else if (_rhs.has_v64()) {
+      return false;
+    }
+    if (_lhs.has_v65()) {
+      if (!_rhs.has_v65()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v65(), _rhs.v65())) {
+        return false;
+      }
+    } else if (_rhs.has_v65()) {
+      return false;
+    }
+    if (_lhs.has_v66()) {
+      if (!_rhs.has_v66()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.v66(), _rhs.v66())) {
+        return false;
+      }
+    } else if (_rhs.has_v66()) {
       return false;
     }
     return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());

@@ -744,6 +744,10 @@
                     "$ref": "#/definitions/typeshape",
                     "description": "Type shape of this declaration"
                 },
+                "maybe_request_type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
                 "maybe_response": {
                     "description": "Optional list of protocol method response parameters",
                     "items": {
@@ -756,6 +760,10 @@
                     "description": "Optional name of the response type"
                 },
                 "maybe_response_type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
+                "maybe_response_type_shape_v2": {
                     "$ref": "#/definitions/typeshape",
                     "description": "Type shape of this declaration"
                 },
@@ -789,6 +797,10 @@
                     "$ref": "#/definitions/fieldshape",
                     "description": "Field shape"
                 },
+                "field_shape_v2": {
+                    "$ref": "#/definitions/fieldshape",
+                    "description": "Field shape"
+                },
                 "location": {
                     "$ref": "#/definitions/location",
                     "description": "Source location of the declaration"
@@ -808,6 +820,7 @@
             },
             "required": [
                 "field_shape_v1",
+                "field_shape_v2",
                 "location",
                 "name",
                 "type"
@@ -1232,6 +1245,10 @@
                 "type_shape_v1": {
                     "$ref": "#/definitions/typeshape",
                     "description": "Type shape of this declaration"
+                },
+                "type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
                 }
             },
             "required": [
@@ -1239,7 +1256,8 @@
                 "members",
                 "name",
                 "resource",
-                "type_shape_v1"
+                "type_shape_v1",
+                "type_shape_v2"
             ],
             "type": "object"
         },
@@ -1251,6 +1269,10 @@
             },
             "properties": {
                 "field_shape_v1": {
+                    "$ref": "#/definitions/fieldshape",
+                    "description": "Field shape"
+                },
+                "field_shape_v2": {
                     "$ref": "#/definitions/fieldshape",
                     "description": "Field shape"
                 },
@@ -1277,6 +1299,7 @@
             },
             "required": [
                 "field_shape_v1",
+                "field_shape_v2",
                 "location",
                 "name",
                 "type"
@@ -1328,6 +1351,10 @@
                 "type_shape_v1": {
                     "$ref": "#/definitions/typeshape",
                     "description": "Type shape of this declaration"
+                },
+                "type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
                 }
             },
             "required": [
@@ -1336,7 +1363,8 @@
                 "name",
                 "resource",
                 "strict",
-                "type_shape_v1"
+                "type_shape_v1",
+                "type_shape_v2"
             ],
             "type": "object"
         },
@@ -1597,6 +1625,10 @@
                 "type_shape_v1": {
                     "$ref": "#/definitions/typeshape",
                     "description": "Type shape of this declaration"
+                },
+                "type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
                 }
             },
             "required": [
@@ -1605,7 +1637,8 @@
                 "name",
                 "resource",
                 "strict",
-                "type_shape_v1"
+                "type_shape_v1",
+                "type_shape_v2"
             ],
             "type": "object"
         },

@@ -299,3 +299,505 @@ const $fidl.TableType<ReverseOrdinalTable> kReverseOrdinalTable_Type =
   ctor: ReverseOrdinalTable._ctor,
   resource: false,
 );
+
+class GreaterThan64OrdinalTable extends $fidl.Table {
+  const GreaterThan64OrdinalTable({
+    this.$unknownData,
+    this.v1,
+    this.v2,
+    this.v3,
+    this.v4,
+    this.v5,
+    this.v6,
+    this.v7,
+    this.v8,
+    this.v9,
+    this.v10,
+    this.v11,
+    this.v12,
+    this.v13,
+    this.v14,
+    this.v15,
+    this.v16,
+    this.v17,
+    this.v18,
+    this.v19,
+    this.v20,
+    this.v21,
+    this.v22,
+    this.v23,
+    this.v24,
+    this.v25,
+    this.v26,
+    this.v27,
+    this.v28,
+    this.v29,
+    this.v30,
+    this.v31,
+    this.v32,
+    this.v33,
+    this.v34,
+    this.v35,
+    this.v36,
+    this.v37,
+    this.v38,
+    this.v39,
+    this.v40,
+    this.v41,
+    this.v42,
+    this.v43,
+    this.v44,
+    this.v45,
+    this.v46,
+    this.v47,
+    this.v48,
+    this.v49,
+    this.v50,
+    this.v51,
+    this.v52,
+    this.v53,
+    this.v54,
+    this.v55,
+    this.v56,
+    this.v57,
+    this.v58,
+    this.v59,
+    this.v60,
+    this.v61,
+    this.v62,
+    this.v63,
+    this.v64,
+    this.v65,
+    this.v66,
+  });
+
+  GreaterThan64OrdinalTable._(Map<int, dynamic> argv, this.$unknownData)
+      : v1 = argv[1],
+        v2 = argv[2],
+        v3 = argv[3],
+        v4 = argv[4],
+        v5 = argv[5],
+        v6 = argv[6],
+        v7 = argv[7],
+        v8 = argv[8],
+        v9 = argv[9],
+        v10 = argv[10],
+        v11 = argv[11],
+        v12 = argv[12],
+        v13 = argv[13],
+        v14 = argv[14],
+        v15 = argv[15],
+        v16 = argv[16],
+        v17 = argv[17],
+        v18 = argv[18],
+        v19 = argv[19],
+        v20 = argv[20],
+        v21 = argv[21],
+        v22 = argv[22],
+        v23 = argv[23],
+        v24 = argv[24],
+        v25 = argv[25],
+        v26 = argv[26],
+        v27 = argv[27],
+        v28 = argv[28],
+        v29 = argv[29],
+        v30 = argv[30],
+        v31 = argv[31],
+        v32 = argv[32],
+        v33 = argv[33],
+        v34 = argv[34],
+        v35 = argv[35],
+        v36 = argv[36],
+        v37 = argv[37],
+        v38 = argv[38],
+        v39 = argv[39],
+        v40 = argv[40],
+        v41 = argv[41],
+        v42 = argv[42],
+        v43 = argv[43],
+        v44 = argv[44],
+        v45 = argv[45],
+        v46 = argv[46],
+        v47 = argv[47],
+        v48 = argv[48],
+        v49 = argv[49],
+        v50 = argv[50],
+        v51 = argv[51],
+        v52 = argv[52],
+        v53 = argv[53],
+        v54 = argv[54],
+        v55 = argv[55],
+        v56 = argv[56],
+        v57 = argv[57],
+        v58 = argv[58],
+        v59 = argv[59],
+        v60 = argv[60],
+        v61 = argv[61],
+        v62 = argv[62],
+        v63 = argv[63],
+        v64 = argv[64],
+        v65 = argv[65],
+        v66 = argv[66];
+
+  @override
+  final Map<int, $fidl.UnknownRawData>? $unknownData;
+  final int? v1;
+  final int? v2;
+  final int? v3;
+  final int? v4;
+  final int? v5;
+  final int? v6;
+  final int? v7;
+  final int? v8;
+  final int? v9;
+  final int? v10;
+  final int? v11;
+  final int? v12;
+  final int? v13;
+  final int? v14;
+  final int? v15;
+  final int? v16;
+  final int? v17;
+  final int? v18;
+  final int? v19;
+  final int? v20;
+  final int? v21;
+  final int? v22;
+  final int? v23;
+  final int? v24;
+  final int? v25;
+  final int? v26;
+  final int? v27;
+  final int? v28;
+  final int? v29;
+  final int? v30;
+  final int? v31;
+  final int? v32;
+  final int? v33;
+  final int? v34;
+  final int? v35;
+  final int? v36;
+  final int? v37;
+  final int? v38;
+  final int? v39;
+  final int? v40;
+  final int? v41;
+  final int? v42;
+  final int? v43;
+  final int? v44;
+  final int? v45;
+  final int? v46;
+  final int? v47;
+  final int? v48;
+  final int? v49;
+  final int? v50;
+  final int? v51;
+  final int? v52;
+  final int? v53;
+  final int? v54;
+  final int? v55;
+  final int? v56;
+  final int? v57;
+  final int? v58;
+  final int? v59;
+  final int? v60;
+  final int? v61;
+  final int? v62;
+  final int? v63;
+  final int? v64;
+  final int? v65;
+  final int? v66;
+
+  @override
+  dynamic $field(int index) {
+    switch (index) {
+      case 0:
+        return v1;
+      case 1:
+        return v2;
+      case 2:
+        return v3;
+      case 3:
+        return v4;
+      case 4:
+        return v5;
+      case 5:
+        return v6;
+      case 6:
+        return v7;
+      case 7:
+        return v8;
+      case 8:
+        return v9;
+      case 9:
+        return v10;
+      case 10:
+        return v11;
+      case 11:
+        return v12;
+      case 12:
+        return v13;
+      case 13:
+        return v14;
+      case 14:
+        return v15;
+      case 15:
+        return v16;
+      case 16:
+        return v17;
+      case 17:
+        return v18;
+      case 18:
+        return v19;
+      case 19:
+        return v20;
+      case 20:
+        return v21;
+      case 21:
+        return v22;
+      case 22:
+        return v23;
+      case 23:
+        return v24;
+      case 24:
+        return v25;
+      case 25:
+        return v26;
+      case 26:
+        return v27;
+      case 27:
+        return v28;
+      case 28:
+        return v29;
+      case 29:
+        return v30;
+      case 30:
+        return v31;
+      case 31:
+        return v32;
+      case 32:
+        return v33;
+      case 33:
+        return v34;
+      case 34:
+        return v35;
+      case 35:
+        return v36;
+      case 36:
+        return v37;
+      case 37:
+        return v38;
+      case 38:
+        return v39;
+      case 39:
+        return v40;
+      case 40:
+        return v41;
+      case 41:
+        return v42;
+      case 42:
+        return v43;
+      case 43:
+        return v44;
+      case 44:
+        return v45;
+      case 45:
+        return v46;
+      case 46:
+        return v47;
+      case 47:
+        return v48;
+      case 48:
+        return v49;
+      case 49:
+        return v50;
+      case 50:
+        return v51;
+      case 51:
+        return v52;
+      case 52:
+        return v53;
+      case 53:
+        return v54;
+      case 54:
+        return v55;
+      case 55:
+        return v56;
+      case 56:
+        return v57;
+      case 57:
+        return v58;
+      case 58:
+        return v59;
+      case 59:
+        return v60;
+      case 60:
+        return v61;
+      case 61:
+        return v62;
+      case 62:
+        return v63;
+      case 63:
+        return v64;
+      case 64:
+        return v65;
+      case 65:
+        return v66;
+    }
+    return null;
+  }
+
+  @override
+  Map<int, dynamic> get $fields {
+    return {
+      1: v1,
+      2: v2,
+      3: v3,
+      4: v4,
+      5: v5,
+      6: v6,
+      7: v7,
+      8: v8,
+      9: v9,
+      10: v10,
+      11: v11,
+      12: v12,
+      13: v13,
+      14: v14,
+      15: v15,
+      16: v16,
+      17: v17,
+      18: v18,
+      19: v19,
+      20: v20,
+      21: v21,
+      22: v22,
+      23: v23,
+      24: v24,
+      25: v25,
+      26: v26,
+      27: v27,
+      28: v28,
+      29: v29,
+      30: v30,
+      31: v31,
+      32: v32,
+      33: v33,
+      34: v34,
+      35: v35,
+      36: v36,
+      37: v37,
+      38: v38,
+      39: v39,
+      40: v40,
+      41: v41,
+      42: v42,
+      43: v43,
+      44: v44,
+      45: v45,
+      46: v46,
+      47: v47,
+      48: v48,
+      49: v49,
+      50: v50,
+      51: v51,
+      52: v52,
+      53: v53,
+      54: v54,
+      55: v55,
+      56: v56,
+      57: v57,
+      58: v58,
+      59: v59,
+      60: v60,
+      61: v61,
+      62: v62,
+      63: v63,
+      64: v64,
+      65: v65,
+      66: v66,
+    };
+  }
+
+  static GreaterThan64OrdinalTable _ctor(Map<int, dynamic> argv,
+          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
+      GreaterThan64OrdinalTable._(argv, unknownData);
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.TableType<GreaterThan64OrdinalTable>
+    kGreaterThan64OrdinalTable_Type =
+    $fidl.TableType<GreaterThan64OrdinalTable>(
+  inlineSize: 16,
+  members: [
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+    $fidl.Int64Type(),
+  ],
+  ctor: GreaterThan64OrdinalTable._ctor,
+  resource: false,
+);

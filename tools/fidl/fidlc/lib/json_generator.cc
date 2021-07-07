@@ -839,6 +839,7 @@ void JSONGenerator::Generate(const flat::Library* library) {
 
 void JSONGenerator::GenerateTypeShapes(const flat::Object& object) {
   GenerateObjectMember("type_shape_v1", TypeShape(object, WireFormat::kV1Header));
+  GenerateObjectMember("type_shape_v2", TypeShape(object, WireFormat::kV2Header));
 }
 
 void JSONGenerator::GenerateTypeShapes(std::string prefix, const flat::Struct* value) {
@@ -848,8 +849,10 @@ void JSONGenerator::GenerateTypeShapes(std::string prefix, const flat::Struct* v
     prefix.push_back('_');
   }
 
-  auto typeshape = value ? TypeShape(value, WireFormat::kV1NoEe) : TypeShape::ForEmptyPayload();
-  GenerateObjectMember(prefix + "type_shape_v1", typeshape);
+  auto typeshapeV1 = value ? TypeShape(value, WireFormat::kV1NoEe) : TypeShape::ForEmptyPayload();
+  GenerateObjectMember(prefix + "type_shape_v1", typeshapeV1);
+  auto typeshapeV2 = value ? TypeShape(value, WireFormat::kV2) : TypeShape::ForEmptyPayload();
+  GenerateObjectMember(prefix + "type_shape_v2", typeshapeV2);
 }
 
 void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_member,
@@ -858,6 +861,8 @@ void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_membe
   // specially as before, but this will be removed once the transition is complete
   const auto& v1 = is_request_or_response ? WireFormat::kV1NoEe : WireFormat::kV1Header;
   GenerateObjectMember("field_shape_v1", FieldShape(struct_member, v1));
+  const auto& v2 = is_request_or_response ? WireFormat::kV2 : WireFormat::kV2Header;
+  GenerateObjectMember("field_shape_v2", FieldShape(struct_member, v2));
 }
 
 void JSONGenerator::GenerateDeclarationsEntry(int count, const flat::Name& name,

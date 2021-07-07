@@ -61,6 +61,15 @@
         "max_out_of_line": 0,
         "has_padding": false,
         "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
       }
     }
   ],

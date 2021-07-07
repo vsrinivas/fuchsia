@@ -758,6 +758,10 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
           }
         },
         {
@@ -776,6 +780,10 @@
             "length": 10
           },
           "field_shape_v1": {
+            "offset": 4,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 4,
             "padding": 0
           }
@@ -798,6 +806,10 @@
           "field_shape_v1": {
             "offset": 8,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 0
           }
         },
         {
@@ -816,6 +828,10 @@
             "length": 12
           },
           "field_shape_v1": {
+            "offset": 12,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 12,
             "padding": 0
           }
@@ -838,6 +854,10 @@
           "field_shape_v1": {
             "offset": 16,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 16,
+            "padding": 0
           }
         },
         {
@@ -856,6 +876,10 @@
             "length": 12
           },
           "field_shape_v1": {
+            "offset": 20,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 20,
             "padding": 0
           }
@@ -878,6 +902,10 @@
           "field_shape_v1": {
             "offset": 24,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 24,
+            "padding": 0
           }
         },
         {
@@ -896,6 +924,10 @@
             "length": 16
           },
           "field_shape_v1": {
+            "offset": 28,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 28,
             "padding": 0
           }
@@ -918,6 +950,10 @@
           "field_shape_v1": {
             "offset": 32,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 32,
+            "padding": 0
           }
         },
         {
@@ -936,6 +972,10 @@
             "length": 12
           },
           "field_shape_v1": {
+            "offset": 36,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 36,
             "padding": 0
           }
@@ -958,6 +998,10 @@
           "field_shape_v1": {
             "offset": 40,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 40,
+            "padding": 0
           }
         },
         {
@@ -976,6 +1020,10 @@
             "length": 12
           },
           "field_shape_v1": {
+            "offset": 44,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 44,
             "padding": 0
           }
@@ -998,6 +1046,10 @@
           "field_shape_v1": {
             "offset": 48,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 48,
+            "padding": 0
           }
         },
         {
@@ -1016,6 +1068,10 @@
             "length": 12
           },
           "field_shape_v1": {
+            "offset": 52,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 52,
             "padding": 0
           }
@@ -1038,6 +1094,10 @@
           "field_shape_v1": {
             "offset": 56,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 56,
+            "padding": 0
           }
         },
         {
@@ -1056,6 +1116,10 @@
             "length": 10
           },
           "field_shape_v1": {
+            "offset": 60,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 60,
             "padding": 0
           }
@@ -1078,6 +1142,10 @@
           "field_shape_v1": {
             "offset": 64,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 64,
+            "padding": 0
           }
         },
         {
@@ -1096,6 +1164,10 @@
             "length": 14
           },
           "field_shape_v1": {
+            "offset": 68,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 68,
             "padding": 0
           }
@@ -1118,6 +1190,10 @@
           "field_shape_v1": {
             "offset": 72,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 72,
+            "padding": 0
           }
         },
         {
@@ -1136,6 +1212,10 @@
             "length": 15
           },
           "field_shape_v1": {
+            "offset": 76,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 76,
             "padding": 0
           }
@@ -1158,6 +1238,10 @@
           "field_shape_v1": {
             "offset": 80,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 80,
+            "padding": 0
           }
         },
         {
@@ -1176,6 +1260,10 @@
             "length": 19
           },
           "field_shape_v1": {
+            "offset": 84,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 84,
             "padding": 0
           }
@@ -1198,6 +1286,10 @@
           "field_shape_v1": {
             "offset": 88,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 88,
+            "padding": 0
           }
         },
         {
@@ -1216,6 +1308,10 @@
             "length": 12
           },
           "field_shape_v1": {
+            "offset": 92,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 92,
             "padding": 0
           }
@@ -1238,6 +1334,10 @@
           "field_shape_v1": {
             "offset": 96,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 96,
+            "padding": 0
           }
         },
         {
@@ -1256,6 +1356,10 @@
             "length": 11
           },
           "field_shape_v1": {
+            "offset": 100,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 100,
             "padding": 0
           }
@@ -1278,6 +1382,10 @@
           "field_shape_v1": {
             "offset": 104,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 104,
+            "padding": 0
           }
         },
         {
@@ -1296,6 +1404,10 @@
             "length": 13
           },
           "field_shape_v1": {
+            "offset": 108,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 108,
             "padding": 0
           }
@@ -1323,6 +1435,10 @@
           "field_shape_v1": {
             "offset": 112,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 112,
+            "padding": 0
           }
         },
         {
@@ -1346,6 +1462,10 @@
             "length": 28
           },
           "field_shape_v1": {
+            "offset": 116,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 116,
             "padding": 0
           }
@@ -1373,6 +1493,10 @@
           "field_shape_v1": {
             "offset": 120,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 120,
+            "padding": 0
           }
         },
         {
@@ -1389,6 +1513,10 @@
             "length": 13
           },
           "field_shape_v1": {
+            "offset": 124,
+            "padding": 0
+          },
+          "field_shape_v2": {
             "offset": 124,
             "padding": 0
           }
@@ -1409,11 +1537,24 @@
           "field_shape_v1": {
             "offset": 128,
             "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 128,
+            "padding": 0
           }
         }
       ],
       "resource": true,
       "type_shape_v1": {
+        "inline_size": 132,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 33,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
         "inline_size": 132,
         "alignment": 4,
         "depth": 0,

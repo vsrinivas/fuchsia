@@ -147,7 +147,14 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kStruct:
             return DataSize(8);
           case flat::Decl::Kind::kUnion:
-            return DataSize(24);
+            switch (wire_format()) {
+              case WireFormat::kV1NoEe:
+              case WireFormat::kV1Header:
+                return DataSize(24);
+              case WireFormat::kV2:
+              case WireFormat::kV2Header:
+                return DataSize(16);
+            }
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
@@ -180,7 +187,8 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
 
   std::any Visit(const flat::Struct& object) override {
     DataSize size = 0;
-    if (object.is_request_or_response && wire_format() != WireFormat::kV1Header) {
+    if (object.is_request_or_response && wire_format() != WireFormat::kV1Header &&
+        wire_format() != WireFormat::kV2Header) {
       size += kSizeOfTransactionHeader;
     }
     if (object.members.empty()) {
@@ -210,7 +218,16 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
     return UnalignedSize(GetType(object.type_ctor));
   }
 
-  std::any Visit(const flat::Union& object) override { return DataSize(24); }
+  std::any Visit(const flat::Union& object) override {
+    switch (wire_format()) {
+      case WireFormat::kV1NoEe:
+      case WireFormat::kV1Header:
+        return DataSize(24);
+      case WireFormat::kV2:
+      case WireFormat::kV2Header:
+        return DataSize(16);
+    }
+  }
 
   std::any Visit(const flat::Union::Member& object) override {
     return object.maybe_used ? UnalignedSize(*object.maybe_used) : DataSize(0);
@@ -744,10 +761,27 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
       }
     }
 
+    const DataSize num_bitmasks = DataSize(max_unreserved_index + 64) / 64;
+    constexpr DataSize kBitmaskSize = 8;
+    DataSize all_bitmasks_size = 0;
+    if (wire_format() == WireFormat::kV2 || wire_format() == WireFormat::kV2Header) {
+      all_bitmasks_size = kBitmaskSize * num_bitmasks;
+    }
+
     const size_t envelope_array_size = max_unreserved_index == -1 ? 0 : max_unreserved_index + 1;
 
-    constexpr DataSize kEnvelopeSize = 16;
-    return DataSize(envelope_array_size) * kEnvelopeSize + max_out_of_line;
+    DataSize envelope_size = 0;
+    switch (wire_format()) {
+      case WireFormat::kV1NoEe:
+      case WireFormat::kV1Header:
+        envelope_size = 16;
+        break;
+      case WireFormat::kV2:
+      case WireFormat::kV2Header:
+        envelope_size = 8;
+        break;
+    }
+    return DataSize(envelope_array_size) * envelope_size + all_bitmasks_size + max_out_of_line;
   }
 
   std::any Visit(const flat::Table::Member& object) override {
@@ -1126,7 +1160,8 @@ FieldShape::FieldShape(const flat::StructMember& member, const WireFormat wire_f
   assert(parent.members.size());
   const std::vector<flat::StructMember>& members = parent.members;
 
-  if (parent.is_request_or_response && wire_format != WireFormat::kV1Header) {
+  if (parent.is_request_or_response && wire_format != WireFormat::kV1Header &&
+      wire_format != WireFormat::kV2Header) {
     offset += kSizeOfTransactionHeader;
   }
 

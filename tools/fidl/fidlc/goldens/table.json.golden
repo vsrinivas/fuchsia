@@ -29,6 +29,15 @@
         "max_out_of_line": 0,
         "has_padding": false,
         "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": true
       }
     },
     {
@@ -111,6 +120,15 @@
         "max_out_of_line": 96,
         "has_padding": false,
         "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 64,
+        "has_padding": false,
+        "has_flexible_envelope": true
       }
     },
     {
@@ -151,6 +169,15 @@
       "strict": false,
       "resource": false,
       "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
         "inline_size": 16,
         "alignment": 8,
         "depth": 2,
@@ -265,6 +292,15 @@
         "max_out_of_line": 120,
         "has_padding": false,
         "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 80,
+        "has_padding": false,
+        "has_flexible_envelope": true
       }
     },
     {
@@ -332,6 +368,1036 @@
         "max_out_of_line": 72,
         "has_padding": false,
         "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 56,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      }
+    },
+    {
+      "name": "fidl.test.table/GreaterThan64OrdinalTable",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+        "line": 38,
+        "column": 7,
+        "length": 25
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v1",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 39,
+            "column": 14,
+            "length": 2
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v2",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 40,
+            "column": 14,
+            "length": 2
+          }
+        },
+        {
+          "ordinal": 3,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v3",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 41,
+            "column": 14,
+            "length": 2
+          }
+        },
+        {
+          "ordinal": 4,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v4",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 42,
+            "column": 14,
+            "length": 2
+          }
+        },
+        {
+          "ordinal": 5,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v5",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 43,
+            "column": 14,
+            "length": 2
+          }
+        },
+        {
+          "ordinal": 6,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v6",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 44,
+            "column": 14,
+            "length": 2
+          }
+        },
+        {
+          "ordinal": 7,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v7",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 45,
+            "column": 14,
+            "length": 2
+          }
+        },
+        {
+          "ordinal": 8,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v8",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 46,
+            "column": 14,
+            "length": 2
+          }
+        },
+        {
+          "ordinal": 9,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v9",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 47,
+            "column": 14,
+            "length": 2
+          }
+        },
+        {
+          "ordinal": 10,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v10",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 48,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 11,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v11",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 49,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 12,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v12",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 50,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 13,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v13",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 51,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 14,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v14",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 52,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 15,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v15",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 53,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 16,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v16",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 54,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 17,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v17",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 55,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 18,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v18",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 56,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 19,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v19",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 57,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 20,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v20",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 58,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 21,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v21",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 59,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 22,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v22",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 60,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 23,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v23",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 61,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 24,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v24",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 62,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 25,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v25",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 63,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 26,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v26",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 64,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 27,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v27",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 65,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 28,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v28",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 66,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 29,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v29",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 67,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 30,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v30",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 68,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 31,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v31",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 69,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 32,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v32",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 70,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 33,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v33",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 71,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 34,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v34",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 72,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 35,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v35",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 73,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 36,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v36",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 74,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 37,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v37",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 75,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 38,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v38",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 76,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 39,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v39",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 77,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 40,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v40",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 78,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 41,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v41",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 79,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 42,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v42",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 80,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 43,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v43",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 81,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 44,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v44",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 82,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 45,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v45",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 83,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 46,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v46",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 84,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 47,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v47",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 85,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 48,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v48",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 86,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 49,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v49",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 87,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 50,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v50",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 88,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 51,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v51",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 89,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 52,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v52",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 90,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 53,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v53",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 91,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 54,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v54",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 92,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 55,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v55",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 93,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 56,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v56",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 94,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 57,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v57",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 95,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 58,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v58",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 96,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 59,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v59",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 97,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 60,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v60",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 98,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 61,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v61",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 99,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 62,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v62",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 100,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 63,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v63",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 101,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 64,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v64",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 102,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 65,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v65",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 103,
+            "column": 15,
+            "length": 3
+          }
+        },
+        {
+          "ordinal": 66,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "v66",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
+            "line": 104,
+            "column": 15,
+            "length": 3
+          }
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 1584,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 1072,
+        "has_padding": false,
+        "has_flexible_envelope": true
       }
     }
   ],
@@ -342,6 +1408,7 @@
     "fidl.test.table/ReverseOrdinalTable",
     "fidl.test.table/OlderSimpleTable",
     "fidl.test.table/NewerSimpleTable",
+    "fidl.test.table/GreaterThan64OrdinalTable",
     "fidl.test.table/EmptyTable"
   ],
   "declarations": {
@@ -349,6 +1416,7 @@
     "fidl.test.table/SimpleTable": "table",
     "fidl.test.table/OlderSimpleTable": "table",
     "fidl.test.table/NewerSimpleTable": "table",
-    "fidl.test.table/ReverseOrdinalTable": "table"
+    "fidl.test.table/ReverseOrdinalTable": "table",
+    "fidl.test.table/GreaterThan64OrdinalTable": "table"
   }
 }
