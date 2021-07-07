@@ -11,6 +11,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'focus_state.dart';
 import 'fuchsia_views_service.dart';
 
 /// Defines a callback to receive view connected and disconnected event.
@@ -47,6 +48,10 @@ class FuchsiaViewController implements PlatformViewController {
   /// Returns the [FuchsiaViewsService] used to communicated with the embedder.
   @visibleForTesting
   FuchsiaViewsService get fuchsiaViewsService => FuchsiaViewsService.instance;
+
+  /// Returns the [FocusState] used to communicated with the embedder.
+  @visibleForTesting
+  FocusState get focusState => FocusState.instance;
 
   // The [Completer] that is completed when the platform view is connected.
   var _whenConnected = Completer();
@@ -140,7 +145,7 @@ class FuchsiaViewController implements PlatformViewController {
   /// Requests that focus be transferred to the remote Scene represented by
   /// this connection.
   Future<void> requestFocus(int viewRef) async {
-    return fuchsiaViewsService.requestFocus(viewRef);
+    return focusState.requestFocus(viewRef);
   }
 
   /// Dispose the underlying platform view controller.

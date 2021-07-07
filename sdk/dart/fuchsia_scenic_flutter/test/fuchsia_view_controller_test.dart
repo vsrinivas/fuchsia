@@ -66,13 +66,13 @@ void main() {
 
   test('FuchsiaViewController requestFocus', () async {
     final controller = TestFuchsiaViewController(viewId: 42);
-    when(controller.fuchsiaViewsService.requestFocus(42))
+    when(controller.focusState.requestFocus(42))
         .thenAnswer((_) => Future.value(0));
     await controller.requestFocus(42);
-    verify(controller.fuchsiaViewsService.requestFocus(42));
+    verify(controller.focusState.requestFocus(42));
 
     // test requestFocus fails to set focus.
-    when(controller.fuchsiaViewsService.requestFocus(42)).thenThrow(OSError());
+    when(controller.focusState.requestFocus(42)).thenThrow(OSError());
     expect(controller.requestFocus(42), throwsA(isException));
   });
 
@@ -91,6 +91,7 @@ void main() {
 
 class TestFuchsiaViewController extends FuchsiaViewController {
   final _fuchsiaViewsService = MockFuchsiaViewsService();
+  final _focusState = MockFocusState();
 
   TestFuchsiaViewController({
     required int viewId,
@@ -108,6 +109,11 @@ class TestFuchsiaViewController extends FuchsiaViewController {
 
   @override
   FuchsiaViewsService get fuchsiaViewsService => _fuchsiaViewsService;
+
+  @override
+  FocusState get focusState => _focusState;
 }
 
 class MockFuchsiaViewsService extends Mock implements FuchsiaViewsService {}
+
+class MockFocusState extends Mock implements FocusState {}

@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 
@@ -101,5 +102,17 @@ void main() {
     testStream(6);
 
     return completer.future;
+  });
+
+  test('FocusState: requestFocus', () async {
+    late final MethodCall invokedMethod;
+    FuchsiaViewsService.instance.platformViewChannel
+        .setMockMethodCallHandler((call) {
+      invokedMethod = call;
+      return Future.value(0);
+    });
+    await FocusState.instance.requestFocus(42);
+    expect(invokedMethod.method, 'View.requestFocus');
+    expect(invokedMethod.arguments, <String, dynamic>{'viewRef': 42});
   });
 }
