@@ -965,7 +965,7 @@ shard:
 // my_component.cml
 {
     // Expose the diagnostics directory capability for Inspect
-    include: [ "//sdk/lib/diagnostics/inspect/client.shard.cml" ],
+    include: [ "inspect/client.shard.cml" ],
     ...
 }
 ```

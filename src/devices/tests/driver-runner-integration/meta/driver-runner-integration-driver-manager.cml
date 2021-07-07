@@ -1,7 +1,7 @@
 {
     include: [
+        "inspect/client.shard.cml",
         "syslog/client.shard.cml",
-        "//sdk/lib/diagnostics/inspect/client.shard.cml",
     ],
     program: {
         runner: "elf",

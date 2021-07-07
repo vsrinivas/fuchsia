@@ -231,7 +231,7 @@ There's a useful manifest include that simplifies this and is required by Inspec
 ```
 {
     include: [
-        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+        "inspect/client.shard.cml",
     ]
 }
 ```

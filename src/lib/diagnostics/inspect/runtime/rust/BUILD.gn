@@ -16,7 +16,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//sdk/lib/diagnostics/inspect:client_includes",
+    "//sdk/lib/inspect:client_includes",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",

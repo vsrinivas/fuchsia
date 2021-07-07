@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/connectivity/network/testing/netemul-v2/service/meta/client.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+
         // TODO(https://fxbug.dev/77954): when the unnecessary transitive
         // dependency on the inspect runtime is gone, remove the inspect client
         // shard.
-        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+        "inspect/client.shard.cml",
         "syslog/client.shard.cml",
-        "//src/connectivity/network/testing/netemul-v2/service/meta/client.shard.cml",
-        "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
         binary: "bin/netstack_inspect_integration_test",

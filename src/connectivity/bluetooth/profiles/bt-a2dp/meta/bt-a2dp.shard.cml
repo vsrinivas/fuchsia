@@ -20,7 +20,7 @@
     //
     // This allows for hermetic packaging as manifests can use a relative URL for the child.
     include: [
-        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+        "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {

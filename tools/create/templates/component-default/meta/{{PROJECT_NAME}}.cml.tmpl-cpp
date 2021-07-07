@@ -7,7 +7,7 @@
 // see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
 {
     include: [
-        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+        "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
 
@@ -15,6 +15,7 @@
     program: {
         // Use the built-in ELF runner to run native binaries.
         runner: "elf",
+
         // The binary to run for this component.
         binary: "bin/{{PROJECT_NAME}}",
     },

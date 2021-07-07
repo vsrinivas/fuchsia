@@ -45,7 +45,7 @@ zx_library("inspect") {
     "//zircon/public/lib/zx",
   ]
 
-  data_deps = [ "//sdk/lib/diagnostics/inspect:client_includes" ]
+  data_deps = [ "//sdk/lib/inspect:client_includes" ]
 }
 
 group("tests") {
