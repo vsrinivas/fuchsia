@@ -25,6 +25,7 @@ plugin!(
         controllers! {
             "/component" => ComponentGraphController::default(),
             "/components" => ComponentsGraphController::default(),
+            "/components/urls" => ComponentsUrlListController::default(),
             "/component/uses" => ComponentUsesGraphController::default(),
             "/component/used" => ComponentUsedGraphController::default(),
             "/component/manifest" => ComponentManifestGraphController::default(),

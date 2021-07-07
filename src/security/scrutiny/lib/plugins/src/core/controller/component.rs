@@ -130,6 +130,30 @@ impl DataController for ComponentManifestGraphController {
     }
 }
 
+#[derive(Default)]
+pub struct ComponentsUrlListController {}
+
+impl DataController for ComponentsUrlListController {
+    fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
+        let mut components = model.get::<Components>()?.entries.clone();
+        components.sort_by(|a, b| a.url.partial_cmp(&b.url).unwrap());
+        let component_urls: Vec<String> = components.iter().map(|e| e.url.clone()).collect();
+        Ok(serde_json::to_value(component_urls)?)
+    }
+
+    fn description(&self) -> String {
+        "Returns every component url in the data model.".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("components.urls - Dumps every component url in the Data Model.")
+            .summary("components.urls")
+            .description("Dumps every component url in the Data Model.")
+            .build()
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -293,6 +317,26 @@ mod tests {
         .unwrap();
         let val = controller.query(model, json_body).unwrap();
         assert_eq!(val.to_string().contains("fake_manifest"), true);
+    }
+
+    #[test]
+    fn component_urls() {
+        let model = fake_data_model();
+
+        let comp1 = make_component(1, "fuchsia-pkg://fuchsia.com/bar#meta/bar.cm", 0, true);
+        let comp2 = make_component(2, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm", 0, false);
+        let mut components = Components::default();
+        components.push(comp1.clone());
+        components.push(comp2.clone());
+        model.set(components).unwrap();
+
+        let controller = ComponentsUrlListController::default();
+        let val = controller.query(model, empty_value()).unwrap();
+        let response: Vec<String> = serde_json::from_value(val).unwrap();
+
+        assert_eq!(2, response.len());
+        assert_eq!(comp1.url, response[0]);
+        assert_eq!(comp2.url, response[1]);
     }
 
     #[ignore]
