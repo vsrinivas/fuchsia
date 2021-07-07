@@ -16,13 +16,14 @@ func TestUnmarshalTest(t *testing.T) {
 			"environments": [],
 			"test": {
 			  "cpu": "x64",
-			  "label": "//garnet/bin/fuchsia:fuchsia_pkg(//build/toolchain/fuchsia:x64)",
+			  "label": "//garnet/bin/fuchsia:fuchsia_pkg_test_component1(//build/toolchain/fuchsia:x64)",
 			  "log_settings": {
 				"max_severity": "ERROR"
 			  },
 			  "name": "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component1.cmx",
 			  "os": "fuchsia",
 			  "package_url": "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component1.cmx",
+			  "package_label": "//garnet/bin/fuchsia:fuchsia_pkg(//build/toolchain/fuchsia:x64)",
 			  "path": "",
 			  "parallel": 2
 			}
@@ -57,8 +58,9 @@ func TestUnmarshalTest(t *testing.T) {
 			Test: Test{
 				Name:            "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component1.cmx",
 				PackageURL:      "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component1.cmx",
+				PackageLabel:    "//garnet/bin/fuchsia:fuchsia_pkg(//build/toolchain/fuchsia:x64)",
 				Path:            "",
-				Label:           "//garnet/bin/fuchsia:fuchsia_pkg(//build/toolchain/fuchsia:x64)",
+				Label:           "//garnet/bin/fuchsia:fuchsia_pkg_test_component1(//build/toolchain/fuchsia:x64)",
 				OS:              "fuchsia",
 				LogSettings:     LogSettings{MaxSeverity: "ERROR"},
 				RuntimeDepsFile: "",

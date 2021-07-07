@@ -24,6 +24,10 @@ type Test struct {
 	// tests targeting Fuchsia.
 	PackageURL string `json:"package_url,omitempty"`
 
+	// PackageLabel is the full GN label with toolchain of the fuchsia package
+	// for this test.
+	PackageLabel string `json:"package_label,omitempty"`
+
 	// Path is the path to the test on the target OS.
 	Path string `json:"path"`
 

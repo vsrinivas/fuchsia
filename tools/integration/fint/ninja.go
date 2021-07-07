@@ -324,7 +324,13 @@ func affectedTestsNoWork(
 			continue
 		}
 		// For Fuchsia tests we derive the stamp path from the GN label.
-		stamp, err := stampFileForTest(test.Label)
+		// We try using the `package_label` if available since the `label`
+		// may point to the test component instead of the test package.
+		label := test.PackageLabel
+		if label == "" {
+			label = test.Label
+		}
+		stamp, err := stampFileForTest(label)
 		if err != nil {
 			return result, err
 		}
