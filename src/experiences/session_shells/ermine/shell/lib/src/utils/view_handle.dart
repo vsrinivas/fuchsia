@@ -6,8 +6,7 @@ import 'dart:async';
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fuchsia_logger/logger.dart';
-import 'package:fuchsia_scenic_flutter/fuchsia_view.dart'
-    show FuchsiaViewsService;
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart' as fuchsia_view;
 
 /// A helper class that wraps [ViewRef] and provides convenient accessors.
 class ViewHandle {
@@ -34,7 +33,7 @@ class ViewHandle {
   /// Request focus to be transfered to the view with [handle].
   Future<void> focus() async {
     try {
-      await FuchsiaViewsService.instance.requestFocus(handle);
+      await fuchsia_view.FocusState.instance.requestFocus(handle);
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
       log.warning('Exception on requestFocus: $e ${StackTrace.current}');
