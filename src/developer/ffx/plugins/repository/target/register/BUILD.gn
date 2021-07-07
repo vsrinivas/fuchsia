@@ -12,6 +12,8 @@ ffx_plugin("ffx_repository_target_register") {
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//third_party/rust_crates:futures",
   ]
+  args_deps =
+      [ "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc" ]
 
   sources = [
     "src/args.rs",

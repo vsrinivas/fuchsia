@@ -149,12 +149,15 @@ impl Repo {
 
         // TODO(fxbug.dev/77015): parameterize the mirror_url value here once we are dynamically assigning ports.
         let config = repo
-            .get_config(&format!("localhost:{}/{}", LISTEN_PORT, repo.name()))
+            .get_config(
+                &format!("localhost:{}/{}", LISTEN_PORT, repo.name()),
+                target_info.storage_type.map(|storage_type| storage_type.into()),
+            )
             .await
             .map_err(|e| {
-            log::warn!("failed to get config: {}", e);
-            return bridge::RepositoryError::RepositoryManagerError;
-        })?;
+                log::warn!("failed to get config: {}", e);
+                return bridge::RepositoryError::RepositoryManagerError;
+            })?;
 
         match proxy.add(config.into()).await {
             Ok(Ok(())) => {}

@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command};
+use {argh::FromArgs, ffx_core::ffx_command, fidl_fuchsia_developer_bridge::RepositoryStorageType};
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "register", description = "")]
 pub struct RegisterCommand {
+    /// enable persisting this repository across reboots.
+    #[argh(option, from_str_fn(parse_storage_type))]
+    pub storage_type: Option<RepositoryStorageType>,
+
     /// repositories will be named `NAME`. Defaults to `devhost`.
     #[argh(positional, default = "\"devhost\".to_string()")]
     pub name: String,
@@ -16,4 +20,12 @@ pub struct RegisterCommand {
     /// to the repository identified by `name`.
     #[argh(option)]
     pub alias: Vec<String>,
+}
+
+fn parse_storage_type(arg: &str) -> Result<RepositoryStorageType, String> {
+    match arg {
+        "ephemeral" => Ok(RepositoryStorageType::Ephemeral),
+        "persistent" => Ok(RepositoryStorageType::Persistent),
+        _ => Err(format!("unknown storage type {}", arg)),
+    }
 }

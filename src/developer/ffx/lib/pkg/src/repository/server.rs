@@ -197,8 +197,10 @@ async fn handle_request(
     };
 
     let resource = match resource_path {
+        // FIXME(http://fxbug.dev/80013): This is no longer necessary.
         "repo.json" => {
-            let config = match repo.get_config(&local_addr.to_string()).await {
+            // Since this is scheduled to be removed, don't specify the storage_type.
+            let config = match repo.get_config(&local_addr.to_string(), None).await {
                 Ok(c) => c,
                 Err(e) => {
                     error!("failed to generate config: {:?}", e);
@@ -463,6 +465,7 @@ mod tests {
             repo_url: Some(format!("fuchsia-pkg://{}", devhost)),
             root_keys: Some(vec![repo_key()]),
             root_version: Some(1),
+            storage_type: None,
             mirrors: Some(vec![MirrorConfig {
                 mirror_url: Some(server_url.to_string()),
                 subscribe: Some(true),

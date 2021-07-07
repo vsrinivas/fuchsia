@@ -6,7 +6,7 @@ use {
     anyhow::Context,
     bytes::Bytes,
     fidl_fuchsia_developer_bridge::RepositoryPackage,
-    fidl_fuchsia_developer_bridge_ext::RepositorySpec,
+    fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryStorageType},
     fidl_fuchsia_pkg as pkg,
     futures::{
         future::ready,
@@ -66,15 +66,20 @@ pub struct RepositoryConfig {
     pub root_keys: Option<Vec<RepositoryKeyConfig>>,
     pub root_version: Option<u32>,
     pub mirrors: Option<Vec<MirrorConfig>>,
+    pub storage_type: Option<RepositoryStorageType>,
 }
 
-impl Into<pkg::RepositoryConfig> for RepositoryConfig {
-    fn into(self) -> pkg::RepositoryConfig {
+impl From<RepositoryConfig> for pkg::RepositoryConfig {
+    fn from(repo_config: RepositoryConfig) -> Self {
         pkg::RepositoryConfig {
-            repo_url: self.repo_url,
-            root_keys: self.root_keys.map(|v| v.into_iter().map(|r| r.into()).collect()),
-            root_version: self.root_version,
-            mirrors: self.mirrors.map(|v| v.into_iter().map(|m| m.into()).collect()),
+            repo_url: repo_config.repo_url,
+            root_keys: repo_config.root_keys.map(|v| v.into_iter().map(|r| r.into()).collect()),
+            root_version: repo_config.root_version,
+            mirrors: repo_config.mirrors.map(|v| v.into_iter().map(|m| m.into()).collect()),
+            storage_type: repo_config.storage_type.map(|v| match v {
+                RepositoryStorageType::Ephemeral => pkg::RepositoryStorageType::Ephemeral,
+                RepositoryStorageType::Persistent => pkg::RepositoryStorageType::Persistent,
+            }),
             ..pkg::RepositoryConfig::EMPTY
         }
     }
@@ -251,7 +256,11 @@ impl Repository {
         Ok(bytes)
     }
 
-    pub async fn get_config(&self, mirror_url: &str) -> Result<RepositoryConfig, Error> {
+    pub async fn get_config(
+        &self,
+        mirror_url: &str,
+        storage_type: Option<RepositoryStorageType>,
+    ) -> Result<RepositoryConfig, Error> {
         let client = self.client.lock();
         let root_keys = client
             .trusted_root()
@@ -268,8 +277,10 @@ impl Repository {
                 mirror_url: Some(format!("http://{}", mirror_url)),
                 subscribe: Some(self.backend.supports_watch()),
             }]),
+            storage_type: storage_type,
         })
     }
+
     async fn get_client(
         tuf_repo: Box<dyn RepositoryProvider<Json>>,
     ) -> Result<
@@ -372,16 +383,33 @@ mod test {
         let repo = make_readonly_empty_repository(REPO_NAME).await.unwrap();
 
         let server_url = "some-url:1234";
-        let expected = RepositoryConfig {
-            repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
-            root_keys: Some(vec![repo_key()]),
-            root_version: Some(ROOT_VERSION),
-            mirrors: Some(vec![MirrorConfig {
-                mirror_url: Some(format!("http://{}", server_url)),
-                subscribe: Some(true),
-            }]),
-        };
 
-        assert_eq!(repo.get_config(server_url).await.unwrap(), expected);
+        assert_eq!(
+            repo.get_config(server_url, None).await.unwrap(),
+            RepositoryConfig {
+                repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
+                root_keys: Some(vec![repo_key()]),
+                root_version: Some(ROOT_VERSION),
+                storage_type: None,
+                mirrors: Some(vec![MirrorConfig {
+                    mirror_url: Some(format!("http://{}", server_url)),
+                    subscribe: Some(true),
+                }]),
+            },
+        );
+
+        assert_eq!(
+            repo.get_config(server_url, Some(RepositoryStorageType::Persistent)).await.unwrap(),
+            RepositoryConfig {
+                repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
+                root_keys: Some(vec![repo_key()]),
+                root_version: Some(ROOT_VERSION),
+                storage_type: Some(RepositoryStorageType::Persistent),
+                mirrors: Some(vec![MirrorConfig {
+                    mirror_url: Some(format!("http://{}", server_url)),
+                    subscribe: Some(true),
+                }]),
+            },
+        );
     }
 }

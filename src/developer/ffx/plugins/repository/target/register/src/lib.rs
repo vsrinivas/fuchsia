@@ -31,6 +31,7 @@ async fn register(
             repo_name: Some(cmd.name),
             target_identifier: target_str,
             aliases: Some(cmd.alias),
+            storage_type: cmd.storage_type,
             ..RepositoryTarget::EMPTY
         })
         .await
@@ -48,7 +49,7 @@ async fn register(
 mod test {
     use super::*;
     use {
-        fidl_fuchsia_developer_bridge::RepositoryRegistryRequest,
+        fidl_fuchsia_developer_bridge::{RepositoryRegistryRequest, RepositoryStorageType},
         fuchsia_async as fasync,
         futures::channel::oneshot::{channel, Receiver},
     };
@@ -73,7 +74,11 @@ mod test {
         let aliases = vec![String::from("my_alias")];
         register(
             Some("target_str".to_string()),
-            RegisterCommand { name: "some_name".to_string(), alias: aliases.clone() },
+            RegisterCommand {
+                name: "some_name".to_string(),
+                alias: aliases.clone(),
+                storage_type: None,
+            },
             repos,
         )
         .await
@@ -85,6 +90,36 @@ mod test {
                 repo_name: Some("some_name".to_string()),
                 target_identifier: Some("target_str".to_string()),
                 aliases: Some(aliases),
+                storage_type: None,
+                ..RepositoryTarget::EMPTY
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_register_storage_type() {
+        let (repos, receiver) = setup_fake_server().await;
+
+        let aliases = vec![String::from("my_alias")];
+        register(
+            Some("target_str".to_string()),
+            RegisterCommand {
+                name: "some_name".to_string(),
+                alias: aliases.clone(),
+                storage_type: Some(RepositoryStorageType::Persistent),
+            },
+            repos,
+        )
+        .await
+        .unwrap();
+        let got = receiver.await.unwrap();
+        assert_eq!(
+            got,
+            RepositoryTarget {
+                repo_name: Some("some_name".to_string()),
+                target_identifier: Some("target_str".to_string()),
+                aliases: Some(aliases),
+                storage_type: Some(RepositoryStorageType::Persistent),
                 ..RepositoryTarget::EMPTY
             }
         );
@@ -96,7 +131,7 @@ mod test {
 
         register(
             Some("target_str".to_string()),
-            RegisterCommand { name: "some_name".to_string(), alias: vec![] },
+            RegisterCommand { name: "some_name".to_string(), alias: vec![], storage_type: None },
             repos,
         )
         .await
@@ -108,6 +143,7 @@ mod test {
                 repo_name: Some("some_name".to_string()),
                 target_identifier: Some("target_str".to_string()),
                 aliases: Some(vec![]),
+                storage_type: None,
                 ..RepositoryTarget::EMPTY
             }
         );
@@ -124,7 +160,7 @@ mod test {
 
         assert!(register(
             Some("target_str".to_string()),
-            RegisterCommand { name: "some_name".to_string(), alias: vec![] },
+            RegisterCommand { name: "some_name".to_string(), alias: vec![], storage_type: None },
             repos,
         )
         .await

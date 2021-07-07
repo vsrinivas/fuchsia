@@ -57,6 +57,30 @@ impl From<RepositorySpec> for fidl::RepositorySpec {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RepositoryStorageType {
+    Ephemeral,
+    Persistent,
+}
+
+impl From<fidl::RepositoryStorageType> for RepositoryStorageType {
+    fn from(storage_type: fidl::RepositoryStorageType) -> Self {
+        match storage_type {
+            fidl::RepositoryStorageType::Ephemeral => RepositoryStorageType::Ephemeral,
+            fidl::RepositoryStorageType::Persistent => RepositoryStorageType::Persistent,
+        }
+    }
+}
+
+impl From<RepositoryStorageType> for fidl::RepositoryStorageType {
+    fn from(storage_type: RepositoryStorageType) -> Self {
+        match storage_type {
+            RepositoryStorageType::Ephemeral => fidl::RepositoryStorageType::Ephemeral,
+            RepositoryStorageType::Persistent => fidl::RepositoryStorageType::Persistent,
+        }
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum RepositoryError {
     #[error("the repository name is missing")]

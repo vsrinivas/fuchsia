@@ -77,6 +77,20 @@ table RepositoryTarget {
     /// An optional list of hostnames. A rewrite rule will be added
     /// for each hostname in this list to resolve to this repository.
     3: vector<string:MAX_NAME>:MAX_ALIASES aliases;
+    /// Controls how repository metadata is persisted across reboots. Optional, if absent presumed
+    /// to be EPHEMERAL.
+    4: RepositoryStorageType storage_type;
+};
+
+/// Where the repository storage is written to.
+enum RepositoryStorageType {
+    /// Ephemeral, or in-memory storage. This repository metadata will be lost
+    /// when the process or device is restarted. The default type.
+    EPHEMERAL = 1;
+
+    /// Persistent, where the repository metadata is written to mutable storage
+    /// and is available after a reboot.
+    PERSISTENT = 2;
 };
 
 enum RepositoryError : uint32 {
