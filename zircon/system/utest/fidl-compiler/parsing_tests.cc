@@ -111,6 +111,89 @@ struct InStruct {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
+// Test that otherwise reserved words can be appropriately parsed when context
+// is clear.
+TEST(ParsingTests, GoodParsingReservedWordsInConstraint) {
+  TestLibrary library(R"FIDL(
+library example;
+
+struct Unshadowed {};
+
+// Keywords
+const uint16 as = 1;
+alias as_constraint = vector<Unshadowed>:as;
+const uint16 library = 1;
+alias library_constraint = vector<Unshadowed>:library;
+const uint16 using = 1;
+alias using_constraint = vector<Unshadowed>:using;
+const uint16 alias = 1;
+alias alias_constraint = vector<Unshadowed>:alias;
+const uint16 type = 1;
+alias type_constraint = vector<Unshadowed>:type;
+const uint16 const = 1;
+alias const_constraint = vector<Unshadowed>:const;
+const uint16 protocol = 1;
+alias protocol_constraint = vector<Unshadowed>:protocol;
+const uint16 service = 1;
+alias service_constraint = vector<Unshadowed>:service;
+const uint16 compose = 1;
+alias compose_constraint = vector<Unshadowed>:compose;
+const uint16 reserved = 1;
+alias reserved_constraint = vector<Unshadowed>:reserved;
+
+// Layouts
+const uint16 bits = 1;
+alias bits_constraint = vector<Unshadowed>:bits;
+const uint16 enum = 1;
+alias enum_constraint = vector<Unshadowed>:enum;
+const uint16 struct = 1;
+alias struct_constraint = vector<Unshadowed>:struct;
+const uint16 table = 1;
+alias table_constraint = vector<Unshadowed>:table;
+const uint16 union = 1;
+alias union_constraint = vector<Unshadowed>:union;
+
+// Builtins
+const uint16 array = 1;
+alias array_constraint = vector<Unshadowed>:array;
+const uint16 handle = 1;
+alias handle_constraint = vector<Unshadowed>:handle;
+const uint16 request = 1;
+alias request_constraint = vector<Unshadowed>:request;
+const uint16 string = 1;
+alias string_constraint = vector<Unshadowed>:string;
+const uint16 optional = 1;
+alias optional_constraint = vector<Unshadowed>:optional;
+
+// Primitives
+const uint16 bool = 1;
+alias bool_constraint = vector<Unshadowed>:bool;
+const uint16 int8 = 1;
+alias int8_constraint = vector<Unshadowed>:int8;
+const uint16 int16 = 1;
+alias int16_constraint = vector<Unshadowed>:int16;
+const uint16 int32 = 1;
+alias int32_constraint = vector<Unshadowed>:int32;
+const uint16 int64 = 1;
+alias int64_constraint = vector<Unshadowed>:int64;
+const uint16 uint8 = 1;
+alias uint8_constraint = vector<Unshadowed>:uint8;
+const uint16 uint32 = 1;
+alias uint32_constraint = vector<Unshadowed>:uint32;
+const uint16 uint64 = 1;
+alias uint64_constraint = vector<Unshadowed>:uint64;
+const uint16 float32 = 1;
+alias float32_constraint = vector<Unshadowed>:float32;
+const uint16 float64 = 1;
+alias float64_constraint = vector<Unshadowed>:float64;
+
+// Must go last so we don't overwrite uint16 for other tests.
+const uint16 uint16 = 1;
+alias uint16_constraint = vector<Unshadowed>:uint16;
+)FIDL");
+  ASSERT_COMPILED_AND_CONVERT(library);
+}
+
 TEST(ParsingTests, GoodParsingHandlesInStructTest) {
   TestLibrary library(R"FIDL(
 library example;

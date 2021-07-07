@@ -513,15 +513,20 @@ raw::AttributeList Parser::MaybeParseAttributeList() {
 
 std::unique_ptr<raw::Constant> Parser::ParseConstant() {
   std::unique_ptr<raw::Constant> constant;
-  switch (Peek().combined()) {
-    case CASE_TOKEN(Token::Kind::kIdentifier): {
-      auto identifier = ParseCompoundIdentifier();
-      if (!Ok())
-        return Fail();
-      constant = std::make_unique<raw::IdentifierConstant>(std::move(identifier));
-      break;
-    }
 
+  switch (Peek().combined()) {
+    // TODO(fxbug.dev/77561): by placing this before the kIdentifier check below, we are implicitly
+    //  stating that the tokens "true" and "false" will always be interpreted as their literal
+    //  constants.  Consider the following example:
+    //    const true string = "abc";
+    //    const foo bool = false; // "false" retains its built-in literal value, so no problem
+    //    const bar bool = true;  // "true" has been redefined as a string type - should this fail?
+    //  We could maintain perfect purity by always treating all tokens, even "true" and "false," as
+    //  identifier (rather than literal) constants, meaning that we would never be able to parse a
+    //  Token::Subkind::True|False.  Since letting people overwrite the value of true and false is
+    //  undesirable for usability (and sanity) reasons, we should instead modify the compiler to
+    //  specifically catch `const true|false ...` cases, and show a "don't change the meaning of
+    //  true and false please" error instead.
     TOKEN_LITERAL_CASES : {
       auto literal = ParseLiteral();
       if (!Ok())
@@ -541,8 +546,16 @@ std::unique_ptr<raw::Constant> Parser::ParseConstant() {
       break;
     }
 
-    default:
-      return Fail();
+    default: {
+      if (Peek().kind() == Token::Kind::kIdentifier) {
+        auto identifier = ParseCompoundIdentifier();
+        if (!Ok())
+          return Fail();
+        constant = std::make_unique<raw::IdentifierConstant>(std::move(identifier));
+      } else {
+        return Fail();
+      }
+    }
   }
 
   if (Peek().combined() == Token::Kind::kPipe) {
@@ -1106,7 +1119,7 @@ void Parser::ParseProtocolMember(
       add(methods, [&] { return ParseProtocolEvent(std::move(attributes), scope); });
       break;
     }
-    case CASE_TOKEN(Token::Kind::kIdentifier): {
+    case Token::Kind::kIdentifier: {
       std::unique_ptr<raw::Identifier> method_name;
       if (Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kCompose)) {
         // There are two possibilities here: we are looking at the first token in a compose

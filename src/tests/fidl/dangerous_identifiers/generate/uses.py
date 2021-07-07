@@ -16,6 +16,9 @@ def use(func):
     USES.append(Use(func.__name__.replace("_", "."), (func,)))
 
 
+# TODO(fxbug.dev/77561): we probably want to add a "constraints" test, for cases
+#  like `vector<Foo>:true` etc.
+
 @use
 def constants(f, idents: List[ScopedIdentifier]):
     for ident in idents:

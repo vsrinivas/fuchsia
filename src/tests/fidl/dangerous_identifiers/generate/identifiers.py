@@ -114,7 +114,8 @@ IDENTIFIERS = [
     Identifier('external'),
     Identifier('factory'),
     Identifier('fallthrough'),
-    Identifier('false', RUST_KEYWORD),
+    # TODO(fxbug.dev/77561)
+    # Identifier('false', RUST_KEYWORD),
     Identifier('fidl'),
     Identifier('fidl_type'),
     Identifier('final', RUST_KEYWORD),
@@ -235,7 +236,8 @@ IDENTIFIERS = [
     Identifier('throw'),
     Identifier('to_string'),
     Identifier('trait', RUST_KEYWORD),
-    Identifier('true', RUST_KEYWORD),
+    # TODO(fxbug.dev/77561)
+    # Identifier('true', RUST_KEYWORD),
     Identifier('try', RUST_KEYWORD),
     Identifier('type', RUST_KEYWORD),
     Identifier('typedef'),
