@@ -28,4 +28,7 @@ source_set("printer") {
   if (!is_fuchsia) {
     deps += [ "//zircon/system/public" ]
   }
+
+  # Suppress warnings the simple-pt code doesn't comply with.
+  configs += [ "//build/config:Wno-unused-but-set-variable" ]
 }
