@@ -18,9 +18,8 @@ use fuchsia_component::client as fclient;
 use fuchsia_runtime::{HandleInfo, HandleType};
 use fuchsia_zircon::{
     self as zx, sys::zx_exception_info_t, sys::zx_thread_state_general_regs_t,
-    sys::ZX_EXCEPTION_STATE_HANDLED, sys::ZX_EXCEPTION_STATE_THREAD_EXIT,
-    sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
-    sys::ZX_EXCP_POLICY_ERROR, AsHandleRef, Task as zxTask,
+    sys::ZX_EXCEPTION_STATE_HANDLED, sys::ZX_EXCEPTION_STATE_TRY_NEXT,
+    sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL, sys::ZX_EXCP_POLICY_ERROR, AsHandleRef, Task as zxTask,
 };
 use futures::TryStreamExt;
 use log::{error, info};
@@ -122,21 +121,13 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
         match dispatch_syscall(&mut ctx, syscall_number, args) {
             Ok(SyscallResult::Exit(error_code)) => {
                 strace!(task, "-> exit {:#x}", error_code);
-                exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
-                return Ok(error_code);
-            }
-            Ok(SyscallResult::ExitGroup(error_code)) => {
-                strace!(task, "-> exit_group {:#x}", error_code);
                 // TODO: Set the error_code on the Zircon process object. Currently missing a way
                 //       to do this in Zircon. Might be easier in the new execution model.
                 if let Some(parent) = task.get_task(task.parent) {
                     // TODO: Clean up the resources associated with the process.
-                    // TODO: This call to kill() looks redundant with the call in
-                    //       ThreadGroup::remove.
                     let _ = ctx.task.thread_group.process.kill();
                     parent.zombie_tasks.write().push(task_owner);
                 }
-                exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
                 return Ok(error_code);
             }
             Ok(SyscallResult::Success(return_value)) => {
