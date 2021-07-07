@@ -1077,7 +1077,7 @@ the following manifest shard to enable forwarding:
 // my_component.cml
 {
     // Enable forwarding of stdio to syslog
-    include: [ "//sdk/lib/diagnostics/syslog/elf_stdio.shard.cml" ],
+    include: [ "syslog/elf_stdio.shard.cml" ],
     ...
 }
 ```

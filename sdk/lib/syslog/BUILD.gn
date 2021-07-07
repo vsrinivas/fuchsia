@@ -11,6 +11,7 @@ sdk_component_manifests("syslog") {
   manifests = [
     "client.shard.cml",
     "client.shard.cmx",
+    "elf_stdio.shard.cml",
   ]
   category = "partner"
 }
