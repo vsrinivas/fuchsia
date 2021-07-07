@@ -6,6 +6,7 @@ use crate::not_implemented;
 use crate::signals::{Signal, SignalAction, UncheckedSignal};
 use crate::syscalls::{SyscallContext, SyscallResult, SUCCESS};
 use crate::task::{Scheduler, Task};
+use crate::types::*;
 use crate::types::{pid_t, sigaction_t, Errno, UserAddress};
 use fuchsia_zircon::sys::zx_thread_state_general_regs_t;
 use std::convert::TryFrom;
@@ -72,9 +73,26 @@ fn misalign_stack_pointer(pointer: u64) -> u64 {
 pub fn dispatch_signal_handler(ctx: &mut SyscallContext<'_>, signal: &Signal, action: sigaction_t) {
     let signal_stack_frame = SignalStackFrame::new(ctx.registers, action.sa_restorer.ptr() as u64);
 
-    // Adjust the stack pointer to allow space for the red zone.
+    // Determine which stack pointer to use for the signal handler.
+    // If the signal handler is executed on the main stack, adjust the stack pointer to account for
+    // the red zone.
     // https://en.wikipedia.org/wiki/Red_zone_%28computing%29
-    let mut stack_pointer = ctx.registers.rsp - RED_ZONE_SIZE;
+    let mut stack_pointer = if (action.sa_flags & SA_ONSTACK as u64) != 0 {
+        let mut signal_stack = ctx.task.signal_stack.lock();
+        match *signal_stack {
+            Some(mut sigaltstack) => {
+                // Update the stored sigaltstack. If a call to sys_sigaltstack is made while
+                // the signal handler is executing, it expects the `ss_flags` to be `SS_ONSTACK`.
+                sigaltstack.ss_flags = SS_ONSTACK;
+                *signal_stack = Some(sigaltstack);
+
+                sigaltstack.ss_sp.ptr() as u64
+            }
+            None => ctx.registers.rsp - RED_ZONE_SIZE,
+        }
+    } else {
+        ctx.registers.rsp - RED_ZONE_SIZE
+    };
     stack_pointer -= SIG_STACK_SIZE as u64;
     stack_pointer = misalign_stack_pointer(stack_pointer);
 
@@ -102,6 +120,16 @@ pub fn restore_from_signal_handler(ctx: &mut SyscallContext<'_>) {
     let signal_stack_frame = SignalStackFrame::from_bytes(signal_stack_bytes);
     // Restore the register state from before executing the signal handler.
     ctx.registers = signal_stack_frame.registers;
+
+    // Restore the stored signal stack's `ss_flags` to 0.
+    let mut signal_stack = ctx.task.signal_stack.lock();
+    match *signal_stack {
+        Some(mut stack) => {
+            stack.ss_flags = 0;
+            *signal_stack = Some(stack);
+        }
+        _ => {}
+    };
 }
 
 pub fn send_signal(

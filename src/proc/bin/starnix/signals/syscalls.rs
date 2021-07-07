@@ -120,7 +120,6 @@ pub fn sys_sigaltstack(
     let mut signal_stack = ctx.task.signal_stack.lock();
 
     if !user_old_ss.is_null() {
-        // TODO: Implement SS_ONSTACK when we actually call the signal handler.
         ctx.task.mm.write_object(
             user_old_ss,
             &match *signal_stack {
