@@ -64,7 +64,7 @@ mod tests {
         pin_utils::pin_mut,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn infinite_stream() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
 
@@ -81,7 +81,7 @@ mod tests {
         assert_eq!(Poll::Ready(Ok(42)), exec.run_until_stalled(&mut fut));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn no_infinite_stream() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
 

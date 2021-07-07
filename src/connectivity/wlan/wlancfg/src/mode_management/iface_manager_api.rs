@@ -227,10 +227,7 @@ impl IfaceManagerApi for IfaceManager {
 mod tests {
     use {
         super::*,
-        crate::{
-            access_point::types, config_management::network_config::Credential,
-            util::testing::set_logger_for_test,
-        },
+        crate::{access_point::types, config_management::network_config::Credential},
         anyhow::format_err,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
@@ -251,7 +248,6 @@ mod tests {
     }
 
     fn test_setup() -> TestValues {
-        set_logger_for_test();
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sender, receiver) = mpsc::channel(1);
         TestValues { exec, iface_manager: IfaceManager { sender }, receiver }
@@ -363,7 +359,7 @@ mod tests {
         Box::pin(fut)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_disconnect_succeeds() {
         let mut test_values = test_setup();
 
@@ -403,6 +399,7 @@ mod tests {
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn disconnect_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -442,7 +439,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_connect_succeeds() {
         let mut test_values = test_setup();
 
@@ -487,6 +484,7 @@ mod tests {
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn connect_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -530,7 +528,7 @@ mod tests {
         assert_variant!(test_values.exec.run_until_stalled(&mut connect_fut), Poll::Ready(Err(_)));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_record_idle_client_succeeds() {
         let mut test_values = test_setup();
 
@@ -563,6 +561,7 @@ mod tests {
 
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn test_record_idle_client_service_failure(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -597,7 +596,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_has_idle_client_success() {
         let mut test_values = test_setup();
 
@@ -626,6 +625,7 @@ mod tests {
 
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn idle_client_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -660,7 +660,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_add_iface_success() {
         let mut test_values = test_setup();
 
@@ -691,6 +691,7 @@ mod tests {
 
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn add_iface_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -725,7 +726,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_remove_iface_success() {
         let mut test_values = test_setup();
 
@@ -756,6 +757,7 @@ mod tests {
 
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn remove_iface_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -790,7 +792,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_scan_success() {
         let mut test_values = test_setup();
 
@@ -824,6 +826,7 @@ mod tests {
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn scan_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -853,7 +856,7 @@ mod tests {
         assert_variant!(test_values.exec.run_until_stalled(&mut scan_fut), Poll::Ready(Err(_)));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_get_scan_proxy_success() {
         let mut test_values = test_setup();
 
@@ -887,6 +890,7 @@ mod tests {
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn scan_proxy_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -920,7 +924,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_stop_client_connections_succeeds() {
         let mut test_values = test_setup();
 
@@ -952,6 +956,7 @@ mod tests {
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn stop_client_connections_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -982,7 +987,7 @@ mod tests {
         assert_variant!(test_values.exec.run_until_stalled(&mut stop_fut), Poll::Ready(Err(_)));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_start_client_connections_succeeds() {
         let mut test_values = test_setup();
 
@@ -1011,6 +1016,7 @@ mod tests {
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn start_client_connections_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -1052,7 +1058,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_start_ap_succeeds() {
         let mut test_values = test_setup();
 
@@ -1084,6 +1090,7 @@ mod tests {
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn start_ap_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -1112,7 +1119,7 @@ mod tests {
         assert_variant!(test_values.exec.run_until_stalled(&mut start_fut), Poll::Ready(Err(_)));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_stop_ap_succeeds() {
         let mut test_values = test_setup();
 
@@ -1145,6 +1152,7 @@ mod tests {
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn stop_ap_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -1174,7 +1182,7 @@ mod tests {
         assert_variant!(test_values.exec.run_until_stalled(&mut stop_fut), Poll::Ready(Err(_)));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_stop_all_aps_succeeds() {
         let mut test_values = test_setup();
 
@@ -1203,6 +1211,7 @@ mod tests {
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn stop_all_aps_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -1231,7 +1240,7 @@ mod tests {
         assert_variant!(test_values.exec.run_until_stalled(&mut stop_fut), Poll::Ready(Err(_)));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_has_wpa3_capable_client_success() {
         let mut test_values = test_setup();
 
@@ -1260,6 +1269,7 @@ mod tests {
 
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn has_wpa3_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -1291,7 +1301,7 @@ mod tests {
         assert_variant!(test_values.exec.run_until_stalled(&mut has_wpa3_fut), Poll::Ready(Err(_)));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_set_country_succeeds() {
         let mut test_values = test_setup();
 
@@ -1324,6 +1334,7 @@ mod tests {
     #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
     #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
     #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
     fn set_country_negative_test(failure_mode: NegativeTestFailureMode) {
         let mut test_values = test_setup();
 
@@ -1331,7 +1342,6 @@ mod tests {
         let set_country_fut = test_values.iface_manager.set_country(None);
         pin_mut!(set_country_fut);
         assert_variant!(test_values.exec.run_until_stalled(&mut set_country_fut), Poll::Pending);
-
         let service_fut =
             iface_manager_api_negative_test(test_values.receiver, failure_mode.clone());
         pin_mut!(service_fut);

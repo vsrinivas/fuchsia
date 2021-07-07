@@ -486,7 +486,7 @@ mod tests {
             config_management::{
                 Credential, NetworkConfig, ScanResultType, SecurityType, WPA_PSK_BYTE_LEN,
             },
-            util::testing::{create_mock_cobalt_sender, set_logger_for_test},
+            util::testing::create_mock_cobalt_sender,
         },
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
@@ -863,7 +863,6 @@ mod tests {
 
         let (update_sender, listener_updates) = mpsc::unbounded();
 
-        set_logger_for_test();
         TestValues {
             saved_networks,
             network_selector,
@@ -877,7 +876,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connect_request_unknown_network() {
         let ssid = b"foobar-unknown".to_vec();
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
@@ -921,7 +920,7 @@ mod tests {
         assert!(exec.run_singlethreaded(lookup_fut).is_empty());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connect_request_open_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -970,7 +969,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connect_request_protected_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -1020,7 +1019,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connect_request_protected_psk_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -1070,7 +1069,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connect_request_success() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup(true);
@@ -1110,7 +1109,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connect_request_failure() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup(false);
@@ -1150,7 +1149,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connect_request_bad_password() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup(false);
@@ -1190,7 +1189,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_connect_wpa3_not_supported() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup(false);
@@ -1242,7 +1241,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_connect_wpa3_is_supported() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup(true);
@@ -1283,7 +1282,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn start_and_stop_client_connections() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup(true);
@@ -1352,7 +1351,7 @@ mod tests {
     /// End-to-end test of the scan function, verifying that an incoming
     /// FIDL scan request results in a scan in the SME, and that the results
     /// make it back to the requester.
-    #[test]
+    #[fuchsia::test]
     fn scan_end_to_end() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup(true);
@@ -1391,7 +1390,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn save_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
@@ -1451,7 +1450,7 @@ mod tests {
         assert_eq!(exec.run_singlethreaded(saved_networks.lookup(target_id)), vec![target_config]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn save_network_with_disconnected_iface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
@@ -1527,7 +1526,7 @@ mod tests {
         assert_eq!(exec.run_singlethreaded(saved_networks.lookup(target_id)), vec![target_config]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn save_network_overwrite_disconnects() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
@@ -1596,7 +1595,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(Ok(()))));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn save_bad_network_should_fail() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut saved_networks = FakeSavedNetworksManager::new();
@@ -1661,7 +1660,7 @@ mod tests {
         assert_eq!(exec.run_singlethreaded(saved_networks.lookup(target_id)), vec![]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_remove_a_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
@@ -1740,7 +1739,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(Ok(Ok(()))));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn get_saved_network() {
         // save a network
         let network_id = NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::Wpa2);
@@ -1759,7 +1758,7 @@ mod tests {
         test_get_saved_networks(saved_networks, expected_configs, expected_num_sends);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn get_saved_networks_multiple_chunks() {
         // Save MAX_CONFIGS_PER_RESPONSE + 1 configs so that get_saved_networks should respond with
         // 2 chunks of responses plus one response with an empty vector.
@@ -1871,7 +1870,7 @@ mod tests {
         assert_eq!(expected_configs.len(), saved_networks_results.len());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn register_update_listener() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup(true);
@@ -1897,7 +1896,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn get_listener() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (listener, requests) = create_proxy::<fidl_policy::ClientListenerMarker>()
@@ -1924,7 +1923,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_controllers_write_attempt() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup(true);
@@ -2005,7 +2004,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_controllers_epitaph() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup(true);
@@ -2133,7 +2132,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn no_client_interface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
@@ -2199,7 +2198,7 @@ mod tests {
         cfgs.pop()
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn get_correct_config() {
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
         let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
@@ -2236,7 +2235,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_api_clients() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup(true);

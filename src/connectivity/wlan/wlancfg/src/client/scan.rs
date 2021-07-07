@@ -510,7 +510,7 @@ mod tests {
                 SavedNetworksManager,
             },
             util::testing::{
-                generate_random_bss_desc, generate_random_bss_info, set_logger_for_test,
+                generate_random_bss_desc, generate_random_bss_info,
                 validate_sme_scan_request_and_send_results,
             },
         },
@@ -628,7 +628,6 @@ mod tests {
     /// Creates a Client wrapper.
     async fn create_iface_manager(
     ) -> (Arc<Mutex<FakeIfaceManager>>, fidl_sme::ClientSmeRequestStream) {
-        set_logger_for_test();
         let (client_sme, remote) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
         let iface_manager = Arc::new(Mutex::new(FakeIfaceManager::new(client_sme)));
@@ -637,7 +636,6 @@ mod tests {
 
     /// Creates an SME proxy for tests.
     async fn create_sme_proxy() -> (fidl_sme::ClientSmeProxy, fidl_sme::ClientSmeRequestStream) {
-        set_logger_for_test();
         let (client_sme, remote) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
         (client_sme, remote.into_stream().expect("failed to create stream"))
@@ -1025,7 +1023,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn sme_scan_with_passive_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
@@ -1064,7 +1062,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn sme_scan_with_active_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
@@ -1108,6 +1106,7 @@ mod tests {
 
     #[test_case(fidl_sme::ScanErrorCode::InternalError; "SME scan error InternalError")]
     #[test_case(fidl_sme::ScanErrorCode::NotSupported; "SME scan error NotSupported")]
+    #[fuchsia::test(add_test_attr = false)]
     fn sme_scan_error(error_code: fidl_sme::ScanErrorCode) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
@@ -1149,6 +1148,7 @@ mod tests {
     #[test_case(fidl_sme::ScanErrorCode::ShouldWait, false; "SME scan error ShouldWait with failed retry")]
     #[test_case(fidl_sme::ScanErrorCode::ShouldWait, true; "SME scan error ShouldWait with successful retry")]
     #[test_case(fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware, true; "SME scan error CanceledByDriverOrFirmware with successful retry")]
+    #[fuchsia::test(add_test_attr = false)]
     fn sme_scan_error_with_retry(error_code: fidl_sme::ScanErrorCode, retry_succeeds: bool) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
@@ -1232,7 +1232,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn sme_scan_channel_closed() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
@@ -1265,7 +1265,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn basic_scan() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
@@ -1345,7 +1345,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn scan_with_active_scan_decider() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
@@ -1479,7 +1479,7 @@ mod tests {
         assert!(config.hidden_probability < PROB_HIDDEN_DEFAULT);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn insert_bss_to_network_bss_map_duplicated_bss() {
         let mut bss_by_network = HashMap::new();
 
@@ -1611,7 +1611,7 @@ mod tests {
         assert_eq!(bss_by_network[&expected_id], expected_bss);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn scan_with_active_scan_decider_and_active_scan_failure() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
@@ -1714,7 +1714,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn scan_iterator_never_polled() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
@@ -1817,7 +1817,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn scan_iterator_shut_down() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
@@ -1876,7 +1876,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn scan_error() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
@@ -1936,7 +1936,7 @@ mod tests {
         assert_eq!(*exec.run_singlethreaded(location_sensor_results.lock()), None);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn overlapping_scans() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
@@ -2082,12 +2082,12 @@ mod tests {
 
     #[test_case(true)]
     #[test_case(false)]
+    #[fuchsia::test(add_test_attr = false)]
     fn perform_scan_wpa3_supported(wpa3_capable: bool) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
         let saved_networks_manager = create_saved_networks_manager(&mut exec);
-        set_logger_for_test();
 
         // Create a FakeIfaceManager that returns has_wpa3_iface() based on test value
         let (sme_proxy, remote) =
@@ -2212,9 +2212,8 @@ mod tests {
 
     // TODO(fxbug.dev/54255): Separate test case for "empty final vector not consumed" vs "partial ap list"
     // consumed.
-    #[test]
+    #[fuchsia::test]
     fn partial_scan_result_consumption_has_no_error() {
-        set_logger_for_test();
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let MockScanData {
             passive_input_aps: _,
@@ -2255,9 +2254,8 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn no_scan_result_consumption_has_error() {
-        set_logger_for_test();
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let MockScanData {
             passive_input_aps: _,
@@ -2281,7 +2279,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Ready(Err(_)));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn directed_active_scan_filters_desired_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
@@ -2353,9 +2351,8 @@ mod tests {
 
     // TODO(fxbug.dev/52700) Ignore this test until the location sensor module exists.
     #[ignore]
-    #[test]
+    #[fuchsia::test]
     fn scan_observer_sends_to_location_sensor() {
-        set_logger_for_test();
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut location_sensor_updater = LocationSensorUpdater { wpa3_supported: true };
         let MockScanData {
@@ -2380,7 +2377,7 @@ mod tests {
         Arc::new(saved_networks_manager)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn sme_protection_converts_to_policy_security() {
         use {super::fidl_sme::Protection, super::types::SecurityType};
         let wpa3_supported = true;

@@ -172,13 +172,13 @@ mod tests {
         (serialized, deserialized)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_serialization() {
         let (serialized, deserialized) = generate_test_data();
         assert_eq!(serialized, serialize_saved_networks(deserialized).unwrap());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_serialization_with_malformed_network() {
         let (serialized, mut deserialized) = generate_test_data();
         // Add another network that's malformed (has no credential field)
@@ -194,7 +194,7 @@ mod tests {
         assert_eq!(serialized, serialize_saved_networks(deserialized).unwrap());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_deserialization() {
         let (serialized, deserialized) = generate_test_data();
         assert_eq!(deserialized, deserialize_saved_networks(serialized).unwrap());

@@ -48,6 +48,7 @@ rustc_binary("bin") {
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
@@ -108,7 +109,6 @@ rustc_binary("bin") {
     "src/util/state_machine.rs",
     "src/util/testing/cobalt.rs",
     "src/util/testing/generate_struct.rs",
-    "src/util/testing/logger.rs",
     "src/util/testing/mod.rs",
     "src/util/testing/sme_stream.rs",
   ]

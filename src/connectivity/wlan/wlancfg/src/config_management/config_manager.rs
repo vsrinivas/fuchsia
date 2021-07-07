@@ -759,7 +759,7 @@ mod tests {
         wlan_common::assert_variant,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn store_and_lookup() {
         let stash_id = "store_and_lookup";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -831,7 +831,7 @@ mod tests {
         assert_eq!(2, saved_networks.known_network_count().await);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn store_twice() {
         let stash_id = "store_twice";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -859,7 +859,7 @@ mod tests {
         assert_eq!(1, saved_networks.known_network_count().await);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn store_many_same_ssid() {
         let stash_id = "store_many_same_ssid";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -890,7 +890,7 @@ mod tests {
         assert_eq!(MAX_CONFIGS_PER_SSID, saved_networks.lookup(network_id).await.len());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn store_and_remove() {
         let stash_id = "store_and_remove";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -958,7 +958,7 @@ mod tests {
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn sme_protection_converts_to_lower_compatible() {
         use fidl_sme::Protection::*;
         let lower_compatible_pairs = vec![
@@ -980,7 +980,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn lookup_compatible_returns_both_compatible_configs() {
         let stash_id = rand_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -1028,6 +1028,7 @@ mod tests {
 
     #[test_case(types::SecurityTypeDetailed::Wpa3Personal)]
     #[test_case(types::SecurityTypeDetailed::Wpa3Enterprise)]
+    #[fuchsia::test(add_test_attr = false)]
     fn lookup_compatible_does_not_return_wpa3_psk(
         wpa3_detailed_security: types::SecurityTypeDetailed,
     ) {
@@ -1069,7 +1070,7 @@ mod tests {
         assert_eq!(results, vec![expected_config_wpa3]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn connect_network() {
         let stash_id = "connect_network";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -1166,7 +1167,7 @@ mod tests {
         });
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_record_connect_updates_one() {
         let stash_id = rand_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -1209,7 +1210,7 @@ mod tests {
         });
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_record_connect_failure() {
         let stash_id = "test_record_connect_failure";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -1280,7 +1281,7 @@ mod tests {
         });
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_record_connect_cancelled_ignored() {
         let stash_id = "test_record_connect_failure";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -1332,7 +1333,7 @@ mod tests {
         assert_eq!(0, connect_failures.len());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_record_disconnect() {
         let stash_id = "test_record_connect_failure";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -1371,7 +1372,7 @@ mod tests {
         })
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_record_passive_scan() {
         let stash_id = rand_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -1416,7 +1417,7 @@ mod tests {
         });
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_record_undirected_scan_with_upgraded_security() {
         // Test that if we see a different compatible (higher) scan result for a saved network that
         // could be used to connect, recording the scan results will change the hidden probability.
@@ -1447,7 +1448,7 @@ mod tests {
         });
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_record_undirected_scan_incompatible_credential() {
         // Test that if we see a different compatible (higher) scan result for a saved network that
         // could be used to connect, recording the scan results will change the hidden probability.
@@ -1479,7 +1480,7 @@ mod tests {
         });
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_record_directed_scan_for_upgraded_security() {
         // Test that if we see a different compatible (higher) scan result for a saved network that
         // could be used to connect in a directed scan, the hidden probability will not be lowered.
@@ -1518,7 +1519,7 @@ mod tests {
         assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_record_directed_scan_for_incompatible_credential() {
         // Test that if we see a network that is not compatible because of the saved credential
         // (but is otherwise compatible), the directed scan is not considered successful and the
@@ -1559,7 +1560,7 @@ mod tests {
         assert!(config.hidden_probability < PROB_HIDDEN_DEFAULT);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_record_directed_scan_no_ssid_match() {
         // Test that recording directed active scan results does not mistakenly match a config with
         // a network with a different SSID.
@@ -1597,7 +1598,7 @@ mod tests {
         assert!(config.hidden_probability < PROB_HIDDEN_DEFAULT);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_record_directed_one_not_compatible_one_compatible() {
         // Test that if we see two networks with the same SSID but only one is compatible, the scan
         // is recorded as successful for the config. In other words it isn't mistakenly recorded as
@@ -1643,7 +1644,7 @@ mod tests {
         assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn evict_if_needed_removes_unconnected() {
         // this test is less meaningful when MAX_CONFIGS_PER_SSID is greater than 1, otherwise
         // the only saved configs should be removed when the max capacity is met, regardless of
@@ -1663,7 +1664,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn evict_if_needed_already_has_space() {
         let mut configs = vec![];
         assert_eq!(evict_if_needed(&mut configs), None);
@@ -1678,7 +1679,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn clear() {
         let stash_id = "clear";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -1718,7 +1719,7 @@ mod tests {
         assert_eq!(0, saved_networks.known_network_count().await);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn ignore_legacy_file_bad_format() {
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
@@ -1754,7 +1755,7 @@ mod tests {
         assert!(path.exists());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn read_network_from_legacy_storage() {
         // Possible contents of a file generated from KnownEssStore, with networks foo and bar with
         // passwords foobar and password respecitively. Network foo should not be read into new
@@ -1797,7 +1798,7 @@ mod tests {
         assert!(path.exists());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn do_not_migrate_networks_twice() {
         let contents = b"[{\"ssid\":[102,111,111],\"password\":[102,111,111,98,97,114]},
             {\"ssid\":[98,97,114],\"password\":[112, 97, 115, 115, 119, 111, 114, 100]}]";
@@ -1857,7 +1858,7 @@ mod tests {
         assert_eq!(vec![new_net_config], saved_networks.lookup(net_id).await);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn ignore_legacy_if_stash_exists() {
         let contents = b"[{\"ssid\":[102,111,111],\"password\":[102,111,111,98,97,114]},
             {\"ssid\":[98,97,114],\"password\":[112, 97, 115, 115, 119, 111, 114, 100]}]";
@@ -1920,7 +1921,7 @@ mod tests {
         assert_eq!(vec![new_net_config], saved_networks.lookup(net_id).await);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn write_and_load_legacy() {
         let stash_id = "write_and_load_legacy";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -1956,7 +1957,7 @@ mod tests {
         assert_eq!(vec![net_config.clone()], saved_networks.lookup(net_id.clone()).await);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_store_waits_for_stash() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create executor");
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -2017,7 +2018,7 @@ mod tests {
         thread_rng().sample_iter(&Alphanumeric).take(20).collect()
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn record_metrics_when_called_on_class() {
         let stash_id = rand_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
@@ -2094,7 +2095,7 @@ mod tests {
         assert!(cobalt_events.try_next().is_err());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn metrics_count_configs() {
         let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
 
@@ -2165,7 +2166,7 @@ mod tests {
         assert!(cobalt_events.try_next().is_err());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn probabilistic_choosing_of_hidden_networks() {
         // Create three networks with 1, 0, 0.5 hidden probability
         let id_hidden =
@@ -2234,7 +2235,7 @@ mod tests {
         assert!(maybe_hidden_selection_count < hidden_selection_count);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_record_not_seen_active_scan() {
         // Test that if we update that we haven't seen a couple of networks in active scans, their
         // hidden probability is updated.

@@ -849,7 +849,7 @@ mod tests {
     /// calling add_phy on PhyManager for a PHY that exists.  The expectation is that the
     /// PhyManager initially does not have any PHYs available.  After the call to add_phy, the
     /// PhyManager should have a new PhyContainer.
-    #[test]
+    #[fuchsia::test]
     fn add_valid_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -879,7 +879,7 @@ mod tests {
     /// This test mimics a client of the DeviceWatcher watcher receiving an OnPhyCreated event and
     /// calling add_phy on PhyManager for a PHY that does not exist.  The PhyManager in this case
     /// should not create and store a new PhyContainer.
-    #[test]
+    #[fuchsia::test]
     fn add_invalid_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -900,7 +900,7 @@ mod tests {
     /// This test mimics a client of the DeviceWatcher watcher receiving an OnPhyCreated event and
     /// calling add_phy on PhyManager for a PHY that has already been accounted for, but whose
     /// properties have changed.  The PhyManager in this case should update the associated PhyInfo.
-    #[test]
+    #[fuchsia::test]
     fn add_duplicate_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -950,7 +950,7 @@ mod tests {
     /// This test mimics a client of the DeviceWatcher watcher receiving an OnPhyRemoved event and
     /// calling remove_phy on PhyManager for a PHY that not longer exists.  The PhyManager in this
     /// case should remove the PhyContainer associated with the removed PHY ID.
-    #[test]
+    #[fuchsia::test]
     fn add_phy_after_create_all_client_ifaces() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1011,7 +1011,7 @@ mod tests {
     }
 
     /// Tests the case where a new PHY is discovered after the country code has been set.
-    #[test]
+    #[fuchsia::test]
     fn test_add_phy_after_setting_country_code() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1099,7 +1099,7 @@ mod tests {
     /// This test mimics a client of the DeviceWatcher watcher receiving an OnIfaceAdded event for
     /// an iface that belongs to a PHY that has been accounted for.  The PhyManager should add the
     /// newly discovered iface to the existing PHY's list of client ifaces.
-    #[test]
+    #[fuchsia::test]
     fn on_iface_added() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1157,7 +1157,7 @@ mod tests {
     /// an iface that belongs to a PHY that has not been accounted for.  The PhyManager should
     /// query the PHY's information, create a new PhyContainer, and insert the new iface ID into
     /// the PHY's list of client ifaces.
-    #[test]
+    #[fuchsia::test]
     fn on_iface_added_missing_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1221,7 +1221,7 @@ mod tests {
     /// This test mimics a client of the DeviceWatcher watcher receiving an OnIfaceAdded event for
     /// an iface that was created by PhyManager and has already been accounted for.  The PhyManager
     /// should simply ignore the duplicate iface ID and not append it to its list of clients.
-    #[test]
+    #[fuchsia::test]
     fn add_duplicate_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1279,7 +1279,7 @@ mod tests {
     /// This test mimics a client of the DeviceWatcher watcher receiving an OnIfaceAdded event for
     /// an iface that has already been removed.  The PhyManager should fail to query the iface info
     /// and not account for the iface ID.
-    #[test]
+    #[fuchsia::test]
     fn add_nonexistent_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1481,6 +1481,7 @@ mod tests {
     /// with the iface ID of the client iface.
     #[test_case(fidl_common::DriverFeature::SaeDriverAuth)]
     #[test_case(fidl_common::DriverFeature::SaeSmeAuth)]
+    #[fuchsia::test(add_test_attr = false)]
     fn get_configured_wpa3_client(wpa3_feature: fidl_common::DriverFeature) {
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1507,7 +1508,7 @@ mod tests {
     /// Tests the PhyManager's response to stop_client_connection when there is an existing client
     /// iface.  The expectation is that the client iface is destroyed and there is no remaining
     /// record of the iface ID in the PhyManager.
-    #[test]
+    #[fuchsia::test]
     fn destroy_all_client_ifaces() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1549,7 +1550,7 @@ mod tests {
 
     /// Tests the PhyManager's response to destroy_all_client_ifaces when no client ifaces are
     /// present but an AP iface is present.  The expectation is that the AP iface is left intact.
-    #[test]
+    #[fuchsia::test]
     fn destroy_all_client_ifaces_no_clients() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1587,7 +1588,7 @@ mod tests {
 
     /// Tests the PhyManager's response to a request for an AP when no PHYs are present.  The
     /// expectation is that the PhyManager will return None in this case.
-    #[test]
+    #[fuchsia::test]
     fn get_ap_no_phys() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1602,7 +1603,7 @@ mod tests {
     /// Tests the PhyManager's response when the PhyManager holds a PHY that can have an AP iface
     /// but the AP iface has not been created yet.  The expectation is that the PhyManager creates
     /// a new AP iface and returns its ID to the caller.
-    #[test]
+    #[fuchsia::test]
     fn get_unconfigured_ap() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1638,7 +1639,7 @@ mod tests {
     /// Tests the PhyManager's response to a create_or_get_ap_iface call when there is a PHY with an AP iface
     /// that has already been created.  The expectation is that the PhyManager should return the
     /// iface ID of the existing AP iface.
-    #[test]
+    #[fuchsia::test]
     fn get_configured_ap() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1669,7 +1670,7 @@ mod tests {
 
     /// This test attempts to get an AP iface from a PhyManager that has a PHY that can only have
     /// a client interface.  The PhyManager should return None.
-    #[test]
+    #[fuchsia::test]
     fn get_ap_no_compatible_phys() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1692,7 +1693,7 @@ mod tests {
 
     /// This test stops a valid AP iface on a PhyManager.  The expectation is that the PhyManager
     /// should retain the record of the PHY, but the AP iface ID should be removed.
-    #[test]
+    #[fuchsia::test]
     fn stop_valid_ap_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1731,7 +1732,7 @@ mod tests {
 
     /// This test attempts to stop an invalid AP iface ID.  The expectation is that a valid iface
     /// ID is unaffected.
-    #[test]
+    #[fuchsia::test]
     fn stop_invalid_ap_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1771,7 +1772,7 @@ mod tests {
     /// This test creates two AP ifaces for a PHY that supports AP ifaces.  destroy_all_ap_ifaces is then
     /// called on the PhyManager.  The expectation is that both AP ifaces should be destroyed and
     /// the records of the iface IDs should be removed from the PhyContainer.
-    #[test]
+    #[fuchsia::test]
     fn stop_all_ap_ifaces() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1815,7 +1816,7 @@ mod tests {
     /// This test calls destroy_all_ap_ifaces on a PhyManager that only has a client iface.  The expectation
     /// is that no interfaces should be destroyed and the client iface ID should remain in the
     /// PhyManager
-    #[test]
+    #[fuchsia::test]
     fn stop_all_ap_ifaces_with_client() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1853,7 +1854,7 @@ mod tests {
     /// Verifies that setting a suggested AP MAC address results in that MAC address being used as
     /// a part of the request to create an AP interface.  Ensures that this does not affect client
     /// interface requests.
-    #[test]
+    #[fuchsia::test]
     fn test_suggest_ap_mac() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1905,7 +1906,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut get_ap_future), Poll::Ready(_));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_suggested_mac_does_not_apply_to_client() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1976,7 +1977,7 @@ mod tests {
 
     /// Tests get_phy_ids() when a single PHY is present. The expectation is that the PhyManager will
     /// return a single element `Vec`, with the appropriate ID.
-    #[test]
+    #[fuchsia::test]
     fn get_phy_ids_single_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1996,7 +1997,7 @@ mod tests {
 
     /// Tests get_phy_ids() when two PHYs are present. The expectation is that the PhyManager will
     /// return a two-element `Vec`, containing the appropriate IDs. Ordering is not guaranteed.
-    #[test]
+    #[fuchsia::test]
     fn get_phy_ids_two_phys() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -2047,7 +2048,7 @@ mod tests {
 
     /// Tests the initialization of the country code and the ability of the PhyManager to cache a
     /// country code update.
-    #[test]
+    #[fuchsia::test]
     fn test_set_country_code() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -2132,7 +2133,7 @@ mod tests {
     }
 
     // Tests the case where setting the country code is unsuccessful.
-    #[test]
+    #[fuchsia::test]
     fn test_setting_country_code_fails() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -2184,7 +2185,7 @@ mod tests {
     }
 
     /// Tests the case where multiple client interfaces need to be recovered.
-    #[test]
+    #[fuchsia::test]
     fn test_recover_client_interfaces_succeeds() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -2273,7 +2274,7 @@ mod tests {
     }
 
     /// Tests the case where a client interface needs to be recovered and recovery fails.
-    #[test]
+    #[fuchsia::test]
     fn test_recover_client_interfaces_fails() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -2375,7 +2376,7 @@ mod tests {
 
     /// Tests the case where a PHY is client-capable, but client connections are disabled and a
     /// caller requests attempts to recover client interfaces.
-    #[test]
+    #[fuchsia::test]
     fn test_recover_client_interfaces_while_disabled() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -2409,6 +2410,7 @@ mod tests {
 
     #[test_case(fidl_common::DriverFeature::SaeDriverAuth)]
     #[test_case(fidl_common::DriverFeature::SaeSmeAuth)]
+    #[fuchsia::test(add_test_attr = false)]
     fn has_wpa3_client_iface(wpa3_feature: fidl_common::DriverFeature) {
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -2436,7 +2438,7 @@ mod tests {
         assert_eq!(phy_manager.has_wpa3_client_iface(), true);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn has_no_wpa3_capable_client_iface() {
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -2455,7 +2457,7 @@ mod tests {
     }
 
     /// Tests reporting of client connections status when client connections are enabled.
-    #[test]
+    #[fuchsia::test]
     fn test_client_connections_enabled_when_enabled() {
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -2466,7 +2468,7 @@ mod tests {
     }
 
     /// Tests reporting of client connections status when client connections are disabled.
-    #[test]
+    #[fuchsia::test]
     fn test_client_connections_enabled_when_disabled() {
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();

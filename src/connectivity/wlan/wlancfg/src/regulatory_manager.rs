@@ -139,7 +139,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn returns_error_on_short_region_code() {
         let mut context = TestContext::new(make_default_stub_iface_manager());
         let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
@@ -163,7 +163,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn returns_error_on_long_region_code() {
         let mut context = TestContext::new(make_default_stub_iface_manager());
         let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
@@ -187,7 +187,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn propagates_update_on_region_code_with_valid_length() {
         let mut context = TestContext::new(make_default_stub_iface_manager());
         let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
@@ -212,7 +212,7 @@ mod tests {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn does_not_propagate_invalid_length_region_code() {
         let mut context = TestContext::new(make_default_stub_iface_manager());
         let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
@@ -243,7 +243,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn does_not_propagate_null_update() {
         let mut context = TestContext::new(make_default_stub_iface_manager());
         let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
@@ -288,7 +288,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn propagates_iface_manager_failure() {
         let (mut set_country_responder, set_country_response_stream) = mpsc::channel(0);
         let mut context =
@@ -318,7 +318,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn propagates_multiple_valid_region_code_updates_to_device_service() {
         let mut context = TestContext::new(make_default_stub_iface_manager());
         let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);

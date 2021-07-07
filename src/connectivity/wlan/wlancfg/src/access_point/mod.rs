@@ -357,10 +357,7 @@ fn log_ap_request(request: &fidl_policy::AccessPointControllerRequest) {
 mod tests {
     use {
         super::*,
-        crate::{
-            client::types as client_types, regulatory_manager::REGION_CODE_LEN,
-            util::testing::set_logger_for_test,
-        },
+        crate::{client::types as client_types, regulatory_manager::REGION_CODE_LEN},
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
         fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
@@ -521,13 +518,12 @@ mod tests {
         let iface_manager = Arc::new(Mutex::new(iface_manager));
         let (sender, _) = mpsc::unbounded();
         let ap = AccessPoint::new(iface_manager.clone(), sender, Arc::new(Mutex::new(())));
-        set_logger_for_test();
         TestValues { provider, requests, ap, iface_manager }
     }
 
     /// Tests the case where StartAccessPoint is called and there is a valid interface to service
     /// the request and the request succeeds.
-    #[test]
+    #[fuchsia::test]
     fn test_start_access_point_with_iface_succeeds() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -567,7 +563,7 @@ mod tests {
 
     /// Tests the case where StartAccessPoint is called and there is a valid interface to service
     /// the request, but the request fails.
-    #[test]
+    #[fuchsia::test]
     fn test_start_access_point_with_iface_fails() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -618,7 +614,7 @@ mod tests {
 
     /// Tests the case where there are no interfaces available to handle a StartAccessPoint
     /// request.
-    #[test]
+    #[fuchsia::test]
     fn test_start_access_point_no_iface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -666,7 +662,7 @@ mod tests {
 
     /// Tests the case where StopAccessPoint is called and there is a valid interface to handle the
     /// request and the request succeeds.
-    #[test]
+    #[fuchsia::test]
     fn test_stop_access_point_with_iface_succeeds() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -704,7 +700,7 @@ mod tests {
 
     /// Tests the case where StopAccessPoint is called and there is a valid interface to service
     /// the request, but the request fails.
-    #[test]
+    #[fuchsia::test]
     fn test_stop_access_point_with_iface_fails() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -753,7 +749,7 @@ mod tests {
 
     /// Tests the case where StopAccessPoints is called, there is a valid interface to handle the
     /// request, and the request succeeds.
-    #[test]
+    #[fuchsia::test]
     fn test_stop_all_access_points_succeeds() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -777,7 +773,7 @@ mod tests {
 
     /// Tests the case where StopAccessPoints is called and there is a valid interface to handle
     /// the request, but the request fails.
-    #[test]
+    #[fuchsia::test]
     fn test_stop_all_access_points_fails() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -810,7 +806,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_multiple_controllers() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -845,7 +841,7 @@ mod tests {
         assert!(chan.is_closed());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_multiple_api_clients() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();

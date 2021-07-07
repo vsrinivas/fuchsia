@@ -542,7 +542,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_stop_during_started() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -608,7 +608,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_exit_during_started() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -665,7 +665,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_start_during_started() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -749,7 +749,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_duplicate_status_during_started() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -806,7 +806,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_new_status_during_started() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -864,7 +864,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_sme_failure_during_started() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -912,7 +912,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_stop_while_stopped() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -938,7 +938,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_exit_while_stopped() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -962,7 +962,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_start_while_stopped() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1041,7 +1041,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_exit_while_stopping() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1081,7 +1081,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut exit_receiver), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_stop_while_stopping() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1130,7 +1130,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_start_while_stopping() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1205,7 +1205,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_sme_failure_while_stopping() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1236,7 +1236,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_failed_result_code_while_stopping() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1279,7 +1279,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_stop_while_starting() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1364,7 +1364,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut stop_receiver), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_start_while_starting() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1480,7 +1480,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut second_start_receiver), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_exit_while_starting() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1550,7 +1550,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_sme_breaks_while_starting() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
@@ -1584,7 +1584,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_sme_fails_to_stop_while_starting() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1639,7 +1639,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_sme_fails_to_start_while_starting() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1739,7 +1739,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_stop_after_start_failure() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1846,7 +1846,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_start_after_start_failure() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -1960,7 +1960,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_exit_after_start_failure() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -2041,7 +2041,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut exit_receiver), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_manual_start_causes_starting_notification() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
@@ -2099,7 +2099,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_serve_does_not_terminate_right_away() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();

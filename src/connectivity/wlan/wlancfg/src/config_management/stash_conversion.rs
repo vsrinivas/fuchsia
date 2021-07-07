@@ -79,7 +79,7 @@ pub fn network_config_vec_to_persistent_data(
 mod tests {
     use {super::super::*, wlan_stash::policy as pstash};
 
-    #[test]
+    #[fuchsia::test]
     fn network_identifier_to_stash_from_policy() {
         assert_eq!(
             pstash::NetworkIdentifier::from(NetworkIdentifier {
@@ -93,7 +93,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn network_identifier_to_policy_from_stash() {
         assert_eq!(
             NetworkIdentifier::from(pstash::NetworkIdentifier {
@@ -104,7 +104,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn security_type_to_stash_from_policy() {
         assert_eq!(pstash::SecurityType::from(SecurityType::None), pstash::SecurityType::None);
         assert_eq!(pstash::SecurityType::from(SecurityType::Wep), pstash::SecurityType::Wep);
@@ -113,7 +113,7 @@ mod tests {
         assert_eq!(pstash::SecurityType::from(SecurityType::Wpa3), pstash::SecurityType::Wpa3);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn security_type_to_policy_from_stash() {
         assert_eq!(SecurityType::from(pstash::SecurityType::None), SecurityType::None);
         assert_eq!(SecurityType::from(pstash::SecurityType::Wep), SecurityType::Wep);
@@ -122,7 +122,7 @@ mod tests {
         assert_eq!(SecurityType::from(pstash::SecurityType::Wpa3), SecurityType::Wpa3);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn credential_to_stash_from_policy() {
         assert_eq!(pstash::Credential::from(Credential::None), pstash::Credential::None);
         assert_eq!(
@@ -135,7 +135,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn credential_to_policy_from_stash() {
         assert_eq!(Credential::from(pstash::Credential::None), Credential::None);
         assert_eq!(
@@ -148,7 +148,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn persistent_data_from_network_config() {
         // Check that from() works when has_ever_connected is true and false.
         let has_ever_connected = false;

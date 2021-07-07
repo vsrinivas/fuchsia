@@ -92,7 +92,7 @@ mod tests {
         fidl_fuchsia_wlan_policy as fidl_policy,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn merge_update_none_to_one_active() {
         let mut current_state_cache = ClientStateUpdate::default();
         assert_eq!(current_state_cache, ClientStateUpdate { state: None, networks: vec![] });
@@ -127,7 +127,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn merge_update_one_to_two_active() {
         // Start with a connected network
         let mut current_state_cache = ClientStateUpdate {
@@ -183,7 +183,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn merge_update_two_to_one_active() {
         // Start with two active networks
         let mut current_state_cache = ClientStateUpdate {
@@ -280,7 +280,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn into_fidl() {
         let single_network_state = ClientStateUpdate {
             state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),

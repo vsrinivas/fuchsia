@@ -192,7 +192,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn initial_update() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientListenerMessage>();
@@ -224,7 +224,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut l1_stream.next()), Poll::Pending);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_listeners_broadcast() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientListenerMessage>();
@@ -276,7 +276,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut l2_stream.next()), Poll::Pending);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_listeners_unacked() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientListenerMessage>();

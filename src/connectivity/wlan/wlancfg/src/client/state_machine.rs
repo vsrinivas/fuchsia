@@ -736,7 +736,7 @@ mod tests {
                 testing::{
                     create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
                     generate_random_bss_desc, generate_random_bss_info, poll_sme_req,
-                    set_logger_for_test, validate_sme_scan_request_and_send_results,
+                    validate_sme_scan_request_and_send_results,
                 },
             },
             validate_cobalt_events, validate_no_cobalt_events,
@@ -765,7 +765,6 @@ mod tests {
     }
 
     async fn test_setup() -> TestValues {
-        set_logger_for_test();
         let (client_req_sender, client_req_stream) = mpsc::channel(1);
         let (update_sender, update_receiver) = mpsc::unbounded();
         let (sme_proxy, sme_server) =
@@ -829,11 +828,10 @@ mod tests {
         thread_rng().sample_iter(&Alphanumeric).take(20).collect()
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connecting_state_successfully_connects() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Do test set up manually to get stash server
-        set_logger_for_test();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
         let (update_sender, mut update_receiver) = mpsc::unbounded();
         let (sme_proxy, sme_server) =
@@ -993,11 +991,10 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connecting_state_successfully_scans_and_connects() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Do test set up manually to get stash server
-        set_logger_for_test();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
         let (update_sender, mut update_receiver) = mpsc::unbounded();
         let (sme_proxy, sme_server) =
@@ -1179,10 +1176,10 @@ mod tests {
 
     #[test_case(types::SecurityType::Wpa3)]
     #[test_case(types::SecurityType::Wpa2)]
+    #[fuchsia::test(add_test_attr = false)]
     fn connecting_state_successfully_connects_wpa2wpa3(type_: types::SecurityType) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Do test set up manually to get stash server
-        set_logger_for_test();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
         let (update_sender, _update_receiver) = mpsc::unbounded();
         let (sme_proxy, sme_server) =
@@ -1293,7 +1290,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connecting_state_fails_to_connect_and_retries() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -1441,11 +1438,10 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connecting_state_fails_to_scan_and_retries() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Do test set up manually to get stash server
-        set_logger_for_test();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
         let (update_sender, mut update_receiver) = mpsc::unbounded();
         let (sme_proxy, sme_server) =
@@ -1634,11 +1630,10 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connecting_state_fails_to_connect_at_max_retries() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Don't use test_values() because of issue with KnownEssStore
-        set_logger_for_test();
         let (update_sender, mut update_receiver) = mpsc::unbounded();
         let (sme_proxy, sme_server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
@@ -1774,11 +1769,10 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connecting_state_fails_to_connect_with_bad_credentials() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Don't use test_values() because of issue with KnownEssStore
-        set_logger_for_test();
         let (update_sender, mut update_receiver) = mpsc::unbounded();
         let (sme_proxy, sme_server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
@@ -1915,7 +1909,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connecting_state_gets_duplicate_connect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -2049,7 +2043,7 @@ mod tests {
         validate_no_cobalt_events!(test_values.cobalt_events);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connecting_state_gets_different_connect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -2249,7 +2243,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connecting_state_gets_disconnect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -2368,7 +2362,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connecting_state_has_broken_sme() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
@@ -2409,7 +2403,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connected_state_gets_disconnect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -2514,7 +2508,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connected_state_records_unexpected_disconnect() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -2600,7 +2594,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connected_state_records_unexpected_disconnect_unspecified_bss() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -2735,7 +2729,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connected_state_gets_duplicate_connect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -2810,7 +2804,7 @@ mod tests {
         validate_no_cobalt_events!(test_values.cobalt_events);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connected_state_gets_different_connect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -2995,11 +2989,10 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connected_state_detects_network_disconnect() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Do test set up manually to get stash server
-        set_logger_for_test();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
         let (update_sender, mut update_receiver) = mpsc::unbounded();
         let (sme_proxy, sme_server) =
@@ -3188,7 +3181,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connected_state_detects_sme_reconnect() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -3284,7 +3277,7 @@ mod tests {
         validate_no_cobalt_events!(test_values.cobalt_events);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn disconnecting_state_completes_and_exits() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -3327,7 +3320,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn disconnecting_state_completes_disconnect_to_connecting() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -3438,7 +3431,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn disconnecting_state_has_broken_sme() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
@@ -3464,7 +3457,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Err(_)));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn serve_loop_handles_startup() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -3523,7 +3516,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn serve_loop_handles_sme_disappearance() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
@@ -3588,7 +3581,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn serve_loop_handles_disconnect() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -3717,7 +3710,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn serve_loop_handles_state_machine_error() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());

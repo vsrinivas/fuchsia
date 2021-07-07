@@ -187,7 +187,7 @@ mod tests {
 
     const STORE_JSON_PATH: &str = "store.json";
 
-    #[test]
+    #[fuchsia::test]
     fn store_and_lookup() {
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
 
@@ -217,7 +217,7 @@ mod tests {
         assert_eq!(2, store.known_network_count());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn unwrap_or_else_from_bad_file() {
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let path = temp_dir.path().join(STORE_JSON_PATH);
@@ -237,7 +237,7 @@ mod tests {
         assert!(path.exists());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn bail_if_path_is_bad() {
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let store = KnownEssStore::new_with_paths(
@@ -255,7 +255,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn clear() {
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
 

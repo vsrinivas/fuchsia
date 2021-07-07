@@ -644,14 +644,10 @@ mod tests {
         crate::{
             access_point::state_machine as ap_fsm,
             config_management::SavedNetworksManager,
-            util::{
-                testing::set_logger_for_test,
-                testing::{
-                    create_mock_cobalt_sender_and_receiver, generate_channel,
-                    generate_random_bss_desc, generate_random_channel,
-                    poll_for_and_validate_sme_scan_request_and_send_results,
-                    validate_sme_scan_request_and_send_results,
-                },
+            util::testing::{
+                create_mock_cobalt_sender_and_receiver, generate_channel, generate_random_bss_desc,
+                generate_random_channel, poll_for_and_validate_sme_scan_request_and_send_results,
+                validate_sme_scan_request_and_send_results,
             },
         },
         anyhow::Error,
@@ -684,8 +680,6 @@ mod tests {
     }
 
     async fn test_setup() -> TestValues {
-        set_logger_for_test();
-
         // setup modules
         let (cobalt_api, cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let saved_network_manager = Arc::new(SavedNetworksManager::new_for_test().await.unwrap());
@@ -806,7 +800,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn scan_results_are_stored() {
         let mut test_values = test_setup().await;
         let network_selector = test_values.network_selector;
@@ -830,7 +824,7 @@ mod tests {
         assert!(test_values.cobalt_events.try_next().unwrap().is_some());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn scan_results_merged_with_saved_networks() {
         let test_values = test_setup().await;
 
@@ -993,6 +987,7 @@ mod tests {
             ..generate_random_bss()
         },
         -71; "5GHz score is RSSI, when below threshold")]
+    #[fuchsia::test(add_test_attr = false)]
     fn scoring_test(bss: types::Bss, expected_score: i8) {
         let mut rng = rand::thread_rng();
 
@@ -1016,7 +1011,7 @@ mod tests {
         assert_eq!(internal_bss.score(), expected_score)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_score_bss_prefers_less_short_connections() {
         let bss_info_worse =
             types::Bss { rssi: -60, channel: generate_channel(3), ..generate_random_bss() };
@@ -1046,7 +1041,7 @@ mod tests {
         assert!(bss_better.score() > bss_worse.score());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_score_bss_prefers_less_failures() {
         let bss_info_worse =
             types::Bss { rssi: -60, channel: generate_channel(3), ..generate_random_bss() };
@@ -1073,7 +1068,7 @@ mod tests {
         assert!(bss_better.score() > bss_worse.score());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_score_bss_prefers_stronger_with_failures() {
         // Test test that if one network has a few network failures but is 5 Ghz instead of 2.4,
         // the 5 GHz network has a higher score.
@@ -1100,7 +1095,7 @@ mod tests {
         assert!(bss_better.score() > bss_worse.score());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_score_credentials_rejected_worse() {
         // If two BSS are identical other than one failed to connect with wrong credentials and
         // the other failed with a few connect failurs, the one with wrong credentials has a lower
@@ -1135,7 +1130,7 @@ mod tests {
         assert!(bss_better.score() > bss_worse.score());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn select_best_connection_candidate_sorts_by_score() {
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
@@ -1256,7 +1251,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn select_best_connection_candidate_sorts_by_failure_count() {
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
@@ -1380,7 +1375,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn select_best_connection_candidate_incompatible() {
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
@@ -1501,7 +1496,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn select_best_connection_candidate_ignore_list() {
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
@@ -1590,7 +1585,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn select_best_connection_candidate_logs_to_inspect() {
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
@@ -1720,7 +1715,7 @@ mod tests {
         });
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn perform_scan_cache_is_fresh() {
         let mut test_values = test_setup().await;
         let network_selector = test_values.network_selector;
@@ -1753,7 +1748,7 @@ mod tests {
         assert!(test_values.sme_stream.next().await.is_none());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn perform_scan_cache_is_stale() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -1804,7 +1799,7 @@ mod tests {
         drop(scan_result_guard);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn perform_scan_error_doesnt_use_stale_results() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -1854,7 +1849,7 @@ mod tests {
         drop(scan_result_guard);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn augment_bss_with_active_scan_doesnt_run_on_actively_found_networks() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
@@ -1892,7 +1887,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn augment_bss_with_active_scan_runs_on_passively_found_networks() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -1986,7 +1981,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn find_best_connection_candidate_end_to_end() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -2241,7 +2236,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn find_best_connection_candidate_wpa_wpa2() {
         // Check that if we see a WPA2 network and have WPA and WPA3 credentials saved for it, we
         // could choose the WPA credential but not the WPA3 credential. In other words we can
@@ -2340,7 +2335,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Ready(None));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn find_connection_candidate_for_network_end_to_end() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -2435,7 +2430,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn find_connection_candidate_for_network_end_to_end_with_failure() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -2531,7 +2526,7 @@ mod tests {
         )
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn recorded_metrics_on_scan() {
         let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
 
@@ -2653,7 +2648,7 @@ mod tests {
         assert!(cobalt_events.try_next().is_err());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn recorded_metrics_on_scan_no_saved_networks() {
         let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let mock_scan_results = vec![];

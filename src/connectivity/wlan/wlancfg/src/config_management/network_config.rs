@@ -506,7 +506,7 @@ impl From<NetworkConfigError> for fidl_policy::NetworkConfigChangeError {
 mod tests {
     use {super::*, wlan_common::assert_variant};
 
-    #[test]
+    #[fuchsia::test]
     fn new_network_config_none_credential() {
         let credential = Credential::None;
         let network_config = NetworkConfig::new(
@@ -530,7 +530,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn new_network_config_password_credential() {
         let credential = Credential::Password(b"foo-password".to_vec());
 
@@ -556,7 +556,7 @@ mod tests {
         assert!(network_config.perf_stats.failure_list.0.is_empty());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn new_network_config_psk_credential() {
         let credential = Credential::Psk([1; WPA_PSK_BYTE_LEN].to_vec());
 
@@ -581,7 +581,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn new_network_config_invalid_ssid() {
         let credential = Credential::None;
 
@@ -594,7 +594,7 @@ mod tests {
         assert_variant!(config_result, Err(NetworkConfigError::SsidLen));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn new_network_config_invalid_password() {
         let credential = Credential::Password([1; 64].to_vec());
 
@@ -604,7 +604,7 @@ mod tests {
         assert_variant!(config_result, Err(NetworkConfigError::PasswordLen));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn new_network_config_invalid_psk() {
         let credential = Credential::Psk(b"bar".to_vec());
 
@@ -617,7 +617,7 @@ mod tests {
         assert_variant!(config_result, Err(NetworkConfigError::PskLen));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn check_config_errors_invalid_wep_password() {
         // Unsupported length (7).
         let password = Credential::Password(b"1234567".to_vec());
@@ -627,7 +627,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn check_config_errors_invalid_wpa_password() {
         // password too short
         let short_password = Credential::Password(b"1234567".to_vec());
@@ -644,7 +644,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn check_config_errors_invalid_wep_credential_variant() {
         // Unsupported variant (`Psk`).
         let psk = Credential::Psk(b"12345".to_vec());
@@ -654,7 +654,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn check_config_errors_invalid_wpa_psk() {
         // PSK length not 32 characters
         let short_psk = Credential::Psk([6; WPA_PSK_BYTE_LEN - 1].to_vec());
@@ -671,7 +671,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn check_config_errors_invalid_security_credential() {
         // Use a password with open network.
         let password = Credential::Password(b"password".to_vec());
@@ -703,7 +703,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn check_config_errors_invalid_ssid() {
         // The longest valid SSID length is 32, so 33 characters is too long.
         let long_ssid = [6; 33].to_vec();
@@ -713,7 +713,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn failure_list_add_and_get() {
         let mut failure_list = ConnectFailureList::new();
 
@@ -732,7 +732,7 @@ mod tests {
         assert!(failure_list.get_recent(later_time).is_empty());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn failure_list_add_when_full() {
         let mut failure_list = ConnectFailureList::new();
 
@@ -752,7 +752,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn get_part_of_failure_list() {
         let mut failure_list = ConnectFailureList::new();
         let bssid = [0; 6];
@@ -787,7 +787,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_disconnect_list_add_and_get() {
         let mut disconnects = DisconnectList::new();
 
@@ -815,7 +815,7 @@ mod tests {
         assert!(disconnects.get_recent(later_time).is_empty());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_disconnect_list_add_removes_oldest_when_full() {
         let mut disconnects = DisconnectList::new();
 
@@ -843,7 +843,7 @@ mod tests {
         assert_eq!(all_disconnects.len(), disconnect_list_capacity);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_credential_from_bytes() {
         assert_eq!(Credential::from_bytes(vec![1]), Credential::Password(vec![1]));
         assert_eq!(Credential::from_bytes(vec![2; 63]), Credential::Password(vec![2; 63]));
@@ -855,7 +855,7 @@ mod tests {
         assert_eq!(Credential::from_bytes(vec![]), Credential::None);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_derived_security_type_from_credential() {
         let password = Credential::Password(b"password".to_vec());
         let psk = Credential::Psk(b"psk-type".to_vec());
@@ -866,7 +866,7 @@ mod tests {
         assert_eq!(SecurityType::None, none.derived_security_type());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_hidden_prob_calculation() {
         let mut network_config = NetworkConfig::new(
             NetworkIdentifier::new(b"some_ssid".to_vec(), SecurityType::None),
@@ -888,7 +888,7 @@ mod tests {
         assert_eq!(network_config.hidden_probability, PROB_HIDDEN_IF_CONNECT_PASSIVE);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_hidden_prob_calc_active_connect() {
         let mut network_config = NetworkConfig::new(
             NetworkIdentifier::new(b"some_ssid".to_vec(), SecurityType::None),
@@ -911,7 +911,7 @@ mod tests {
         assert_eq!(network_config.hidden_probability, PROB_HIDDEN_IF_CONNECT_ACTIVE);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_hidden_prob_calc_not_seen_in_active_scan_lowers_prob() {
         // Test that updating hidden probability after not seeing the network in a directed active
         // scan lowers the hidden probability
@@ -932,7 +932,7 @@ mod tests {
         assert_eq!(network_config.hidden_probability, expected_prob);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_hidden_prob_calc_not_seen_in_active_scan_does_not_lower_past_threshold() {
         let mut network_config = NetworkConfig::new(
             NetworkIdentifier::new(b"some_ssid".to_vec(), SecurityType::None),
@@ -952,7 +952,7 @@ mod tests {
         assert_eq!(network_config.hidden_probability, PROB_HIDDEN_MIN_FROM_NOT_SEEN_ACTIVE);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_hidden_prob_calc_not_seen_in_active_scan_does_not_change_if_lower_than_threshold() {
         let mut network_config = NetworkConfig::new(
             NetworkIdentifier::new(b"some_ssid".to_vec(), SecurityType::None),
@@ -970,7 +970,7 @@ mod tests {
         assert_eq!(network_config.hidden_probability, prob_before_update);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_hidden_prob_calc_not_seen_active_after_active_connect() {
         // Test the specific case where we fail to see the network in an active scan after we
         // previously connected to the network after an active scan was required.

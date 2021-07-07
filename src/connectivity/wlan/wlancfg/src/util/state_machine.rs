@@ -61,7 +61,7 @@ mod tests {
     use futures::{channel::mpsc, stream::StreamExt};
     use std::mem;
 
-    #[test]
+    #[fuchsia::test]
     fn state_machine() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (sender, receiver) = mpsc::unbounded();

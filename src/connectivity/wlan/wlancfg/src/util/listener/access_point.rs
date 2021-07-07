@@ -112,7 +112,7 @@ mod tests {
         types::NetworkIdentifier { ssid: b"test".to_vec(), type_: fidl_policy::SecurityType::None }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn merge_updates() {
         let mut current_state_cache = ApStatesUpdate::default();
         assert_eq!(current_state_cache, ApStatesUpdate { access_points: vec![] });
@@ -149,7 +149,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn into_fidl() {
         let state = ApStatesUpdate {
             access_points: vec![{

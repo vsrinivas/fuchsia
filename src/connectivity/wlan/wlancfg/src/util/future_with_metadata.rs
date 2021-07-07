@@ -47,7 +47,7 @@ mod tests {
         wlan_common::assert_variant,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn assign_and_read_metadata_in_future_output() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 

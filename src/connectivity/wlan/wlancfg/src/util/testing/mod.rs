@@ -5,10 +5,8 @@
 
 pub mod cobalt;
 pub mod generate_struct;
-pub mod logger;
 pub mod sme_stream;
 
 pub use cobalt::*;
 pub use generate_struct::*;
-pub use logger::*;
 pub use sme_stream::*;
