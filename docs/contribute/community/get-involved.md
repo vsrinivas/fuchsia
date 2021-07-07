@@ -36,18 +36,18 @@ that lists any open Gerrit change in the `rfcs` directory.
 If you want to create a proposal that you want the Fuchsia Eng Council to
 review, see [Creating an RFC.](/docs/contribute/governance/rfcs/create_rfc.md)
 
-## Join a mailing list
+## Join a discussion group
 
-Stay informed about the Fuchsia project by joining mailing lists.
+Stay informed about the Fuchsia project by joining a discussion group.
 
 ### General discussion
 
-The following are general Fuchsia mailing lists:
+The following are general Fuchsia discussion groups:
 
 
 <table>
   <tr>
-   <td><strong>Mailing list</strong>
+   <td><strong>Group</strong>
    </td>
    <td><strong>Purpose</strong>
    </td>
@@ -65,6 +65,12 @@ The following are general Fuchsia mailing lists:
    </td>
   </tr>
   <tr>
+   <td><a href="https://discord.gg/pjfYkmbq69">Discord community</a>
+   </td>
+   <td>Fuchsia's Discord community.
+   </td>
+  </tr>
+  <tr>
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/testability-discuss">testability-discuss</a>
    </td>
    <td>Discussion list for general conversation about testable code and Fuchsia’s testability rubrics.
@@ -74,12 +80,12 @@ The following are general Fuchsia mailing lists:
 
 ### Topic discussion
 
-The following mailing lists are discussion channels for specific areas of
+The following discussion groups are for specific areas of
 Fuchsia:
 
 <table>
   <tr>
-   <td><strong>Mailing list</strong>
+   <td><strong>Group</strong>
    </td>
    <td><strong>Purpose</strong>
    </td>
@@ -219,12 +225,12 @@ Fuchsia:
 
 ### Platform governance and management
 
-The following mailing lists are discussion channels for communicating with
+The following discussion groups are for communicating with
 Fuchsia’s leadership:
 
 <table>
   <tr>
-   <td><strong>Mailing list</strong>
+   <td><strong>Group</strong>
    </td>
    <td><strong>Purpose</strong>
    </td>
