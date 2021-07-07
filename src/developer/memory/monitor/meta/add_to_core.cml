@@ -1,0 +1,63 @@
+// Adds memory_monitor to core
+{
+    children: [
+        {
+            name: "memory_monitor",
+            url: "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cm",
+
+            // TODO(fxbug.dev/78680): need to start eagerly to collect memory
+            // stats. Find a better solution than "eager".
+            startup: "eager",
+            environment: "#universe-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.memory.Debugger",
+                "fuchsia.memory.Monitor",
+                "fuchsia.memorypressure.Provider",
+            ],
+            from: "#memory_monitor",
+            to: "#appmgr",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#appmgr",
+            to: "#memory_monitor",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+            ],
+            from: "parent",
+            to: "#memory_monitor",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#memory_monitor",
+            subdir: "memory_monitor",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-aml-ram",
+            to: "#memory_monitor",
+            subdir: "class/aml-ram",
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: "#memory_monitor",
+        },
+    ],
+}

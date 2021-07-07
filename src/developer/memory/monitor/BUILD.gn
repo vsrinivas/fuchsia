@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//src/sys/core/build/core_shard.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 source_set("lib") {
@@ -73,6 +74,10 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+}
+
+core_shard("add_to_core") {
+  shard_file = "meta/add_to_core.cml"
 }
 
 fuchsia_package_with_single_component("monitor") {
