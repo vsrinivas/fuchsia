@@ -29,6 +29,7 @@ plugin!(
             "/component/used" => ComponentUsedGraphController::default(),
             "/component/manifest" => ComponentManifestGraphController::default(),
             "/packages" => PackagesGraphController::default(),
+            "/packages/urls" => PackageUrlListController::default(),
             "/routes" => RoutesGraphController::default(),
             "/blob" => BlobController::default(),
             "/sysmgr/services" => SysmgrServicesController::default(),
