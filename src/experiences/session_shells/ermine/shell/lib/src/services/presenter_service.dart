@@ -55,6 +55,9 @@ class PresenterService extends GraphicalPresenter {
         .value
         ?.text;
 
+    // Build title from one of: name, url, id or ''.
+    final title = name ?? (url?.startsWith('http') == true ? url : id ?? '');
+
     final viewHolderToken = viewSpec.viewHolderToken;
     final viewRef = viewSpec.viewRef;
     if (viewHolderToken != null && viewRef != null) {
@@ -73,7 +76,7 @@ class PresenterService extends GraphicalPresenter {
         viewConnection: viewConnection,
         view: ViewHandle(viewRefDup),
         id: id,
-        title: name ?? id ?? url ?? '',
+        title: title!,
         url: url,
         onClose: viewController.close,
       );

@@ -106,10 +106,13 @@ class _AppChip extends StatelessWidget {
             SizedBox(
               width: 140,
               child: Center(
-                child: Text(
-                  _view.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Tooltip(
+                  message: _view.title,
+                  child: Text(
+                    _view.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
             ),
