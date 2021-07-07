@@ -531,7 +531,7 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
     });
 
     const POLL_INTERVAL: zx::Duration = zx::Duration::from_millis(100);
-    const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(5000);
+    const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(60000);
 
     let inspect_stats_stream = fasync::Interval::new(POLL_INTERVAL)
         .then(|()| {
