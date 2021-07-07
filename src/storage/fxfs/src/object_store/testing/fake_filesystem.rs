@@ -5,7 +5,7 @@
 use {
     crate::object_store::{
         allocator::Allocator,
-        filesystem::{Filesystem, SyncOptions},
+        filesystem::{Filesystem, Info, SyncOptions},
         journal::JournalCheckpoint,
         object_manager::ObjectManager,
         transaction::{
@@ -63,6 +63,14 @@ impl Filesystem for FakeFilesystem {
     async fn sync(&self, _: SyncOptions<'_>) -> Result<(), Error> {
         self.num_syncs.fetch_add(1u64, Ordering::Relaxed);
         Ok(())
+    }
+
+    fn block_size(&self) -> u32 {
+        4096
+    }
+
+    fn get_info(&self) -> Info {
+        Info { total_bytes: 1024 * 1024, used_bytes: 0, block_size: 4096 }
     }
 }
 

@@ -131,6 +131,11 @@ template("fs_test_suite") {
   }
 
   storage_isolated_devmgr_unittest_v2_component(
+      "${suite_name}-query-filesystem-tests") {
+    deps = [ "//src/storage/fs_test:query_filesystem_tests" ]
+  }
+
+  storage_isolated_devmgr_unittest_v2_component(
       "${suite_name}-random-op-tests") {
     deps = [ "//src/storage/fs_test:random_op_tests" ]
   }
@@ -221,6 +226,7 @@ template("fs_test_suite") {
       ":${suite_name}-open-tests",
       ":${suite_name}-overflow-tests",
       ":${suite_name}-persist-tests",
+      ":${suite_name}-query-filesystem-tests",
       ":${suite_name}-random-op-tests",
       ":${suite_name}-realpath-tests",
       ":${suite_name}-rename-tests",

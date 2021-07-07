@@ -227,6 +227,16 @@ test("persist_tests") {
   ]
 }
 
+test("query_filesystem_tests") {
+  sources = [ "query_filesystem.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
 test("random_op_tests") {
   sources = [ "random_op.cc" ]
   deps = [

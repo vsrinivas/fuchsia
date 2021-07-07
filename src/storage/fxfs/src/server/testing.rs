@@ -113,6 +113,10 @@ impl TestFixture {
     pub fn root(&self) -> &DirectoryProxy {
         &self.state.as_ref().unwrap().root
     }
+
+    pub fn fs(&self) -> &FxFilesystem {
+        &self.state.as_ref().unwrap().filesystem
+    }
 }
 
 impl Drop for TestFixture {

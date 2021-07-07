@@ -66,8 +66,6 @@ use {
     storage_device::Device,
 };
 
-pub const MIN_BLOCK_SIZE: u32 = 4096;
-
 // TODO(jfsulliv): This probably could have a better home.
 pub fn current_time() -> Timestamp {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO).into()
@@ -133,8 +131,7 @@ impl ObjectStore {
         tree: LSMTree<ObjectKey, ObjectValue>,
     ) -> Arc<ObjectStore> {
         let device = filesystem.device();
-        let block_size = std::cmp::max(device.block_size(), MIN_BLOCK_SIZE);
-        assert_eq!(block_size % MIN_BLOCK_SIZE, 0);
+        let block_size = filesystem.block_size();
         let store = Arc::new(ObjectStore {
             parent_store,
             store_object_id,

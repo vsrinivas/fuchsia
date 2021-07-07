@@ -5,11 +5,16 @@
 use {
     crate::{
         errors::FxfsError,
-        object_store::{filesystem::OpenFxFilesystem, volume::root_volume},
+        object_store::{
+            filesystem::{Filesystem, OpenFxFilesystem},
+            volume::root_volume,
+        },
         server::volume::FxVolumeAndRoot,
     },
     anyhow::{Context, Error},
-    fidl_fuchsia_fs::{AdminRequest, AdminRequestStream, QueryRequest, QueryRequestStream},
+    fidl_fuchsia_fs::{
+        AdminRequest, AdminRequestStream, FilesystemInfo, FsType, QueryRequest, QueryRequestStream,
+    },
     fidl_fuchsia_io::{self as fio, DirectoryMarker},
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{self as zx},
@@ -120,8 +125,23 @@ impl FxfsServer {
         }
     }
 
-    async fn handle_query(&self, _scope: &ExecutionScope, _req: QueryRequest) -> Result<(), Error> {
-        panic!("Unimplemented")
+    async fn handle_query(&self, _scope: &ExecutionScope, req: QueryRequest) -> Result<(), Error> {
+        match req {
+            QueryRequest::GetInfo { responder, .. } => {
+                // TODO(csuter): Support all the fields.
+                let info = self.fs.get_info();
+                responder.send(&mut Ok(FilesystemInfo {
+                    total_bytes: Some(info.total_bytes),
+                    used_bytes: Some(info.used_bytes),
+                    block_size: Some(info.block_size),
+                    max_node_name_size: Some(255), // This is limited by Fuchsia.io
+                    fs_type: Some(FsType::Fxfs),
+                    ..FilesystemInfo::EMPTY
+                }))?;
+            }
+            _ => panic!("Unimplemented"),
+        }
+        Ok(())
     }
 
     async fn handle_request(&self, stream: Services, scope: &ExecutionScope) -> Result<(), Error> {

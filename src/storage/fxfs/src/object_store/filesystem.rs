@@ -30,6 +30,14 @@ use {
     storage_device::{Device, DeviceHolder},
 };
 
+pub const MIN_BLOCK_SIZE: u32 = 4096;
+
+pub struct Info {
+    pub total_bytes: u64,
+    pub used_bytes: u64,
+    pub block_size: u32,
+}
+
 #[async_trait]
 pub trait Filesystem: TransactionHandler {
     /// Returns access to the undeyling device.
@@ -46,6 +54,12 @@ pub trait Filesystem: TransactionHandler {
 
     /// Flushes buffered data to the underlying device.
     async fn sync(&self, options: SyncOptions<'_>) -> Result<(), Error>;
+
+    /// Returns the filesystem block size.
+    fn block_size(&self) -> u32;
+
+    /// Returns filesystem information.
+    fn get_info(&self) -> Info;
 }
 
 #[async_trait]
@@ -121,6 +135,7 @@ impl std::ops::Deref for OpenFxFilesystem {
 
 pub struct FxFilesystem {
     device: OnceCell<DeviceHolder>,
+    block_size: u32,
     objects: Arc<ObjectManager>,
     journal: Journal,
     lock_manager: LockManager,
@@ -141,8 +156,11 @@ impl FxFilesystem {
     pub async fn new_empty(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
+        let block_size = std::cmp::max(device.block_size(), MIN_BLOCK_SIZE);
+        assert_eq!(block_size % MIN_BLOCK_SIZE, 0);
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
+            block_size,
             objects,
             journal,
             lock_manager: LockManager::new(),
@@ -163,8 +181,11 @@ impl FxFilesystem {
     ) -> Result<OpenFxFilesystem, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
+        let block_size = std::cmp::max(device.block_size(), MIN_BLOCK_SIZE);
+        assert_eq!(block_size % MIN_BLOCK_SIZE, 0);
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
+            block_size,
             objects,
             journal,
             lock_manager: LockManager::new(),
@@ -281,6 +302,18 @@ impl Filesystem for FxFilesystem {
 
     async fn sync(&self, options: SyncOptions<'_>) -> Result<(), Error> {
         self.journal.sync(options).await.map(|_| ())
+    }
+
+    fn block_size(&self) -> u32 {
+        self.block_size
+    }
+
+    fn get_info(&self) -> Info {
+        Info {
+            total_bytes: self.device.get().unwrap().size(),
+            used_bytes: self.object_manager().allocator().get_allocated_bytes(),
+            block_size: self.block_size(),
+        }
     }
 }
 

@@ -23,7 +23,7 @@ use {
             journal::checksum_list::ChecksumList,
             round_down,
             transaction::{AllocatorMutation, AssocObj, Mutation, Options, Transaction},
-            HandleOptions, ObjectStore, MIN_BLOCK_SIZE,
+            HandleOptions, ObjectStore,
         },
         trace_duration,
     },
@@ -348,7 +348,7 @@ impl SimpleAllocator {
             // TODO(csuter): Rather than computing the block size here, we should perhaps have the
             // filesystem determine what it should be.  Also, it eventually needs to come from the
             // super-block.
-            block_size: std::cmp::max(filesystem.device().block_size(), MIN_BLOCK_SIZE),
+            block_size: filesystem.block_size(),
             device_size: filesystem.device().size(),
             object_id,
             empty,
@@ -1106,7 +1106,7 @@ mod tests {
                 graveyard::Graveyard,
                 testing::fake_filesystem::FakeFilesystem,
                 transaction::{Options, TransactionHandler},
-                ObjectStore, MIN_BLOCK_SIZE,
+                ObjectStore,
             },
         },
         fuchsia_async as fasync,
@@ -1219,29 +1219,29 @@ mod tests {
         let mut device_ranges = Vec::new();
         device_ranges.push(
             allocator
-                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .allocate(&mut transaction, fs.block_size() as u64)
                 .await
                 .expect("allocate failed"),
         );
-        assert_eq!(device_ranges.last().unwrap().length(), MIN_BLOCK_SIZE as u64);
+        assert_eq!(device_ranges.last().unwrap().length(), fs.block_size() as u64);
         device_ranges.push(
             allocator
-                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .allocate(&mut transaction, fs.block_size() as u64)
                 .await
                 .expect("allocate failed"),
         );
-        assert_eq!(device_ranges.last().unwrap().length(), MIN_BLOCK_SIZE as u64);
+        assert_eq!(device_ranges.last().unwrap().length(), fs.block_size() as u64);
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
         transaction.commit().await.expect("commit failed");
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         device_ranges.push(
             allocator
-                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .allocate(&mut transaction, fs.block_size() as u64)
                 .await
                 .expect("allocate failed"),
         );
-        assert_eq!(device_ranges[2].length(), MIN_BLOCK_SIZE as u64);
+        assert_eq!(device_ranges[2].length(), fs.block_size() as u64);
         assert_eq!(overlap(&device_ranges[0], &device_ranges[2]), 0);
         assert_eq!(overlap(&device_ranges[1], &device_ranges[2]), 0);
         transaction.commit().await.expect("commit failed");
@@ -1260,10 +1260,10 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let device_range1 = allocator
-            .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+            .allocate(&mut transaction, fs.block_size() as u64)
             .await
             .expect("allocate failed");
-        assert_eq!(device_range1.length(), MIN_BLOCK_SIZE as u64);
+        assert_eq!(device_range1.length(), fs.block_size() as u64);
         transaction.commit().await.expect("commit failed");
 
         let mut transaction =
@@ -1285,18 +1285,18 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
-        device_ranges.push(0..MIN_BLOCK_SIZE as u64);
+        device_ranges.push(0..fs.block_size() as u64);
         allocator
             .mark_allocated(&mut transaction, device_ranges.last().unwrap().clone())
             .await
             .expect("mark_allocated failed");
         device_ranges.push(
             allocator
-                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .allocate(&mut transaction, fs.block_size() as u64)
                 .await
                 .expect("allocate failed"),
         );
-        assert_eq!(device_ranges.last().unwrap().length(), MIN_BLOCK_SIZE as u64);
+        assert_eq!(device_ranges.last().unwrap().length(), fs.block_size() as u64);
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
         transaction.commit().await.expect("commit failed");
 
@@ -1319,19 +1319,19 @@ mod tests {
         let mut device_ranges = Vec::new();
         device_ranges.push(
             allocator
-                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .allocate(&mut transaction, fs.block_size() as u64)
                 .await
                 .expect("allocate failed"),
         );
         device_ranges.push(
             allocator
-                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .allocate(&mut transaction, fs.block_size() as u64)
                 .await
                 .expect("allocate failed"),
         );
         device_ranges.push(
             allocator
-                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .allocate(&mut transaction, fs.block_size() as u64)
                 .await
                 .expect("allocate failed"),
         );
@@ -1349,7 +1349,7 @@ mod tests {
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         device_ranges.push(
             allocator
-                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .allocate(&mut transaction, fs.block_size() as u64)
                 .await
                 .expect("allocate failed"),
         );
@@ -1375,7 +1375,7 @@ mod tests {
                 .await
                 .expect("new_transaction failed");
             allocator
-                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .allocate(&mut transaction, fs.block_size() as u64)
                 .await
                 .expect("allocate failed")
         };
@@ -1388,7 +1388,7 @@ mod tests {
             .expect("new_transaction failed");
         assert_eq!(
             allocator
-                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .allocate(&mut transaction, fs.block_size() as u64)
                 .await
                 .expect("allocate failed"),
             allocated_range
@@ -1408,7 +1408,7 @@ mod tests {
         assert_eq!(allocator.get_allocated_bytes(), 0);
 
         // Verify allocated_bytes reflects allocation changes.
-        const ALLOCATED_BYTES: u64 = MIN_BLOCK_SIZE as u64;
+        let allocated_bytes = fs.block_size() as u64;
         let allocated_range = {
             let mut transaction = fs
                 .clone()
@@ -1416,11 +1416,11 @@ mod tests {
                 .await
                 .expect("new_transaction failed");
             let range = allocator
-                .allocate(&mut transaction, ALLOCATED_BYTES)
+                .allocate(&mut transaction, allocated_bytes)
                 .await
                 .expect("allocate failed");
             transaction.commit().await.expect("commit failed");
-            assert_eq!(allocator.get_allocated_bytes(), ALLOCATED_BYTES);
+            assert_eq!(allocator.get_allocated_bytes(), allocated_bytes);
             range
         };
 
@@ -1431,16 +1431,16 @@ mod tests {
                 .await
                 .expect("new_transaction failed");
             allocator
-                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .allocate(&mut transaction, fs.block_size() as u64)
                 .await
                 .expect("allocate failed");
 
             // Prior to commiiting, the count of allocated bytes shouldn't change.
-            assert_eq!(allocator.get_allocated_bytes(), ALLOCATED_BYTES);
+            assert_eq!(allocator.get_allocated_bytes(), allocated_bytes);
         }
 
         // After dropping the prior transaction, the allocated bytes still shouldn't have changed.
-        assert_eq!(allocator.get_allocated_bytes(), ALLOCATED_BYTES);
+        assert_eq!(allocator.get_allocated_bytes(), allocated_bytes);
 
         // Verify allocated_bytes reflects deallocations.
         let deallocate_range = allocated_range.start + 20..allocated_range.end - 20;
@@ -1449,7 +1449,7 @@ mod tests {
         allocator.deallocate(&mut transaction, deallocate_range).await.expect("deallocate failed");
 
         // Before committing, there should be no change.
-        assert_eq!(allocator.get_allocated_bytes(), ALLOCATED_BYTES);
+        assert_eq!(allocator.get_allocated_bytes(), allocated_bytes);
 
         transaction.commit().await.expect("commit failed");
 

@@ -23,10 +23,12 @@ use {
     async_trait::async_trait,
     either::{Left, Right},
     fidl::endpoints::ServerEnd,
+    fidl_fuchsia_fs::FsType,
     fidl_fuchsia_io::{
-        self as fio, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY, WATCH_MASK_EXISTING,
+        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY,
+        DIRENT_TYPE_FILE, MAX_FILENAME, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_CREATE,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
+        WATCH_MASK_EXISTING,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
@@ -628,6 +630,23 @@ impl Directory for FxDirectory {
 
     fn close(&self) -> Result<(), Status> {
         Ok(())
+    }
+
+    fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+        let info = self.directory.store().filesystem().get_info();
+        Ok(FilesystemInfo {
+            total_bytes: info.total_bytes,
+            used_bytes: info.used_bytes,
+            total_nodes: 0,
+            used_nodes: 0,
+            free_shared_pool_bytes: 0,
+            fs_id: 0, // TODO(csuter)
+            block_size: info.block_size,
+            max_filename_size: MAX_FILENAME as u32,
+            fs_type: FsType::Fxfs.into_primitive(),
+            padding: 0,
+            name: Default::default(),
+        })
     }
 }
 

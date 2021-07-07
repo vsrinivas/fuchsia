@@ -13,7 +13,7 @@ use crate::{
 
 use {
     async_trait::async_trait,
-    fidl_fuchsia_io::NodeAttributes,
+    fidl_fuchsia_io::{FilesystemInfo, NodeAttributes},
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
@@ -80,6 +80,10 @@ pub trait Directory: Any + Send + Sync {
 
     /// Called when the directory is closed.
     fn close(&self) -> Result<(), Status>;
+
+    fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+        Err(Status::NOT_SUPPORTED)
+    }
 }
 
 /// This trait indicates a directory that can be mutated by adding and removing entries.

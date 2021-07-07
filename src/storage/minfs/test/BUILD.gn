@@ -246,6 +246,7 @@ storage_isolated_devmgr_unittest_v2_component("minfs-micro-benchmark-test") {
 
 fs_test_config("minfs") {
   timestamp_granularity = 1
+  supports_fs_query = false
   supports_hard_links = true
   supports_resize = true
   max_file_size = 4294950912

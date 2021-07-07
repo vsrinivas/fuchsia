@@ -144,7 +144,10 @@ fs_test_suite("fatfs") {
     supports_watch_event_deleted = false
   }
 
-  omit_components = [ ":fatfs-filename-tests" ]
+  omit_components = [
+    ":fatfs-filename-tests",
+    ":fatfs-query-filesystem-tests",
+  ]
   extra_components = [ ":fatfs-fat-filename-tests" ]
 }
 

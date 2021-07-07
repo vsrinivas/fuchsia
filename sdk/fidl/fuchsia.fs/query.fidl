@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.fs;
 
 using fuchsia.io2;
@@ -117,4 +116,5 @@ enum FsType : uint32 {
     FATFS = 0xce694d21;
     MINFS = 0x6e694d21;
     MEMFS = 0x3e694d21;
+    FXFS = 0x73667866;
 };

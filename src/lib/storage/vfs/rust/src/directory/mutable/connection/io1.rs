@@ -28,8 +28,8 @@ use {
     anyhow::Error,
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryObject, DirectoryRequest, NodeAttributes, NodeInfo, NodeMarker,
-        OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
+        DirectoryAdminMarker, DirectoryAdminRequest, DirectoryObject, NodeAttributes, NodeInfo,
+        NodeMarker, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
     fuchsia_zircon::Status,
@@ -91,7 +91,7 @@ impl DerivedConnection for MutableConnection {
         };
 
         let (requests, control_handle) =
-            match ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
+            match ServerEnd::<DirectoryAdminMarker>::new(server_end.into_channel())
                 .into_stream_and_control_handle()
             {
                 Ok((requests, control_handle)) => (requests, control_handle),
@@ -144,7 +144,7 @@ impl DerivedConnection for MutableConnection {
 
     fn handle_request(
         &mut self,
-        request: DirectoryRequest,
+        request: DirectoryAdminRequest,
     ) -> BoxFuture<'_, Result<ConnectionState, Error>> {
         Box::pin(async move {
             match request.into() {
@@ -362,7 +362,7 @@ mod tests {
         },
         async_trait::async_trait,
         fidl_fuchsia_io::{
-            DirectoryProxy, NodeAttributes, DIRENT_TYPE_DIRECTORY,
+            DirectoryMarker, DirectoryProxy, NodeAttributes, DIRENT_TYPE_DIRECTORY,
             NODE_ATTRIBUTE_FLAG_CREATION_TIME, NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
             OPEN_RIGHT_READABLE,
         },

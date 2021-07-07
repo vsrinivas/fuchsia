@@ -189,6 +189,7 @@ class MemfsFilesystem : public FilesystemImpl<MemfsFilesystem> {
         .in_memory = true,
         .is_case_sensitive = true,
         .supports_sparse_files = true,
+        .supports_fs_query = false,
         .supports_watch_event_deleted = false,
     };
     return traits;

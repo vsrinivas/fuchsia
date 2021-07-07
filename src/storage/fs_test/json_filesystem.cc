@@ -102,6 +102,8 @@ class JsonInstance : public FilesystemInstance {
     return std::get_if<ramdevice_client::RamNand>(&device_);
   }
 
+  zx::unowned_channel GetOutgoingDirectory() const override { return outgoing_directory_.borrow(); }
+
  private:
   const JsonFilesystem& filesystem_;
   RamDevice device_;
