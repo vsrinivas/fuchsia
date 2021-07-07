@@ -16,11 +16,10 @@
 ## possible products and boards (respectively). See the README.md in those
 ## directories for a description of the various options.
 ##
-## BUILDDIR is the directory where the build output goes.
-## If it begins with `//` or `out/` then it's taken as relative to FUCHSIA_DIR.
-## Otherwise it should be an absolute path or a path relative to the current
-## working directory that winds up in `FUCHSIA_DIR/out`.
-## It defaults to `out/default`.
+## Use `fx --dir BUILD_DIR set` to specify the build directory. If it begins with
+## `//` or `out/` then it's taken as relative to FUCHSIA_DIR. Otherwise it should
+## be an absolute path or a path relative to the current working directory that
+## winds up in `FUCHSIA_DIR/out`. It defaults to `out/default`.
 ##
 ## This command stores the location of the build directory in the //.fx-build-dir
 ## file, which causes subsequent `fx` commands to use that build directory. Use
@@ -28,7 +27,7 @@
 ##
 ## Ensures Goma is ready (if Goma is enabled).
 ##
-## This is a wrapper around running `gn gen --check=system BUILDDIR --args ...`.
+## This is a wrapper around running `gn gen --check=system BUILD_DIR --args ...`.
 ## If GN fails with an error, `fx set` does not change anything.
 ##
 ## optional arguments:
