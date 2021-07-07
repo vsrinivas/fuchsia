@@ -341,7 +341,7 @@ manifest, with include directives replaced with the contents of included files
 (transitively if needed), with a simple command.
 
 ```posix-terminal
-fx cmc include {{ "<var>" }}manifest{{ "<var>" }} --includepath $(fx get-src-dir)
+fx cmc include {{ "<var>" }}manifest{{ "</var>" }} --includepath $(fx get-src-dir)
 ```
 
 Note: `fx cmc` is an IT shortcut for launching the `cmc` binary, possibly
