@@ -24,7 +24,7 @@ pub fn create_test_file_system() -> Arc<FsContext> {
         directory::open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE)
             .expect("failed to open /pkg");
     return FsContext::new(Namespace::new(new_remote_filesystem(
-        fio::DirectorySynchronousProxy::new(root.into_channel().unwrap().into_zx_channel()),
+        root.into_channel().unwrap().into_zx_channel(),
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     )));
 }

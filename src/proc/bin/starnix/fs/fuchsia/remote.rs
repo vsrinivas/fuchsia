@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_io as fio;
 use fidl_fuchsia_kernel as fkernel;
 use fuchsia_component::client::connect_channel_to_protocol;
-use fuchsia_zircon as zx;
+use fuchsia_zircon::{self as zx, HandleBased};
 use lazy_static::lazy_static;
-use log::{info, warn};
+use log::warn;
+use std::sync::Arc;
+use syncio::{zxio::zxio_get_posix_mode, zxio_node_attributes_t, Zxio};
 
 use crate::devices::*;
 use crate::fs::*;
@@ -25,70 +26,45 @@ lazy_static! {
     };
 }
 
-fn update_stat_from_result(
-    node: &FsNode,
-    result: Result<(i32, fio::NodeAttributes), fidl::Error>,
-) -> Result<(), Errno> {
+fn update_stat_from_result(node: &FsNode, attrs: zxio_node_attributes_t) -> Result<(), Errno> {
     /// st_blksize is measured in units of 512 bytes.
     const BYTES_PER_BLOCK: i64 = 512;
 
-    let (status, attrs) = result.map_err(fidl_error)?;
-    zx::Status::ok(status).map_err(fio_error)?;
     let mut stat = node.stat_mut();
     stat.st_ino = attrs.id;
-    stat.st_mode = attrs.mode;
+    stat.st_mode = unsafe { zxio_get_posix_mode(attrs.protocols, attrs.abilities) };
     stat.st_size = attrs.content_size as i64;
     stat.st_blocks = attrs.storage_size as i64 / BYTES_PER_BLOCK;
     stat.st_nlink = attrs.link_count;
     Ok(())
 }
 
-struct RemoteDirectoryNode {
-    dir: fio::DirectorySynchronousProxy,
-    // The fuchsia.io rights for the dir handle. Subdirs will be opened with the same rights.
+pub struct RemoteNode {
+    /// The underlying Zircon I/O object for this remote node.
+    ///
+    /// We delegate to the zxio library for actually doing I/O with remote
+    /// objects, including fuchsia.io.Directory and fuchsia.io.File objects.
+    /// This structure lets us share code with FDIO and other Fuchsia clients.
+    zxio: Arc<syncio::Zxio>,
+
+    /// The fuchsia.io rights for the dir handle. Subdirs will be opened with
+    /// the same rights.
     rights: u32,
 }
 
-impl FsNodeOps for RemoteDirectoryNode {
+impl FsNodeOps for RemoteNode {
     fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(RemoteFile {
-            node: RemoteNode::Directory(
-                syncio::directory_clone(&self.dir, fio::CLONE_FLAG_SAME_RIGHTS).map_err(|_| EIO)?,
-            ),
-        }))
+        Ok(Box::new(RemoteFileObject { zxio: Arc::clone(&self.zxio) }))
     }
 
     fn lookup(&self, _node: &FsNode, name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
-        let desc = syncio::directory_open(
-            &self.dir,
-            std::str::from_utf8(name).map_err(|_| {
-                warn!("bad utf8 in pathname! fidl can't handle this");
-                EINVAL
-            })?,
-            self.rights,
-            0,
-            zx::Time::INFINITE,
-        )
-        .map_err(|e| match e {
-            zx::Status::NOT_FOUND => ENOENT,
-            _ => {
-                warn!("open failed on {:?}: {:?}", name, e);
-                EIO
-            }
+        let name = std::str::from_utf8(name).map_err(|_| {
+            warn!("bad utf8 in pathname! remote filesystems can't handle this");
+            EINVAL
         })?;
-        Ok(match desc.info {
-            fio::NodeInfo::Directory(_) => Box::new(RemoteDirectoryNode {
-                dir: fio::DirectorySynchronousProxy::new(desc.node.into_channel()),
-                rights: self.rights,
-            }),
-            fio::NodeInfo::File(_) => Box::new(RemoteFileNode {
-                file: fio::FileSynchronousProxy::new(desc.node.into_channel()),
-            }),
-            _ => {
-                warn!("non-directories are unimplemented {:?}", desc.info);
-                return Err(ENOSYS);
-            }
-        })
+        let zxio =
+            Arc::new(self.zxio.open(self.rights, 0, name).map_err(Errno::from_status_like_fdio)?);
+        Ok(Box::new(RemoteNode { zxio, rights: self.rights }))
     }
 
     fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
@@ -97,43 +73,25 @@ impl FsNodeOps for RemoteDirectoryNode {
     }
 
     fn update_stat(&self, node: &FsNode) -> Result<(), Errno> {
-        update_stat_from_result(node, self.dir.get_attr(zx::Time::INFINITE))
+        let attributes = self.zxio.attr_get().map_err(Errno::from_status_like_fdio)?;
+        update_stat_from_result(node, attributes)
     }
 }
 
-struct RemoteFileNode {
-    file: fio::FileSynchronousProxy,
-}
-
-impl FsNodeOps for RemoteFileNode {
-    fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(RemoteFile {
-            node: RemoteNode::File(
-                syncio::file_clone(&self.file, fio::CLONE_FLAG_SAME_RIGHTS).map_err(|_| EIO)?,
-            ),
-        }))
-    }
-
-    fn update_stat(&self, node: &FsNode) -> Result<(), Errno> {
-        update_stat_from_result(node, self.file.get_attr(zx::Time::INFINITE))
-    }
-}
-
-pub fn new_remote_filesystem(dir: fio::DirectorySynchronousProxy, rights: u32) -> FsNodeHandle {
+pub fn new_remote_filesystem(root: zx::Channel, rights: u32) -> FsNodeHandle {
     let remotefs = AnonNodeDevice::new(0); // TODO: Get from device registry.
-    FsNode::new_root(RemoteDirectoryNode { dir, rights }, remotefs)
+    let zxio = Arc::new(Zxio::create(root.into_handle()).unwrap());
+    FsNode::new_root(RemoteNode { zxio, rights }, remotefs)
 }
 
-pub struct RemoteFile {
-    node: RemoteNode,
+pub struct RemoteFileObject {
+    /// The underlying Zircon I/O object.
+    ///
+    /// Shared with RemoteNode.
+    zxio: Arc<syncio::Zxio>,
 }
 
-enum RemoteNode {
-    File(fio::FileSynchronousProxy),
-    Directory(fio::DirectorySynchronousProxy),
-}
-
-impl FileOps for RemoteFile {
+impl FileOps for RemoteFileObject {
     fd_impl_seekable!();
 
     fn read_at(
@@ -144,26 +102,26 @@ impl FileOps for RemoteFile {
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         let total = UserBuffer::get_total_length(data);
-        let (status, bytes) = match self.node {
-            RemoteNode::File(ref n) => {
-                // TODO(tbodt): Break this into 8k chunks if needed to fit in the FIDL protocol
-                n.read_at(total as u64, offset as u64, zx::Time::INFINITE).map_err(fidl_error)
-            }
-            RemoteNode::Directory(_) => Err(EISDIR),
-        }?;
-        zx::Status::ok(status).map_err(fio_error)?;
-        task.mm.write_all(data, &bytes)?;
-        Ok(bytes.len())
+        let mut bytes = vec![0u8; total];
+        let actual =
+            self.zxio.read_at(offset as u64, &mut bytes).map_err(Errno::from_status_like_fdio)?;
+        task.mm.write_all(data, &bytes[0..actual])?;
+        Ok(actual)
     }
 
     fn write_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
-        _offset: usize,
-        _data: &[UserBuffer],
+        task: &Task,
+        offset: usize,
+        data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Err(ENOSYS)
+        let total = UserBuffer::get_total_length(data);
+        let mut bytes = vec![0u8; total];
+        task.mm.read_all(data, &mut bytes)?;
+        let actual =
+            self.zxio.write_at(offset as u64, &bytes).map_err(Errno::from_status_like_fdio)?;
+        Ok(actual)
     }
 
     fn get_vmo(
@@ -174,15 +132,7 @@ impl FileOps for RemoteFile {
     ) -> Result<zx::Vmo, Errno> {
         let has_execute = prot.contains(zx::VmarFlags::PERM_EXECUTE);
         prot -= zx::VmarFlags::PERM_EXECUTE;
-
-        let (status, buffer) = match self.node {
-            RemoteNode::File(ref n) => {
-                n.get_buffer(prot.bits(), zx::Time::INFINITE).map_err(fidl_error)
-            }
-            _ => Err(ENODEV),
-        }?;
-        zx::Status::ok(status).map_err(fio_error)?;
-        let mut vmo = buffer.unwrap().vmo;
+        let (mut vmo, _size) = self.zxio.vmo_get(prot).map_err(Errno::from_status_like_fdio)?;
         if has_execute {
             vmo = vmo.replace_as_executable(&VMEX_RESOURCE).expect("replace_as_executable failed");
         }
@@ -194,14 +144,14 @@ impl FileOps for RemoteFile {
 mod test {
     use super::*;
     use fidl::endpoints::Proxy;
-    use fidl_fuchsia_io::DirectorySynchronousProxy;
+    use fidl_fuchsia_io as fio;
 
     #[::fuchsia::test]
     async fn test_tree() -> Result<(), anyhow::Error> {
         let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
         let root = io_util::directory::open_in_namespace("/pkg", rights)?;
         let ns = Namespace::new(new_remote_filesystem(
-            DirectorySynchronousProxy::new(root.into_channel().unwrap().into_zx_channel()),
+            root.into_channel().unwrap().into_zx_channel(),
             rights,
         ));
         let root = ns.root();
@@ -211,12 +161,4 @@ mod test {
         let _test_file = root.lookup(b"bin/hello_starnix")?.node.open()?;
         Ok(())
     }
-}
-
-fn fidl_error(err: fidl::Error) -> Errno {
-    info!("fidl error: {}", err);
-    EIO
-}
-fn fio_error(status: zx::Status) -> Errno {
-    Errno::from_status_like_fdio(status)
 }

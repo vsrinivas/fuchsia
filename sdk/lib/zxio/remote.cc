@@ -14,6 +14,7 @@
 #include <lib/zxio/posix_mode.h>
 #include <lib/zxio/types.h>
 #include <sys/stat.h>
+#include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
 #include "private.h"
@@ -1125,6 +1126,7 @@ uint32_t zxio_node_protocols_to_posix_type(zxio_node_protocols_t protocols) {
   return ToIo1ModeFileType(protocols);
 }
 
+__EXPORT
 uint32_t zxio_get_posix_mode(zxio_node_protocols_t protocols, zxio_abilities_t abilities) {
   uint32_t mode = zxio_node_protocols_to_posix_type(protocols);
   if (mode & S_IFDIR) {

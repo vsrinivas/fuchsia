@@ -4,13 +4,106 @@
 
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
-use fuchsia_zircon as zx;
+use fuchsia_zircon::{self as zx, HandleBased};
 
-mod zxio;
+pub mod zxio;
+
+pub use zxio::zxio_node_attributes_t;
 
 // TODO: We need a more comprehensive error strategy.
 // Our dependencies create elaborate error objects, but Starnix would prefer
 // this library produce zx::Status errors for easier conversion to Errno.
+
+#[derive(Default)]
+pub struct Zxio {
+    storage: zxio::zxio_storage_t,
+}
+
+impl Zxio {
+    fn as_storage_ptr(&self) -> *mut zxio::zxio_storage_t {
+        &self.storage as *const zxio::zxio_storage_t as *mut zxio::zxio_storage_t
+    }
+
+    fn as_ptr(&self) -> *mut zxio::zxio_t {
+        &self.storage.io as *const zxio::zxio_t as *mut zxio::zxio_t
+    }
+
+    pub fn create(handle: zx::Handle) -> Result<Zxio, zx::Status> {
+        let zxio = Zxio::default();
+        let status = unsafe { zxio::zxio_create(handle.into_raw(), zxio.as_storage_ptr()) };
+        zx::ok(status)?;
+        Ok(zxio)
+    }
+
+    pub fn open(&self, flags: u32, mode: u32, path: &str) -> Result<Zxio, zx::Status> {
+        let zxio = Zxio::default();
+        let status = unsafe {
+            zxio::zxio_open(
+                self.as_ptr(),
+                flags,
+                mode,
+                path.as_ptr() as *const ::std::os::raw::c_char,
+                path.len(),
+                zxio.as_storage_ptr(),
+            )
+        };
+        zx::ok(status)?;
+        Ok(zxio)
+    }
+
+    pub fn read_at(&self, offset: u64, data: &mut [u8]) -> Result<usize, zx::Status> {
+        let flags = zxio::zxio_flags_t::default();
+        let mut actual = 0usize;
+        let status = unsafe {
+            zxio::zxio_read_at(
+                self.as_ptr(),
+                offset,
+                data.as_ptr() as *mut ::std::os::raw::c_void,
+                data.len(),
+                flags,
+                &mut actual,
+            )
+        };
+        zx::ok(status)?;
+        Ok(actual)
+    }
+
+    pub fn write_at(&self, offset: u64, data: &[u8]) -> Result<usize, zx::Status> {
+        let flags = zxio::zxio_flags_t::default();
+        let mut actual = 0;
+        let status = unsafe {
+            zxio::zxio_write_at(
+                self.as_ptr(),
+                offset,
+                data.as_ptr() as *const ::std::os::raw::c_void,
+                data.len(),
+                flags,
+                &mut actual,
+            )
+        };
+        zx::ok(status)?;
+        Ok(actual)
+    }
+
+    pub fn vmo_get(&self, flags: zx::VmarFlags) -> Result<(zx::Vmo, usize), zx::Status> {
+        let mut vmo = 0;
+        let mut size = 0;
+        let status =
+            unsafe { zxio::zxio_vmo_get(self.as_ptr(), flags.bits(), &mut vmo, &mut size) };
+        zx::ok(status)?;
+        let handle = unsafe { zx::Handle::from_raw(vmo) };
+        Ok((zx::Vmo::from(handle), size))
+    }
+
+    pub fn attr_get(&self) -> Result<zxio_node_attributes_t, zx::Status> {
+        let mut attributes = zxio_node_attributes_t::default();
+        let status = unsafe { zxio::zxio_attr_get(self.as_ptr(), &mut attributes) };
+        zx::ok(status)?;
+        Ok(attributes)
+    }
+}
+
+// let storage = zxio::zxio_storage_t::default();
 
 /// A fuchsia.io.Node along with its NodeInfo.
 ///

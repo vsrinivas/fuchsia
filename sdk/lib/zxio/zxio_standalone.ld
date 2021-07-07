@@ -13,6 +13,7 @@
 		zxio_dirent_iterator_next;
 		zxio_flags_get;
 		zxio_flags_set;
+		zxio_get_posix_mode;
 		zxio_get_read_buffer_available;
 		zxio_get_window_size;
 		zxio_isatty;

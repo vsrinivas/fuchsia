@@ -258,7 +258,7 @@ async fn start_component(
     let files = files_from_numbered_handles(start_info.numbered_handles, &kernel)?;
 
     let root_node = new_remote_filesystem(
-        syncio::directory_clone(&root, fio::CLONE_FLAG_SAME_RIGHTS)?,
+        root.into_channel(),
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     );
     let namespace = Namespace::new(root_node);
