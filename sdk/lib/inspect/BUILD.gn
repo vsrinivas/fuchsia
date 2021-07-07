@@ -1,0 +1,21 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_component_manifests.gni")
+import("//tools/cmc/build/expect_includes.gni")
+
+sdk_component_manifests("inspect") {
+  name = "inspect"
+  manifests = [ "client.shard.cml" ]
+  category = "partner"
+}
+
+# Require dependent components to include required capabilities in their
+# component manifests in order to export Inspect data.
+expect_includes("client_includes") {
+  includes = [ "client.shard.cml" ]
+
+  # TODO(shayba): delete this target after all deps are moved
+  enforce = false
+}
