@@ -7,6 +7,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_scrutiny_package_args::ScrutinyPackageCommand,
     scrutiny_frontend::{
+        command_builder::CommandBuilder,
         config::{Config, LaunchConfig, RuntimeConfig},
         launcher,
     },
@@ -17,8 +18,10 @@ pub async fn scrutiny_package(cmd: ScrutinyPackageCommand) -> Result<(), Error> 
     let config = Config {
         launch: LaunchConfig {
             command: Some(
-                format!("tool.package.extract --url {} --output {}", cmd.url, cmd.output)
-                    .to_string(),
+                CommandBuilder::new("tool.package.extract")
+                    .param("url", cmd.url)
+                    .param("output", cmd.output)
+                    .build(),
             ),
             script_path: None,
         },

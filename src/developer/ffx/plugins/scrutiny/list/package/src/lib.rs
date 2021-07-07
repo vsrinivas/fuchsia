@@ -7,6 +7,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_scrutiny_package_list_args::ScrutinyPackageCommand,
     scrutiny_frontend::{
+        command_builder::CommandBuilder,
         config::{Config, LaunchConfig, RuntimeConfig},
         launcher,
     },
@@ -16,7 +17,7 @@ use {
 pub async fn scrutiny_package(cmd: ScrutinyPackageCommand) -> Result<(), Error> {
     let config = Config {
         launch: LaunchConfig {
-            command: Some(format!("search.package.list --url {}", cmd.url).to_string()),
+            command: Some(CommandBuilder::new("search.package.list").param("url", cmd.url).build()),
             script_path: None,
         },
         runtime: RuntimeConfig::minimal(),

@@ -7,6 +7,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_scrutiny_zbi_args::ScrutinyZbiCommand,
     scrutiny_frontend::{
+        command_builder::CommandBuilder,
         config::{Config, LaunchConfig, RuntimeConfig},
         launcher,
     },
@@ -17,8 +18,10 @@ pub async fn scrutiny_zbi(cmd: ScrutinyZbiCommand) -> Result<(), Error> {
     let config = Config {
         launch: LaunchConfig {
             command: Some(
-                format!("tool.zbi.extract --input {} --output {}", cmd.input, cmd.output)
-                    .to_string(),
+                CommandBuilder::new("tool.zbi.extract")
+                    .param("input", cmd.input)
+                    .param("output", cmd.output)
+                    .build(),
             ),
             script_path: None,
         },

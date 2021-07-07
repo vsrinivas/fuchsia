@@ -7,6 +7,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_scrutiny_fvm_args::ScrutinyFvmCommand,
     scrutiny_frontend::{
+        command_builder::CommandBuilder,
         config::{Config, LaunchConfig, RuntimeConfig},
         launcher,
     },
@@ -17,8 +18,10 @@ pub async fn scrutiny_fvm(cmd: ScrutinyFvmCommand) -> Result<(), Error> {
     let config = Config {
         launch: LaunchConfig {
             command: Some(
-                format!("tool.fvm.extract --input {} --output {}", cmd.input, cmd.output)
-                    .to_string(),
+                CommandBuilder::new("tool.fvm.extract")
+                    .param("input", cmd.input)
+                    .param("output", cmd.output)
+                    .build(),
             ),
             script_path: None,
         },

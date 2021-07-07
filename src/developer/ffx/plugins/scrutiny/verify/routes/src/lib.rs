@@ -7,6 +7,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_scrutiny_routes_args::ScrutinyRoutesCommand,
     scrutiny_frontend::{
+        command_builder::CommandBuilder,
         config::{Config, LaunchConfig, RuntimeConfig},
         launcher,
     },
@@ -17,11 +18,10 @@ pub async fn scrutiny_routes(cmd: ScrutinyRoutesCommand) -> Result<(), Error> {
     let config = Config {
         launch: LaunchConfig {
             command: Some(
-                format!(
-                    "verify.capability_routes --capability_types {} --response_level error",
-                    cmd.capability
-                )
-                .to_string(),
+                CommandBuilder::new("verify.capability_routes")
+                    .param("capability_types", cmd.capability)
+                    .param("response_level", "error")
+                    .build(),
             ),
             script_path: None,
         },

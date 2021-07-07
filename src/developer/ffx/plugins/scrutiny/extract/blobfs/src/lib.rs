@@ -7,6 +7,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_scrutiny_blobfs_args::ScrutinyBlobfsCommand,
     scrutiny_frontend::{
+        command_builder::CommandBuilder,
         config::{Config, LaunchConfig, RuntimeConfig},
         launcher,
     },
@@ -17,8 +18,10 @@ pub async fn scrutiny_blobfs(cmd: ScrutinyBlobfsCommand) -> Result<(), Error> {
     let config = Config {
         launch: LaunchConfig {
             command: Some(
-                format!("tool.blobfs.extract --input {} --output {}", cmd.input, cmd.output)
-                    .to_string(),
+                CommandBuilder::new("tool.blobfs.extract")
+                    .param("input", cmd.input)
+                    .param("output", cmd.output)
+                    .build(),
             ),
             script_path: None,
         },
