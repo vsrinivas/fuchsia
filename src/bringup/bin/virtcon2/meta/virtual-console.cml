@@ -24,6 +24,7 @@
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",

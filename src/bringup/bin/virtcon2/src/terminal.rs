@@ -6,7 +6,10 @@ use {
     anyhow::Error,
     carnelian::Size,
     std::{cell::RefCell, fs::File, io::prelude::*, rc::Rc},
-    term_model::{clipboard::Clipboard, config::Config, term::SizeInfo, Term},
+    term_model::{
+        clipboard::Clipboard, config::Config, event::EventListener, grid::Scroll, term::SizeInfo,
+        Term,
+    },
 };
 
 /// Empty type for term model config.
@@ -72,6 +75,14 @@ impl<T> Terminal<T> {
 
     pub fn title(&self) -> &str {
         self.title.as_str()
+    }
+
+    pub fn scroll(&mut self, scroll: Scroll)
+    where
+        T: EventListener,
+    {
+        let mut term = self.term.borrow_mut();
+        term.scroll_display(scroll);
     }
 }
 

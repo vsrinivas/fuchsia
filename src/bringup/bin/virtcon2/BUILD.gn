@@ -43,6 +43,7 @@ rustc_library("lib") {
     "//garnet/bin/terminal/third_party/term-model",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty-rustc",
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole-rustc",
     "//src/graphics/lib/compute/rive-rs",

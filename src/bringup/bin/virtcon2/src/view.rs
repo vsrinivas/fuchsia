@@ -20,8 +20,11 @@ use {
         AppContext, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     fidl_fuchsia_hardware_display::VirtconMode,
+    fidl_fuchsia_hardware_power_statecontrol::{AdminMarker, AdminSynchronousProxy, RebootReason},
     fidl_fuchsia_hardware_pty::WindowSize,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync,
+    fuchsia_component::client::connect_channel_to_protocol,
+    fuchsia_zircon::{self as zx, prelude::*},
     pty::{key_util::CodePoint, key_util::HidUsage, Pty},
     rive_rs as rive,
     std::{
@@ -31,6 +34,7 @@ use {
     },
     term_model::{
         event::{Event, EventListener},
+        grid::Scroll,
         term::SizeInfo,
     },
 };
@@ -295,6 +299,26 @@ impl VirtualConsoleViewAssistant {
         }
     }
 
+    fn next_active_terminal(&mut self) {
+        let first = self.terminals.keys().next();
+        let last = self.terminals.keys().next_back();
+        if let Some((first, last)) = first.and_then(|first| last.map(|last| (first, last))) {
+            let active = self.active_terminal_id;
+            let id = if active == *last { *first } else { active + 1 };
+            self.set_active_terminal(id);
+        }
+    }
+
+    fn previous_active_terminal(&mut self) {
+        let first = self.terminals.keys().next();
+        let last = self.terminals.keys().next_back();
+        if let Some((first, last)) = first.and_then(|first| last.map(|last| (first, last))) {
+            let active = self.active_terminal_id;
+            let id = if active == *first { *last } else { active - 1 };
+            self.set_active_terminal(id);
+        }
+    }
+
     fn update_status(&mut self) {
         let new_status = self.get_status();
         if let Some(scene_details) = &mut self.scene_details {
@@ -314,6 +338,12 @@ impl VirtualConsoleViewAssistant {
         self.app_context.request_render(self.view_key);
     }
 
+    fn scroll_active_terminal(&mut self, scroll: Scroll) {
+        if let Some((terminal, _)) = self.terminals.get_mut(&self.active_terminal_id) {
+            terminal.scroll(scroll);
+        }
+    }
+
     fn handle_device_control_keyboard_event(
         &mut self,
         context: &mut ViewAssistantContext,
@@ -322,9 +352,11 @@ impl VirtualConsoleViewAssistant {
         if keyboard_event.phase == input::keyboard::Phase::Pressed {
             if keyboard_event.code_point.is_none() {
                 const HID_USAGE_KEY_ESC: u32 = 0x29;
+                const HID_USAGE_KEY_DELETE: u32 = 0x4c;
 
+                let modifiers = &keyboard_event.modifiers;
                 match keyboard_event.hid_usage {
-                    HID_USAGE_KEY_ESC if keyboard_event.modifiers.alt == true => {
+                    HID_USAGE_KEY_ESC if modifiers.alt => {
                         self.cancel_animation();
                         self.desired_virtcon_mode =
                             if self.desired_virtcon_mode == VirtconMode::Fallback {
@@ -335,7 +367,22 @@ impl VirtualConsoleViewAssistant {
                         self.set_desired_virtcon_mode(context)?;
                         return Ok(true);
                     }
-                    // TODO: Implement other interactions.
+                    // Provides a CTRL-ALT-DEL reboot sequence.
+                    HID_USAGE_KEY_DELETE if modifiers.control && modifiers.alt => {
+                        let (server_end, client_end) = zx::Channel::create()?;
+                        connect_channel_to_protocol::<AdminMarker>(server_end)?;
+                        let admin = AdminSynchronousProxy::new(client_end);
+                        match admin
+                            .reboot(RebootReason::UserRequest, zx::Time::after(5.second()))?
+                        {
+                            Ok(()) => {
+                                // Wait for the world to end.
+                                zx::Time::INFINITE.sleep();
+                            }
+                            Err(e) => println!("Failed to reboot, status: {}", e),
+                        }
+                        return Ok(true);
+                    }
                     _ => {}
                 }
             }
@@ -350,47 +397,95 @@ impl VirtualConsoleViewAssistant {
         keyboard_event: &input::keyboard::Event,
     ) -> Result<bool, Error> {
         if keyboard_event.phase == input::keyboard::Phase::Pressed {
+            let modifiers = &keyboard_event.modifiers;
             match keyboard_event.code_point {
                 None => {
                     const HID_USAGE_KEY_ESC: u32 = 0x29;
+                    const HID_USAGE_KEY_TAB: u32 = 0x2b;
                     const HID_USAGE_KEY_F1: u32 = 0x3a;
                     const HID_USAGE_KEY_F10: u32 = 0x43;
+                    const HID_USAGE_KEY_HOME: u32 = 0x4a;
+                    const HID_USAGE_KEY_PAGEUP: u32 = 0x4b;
+                    const HID_USAGE_KEY_END: u32 = 0x4d;
+                    const HID_USAGE_KEY_PAGEDOWN: u32 = 0x4e;
+                    const HID_USAGE_KEY_DOWN: u32 = 0x51;
+                    const HID_USAGE_KEY_UP: u32 = 0x52;
+                    const HID_USAGE_KEY_VOL_DOWN: u32 = 0xe8;
+                    const HID_USAGE_KEY_VOL_UP: u32 = 0xe9;
 
                     match keyboard_event.hid_usage {
                         HID_USAGE_KEY_ESC => {
                             self.cancel_animation();
                             return Ok(true);
                         }
-                        HID_USAGE_KEY_F1..=HID_USAGE_KEY_F10
-                            if keyboard_event.modifiers.alt == true =>
-                        {
+                        HID_USAGE_KEY_F1..=HID_USAGE_KEY_F10 if modifiers.alt => {
                             let id = keyboard_event.hid_usage - HID_USAGE_KEY_F1;
                             self.set_active_terminal(id);
                             return Ok(true);
                         }
-                        // TODO: Implement other interactions.
+                        HID_USAGE_KEY_TAB if modifiers.alt => {
+                            if modifiers.shift {
+                                self.previous_active_terminal();
+                            } else {
+                                self.next_active_terminal();
+                            }
+                            return Ok(true);
+                        }
+                        HID_USAGE_KEY_VOL_UP if modifiers.alt => {
+                            self.previous_active_terminal();
+                            return Ok(true);
+                        }
+                        HID_USAGE_KEY_VOL_DOWN if modifiers.alt => {
+                            self.next_active_terminal();
+                            return Ok(true);
+                        }
+                        HID_USAGE_KEY_UP if modifiers.alt => {
+                            self.scroll_active_terminal(Scroll::Lines(1));
+                            return Ok(true);
+                        }
+                        HID_USAGE_KEY_DOWN if modifiers.alt => {
+                            self.scroll_active_terminal(Scroll::Lines(-1));
+                            return Ok(true);
+                        }
+                        HID_USAGE_KEY_PAGEUP if modifiers.shift => {
+                            self.scroll_active_terminal(Scroll::PageUp);
+                            return Ok(true);
+                        }
+                        HID_USAGE_KEY_PAGEDOWN if modifiers.shift => {
+                            self.scroll_active_terminal(Scroll::PageDown);
+                            return Ok(true);
+                        }
+                        HID_USAGE_KEY_HOME if modifiers.shift => {
+                            self.scroll_active_terminal(Scroll::Top);
+                            return Ok(true);
+                        }
+                        HID_USAGE_KEY_END if modifiers.shift => {
+                            self.scroll_active_terminal(Scroll::Bottom);
+                            return Ok(true);
+                        }
                         _ => {}
                     }
                 }
-                Some(code_point) => {
+                Some(code_point) if modifiers.alt == true => {
                     const PLUS: u32 = 43;
+                    const EQUAL: u32 = 61;
                     const MINUS: u32 = 45;
 
                     match code_point {
-                        PLUS if keyboard_event.modifiers.alt == true => {
+                        PLUS | EQUAL => {
                             let new_font_size = (self.font_size + 15.0).min(MAX_FONT_SIZE);
                             self.set_font_size(new_font_size);
                             return Ok(true);
                         }
-                        MINUS if keyboard_event.modifiers.alt == true => {
+                        MINUS => {
                             let new_font_size = (self.font_size - 15.0).max(MIN_FONT_SIZE);
                             self.set_font_size(new_font_size);
                             return Ok(true);
                         }
-                        // TODO: Implement other interactions.
                         _ => {}
                     }
                 }
+                _ => {}
             }
         }
 
