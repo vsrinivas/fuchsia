@@ -149,7 +149,7 @@ Base) for a product. These packages are never evicted by the system.
 
 **Current value for `target_cpu = "arm64"`:** `["//bundles:kitchen_sink"]`
 
-From //out/not-default/args.gn:8
+From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
@@ -157,7 +157,7 @@ From //BUILD.gn:31
 
 **Current value for `target_cpu = "x64"`:** `["//bundles:kitchen_sink"]`
 
-From //out/not-default/args.gn:8
+From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
@@ -573,7 +573,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //out/not-default/args.gn:9
+From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
@@ -581,7 +581,7 @@ From //BUILD.gn:39
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //out/not-default/args.gn:9
+From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
@@ -723,7 +723,7 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/070838ebc80aaed83cdefca8110814a035fee41f/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/23e9bcef4cd4663b7766efc1d33966d5a8a1ca72/config.gni#32)
 
 ### conformance_testing_netstack
 If true, uses a netstack tailored for network conformance testing.
@@ -1007,7 +1007,19 @@ From //build/images/args.gni:60
 ### enable_rbe
 Set to true to enable distributed compilation using RBE.
 
-**Current value (from the default):** `false`
+**Current value for `target_cpu = "arm64"`:** `false`
+
+From //out/not-default/args.gn:5
+
+**Overridden from the default:** `false`
+
+From //build/toolchain/rbe.gni:9
+
+**Current value for `target_cpu = "x64"`:** `false`
+
+From //out/not-default/args.gn:5
+
+**Overridden from the default:** `false`
 
 From //build/toolchain/rbe.gni:9
 
@@ -1524,7 +1536,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
-From //out/not-default/args.gn:10
+From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
@@ -1532,7 +1544,7 @@ From //BUILD.gn:58
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
-From //out/not-default/args.gn:10
+From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
@@ -1617,38 +1629,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/070838ebc80aaed83cdefca8110814a035fee41f/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/23e9bcef4cd4663b7766efc1d33966d5a8a1ca72/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/070838ebc80aaed83cdefca8110814a035fee41f/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/23e9bcef4cd4663b7766efc1d33966d5a8a1ca72/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/070838ebc80aaed83cdefca8110814a035fee41f/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/23e9bcef4cd4663b7766efc1d33966d5a8a1ca72/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/070838ebc80aaed83cdefca8110814a035fee41f/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/23e9bcef4cd4663b7766efc1d33966d5a8a1ca72/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/070838ebc80aaed83cdefca8110814a035fee41f/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/23e9bcef4cd4663b7766efc1d33966d5a8a1ca72/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/070838ebc80aaed83cdefca8110814a035fee41f/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/23e9bcef4cd4663b7766efc1d33966d5a8a1ca72/config.gni#13)
 
 ### is_analysis
 If set, the build will produce compilation analysis dumps, used for code
@@ -1665,7 +1677,7 @@ Debug build.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //out/not-default/args.gn:5
+From //out/not-default/args.gn:6
 
 **Overridden from the default:** `true`
 
@@ -1673,7 +1685,7 @@ From //build/config/BUILDCONFIG.gn:27
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //out/not-default/args.gn:5
+From //out/not-default/args.gn:6
 
 **Overridden from the default:** `true`
 
@@ -3380,13 +3392,13 @@ From //build/config.gni:13
 
 **Current value for `target_cpu = "arm64"`:** `"arm64"`
 
-From //out/not-default/args.gn:6
+From //out/not-default/args.gn:7
 
 **Overridden from the default:** `""`
 
 **Current value for `target_cpu = "x64"`:** `"x64"`
 
-From //out/not-default/args.gn:6
+From //out/not-default/args.gn:7
 
 **Overridden from the default:** `""`
 
@@ -3585,7 +3597,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
 
-From //out/not-default/args.gn:11
+From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
@@ -3593,7 +3605,7 @@ From //BUILD.gn:53
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
 
-From //out/not-default/args.gn:11
+From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
@@ -3660,7 +3672,7 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //out/not-default/args.gn:7
+From //out/not-default/args.gn:8
 
 **Overridden from the default:** `false`
 
@@ -3668,7 +3680,7 @@ From //build/toolchain/goma.gni:11
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //out/not-default/args.gn:7
+From //out/not-default/args.gn:8
 
 **Overridden from the default:** `false`
 
@@ -3831,7 +3843,7 @@ From //build/fidl/fidl_library.gni:13
 
 ### virtcon_boot_animation_path
 
-**Current value (from the default):** `"//src/bringup/bin/virtcon2/data/boot-animation-dark.riv"`
+**Current value (from the default):** `"//src/bringup/bin/virtcon2/data/boot-animation.riv"`
 
 From //src/bringup/bin/virtcon2/virtcon_args.gni:12
 
@@ -3908,35 +3920,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/070838ebc80aaed83cdefca8110814a035fee41f/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/23e9bcef4cd4663b7766efc1d33966d5a8a1ca72/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/070838ebc80aaed83cdefca8110814a035fee41f/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/23e9bcef4cd4663b7766efc1d33966d5a8a1ca72/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/070838ebc80aaed83cdefca8110814a035fee41f/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/23e9bcef4cd4663b7766efc1d33966d5a8a1ca72/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/070838ebc80aaed83cdefca8110814a035fee41f/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/23e9bcef4cd4663b7766efc1d33966d5a8a1ca72/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/070838ebc80aaed83cdefca8110814a035fee41f/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/23e9bcef4cd4663b7766efc1d33966d5a8a1ca72/config.gni#23)
 
 ### with_live_usb
 Whether or not to include the live_usb component in the build.
