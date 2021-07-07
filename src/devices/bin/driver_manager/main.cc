@@ -41,7 +41,6 @@
 #include "fdio.h"
 #include "fuchsia/io/llcpp/fidl.h"
 #include "src/devices/bin/driver_manager/device_watcher.h"
-#include "src/devices/bin/driver_manager/fake_driver_index.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -284,7 +283,6 @@ int main(int argc, char** argv) {
   InspectManager inspect_manager(loop.dispatcher());
 
   std::optional<DriverRunner> driver_runner;
-  std::optional<FakeDriverIndex> driver_index;
   if (driver_manager_args.driver_runner_root_driver_url.size() != 0) {
     LOGF(INFO, "Starting DriverRunner with root driver URL: %s",
          driver_manager_args.driver_runner_root_driver_url.data());
