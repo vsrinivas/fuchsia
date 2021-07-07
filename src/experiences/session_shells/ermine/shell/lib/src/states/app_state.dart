@@ -35,6 +35,7 @@ abstract class AppState with Store {
   ObservableValue<bool> get sideBarVisible;
   ObservableValue<bool> get overlaysVisible;
   ObservableValue<bool> get oobeVisible;
+  ObservableValue<bool> get isIdle;
   ObservableValue<ViewState> get topView;
   ObservableList<ViewState> get views;
   ObservableMap<String, List<String>> get errors;

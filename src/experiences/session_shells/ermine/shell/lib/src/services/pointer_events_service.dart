@@ -28,6 +28,7 @@ enum _PeekState { none, onEdge, peeking }
 class PointerEventsService extends PointerCaptureListener {
   late final void Function(PeekEdge) onPeekBegin;
   late final VoidCallback onPeekEnd;
+  late final VoidCallback onActivity;
 
   /// The insets at the edges where the peek state is true.
   final EdgeInsets insets;
@@ -60,6 +61,11 @@ class PointerEventsService extends PointerCaptureListener {
 
   @override
   Future<void> onPointerEvent(PointerEvent event) async {
+    // Report pointer event to activity tracking service.
+    // TODO(http://fxb/80131): Remove once activity is reported in the input
+    // pipeline.
+    onActivity();
+
     if (!listen || event.phase != PointerEventPhase.move) {
       return;
     }

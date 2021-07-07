@@ -65,10 +65,12 @@ class AppStateImpl with Disposable implements AppState {
 
     pointerEventsService
       ..onPeekBegin = _onPeekBegin
-      ..onPeekEnd = _onPeekEnd;
+      ..onPeekEnd = _onPeekEnd
+      ..onActivity = () => startupService.onActivity('pointer');
 
     startupService
       ..onInspect = _onInspect
+      ..onIdle = _onIdle
       ..serve();
 
     // Add reactions to state changes.
@@ -104,6 +106,9 @@ class AppStateImpl with Disposable implements AppState {
   OobeState? _oobeState;
   @override
   OobeState get oobeState => _oobeState ??= OobeState.fromEnv();
+
+  @override
+  final Observable<bool> isIdle = false.asObservable();
 
   @override
   late final theme = (() {
@@ -440,6 +445,8 @@ class AppStateImpl with Disposable implements AppState {
           (key, value) => key == url && value[1].startsWith(errorType));
     });
   }
+
+  void _onIdle({required bool idle}) => runInAction(() => isIdle.value = idle);
 
   // Adds inspect data when requested by [Inspect].
   void _onInspect(Node node) {

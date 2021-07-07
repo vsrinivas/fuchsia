@@ -64,6 +64,10 @@ class App extends StatelessWidget {
                   if (app.overlaysVisible.value)
                     WidgetFactory.create(() => Overlays(app)),
 
+                  // Show blank screen saver when idle.
+                  if (app.isIdle.value)
+                    WidgetFactory.create(() => Container(color: Colors.black)),
+
                   // Show OOBE view for first-time configuration.
                   if (app.oobeVisible.value)
                     WidgetFactory.create(() => Oobe(

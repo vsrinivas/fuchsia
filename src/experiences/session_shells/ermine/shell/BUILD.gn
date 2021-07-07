@@ -118,6 +118,7 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ssh",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.activity",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.input",

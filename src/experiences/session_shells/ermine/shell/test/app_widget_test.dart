@@ -44,6 +44,7 @@ void main() async {
     final stream = controller.stream.asObservable();
     when(state.localeStream).thenAnswer((_) => stream);
     when(state.views).thenAnswer((_) => <ViewState>[].asObservable());
+    when(state.isIdle).thenAnswer((_) => false.asObservable());
     when(state.oobeVisible).thenAnswer((_) => false.asObservable());
     when(state.overlaysVisible).thenAnswer((_) => false.asObservable());
 
@@ -79,6 +80,7 @@ void main() async {
     when(state.overlaysVisible).thenAnswer((_) => true.asObservable());
     // Hide OObe.
     when(state.oobeVisible).thenAnswer((_) => false.asObservable());
+    when(state.isIdle).thenAnswer((_) => false.asObservable());
 
     await tester.pumpWidget(app);
     await tester.pumpAndSettle();
