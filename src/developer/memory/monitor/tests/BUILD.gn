@@ -74,9 +74,6 @@ executable("test-inspect") {
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/inspect",
   ]
-
-  # TODO(fxbug.dev/46756): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fuchsia_component("memory_monitor_test_app_component") {

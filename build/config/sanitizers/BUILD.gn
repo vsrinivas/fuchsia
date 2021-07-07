@@ -94,7 +94,6 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//src/connectivity/weave/*",
     "//src/developer/debug/debug_agent/*",
     "//src/developer/forensics/feedback_data/tests/*",
-    "//src/developer/memory/monitor/tests/*",
     "//src/developer/shell/josh/*",
     "//src/developer/shell/mirror/*",
     "//src/devices/sysmem/tests/sysmem/fuzz/*",
