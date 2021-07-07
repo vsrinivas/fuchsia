@@ -78,7 +78,14 @@ template("cts_copy_to_sdk") {
   sdk_files = [
     {
       source = output_path
-      dest = "${file_base}/${relative_path}"
+
+      # If file_base is empty, the resource file will actually be copied into
+      # the '/' directory on the host instead of being copied into the SDK.
+      if (file_base != "") {
+        dest = "${file_base}/${relative_path}"
+      } else {
+        dest = relative_path
+      }
     },
   ]
 
@@ -98,7 +105,14 @@ template("cts_copy_to_sdk") {
       value = {
         type = "resource"
         name = main_target_name
-        resources = [ relative_path ]
+
+        # If file_base is empty, the resource file will actually be copied into
+        # the '/' directory on the host instead of being copied into the SDK.
+        if (file_base != "") {
+          resources = [ "${file_base}/${relative_path}" ]
+        } else {
+          resources = [ relative_path ]
+        }
       }
     }
 

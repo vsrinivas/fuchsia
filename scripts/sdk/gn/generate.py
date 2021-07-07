@@ -271,6 +271,25 @@ class GNBuilder(Frontend):
     def install_documentation_atom(self, atom):
         self.copy_files(atom['docs'])
 
+    def install_cts_resource_atom(self, atom):
+        # Copy the CTS build files and component manifests.
+        # TODO(80274): We should generate the build files instead of
+        # copying them into the SDK.
+        self.copy_files(atom['resources'])
+
+        # splitext always returns a tuple with 2 items.
+        ext = os.path.splitext(atom['resources'][0])[1]
+        if ext == ".gn":
+            base = self.dest('', atom['name'])
+            self.build_files.append(
+                os.path.relpath(os.path.join(base, 'BUILD.gn'), self.output))
+
+    def install_cts_source_library_atom(self, atom):
+        # Copy the CTS source files.
+        self.copy_files(atom['sources'])
+        self.copy_files(atom['headers'])
+        self.cc_source_targets.append(atom['name'])
+
     def install_cc_prebuilt_library_atom(self, atom):
         name = atom['name']
         # Add atom to test targets
