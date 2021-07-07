@@ -10,11 +10,26 @@ use {
     fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
     fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic, fuchsia_syslog as syslog,
+    futures::channel::mpsc::{UnboundedReceiver, UnboundedSender},
     futures::future::TryFutureExt,
     futures::prelude::*,
     parking_lot::Mutex,
     std::sync::Weak,
 };
+
+/// Presentation messages.
+pub enum PresentationMessage {
+    /// Request a present call.
+    RequestPresent,
+    /// Submit a present call.
+    Present,
+}
+
+/// Unbounded sender used for presentation messages.
+pub type PresentationSender = UnboundedSender<PresentationMessage>;
+
+/// Unbounded receiver used for presentation messages.
+pub type PresentationReceiver = UnboundedReceiver<PresentationMessage>;
 
 /// A [`SceneManager`] sets up and manages a Scenic scene graph.
 ///
@@ -174,22 +189,50 @@ pub trait SceneManager: Sized {
     }
 }
 
+/// Listens for presentation requests and schedules presents.
 /// Connects to the Scenic event stream to listen for OnFramePresented messages and calls present
 /// when Scenic is ready for an update.
-pub fn start_presentation_loop(weak_session: Weak<Mutex<scenic::Session>>) {
+pub fn start_presentation_loop(
+    sender: PresentationSender,
+    mut receiver: PresentationReceiver,
+    weak_session: Weak<Mutex<scenic::Session>>,
+) {
     fasync::Task::local(async move {
-        if let Some(session) = weak_session.upgrade() {
-            present(&session);
-            let mut event_stream = session.lock().take_event_stream();
-            while let Some(event) = event_stream.try_next().await.expect("Failed to get next event")
-            {
-                match event {
-                    ui_scenic::SessionEvent::OnFramePresented { frame_presented_info: _ } => {
-                        if let Some(session) = weak_session.upgrade() {
-                            present(&session);
-                        } else {
-                            break;
+        let mut event_stream = {
+            let session = weak_session.upgrade().expect("Failed to acquire session");
+            let event_stream = session.lock().take_event_stream();
+            event_stream
+        };
+        let mut present_requested = false;
+
+        while let Some(message) = receiver.next().await {
+            match message {
+                PresentationMessage::RequestPresent => {
+                    // Queue a present if not already queued.
+                    if !present_requested {
+                        sender
+                            .unbounded_send(PresentationMessage::Present)
+                            .expect("failed to send Present message");
+                        present_requested = true;
+                    }
+                }
+                PresentationMessage::Present => {
+                    present_requested = false;
+                    if let Some(session) = weak_session.upgrade() {
+                        present(&session);
+
+                        // Wait for frame to be presented before we queue another present.
+                        while let Some(event) =
+                            event_stream.try_next().await.expect("Failed to get next event")
+                        {
+                            match event {
+                                ui_scenic::SessionEvent::OnFramePresented {
+                                    frame_presented_info: _,
+                                } => break,
+                            }
                         }
+                    } else {
+                        break;
                     }
                 }
             }

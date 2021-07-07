@@ -5,12 +5,13 @@
 use {
     crate::display_metrics::{DisplayMetrics, ViewingDistance},
     crate::graphics_utils::{ScreenCoordinates, ScreenSize},
-    crate::scene_manager::{self, SceneManager},
+    crate::scene_manager::{self, PresentationMessage, PresentationSender, SceneManager},
     anyhow::Error,
     async_trait::async_trait,
     fidl, fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
     fuchsia_scenic as scenic, fuchsia_scenic,
+    futures::channel::mpsc::unbounded,
     input_pipeline::Size,
     std::sync::Arc,
 };
@@ -55,6 +56,9 @@ pub struct FlatSceneManager {
 
     /// The shapenode for the cursor. It is optional in case a scene doesn't render a cursor.
     cursor_shape: Option<scenic::ShapeNode>,
+
+    /// Presentation sender used to request presents.
+    presentation_sender: PresentationSender,
 
     /// The resources used to construct the scene. If these are dropped, they will be removed
     /// from Scenic, so they must be kept alive for the lifetime of `FlatSceneManager`.
@@ -139,7 +143,11 @@ impl SceneManager for FlatSceneManager {
             _scene: scene,
         };
 
-        scene_manager::start_presentation_loop(Arc::downgrade(&session));
+        let (sender, receiver) = unbounded();
+        scene_manager::start_presentation_loop(sender.clone(), receiver, Arc::downgrade(&session));
+        sender
+            .unbounded_send(PresentationMessage::RequestPresent)
+            .expect("failed to send RequestPresent message");
 
         Ok(FlatSceneManager {
             session,
@@ -154,6 +162,7 @@ impl SceneManager for FlatSceneManager {
             display_metrics,
             cursor_node: None,
             cursor_shape: None,
+            presentation_sender: sender,
         })
     }
 
@@ -171,6 +180,7 @@ impl SceneManager for FlatSceneManager {
             &mut viewref_pair.view_ref,
         )?;
         self.add_view(token_pair.view_holder_token, name);
+        self.request_present();
 
         Ok(viewref_dup)
     }
@@ -188,6 +198,7 @@ impl SceneManager for FlatSceneManager {
             &mut viewref_pair.view_ref,
         )?;
         self.add_view(token_pair.view_holder_token, Some("root".to_string()));
+        self.request_present();
 
         Ok(viewref_dup)
     }
@@ -235,6 +246,8 @@ impl SceneManager for FlatSceneManager {
             self.a11y_proxy_view.add_child(&*view_holder_node);
         }
 
+        self.request_present();
+
         Ok(proxy_token_pair.view_holder_token)
     }
 
@@ -254,6 +267,7 @@ impl SceneManager for FlatSceneManager {
 
         let (x, y) = location.pips();
         self.cursor_node().set_translation(x, y, FlatSceneManager::CURSOR_DEPTH);
+        self.request_present();
     }
 
     fn set_cursor_shape(&mut self, shape: scenic::ShapeNode) {
@@ -265,6 +279,7 @@ impl SceneManager for FlatSceneManager {
 
         self.cursor_node().add_child(&shape);
         self.cursor_shape = Some(shape);
+        self.request_present();
     }
 }
 
@@ -444,5 +459,12 @@ impl FlatSceneManager {
         }
 
         self.cursor_node.as_ref().unwrap()
+    }
+
+    /// Requests that all previously enqueued operations are presented.
+    fn request_present(&mut self) {
+        self.presentation_sender
+            .unbounded_send(PresentationMessage::RequestPresent)
+            .expect("failed to send RequestPresent message");
     }
 }
