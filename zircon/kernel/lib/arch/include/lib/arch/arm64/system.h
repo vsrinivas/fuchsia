@@ -5,9 +5,9 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_ARM64_SYSTEM_H_
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_ARM64_SYSTEM_H_
 
+#include <lib/arch/arm64/feature.h>
 #include <lib/arch/internal/bits.h>
 #include <lib/arch/sysreg.h>
-#include <lib/arch/arm64/feature.h>
 
 #include <optional>
 
@@ -37,7 +37,8 @@ ARCH_ARM64_SYSREG(ArmCurrentEl, "CurrentEL");
 //  * [arm/sysreg]/sctlr_el3: System Control Register (EL3)
 // Some fields (mostly things relating to EL0) are only used in EL1 and are
 // reserved in the other registers.  Missing bits are reserved in all cases.
-struct ArmSystemControlRegister : public SysRegDerivedBase<ArmSystemControlRegister> {
+struct ArmSystemControlRegister
+    : public SysRegDerivedBase<ArmSystemControlRegister, uint64_t, hwreg::EnablePrinter> {
   enum class TagCheckFault : uint64_t {
     kNone = 0b00,             // Faults have no effect.
     kSynchronous = 0b01,      // All faults cause a synchronous exception.

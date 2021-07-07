@@ -71,6 +71,10 @@ extern "C" void CleanLocalCaches();
 extern "C" void InvalidateLocalCaches();
 extern "C" void CleanAndInvalidateLocalCaches();
 
+// Disables the local caches and MMU, ensuring that the former are flushed
+// (along with the TLB).
+extern "C" void DisableLocalCachesAndMmu();
+
 }  // namespace arch
 
 #else  // __ASSEMBLER__

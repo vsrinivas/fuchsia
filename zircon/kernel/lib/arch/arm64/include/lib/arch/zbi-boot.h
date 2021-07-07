@@ -7,8 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_ARM64_INCLUDE_LIB_ARCH_ZBI_BOOT_H_
 #define ZIRCON_KERNEL_LIB_ARCH_ARM64_INCLUDE_LIB_ARCH_ZBI_BOOT_H_
 
-#include <lib/arch/arm64/system.h>
-#include <lib/arch/sysreg.h>
+#include <lib/arch/cache.h>
 #include <zircon/boot/image.h>
 
 #include <cstdint>
@@ -29,19 +28,11 @@ constexpr uintptr_t kZbiBootDataAlignment = 1 << 12;
 // can be called in physical address mode or with identity mapping that covers
 // at least the kernel plus its reserve_memory_size and the whole data ZBI.
 [[noreturn]] inline void ZbiBoot(zircon_kernel_t* kernel, zbi_header_t* zbi) {
-  uintptr_t entry = reinterpret_cast<uintptr_t>(kernel) + kernel->data_kernel.entry;
-
-  constexpr auto disable_caches_and_mmu = [](auto& sctlr) {
-    sctlr.set_i(false).set_c(false).set_m(false);
-  };
-  if (arch::ArmCurrentEl::Read().el() == 1) {
-    arch::ArmSctlrEl1::Modify(disable_caches_and_mmu);
-  } else {
-    arch::ArmSctlrEl2::Modify(disable_caches_and_mmu);
-  }
+  DisableLocalCachesAndMmu();
 
   // Clear the stack and frame pointers and the link register so no misleading
   // breadcrumbs are left.
+  uintptr_t entry = reinterpret_cast<uintptr_t>(kernel) + kernel->data_kernel.entry;
   __asm__ volatile(
       R"""(
       mov x0, %[zbi]

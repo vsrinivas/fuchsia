@@ -5,6 +5,7 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/zircon/migrated_targets.gni")
+import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
 zx_library("arm64") {
   kernel = true
@@ -19,6 +20,8 @@ zx_library("arm64") {
     "include",
     "../include",
   ]
+
+  deps = [ ":gen-arm64-system-asm" ]
   public_deps = [ "//zircon/system/ulib/hwreg:headers" ]
 
   sdk = "source"
@@ -32,4 +35,11 @@ zx_library("arm64") {
   if (!is_host) {
     sources += [ "random.cc" ]
   }
+}
+
+hwreg_asm_header("gen-arm64-system-asm") {
+  visibility = [ ":*" ]
+  output_name = "lib/arch/arm64/system-asm.h"
+  sources = [ "gen-arm64-system-asm.cc" ]
+  deps = [ ".." ]
 }
