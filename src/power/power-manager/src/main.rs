@@ -20,6 +20,7 @@ mod dev_control_handler;
 mod driver_manager_handler;
 mod lid_shutdown;
 mod shutdown_watcher;
+mod system_profile_handler;
 mod system_shutdown_handler;
 mod temperature_handler;
 mod thermal_limiter;

@@ -50,6 +50,14 @@ pub enum Message {
     /// Specify the termination system state, intended to be used in the DriverManagerHandler node.
     /// Arg: the SystemPowerState value indicating the termination state
     SetTerminationSystemState(fidl_fuchsia_hardware_power_statecontrol::SystemPowerState),
+
+    /// Notify that the mic enabled state has changed
+    /// Arg: the new enabled state
+    NotifyMicEnabledChanged(bool),
+
+    /// Notify that the user active state has changed
+    /// Arg: the new active state
+    NotifyUserActiveChanged(bool),
 }
 
 /// Defines the return values for each of the Message types from above
@@ -89,4 +97,10 @@ pub enum MessageReturn {
 
     /// There is no arg in this MessageReturn type. It only serves as an ACK.
     SetTerminationSystemState,
+
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
+    NotifyMicEnabledChanged,
+
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
+    NotifyUserActiveChanged,
 }
