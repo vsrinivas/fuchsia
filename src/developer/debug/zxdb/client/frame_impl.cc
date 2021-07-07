@@ -258,7 +258,7 @@ bool FrameImpl::EnsureBasePointer() {
   base_pointer_eval_ = std::make_unique<DwarfExprEval>();
 
   // Callback when the expression is done. Will normally get called reentrantly by
-  // DwarfExpreval::Eval().
+  // DwarfExprEval::Eval().
   //
   // Binding |this| here is OK because the DwarfExprEval is owned by us and won't give callbacks
   // after it's destroyed.

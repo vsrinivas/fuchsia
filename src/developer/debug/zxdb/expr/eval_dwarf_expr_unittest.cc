@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/expr/async_dwarf_expr_eval.h"
+#include "src/developer/debug/zxdb/expr/eval_dwarf_expr.h"
 
 #include <gtest/gtest.h>
 
@@ -25,14 +25,16 @@ namespace {
 class AsyncDwarfExprEvalTest : public TestWithLoop {};
 
 // Provides a way for us to know when the object was deleted.
-class TrackedAsyncDwarfExprEval : public AsyncDwarfExprEval {
+class TrackedAsyncDwarfExprEval : public AsyncDwarfExprEvalValue {
  public:
   FRIEND_REF_COUNTED_THREAD_SAFE(TrackedAsyncDwarfExprEval);
   FRIEND_MAKE_REF_COUNTED(TrackedAsyncDwarfExprEval);
 
   // Sets the given boolean in the destructor. The pointer must outlive this class.
-  explicit TrackedAsyncDwarfExprEval(EvalCallback cb, fxl::RefPtr<Type> type, bool* destroyed)
-      : AsyncDwarfExprEval(std::move(cb), std::move(type)), destroyed_(destroyed) {}
+  explicit TrackedAsyncDwarfExprEval(const fxl::RefPtr<EvalContext>& context,
+                                     fxl::RefPtr<Type> type, EvalCallback cb, bool* destroyed)
+      : AsyncDwarfExprEvalValue(std::move(context), std::move(type), std::move(cb)),
+        destroyed_(destroyed) {}
 
   ~TrackedAsyncDwarfExprEval() override { *destroyed_ = true; }
 
@@ -74,9 +76,9 @@ TEST_F(AsyncDwarfExprEvalTest, MemoryManagement) {
   };
 
   bool destroyed = false;
-  auto eval =
-      fxl::MakeRefCounted<TrackedAsyncDwarfExprEval>(value_callback, uint32_type, &destroyed);
-  eval->Eval(eval_context, symbol_context, expr);
+  auto eval = fxl::MakeRefCounted<TrackedAsyncDwarfExprEval>(eval_context, uint32_type,
+                                                             value_callback, &destroyed);
+  eval->Eval(eval_context->GetDataProvider(), symbol_context, expr);
 
   // Should evaluate asynchronously.
   EXPECT_FALSE(called);

@@ -5,9 +5,9 @@
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 
 #include "src/developer/debug/shared/message_loop.h"
-#include "src/developer/debug/zxdb/expr/async_dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/expr/bitfield.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_dwarf_expr.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
@@ -364,29 +364,26 @@ void ResolveInheritedPtr(const fxl::RefPtr<EvalContext>& context, TargetPointer 
       return;
     }
     case InheritedFrom::kExpression: {
-      // Run the expression (may be asynchronous). We don't use the AsyncDwarfExprEval because
-      // that attempts to create an ExprValue from the result, which normally means dereferencing
-      // the result of the expression as a pointer. We want the literal number resulting from
-      // evaluating the expression.
-      auto dwarf_eval = std::make_shared<DwarfExprEval>();
-      dwarf_eval->Push(derived);
-      dwarf_eval->Eval(
-          context->GetDataProvider(), first_from->GetSymbolContext(context->GetProcessSymbols()),
-          first_from->location_expression(),
-          [dwarf_eval, context, remaining = std::move(remaining), cb = std::move(cb)](
-              DwarfExprEval*, const Err& err) mutable {
-            if (err.has_error()) {
-              cb(err);
-            } else {
-              // Continue resolution on any remaining inheritance steps.
-              ResolveInheritedPtr(context, static_cast<TargetPointer>(dwarf_eval->GetResult()),
-                                  remaining, std::move(cb));
-            }
+      // This callback is executed once the DWARF expression has produced the result. It converts
+      // the result to the base class pointer and continues evaluating.
+      auto on_expr_complete = [context, remaining = std::move(remaining), cb = std::move(cb)](
+                                  DwarfExprEval& eval, const Err& err) mutable {
+        if (err.has_error()) {
+          cb(err);
+        } else {
+          // Continue resolution on any remaining inheritance steps.
+          ResolveInheritedPtr(context, static_cast<TargetPointer>(eval.GetResult()), remaining,
+                              std::move(cb));
+        }
+      };
 
-            // Prevent the DwarfExprEval from getting deleted from its own stack.
-            debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                                        [dwarf_eval = std::move(dwarf_eval)]() {});
-          });
+      // The expression is evaluated by pushing the derived pointer on the evaluation stack and
+      // executing the DWARF expression to get the resulting base class pointer.
+      auto async_eval = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(on_expr_complete));
+      async_eval->dwarf_eval().Push(derived);
+      async_eval->Eval(context->GetDataProvider(),
+                       first_from->GetSymbolContext(context->GetProcessSymbols()),
+                       first_from->location_expression());
       return;
     }
   }

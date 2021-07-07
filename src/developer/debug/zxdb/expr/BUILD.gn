@@ -12,8 +12,6 @@ static_library("expr") {
     "abi_null.h",
     "abi_x64.cc",
     "abi_x64.h",
-    "async_dwarf_expr_eval.cc",
-    "async_dwarf_expr_eval.h",
     "bitfield.cc",
     "bitfield.h",
     "builtin_types.cc",
@@ -24,6 +22,8 @@ static_library("expr") {
     "eval_context.h",
     "eval_context_impl.cc",
     "eval_context_impl.h",
+    "eval_dwarf_expr.cc",
+    "eval_dwarf_expr.h",
     "eval_operators.cc",
     "eval_operators.h",
     "expr.cc",
@@ -138,11 +138,11 @@ source_set("tests") {
   testonly = true
 
   sources = [
-    "async_dwarf_expr_eval_unittest.cc",
     "bitfield_unittest.cc",
     "builtin_types_unittest.cc",
     "cast_unittest.cc",
     "eval_context_impl_unittest.cc",
+    "eval_dwarf_expr_unittest.cc",
     "eval_operators_unittest.cc",
     "eval_test_support.cc",
     "eval_test_support.h",

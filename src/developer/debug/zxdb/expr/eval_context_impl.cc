@@ -9,8 +9,8 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/adapters.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/developer/debug/zxdb/expr/async_dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/expr/builtin_types.h"
+#include "src/developer/debug/zxdb/expr/eval_dwarf_expr.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
@@ -249,8 +249,7 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallbac
   }
 
   // Schedule the expression to be evaluated.
-  auto evaluator = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(cb), std::move(type));
-  evaluator->Eval(RefPtrTo(this), symbol_context, *loc_expr);
+  DwarfExprToValue(RefPtrTo(this), symbol_context, *loc_expr, std::move(type), std::move(cb));
 }
 
 const ProcessSymbols* EvalContextImpl::GetProcessSymbols() const {

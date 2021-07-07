@@ -126,7 +126,8 @@ class DwarfExprEval {
   // This will take a reference to the SymbolDataProvider until the computation is complete.
   //
   // The symbol context is used to evaluate relative addresses. It should be the context associated
-  // with the module that this expression is from.
+  // with the module that this expression is from. Normally this will be retrieved from the
+  // symbol that generated the dwarf expression (see DwarfExpr::source()).
   //
   // The return value will indicate if the request completed synchronously. In synchronous
   // completion the callback will have been called reentrantly from within the stack of this
