@@ -18,9 +18,9 @@ namespace arch {
 // modification of provided address ranges. The caches are regarded as coherent
 // - with respect to the ranges passed to SyncRange() - only after the
 // associated object is destroyed.
-struct CacheConsistencyContext {
+struct GlobalCacheConsistencyContext {
   // Ensures consistency on destruction.
-  ~CacheConsistencyContext() {
+  ~GlobalCacheConsistencyContext() {
     // [amd/vol2]: 7.6.1  Cache Organization and Operation.
     // AMD documents that the processor will do its own checking and flushing of
     // the instruction cache, so that software need not take any action.

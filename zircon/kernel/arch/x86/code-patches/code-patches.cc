@@ -46,7 +46,7 @@ void ArchPatchCode(ktl::span<const code_patching::Directive> patches) {
   hwreg::X86MsrIo msr;
 
   // Will effect instruction-data cache consistency on destruction.
-  arch::CacheConsistencyContext sync_ctx;
+  arch::GlobalCacheConsistencyContext sync_ctx;
 
   for (const code_patching::Directive& patch : patches) {
     ktl::span<ktl::byte> insns = GetInstructions(patch.range_start, patch.range_size);

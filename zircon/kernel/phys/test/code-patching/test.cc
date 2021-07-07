@@ -58,7 +58,7 @@ int TestAddOnePatching(const code_patching::Directive& patch) {
   // expect AddOne() to be the identity function.
   auto insns = GetInstructionRange(patch.range_start, patch.range_size);
   code_patching::NopFill(insns);
-  arch::CacheConsistencyContext().SyncRange(patch.range_start, patch.range_size);
+  arch::GlobalCacheConsistencyContext().SyncRange(patch.range_start, patch.range_size);
   {
     uint64_t result = AddOne(583);
     ZX_ASSERT_MSG(result == 583, "Patched AddOne(583) returned %lu; expected 583.\n", result);
@@ -77,7 +77,7 @@ int TestMultiplyByFactorPatching(const code_patching::Directive& patch) {
   // multiply by 2.
   ktl::span<const ktl::byte> multiply_by_two = GetPatchAlternative("multiply_by_two");
   code_patching::Patch(insns, multiply_by_two);
-  arch::CacheConsistencyContext().SyncRange(patch.range_start, patch.range_size);
+  arch::GlobalCacheConsistencyContext().SyncRange(patch.range_start, patch.range_size);
 
   {
     uint64_t result = multiply_by_factor(583);
@@ -89,7 +89,7 @@ int TestMultiplyByFactorPatching(const code_patching::Directive& patch) {
   // multiply by ten.
   ktl::span<const ktl::byte> multiply_by_ten = GetPatchAlternative("multiply_by_ten");
   code_patching::Patch(insns, multiply_by_ten);
-  arch::CacheConsistencyContext().SyncRange(patch.range_start, patch.range_size);
+  arch::GlobalCacheConsistencyContext().SyncRange(patch.range_start, patch.range_size);
   {
     uint64_t result = multiply_by_factor(583);
     ZX_ASSERT_MSG(result == 10 * 583, "multiply_by_factor(583) returned %lu; expected %d.\n",

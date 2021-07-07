@@ -187,7 +187,7 @@ END_FUNCTION(memmove_mexec)
 // The following op cleans and invalidates every entry in each level of the
 // cache.
 LOCAL_FUNCTION(mexec_arch_clean_invalidate_cache_all)
-    cache_way_set_op cisw, clean_invalidate
+    data_cache_way_set_op cisw, clean_invalidate
 
     // Invalidate the instruction cache as well
     ic      iallu

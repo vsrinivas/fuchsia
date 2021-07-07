@@ -22,20 +22,20 @@ namespace arch {
 // modification of provided address ranges. The caches are regarded as coherent
 // - with respect to the ranges passed to SyncRange() - only after the
 // associated object is destroyed.
-class CacheConsistencyContext {
+class GlobalCacheConsistencyContext {
  public:
-  // Constructs a CacheConsistencyContext with an expectation around whether
+  // Constructs a GlobalCacheConsistencyContext with an expectation around whether
   // virtual address aliasing is possible among the address ranges to be
   // recorded.
-  explicit CacheConsistencyContext(bool possible_aliasing)
+  explicit GlobalCacheConsistencyContext(bool possible_aliasing)
       : possible_aliasing_(possible_aliasing) {}
 
   // Defaults to the general assumption that aliasing among the address ranges
   // to be recorded is possible if the instruction cache is VIPT.
-  CacheConsistencyContext() = default;
+  GlobalCacheConsistencyContext() = default;
 
   // Ensures consistency on destruction.
-  ~CacheConsistencyContext();
+  ~GlobalCacheConsistencyContext();
 
   // Records a virtual address range that should factor into consistency.
   void SyncRange(uintptr_t vaddr, size_t size);
@@ -48,7 +48,7 @@ class CacheConsistencyContext {
 //
 // Caller must perform an instruction barrier (e.g., `__isb(ARM_MB_SY)`)
 // prior to relying on the operation being complete.
-inline void InvalidateInstructionCache() {
+inline void InvalidateGlobalInstructionCache() {
   // Instruction cache: invalidate all ("iall") inner-sharable ("is") caches
   // to point of unification ("u").
   asm volatile("ic ialluis" ::: "memory");
@@ -58,7 +58,7 @@ inline void InvalidateInstructionCache() {
 //
 // Caller must perform an instruction barrier (e.g., `__isb(ARM_MB_SY)`)
 // prior to relying on the operation being complete.
-inline void InvalidateTlbs() { asm volatile("tlbi vmalle1" ::: "memory"); }
+inline void InvalidateLocalTlbs() { asm volatile("tlbi vmalle1" ::: "memory"); }
 
 // Local per-cpu cache flush routines.
 //
@@ -67,13 +67,13 @@ inline void InvalidateTlbs() { asm volatile("tlbi vmalle1" ::: "memory"); }
 //
 // These are typically only useful during system setup or shutdown when
 // the MMU is not enabled. Other use-cases should use range-based cache operation.
-extern "C" void Arm64LocalCleanAndInvalidateAllCaches();
-extern "C" void Arm64LocalCleanAllCaches();
-extern "C" void Arm64LocalInvalidateAllCaches();
+extern "C" void CleanLocalCaches();
+extern "C" void InvalidateLocalCaches();
+extern "C" void CleanAndInvalidateLocalCaches();
 
 }  // namespace arch
 
-#else // __ASSEMBLER__
+#else  // __ASSEMBLER__
 
 // clang-format off
 
@@ -84,8 +84,8 @@ extern "C" void Arm64LocalInvalidateAllCaches();
 // "csw" (i.e., "Clean by Set and Way").
 //
 // Generated assembly does not use the stack, but clobbers registers [x0 -- x13].
-.macro cache_way_set_op op, name
-cache_way_set_op_impl \op, \name
+.macro data_cache_way_set_op op, name
+  data_cache_way_set_op_impl \op, \name
 .endm
 
 // clang-format on

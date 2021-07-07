@@ -21,7 +21,7 @@ namespace {
 bool test_clean_cache() {
   BEGIN_TEST;
 
-  arch::Arm64LocalCleanAllCaches();
+  arch::CleanLocalCaches();
 
   END_TEST;
 }
@@ -29,7 +29,7 @@ bool test_clean_cache() {
 bool test_clean_invalidate_cache() {
   BEGIN_TEST;
 
-  arch::Arm64LocalCleanAndInvalidateAllCaches();
+  arch::CleanAndInvalidateLocalCaches();
 
   END_TEST;
 }

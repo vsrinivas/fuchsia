@@ -8,19 +8,19 @@
 
 namespace arch {
 
-CacheConsistencyContext::~CacheConsistencyContext() {
+GlobalCacheConsistencyContext::~GlobalCacheConsistencyContext() {
   // If CTR_EL0.DIC is unset, invalidating the instruction cache to the PoU
   // is required for data-to-instruction cache coherence. Furthermore, if there
   // is possible aliasing then we cannot rely on invalidation by virtual
   // address and must resort to invalidating the entirety of the instruction
   // cache.
   if (!CacheTypeEl0::Read().dic() && possible_aliasing_) {
-    InvalidateInstructionCache();
+    InvalidateGlobalInstructionCache();
     __isb(ARM_MB_SY);
   }
 }
 
-void CacheConsistencyContext::SyncRange(uintptr_t vaddr, size_t size) {
+void GlobalCacheConsistencyContext::SyncRange(uintptr_t vaddr, size_t size) {
   const auto ctr = CacheTypeEl0::Read();
   // If CTR_EL0.IDC is unset, cleaning the data cache to the PoU is required
   // for instruction-to-data cache coherence.

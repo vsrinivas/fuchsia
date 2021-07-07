@@ -9,39 +9,33 @@
 
 .text
 
-// void Arm64LocalInvalidateAllCaches()
-.function Arm64LocalInvalidateAllCaches, global, none
-    cache_way_set_op isw, invalidate
+// void InvalidateLocalCaches()
+.function InvalidateLocalCaches, global, none
+   data_cache_way_set_op isw, invalidate
+   ic  iallu
+   isb
 
-    // dump the instruction cache as well
-    ic      iallu
-    isb
-
-    ret
-    speculation_postfence
+   ret
+   speculation_postfence
 .end_function
 
-// void Arm64LocalCleanAllCaches()
-.function Arm64LocalCleanAllCaches, global, none
-    cache_way_set_op csw, clean
+// void CleanLocalCaches()
+.function CleanLocalCaches, global, none
+   data_cache_way_set_op csw, clean
+   ic  iallu
+   isb
 
-    // dump the instruction cache as well
-    ic      iallu
-    isb
-
-    ret
-    speculation_postfence
+   ret
+   speculation_postfence
 .end_function
 
-// void Arm64LocalCleanAndInvalidateAllCaches()
-.function Arm64LocalCleanAndInvalidateAllCaches, global, none
-    cache_way_set_op cisw, clean_invalidate
+// void CleanAndInvalidateLocalCaches()
+.function CleanAndInvalidateLocalCaches, global, none
+   data_cache_way_set_op cisw, clean_and_invalidate
+   ic  iallu
+   isb
 
-    // dump the instruction cache as well
-    ic      iallu
-    isb
-
-    ret
-    speculation_postfence
+   ret
+   speculation_postfence
 .end_function
 

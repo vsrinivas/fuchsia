@@ -51,8 +51,8 @@ void EnablePagingForEl(Paddr ttbr0_root) {
   ZX_ASSERT(!sctlr_reg.m() && !sctlr_reg.c());
 
   // Clear out the data and instruction caches, and all TLBs.
-  arch::Arm64LocalInvalidateAllCaches();
-  arch::InvalidateTlbs();
+  arch::InvalidateLocalCaches();
+  arch::InvalidateLocalTlbs();
   __dsb(ARM_MB_SY);
   __isb(ARM_MB_SY);
 
@@ -61,11 +61,11 @@ void EnablePagingForEl(Paddr ttbr0_root) {
 
   // Configure the page table layout of TTBR0 and enable page table caching.
   TcrReg tcr = TcrReg{}
-        .set_tg0(arch::ArmTcrTg0Value::k4KiB)                     // Use 4 KiB granules.
-        .set_t0sz(64 - kDefaultPageTableLayout.region_size_bits)  // Set region size.
-        .set_sh0(arch::ArmTcrShareAttr::kInnerShareable)
-        .set_orgn0(arch::ArmTcrCacheAttr::kWriteBackWriteAllocate)
-        .set_irgn0(arch::ArmTcrCacheAttr::kWriteBackWriteAllocate);
+                   .set_tg0(arch::ArmTcrTg0Value::k4KiB)                     // Use 4 KiB granules.
+                   .set_t0sz(64 - kDefaultPageTableLayout.region_size_bits)  // Set region size.
+                   .set_sh0(arch::ArmTcrShareAttr::kInnerShareable)
+                   .set_orgn0(arch::ArmTcrCacheAttr::kWriteBackWriteAllocate)
+                   .set_irgn0(arch::ArmTcrCacheAttr::kWriteBackWriteAllocate);
 
   // Allow the CPU to access all of its supported physical address space.
   SetPhysicalAddressSize(tcr, arch::ArmIdAa64Mmfr0El1::Read().pa_range());

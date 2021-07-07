@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_CACHE_LOOP_H_
-#define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_CACHE_LOOP_H_
+#ifndef ZIRCON_KERNEL_LIB_ARCH_ARM64_INCLUDE_LIB_ARCH_INTERNAL_CACHE_LOOP_H_
+#define ZIRCON_KERNEL_LIB_ARCH_ARM64_INCLUDE_LIB_ARCH_INTERNAL_CACHE_LOOP_H_
 
 // clang-format off
 
@@ -15,7 +15,7 @@
 // caches from level 0 to the point of coherence.
 //
 // Adapted from example code in the ARM Architecture Reference Manual ARMv8.
-.macro cache_way_set_op_impl, op name
+.macro data_cache_way_set_op_impl, op name
     mrs     x0, clidr_el1
     and     w3, w0, #0x07000000     // get 2x level of coherence
     lsr     w3, w3, #23
@@ -61,4 +61,5 @@
 
 #endif
 
-#endif
+
+#endif  // ZIRCON_KERNEL_LIB_ARCH_ARM64_INCLUDE_LIB_ARCH_INTERNAL_CACHE_LOOP_H_
