@@ -477,7 +477,7 @@
         "alignment": 8,
         "depth": 2,
         "max_handles": 0,
-        "max_out_of_line": 24,
+        "max_out_of_line": 16,
         "has_padding": true,
         "has_flexible_envelope": true
       }
@@ -551,7 +551,7 @@
         "alignment": 8,
         "depth": 1,
         "max_handles": 0,
-        "max_out_of_line": 8,
+        "max_out_of_line": 0,
         "has_padding": true,
         "has_flexible_envelope": false
       }
@@ -623,7 +623,7 @@
         "alignment": 8,
         "depth": 1,
         "max_handles": 0,
-        "max_out_of_line": 8,
+        "max_out_of_line": 0,
         "has_padding": true,
         "has_flexible_envelope": true
       }

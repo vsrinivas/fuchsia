@@ -744,6 +744,11 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
     DataSize max_out_of_line = 0;
 
     for (const auto& member : object.members) {
+      if (wire_format() == WireFormat::kV2 || wire_format() == WireFormat::kV2Header) {
+        if (UnalignedSize(member, wire_format()) <= 4) {
+          continue;
+        }
+      }
       max_out_of_line += ObjectAlign(UnalignedSize(member, wire_format())) + MaxOutOfLine(member);
     }
 
@@ -793,9 +798,14 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Union& object) override {
-    DataSize max_out_of_line;
+    DataSize max_out_of_line = 0;
 
     for (const auto& member : object.members) {
+      if (wire_format() == WireFormat::kV2 || wire_format() == WireFormat::kV2Header) {
+        if (UnalignedSize(member, wire_format()) <= 4) {
+          continue;
+        }
+      }
       max_out_of_line =
           std::max(max_out_of_line,
                    ObjectAlign(UnalignedSize(member, wire_format())) + MaxOutOfLine(member));

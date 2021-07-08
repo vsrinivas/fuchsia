@@ -401,14 +401,23 @@ table TableWithBoolAndU64 {
 
   auto one_bool = test_library.LookupTable("TableWithOneBool");
   ASSERT_NOT_NULL(one_bool);
-  ASSERT_NO_FAILURES(CheckTypeShape(one_bool, Expected{
-                                                  .inline_size = 16,
-                                                  .alignment = 8,
-                                                  .max_out_of_line = 24,
-                                                  .depth = 2,
-                                                  .has_padding = true,
-                                                  .has_flexible_envelope = true,
-                                              }));
+  ASSERT_NO_FAILURES(CheckTypeShape(one_bool,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 24,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 16,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    }));
 
   auto two_bools = test_library.LookupTable("TableWithTwoBools");
   ASSERT_NOT_NULL(two_bools);
@@ -424,7 +433,7 @@ table TableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 40,
+                                        .max_out_of_line = 24,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -444,7 +453,7 @@ table TableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 40,
+                                        .max_out_of_line = 24,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -452,7 +461,7 @@ table TableWithBoolAndU64 {
 
   auto bool_and_u64 = test_library.LookupTable("TableWithBoolAndU64");
   ASSERT_NOT_NULL(bool_and_u64);
-  ASSERT_NO_FAILURES(CheckTypeShape(bool_and_u32,
+  ASSERT_NO_FAILURES(CheckTypeShape(bool_and_u64,
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
@@ -464,7 +473,7 @@ table TableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 40,
+                                        .max_out_of_line = 32,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -521,7 +530,7 @@ table OneReserved {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 48,
+                                        .max_out_of_line = 32,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -541,7 +550,7 @@ table OneReserved {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 40,
+                                        .max_out_of_line = 32,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -561,7 +570,7 @@ table OneReserved {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 40,
+                                        .max_out_of_line = 24,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -604,15 +613,25 @@ resource table TableWithOneHandle {
 
   auto one_handle = test_library.LookupTable("TableWithOneHandle");
   ASSERT_NOT_NULL(one_handle);
-  ASSERT_NO_FAILURES(CheckTypeShape(one_handle, Expected{
-                                                    .inline_size = 16,
-                                                    .alignment = 8,
-                                                    .max_out_of_line = 24,
-                                                    .max_handles = 1,
-                                                    .depth = 2,
-                                                    .has_padding = true,
-                                                    .has_flexible_envelope = true,
-                                                }));
+  ASSERT_NO_FAILURES(CheckTypeShape(one_handle,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 24,
+                                        .max_handles = 1,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 16,
+                                        .max_handles = 1,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    }));
 }
 
 TEST(TypeshapeTests, GoodOptionalStructs) {
@@ -779,36 +798,63 @@ table TableWithOptionalTableWithBoolAndU64 {
 
   auto one_bool = test_library.LookupTable("TableWithOptionalOneBool");
   ASSERT_NOT_NULL(one_bool);
-  ASSERT_NO_FAILURES(CheckTypeShape(one_bool, Expected{
-                                                  .inline_size = 16,
-                                                  .alignment = 8,
-                                                  .max_out_of_line = 24,
-                                                  .depth = 2,
-                                                  .has_padding = true,
-                                                  .has_flexible_envelope = true,
-                                              }));
+  ASSERT_NO_FAILURES(CheckTypeShape(one_bool,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 24,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 16,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    }));
 
   auto table_with_one_bool = test_library.LookupTable("TableWithOptionalTableWithOneBool");
   ASSERT_NOT_NULL(table_with_one_bool);
-  ASSERT_NO_FAILURES(CheckTypeShape(table_with_one_bool, Expected{
-                                                             .inline_size = 16,
-                                                             .alignment = 8,
-                                                             .max_out_of_line = 56,
-                                                             .depth = 4,
-                                                             .has_padding = true,
-                                                             .has_flexible_envelope = true,
-                                                         }));
+  ASSERT_NO_FAILURES(CheckTypeShape(table_with_one_bool,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 56,
+                                        .depth = 4,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 48,
+                                        .depth = 4,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    }));
 
   auto two_bools = test_library.LookupTable("TableWithOptionalTwoBools");
   ASSERT_NOT_NULL(two_bools);
-  ASSERT_NO_FAILURES(CheckTypeShape(two_bools, Expected{
-                                                   .inline_size = 16,
-                                                   .alignment = 8,
-                                                   .max_out_of_line = 24,
-                                                   .depth = 2,
-                                                   .has_padding = true,
-                                                   .has_flexible_envelope = true,
-                                               }));
+  ASSERT_NO_FAILURES(CheckTypeShape(two_bools,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 24,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 16,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    }));
 
   auto table_with_two_bools = test_library.LookupTable("TableWithOptionalTableWithTwoBools");
   ASSERT_NOT_NULL(table_with_two_bools);
@@ -824,7 +870,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 72,
+                                        .max_out_of_line = 56,
                                         .depth = 4,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -855,7 +901,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 72,
+                                        .max_out_of_line = 56,
                                         .depth = 4,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -886,7 +932,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 72,
+                                        .max_out_of_line = 64,
                                         .depth = 4,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -1054,7 +1100,7 @@ resource union ManyHandleUnion {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 8,
+                                        .max_out_of_line = 0,
                                         .max_handles = 1,
                                         .depth = 1,
                                         .has_padding = true,
@@ -1353,15 +1399,25 @@ resource table TableWithHandleStructVector {
 
   auto handle_table_vector = test_library.LookupStruct("HandleTableVector");
   ASSERT_NOT_NULL(handle_table_vector);
-  ASSERT_NO_FAILURES(CheckTypeShape(handle_table_vector, Expected{
-                                                             .inline_size = 16,
-                                                             .alignment = 8,
-                                                             .max_out_of_line = 320,
-                                                             .max_handles = 8,
-                                                             .depth = 3,
-                                                             .has_padding = true,
-                                                             .has_flexible_envelope = true,
-                                                         }));
+  ASSERT_NO_FAILURES(CheckTypeShape(handle_table_vector,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 320,
+                                        .max_handles = 8,
+                                        .depth = 3,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 256,
+                                        .max_handles = 8,
+                                        .depth = 3,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    }));
 
   auto table_with_handle_struct_vector = test_library.LookupTable("TableWithHandleStructVector");
   ASSERT_NOT_NULL(table_with_handle_struct_vector);
@@ -1642,7 +1698,7 @@ flexible union PaddingCheck {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 8,
+                                        .max_out_of_line = 0,
                                         .depth = 1,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -1666,7 +1722,7 @@ flexible union PaddingCheck {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 8,
+                                        .max_out_of_line = 0,
                                         .depth = 1,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -2673,7 +2729,7 @@ struct Sandwich {
                                     Expected{
                                         .inline_size = 32,
                                         .alignment = 8,
-                                        .max_out_of_line = 8,
+                                        .max_out_of_line = 0,
                                         .max_handles = 0,
                                         .depth = 1,
                                         .has_padding = true,
