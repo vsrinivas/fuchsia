@@ -15,18 +15,12 @@ class Socket extends _HandleWrapper<Socket> {
   static const int READABLE = ZX.SOCKET_READABLE;
   static const int WRITABLE = ZX.SOCKET_WRITABLE;
   static const int PEER_CLOSED = ZX.SOCKET_PEER_CLOSED;
-  static const int READ_DISABLED = ZX.SOCKET_READ_DISABLED;
   static const int WRITE_DISABLED = ZX.SOCKET_WRITE_DISABLED;
-  static const int CONTROL_READABLE = ZX.SOCKET_CONTROL_READABLE;
-  static const int CONTROL_WRITABLE = ZX.SOCKET_CONTROL_WRITABLE;
+  static const int PEER_WRITE_DISABLED = ZX.SOCKET_PEER_WRITE_DISABLED;
 
   // Create options
   static const int STREAM = ZX.SOCKET_STREAM;
   static const int DATAGRAM = ZX.SOCKET_DATAGRAM;
-  static const int HAS_CONTROL = ZX.SOCKET_HAS_CONTROL;
-
-  // Read / write options
-  static const int CONTROL = ZX.SOCKET_CONTROL;
 
   // Write options
   static const int SHUTDOWN_READ = ZX.SOCKET_SHUTDOWN_READ;

@@ -175,6 +175,11 @@ def write_constants():
         f.write('abstract class ZX {\n')
         f.write('  ZX._();')
         for symbol, value in error_defines + type_defines + right_defines:
+            # PAGE_SIZE is from limits.h. It contains arch specific defines
+            # that are hard to parse here, so skip until affected constants are
+            # needed in Dart.
+            if value == 'PAGE_SIZE':
+                continue
             if symbol.startswith('_'):
                 # private constant, it's okay if it's unused.
                 f.write('  // ignore: unused_field\n')
