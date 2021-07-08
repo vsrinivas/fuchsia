@@ -10,8 +10,6 @@ group("management") {
   testonly = true
   deps = [
     ":tests",
-    "network-manager",
-    "network-manager-cli",
     "reachability",
   ]
 }
@@ -40,10 +38,5 @@ group("network_config_no_ssh_over_wlan") {
 
 group("tests") {
   testonly = true
-  deps = [
-    "network-manager:tests",
-    "network-manager-cli:tests",
-    "reachability:tests",
-    "tests",
-  ]
+  deps = [ "reachability:tests" ]
 }

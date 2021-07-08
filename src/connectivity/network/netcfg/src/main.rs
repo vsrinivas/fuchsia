@@ -9,13 +9,12 @@
 //   recursion limit very high, e.g. #![recursion_limit="1024"].
 #![recursion_limit = "512"]
 
-extern crate network_manager_core_interface as interface;
-
 mod devices;
 mod dhcpv4;
 mod dhcpv6;
 mod dns;
 mod errors;
+mod interface;
 mod matchers;
 
 use dhcp::protocol::FromFidlExt as _;

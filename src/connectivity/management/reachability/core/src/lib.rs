@@ -9,15 +9,16 @@ mod ping;
 extern crate log;
 use {
     crate::ping::Ping,
-    fidl_fuchsia_hardware_network, fidl_fuchsia_net_interfaces as fnet_interfaces,
-    fidl_fuchsia_net_interfaces_ext::{self as fnet_interfaces_ext},
+    anyhow::Context as _,
+    fidl_fuchsia_hardware_network, fidl_fuchsia_net as fnet, fidl_fuchsia_net_ext as fnet_ext,
+    fidl_fuchsia_net_interfaces as fnet_interfaces,
+    fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext, fidl_fuchsia_netstack as fnetstack,
     fuchsia_async as fasync,
     fuchsia_inspect::Inspector,
     futures::{pin_mut, FutureExt as _, StreamExt as _},
     inspect::InspectInfo,
     net_declare::std_ip,
-    net_types::ScopeableAddress as _,
-    network_manager_core::{address::LifIpAddr, error, hal},
+    net_types::{ip::IpAddress as _, ScopeableAddress as _},
     std::collections::HashMap,
 };
 
@@ -183,7 +184,7 @@ impl<T> IpVersions<T> {
     }
 }
 
-type Id = hal::PortId;
+type Id = u64;
 
 // NB PartialEq is derived only for tests to avoid unintentionally making a comparison that
 // includes the timestamp in `StateEvent`.
@@ -324,7 +325,8 @@ impl StateInfo {
 
 /// `Monitor` monitors the reachability state.
 pub struct Monitor {
-    hal: hal::NetCfg,
+    netstack: fnetstack::NetstackProxy,
+    interface_state: fnet_interfaces::StateProxy,
     state: StateInfo,
     stats: Stats,
     inspector: Option<&'static Inspector>,
@@ -335,9 +337,15 @@ pub struct Monitor {
 impl Monitor {
     /// Create the monitoring service.
     pub fn new() -> anyhow::Result<Self> {
-        let hal = hal::NetCfg::new()?;
+        use fuchsia_component::client::connect_to_protocol;
+
+        let netstack = connect_to_protocol::<fnetstack::NetstackMarker>()
+            .context("network_manager failed to connect to netstack")?;
+        let interface_state = connect_to_protocol::<fnet_interfaces::StateMarker>()
+            .context("network_manager failed to connect to interface state")?;
         Ok(Monitor {
-            hal,
+            netstack,
+            interface_state,
             state: Default::default(),
             stats: Default::default(),
             inspector: None,
@@ -353,8 +361,18 @@ impl Monitor {
     }
 
     /// Returns an interface watcher client proxy.
-    pub fn create_interface_watcher(&self) -> error::Result<fnet_interfaces::WatcherProxy> {
-        self.hal.create_interface_watcher()
+    pub fn create_interface_watcher(&self) -> anyhow::Result<fnet_interfaces::WatcherProxy> {
+        let (watcher, watcher_server) =
+            fidl::endpoints::create_proxy::<fnet_interfaces::WatcherMarker>()
+                .context("failed to create fuchsia.net.interfaces/Watcher proxy")?;
+        let () = self
+            .interface_state
+            .get_watcher(
+                fnet_interfaces::WatcherOptions { ..fnet_interfaces::WatcherOptions::EMPTY },
+                watcher_server,
+            )
+            .context("failed to call fuchsia.net.interfaces/State.get_watcher")?;
+        Ok(watcher)
     }
 
     /// Sets the inspector.
@@ -419,9 +437,8 @@ impl Monitor {
     /// The interface may have been recently-discovered, or the properties of a known interface may
     /// have changed.
     pub async fn compute_state(&mut self, properties: &fnet_interfaces_ext::Properties) {
-        // TODO(https://fxbug.dev/75079) Get the route table ourselves.
-        let routes = self.hal.routes().await.unwrap_or_else(|| {
-            error!("failed to get route table");
+        let routes = self.netstack.get_route_table().await.unwrap_or_else(|e| {
+            error!("failed to get route table: {}", e);
             Vec::new()
         });
         if let Some(info) = compute_state(properties, &routes, &ping::Pinger).await {
@@ -462,17 +479,12 @@ async fn compute_state(
         has_default_ipv4_route: _,
         has_default_ipv6_route: _,
     }: &fnet_interfaces_ext::Properties,
-    routes: &[hal::Route],
+    routes: &[fnetstack::RouteTableEntry],
     pinger: &dyn Ping,
 ) -> Option<IpVersions<StateEvent>> {
     if PortType::from(device_class) == PortType::Loopback {
         return None;
     }
-
-    let (v4_addrs, v6_addrs): (Vec<_>, _) = addresses
-        .iter()
-        .map(|fnet_interfaces_ext::Address { addr, valid_until: _ }| LifIpAddr::from(addr))
-        .partition(|addr| addr.is_ipv4());
 
     if !online {
         return Some(IpVersions {
@@ -480,6 +492,14 @@ async fn compute_state(
             ipv6: StateEvent { state: State::Down, time: fasync::Time::now() },
         });
     }
+
+    let (v4_addrs, v6_addrs): (Vec<_>, _) = addresses
+        .into_iter()
+        .map(|fnet_interfaces_ext::Address { addr, valid_until: _ }| addr)
+        .partition(|fnet::Subnet { addr, prefix_len: _ }| match addr {
+            fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: _ }) => true,
+            fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: _ }) => false,
+        });
 
     // TODO(https://fxbug.dev/74517) Check if packet count has increased, and if so upgrade the
     // state to LinkLayerUp.
@@ -495,21 +515,50 @@ async fn compute_state(
 
 // `local_routes` traverses `route_table` to find routes that use a gateway local to `address`
 // network.
-fn local_routes<'a>(address: &LifIpAddr, route_table: &'a [hal::Route]) -> Vec<&'a hal::Route> {
-    let local_routes: Vec<&hal::Route> = route_table
+fn local_routes(
+    subnet: fnet::Subnet,
+    route_table: &[fnetstack::RouteTableEntry],
+) -> Vec<&fnetstack::RouteTableEntry> {
+    let fnet::Subnet { addr, prefix_len } = subnet;
+    let addr = match addr {
+        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
+            net_types::ip::IpAddr::V4(net_types::ip::Ipv4Addr::new(addr).mask(prefix_len))
+        }
+        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
+            net_types::ip::IpAddr::V6(net_types::ip::Ipv6Addr::new(addr).mask(prefix_len))
+        }
+    };
+    let subnet = net_types::ip::SubnetEither::new(addr, prefix_len).unwrap_or_else(|e| {
+        panic!("SubnetEither::new({:?}, {}): {:?}", addr, prefix_len, e);
+    });
+    route_table
         .iter()
-        .filter(|r| match r.gateway {
-            Some(gateway) => address.is_in_same_subnet(&gateway),
-            None => false,
+        .filter(|fnetstack::RouteTableEntry { gateway, .. }| {
+            gateway
+                .as_ref()
+                .map(|gateway| match **gateway {
+                    fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => match subnet {
+                        net_types::ip::SubnetEither::V4(subnet) => {
+                            net_types::ip::Ipv4Addr::new(addr).is_unicast_in_subnet(&subnet)
+                        }
+                        net_types::ip::SubnetEither::V6(_) => false,
+                    },
+                    fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => match subnet {
+                        net_types::ip::SubnetEither::V4(_) => false,
+                        net_types::ip::SubnetEither::V6(subnet) => {
+                            net_types::ip::Ipv6Addr::new(addr).is_unicast_in_subnet(&subnet)
+                        }
+                    },
+                })
+                .unwrap_or(false)
         })
-        .collect();
-    local_routes
+        .collect()
 }
 
 // `network_layer_state` determines the L3 reachability state.
 async fn network_layer_state(
-    addresses: &[LifIpAddr],
-    routes: &[hal::Route],
+    addresses: &[fnet::Subnet],
+    routes: &[fnetstack::RouteTableEntry],
     p: &dyn Ping,
     internet_ping_address: std::net::IpAddr,
 ) -> State {
@@ -520,22 +569,23 @@ async fn network_layer_state(
     // TODO(https://fxbug.dev/36242) Check neighbor reachability and upgrade state to Local.
 
     let gateway_reachable =
-        futures::stream::iter(addresses.into_iter()).filter_map(|a| async move {
-            let gateway_addr_iter = local_routes(&a, routes).into_iter().filter_map(|r| {
+        futures::stream::iter(addresses.into_iter()).filter_map(|subnet| async move {
+            let gateway_addr_iter = local_routes(*subnet, routes).into_iter().filter_map(|r| {
                 // TODO(https://github.com/rust-lang/rust/issues/65490): Move this line into the
                 // closure parameter when possible.
-                let &hal::Route { target: _, gateway, port_id, metric: _ } = r;
-                gateway.and_then(|gw_ip| match gw_ip {
-                    std::net::IpAddr::V4(_) => Some(std::net::SocketAddr::new(gw_ip, 0)),
-                    std::net::IpAddr::V6(v6) => port_id
-                        .map(|id| {
-                            std::net::SocketAddr::V6(std::net::SocketAddrV6::new(
-                                v6,
-                                0,
-                                0,
-                                id.to_u32(),
-                            ))
-                        })
+                let fnetstack::RouteTableEntry { destination: _, gateway, nicid, metric: _ } = r;
+                gateway.as_ref().and_then(|gateway| {
+                    let nicid = *nicid;
+                    let fnet_ext::IpAddress(gw_ip) = (**gateway).into();
+                    match gw_ip {
+                        std::net::IpAddr::V4(_) => Some(std::net::SocketAddr::new(gw_ip, 0)),
+                        std::net::IpAddr::V6(v6) => if nicid == 0 {
+                            None
+                        } else {
+                            Some(std::net::SocketAddr::V6(std::net::SocketAddrV6::new(
+                                v6, 0, 0, nicid,
+                            )))
+                        }
                         .or_else(|| {
                             if net_types::ip::Ipv6Addr::new(v6.octets()).scope()
                                 != net_types::ip::Ipv6Scope::Global
@@ -550,6 +600,7 @@ async fn network_layer_state(
                                 Some(std::net::SocketAddr::new(gw_ip, 0))
                             }
                         }),
+                    }
                 })
             });
             let reachable = futures::stream::iter(gateway_addr_iter)
@@ -575,16 +626,13 @@ mod tests {
         super::*,
         async_trait::async_trait,
         fuchsia_async as fasync,
-        net_declare::{fidl_subnet, std_ip},
-        std::{
-            net::{IpAddr, Ipv4Addr, Ipv6Addr},
-            task::Poll,
-        },
+        net_declare::{fidl_ip, fidl_subnet, std_ip},
+        std::task::Poll,
     };
 
     const ETHERNET_INTERFACE_NAME: &str = "eth1";
-    const ID1: Id = crate::hal::PortId::new(1);
-    const ID2: Id = crate::hal::PortId::new(2);
+    const ID1: u32 = 1;
+    const ID2: u32 = 2;
 
     // A trait for writing helper constructors.
     //
@@ -634,56 +682,56 @@ mod tests {
 
     #[test]
     fn test_local_routes() {
-        let address = &LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 };
+        let address = fidl_subnet!("1.2.3.4/24");
         let route_table = &vec![
-            hal::Route {
-                gateway: Some("1.2.3.1".parse().unwrap()),
-                metric: None,
-                port_id: Some(ID1),
-                target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
+            fnetstack::RouteTableEntry {
+                gateway: Some(Box::new(fidl_ip!("1.2.3.1"))),
+                metric: 0,
+                nicid: ID1.into(),
+                destination: fidl_subnet!("0.0.0.0/0"),
             },
-            hal::Route {
+            fnetstack::RouteTableEntry {
                 gateway: None,
-                metric: None,
-                port_id: Some(ID1),
-                target: LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 24 },
+                metric: 0,
+                nicid: ID1.into(),
+                destination: fidl_subnet!("1.2.3.0/24"),
             },
         ];
 
-        let want_route = &hal::Route {
-            gateway: Some("1.2.3.1".parse().unwrap()),
-            metric: None,
-            port_id: Some(ID1),
-            target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
+        let want_route = &fnetstack::RouteTableEntry {
+            gateway: Some(Box::new(fidl_ip!("1.2.3.1"))),
+            metric: 0,
+            nicid: ID1.into(),
+            destination: fidl_subnet!("0.0.0.0/0"),
         };
 
         let want = vec![want_route];
         let got = local_routes(address, route_table);
         assert_eq!(got, want, "route via local network found.");
 
-        let address = &LifIpAddr { address: "2.2.3.4".parse().unwrap(), prefix: 24 };
+        let address = fidl_subnet!("2.2.3.4/24");
         let route_table = &vec![
-            hal::Route {
-                gateway: Some("1.2.3.1".parse().unwrap()),
-                metric: None,
-                port_id: Some(ID1),
-                target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
+            fnetstack::RouteTableEntry {
+                gateway: Some(Box::new(fidl_ip!("1.2.3.1"))),
+                metric: 0,
+                nicid: ID1.into(),
+                destination: fidl_subnet!("0.0.0.0/0"),
             },
-            hal::Route {
+            fnetstack::RouteTableEntry {
                 gateway: None,
-                metric: None,
-                port_id: Some(ID1),
-                target: LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 24 },
+                metric: 0,
+                nicid: ID1.into(),
+                destination: fidl_subnet!("1.2.3.0/24"),
             },
-            hal::Route {
+            fnetstack::RouteTableEntry {
                 gateway: None,
-                metric: None,
-                port_id: Some(ID1),
-                target: LifIpAddr { address: "2.2.3.0".parse().unwrap(), prefix: 24 },
+                metric: 0,
+                nicid: ID1.into(),
+                destination: fidl_subnet!("2.2.3.0/24"),
             },
         ];
 
-        let want = Vec::<&hal::Route>::new();
+        let want = Vec::<&fnetstack::RouteTableEntry>::new();
         let got = local_routes(address, route_table);
         assert_eq!(got, want, "route via local network not present.");
     }
@@ -713,12 +761,12 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_network_layer_state_ipv4() {
         test_network_layer_state(
-            "1.2.3.0",
-            "1.2.3.4",
-            "1.2.3.1",
-            "2.2.3.0",
-            "2.2.3.1",
-            LifIpAddr { address: IpAddr::V4(Ipv4Addr::UNSPECIFIED), prefix: 0 },
+            fidl_ip!("1.2.3.0"),
+            fidl_ip!("1.2.3.4"),
+            fidl_ip!("1.2.3.1"),
+            fidl_ip!("2.2.3.0"),
+            fidl_ip!("2.2.3.1"),
+            fidl_subnet!("0.0.0.0/0"),
             IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS,
             24,
         )
@@ -728,12 +776,12 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_network_layer_state_ipv6() {
         test_network_layer_state(
-            "123::",
-            "123::4",
-            "123::1",
-            "223::",
-            "223::1",
-            LifIpAddr { address: IpAddr::V6(Ipv6Addr::UNSPECIFIED), prefix: 0 },
+            fidl_ip!("123::"),
+            fidl_ip!("123::4"),
+            fidl_ip!("123::1"),
+            fidl_ip!("223::"),
+            fidl_ip!("223::1"),
+            fidl_subnet!("::/0"),
             IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS,
             64,
         )
@@ -741,57 +789,59 @@ mod tests {
     }
 
     async fn test_network_layer_state(
-        net1: &str,
-        net1_addr: &str,
-        net1_gateway: &str,
-        net2: &str,
-        net2_gateway: &str,
-        unspecified_addr: LifIpAddr,
+        net1: fnet::IpAddress,
+        net1_addr: fnet::IpAddress,
+        net1_gateway: fnet::IpAddress,
+        net2: fnet::IpAddress,
+        net2_gateway: fnet::IpAddress,
+        unspecified_addr: fnet::Subnet,
         ping_internet_addr: std::net::IpAddr,
-        prefix: u8,
+        prefix_len: u8,
     ) {
-        let address = LifIpAddr { address: net1_addr.parse().unwrap(), prefix };
+        let address = fnet::Subnet { addr: net1_addr, prefix_len };
         let route_table = vec![
-            hal::Route {
-                gateway: Some(net1_gateway.parse().unwrap()),
-                metric: None,
-                port_id: Some(ID1),
-                target: unspecified_addr,
+            fnetstack::RouteTableEntry {
+                gateway: Some(Box::new(net1_gateway)),
+                metric: 0,
+                nicid: ID1.into(),
+                destination: unspecified_addr,
             },
-            hal::Route {
+            fnetstack::RouteTableEntry {
                 gateway: None,
-                metric: None,
-                port_id: Some(ID1),
-                target: LifIpAddr { address: net1.parse().unwrap(), prefix },
+                metric: 0,
+                nicid: ID1.into(),
+                destination: fnet::Subnet { addr: net1, prefix_len },
             },
         ];
         let route_table_2 = vec![
-            hal::Route {
-                gateway: Some(net2_gateway.parse().unwrap()),
-                metric: None,
-                port_id: Some(ID1),
-                target: unspecified_addr,
+            fnetstack::RouteTableEntry {
+                gateway: Some(Box::new(net2_gateway)),
+                metric: 0,
+                nicid: ID1.into(),
+                destination: unspecified_addr,
             },
-            hal::Route {
+            fnetstack::RouteTableEntry {
                 gateway: None,
-                metric: None,
-                port_id: Some(ID1),
-                target: LifIpAddr { address: net1.parse().unwrap(), prefix },
+                metric: 0,
+                nicid: ID1.into(),
+                destination: fnet::Subnet { addr: net1, prefix_len },
             },
-            hal::Route {
+            fnetstack::RouteTableEntry {
                 gateway: None,
-                metric: None,
-                port_id: Some(ID1),
-                target: LifIpAddr { address: net2.parse().unwrap(), prefix },
+                metric: 0,
+                nicid: ID1.into(),
+                destination: fnet::Subnet { addr: net2, prefix_len },
             },
         ];
+
+        let fnet_ext::IpAddress(net1_gateway) = net1_gateway.into();
 
         assert_eq!(
             network_layer_state(
                 &[address],
                 &route_table,
                 &FakePing {
-                    gateway_addrs: std::iter::once(net1_gateway.parse().unwrap()).collect(),
+                    gateway_addrs: std::iter::once(net1_gateway).collect(),
                     gateway_response: true,
                     internet_response: true,
                 },
@@ -807,7 +857,7 @@ mod tests {
                 &[address],
                 &route_table,
                 &FakePing {
-                    gateway_addrs: std::iter::once(net1_gateway.parse().unwrap()).collect(),
+                    gateway_addrs: std::iter::once(net1_gateway).collect(),
                     gateway_response: true,
                     internet_response: false,
                 },
@@ -823,7 +873,7 @@ mod tests {
                 &[address],
                 &route_table,
                 &FakePing {
-                    gateway_addrs: std::iter::once(net1_gateway.parse().unwrap()).collect(),
+                    gateway_addrs: std::iter::once(net1_gateway).collect(),
                     gateway_response: false,
                     internet_response: false,
                 },
@@ -856,7 +906,7 @@ mod tests {
     #[test]
     fn test_compute_state() {
         let properties = fnet_interfaces_ext::Properties {
-            id: ID1.to_u64(),
+            id: ID1.into(),
             name: ETHERNET_INTERFACE_NAME.to_string(),
             device_class: fnet_interfaces::DeviceClass::Device(
                 fidl_fuchsia_hardware_network::DeviceClass::Ethernet,
@@ -876,31 +926,31 @@ mod tests {
             ],
         };
         let route_table = &[
-            hal::Route {
-                gateway: Some(std_ip!("1.2.3.1")),
-                metric: None,
-                port_id: Some(ID1),
-                target: LifIpAddr { address: IpAddr::V4(Ipv4Addr::UNSPECIFIED), prefix: 0 },
+            fnetstack::RouteTableEntry {
+                gateway: Some(Box::new(fidl_ip!("1.2.3.1"))),
+                metric: 0,
+                nicid: ID1.into(),
+                destination: fidl_subnet!("0.0.0.0/0"),
             },
-            hal::Route {
-                gateway: Some(std_ip!("123::1")),
-                metric: None,
-                port_id: Some(ID1),
-                target: LifIpAddr { address: IpAddr::V6(Ipv6Addr::UNSPECIFIED), prefix: 0 },
+            fnetstack::RouteTableEntry {
+                gateway: Some(Box::new(fidl_ip!("123::1"))),
+                metric: 0,
+                nicid: ID1.into(),
+                destination: fidl_subnet!("::/0"),
             },
         ];
         let route_table2 = &[
-            hal::Route {
-                gateway: Some(std_ip!("2.2.3.1")),
-                metric: None,
-                port_id: Some(ID1),
-                target: LifIpAddr { address: IpAddr::V4(Ipv4Addr::UNSPECIFIED), prefix: 0 },
+            fnetstack::RouteTableEntry {
+                gateway: Some(Box::new(fidl_ip!("2.2.3.1"))),
+                metric: 0,
+                nicid: ID1.into(),
+                destination: fidl_subnet!("0.0.0.0/0"),
             },
-            hal::Route {
-                gateway: Some(std_ip!("223::1")),
-                metric: None,
-                port_id: Some(ID1),
-                target: LifIpAddr { address: IpAddr::V6(Ipv6Addr::UNSPECIFIED), prefix: 0 },
+            fnetstack::RouteTableEntry {
+                gateway: Some(Box::new(fidl_ip!("223::1"))),
+                metric: 0,
+                nicid: ID1.into(),
+                destination: fidl_subnet!("::/0"),
             },
         ];
 
@@ -914,7 +964,7 @@ mod tests {
         fn run_compute_state(
             exec: &mut fasync::TestExecutor,
             properties: &fnet_interfaces_ext::Properties,
-            routes: &[hal::Route],
+            routes: &[fnetstack::RouteTableEntry],
             pinger: &dyn Ping,
         ) -> Result<Option<IpVersions<StateEvent>>, anyhow::Error> {
             let fut = compute_state(&properties, routes, pinger);
@@ -928,7 +978,7 @@ mod tests {
         let got = run_compute_state(
             &mut exec,
             &fnet_interfaces_ext::Properties {
-                id: ID1.to_u64(),
+                id: ID1.into(),
                 name: NON_ETHERNET_INTERFACE_NAME.to_string(),
                 device_class: fnet_interfaces::DeviceClass::Device(
                     fidl_fuchsia_hardware_network::DeviceClass::Unknown,
@@ -1026,12 +1076,16 @@ mod tests {
         let mut state = StateInfo::default();
         let want = update_delta(
             Delta { previous: None, current: if1_local_event },
-            Delta { previous: None, current: SystemState { id: ID1, state: if1_local_event } },
+            Delta {
+                previous: None,
+                current: SystemState { id: ID1.into(), state: if1_local_event },
+            },
         );
-        assert_eq!(state.update(ID1, if1_local.clone()), want);
+        assert_eq!(state.update(ID1.into(), if1_local.clone()), want);
         let want_state = StateInfo {
-            per_interface: std::iter::once((ID1, if1_local.clone())).collect::<HashMap<_, _>>(),
-            system: IpVersions { ipv4: Some(ID1), ipv6: Some(ID1) },
+            per_interface: std::iter::once((ID1.into(), if1_local.clone()))
+                .collect::<HashMap<_, _>>(),
+            system: IpVersions { ipv4: Some(ID1.into()), ipv6: Some(ID1.into()) },
         };
         assert_eq!(state, want_state);
 
@@ -1042,17 +1096,17 @@ mod tests {
         let want = update_delta(
             Delta { previous: None, current: if2_gateway_event },
             Delta {
-                previous: Some(SystemState { id: ID1, state: if1_local_event }),
-                current: SystemState { id: ID2, state: if2_gateway_event },
+                previous: Some(SystemState { id: ID1.into(), state: if1_local_event }),
+                current: SystemState { id: ID2.into(), state: if2_gateway_event },
             },
         );
-        assert_eq!(state.update(ID2, if2_gateway.clone()), want);
+        assert_eq!(state.update(ID2.into(), if2_gateway.clone()), want);
         let want_state = StateInfo {
-            per_interface: [(ID1, if1_local.clone()), (ID2, if2_gateway.clone())]
+            per_interface: [(ID1.into(), if1_local.clone()), (ID2.into(), if2_gateway.clone())]
                 .iter()
                 .cloned()
                 .collect::<HashMap<_, _>>(),
-            system: IpVersions { ipv4: Some(ID2), ipv6: Some(ID2) },
+            system: IpVersions { ipv4: Some(ID2.into()), ipv6: Some(ID2.into()) },
         };
         assert_eq!(state, want_state);
 
@@ -1063,17 +1117,17 @@ mod tests {
         let want = update_delta(
             Delta { previous: Some(if2_gateway_event), current: if2_removed_event },
             Delta {
-                previous: Some(SystemState { id: ID2, state: if2_gateway_event }),
-                current: SystemState { id: ID1, state: if1_local_event },
+                previous: Some(SystemState { id: ID2.into(), state: if2_gateway_event }),
+                current: SystemState { id: ID1.into(), state: if1_local_event },
             },
         );
-        assert_eq!(state.update(ID2, if2_removed.clone()), want);
+        assert_eq!(state.update(ID2.into(), if2_removed.clone()), want);
         let want_state = StateInfo {
-            per_interface: [(ID1, if1_local.clone()), (ID2, if2_removed.clone())]
+            per_interface: [(ID1.into(), if1_local.clone()), (ID2.into(), if2_removed.clone())]
                 .iter()
                 .cloned()
                 .collect::<HashMap<_, _>>(),
-            system: IpVersions { ipv4: Some(ID1), ipv6: Some(ID1) },
+            system: IpVersions { ipv4: Some(ID1.into()), ipv6: Some(ID1.into()) },
         };
         assert_eq!(state, want_state);
     }

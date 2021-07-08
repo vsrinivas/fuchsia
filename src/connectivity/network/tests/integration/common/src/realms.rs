@@ -239,17 +239,6 @@ impl Manager for NetCfg {
     const TESTING_ARGS: &'static [&'static str] = &["--config-data", "netcfg/empty.json"];
 }
 
-/// Uninstantiable type that represents NetworkManager's implementation of a network manager.
-#[derive(Copy, Clone)]
-pub enum NetworkManager {}
-
-impl Manager for NetworkManager {
-    // Note, network-manager.cmx must never be used in a Netemul environment as it breaks
-    // hermeticity.
-    const PKG_URL: &'static str = "#meta/network-manager-netemul.cmx";
-    const TESTING_ARGS: &'static [&'static str] = &[];
-}
-
 /// Abstraction for a Fuchsia component which monitors reachability status.
 pub trait Reachability: Copy + Clone {
     /// The Fuchsia package URL to the component.

@@ -21,7 +21,7 @@ use futures::stream::{self, StreamExt as _};
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
 use netstack_testing_common::environments::{
-    KnownServices, Manager, NetCfg, Netstack2, TestSandboxExt as _,
+    KnownServices, Manager, Netstack2, TestSandboxExt as _,
 };
 use netstack_testing_common::{
     try_all, try_any, wait_for_non_loopback_interface_up, Result,
@@ -31,9 +31,8 @@ use netstack_testing_macros::variants_test;
 
 /// Test that NetCfg discovers a newly added device and it adds the device
 /// to the Netstack.
-// TODO(fxbug.dev/54025): Enable this test for NetworkManager.
 #[variants_test]
-async fn test_oir<E: netemul::Endpoint>(name: &str) -> Result {
+async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("create sandbox")?;
     // Create an environment with the LookupAdmin service as NetCfg tries to configure
     // it. NetCfg will fail if it can't send the LookupAdmin a request.
@@ -43,12 +42,9 @@ async fn test_oir<E: netemul::Endpoint>(name: &str) -> Result {
 
     // Start the network manager.
     let launcher = environment.get_launcher().context("get launcher")?;
-    let mut netmgr = fuchsia_component::client::launch(
-        &launcher,
-        NetCfg::PKG_URL.to_string(),
-        NetCfg::testing_args(),
-    )
-    .context("launch the network manager")?;
+    let mut netmgr =
+        fuchsia_component::client::launch(&launcher, M::PKG_URL.to_string(), M::testing_args())
+            .context("launch the network manager")?;
 
     // Add a device to the environment.
     let endpoint = sandbox.create_endpoint::<E, _>(name).await.context("create endpoint")?;
@@ -79,9 +75,8 @@ async fn test_oir<E: netemul::Endpoint>(name: &str) -> Result {
 }
 
 /// Tests that stable interface name conflicts are handled gracefully.
-// TODO(fxbug.dev/54025): Enable this test for NetworkManager.
 #[variants_test]
-async fn test_oir_interface_name_conflict<E: netemul::Endpoint>(name: &str) -> Result {
+async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("create sandbox")?;
     let environment = sandbox
         .create_netstack_environment_with::<Netstack2, _, _>(name, &[KnownServices::LookupAdmin])
@@ -89,12 +84,9 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint>(name: &str) -> R
 
     // Start the network manager.
     let launcher = environment.get_launcher().context("get launcher")?;
-    let mut netmgr = fuchsia_component::client::launch(
-        &launcher,
-        NetCfg::PKG_URL.to_string(),
-        NetCfg::testing_args(),
-    )
-    .context("launch the network manager")?;
+    let mut netmgr =
+        fuchsia_component::client::launch(&launcher, M::PKG_URL.to_string(), M::testing_args())
+            .context("launch the network manager")?;
 
     let mut wait_for_netmgr = netmgr.wait().fuse();
     let netstack = environment
@@ -212,7 +204,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint>(name: &str) -> R
 /// Also make sure that a new WLAN AP interface may be added after a previous interface has been
 /// removed from the netstack.
 #[variants_test]
-async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
+async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
     // Use a large timeout to check for resolution.
     //
     // These values effectively result in a large timeout of 60s which should avoid
@@ -458,12 +450,9 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
 
     // Start NetCfg.
     let launcher = environment.get_launcher().context("get launcher")?;
-    let mut netcfg = fuchsia_component::client::launch(
-        &launcher,
-        NetCfg::PKG_URL.to_string(),
-        NetCfg::testing_args(),
-    )
-    .context("launch netcfg")?;
+    let mut netcfg =
+        fuchsia_component::client::launch(&launcher, M::PKG_URL.to_string(), M::testing_args())
+            .context("launch netcfg")?;
     let mut wait_for_netcfg_fut = netcfg.wait().fuse();
 
     // Add a WLAN AP, make sure the DHCP server gets configurd and starts or stops when the

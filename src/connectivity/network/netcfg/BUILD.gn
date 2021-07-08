@@ -29,7 +29,6 @@ rustc_binary("bin") {
     "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
     "//src/connectivity/lib/fidl_fuchsia_netstack_ext",
     "//src/connectivity/lib/net-declare",
-    "//src/connectivity/management/network-manager/core/interface:lib",
     "//src/connectivity/network/dhcp:lib",
     "//src/connectivity/network/lib/dns_server_watcher",
     "//src/connectivity/network/lib/netfilter",
@@ -64,6 +63,7 @@ rustc_binary("bin") {
     "src/dhcpv6.rs",
     "src/dns.rs",
     "src/errors.rs",
+    "src/interface.rs",
     "src/main.rs",
     "src/matchers.rs",
   ]
@@ -102,6 +102,7 @@ config_data("config-no-ssh-over-wlan") {
 
 fuchsia_unittest_package("netcfg-tests") {
   deps = [ ":bin_test" ]
+  manifest = "meta/netcfg_bin_test.cml"
 }
 
 group("tests") {

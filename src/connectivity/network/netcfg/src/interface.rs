@@ -360,7 +360,7 @@ mod tests {
         test2.mac[0] ^= 0xff;
         let test_cases = vec![test1, test2];
 
-        let temp_dir = tempfile::tempdir_in("/data").expect("failed to create the temp dir");
+        let temp_dir = tempfile::tempdir_in("/tmp").expect("failed to create the temp dir");
         let path = temp_dir.path().join("net.config.json");
 
         // query an existing interface with the same topo path and a different mac address
@@ -379,7 +379,7 @@ mod tests {
 
     #[test]
     fn test_get_temporary_name() {
-        let temp_dir = tempfile::tempdir_in("/data").expect("failed to create the temp dir");
+        let temp_dir = tempfile::tempdir_in("/tmp").expect("failed to create the temp dir");
         let path = temp_dir.path().join("net.config.json");
         let mut interface_config =
             FileBackedConfig::load(&path).expect("failed to load the interface config");
@@ -415,12 +415,12 @@ mod tests {
 
     #[test]
     fn test_load_malformed_file() {
-        let temp_dir = tempfile::tempdir_in("/data").expect("failed to create the temp dir");
+        let temp_dir = tempfile::tempdir_in("/tmp").expect("failed to create the temp dir");
         let path = temp_dir.path().join("net.config.json");
         {
             let mut file = fs::File::create(&path).expect("failed to open file for writing");
             // Write invalid JSON and close the file
-            file.write(b"{").expect("failed to write broken json into file");
+            let () = file.write_all(b"{").expect("failed to write broken json into file");
         }
         assert_eq!(
             FileBackedConfig::load(&path)
