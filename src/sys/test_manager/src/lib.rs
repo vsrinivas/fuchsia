@@ -9,8 +9,9 @@ use {
     diagnostics_bridge::ArchiveReaderManager,
     fdiagnostics::ArchiveAccessorProxy,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_diagnostics as fdiagnostics, fidl_fuchsia_io2 as fio2, fidl_fuchsia_test as ftest,
-    fidl_fuchsia_test_internal as ftest_internal, fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_diagnostics as fdiagnostics, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_test as ftest, fidl_fuchsia_test_internal as ftest_internal,
+    fidl_fuchsia_test_manager as ftest_manager,
     ftest::{Invocation, SuiteMarker},
     ftest_manager::{
         CaseStatus, LaunchError, RunControllerRequest, RunControllerRequestStream,
@@ -35,13 +36,17 @@ use {
         prelude::*,
         StreamExt,
     },
+    io_util,
     lazy_static::lazy_static,
     maplit::hashmap,
     regex::Regex,
-    std::collections::{HashMap, HashSet},
-    std::sync::{
-        atomic::{AtomicU32, Ordering},
-        Arc, Mutex, Weak,
+    routing::rights::READ_RIGHTS,
+    std::{
+        collections::{HashMap, HashSet},
+        sync::{
+            atomic::{AtomicU32, Ordering},
+            Arc, Mutex, Weak,
+        },
     },
     tracing::{debug, error, warn},
 };
@@ -50,61 +55,16 @@ mod diagnostics;
 mod error;
 
 pub const TEST_ROOT_REALM_NAME: &'static str = "test_root";
-pub const WRAPPER_ROOT_REALM_PATH: &'static str = "test_wrapper/test_root";
-pub const ARCHIVIST_REALM_PATH: &'static str = "test_wrapper/archivist";
+const WRAPPER_ROOT_REALM_PATH: &'static str = "test_wrapper/test_root";
+const ARCHIVIST_REALM_PATH: &'static str = "test_wrapper/archivist";
+const ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
+    "fuchsia-pkg://fuchsia.com/test_manager#meta/archivist-for-embedding.cm";
+const TESTS_COLLECTION: &'static str = "tests";
 
 lazy_static! {
-    static ref ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
-        "fuchsia-pkg://fuchsia.com/test_manager#meta/archivist-for-embedding.cm";
-    static ref READ_RIGHTS: fio2::Operations = fio2::Operations::Connect
-        | fio2::Operations::Enumerate
-        | fio2::Operations::Traverse
-        | fio2::Operations::ReadBytes
-        | fio2::Operations::GetAttributes;
-    static ref READ_WRITE_RIGHTS: fio2::Operations = fio2::Operations::Connect
-        | fio2::Operations::Enumerate
-        | fio2::Operations::Traverse
-        | fio2::Operations::ReadBytes
-        | fio2::Operations::WriteBytes
-        | fio2::Operations::ModifyDirectory
-        | fio2::Operations::GetAttributes
-        | fio2::Operations::UpdateAttributes;
-    static ref ADMIN_RIGHTS: fio2::Operations = fio2::Operations::Admin;
-    static ref ABOVE_ROOT_PROTOCOLS: Vec<&'static str> = vec![
-        "fuchsia.boot.WriteOnlyLog",
-        "fuchsia.hardware.display.Provider",
-        "fuchsia.kernel.VmexResource",
-        "fuchsia.kernel.RootJobForInspect",
-        "fuchsia.kernel.Stats",
-        "fuchsia.process.Launcher",
-        "fuchsia.scheduler.ProfileProvider",
-        "fuchsia.sys.Loader",
-        "fuchsia.sys.Environment",
-        "fuchsia.sys2.EventSource",
-        "fuchsia.sysmem.Allocator",
-        "fuchsia.tracing.provider.Registry",
-        "fuchsia.vulkan.loader.Loader",
-    ];
-    static ref ABOVE_ROOT_DIRECTORIES: HashMap<fio2::Operations, Vec<&'static str>> = hashmap! {
-        *READ_WRITE_RIGHTS => vec![
-            "dev-display-controller",
-            "dev-goldfish-address-space",
-            "dev-goldfish-control",
-            "dev-goldfish-pipe",
-            "dev-goldfish-sync",
-            "dev-gpu",
-            "dev-input-report",
-        ],
-        *READ_RIGHTS => vec![
-            "config-data",
-            "root-ssl-certificates",
-        ],
-        *ADMIN_RIGHTS | *READ_WRITE_RIGHTS => vec![
-            "deprecated-tmp",
-        ]
+    static ref STORAGE_SPECIAL_PATHS: HashMap<String, &'static str> = hashmap! {
+        "temp".to_string() => "/tmp",
     };
-    static ref ABOVE_ROOT_STORAGE: Vec<(&'static str, &'static str)> =
-        vec![("temp", "/tmp"), ("data", "/data"), ("cache", "/cache"),];
 }
 
 struct TestMapValue {
@@ -202,6 +162,7 @@ struct Suite {
     test_url: String,
     options: ftest_manager::RunOptions,
     controller: SuiteControllerRequestStream,
+    above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 }
 struct TestSuiteBuilder {
     suites: Vec<Suite>,
@@ -905,7 +866,15 @@ impl Suite {
         };
 
         sender.send(Ok(SuiteEvents::suite_syslog(syslog).into())).await.unwrap();
-        match launch_test(&self.test_url, suite_request, test_map, Some(log_iterator)).await {
+        match launch_test(
+            &self.test_url,
+            suite_request,
+            test_map,
+            self.above_root_capabilities_for_test.clone(),
+            Some(log_iterator),
+        )
+        .await
+        {
             Ok(test) => Some(test),
             Err(err) => {
                 warn!(?err, "Failed to launch test");
@@ -921,6 +890,7 @@ impl Suite {
 pub async fn run_test_manager(
     mut stream: ftest_manager::RunBuilderRequestStream,
     test_map: Arc<TestMap>,
+    above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 ) -> Result<(), TestManagerError> {
     let mut builder = TestSuiteBuilder { suites: vec![] };
     while let Some(event) = stream.try_next().await.map_err(TestManagerError::Stream)? {
@@ -942,7 +912,12 @@ pub async fn run_test_manager(
                         break;
                     }
                 };
-                builder.suites.push(Suite { test_url, options, controller });
+                builder.suites.push(Suite {
+                    test_url,
+                    options,
+                    controller,
+                    above_root_capabilities_for_test: above_root_capabilities_for_test.clone(),
+                });
             }
             ftest_manager::RunBuilderRequest::Build { controller, control_handle } => {
                 let controller = match controller.into_stream() {
@@ -966,6 +941,7 @@ pub async fn run_test_manager(
 pub async fn run_test_manager_query_server(
     mut stream: ftest_manager::QueryRequestStream,
     test_map: Arc<TestMap>,
+    above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 ) -> Result<(), TestManagerError> {
     while let Some(event) = stream.try_next().await.map_err(TestManagerError::Stream)? {
         match event {
@@ -980,7 +956,15 @@ pub async fn run_test_manager_query_server(
                 };
                 let (suite, suite_request) =
                     fidl::endpoints::create_proxy().expect("cannot create suite proxy");
-                match launch_test(&test_url, suite_request, test_map.clone(), None).await {
+                match launch_test(
+                    &test_url,
+                    suite_request,
+                    test_map.clone(),
+                    above_root_capabilities_for_test.clone(),
+                    None,
+                )
+                .await
+                {
                     Ok(test) => {
                         let enumeration_result = enumerate_tests(&suite, None).await;
                         let test_name = test.instance.root.child_name();
@@ -1109,6 +1093,7 @@ async fn launch_test(
     test_url: &str,
     suite_request: ServerEnd<SuiteMarker>,
     test_map: Arc<TestMap>,
+    above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
     log_iterator: Option<ftest_manager::LogsIterator>,
 ) -> Result<RunningTest, LaunchTestError> {
     // This archive accessor will be served by the embedded archivist.
@@ -1117,10 +1102,14 @@ async fn launch_test(
             .map_err(LaunchTestError::CreateProxyForArchiveAccessor)?;
 
     let archive_accessor_arc = Arc::new(archive_accessor);
-    let mut realm = get_realm(Arc::downgrade(&archive_accessor_arc), test_url)
-        .await
-        .map_err(LaunchTestError::InitializeTestRealm)?;
-    realm.set_collection_name("tests");
+    let mut realm = get_realm(
+        Arc::downgrade(&archive_accessor_arc),
+        test_url,
+        above_root_capabilities_for_test,
+    )
+    .await
+    .map_err(LaunchTestError::InitializeTestRealm)?;
+    realm.set_collection_name(TESTS_COLLECTION);
     let instance = realm.create().await.map_err(LaunchTestError::CreateTestRealm)?;
     let test_name = instance.root.child_name();
     test_map.insert(test_name.clone(), test_url.to_string());
@@ -1168,6 +1157,7 @@ async fn launch_test(
 async fn get_realm(
     archive_accessor: Weak<fdiagnostics::ArchiveAccessorProxy>,
     test_url: &str,
+    above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 ) -> Result<Realm, RealmBuilderError> {
     let mut builder = RealmBuilder::new().await?;
     builder
@@ -1182,7 +1172,7 @@ async fn get_realm(
         .await?
         .add_eager_component(
             ARCHIVIST_REALM_PATH,
-            ComponentSource::url(*ARCHIVIST_FOR_EMBEDDING_URL),
+            ComponentSource::url(ARCHIVIST_FOR_EMBEDDING_URL),
         )
         .await?
         .add_route(CapabilityRoute {
@@ -1251,29 +1241,8 @@ async fn get_realm(
             source: RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH),
             targets: vec![RouteEndpoint::AboveRoot],
         })?;
-    for protocol in ABOVE_ROOT_PROTOCOLS.iter() {
-        builder.add_route(CapabilityRoute {
-            capability: Capability::protocol(*protocol),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?;
-    }
-    for (rights, directories) in ABOVE_ROOT_DIRECTORIES.iter() {
-        for directory in directories {
-            builder.add_route(CapabilityRoute {
-                capability: Capability::directory(*directory, "", *rights),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-            })?;
-        }
-    }
-    for (storage, path) in ABOVE_ROOT_STORAGE.iter() {
-        builder.add_route(CapabilityRoute {
-            capability: Capability::storage(*storage, *path),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?;
-    }
+
+    above_root_capabilities_for_test.apply(&mut builder)?;
 
     Ok(builder.build())
 }
@@ -1297,6 +1266,99 @@ async fn serve_mocks(
     fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
+}
+
+pub struct AboveRootCapabilitiesForTest {
+    capabilities: Vec<Capability>,
+}
+
+impl AboveRootCapabilitiesForTest {
+    pub async fn new(manifest_name: &str) -> Result<Self, Error> {
+        let path = format!("/pkg/meta/{}", manifest_name);
+        let file_proxy = io_util::open_file_in_namespace(&path, io_util::OPEN_RIGHT_READABLE)?;
+        let component_decl = io_util::read_file_fidl::<fsys::ComponentDecl>(&file_proxy).await?;
+        let capabilities = Self::load(component_decl);
+        Ok(Self { capabilities })
+    }
+
+    fn apply(&self, builder: &mut RealmBuilder) -> Result<(), RealmBuilderError> {
+        for capability in &self.capabilities {
+            builder.add_route(CapabilityRoute {
+                capability: capability.clone(),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+            })?;
+        }
+        Ok(())
+    }
+
+    fn load(decl: fsys::ComponentDecl) -> Vec<Capability> {
+        let mut capabilities = vec![];
+        for offer_decl in decl.offers.unwrap_or(vec![]) {
+            match offer_decl {
+                fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
+                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                    target_name: Some(target_name),
+                    ..
+                }) if name == TESTS_COLLECTION && target_name != "fuchsia.logger.LogSink" => {
+                    capabilities.push(Capability::protocol(target_name));
+                }
+                fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
+                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                    rights,
+                    target_name: Some(target_name),
+                    ..
+                }) if name == TESTS_COLLECTION => {
+                    capabilities.push(Capability::directory(
+                        target_name,
+                        "",
+                        rights.unwrap_or(*READ_RIGHTS),
+                    ));
+                }
+                fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
+                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                    target_name: Some(target_name),
+                    ..
+                }) if name == TESTS_COLLECTION => {
+                    match STORAGE_SPECIAL_PATHS.get(&name) {
+                        Some(path) => {
+                            capabilities.push(Capability::storage(target_name, *path));
+                        }
+                        None => {
+                            let use_path = format!("/{}", target_name);
+                            capabilities.push(Capability::storage(target_name, use_path));
+                        }
+                    };
+                }
+                fsys::OfferDecl::Service(fsys::OfferServiceDecl {
+                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                    ..
+                })
+                | fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
+                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                    ..
+                })
+                | fsys::OfferDecl::Resolver(fsys::OfferResolverDecl {
+                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                    ..
+                }) if name == TESTS_COLLECTION => {
+                    unimplemented!(
+                        "Services, runners and resolvers are not supported by realm builder"
+                    );
+                }
+                fsys::OfferDecl::Event(fsys::OfferEventDecl {
+                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                    ..
+                }) if name == TESTS_COLLECTION => {
+                    unreachable!("No events should be routed from above root to a test.");
+                }
+                _ => {
+                    // Ignore anything else that is not routed to #tests
+                }
+            }
+        }
+        capabilities
+    }
 }
 
 #[cfg(test)]

@@ -16,6 +16,7 @@ rustc_library("routing") {
     "//src/sys/component_manager/*",
     "//src/sys/lib/cm_rust/testing:*",
     "//src/sys/lib/routing/*",
+    "//src/sys/test_manager/*",
     "//tools/lib/cm_fidl_analyzer/*",
   ]
 
