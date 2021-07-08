@@ -1,39 +1,72 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
-///
-//  Generated code. Do not modify.
-//  source: report.proto
+// found in the LICENSE file
 //
-// @dart = 2.3
-// ignore_for_file: annotate_overrides,camel_case_types,unnecessary_const,non_constant_identifier_names,library_prefixes,unused_import,unused_shown_name,return_of_invalid_type,prefer_constructors_over_static_methods,sort_unnamed_constructors_first,avoid_as, deprecated_member_use
-
-// TODO(fxb/63090): Get rid of deprecated call and update to new API.
+//  Generated code. Do not modify.
+//  source: src/report.proto
+//
+// @dart = 2.7
+// ignore_for_file: annotate_overrides,camel_case_types,unnecessary_const,non_constant_identifier_names,library_prefixes,unused_import,unused_shown_name,return_of_invalid_type,unnecessary_this,prefer_final_fields, prefer_constructors_over_static_methods
 
 import 'dart:core' as $core;
 
 import 'package:protobuf/protobuf.dart' as $pb;
 
 class SizeInfo extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo('SizeInfo',
-      package: const $pb.PackageName('bloaty_report'),
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'SizeInfo',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'bloaty_report'),
       createEmptyInstance: create)
-    ..a<$core.int>(1, 'fileActual', $pb.PbFieldType.OU3)
-    ..a<$core.int>(2, 'vmActual', $pb.PbFieldType.OU3)
+    ..a<$core.int>(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'fileActual',
+        $pb.PbFieldType.OU3)
+    ..a<$core.int>(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'vmActual',
+        $pb.PbFieldType.OU3)
     ..hasRequiredFields = false;
 
   SizeInfo._() : super();
-  factory SizeInfo() => create();
+  // ignore: sort_unnamed_constructors_first
+  factory SizeInfo({
+    $core.int fileActual,
+    $core.int vmActual,
+  }) {
+    final _result = create();
+    if (fileActual != null) {
+      _result.fileActual = fileActual;
+    }
+    if (vmActual != null) {
+      _result.vmActual = vmActual;
+    }
+    return _result;
+  }
   factory SizeInfo.fromBuffer($core.List<$core.int> i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromBuffer(i, r);
   factory SizeInfo.fromJson($core.String i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
   SizeInfo clone() => SizeInfo()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
   SizeInfo copyWith(void Function(SizeInfo) updates) =>
-      super.copyWith((message) => updates(message as SizeInfo));
+      super.copyWith((message) => updates(message as SizeInfo))
+          as SizeInfo; // ignore: deprecated_member_use
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static SizeInfo create() => SizeInfo._();
@@ -70,25 +103,61 @@ class SizeInfo extends $pb.GeneratedMessage {
 }
 
 class Symbol extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo('Symbol',
-      package: const $pb.PackageName('bloaty_report'),
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'Symbol',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'bloaty_report'),
       createEmptyInstance: create)
-    ..aOM<SizeInfo>(1, 'sizes', subBuilder: SizeInfo.create)
-    ..aOS(2, 'name')
-    ..aOS(3, 'maybeRustCrate')
+    ..aOM<SizeInfo>(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'sizes',
+        subBuilder: SizeInfo.create)
+    ..aOS(2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'name')
+    ..aOS(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'maybeRustCrate')
     ..hasRequiredFields = false;
 
   Symbol._() : super();
-  factory Symbol() => create();
+  // ignore: sort_unnamed_constructors_first
+  factory Symbol({
+    SizeInfo sizes,
+    $core.String name,
+    $core.String maybeRustCrate,
+  }) {
+    final _result = create();
+    if (sizes != null) {
+      _result.sizes = sizes;
+    }
+    if (name != null) {
+      _result.name = name;
+    }
+    if (maybeRustCrate != null) {
+      _result.maybeRustCrate = maybeRustCrate;
+    }
+    return _result;
+  }
   factory Symbol.fromBuffer($core.List<$core.int> i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromBuffer(i, r);
   factory Symbol.fromJson($core.String i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
   Symbol clone() => Symbol()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
   Symbol copyWith(void Function(Symbol) updates) =>
-      super.copyWith((message) => updates(message as Symbol));
+      super.copyWith((message) => updates(message as Symbol))
+          as Symbol; // ignore: deprecated_member_use
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static Symbol create() => Symbol._();
@@ -139,25 +208,61 @@ class Symbol extends $pb.GeneratedMessage {
 }
 
 class CompileUnit extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo('CompileUnit',
-      package: const $pb.PackageName('bloaty_report'),
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'CompileUnit',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'bloaty_report'),
       createEmptyInstance: create)
-    ..aOM<SizeInfo>(1, 'sizes', subBuilder: SizeInfo.create)
-    ..pc<Symbol>(2, 'symbols', $pb.PbFieldType.PM, subBuilder: Symbol.create)
-    ..aOS(3, 'name')
+    ..aOM<SizeInfo>(
+        1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'sizes',
+        subBuilder: SizeInfo.create)
+    ..pc<Symbol>(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'symbols',
+        $pb.PbFieldType.PM,
+        subBuilder: Symbol.create)
+    ..aOS(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'name')
     ..hasRequiredFields = false;
 
   CompileUnit._() : super();
-  factory CompileUnit() => create();
+  // ignore: sort_unnamed_constructors_first
+  factory CompileUnit({
+    SizeInfo sizes,
+    $core.Iterable<Symbol> symbols,
+    $core.String name,
+  }) {
+    final _result = create();
+    if (sizes != null) {
+      _result.sizes = sizes;
+    }
+    if (symbols != null) {
+      _result.symbols.addAll(symbols);
+    }
+    if (name != null) {
+      _result.name = name;
+    }
+    return _result;
+  }
   factory CompileUnit.fromBuffer($core.List<$core.int> i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromBuffer(i, r);
   factory CompileUnit.fromJson($core.String i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
   CompileUnit clone() => CompileUnit()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
   CompileUnit copyWith(void Function(CompileUnit) updates) =>
-      super.copyWith((message) => updates(message as CompileUnit));
+      super.copyWith((message) => updates(message as CompileUnit))
+          as CompileUnit; // ignore: deprecated_member_use
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static CompileUnit create() => CompileUnit._();
@@ -199,26 +304,64 @@ class CompileUnit extends $pb.GeneratedMessage {
 }
 
 class Report extends $pb.GeneratedMessage {
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo('Report',
-      package: const $pb.PackageName('bloaty_report'),
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      const $core.bool.fromEnvironment('protobuf.omit_message_names')
+          ? ''
+          : 'Report',
+      package: const $pb.PackageName(
+          const $core.bool.fromEnvironment('protobuf.omit_message_names')
+              ? ''
+              : 'bloaty_report'),
       createEmptyInstance: create)
-    ..pc<CompileUnit>(1, 'compileUnits', $pb.PbFieldType.PM,
+    ..pc<CompileUnit>(
+        1,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names')
+            ? ''
+            : 'compileUnits',
+        $pb.PbFieldType.PM,
         subBuilder: CompileUnit.create)
-    ..a<$core.int>(2, 'fileTotal', $pb.PbFieldType.OU3)
-    ..a<$core.int>(3, 'vmTotal', $pb.PbFieldType.OU3)
+    ..a<$core.int>(
+        2,
+        const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'fileTotal',
+        $pb.PbFieldType.OU3)
+    ..a<$core.int>(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'vmTotal', $pb.PbFieldType.OU3)
     ..hasRequiredFields = false;
 
   Report._() : super();
-  factory Report() => create();
+  // ignore: sort_unnamed_constructors_first
+  factory Report({
+    $core.Iterable<CompileUnit> compileUnits,
+    $core.int fileTotal,
+    $core.int vmTotal,
+  }) {
+    final _result = create();
+    if (compileUnits != null) {
+      _result.compileUnits.addAll(compileUnits);
+    }
+    if (fileTotal != null) {
+      _result.fileTotal = fileTotal;
+    }
+    if (vmTotal != null) {
+      _result.vmTotal = vmTotal;
+    }
+    return _result;
+  }
   factory Report.fromBuffer($core.List<$core.int> i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromBuffer(i, r);
   factory Report.fromJson($core.String i,
           [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromJson(i, r);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
   Report clone() => Report()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
   Report copyWith(void Function(Report) updates) =>
-      super.copyWith((message) => updates(message as Report));
+      super.copyWith((message) => updates(message as Report))
+          as Report; // ignore: deprecated_member_use
   $pb.BuilderInfo get info_ => _i;
   @$core.pragma('dart2js:noInline')
   static Report create() => Report._();

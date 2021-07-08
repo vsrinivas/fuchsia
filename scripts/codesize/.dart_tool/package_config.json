@@ -38,6 +38,12 @@
             "name": "gcloud",
             "packageUri": "lib/",
             "rootUri": "../../../third_party/dart-pkg/pub/gcloud/"
+        },
+        {
+            "languageVersion": "2.7",
+            "name": "protobuf",
+            "packageUri": "lib/",
+            "rootUri": "../../../third_party/dart-pkg/pub/protobuf/"
         }
     ]
 }
