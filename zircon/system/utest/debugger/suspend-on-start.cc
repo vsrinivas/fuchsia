@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <zircon/syscalls/port.h>
 
+#include <utility>
+
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
