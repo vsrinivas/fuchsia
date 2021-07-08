@@ -28,13 +28,12 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
   return zx::ok(std::make_unique<JsonFilesystem>(
       Traits{
           .name = config["name"].GetString(),
-          .can_unmount = true,
           .timestamp_granularity = zx::nsec(config["timestamp_granularity"].GetInt64()),
           .supports_hard_links = GetBoolOrDefault(config, "supports_hard_links", false),
           .supports_mmap = GetBoolOrDefault(config, "supports_mmap", false),
           .supports_resize = GetBoolOrDefault(config, "supports_resize", false),
           .max_file_size = config["max_file_size"].GetInt64(),
-          .in_memory = false,
+          .in_memory = GetBoolOrDefault(config, "in_memory", false),
           .is_case_sensitive = GetBoolOrDefault(config, "is_case_sensitive", true),
           .supports_sparse_files = GetBoolOrDefault(config, "supports_sparse_files", true),
           .is_slow = GetBoolOrDefault(config, "is_slow", false),

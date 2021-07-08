@@ -151,7 +151,7 @@ TEST_P(DirectoryTest, TestDirectoryCoalesceLargeRecord) {
   // Check that the 'large remaining entry', which may
   // have a fairly large size, isn't marked as 'invalid' by
   // fsck.
-  if (fs().GetTraits().can_unmount) {
+  if (!fs().GetTraits().in_memory) {
     ASSERT_EQ(close(dirfd.release()), 0);
     EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
     EXPECT_EQ(fs().Mount().status_value(), ZX_OK);

@@ -258,10 +258,10 @@ std::vector<TestFilesystemOptions> GetTestCombinations() {
   return MapAndFilterAllTestFilesystems(
       [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
         // These tests only work on filesystems that can be unmounted.
-        if (options.filesystem->GetTraits().can_unmount) {
-          return options;
-        } else {
+        if (options.filesystem->GetTraits().in_memory) {
           return std::nullopt;
+        } else {
+          return options;
         }
       });
 }

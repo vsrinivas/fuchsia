@@ -43,7 +43,7 @@ TEST_P(CaseInsensitiveTest, OpenUpperFromLowerNoCacheSucceeds) {
     auto fd = fbl::unique_fd(open(GetPath(lower_name).c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
     EXPECT_TRUE(fd);
   }
-  if (fs().GetTraits().can_unmount) {
+  if (!fs().GetTraits().in_memory) {
     EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
     EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
     EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
@@ -59,7 +59,7 @@ TEST_P(CaseInsensitiveTest, OpenLowerFromUpperNoCacheSucceeds) {
     auto fd = fbl::unique_fd(open(GetPath(upper_name).c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
     EXPECT_TRUE(fd);
   }
-  if (fs().GetTraits().can_unmount) {
+  if (!fs().GetTraits().in_memory) {
     EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
     EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
     EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
@@ -76,7 +76,7 @@ TEST_P(CaseInsensitiveTest, RenameLowerToUpperSucceeds) {
     EXPECT_TRUE(fd);
   }
   EXPECT_EQ(rename(GetPath(lower_name).c_str(), GetPath(upper_name).c_str()), 0) << strerror(errno);
-  if (fs().GetTraits().can_unmount) {
+  if (!fs().GetTraits().in_memory) {
     EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
     EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
     EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
@@ -103,7 +103,7 @@ TEST_P(CaseInsensitiveTest, RenameUpperToLowerSucceeds) {
     EXPECT_TRUE(fd);
   }
   EXPECT_EQ(rename(GetPath(upper_name).c_str(), GetPath(lower_name).c_str()), 0) << strerror(errno);
-  if (fs().GetTraits().can_unmount) {
+  if (!fs().GetTraits().in_memory) {
     EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
     EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
     EXPECT_EQ(fs().Mount().status_value(), ZX_OK);

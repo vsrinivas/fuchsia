@@ -15,6 +15,7 @@
 #include <gtest/gtest.h>
 
 #include "src/storage/fs_test/fs_test.h"
+#include "src/storage/fs_test/test_filesystem.h"
 
 namespace fs_test {
 namespace {
@@ -167,8 +168,7 @@ INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, CorruptTest,
     testing::ValuesIn(MapAndFilterAllTestFilesystems(
         [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
-          if (options.filesystem->GetTraits().can_unmount &&
-              options.filesystem->GetTraits().is_journaled) {
+          if (options.filesystem->GetTraits().is_journaled) {
             return options;
           } else {
             return std::nullopt;

@@ -199,7 +199,7 @@ std::vector<ParamType> GetTestCombinationsForMaxInodeTest() {
       options.device_block_size = 1LLU << 9;
       options.fvm_slice_size = 1LLU << 20;
       test_combinations.push_back(ParamType{options, false});
-      if (options.filesystem->GetTraits().can_unmount) {
+      if (!options.filesystem->GetTraits().in_memory) {
         test_combinations.push_back(ParamType{options, true});
       }
     }
@@ -215,7 +215,7 @@ std::vector<ParamType> GetTestCombinationsForMaxDataTest() {
       options.device_block_size = 1LLU << 9;
       options.fvm_slice_size = 1LLU << 20;
       test_combinations.push_back(ParamType{options, false});
-      if (options.filesystem->GetTraits().can_unmount) {
+      if (!options.filesystem->GetTraits().in_memory) {
         test_combinations.push_back(ParamType{options, true});
       }
     }

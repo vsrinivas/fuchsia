@@ -9,16 +9,24 @@ import("//build/test.gni")
 import("//src/storage/testing/isolated_devmgr.gni")
 
 # Generates config that will work with the filesystem test framework.
+#
+#   data_deps (optional)
+#     Additional dependencies to be included with the config
 template("fs_test_config") {
   name = target_name
   generated_resource("${name}_fs_test_config") {
+    testonly = true
+    if (defined(invoker.data_deps)) {
+      data_deps = invoker.data_deps
+    }
     contents = {
-      forward_variables_from(invoker, "*")
+      forward_variables_from(invoker, "*", [ "data_deps" ])
     }
     if (!defined(contents.name)) {
       contents.name = name
     }
-    if (!defined(contents.binary_path) && !defined(contents.disk_format)) {
+    if (!defined(contents.binary_path) && !defined(contents.disk_format) &&
+        !defined(contents.library)) {
       contents.binary_path = "/pkg/bin/${name}"
     }
     output_conversion = "json"
@@ -28,6 +36,7 @@ template("fs_test_config") {
   config_outputs = get_target_outputs(":${name}_fs_test_config")
 
   validate_json("${name}_validate_fs_test_config") {
+    testonly = true
     data = config_outputs[0]
     schema = "//src/storage/fs_test/fs_test.schema.json"
     deps = [ ":${name}_fs_test_config" ]

@@ -4,10 +4,15 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
+import("//src/storage/fs_test/suite.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":memfs-tests" ]
+  deps = [
+    ":memfs-fs-tests",
+    ":memfs-slow-fs-tests",
+    ":memfs-tests",
+  ]
 }
 
 test("memfs-test") {
@@ -32,4 +37,30 @@ test("memfs-test") {
 fuchsia_unittest_package("memfs-tests") {
   manifest = "memfs-unit-test.cmx"
   deps = [ ":memfs-test" ]
+}
+
+shared_library("memfs_fs_test") {
+  testonly = true
+  sources = [
+    "memfs_fs_test.cc",
+    "memfs_fs_test.h",
+  ]
+  deps = [
+    "//src/storage/fs_test",
+    "//src/storage/memfs",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+}
+
+fs_test_config("memfs") {
+  data_deps = [ ":memfs_fs_test" ]
+  library = "libmemfs_fs_test.so"
+}
+
+fs_test_suite("memfs") {
+  deps = [ ":memfs_fs_test_config" ]
+}
+
+slow_fs_test_suite("memfs") {
+  deps = [ ":memfs_fs_test_config" ]
 }

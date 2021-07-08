@@ -7,6 +7,8 @@
 #include <gtest/gtest.h>
 
 #include "src/storage/fs_test/fs_test.h"
+#include "src/storage/fs_test/test_filesystem.h"
+#include "src/storage/memfs/test/memfs_fs_test.h"
 #include "src/storage/tools/blobfs-compression/blobfs-compression.h"
 
 namespace blobfs_compress {
@@ -32,7 +34,7 @@ class CliOptionValidationTest : public ::testing::Test {
 
  private:
   TestFilesystem CreateTestFilesystem() {
-    auto fs_options = TestFilesystemOptions::DefaultMemfs();
+    auto fs_options = memfs::DefaultMemfsTestOptions();
     fs_options.description = "fake_memfs";
     auto fs_or = TestFilesystem::Create(fs_options);
     return std::move(fs_or).value();

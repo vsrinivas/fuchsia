@@ -17,7 +17,7 @@ std::vector<LargeTruncateTestParamType> GetTestCombinations(
   for (TestFilesystemOptions options : AllTestFilesystems()) {
     for (const auto& variation : variations) {
       if (std::get<2>(variation) == LargeTruncateTestType::Remount &&
-          !options.filesystem->GetTraits().can_unmount) {
+          options.filesystem->GetTraits().in_memory) {
         continue;
       }
       if (options.filesystem->GetTraits().is_slow && std::get<0>(variation) > (1 << 20)) {

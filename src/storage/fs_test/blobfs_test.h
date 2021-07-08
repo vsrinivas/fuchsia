@@ -15,7 +15,6 @@ class BlobfsFilesystem : public FilesystemImplWithDefaultMake<BlobfsFilesystem> 
  public:
   const Traits& GetTraits() const override {
     static Traits traits{
-        .can_unmount = true,
         .timestamp_granularity = zx::nsec(1),
         .supports_hard_links = false,
         .supports_mmap = true,

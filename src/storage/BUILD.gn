@@ -16,7 +16,6 @@ group("tests") {
     "ext4:tests",
     "extractor:tests",
     "factory:tests",
-    "fs_test:tests",
     "fshost:tests",
     "fuchsia-fatfs:tests",
     "fvm:tests",

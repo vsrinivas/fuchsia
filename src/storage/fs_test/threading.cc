@@ -237,7 +237,7 @@ TEST_P(ThreadingLinkTest, LinkExclusive) {
     ASSERT_EQ(unlink(GetPath("link_start").c_str()), 0);
     ASSERT_EQ(unlink(GetPath("link_end").c_str()), 0);
 
-    if (fs().GetTraits().can_unmount) {
+    if (!fs().GetTraits().in_memory) {
       EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
       EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
       EXPECT_EQ(fs().Mount().status_value(), ZX_OK);

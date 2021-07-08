@@ -13,6 +13,7 @@
 #include <gtest/gtest.h>
 
 #include "src/storage/fs_test/fs_test.h"
+#include "src/storage/fs_test/test_filesystem.h"
 
 namespace fs_test {
 

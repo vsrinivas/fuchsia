@@ -284,7 +284,7 @@ std::vector<ParamType> GetTestCombinations() {
       options.fvm_slice_size = 8'388'608;
     }
     test_combinations.push_back(ParamType{options, false});
-    if (options.filesystem->GetTraits().can_unmount) {
+    if (!options.filesystem->GetTraits().in_memory) {
       test_combinations.push_back(ParamType{options, true});
     }
   }
@@ -305,7 +305,7 @@ std::vector<ParamType> GetCombinationWithSparseFileSupport() {
     options.device_block_count = 1'048'576;
     options.fvm_slice_size = 8'388'608;
     test_combinations.emplace_back(options, false);
-    if (options.filesystem->GetTraits().can_unmount) {
+    if (!options.filesystem->GetTraits().in_memory) {
       test_combinations.emplace_back(options, true);
     }
   }

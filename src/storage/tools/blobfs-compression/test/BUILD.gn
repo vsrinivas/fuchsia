@@ -39,6 +39,7 @@ test("cli-option-validation-test") {
     "//src/lib/chunked-compression",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fs_test",
+    "//src/storage/memfs/test:memfs_fs_test",
     "//src/storage/tools/blobfs-compression:common",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop",

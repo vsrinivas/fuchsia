@@ -16,6 +16,12 @@
                 "name",
                 "timestamp_granularity"
             ]
+        },
+        {
+            "required": [
+                "library",
+                "name"
+            ]
         }
     ],
     "properties": {
@@ -32,6 +38,11 @@
             "description": "True if the filesystem has a directory size limit (unrelated to available disk space)",
             "type": "boolean"
         },
+        "in_memory": {
+            "default": false,
+            "description": "True if the filesystem is an in-memory filesystem",
+            "type": "boolean"
+        },
         "is_case_sensitive": {
             "default": true,
             "description": "True if the filesystem is case sensitive",
@@ -46,6 +57,10 @@
             "default": false,
             "description": "True if the filesystem is a slow filesystem, in which case some tests are tweaked so they can complete on time",
             "type": "boolean"
+        },
+        "library": {
+            "description": "Dynamic library that contains the filesystem definition; see memfs for an example",
+            "type": "string"
         },
         "max_file_size": {
             "description": "The maximum file size supported",

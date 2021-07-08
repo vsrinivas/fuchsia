@@ -4,6 +4,7 @@
 
 #include "src/storage/fs_test/fs_test.h"
 
+#include <dlfcn.h>
 #include <errno.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/fs/cpp/fidl.h>
@@ -15,7 +16,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/memfs/memfs.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -26,6 +26,7 @@
 #include <zircon/errors.h>
 
 #include <iostream>
+#include <unordered_map>
 #include <utility>
 
 #include <fbl/unique_fd.h>
@@ -42,18 +43,11 @@
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/fs_test/blobfs_test.h"
 #include "src/storage/fs_test/json_filesystem.h"
+#include "src/storage/fs_test/test_filesystem.h"
 #include "src/storage/testing/fvm.h"
 
 namespace fs_test {
 namespace {
-
-std::string StripTrailingSlash(const std::string& in) {
-  if (!in.empty() && in.back() == '/') {
-    return in.substr(0, in.length() - 1);
-  } else {
-    return in;
-  }
-}
 
 // Creates a ram-disk with an optional FVM partition. Returns the ram-disk and the device path.
 zx::status<std::pair<storage::RamDisk, std::string>> CreateRamDisk(
@@ -185,19 +179,6 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   return zx::ok(std::make_pair(*std::move(ram_nand), std::move(ftl_path)));
 }
 
-zx::status<> FsUnbind(const std::string& mount_path) {
-  fdio_ns_t* ns;
-  if (auto status = zx::make_status(fdio_ns_get_installed(&ns)); status.is_error()) {
-    return status;
-  }
-  if (auto status = zx::make_status(fdio_ns_unbind(ns, StripTrailingSlash(mount_path).c_str()));
-      status.is_error()) {
-    std::cout << "Unable to unbind: " << status.status_string() << std::endl;
-    return status;
-  }
-  return zx::ok();
-}
-
 zx::status<> FsDirectoryAdminUnmount(const std::string& mount_path) {
   // O_ADMIN is not part of the SDK.  Eventually, this should switch to using fs.Admin.
   constexpr int kAdmin = 0x0000'0004;
@@ -221,6 +202,27 @@ zx::status<> FsDirectoryAdminUnmount(const std::string& mount_path) {
 }
 
 }  // namespace
+
+std::string StripTrailingSlash(const std::string& in) {
+  if (!in.empty() && in.back() == '/') {
+    return in.substr(0, in.length() - 1);
+  } else {
+    return in;
+  }
+}
+
+zx::status<> FsUnbind(const std::string& mount_path) {
+  fdio_ns_t* ns;
+  if (auto status = zx::make_status(fdio_ns_get_installed(&ns)); status.is_error()) {
+    return status;
+  }
+  if (auto status = zx::make_status(fdio_ns_unbind(ns, StripTrailingSlash(mount_path).c_str()));
+      status.is_error()) {
+    std::cout << "Unable to unbind: " << status.status_string() << std::endl;
+    return status;
+  }
+  return zx::ok();
+}
 
 // Returns device and device path.
 zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
@@ -407,11 +409,6 @@ zx::status<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystem
   return zx::ok(std::make_pair(std::move(ram_device), std::move(device_path)));
 }
 
-TestFilesystemOptions TestFilesystemOptions::DefaultMemfs() {
-  return TestFilesystemOptions{.description = "Memfs",
-                               .filesystem = &MemfsFilesystem::SharedInstance()};
-}
-
 TestFilesystemOptions TestFilesystemOptions::DefaultBlobfs() {
   return TestFilesystemOptions{.description = "Blobfs",
                                .use_fvm = true,
@@ -437,42 +434,43 @@ std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options
 std::vector<TestFilesystemOptions> AllTestFilesystems() {
   static const std::vector<TestFilesystemOptions>* options = [] {
     const char kConfigFile[] = "/pkg/config/config.json";
-    struct stat buf;
-    if (!stat(kConfigFile, &buf)) {
-      json_parser::JSONParser parser;
-      auto config = parser.ParseFromFile(std::string(kConfigFile));
-      std::string name = config["name"].GetString();
-
-      auto filesystem = JsonFilesystem::NewFilesystem(config).value();
-      auto options = new std::vector<TestFilesystemOptions>;
-      auto iter = config.FindMember("options");
-      if (iter == config.MemberEnd()) {
-        name[0] = toupper(name[0]);
-        options->push_back(TestFilesystemOptions{.description = name,
-                                                 .use_fvm = false,
+    json_parser::JSONParser parser;
+    auto config = parser.ParseFromFile(std::string(kConfigFile));
+    auto iter = config.FindMember("library");
+    std::unique_ptr<Filesystem> filesystem;
+    if (iter != config.MemberEnd()) {
+      void* handle = dlopen(iter->value.GetString(), RTLD_NOW);
+      FX_CHECK(handle) << dlerror();
+      auto get_filesystem =
+          reinterpret_cast<std::unique_ptr<Filesystem> (*)()>(dlsym(handle, "_Z13GetFilesystemv"));
+      FX_CHECK(get_filesystem) << dlerror();
+      filesystem = get_filesystem();
+    } else {
+      filesystem = JsonFilesystem::NewFilesystem(config).value();
+    }
+    std::string name = config["name"].GetString();
+    auto options = new std::vector<TestFilesystemOptions>;
+    iter = config.FindMember("options");
+    if (iter == config.MemberEnd()) {
+      name[0] = toupper(name[0]);
+      options->push_back(TestFilesystemOptions{.description = name,
+                                               .use_fvm = false,
+                                               .device_block_size = 512,
+                                               .device_block_count = 196'608,
+                                               .filesystem = filesystem.get()});
+    } else {
+      for (size_t i = 0; i < iter->value.Size(); ++i) {
+        const auto& opt = iter->value[i];
+        options->push_back(TestFilesystemOptions{.description = opt["description"].GetString(),
+                                                 .use_fvm = opt["use_fvm"].GetBool(),
                                                  .device_block_size = 512,
                                                  .device_block_count = 196'608,
+                                                 .fvm_slice_size = 32'768,
                                                  .filesystem = filesystem.get()});
-      } else {
-        for (size_t i = 0; i < iter->value.Size(); ++i) {
-          const auto& opt = iter->value[i];
-          options->push_back(TestFilesystemOptions{.description = opt["description"].GetString(),
-                                                   .use_fvm = opt["use_fvm"].GetBool(),
-                                                   .device_block_size = 512,
-                                                   .device_block_count = 196'608,
-                                                   .fvm_slice_size = 32'768,
-                                                   .filesystem = filesystem.get()});
-        }
       }
-      filesystem.release();  // Deliberate leak.
-      return options;
-    } else {
-      // Note: blobfs is intentionally absent, since it is not intended to run as part of the
-      // fs_test suite.
-      return new std::vector<TestFilesystemOptions>{
-          TestFilesystemOptions::DefaultMemfs(),
-      };
     }
+    filesystem.release();  // Deliberate leak
+    return options;
   }();
 
   return *options;
@@ -509,60 +507,6 @@ zx::status<> FilesystemInstance::Unmount(const std::string& mount_path) {
     return status;
   }
   return FsUnbind(mount_path);
-}
-
-// -- Memfs --
-
-class MemfsInstance : public FilesystemInstance {
- public:
-  MemfsInstance() : loop_(&kAsyncLoopConfigNeverAttachToThread) {
-    ZX_ASSERT(loop_.StartThread() == ZX_OK);
-  }
-  ~MemfsInstance() override {
-    if (fs_) {
-      sync_completion_t sync;
-      memfs_free_filesystem(fs_, &sync);
-      ZX_ASSERT(sync_completion_wait(&sync, zx::duration::infinite().get()) == ZX_OK);
-    }
-  }
-  zx::status<> Format(const TestFilesystemOptions&) override {
-    return zx::make_status(
-        memfs_create_filesystem(loop_.dispatcher(), &fs_, root_.reset_and_get_address()));
-  }
-
-  zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) override {
-    if (!root_) {
-      // Already mounted.
-      return zx::error(ZX_ERR_BAD_STATE);
-    }
-    fdio_ns_t* ns;
-    if (auto status = zx::make_status(fdio_ns_get_installed(&ns)); status.is_error()) {
-      return status;
-    }
-    return zx::make_status(
-        fdio_ns_bind(ns, StripTrailingSlash(mount_path).c_str(), root_.release()));
-  }
-
-  zx::status<> Unmount(const std::string& mount_path) override { return FsUnbind(mount_path); }
-
-  zx::status<> Fsck() override { return zx::ok(); }
-
-  zx::status<std::string> DevicePath() const override { return zx::error(ZX_ERR_BAD_STATE); }
-
- private:
-  async::Loop loop_;
-  memfs_filesystem_t* fs_ = nullptr;
-  zx::channel root_;  // Not valid after mounted.
-};
-
-zx::status<std::unique_ptr<FilesystemInstance>> MemfsFilesystem::Make(
-    const TestFilesystemOptions& options) const {
-  auto instance = std::make_unique<MemfsInstance>();
-  zx::status<> status = instance->Format(options);
-  if (status.is_error()) {
-    return status.take_error();
-  }
-  return zx::ok(std::move(instance));
 }
 
 // -- Blobfs --
