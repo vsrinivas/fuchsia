@@ -50,7 +50,7 @@ BlobfsMetrics::BlobfsMetrics(
     bool should_record_page_in,
     const std::function<std::unique_ptr<cobalt_client::Collector>()>& collector_factory,
     zx::duration cobalt_flush_time)
-    : should_record_page_in(should_record_page_in),
+    : should_record_page_in_(should_record_page_in),
       cobalt_metrics_(collector_factory ? collector_factory()
                                         : std::make_unique<cobalt_client::Collector>(
                                               fs_metrics::kCobaltProjectId),
@@ -82,7 +82,7 @@ void PrintReadMetrics(ReadMetrics& metrics) {
                 << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
                 << snapshot.decompress_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";
-  FX_LOGS(INFO) << "    Remote decompressions: " << metrics.remote_decompressions();
+  FX_LOGS(INFO) << "    Remote decompressions: " << metrics.GetRemoteDecompressions();
 }
 
 void BlobfsMetrics::Dump() {
@@ -131,7 +131,7 @@ void BlobfsMetrics::Dump() {
   FX_LOGS(INFO) << "  Maximum Size (bytes) = " << inspector_.GetStats().maximum_size;
   FX_LOGS(INFO) << "  Current Size (bytes) = " << inspector_.GetStats().size;
   FX_LOGS(INFO) << "Page-in Metrics Recording Enabled = "
-                << (should_record_page_in ? "true" : "false");
+                << (should_record_page_in_ ? "true" : "false");
 }
 
 void BlobfsMetrics::ScheduleMetricFlush() {
@@ -213,7 +213,7 @@ void BlobfsMetrics::IncrementPageIn(const fbl::String& merkle_hash, uint64_t off
                                     uint64_t length) {
   // Page-in metrics are a developer feature that is not intended to be used in production. Enabling
   // this feature also requires increasing the size of the Inspect VMO considerably (>512KB).
-  if (!should_record_page_in) {
+  if (!should_record_page_in_) {
     return;
   }
 
@@ -223,10 +223,11 @@ void BlobfsMetrics::IncrementPageIn(const fbl::String& merkle_hash, uint64_t off
     FX_LOGS(ERROR) << "To record page-in metrics accurately, increase the VMO size.";
     FX_LOGS(ERROR) << "    Maximum size  : " << stats.maximum_size;
     FX_LOGS(ERROR) << "    Current size  : " << stats.size;
-    should_record_page_in = false;
+    should_record_page_in_ = false;
     return;
   }
 
+  std::lock_guard lock(frequencies_lock_);
   if (all_page_in_frequencies_.find(merkle_hash) == all_page_in_frequencies_.end()) {
     // We have no page in metrics on this blob yet. Create a new child node.
     all_page_in_frequencies_[merkle_hash].blob_root_node =

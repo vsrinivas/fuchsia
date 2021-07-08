@@ -12,6 +12,8 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/time.h>
 
+#include <mutex>
+
 #include <cobalt-client/cpp/collector.h>
 
 #include "src/lib/storage/vfs/cpp/journal/journal.h"
@@ -37,7 +39,10 @@ struct BlobPageInFrequencies {
   std::map<uint32_t, inspect::UintProperty> offset_map;
 };
 
-// This class is not thread-safe except for the read_metrics() and verification_metrics() accessors.
+// This class is not thread-safe except for the read_metrics() and verification_metrics()
+// accessors, as well as calls to IncrementPageIn(). Everything else is only accessed from the main
+// serving thread which is currently single-threaded.
+// TODO(fxbug.dev/80285): Make this properly thread-safe.
 class BlobfsMetrics : public fs::MetricsTrait {
  public:
   explicit BlobfsMetrics(
@@ -176,8 +181,10 @@ class BlobfsMetrics : public fs::MetricsTrait {
   uint64_t bytes_merkle_read_from_disk_ = 0;
 
   // PAGE-IN FREQUENCY STATS
-  bool should_record_page_in = false;
-  std::map<fbl::String, BlobPageInFrequencies> all_page_in_frequencies_;
+  bool should_record_page_in_ = false;
+  std::mutex frequencies_lock_;
+  std::map<fbl::String, BlobPageInFrequencies> all_page_in_frequencies_
+      __TA_GUARDED(frequencies_lock_);
 
   // VERIFICATION STATS
   VerificationMetrics verification_metrics_;

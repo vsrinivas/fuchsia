@@ -20,8 +20,7 @@ namespace blobfs {
 // The |ReadMetrics| class tracks blobfs metrics that are updated on the read path, i.e. metrics
 // related to disk reads and decompression.
 //
-// This class is thread-safe. Two instances of this class are stored in |BlobfsMetrics|, one for
-// each thread.
+// This class is thread-safe.
 class ReadMetrics {
  public:
   explicit ReadMetrics(inspect::Node* read_metrics_node);
@@ -50,12 +49,10 @@ class ReadMetrics {
   // Returns a snapshot of metrics recorded by this class.
   PerCompressionSnapshot GetSnapshot(CompressionAlgorithm algorithm);
 
-  uint64_t remote_decompressions() const { return remote_decompressions_; }
+  uint64_t GetRemoteDecompressions() const;
 
  private:
   struct PerCompressionMetrics {
-    explicit PerCompressionMetrics(inspect::Node node);
-
     // Metrics for reads from disk
     zx::ticks read_ticks = {};
     uint64_t read_bytes = 0;
@@ -63,8 +60,10 @@ class ReadMetrics {
     // Metrics for decompression
     zx::ticks decompress_ticks = {};
     uint64_t decompress_bytes = 0;
+  };
 
-    // Inspect tree nodes
+  struct PerCompressionInspect {
+    explicit PerCompressionInspect(inspect::Node node);
     inspect::Node parent_node;
     inspect::IntProperty read_ticks_node;
     inspect::UintProperty read_bytes_node;
@@ -72,12 +71,19 @@ class ReadMetrics {
     inspect::UintProperty decompress_bytes_node;
   };
 
-  ReadMetrics::PerCompressionMetrics* GetMetrics(CompressionAlgorithm algorithm);
+  ReadMetrics::PerCompressionMetrics* GetMetrics(CompressionAlgorithm algorithm)
+      __TA_REQUIRES(lock_);
+  ReadMetrics::PerCompressionInspect* GetInspect(CompressionAlgorithm algorithm);
 
-  PerCompressionMetrics uncompressed_metrics_;
-  PerCompressionMetrics chunked_metrics_;
+  // Guards all locally tracked metrics that get flushed to cobalt. The inspect metrics are all
+  // thread-safe to increment and decrement.
+  mutable std::mutex lock_;
+  PerCompressionMetrics uncompressed_metrics_ __TA_GUARDED(lock_);
+  PerCompressionMetrics chunked_metrics_ __TA_GUARDED(lock_);
+  PerCompressionInspect uncompressed_inspect_;
+  PerCompressionInspect chunked_inspect_;
 
-  uint64_t remote_decompressions_ = 0;
+  uint64_t remote_decompressions_ __TA_GUARDED(lock_) = 0;
   inspect::UintProperty remote_decompressions_node_;
 };
 

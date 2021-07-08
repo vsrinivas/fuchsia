@@ -75,7 +75,7 @@ TEST(ReadMetricsTest, ChunkedDecompression) {
   stats = read_metrics.GetSnapshot(CompressionAlgorithm::kChunked);
   EXPECT_EQ(stats.decompress_bytes, kDecompressBytes * kNumOperations);
   EXPECT_EQ(stats.decompress_ticks, kDecompressDuration * kNumOperations);
-  EXPECT_EQ(read_metrics.remote_decompressions(), kNumOperations / 2ul);
+  EXPECT_EQ(read_metrics.GetRemoteDecompressions(), kNumOperations / 2ul);
 }
 
 TEST(VerificationMetricsTest, MerkleVerifyMultithreaded) {
