@@ -446,7 +446,15 @@ class AppStateImpl with Disposable implements AppState {
     });
   }
 
-  void _onIdle({required bool idle}) => runInAction(() => isIdle.value = idle);
+  void _onIdle({required bool idle}) => runInAction(() {
+        if (idle) {
+          // Before going to idle mode (screen saver), switch focus to the shell
+          // view in-order to get keyboard events that will help dismiss the
+          // screen saver.
+          showOverlay();
+        }
+        isIdle.value = idle;
+      });
 
   // Adds inspect data when requested by [Inspect].
   void _onInspect(Node node) {
