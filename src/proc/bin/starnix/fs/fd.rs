@@ -58,6 +58,9 @@ impl SeekOrigin {
 
 /// Corresponds to struct file_operations in Linux, plus any filesystem-specific data.
 pub trait FileOps: Send + Sync {
+    /// Called when the FileObject is closed.
+    fn close(&self, _file: &FileObject) {}
+
     /// Read from the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable.
     fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno>;
@@ -106,7 +109,7 @@ pub trait FileOps: Send + Sync {
 
     /// Establish a one-shot, asynchronous wait for the given FdEvents for the given file and task.
     fn wait_async(&self, file: &FileObject, waiter: &Arc<Waiter>, events: FdEvents) {
-        file.node.observers.wait_async(waiter, events)
+        file.node().observers.wait_async(waiter, events)
     }
 
     fn ioctl(
@@ -211,27 +214,45 @@ pub fn default_ioctl(request: u32) -> Result<SyscallResult, Errno> {
     Err(ENOTTY)
 }
 
-/// Corresponds to struct file in Linux.
+/// A session with a file object.
+///
+/// Each time a client calls open(), we create a new FileObject from the
+/// underlying FsNode that receives the open(). This object contains the state
+/// that is specific to this sessions whereas the underlying FsNode contains
+/// the state that is shared between all the sessions.
 pub struct FileObject {
     ops: Box<dyn FileOps>,
-    pub node: FsNodeHandle,
+    name: NamespaceNode,
     pub offset: Mutex<usize>,
     pub flags: Mutex<u32>,
     pub async_owner: Mutex<pid_t>,
 }
 
 impl FileObject {
-    pub fn new<T: FileOps + 'static>(ops: T, node: FsNodeHandle) -> FileHandle {
-        Self::new_from_box(Box::new(ops), node)
+    /// Create a FileObject that is not mounted in a namespace.
+    ///
+    /// The returned FileObject does not have a name.
+    pub fn new_unmounted<T: FileOps + 'static>(ops: T, node: FsNodeHandle) -> FileHandle {
+        Self::new(Box::new(ops), NamespaceNode::new_unmounted(node))
     }
-    pub fn new_from_box(ops: Box<dyn FileOps>, node: FsNodeHandle) -> FileHandle {
+
+    /// Create a FileObject with an associated NamespaceNode.
+    ///
+    /// This function is not typically called directly. Instead, consider
+    /// calling NamespaceNode::open.
+    pub fn new(ops: Box<dyn FileOps>, name: NamespaceNode) -> FileHandle {
         Arc::new(Self {
-            node,
+            name,
             ops,
             offset: Mutex::new(0),
             flags: Mutex::new(0),
             async_owner: Mutex::new(0),
         })
+    }
+
+    /// The FsNode from which this FileObject was created.
+    pub fn node(&self) -> &FsNodeHandle {
+        &self.name.node
     }
 
     fn ops(&self) -> &dyn FileOps {
@@ -318,6 +339,12 @@ impl FileObject {
     /// See fcntl(F_SETOWN)
     pub fn set_async_owner(&self, owner: pid_t) {
         *self.async_owner.lock() = owner;
+    }
+}
+
+impl Drop for FileObject {
+    fn drop(&mut self) {
+        self.ops().close(self);
     }
 }
 

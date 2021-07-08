@@ -24,7 +24,7 @@ impl Anon {
         ops: T,
         name: AnonNodeType,
     ) -> FileHandle {
-        FileObject::new(ops, Self::new_node(kernel, name))
+        FileObject::new_unmounted(ops, Self::new_node(kernel, name))
     }
 }
 

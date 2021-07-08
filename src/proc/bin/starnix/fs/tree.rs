@@ -6,7 +6,7 @@ use parking_lot::{RwLock, RwLockUpgradableReadGuard, RwLockWriteGuard};
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
-use super::{FileHandle, FileObject, FileOps, ObserverList};
+use super::{FileOps, ObserverList};
 use crate::devices::DeviceHandle;
 use crate::types::*;
 
@@ -92,8 +92,8 @@ impl FsNode {
         &**self.ops.get().unwrap()
     }
 
-    pub fn open(self: &FsNodeHandle) -> Result<FileHandle, Errno> {
-        Ok(FileObject::new_from_box(self.ops().open(&self)?, Arc::clone(self)))
+    pub fn open(self: &FsNodeHandle) -> Result<Box<dyn FileOps>, Errno> {
+        self.ops().open(&self)
     }
 
     pub fn component_lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {

@@ -23,8 +23,6 @@ fn round_up(value: usize, increment: usize) -> usize {
 }
 
 struct Pipe {
-    node: FsNodeHandle,
-
     /// The maximum number of bytes that can be stored inside this pipe.
     size: usize,
 
@@ -45,12 +43,11 @@ struct Pipe {
 }
 
 impl Pipe {
-    fn new(node: FsNodeHandle) -> Arc<Mutex<Pipe>> {
+    fn new() -> Arc<Mutex<Pipe>> {
         // Pipes default to a size of 16 pages.
         let default_pipe_size = (*PAGE_SIZE * 16) as usize;
 
         Arc::new(Mutex::new(Pipe {
-            node,
             size: default_pipe_size,
             used: 0,
             buffers: VecDeque::new(),
@@ -137,33 +134,36 @@ impl Pipe {
     }
 }
 
-pub struct PipeReadEndpoint {
-    pipe: Arc<Mutex<Pipe>>,
-}
+/// Creates a new pipe between the two returned FileObjects.
+///
+/// The first FileObject is the read endpoint of the pipe. The second is the
+/// write endpoint of the pipe. This order matches the order expected by
+/// sys_pipe2().
+pub fn new_pipe(kernel: &Kernel) -> (FileHandle, FileHandle) {
+    let pipe = Pipe::new();
+    let read_end = PipeReadEndpoint { pipe: pipe.clone() };
+    let write_end = PipeWriteEndpoint { pipe };
 
-pub struct PipeWriteEndpoint {
-    pipe: Arc<Mutex<Pipe>>,
-}
-
-pub fn new_pipe(kern: &Kernel) -> (FileHandle, FileHandle) {
-    let node = Anon::new_node(kern, AnonNodeType::Pipe);
+    let node = Anon::new_node(kernel, AnonNodeType::Pipe);
     node.stat_mut().st_blksize = ATOMIC_IO_BYTES as i64;
-    let pipe = Pipe::new(node.clone());
-    let read = FileObject::new(PipeReadEndpoint { pipe: pipe.clone() }, node.clone());
-    let write = FileObject::new(PipeWriteEndpoint { pipe }, node);
+    let read = FileObject::new_unmounted(read_end, node.clone());
+    let write = FileObject::new_unmounted(write_end, node);
+
     (read, write)
 }
 
-impl Drop for PipeReadEndpoint {
-    fn drop(&mut self) {
-        let mut pipe = self.pipe.lock();
-        pipe.has_reader = false;
-        pipe.node.observers.notify(FdEvents::POLLOUT);
-    }
+struct PipeReadEndpoint {
+    pipe: Arc<Mutex<Pipe>>,
 }
 
 impl FileOps for PipeReadEndpoint {
     fd_impl_nonseekable!();
+
+    fn close(&self, file: &FileObject) {
+        let mut pipe = self.pipe.lock();
+        pipe.has_reader = false;
+        file.node().observers.notify(FdEvents::POLLOUT);
+    }
 
     fn write(
         &self,
@@ -224,7 +224,7 @@ impl FileOps for PipeReadEndpoint {
             dst_offset += chunk_size;
             src_offset += chunk_size;
         }
-        file.node.observers.notify(FdEvents::POLLOUT);
+        file.node().observers.notify(FdEvents::POLLOUT);
         Ok(actual)
     }
 
@@ -250,16 +250,18 @@ impl FileOps for PipeReadEndpoint {
     }
 }
 
-impl Drop for PipeWriteEndpoint {
-    fn drop(&mut self) {
-        let mut pipe = self.pipe.lock();
-        pipe.has_writer = false;
-        pipe.node.observers.notify(FdEvents::POLLIN);
-    }
+struct PipeWriteEndpoint {
+    pipe: Arc<Mutex<Pipe>>,
 }
 
 impl FileOps for PipeWriteEndpoint {
     fd_impl_nonseekable!();
+
+    fn close(&self, file: &FileObject) {
+        let mut pipe = self.pipe.lock();
+        pipe.has_writer = false;
+        file.node().observers.notify(FdEvents::POLLIN);
+    }
 
     fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut pipe = self.pipe.lock();
@@ -279,7 +281,7 @@ impl FileOps for PipeWriteEndpoint {
         task.mm.read_all(data, &mut bytes)?;
         pipe.push_back(bytes);
 
-        file.node.observers.notify(FdEvents::POLLIN);
+        file.node().observers.notify(FdEvents::POLLIN);
         Ok(actual)
     }
 

@@ -260,7 +260,7 @@ pub fn sys_fstat(
     buffer: UserRef<stat_t>,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    let result = file.node.update_stat()?;
+    let result = file.node().update_stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
 }
@@ -278,7 +278,7 @@ pub fn sys_newfstatat(
     }
     let fio_flags = fio::OPEN_RIGHT_READABLE;
     let file = open_internal(&ctx.task, dir_fd, user_path, fio_flags, 0)?;
-    let result = file.node.update_stat()?;
+    let result = file.node().update_stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
 }
@@ -311,7 +311,7 @@ pub fn sys_truncate(
     let length = length.try_into().map_err(|_| EINVAL)?;
     let file =
         open_internal(&ctx.task, FdNumber::AT_FDCWD, user_path, fio::OPEN_RIGHT_WRITABLE, 0)?;
-    file.node.truncate(length)?;
+    file.node().truncate(length)?;
     Ok(SUCCESS)
 }
 
@@ -322,7 +322,7 @@ pub fn sys_ftruncate(
 ) -> Result<SyscallResult, Errno> {
     let length = length.try_into().map_err(|_| EINVAL)?;
     let file = ctx.task.files.get(fd)?;
-    file.node.truncate(length)?;
+    file.node().truncate(length)?;
     Ok(SUCCESS)
 }
 

@@ -49,7 +49,7 @@ impl FsContext {
     }
 
     // This will eventually have the equivalent of a dir_fd parameter.
-    pub fn lookup_node(&self, path: &FsStr) -> Result<FsNodeHandle, Errno> {
+    pub fn lookup_node(&self, path: &FsStr) -> Result<NamespaceNode, Errno> {
         let mut node = self.root_node.clone();
         for component in path.split(|c| *c == b'/') {
             if component == b"." || component == b"" {
@@ -61,7 +61,7 @@ impl FsContext {
                 node = node.lookup(component)?;
             }
         }
-        Ok(node.node)
+        Ok(node)
     }
 
     #[cfg(test)]
