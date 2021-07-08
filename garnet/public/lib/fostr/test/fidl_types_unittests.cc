@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/example/fostr/cpp/fidl.h>
+#include <fuchsia/example/fostr2/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fostr/fidl/fuchsia/example/fostr/formatting.h>
+#include <lib/fostr/fidl/fuchsia/example/fostr2/formatting.h>
 
 #include <sstream>
 
@@ -94,7 +96,7 @@ TEST(FidlTypes, Array) {
   utensil_array[0] = "knife";
   utensil_array[1] = "spork";
 
-  os << Indent << "utensil:" << utensil_array;
+  os << Indent << "utensil:" << Formatted(utensil_array);
 
   EXPECT_EQ(
       "utensil:"
@@ -109,7 +111,7 @@ TEST(FidlTypes, ArrayOfInt32) {
   std::array<int32_t, 2> arr;
   arr[0] = 5;
   arr[1] = 6;
-  os << Indent << "arr: " << arr;
+  os << Indent << "arr: " << Formatted(arr);
   EXPECT_EQ(
       "arr: "
       "\n    [0] 5"
@@ -123,7 +125,7 @@ TEST(FidlTypes, ArrayOfFloat) {
   std::array<float, 2> arr;
   arr[0] = 5.5f;
   arr[1] = 6.6f;
-  os << Indent << "arr: " << arr;
+  os << Indent << "arr: " << Formatted(arr);
   EXPECT_EQ(
       "arr: "
       "\n    [0] 5.5"
@@ -147,7 +149,7 @@ TEST(FidlTypes, ArrayOfArrays) {
   std::array<std::array<int32_t, 3>, 2> arr;
   arr[0] = left;
   arr[1] = right;
-  os << Indent << "arr: " << arr;
+  os << Indent << "arr: " << Formatted(arr);
   EXPECT_EQ(
       "arr: "
       "\n    [0]:"
@@ -166,7 +168,7 @@ TEST(FidlTypes, ArrayOfArraysEmpty) {
   std::ostringstream os;
 
   std::array<std::array<int32_t, 3>, 0> arr;
-  os << Indent << "arr: " << arr;
+  os << Indent << "arr: " << Formatted(arr);
   EXPECT_EQ("arr: <empty>", os.str());
 }
 
@@ -185,8 +187,9 @@ TEST(FidlTypes, ArrayOfUint8) {
     large_array[i + 10] = i;
   }
 
-  os << Indent << "small:" << small_array << fostr::NewLine << "medium:" << medium_array
-     << fostr::NewLine << "large:" << large_array;
+  os << Indent << "small:" << Formatted(small_array) << fostr::NewLine
+     << "medium:" << Formatted(medium_array) << fostr::NewLine
+     << "large:" << Formatted(large_array);
 
   EXPECT_EQ(
       "small:"
@@ -254,8 +257,9 @@ TEST(FidlTypes, ArrayOfInt8) {
     large_array[i + 10] = static_cast<int8_t>(i);
   }
 
-  os << Indent << "small:" << small_array << fostr::NewLine << "medium:" << medium_array
-     << fostr::NewLine << "large:" << large_array;
+  os << Indent << "small:" << Formatted(small_array) << fostr::NewLine
+     << "medium:" << Formatted(medium_array) << fostr::NewLine
+     << "large:" << Formatted(large_array);
 
   EXPECT_EQ(
       "small:"
@@ -482,10 +486,12 @@ TEST(FidlTypes, StdVector) {
   std::vector<std::string> empty_vector;
   std::vector<std::string> utensil_vector = {"knife", "spork"};
 
-  os << fostr::Indent << "empty:" << empty_vector << ", utensil:" << utensil_vector;
+  // The fostr::NewLine was added to repro fxb/80062 and test for regressions.
+  os << fostr::Indent << fostr::NewLine << "empty:" << Formatted(empty_vector)
+     << ", utensil:" << Formatted(utensil_vector);
 
   EXPECT_EQ(
-      "empty:<empty>, utensil:"
+      "\n    empty:<empty>, utensil:"
       "\n    [0] knife"
       "\n    [1] spork",
       os.str());
@@ -507,8 +513,10 @@ TEST(FidlTypes, StdVectorOfUint8) {
     large_vector.push_back(i);
   }
 
-  os << fostr::Indent << "empty:" << empty_vector << fostr::NewLine << "small:" << small_vector
-     << fostr::NewLine << "medium:" << medium_vector << fostr::NewLine << "large:" << large_vector;
+  os << fostr::Indent << "empty:" << Formatted(empty_vector) << fostr::NewLine
+     << "small:" << Formatted(small_vector) << fostr::NewLine
+     << "medium:" << Formatted(medium_vector) << fostr::NewLine
+     << "large:" << Formatted(large_vector);
 
   EXPECT_EQ(
       "empty:<empty>"
@@ -577,8 +585,10 @@ TEST(FidlTypes, StdVectorOfInt8) {
     large_vector.push_back(static_cast<int8_t>(i));
   }
 
-  os << fostr::Indent << "empty:" << empty_vector << fostr::NewLine << "small:" << small_vector
-     << fostr::NewLine << "medium:" << medium_vector << fostr::NewLine << "large:" << large_vector;
+  os << fostr::Indent << "empty:" << Formatted(empty_vector) << fostr::NewLine
+     << "small:" << Formatted(small_vector) << fostr::NewLine
+     << "medium:" << Formatted(medium_vector) << fostr::NewLine
+     << "large:" << Formatted(large_vector);
 
   EXPECT_EQ(
       "empty:<empty>"
@@ -805,5 +815,24 @@ TEST(FidlTypes, TableFormatting) {
     my_uint8: 5
     my_int8: -6)");
 }
+
+// Tests that fb/79996 has not regressed.
+TEST(FidlTypes, ExternalOptionals) {
+  using namespace fuchsia::example::fostr;
+  using namespace fuchsia::example::fostr2;
+
+  MyStruct2 struct2;
+  EXPECT_FIDL_TO_FORMAT_AS(struct2, "\n    optional_external_value: <null>");
+
+  struct2.optional_external_value = std::make_unique<MyStruct>();
+  EXPECT_FIDL_TO_FORMAT_AS(struct2, R"(
+    optional_external_value: 
+        nums: <null>
+        foo: 
+        bar: <empty union>
+        my_uint8: 0
+        my_int8: 0)");
+}
+
 }  // namespace
 }  // namespace fostr

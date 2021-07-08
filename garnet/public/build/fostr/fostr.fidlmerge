@@ -133,16 +133,6 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
     {{- range .Name.Parts }}
 namespace {{ . }} {
     {{- end }}
-
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& value) {
-  using fidl::operator<<;
-  if (!value) {
-    return os << "<null>";
-  }
-
-  return os << *value;
-}
 {{/* keep the newline */}}
 {{- end }}
 
@@ -198,8 +188,8 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
   using fidl::operator<<;
   os << ::fostr::Indent;
         {{- range .Members }}
-          {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
-  os << ::fostr::NewLine << "{{ .Name }}: " << ::fostr::PrintVector(value.{{ .Name }});
+          {{- if or .Type.Nullable (or (eq .Type.Kind "vector") (eq .Type.Kind "array")) }}
+  os << ::fostr::NewLine << "{{ .Name }}: " << ::fostr::Formatted(value.{{ .Name }});
           {{- else if and (eq .Type.Kind "primitive") (eq .Type.PrimitiveSubtype "uint8") }}
   os << ::fostr::NewLine << "{{ .Name }}: " << static_cast<uint32_t>(value.{{ .Name }});
           {{- else if and (eq .Type.Kind "primitive") (eq .Type.PrimitiveSubtype "int8") }}
@@ -226,8 +216,8 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
         {{- range .Members }}
           {{- if not .Reserved }}
   if (value.has_{{ .Name }}()) {
-            {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
-    os << ::fostr::NewLine << "{{ .Name }}: " << ::fostr::PrintVector(value.{{ .Name }}());
+            {{- if or .Type.Nullable (or (eq .Type.Kind "vector") (eq .Type.Kind "array")) }}
+    os << ::fostr::NewLine << "{{ .Name }}: " << ::fostr::Formatted(value.{{ .Name }}());
             {{- else if and (eq .Type.Kind "primitive") (eq .Type.PrimitiveSubtype "uint8") }}
     os << ::fostr::NewLine << "{{ .Name }}: " << static_cast<uint32_t>(value.{{ .Name }}());
             {{- else if and (eq .Type.Kind "primitive") (eq .Type.PrimitiveSubtype "int8") }}
@@ -254,8 +244,8 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
         {{- range .Members }}
           {{- if not .Reserved }}
     case {{ $type_name }}::Tag::k{{ toUpperCamelCase .Name }}:
-            {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
-      return os << "{{ .Name }} " << ::fostr::PrintVector(value.{{ .Name }}());
+            {{- if or .Type.Nullable (or (eq .Type.Kind "vector") (eq .Type.Kind "array")) }}
+      return os << "{{ .Name }} " << ::fostr::Formatted(value.{{ .Name }}());
             {{- else if and (eq .Type.Kind "primitive") (eq .Type.PrimitiveSubtype "uint8") }}
       return os << "{{ .Name }} " << static_cast<uint32_t>(value.{{ .Name }}());
             {{- else if and (eq .Type.Kind "primitive") (eq .Type.PrimitiveSubtype "int8") }}

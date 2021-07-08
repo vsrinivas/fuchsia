@@ -29,7 +29,7 @@ std::ostream& operator<<(std::ostream& os, const ComponentData& value) {
     os << ::fostr::NewLine << "namespace: " << value.namespace_();
   }
   if (value.has_annotations()) {
-    os << ::fostr::NewLine << "annotations: " << ::fostr::PrintVector(value.annotations());
+    os << ::fostr::NewLine << "annotations: " << ::fostr::Formatted(value.annotations());
   }
   return os << ::fostr::Outdent;
 }

@@ -39,54 +39,107 @@ void insert_sequence_container(std::ostream& os, Iter begin, Iter end) {
 }
 
 }  // namespace internal
+
+// Wrapper type to disambiguate formatting operator overloads.
+//
+// This file avoids defining any overloads for types in the std namespace. To correctly format
+// arrays, vectors and unique pointers, this wrapper is used so we can define an overload for
+// e.g. fostr::Formatted<std::unique_ptr<T>> instead of defining one for std::unique_ptr<T>.
+// Consequently, this wrapper must be used for the supported std types. The wrapper has no effect
+// for other types, so it can safely be applied to any value.
+//
+//     std::vector<int32_t> my_fector;
+//     os << fostr::Formatted(my_vector);
+//
+template <typename T>
+struct Formatted {
+  explicit Formatted(const T& v) : value(v) {}
+  const T& value;
+};
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const Formatted<T>& value);
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const Formatted<T>& value) {
+  return os << value.value;
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const Formatted<std::unique_ptr<T>>& value) {
+  if (!value.value) {
+    return os << "<null>";
+  }
+
+  return os << Formatted(*value.value);
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const Formatted<std::vector<T>>& value) {
+  if (value.value.empty()) {
+    return os << "<empty>";
+  }
+
+  fostr::internal::insert_sequence_container(os, value.value.cbegin(), value.value.cend());
+  return os;
+}
+
+template <>
+std::ostream& operator<<(std::ostream& os, const Formatted<std::vector<uint8_t>>& value);
+
+template <>
+std::ostream& operator<<(std::ostream& os, const Formatted<std::vector<int8_t>>& value);
+
+template <typename T, size_t N>
+std::ostream& operator<<(std::ostream& os, const Formatted<std::array<T, N>>& value);
+
+template <typename T, size_t N, size_t M>
+std::ostream& operator<<(std::ostream& os,
+                         const Formatted<std::array<std::array<T, M>, N>>& value) {
+  if (value.value.empty()) {
+    return os << "<empty>";
+  }
+
+  int index = 0;
+  for (const std::array<T, M>& item : value.value) {  // N items
+    os << fostr::NewLine << "[" << index++ << "]:" << fostr::Indent << Formatted(item)
+       << fostr::Outdent;
+  }
+  return os;
+}
+
+template <typename T, size_t N>
+std::ostream& operator<<(std::ostream& os, const Formatted<std::array<T, N>>& value) {
+  fostr::internal::insert_sequence_container(os, value.value.cbegin(), value.value.cend());
+  return os;
+}
+
+template <size_t N>
+std::ostream& operator<<(std::ostream& os, const Formatted<std::array<uint8_t, N>>& value) {
+  if (N <= fostr::internal::kMaxBytesToDump) {
+    return os << fostr::HexDump(value.value.data(), N, 0);
+  }
+
+  return os << fostr::HexDump(value.value.data(), fostr::internal::kTruncatedDumpSize, 0)
+            << fostr::NewLine << "(truncated, " << N << " bytes total)";
+}
+
+template <size_t N>
+std::ostream& operator<<(std::ostream& os, const Formatted<std::array<int8_t, N>>& value) {
+  if (N <= fostr::internal::kMaxBytesToDump) {
+    return os << fostr::HexDump(value.value.data(), N, 0);
+  }
+
+  return os << fostr::HexDump(value.value.data(), fostr::internal::kTruncatedDumpSize, 0)
+            << fostr::NewLine << "(truncated, " << N << " bytes total)";
+}
+
 }  // namespace fostr
 
 namespace fidl {
 
 // ostream operator<< templates for fidl types. These templates conform to the
 // convention described in indent.h.
-
-template <typename T, size_t N>
-std::ostream& operator<<(std::ostream& os, const std::array<T, N>& value);
-
-template <typename T, size_t N, size_t M>
-std::ostream& operator<<(std::ostream& os, const std::array<std::array<T, M>, N>& value) {
-  if (value.empty()) {
-    return os << "<empty>";
-  }
-
-  int index = 0;
-  for (const std::array<T, M>& item : value) {  // N items
-    os << fostr::NewLine << "[" << index++ << "]:" << fostr::Indent << item << fostr::Outdent;
-  }
-  return os;
-}
-
-template <typename T, size_t N>
-std::ostream& operator<<(std::ostream& os, const std::array<T, N>& value) {
-  fostr::internal::insert_sequence_container(os, value.cbegin(), value.cend());
-  return os;
-}
-
-template <size_t N>
-std::ostream& operator<<(std::ostream& os, const std::array<uint8_t, N>& value) {
-  if (N <= fostr::internal::kMaxBytesToDump) {
-    return os << fostr::HexDump(value.data(), N, 0);
-  }
-
-  return os << fostr::HexDump(value.data(), fostr::internal::kTruncatedDumpSize, 0)
-            << fostr::NewLine << "(truncated, " << N << " bytes total)";
-}
-
-template <size_t N>
-std::ostream& operator<<(std::ostream& os, const std::array<int8_t, N>& value) {
-  if (N <= fostr::internal::kMaxBytesToDump) {
-    return os << fostr::HexDump(value.data(), N, 0);
-  }
-
-  return os << fostr::HexDump(value.data(), fostr::internal::kTruncatedDumpSize, 0)
-            << fostr::NewLine << "(truncated, " << N << " bytes total)";
-}
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const VectorPtr<T>& value) {
@@ -107,22 +160,6 @@ std::ostream& operator<<(std::ostream& os, const VectorPtr<uint8_t>& value);
 
 template <>
 std::ostream& operator<<(std::ostream& os, const VectorPtr<int8_t>& value);
-
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
-  if (value.empty()) {
-    return os << "<empty>";
-  }
-
-  fostr::internal::insert_sequence_container(os, value.cbegin(), value.cend());
-  return os;
-}
-
-template <>
-std::ostream& operator<<(std::ostream& os, const std::vector<uint8_t>& value);
-
-template <>
-std::ostream& operator<<(std::ostream& os, const std::vector<int8_t>& value);
 
 #ifdef __Fuchsia__
 template <typename T>
@@ -163,35 +200,5 @@ std::ostream& operator<<(std::ostream& os, const InterfaceRequest<T>& value) {
 #endif
 
 }  // namespace fidl
-
-namespace fostr {
-
-template <typename T>
-std::string PrintVector(const std::vector<T>& value);
-
-template <typename T>
-std::string PrintVector(const std::vector<std::vector<T>>& value) {
-  std::stringstream os;
-
-  if (value.empty()) {
-    return "<empty>";
-  }
-
-  int index = 0;
-  for (const std::vector<T>& item : value) {
-    os << NewLine << "[" << index++ << "] " << PrintVector(item);
-  }
-  return os.str();
-}
-
-template <typename T>
-std::string PrintVector(const std::vector<T>& value) {
-  std::stringstream os;
-
-  fostr::internal::insert_sequence_container(os, value.cbegin(), value.cend());
-  return os.str();
-}
-
-}  // namespace fostr
 
 #endif  // LIB_FOSTR_FIDL_TYPES_H_
