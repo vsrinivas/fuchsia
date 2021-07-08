@@ -36,8 +36,8 @@ template("fuchsia_driver_component") {
   generated_file(manifest_target) {
     contents = {
       include = [
+        "inspect/client.shard.cml",
         "syslog/client.shard.cml",
-        "//sdk/lib/diagnostics/inspect/client.shard.cml",
       ]
       program = {
         runner = "driver"
