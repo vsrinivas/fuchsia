@@ -31,6 +31,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
+#include "src/devices/lib/acpi/client.h"
 #include "src/graphics/drivers/misc/goldfish_sync/sync_common_defs.h"
 
 namespace goldfish {
@@ -48,7 +49,7 @@ class SyncDevice : public SyncDeviceType,
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  SyncDevice(zx_device_t* parent, bool can_read_multiple_commands);
+  SyncDevice(zx_device_t* parent, bool can_read_multiple_commands, acpi::Client client);
   ~SyncDevice();
 
   zx_status_t Bind();
@@ -96,6 +97,7 @@ class SyncDevice : public SyncDeviceType,
   const bool can_read_multiple_commands_;
 
   ddk::AcpiProtocolClient acpi_;
+  acpi::Client acpi_fidl_;
   zx::interrupt irq_;
   zx::bti bti_;
   ddk::IoBuffer io_buffer_ TA_GUARDED(cmd_lock_);

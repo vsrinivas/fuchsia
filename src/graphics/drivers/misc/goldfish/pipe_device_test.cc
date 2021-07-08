@@ -26,8 +26,11 @@
 
 #include <zxtest/zxtest.h>
 
+#include "src/devices/lib/acpi/mock/mock-acpi.h"
 #include "src/graphics/drivers/misc/goldfish/goldfish-bind.h"
 namespace goldfish {
+
+using MockAcpiFidl = acpi::mock::Device;
 
 namespace {
 
@@ -170,8 +173,11 @@ class Binder : public fake_ddk::Bind {
 // Test suite creating fake PipeDevice on a mock ACPI bus.
 class PipeDeviceTest : public zxtest::Test {
  public:
+  PipeDeviceTest() : async_loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   // |zxtest::Test|
   void SetUp() override {
+    ASSERT_OK(async_loop_.StartThread("pipe-device-test-dispatcher"));
+
     zx::bti out_bti;
     ASSERT_OK(fake_bti_create(out_bti.reset_and_get_address()));
     ASSERT_OK(out_bti.duplicate(ZX_RIGHT_SAME_RIGHTS, &acpi_bti_));
@@ -185,9 +191,17 @@ class PipeDeviceTest : public zxtest::Test {
     ASSERT_OK(zx::interrupt::create(zx::resource(), 0u, ZX_INTERRUPT_VIRTUAL, &irq));
     ASSERT_OK(irq.duplicate(ZX_RIGHT_SAME_RIGHTS, &irq_));
 
+    mock_acpi_fidl_.SetMapInterrupt(
+        [this](acpi::mock::Device::MapInterruptRequestView rv,
+               acpi::mock::Device::MapInterruptCompleter::Sync& completer) {
+          zx::interrupt dupe;
+          ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &dupe));
+          ASSERT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe));
+          completer.ReplySuccess(std::move(dupe));
+        });
+
     mock_acpi_.ExpectGetBti(ZX_OK, kGoldfishBtiId, 0, std::move(out_bti))
-        .ExpectGetMmio(ZX_OK, 0u, {.offset = 0u, .size = kCtrlSize, .vmo = vmo_control.release()})
-        .ExpectMapInterrupt(ZX_OK, 0u, std::move(irq));
+        .ExpectGetMmio(ZX_OK, 0u, {.offset = 0u, .size = kCtrlSize, .vmo = vmo_control.release()});
 
     mock_acpi_.mock_connect_sysmem().ExpectCallWithMatcher([this](const zx::channel& connection) {
       zx_info_handle_basic_t info;
@@ -218,8 +232,11 @@ class PipeDeviceTest : public zxtest::Test {
           });
     }
 
+    auto acpi_client = mock_acpi_fidl_.CreateClient(async_loop_.dispatcher());
+    ASSERT_OK(acpi_client.status_value());
+
     ddk_.SetProtocol(ZX_PROTOCOL_ACPI, mock_acpi_.GetProto());
-    dut_ = std::make_unique<PipeDevice>(fake_ddk::FakeParent());
+    dut_ = std::make_unique<PipeDevice>(fake_ddk::FakeParent(), std::move(acpi_client.value()));
     dut_child_ = std::make_unique<PipeChildDevice>(dut_.get());
   }
 
@@ -237,6 +254,8 @@ class PipeDeviceTest : public zxtest::Test {
 
  protected:
   ddk::MockAcpi mock_acpi_;
+  acpi::mock::Device mock_acpi_fidl_;
+  async::Loop async_loop_;
   Binder ddk_;
   std::unique_ptr<PipeDevice> dut_;
   std::unique_ptr<PipeChildDevice> dut_child_;

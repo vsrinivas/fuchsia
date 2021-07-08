@@ -5,11 +5,13 @@
 source_set("acpi") {
   deps = [
     "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//zircon/public/lib/zx",
   ]
+
+  public_deps =
+      [ "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp" ]
 
   include_dirs = [ "." ]
   sources = [ "client.cc" ]

@@ -18,6 +18,7 @@
 #include <fbl/auto_lock.h>
 
 #include "lib/ddk/driver.h"
+#include "src/devices/lib/acpi/client.h"
 #include "src/graphics/drivers/misc/goldfish/goldfish-bind.h"
 #include "src/graphics/drivers/misc/goldfish/instance.h"
 
@@ -71,7 +72,11 @@ uint32_t lower_32_bits(uint64_t n) { return static_cast<uint32_t>(n); }
 
 // static
 zx_status_t PipeDevice::Create(void* ctx, zx_device_t* device) {
-  auto pipe_device = std::make_unique<goldfish::PipeDevice>(device);
+  auto acpi = acpi::Client::Create(device);
+  if (acpi.is_error()) {
+    return acpi.status_value();
+  }
+  auto pipe_device = std::make_unique<goldfish::PipeDevice>(device, std::move(acpi.value()));
   zx_status_t status = pipe_device->Bind();
   if (status != ZX_OK) {
     return status;
@@ -106,7 +111,8 @@ zx_status_t PipeDevice::Create(void* ctx, zx_device_t* device) {
   return ZX_OK;
 }
 
-PipeDevice::PipeDevice(zx_device_t* parent) : DeviceType(parent), acpi_(parent) {}
+PipeDevice::PipeDevice(zx_device_t* parent, acpi::Client client)
+    : DeviceType(parent), acpi_(parent), acpi_fidl_(std::move(client)) {}
 
 PipeDevice::~PipeDevice() {
   if (irq_.is_valid()) {
@@ -149,11 +155,13 @@ zx_status_t PipeDevice::Bind() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  status = acpi_.MapInterrupt(0, &irq_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: map_interrupt failed: %d", kTag, status);
+  auto irq = acpi_fidl_.borrow().MapInterrupt(0);
+  if (!irq.ok() || irq->result.is_err()) {
+    zxlogf(ERROR, "%s: map_interrupt failed: %d", kTag,
+           !irq.ok() ? irq.status() : irq->result.err());
     return status;
   }
+  irq_.reset(irq->result.mutable_response().irq.release());
 
   int rc = thrd_create_with_name(
       &irq_thread_, [](void* arg) { return static_cast<PipeDevice*>(arg)->IrqHandler(); }, this,

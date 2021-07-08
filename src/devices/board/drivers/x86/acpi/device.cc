@@ -222,63 +222,6 @@ zx_status_t Device::AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio) {
   return ZX_OK;
 }
 
-zx_status_t Device::AcpiMapInterrupt(int64_t which_irq, zx::interrupt* out_handle) {
-  fbl::AutoLock<fbl::Mutex> guard{&lock_};
-  zx_status_t st = ReportCurrentResources();
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  if (static_cast<uint64_t>(which_irq) >= irqs_.size()) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  const DeviceIrqResource& irq = irqs_[which_irq];
-  uint32_t mode;
-  mode = ZX_INTERRUPT_MODE_DEFAULT;
-  st = ZX_OK;
-  switch (irq.trigger) {
-    case ACPI_IRQ_TRIGGER_EDGE:
-      switch (irq.polarity) {
-        case ACPI_IRQ_ACTIVE_BOTH:
-          mode = ZX_INTERRUPT_MODE_EDGE_BOTH;
-          break;
-        case ACPI_IRQ_ACTIVE_LOW:
-          mode = ZX_INTERRUPT_MODE_EDGE_LOW;
-          break;
-        case ACPI_IRQ_ACTIVE_HIGH:
-          mode = ZX_INTERRUPT_MODE_EDGE_HIGH;
-          break;
-        default:
-          st = ZX_ERR_INVALID_ARGS;
-          break;
-      }
-      break;
-    case ACPI_IRQ_TRIGGER_LEVEL:
-      switch (irq.polarity) {
-        case ACPI_IRQ_ACTIVE_LOW:
-          mode = ZX_INTERRUPT_MODE_LEVEL_LOW;
-          break;
-        case ACPI_IRQ_ACTIVE_HIGH:
-          mode = ZX_INTERRUPT_MODE_LEVEL_HIGH;
-          break;
-        default:
-          st = ZX_ERR_INVALID_ARGS;
-          break;
-      }
-      break;
-    default:
-      st = ZX_ERR_INVALID_ARGS;
-      break;
-  }
-  if (st != ZX_OK) {
-    return st;
-  }
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  return zx::interrupt::create(*zx::unowned_resource{get_root_resource()}, irq.pin,
-                               ZX_INTERRUPT_REMAP_IRQ | mode, out_handle);
-}
-
 zx_status_t Device::AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
   // The x86 IOMMU world uses PCI BDFs as the hardware identifiers, so there
   // will only be one BTI per device.
@@ -350,5 +293,73 @@ void Device::EvaluateObject(EvaluateObjectRequestView request,
   } else {
     completer.Reply(result.value());
   }
+}
+
+void Device::MapInterrupt(MapInterruptRequestView request, MapInterruptCompleter::Sync& completer) {
+  fbl::AutoLock<fbl::Mutex> guard{&lock_};
+  zx_status_t st = ReportCurrentResources();
+  if (st != ZX_OK) {
+    completer.ReplyError(st);
+    return;
+  }
+
+  uint64_t which_irq = request->index;
+  if (which_irq >= irqs_.size()) {
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
+  }
+
+  const DeviceIrqResource& irq = irqs_[which_irq];
+  uint32_t mode;
+  mode = ZX_INTERRUPT_MODE_DEFAULT;
+  st = ZX_OK;
+  switch (irq.trigger) {
+    case ACPI_IRQ_TRIGGER_EDGE:
+      switch (irq.polarity) {
+        case ACPI_IRQ_ACTIVE_BOTH:
+          mode = ZX_INTERRUPT_MODE_EDGE_BOTH;
+          break;
+        case ACPI_IRQ_ACTIVE_LOW:
+          mode = ZX_INTERRUPT_MODE_EDGE_LOW;
+          break;
+        case ACPI_IRQ_ACTIVE_HIGH:
+          mode = ZX_INTERRUPT_MODE_EDGE_HIGH;
+          break;
+        default:
+          st = ZX_ERR_INVALID_ARGS;
+          break;
+      }
+      break;
+    case ACPI_IRQ_TRIGGER_LEVEL:
+      switch (irq.polarity) {
+        case ACPI_IRQ_ACTIVE_LOW:
+          mode = ZX_INTERRUPT_MODE_LEVEL_LOW;
+          break;
+        case ACPI_IRQ_ACTIVE_HIGH:
+          mode = ZX_INTERRUPT_MODE_LEVEL_HIGH;
+          break;
+        default:
+          st = ZX_ERR_INVALID_ARGS;
+          break;
+      }
+      break;
+    default:
+      st = ZX_ERR_INVALID_ARGS;
+      break;
+  }
+  if (st != ZX_OK) {
+    completer.ReplyError(st);
+    return;
+  }
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
+  zx::interrupt out_irq;
+  st = zx::interrupt::create(*zx::unowned_resource{get_root_resource()}, irq.pin,
+                             ZX_INTERRUPT_REMAP_IRQ | mode, &out_irq);
+  if (st != ZX_OK) {
+    completer.ReplyError(st);
+    return;
+  }
+
+  completer.ReplySuccess(std::move(out_irq));
 }
 }  // namespace acpi

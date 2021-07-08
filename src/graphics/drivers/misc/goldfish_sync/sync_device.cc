@@ -21,6 +21,7 @@
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 
+#include "src/devices/lib/acpi/client.h"
 #include "src/graphics/drivers/misc/goldfish_sync/goldfish_sync-bind.h"
 #include "src/graphics/drivers/misc/goldfish_sync/sync_common_defs.h"
 
@@ -42,8 +43,12 @@ uint32_t lower_32_bits(uint64_t n) { return static_cast<uint32_t>(n); }
 
 // static
 zx_status_t SyncDevice::Create(void* ctx, zx_device_t* device) {
-  auto sync_device =
-      std::make_unique<goldfish::sync::SyncDevice>(device, /* can_read_multiple_commands= */ true);
+  auto client = acpi::Client::Create(device);
+  if (client.is_error()) {
+    return client.status_value();
+  }
+  auto sync_device = std::make_unique<goldfish::sync::SyncDevice>(
+      device, /* can_read_multiple_commands= */ true, std::move(client.value()));
 
   zx_status_t status = sync_device->Bind();
   if (status == ZX_OK) {
@@ -53,10 +58,11 @@ zx_status_t SyncDevice::Create(void* ctx, zx_device_t* device) {
   return status;
 }
 
-SyncDevice::SyncDevice(zx_device_t* parent, bool can_read_multiple_commands)
+SyncDevice::SyncDevice(zx_device_t* parent, bool can_read_multiple_commands, acpi::Client client)
     : SyncDeviceType(parent),
       can_read_multiple_commands_(can_read_multiple_commands),
       acpi_(parent),
+      acpi_fidl_(std::move(client)),
       loop_(&kAsyncLoopConfigNeverAttachToThread) {
   loop_.StartThread("goldfish-sync-loop-thread");
 }
@@ -100,11 +106,13 @@ zx_status_t SyncDevice::Bind() {
     }
   }
 
-  status = acpi_.MapInterrupt(0, &irq_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "map_interrupt failed: %d", status);
-    return status;
+  auto result = acpi_fidl_.borrow().MapInterrupt(0);
+  if (!result.ok() || result->result.is_err()) {
+    zxlogf(ERROR, "map_interrupt failed: %d",
+           !result.ok() ? result.status() : result->result.err());
+    return result.status();
   }
+  irq_.reset(result->result.mutable_response().irq.release());
 
   irq_thread_.emplace(thrd_t{});
   int rc = thrd_create_with_name(

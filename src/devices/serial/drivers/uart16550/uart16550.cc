@@ -35,12 +35,19 @@ static constexpr serial_port_info_t kInfo = {
     .serial_pid = 0,
 };
 
-Uart16550::Uart16550() : DeviceType(nullptr) {}
+Uart16550::Uart16550()
+    : DeviceType(nullptr),
+      acpi_fidl_(acpi::Client::Create(fidl::WireSyncClient<fuchsia_hardware_acpi::Device>())) {}
 
-Uart16550::Uart16550(zx_device_t* parent) : DeviceType(parent), acpi_(parent) {}
+Uart16550::Uart16550(zx_device_t* parent, acpi::Client acpi)
+    : DeviceType(parent), acpi_(parent), acpi_fidl_(std::move(acpi)) {}
 
 zx_status_t Uart16550::Create(void* /*ctx*/, zx_device_t* parent) {
-  auto dev = std::make_unique<Uart16550>(parent);
+  auto acpi = acpi::Client::Create(parent);
+  if (acpi.is_error()) {
+    return acpi.status_value();
+  }
+  auto dev = std::make_unique<Uart16550>(parent, std::move(acpi.value()));
 
   auto status = dev->Init();
   if (status != ZX_OK) {
@@ -78,11 +85,12 @@ zx_status_t Uart16550::Init() {
     return status;
   }
 
-  status = acpi_.MapInterrupt(kIrqIndex, &interrupt_);
-  if (status != ZX_OK) {
+  auto irq = acpi_fidl_.borrow().MapInterrupt(kIrqIndex);
+  if (!irq.ok() || irq->result.is_err()) {
     zxlogf(ERROR, "%s: acpi_.MapInterrupt failed", __func__);
     return status;
   }
+  interrupt_.reset(irq->result.mutable_response().irq.release());
 
   zx_info_resource_t resource_info;
   status =

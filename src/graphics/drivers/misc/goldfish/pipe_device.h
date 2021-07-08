@@ -24,6 +24,8 @@
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
+#include "src/devices/lib/acpi/client.h"
+
 namespace goldfish {
 
 class PipeDevice;
@@ -37,7 +39,7 @@ class PipeDevice : public DeviceType {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  explicit PipeDevice(zx_device_t* parent);
+  explicit PipeDevice(zx_device_t* parent, acpi::Client client);
   ~PipeDevice();
 
   zx_status_t Bind();
@@ -69,6 +71,7 @@ class PipeDevice : public DeviceType {
   };
 
   ddk::AcpiProtocolClient acpi_;
+  acpi::Client acpi_fidl_;
   zx::interrupt irq_;
   zx::bti bti_;
   ddk::IoBuffer io_buffer_;

@@ -20,6 +20,8 @@
 #include <hwreg/bitfields.h>
 #include <hwreg/pio.h>
 
+#include "src/devices/lib/acpi/client.h"
+
 #if UART16550_TESTING
 #include <hwreg/mock.h>
 #endif
@@ -33,7 +35,7 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
  public:
   Uart16550();
 
-  explicit Uart16550(zx_device_t* parent);
+  explicit Uart16550(zx_device_t* parent, acpi::Client acpi);
 
   size_t FifoDepth() const;
 
@@ -86,6 +88,7 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
   void HandleInterrupts();
 
   ddk::AcpiProtocolClient acpi_;
+  acpi::Client acpi_fidl_;
   std::mutex device_mutex_;
 
   std::thread interrupt_thread_;

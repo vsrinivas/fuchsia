@@ -40,6 +40,7 @@ class Device : public fidl::WireServer<fuchsia_hardware_acpi::Device> {
 
   MOCK_FN_IMPL(GetBusId, ZX_ERR_NOT_SUPPORTED);
   MOCK_FN_IMPL(EvaluateObject, fuchsia_hardware_acpi::wire::Status::kNotImplemented);
+  MOCK_FN_IMPL(MapInterrupt, ZX_ERR_NOT_SUPPORTED);
 
 #undef MOCK_FN_IMPL
 };

@@ -22,7 +22,6 @@ protocol Acpi {
     ConnectServer(zx.handle:CHANNEL server) -> ();
     GetPio(uint32 index) -> (zx.status s, zx.handle:RESOURCE pio);
     GetMmio(uint32 index) -> (zx.status s, AcpiMmio mmio);
-    MapInterrupt(int64 index) -> (zx.status s, zx.handle:INTERRUPT handle);
     GetBti(uint32 bdf, uint32 index) -> (zx.status s, zx.handle:BTI bti);
     ConnectSysmem(zx.handle:CHANNEL connection) -> (zx.status s);
     RegisterSysmemHeap(uint64 heap, zx.handle:CHANNEL connection) -> (zx.status s);

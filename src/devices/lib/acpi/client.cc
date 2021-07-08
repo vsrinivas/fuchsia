@@ -19,7 +19,12 @@ zx::status<Client> Client::Create(zx_device_t* parent) {
     return zx::error(status);
   }
 
-  ddk::AcpiProtocolClient client(parent, "acpi");
+  ddk::AcpiProtocolClient client;
+  if (device_get_fragment_count(parent) == 0) {
+    client = ddk::AcpiProtocolClient(parent);
+  } else {
+    client = ddk::AcpiProtocolClient(parent, "acpi");
+  }
   if (!client.is_valid()) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
