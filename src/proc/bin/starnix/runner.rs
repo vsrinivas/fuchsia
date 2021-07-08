@@ -237,6 +237,12 @@ async fn start_component(
             args.iter().map(|arg| CString::new(arg.clone())).collect::<Result<Vec<CString>, _>>()
         })
         .unwrap_or(Ok(vec![]))?;
+    let environ = runner::get_program_strvec(&start_info, "environ")
+        .map(|args| {
+            args.iter().map(|arg| CString::new(arg.clone())).collect::<Result<Vec<CString>, _>>()
+        })
+        .unwrap_or(Ok(vec![]))?;
+    info!("start_component environment: {:?}", environ);
 
     let ns = start_info.ns.ok_or_else(|| anyhow!("Missing namespace"))?;
 
@@ -276,7 +282,7 @@ async fn start_component(
     let mut argv = vec![binary_path];
     argv.extend(args.into_iter());
 
-    let start_info = task_owner.task.exec(&argv[0], &argv, &vec![])?;
+    let start_info = task_owner.task.exec(&argv[0], &argv, &environ)?;
 
     spawn_task(task_owner, start_info.to_registers(), |result| {
         // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
