@@ -72,6 +72,10 @@ impl FsNodeOps for RemoteNode {
         Err(ENOSYS)
     }
 
+    fn truncate(&self, _node: &FsNode, length: u64) -> Result<(), Errno> {
+        self.zxio.truncate(length).map_err(Errno::from_status_like_fdio)
+    }
+
     fn update_stat(&self, node: &FsNode) -> Result<(), Errno> {
         let attributes = self.zxio.attr_get().map_err(Errno::from_status_like_fdio)?;
         update_stat_from_result(node, attributes)

@@ -85,6 +85,12 @@ impl Zxio {
         Ok(actual)
     }
 
+    pub fn truncate(&self, length: u64) -> Result<(), zx::Status> {
+        let status = unsafe { zxio::zxio_truncate(self.as_ptr(), length) };
+        zx::ok(status)?;
+        Ok(())
+    }
+
     pub fn vmo_get(&self, flags: zx::VmarFlags) -> Result<(zx::Vmo, usize), zx::Status> {
         let mut vmo = 0;
         let mut size = 0;

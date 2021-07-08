@@ -303,6 +303,29 @@ pub fn sys_readlink(
     sys_readlinkat(ctx, FdNumber::AT_FDCWD, user_path, buffer, buffer_size)
 }
 
+pub fn sys_truncate(
+    ctx: &SyscallContext<'_>,
+    user_path: UserCString,
+    length: off_t,
+) -> Result<SyscallResult, Errno> {
+    let length = length.try_into().map_err(|_| EINVAL)?;
+    let file =
+        open_internal(&ctx.task, FdNumber::AT_FDCWD, user_path, fio::OPEN_RIGHT_WRITABLE, 0)?;
+    file.node.truncate(length)?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_ftruncate(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    length: off_t,
+) -> Result<SyscallResult, Errno> {
+    let length = length.try_into().map_err(|_| EINVAL)?;
+    let file = ctx.task.files.get(fd)?;
+    file.node.truncate(length)?;
+    Ok(SUCCESS)
+}
+
 pub fn sys_getcwd(
     ctx: &SyscallContext<'_>,
     buf: UserAddress,

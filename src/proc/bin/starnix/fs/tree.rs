@@ -41,6 +41,10 @@ pub trait FsNodeOps: Send + Sync {
     fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         Err(ENOTDIR)
     }
+    /// Change the length of the file.
+    fn truncate(&self, _node: &FsNode, _length: u64) -> Result<(), Errno> {
+        Err(EINVAL)
+    }
 
     /// Update node.stat if needed.
     fn update_stat(&self, _node: &FsNode) -> Result<(), Errno> {
@@ -106,6 +110,10 @@ impl FsNode {
             return Err(EEXIST);
         }
         Ok(node)
+    }
+
+    pub fn truncate(&self, length: u64) -> Result<(), Errno> {
+        self.ops().truncate(self, length)
     }
 
     pub fn update_stat(&self) -> Result<stat_t, Errno> {
