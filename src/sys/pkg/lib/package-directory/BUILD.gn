@@ -1,0 +1,54 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("package-directory") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/fidl-fuchsia-pkg-ext",
+    "//src/sys/pkg/lib/blobfs",
+    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+    "//src/sys/pkg/lib/fuchsia-hash",
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//src/sys/pkg/bin/pm:pm_bin",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+fuchsia_component("test-component") {
+  component_name = "package-directory-lib-test"
+  visibility = [ ":*" ]
+  testonly = true
+  deps = [ ":package-directory_test" ]
+  manifest = "meta/package-directory-lib-test.cml"
+}
+
+fuchsia_test_package("package-directory-tests") {
+  test_components = [ ":test-component" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":package-directory-tests" ]
+}

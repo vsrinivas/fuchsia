@@ -122,6 +122,19 @@ impl Client {
         .await
     }
 
+    /// Open the blob for reading. The target is not verified to be any
+    /// particular type and may not implement the fuchsia.io.File protocol.
+    pub fn open_blob_for_read_no_describe(
+        &self,
+        blob: &Hash,
+    ) -> Result<FileProxy, io_util::node::OpenError> {
+        io_util::directory::open_file_no_describe(
+            &self.proxy,
+            &blob.to_string(),
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        )
+    }
+
     /// Open a new blob for write.
     pub async fn open_blob_for_write(
         &self,
