@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/tools/integration/fint/filetype"
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
@@ -49,17 +48,58 @@ const (
 	unknownAffectedStatus = "Found dependency (all)"
 )
 
-// skipAnalysisAllowlist returns the directories whose files cannot be
-// correctly analyzed for build graph dependencies. If there are changed
-// files in these directories, we should skip the analysis and always
-// build. This allowlist should cover all the targets that skip strict
-// source checking listed in the allowlists here:
-// //build/go/BUILD.gn
-// //build/rust/BUILD.gn
-func skipAnalysisAllowlist() []string {
-	return []string{
+// isSupportedPath returns whether the given file is in a directory whose files
+// can be correctly analyzed for build graph dependencies. If the file is in an
+// unsupported directory, we should skip the analysis and always build.
+func isSupportedPath(path string) bool {
+	// This allowlist should cover all the targets that skip strict source
+	// checking listed in the allowlists here:
+	// //build/go/BUILD.gn
+	// //build/rust/BUILD.gn
+	skipAnalysisAllowlist := []string{
 		"third_party/",
 	}
+	for _, prefix := range skipAnalysisAllowlist {
+		if strings.HasPrefix(path, prefix) {
+			return false
+		}
+	}
+	return true
+}
+
+// isSupportedFileType returns whether a given file can be correctly analyzed
+// for build graph dependencies, based on its file extension.
+func isSupportedFileType(path string) bool {
+	if filepath.Base(path) == "OWNERS" {
+		return true
+	}
+	supportedExtensions := []string{
+		".c",
+		".cc",
+		".cml",
+		".cmake",
+		".cmx",
+		".cpp",
+		".dart",
+		".fidl",
+		".gn",
+		".gni",
+		".go",
+		".golden",
+		".md",
+		".pb",
+		".png",
+		".proto",
+		".py",
+		".rs",
+		".rst",
+		".sh",
+		".template",
+		".tmpl",
+		".yaml",
+	}
+	extension := filepath.Ext(path)
+	return contains(supportedExtensions, extension)
 }
 
 // shouldBuild runs `gn analyze` on the given files to determine
@@ -141,33 +181,10 @@ func formatFilePaths(paths []string) []string {
 
 func canAnalyzeFiles(ctx context.Context, changedFiles []string) bool {
 	for _, path := range changedFiles {
-		if shouldSkipAnalysis(path) {
-			logger.Debugf(ctx, "Build graph analysis is not supported for file %q", path)
-			return false
-		}
-		ft := filetype.TypeForFile(path)
-		if !containsFileType(filetype.KnownFileTypes(), ft) {
+		if !isSupportedPath(path) || !isSupportedFileType(path) {
 			logger.Debugf(ctx, "Build graph analysis is not supported for file %q", path)
 			return false
 		}
 	}
 	return true
-}
-
-func shouldSkipAnalysis(file string) bool {
-	for _, path := range skipAnalysisAllowlist() {
-		if strings.HasPrefix(file, path) {
-			return true
-		}
-	}
-	return false
-}
-
-func containsFileType(collection []filetype.FileType, target filetype.FileType) bool {
-	for _, ft := range collection {
-		if ft == target {
-			return true
-		}
-	}
-	return false
 }

@@ -178,7 +178,7 @@ func TestCanAnalyzeFiles(t *testing.T) {
 		},
 		{
 			name:               "some file types unsupported",
-			files:              []string{"foo.py", "bar/baz.invalid"},
+			files:              []string{"foo.py", "bar/baz.invalid", "noextension"},
 			expectedCanAnalyze: false,
 		},
 	}

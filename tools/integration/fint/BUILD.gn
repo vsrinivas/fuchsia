@@ -48,18 +48,6 @@ go_library("proto_lib") {
   ]
 }
 
-go_library("filetype_lib") {
-  sources = [
-    "filetype/filetype.go",
-    "filetype/filetype_test.go",
-  ]
-}
-
-go_test("filetype_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/fint/filetype" ]
-  deps = [ ":filetype_lib" ]
-}
-
 go_library("fint_lib") {
   sources = [
     "build.go",
@@ -76,7 +64,6 @@ go_library("fint_lib") {
   ]
 
   deps = [
-    ":filetype_lib",
     ":proto_lib",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:github.com/google/subcommands",
@@ -134,7 +121,6 @@ go_binary("fint") {
 group("tests") {
   testonly = true
   deps = [
-    ":filetype_tests",
     ":fint_lib_tests",
     ":main_tests",
   ]
