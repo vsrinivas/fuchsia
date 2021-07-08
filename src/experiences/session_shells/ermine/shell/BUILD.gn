@@ -15,6 +15,7 @@ group("shell") {
   public_deps = [
     ":ermine",
     ":images",
+    ":oobe",
   ]
 }
 
@@ -30,6 +31,12 @@ declare_args() {
 dart_library("lib") {
   package_name = "ermine"
   null_safe = true
+
+  entrypoints = [
+    "main.dart",
+    "oobe_main.dart",
+    "test_main.dart",
+  ]
 
   services = [
     "src/services/focus_service.dart",
@@ -92,10 +99,7 @@ dart_library("lib") {
     "src/widgets/status.dart",
   ]
 
-  sources = [
-              "main.dart",
-              "test_main.dart",
-            ] + services + states + utils + widgets
+  sources = entrypoints + services + states + utils + widgets
 
   deps = [
     "//sdk/dart/fidl",
@@ -167,6 +171,21 @@ fuchsia_package("ermine") {
   } else {
     deps += [ ":default_config" ]
   }
+}
+
+flutter_component("oobe_component") {
+  main_dart = "oobe_main.dart"
+  main_package = "ermine"
+  component_name = "oobe"
+  manifest = "meta/oobe.cmx"
+  deps = [
+    ":lib",
+    ":resources",
+  ]
+}
+
+fuchsia_package("oobe") {
+  deps = [ ":oobe_component" ]
 }
 
 tz_ids_path = "${target_gen_dir}/tz_ids.txt"

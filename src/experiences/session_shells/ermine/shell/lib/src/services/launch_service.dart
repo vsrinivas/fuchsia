@@ -8,7 +8,7 @@ import 'package:fuchsia_services/services.dart';
 /// Defines a service to launch applications given their [url] using the
 /// [ElementManager.proposeElement] API.
 class LaunchService {
-  Future<void> launch(String title, String url) async {
+  Future<ElementControllerProxy> launch(String title, String url) async {
     final elementController = ElementControllerProxy();
     final proxy = ElementManagerProxy();
 
@@ -34,5 +34,7 @@ class LaunchService {
 
     proxy.ctrl.close();
     await incoming.close();
+
+    return elementController;
   }
 }

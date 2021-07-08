@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:ui';
+
 import 'package:ermine/src/services/oobe/channel_service.dart';
 import 'package:ermine/src/services/oobe/privacy_consent_service.dart';
 import 'package:ermine/src/services/oobe/ssh_keys_service.dart';
@@ -19,6 +21,7 @@ enum SshImport { github, manual }
 
 /// Defines the state of an application view.
 abstract class OobeState with Store {
+  ObservableStream<Locale> get localeStream;
   ObservableValue<OobeScreen> get screen;
   ObservableValue<bool> get updateChannelsAvailable;
   ObservableValue<String> get currentChannel;
@@ -44,6 +47,7 @@ abstract class OobeState with Store {
   Action get sshBackScreen;
   Action get sshAdd;
   Action get skip;
+  Action get finish;
 
   factory OobeState.fromEnv() {
     return OobeStateImpl(

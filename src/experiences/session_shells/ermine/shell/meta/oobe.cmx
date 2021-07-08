@@ -1,0 +1,31 @@
+{
+  "program": {
+    "data": "data/oobe"
+  },
+  "sandbox": {
+    "features": [
+      "config-data"
+    ],
+    "pkgfs": [
+      "packages"
+    ],
+    "services": [
+      "fuchsia.accessibility.semantics.SemanticsManager",
+      "fuchsia.cobalt.LoggerFactory",
+      "fuchsia.fonts.Provider",
+      "fuchsia.intl.PropertyProvider",
+      "fuchsia.logger.LogSink",
+      "fuchsia.settings.Intl",
+      "fuchsia.settings.Privacy",
+      "fuchsia.ssh.AuthorizedKeys",
+      "fuchsia.sys.Environment",
+      "fuchsia.ui.input.ImeService",
+      "fuchsia.ui.input.InputDeviceRegistry",
+      "fuchsia.ui.input3.Keyboard",
+      "fuchsia.ui.policy.Presentation",
+      "fuchsia.ui.policy.Presenter",
+      "fuchsia.ui.scenic.Scenic",
+      "fuchsia.update.channelcontrol.ChannelControl"
+    ]
+  }
+}

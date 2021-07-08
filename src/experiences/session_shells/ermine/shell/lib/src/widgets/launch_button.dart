@@ -4,7 +4,6 @@
 
 import 'package:ermine/src/states/app_state.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_mobx/flutter_mobx.dart';
 
 /// Defines a button to display system overlays persistently.
 class LaunchButton extends StatelessWidget {
@@ -14,28 +13,26 @@ class LaunchButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Observer(builder: (context) {
-      return Material(
-        type: MaterialType.transparency,
-        child: Ink(
-          width: 56,
-          height: 56,
-          decoration: ShapeDecoration(
-            color: Colors.transparent,
-            shape: CircleBorder(),
-          ),
-          child: IconButton(
-            iconSize: 32,
-            onPressed: appState.showOverlay,
-            padding: EdgeInsets.all(12),
-            icon: Image.asset(
-              'images/Fuchsia-logo-2x.png',
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-            tooltip: 'Show App Launcher',
-          ),
+    return Material(
+      type: MaterialType.transparency,
+      child: Ink(
+        width: 56,
+        height: 56,
+        decoration: ShapeDecoration(
+          color: Colors.transparent,
+          shape: CircleBorder(),
         ),
-      );
-    });
+        child: IconButton(
+          iconSize: 32,
+          onPressed: appState.showOverlay,
+          padding: EdgeInsets.all(12),
+          icon: Image.asset(
+            'images/Fuchsia-logo-2x.png',
+            color: Theme.of(context).colorScheme.secondary,
+          ),
+          tooltip: 'Show App Launcher',
+        ),
+      ),
+    );
   }
 }

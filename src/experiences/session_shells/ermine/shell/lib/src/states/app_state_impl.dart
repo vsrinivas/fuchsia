@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:isolate';
 import 'dart:ui';
 
 import 'package:ermine/src/services/focus_service.dart';
@@ -74,14 +75,29 @@ class AppStateImpl with Disposable implements AppState {
       ..serve();
 
     // Add reactions to state changes.
-    reactions.add(reaction<bool>((_) => views.isNotEmpty, (hasViews) {
-      // Listen to out-of-band pointer events only when apps are launched.
-      pointerEventsService.listen = hasViews;
-      // Display overlays when no views are present.
-      if (!hasViews) {
-        overlayVisibility.value = true;
-      }
-    }));
+    reactions
+      ..add(reaction<bool>((_) => views.isNotEmpty, (hasViews) {
+        // Listen to out-of-band pointer events only when apps are launched.
+        pointerEventsService.listen = hasViews;
+        // Display overlays when no views are present.
+        if (!hasViews) {
+          overlayVisibility.value = true;
+        }
+      }))
+      ..add(when((_) => oobeVisible.value, () async {
+        // Start oobe component.
+        try {
+          final elementController = await launchService.launch(
+              'Oobe', 'fuchsia-pkg://fuchsia.com/oobe#meta/oobe.cmx');
+          await elementController.ctrl.whenClosed;
+          // ignore: avoid_catches_without_on_clauses
+        } catch (e) {
+          // If OOBE launch fails, it is a fatal error. Quit the shell.
+          log.severe('Failed to launch OOBE. Quiting.');
+          Isolate.current.kill();
+        }
+        oobeFinished();
+      }));
   }
 
   @override
@@ -245,7 +261,7 @@ class AppStateImpl with Disposable implements AppState {
 
   @override
   late final Action closeView = () {
-    if (views.isEmpty) {
+    if (views.isEmpty || oobeVisible.value) {
       return;
     }
     topView.value.close();
@@ -265,26 +281,12 @@ class AppStateImpl with Disposable implements AppState {
 
   @override
   late final Action launchFeedback = () async {
-    try {
-      await launchService.launch(Strings.feedback, kFeedbackUrl);
-      _clearError(kFeedbackUrl, 'ProposeElementError');
-      // ignore: avoid_catches_without_on_clauses
-    } catch (e) {
-      _onLaunchError(kFeedbackUrl, e.toString());
-      log.shout('$e: Failed to propose element <$kFeedbackUrl>');
-    }
+    launch([Strings.feedback, kFeedbackUrl]);
   }.asAction();
 
   @override
   late final Action launchLicense = () async {
-    try {
-      await launchService.launch(Strings.feedback, kLicenseUrl);
-      _clearError(kLicenseUrl, 'ProposeElementError');
-      // ignore: avoid_catches_without_on_clauses
-    } catch (e) {
-      _onLaunchError(kLicenseUrl, e.toString());
-      log.shout('$e: Failed to propose element <$kLicenseUrl>');
-    }
+    launch([Strings.license, kLicenseUrl]);
   }.asAction();
 
   @override

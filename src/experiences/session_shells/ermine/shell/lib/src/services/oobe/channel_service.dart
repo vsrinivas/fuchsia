@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:ui';
+
+import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:fidl_fuchsia_update_channelcontrol/fidl_async.dart';
 import 'package:flutter/foundation.dart';
+import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:internationalization/strings.dart';
 
@@ -12,12 +16,15 @@ class ChannelService {
   late final ValueChanged<bool> onConnected;
 
   final _control = ChannelControlProxy();
+  final _intl = PropertyProviderProxy();
 
   ChannelService() {
+    Incoming.fromSvcPath().connectToService(_intl);
     Incoming.fromSvcPath().connectToService(_control);
     _control.ctrl.whenBound.then((_) => onConnected(true));
     _control.ctrl.whenClosed.then((_) => onConnected(false));
   }
+  Stream<Locale> get stream => LocaleSource(_intl).stream();
 
   /// Get the current update channel.
   Future<String> get currentChannel async {
@@ -50,6 +57,7 @@ class ChannelService {
   };
 
   void dispose() {
+    _intl.ctrl.close();
     _control.ctrl.close();
   }
 }

@@ -4,37 +4,44 @@
 
 import 'dart:ui';
 
-import 'package:ermine/src/states/app_state.dart';
+import 'package:ermine/src/states/oobe_state.dart';
 import 'package:ermine/src/utils/fuchsia_keyboard.dart';
+import 'package:ermine/src/utils/themes.dart';
 import 'package:ermine/src/utils/widget_factory.dart';
-import 'package:ermine/src/widgets/app_view.dart';
-import 'package:ermine/src/widgets/overlays.dart';
-import 'package:flutter/material.dart' hide AppBar;
+import 'package:ermine/src/widgets/oobe.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:internationalization/localizations_delegate.dart'
     as localizations;
 import 'package:internationalization/supported_locales.dart'
     as supported_locales;
 import 'package:intl/intl.dart';
 
-/// Builds the top level application widget that reacts to locale changes.
-class App extends StatelessWidget {
-  final AppState app;
+Future<void> main() async {
+  setupLogger(name: 'oobe');
+  final oobe = OobeState.fromEnv();
+  final app = OobeApp(oobe);
+  runApp(app);
+}
 
-  const App(this.app);
+class OobeApp extends StatelessWidget {
+  final OobeState oobe;
+
+  const OobeApp(this.oobe);
 
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
-      final locale = app.localeStream.value;
+      final locale = oobe.localeStream.value;
       if (locale == null) {
         return Offstage();
       }
       Intl.defaultLocale = locale.toString();
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: app.theme.value,
+        theme: AppTheme.darkTheme,
         locale: locale,
         localizationsDelegates: [
           localizations.delegate(),
@@ -52,18 +59,10 @@ class App extends StatelessWidget {
           return Material(
             type: MaterialType.canvas,
             child: Observer(builder: (_) {
-              return Stack(
-                fit: StackFit.expand,
-                children: <Widget>[
-                  // Show fullscreen top view.
-                  if (app.views.isNotEmpty)
-                    WidgetFactory.create(() => AppView(app)),
-
-                  // Show scrim and overlay layers if an overlay is visible.
-                  if (app.overlaysVisible.value)
-                    WidgetFactory.create(() => Overlays(app)),
-                ],
-              );
+              return WidgetFactory.create(() => Oobe(
+                    oobe,
+                    onFinish: oobe.finish,
+                  ));
             }),
           );
         }),

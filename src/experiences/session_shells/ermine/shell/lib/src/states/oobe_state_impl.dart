@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:isolate';
+import 'dart:ui';
+
 import 'package:ermine/src/services/oobe/channel_service.dart';
 import 'package:ermine/src/services/oobe/privacy_consent_service.dart';
 import 'package:ermine/src/services/oobe/ssh_keys_service.dart';
@@ -21,7 +24,7 @@ class OobeStateImpl with Disposable implements OobeState {
     required this.channelService,
     required this.sshKeysService,
     required this.privacyConsentService,
-  }) {
+  }) : localeStream = channelService.stream.asObservable() {
     privacyPolicy = privacyConsentService.privacyPolicy;
 
     channelService.onConnected = (connected) => runInAction(() async {
@@ -42,6 +45,9 @@ class OobeStateImpl with Disposable implements OobeState {
     privacyConsentService.dispose();
     sshKeysService.dispose();
   }
+
+  @override
+  final ObservableStream<Locale> localeStream;
 
   @override
   final Observable<OobeScreen> screen = OobeScreen.channel.asObservable();
@@ -218,5 +224,11 @@ class OobeStateImpl with Disposable implements OobeState {
   @override
   late final Action skip = () {
     sshScreen.value = SshScreen.exit;
+  }.asAction();
+
+  @override
+  late final Action finish = () {
+    dispose();
+    Isolate.current.kill();
   }.asAction();
 }
