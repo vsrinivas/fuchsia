@@ -5,9 +5,12 @@ common base for these tools to prevent code duplication. I encourage you to
 work through the Getting Started section to get a quick overview of the
 framework and how you can use it and write your own plugins!
 
+Scrutiny is integrated into the build, so it is easy to extend it to add new
+static analysers to check platform integrity pre-condition at build time.
+
 ## Getting Started
-To get started you can launch Scrutiny with the command `fx scrutiny`. If the
-tool isn't available on your path you can build it by simply adding:
+To get started you can launch Scrutiny with the command `ffx scrutiny shell`. If
+the tool isn't available on your path you can build it by simply adding:
 `--with //src/security/scrutiny` or `--with //bundles:tools` to your fx
 set command.
 
@@ -30,12 +33,42 @@ With just these two instructions you should be able to get a pretty good idea
 of the different commands but to see some common workflows check out the
 `examples` directory which contains a selection of Scrutiny scripts (.sc).
 
+## Common Workflows
+Some commonly used workflows can be accessed without using the shell interface
+directly. These have been integrated into ffx to improve usability:
+
+### Extract Fuchsia Packages
+```
+ffx scrutiny extract package [url] [output]
+```
+This command will extract a package from a given url to an output directory.
+This is very useful if you want to quickly inspect a packages contents without
+having to resolve all the url to blob merkle mappings.
+
+### Extract Common Formats Zircon Boot Image, FVM & BlobFS
+```
+ffx scrutiny extract zbi [input.zbi] [output]
+ffx scrutiny extract blobfs [blobfs.blk] [output]
+ffx scrutiny extract fvm [fvm.blk] [output]
+```
+Scrutiny makes it easy to internally inspect common file formats such as the
+ZBI, a Blobfs block or a Fuchsia volume.
+
+### Verify Component Routes
+```
+ffx scrutiny verify routes
+```
+The Scrutiny data model has built in support for doing static capability flow
+analysis to verify that capability routes are well-formed. This means you can
+check that your current build doesn't have any components that are requesting
+capabilities that are not offered to it.
+
 ### Running Scripts
 Scrutiny scripts (.sc) can be run with the `fx scrutiny -s script_name` command.
 This will output the content of your script to the screen as it runs through.
 To get started try out the following example:
 
-`fx scrutiny -s examples/zbi_inspect.sc`
+`ffx scrutiny shell -s examples/zbi_inspect.sc`
 
 This script will extract the ZBI into your /tmp/ and allow you to see some of
 the inner workings of how the Zircon Boot Image is packaged.
