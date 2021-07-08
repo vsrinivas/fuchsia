@@ -4,4 +4,4 @@
 
 mod repo;
 
-pub use repo::{RepositoryError, RepositorySpec, RepositoryStorageType};
+pub use repo::{RepositoryError, RepositorySpec, RepositoryStorageType, RepositoryTarget};

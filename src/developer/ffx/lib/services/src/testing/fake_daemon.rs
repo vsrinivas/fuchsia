@@ -56,6 +56,7 @@ where
 
 #[derive(Default, Clone)]
 pub struct FakeDaemon {
+    nodename: Option<String>,
     register: Option<ServiceRegister>,
 }
 
@@ -120,18 +121,27 @@ impl DaemonServiceProvider for FakeDaemon {
                 },
                 _ => bail!("invalid selector"),
             };
-        Ok((bridge::Target::EMPTY, self.open_service_proxy(service_name).await?))
+        Ok((
+            bridge::Target { nodename: self.nodename.clone(), ..bridge::Target::EMPTY },
+            self.open_service_proxy(service_name).await?,
+        ))
     }
 }
 
 #[derive(Default)]
 pub struct FakeDaemonBuilder {
     map: NameToStreamHandlerMap,
+    nodename: Option<String>,
 }
 
 impl FakeDaemonBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn nodename(mut self, nodename: String) -> Self {
+        self.nodename = Some(nodename);
+        self
     }
 
     pub fn register_instanced_service_closure<S, F>(mut self, f: F) -> Self
@@ -162,7 +172,7 @@ impl FakeDaemonBuilder {
     }
 
     pub fn build(self) -> FakeDaemon {
-        FakeDaemon { register: Some(ServiceRegister::new(self.map)) }
+        FakeDaemon { register: Some(ServiceRegister::new(self.map)), nodename: self.nodename }
     }
 }
 

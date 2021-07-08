@@ -40,6 +40,9 @@ protocol RepositoryRegistry {
 
     ListRepositories(request<RepositoryIterator> iterator);
 
+    /// Registers a repository on a target.
+    ///
+    /// `target_info`: Metadata describing the repository registration.
     RegisterTarget(RepositoryTarget target_info) -> () error RepositoryError;
 
     /// Deregisters a repository from a target.

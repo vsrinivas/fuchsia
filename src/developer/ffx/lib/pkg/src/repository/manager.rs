@@ -36,6 +36,11 @@ impl RepositoryManager {
         self.repositories.write().remove(name).is_some()
     }
 
+    /// Removes all [Repositories](Repository) from the [RepositoryManager].
+    pub fn clear(&self) {
+        self.repositories.write().clear();
+    }
+
     /// Iterate through all [Repositories].
     pub fn repositories<'a>(&'a self) -> impl std::iter::Iterator<Item = ArcRepository> + 'a {
         let mut ret = self.repositories.read().values().map(Arc::clone).collect::<Vec<_>>();
@@ -75,6 +80,20 @@ mod test {
         );
 
         manager.remove(REPO_NAME);
+        assert!(manager.repositories().next().is_none());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_clear() {
+        let repo1 = make_readonly_empty_repository("repo1").await.unwrap();
+        let repo2 = make_readonly_empty_repository("repo2").await.unwrap();
+
+        let manager = RepositoryManager::new();
+        manager.add(Arc::new(repo1));
+        manager.add(Arc::new(repo2));
+
+        manager.clear();
+
         assert!(manager.repositories().next().is_none());
     }
 }

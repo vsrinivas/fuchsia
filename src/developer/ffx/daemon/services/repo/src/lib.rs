@@ -3,20 +3,26 @@
 // found in the LICENSE file.
 use {
     anyhow::{anyhow, Context as _, Result},
-    async_lock::RwLock,
+    async_lock::{Mutex, RwLock},
     async_trait::async_trait,
     ffx_config::{self, ConfigLevel},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge as bridge,
-    fidl_fuchsia_developer_bridge_ext::RepositorySpec,
+    fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryTarget},
     fidl_fuchsia_pkg::RepositoryManagerMarker,
     fidl_fuchsia_pkg_rewrite::{EngineMarker, LiteralRule, Rule},
     fuchsia_async as fasync,
     futures::{FutureExt as _, StreamExt as _},
     pkg::repository::{Repository, RepositoryManager, RepositoryServer, LISTEN_PORT},
-    serde_json,
+    serde_json::{self, Value},
     services::prelude::*,
-    std::{convert::TryInto, net, sync::Arc, time::Duration},
+    std::{
+        collections::HashMap,
+        convert::{TryFrom, TryInto},
+        net,
+        sync::Arc,
+        time::Duration,
+    },
 };
 
 const REPOSITORY_MANAGER_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.RepositoryManager";
@@ -34,6 +40,13 @@ struct ServerInfo {
 pub struct Repo {
     manager: Arc<RepositoryManager>,
     server: RwLock<Option<ServerInfo>>,
+    registered_targets: Mutex<HashMap<(String, String), RepositoryTarget>>,
+}
+
+#[derive(PartialEq)]
+enum SaveConfig {
+    Save,
+    DoNotSave,
 }
 
 impl Repo {
@@ -74,14 +87,106 @@ impl Repo {
         Ok(())
     }
 
+    async fn load_repositories_from_config(&self) {
+        let value = match ffx_config::get::<Value, _>("repository.server.repositories").await {
+            Ok(value) => value,
+            Err(err) => {
+                log::warn!("failed to load repositories: {:?}", err);
+                return;
+            }
+        };
+
+        let repos = match value {
+            Value::Object(repos) => repos,
+            _ => {
+                log::warn!("expected repository.server.repositories to be a map, not {}", value);
+                return;
+            }
+        };
+
+        for (name, entry) in repos.into_iter() {
+            // Parse the repository spec.
+            let repo_spec = match serde_json::from_value(entry) {
+                Ok(repo_spec) => repo_spec,
+                Err(err) => {
+                    log::warn!("failed to parse repository {:?}: {:?}", name, err);
+                    continue;
+                }
+            };
+
+            // Add the repository.
+            if let Err(err) = self.add_repository(&name, repo_spec, SaveConfig::DoNotSave).await {
+                log::warn!("failed to add the repository {:?}: {:?}", name, err);
+                continue;
+            }
+        }
+    }
+
+    async fn load_registrations_from_config(&self, cx: &Context) {
+        let value = match ffx_config::get::<Value, _>("repository.server.registrations").await {
+            Ok(value) => value,
+            Err(err) => {
+                log::warn!("failed to load registrations: {:?}", err);
+                return;
+            }
+        };
+
+        let registrations = match value {
+            Value::Object(registrations) => registrations,
+            _ => {
+                log::warn!("expected repository.server.registrations to be a map, not {}", value);
+                return;
+            }
+        };
+
+        for (repo_name, targets) in registrations.into_iter() {
+            let targets = match targets {
+                Value::Object(targets) => targets,
+                _ => {
+                    log::warn!(
+                        "repository {:?} targets should be a map, not {}",
+                        repo_name,
+                        targets
+                    );
+                    continue;
+                }
+            };
+
+            for (target_nodename, target_info) in targets.into_iter() {
+                let target_info = match serde_json::from_value(target_info) {
+                    Ok(target_info) => target_info,
+                    Err(err) => {
+                        log::warn!(
+                            "failed to parse registration {:?} {:?}: {:?}",
+                            repo_name,
+                            target_nodename,
+                            err
+                        );
+                        continue;
+                    }
+                };
+
+                if let Err(err) = self.register_target(cx, target_info, SaveConfig::DoNotSave).await
+                {
+                    log::warn!(
+                        "failed to register target {:?} {:?}: {:?}",
+                        repo_name,
+                        target_nodename,
+                        err
+                    );
+                    continue;
+                }
+            }
+        }
+    }
+
     async fn add_repository(
         &self,
-        name: String,
-        repo_spec: bridge::RepositorySpec,
+        name: &str,
+        repo_spec: RepositorySpec,
+        save_config: SaveConfig,
     ) -> std::result::Result<(), bridge::RepositoryError> {
         log::info!("Adding repository {} {:?}", name, repo_spec);
-
-        let repo_spec: RepositorySpec = repo_spec.try_into()?;
 
         let json_repo_spec = serde_json::to_value(repo_spec.clone()).map_err(|err| {
             log::error!("Unable to serialize repository spec {:?}: {:#?}", repo_spec, err);
@@ -89,21 +194,23 @@ impl Repo {
         })?;
 
         // Create the repository.
-        let repo = Repository::from_repository_spec(&name, repo_spec).await.map_err(|err| {
+        let repo = Repository::from_repository_spec(name, repo_spec).await.map_err(|err| {
             log::error!("Unable to create repository: {:#?}", err);
             bridge::RepositoryError::IoError
         })?;
 
-        // Save the filesystem configuration.
-        ffx_config::set(
-            (format!("repository.server.repositories.{}", name).as_str(), ConfigLevel::User),
-            json_repo_spec,
-        )
-        .await
-        .map_err(|err| {
-            log::error!("Failed to save repository: {:#?}", err);
-            bridge::RepositoryError::IoError
-        })?;
+        if save_config == SaveConfig::Save {
+            // Save the filesystem configuration.
+            ffx_config::set(
+                (format!("repository.server.repositories.{}", name).as_str(), ConfigLevel::User),
+                json_repo_spec,
+            )
+            .await
+            .map_err(|err| {
+                log::error!("Failed to save repository: {:#?}", err);
+                bridge::RepositoryError::IoError
+            })?;
+        }
 
         // Finally add the repository.
         self.manager.add(Arc::new(repo));
@@ -114,26 +221,27 @@ impl Repo {
     async fn register_target(
         &self,
         cx: &Context,
-        target_info: bridge::RepositoryTarget,
+        target_info: RepositoryTarget,
+        save_config: SaveConfig,
     ) -> std::result::Result<(), bridge::RepositoryError> {
-        let repo_name = target_info.repo_name.as_ref().ok_or_else(|| {
-            log::warn!("Registering repository target is missing a repository name");
-            bridge::RepositoryError::MissingRepositoryName
-        })?;
-
         log::info!(
             "Registering repository {:?} for target {:?}",
-            repo_name,
+            target_info.repo_name,
             target_info.target_identifier
         );
 
+        let json_target_info = serde_json::to_value(&target_info).map_err(|err| {
+            log::error!("Unable to serialize registration info {:?}: {:#?}", target_info, err);
+            bridge::RepositoryError::InternalError
+        })?;
+
         let repo = self
             .manager
-            .get(&repo_name)
+            .get(&target_info.repo_name)
             .ok_or_else(|| bridge::RepositoryError::NoMatchingRepository)?;
 
-        let proxy = cx
-            .open_target_proxy::<RepositoryManagerMarker>(
+        let (target, proxy) = cx
+            .open_target_proxy_with_info::<RepositoryManagerMarker>(
                 target_info.target_identifier.clone(),
                 REPOSITORY_MANAGER_SELECTOR,
             )
@@ -147,11 +255,16 @@ impl Repo {
                 bridge::RepositoryError::TargetCommunicationFailure
             })?;
 
+        let target_nodename = target.nodename.ok_or_else(|| {
+            log::warn!("target {:?} does not have a nodename", target_info.target_identifier);
+            bridge::RepositoryError::InternalError
+        })?;
+
         // TODO(fxbug.dev/77015): parameterize the mirror_url value here once we are dynamically assigning ports.
         let config = repo
             .get_config(
                 &format!("localhost:{}/{}", LISTEN_PORT, repo.name()),
-                target_info.storage_type.map(|storage_type| storage_type.into()),
+                target_info.storage_type.clone().map(|storage_type| storage_type.into()),
             )
             .await
             .map_err(|e| {
@@ -171,70 +284,90 @@ impl Repo {
             }
         }
 
-        let aliases = target_info.aliases.unwrap_or(vec![]);
-        if aliases.is_empty() {
-            return Ok(());
+        if !target_info.aliases.is_empty() {
+            let rewrite_proxy = match cx
+                .open_target_proxy::<EngineMarker>(
+                    target_info.target_identifier.clone(),
+                    REWRITE_SERVICE_SELECTOR,
+                )
+                .await
+            {
+                Ok(p) => p,
+                Err(err) => {
+                    log::warn!(
+                        "Failed to open Rewrite Engine target proxy with target name {:?}: {:#?}",
+                        target_info.target_identifier,
+                        err
+                    );
+                    return Err(bridge::RepositoryError::TargetCommunicationFailure);
+                }
+            };
+
+            let (transaction_proxy, server_end) = create_proxy().map_err(|err| {
+                log::warn!("Failed to create Rewrite transaction: {:#?}", err);
+                bridge::RepositoryError::RewriteEngineError
+            })?;
+
+            rewrite_proxy.start_edit_transaction(server_end).map_err(|err| {
+                log::warn!("Failed to start edit transaction: {:#?}", err);
+                bridge::RepositoryError::RewriteEngineError
+            })?;
+
+            for alias in target_info.aliases.iter() {
+                let rule = LiteralRule {
+                    host_match: alias.to_string(),
+                    host_replacement: repo.name().to_string(),
+                    path_prefix_match: "/".to_string(),
+                    path_prefix_replacement: "/".to_string(),
+                };
+                match transaction_proxy.add(&mut Rule::Literal(rule)).await {
+                    Err(err) => {
+                        log::warn!("Failed to add rewrite rule. Error was: {:#?}", err);
+                        return Err(bridge::RepositoryError::RewriteEngineError);
+                    }
+                    Ok(Err(err)) => {
+                        log::warn!("Adding rewrite rule returned failure. Error was: {:#?}", err);
+                        return Err(bridge::RepositoryError::RewriteEngineError);
+                    }
+                    Ok(_) => {}
+                }
+            }
+
+            match transaction_proxy.commit().await {
+                Ok(Ok(())) => {}
+                Ok(Err(err)) => {
+                    log::warn!("Committing rewrite rule returned failure. Error was: {:#?}", err);
+                    return Err(bridge::RepositoryError::RewriteEngineError);
+                }
+                Err(err) => {
+                    log::warn!("Failed to commit rewrite rule. Error was: {:#?}", err);
+                    return Err(bridge::RepositoryError::RewriteEngineError);
+                }
+            }
         }
 
-        let rewrite_proxy = match cx
-            .open_target_proxy::<EngineMarker>(
-                target_info.target_identifier.clone(),
-                REWRITE_SERVICE_SELECTOR,
+        if save_config == SaveConfig::Save {
+            ffx_config::set(
+                (
+                    format!("repository.server.registrations.{}.{}", repo.name(), target_nodename)
+                        .as_str(),
+                    ConfigLevel::User,
+                ),
+                json_target_info,
             )
             .await
-        {
-            Ok(p) => p,
-            Err(err) => {
-                log::warn!(
-                    "Failed to open Rewrite Engine target proxy with target name {:?}: {:#?}",
-                    target_info.target_identifier,
-                    err
-                );
-                return Err(bridge::RepositoryError::TargetCommunicationFailure);
-            }
-        };
-
-        let (transaction_proxy, server_end) = create_proxy().map_err(|err| {
-            log::warn!("Failed to create Rewrite transaction: {:#?}", err);
-            bridge::RepositoryError::RewriteEngineError
-        })?;
-
-        rewrite_proxy.start_edit_transaction(server_end).map_err(|err| {
-            log::warn!("Failed to start edit transaction: {:#?}", err);
-            bridge::RepositoryError::RewriteEngineError
-        })?;
-
-        for alias in aliases.iter() {
-            let rule = LiteralRule {
-                host_match: alias.to_string(),
-                host_replacement: repo.name().to_string(),
-                path_prefix_match: "/".to_string(),
-                path_prefix_replacement: "/".to_string(),
-            };
-            match transaction_proxy.add(&mut Rule::Literal(rule)).await {
-                Err(err) => {
-                    log::warn!("Failed to add rewrite rule. Error was: {:#?}", err);
-                    return Err(bridge::RepositoryError::RewriteEngineError);
-                }
-                Ok(Err(err)) => {
-                    log::warn!("Adding rewrite rule returned failure. Error was: {:#?}", err);
-                    return Err(bridge::RepositoryError::RewriteEngineError);
-                }
-                Ok(_) => {}
-            }
+            .map_err(|err| {
+                log::warn!("Failed to save registration to config: {:#?}", err);
+                bridge::RepositoryError::InternalError
+            })?;
         }
 
-        match transaction_proxy.commit().await {
-            Ok(Ok(())) => Ok(()),
-            Ok(Err(err)) => {
-                log::warn!("failed to deregister repo {:?}: {:?}", repo_name, err);
-                return Err(bridge::RepositoryError::InternalError);
-            }
-            Err(err) => {
-                log::warn!("Failed to remove repo: {:?}", err);
-                return Err(bridge::RepositoryError::TargetCommunicationFailure);
-            }
-        }
+        self.registered_targets
+            .lock()
+            .await
+            .insert((target_info.repo_name.clone(), target_nodename), target_info);
+
+        Ok(())
     }
 
     async fn deregister_target(
@@ -250,8 +383,11 @@ impl Repo {
             .get(&repo_name)
             .ok_or_else(|| bridge::RepositoryError::NoMatchingRepository)?;
 
-        let proxy = cx
-            .open_target_proxy::<RepositoryManagerMarker>(
+        // Hold the lock during the unregistration process.
+        let mut registered_targets = self.registered_targets.lock().await;
+
+        let (target, proxy) = cx
+            .open_target_proxy_with_info::<RepositoryManagerMarker>(
                 target_identifier.clone(),
                 REPOSITORY_MANAGER_SELECTOR,
             )
@@ -265,6 +401,11 @@ impl Repo {
                 bridge::RepositoryError::TargetCommunicationFailure
             })?;
 
+        let target_nodename = target.nodename.ok_or_else(|| {
+            log::warn!("target {:?} does not have a nodename", target_identifier);
+            bridge::RepositoryError::InternalError
+        })?;
+
         match proxy.remove(&repo.repo_url()).await {
             Ok(Ok(())) => {}
             Ok(Err(err)) => {
@@ -277,13 +418,29 @@ impl Repo {
             }
         }
 
+        ffx_config::remove((
+            format!("repository.server.registrations.{}.{}", repo_name, target_nodename,).as_str(),
+            ConfigLevel::User,
+        ))
+        .await
+        .map_err(|err| {
+            log::warn!("Failed to remove registration from config: {:#?}", err);
+            bridge::RepositoryError::InternalError
+        })?;
+
+        registered_targets.remove(&(repo_name, target_nodename));
+
         Ok(())
     }
 }
 
 impl Default for Repo {
     fn default() -> Self {
-        Repo { manager: RepositoryManager::new(), server: RwLock::new(None) }
+        Repo {
+            manager: RepositoryManager::new(),
+            server: RwLock::new(None),
+            registered_targets: Mutex::new(HashMap::new()),
+        }
     }
 }
 
@@ -295,7 +452,12 @@ impl FidlService for Repo {
     async fn handle(&self, cx: &Context, req: bridge::RepositoryRegistryRequest) -> Result<()> {
         match req {
             bridge::RepositoryRegistryRequest::AddRepository { name, repository, responder } => {
-                responder.send(&mut self.add_repository(name, repository).await)?;
+                let mut res = match repository.try_into() {
+                    Ok(repo_spec) => self.add_repository(&name, repo_spec, SaveConfig::Save).await,
+                    Err(err) => Err(err.into()),
+                };
+
+                responder.send(&mut res)?;
                 Ok(())
             }
             bridge::RepositoryRegistryRequest::RemoveRepository { name, responder } => {
@@ -305,7 +467,14 @@ impl FidlService for Repo {
                 Ok(())
             }
             bridge::RepositoryRegistryRequest::RegisterTarget { target_info, responder } => {
-                responder.send(&mut self.register_target(cx, target_info).await)?;
+                let mut res = match RepositoryTarget::try_from(target_info) {
+                    Ok(target_info) => {
+                        self.register_target(cx, target_info, SaveConfig::Save).await
+                    }
+                    Err(err) => Err(err.into()),
+                };
+
+                responder.send(&mut res)?;
                 Ok(())
             }
             bridge::RepositoryRegistryRequest::DeregisterTarget {
@@ -410,37 +579,11 @@ impl FidlService for Repo {
         }
     }
 
-    async fn start(&mut self, _cx: &Context) -> Result<()> {
+    async fn start(&mut self, cx: &Context) -> Result<()> {
         log::info!("Starting repository service");
 
-        match ffx_config::get::<serde_json::Value, _>("repository.server.repositories").await {
-            Ok(serde_json::Value::Object(repos)) => {
-                for (name, entry) in repos.into_iter() {
-                    log::info!("Registering repository {:?}", name);
-
-                    let repo_spec = match serde_json::from_value(entry) {
-                        Ok(repo_spec) => repo_spec,
-                        Err(err) => {
-                            log::warn!("Failed to parse repository {:?}: {:#?}", name, err);
-                            continue;
-                        }
-                    };
-
-                    let repo = match Repository::from_repository_spec(&name, repo_spec).await {
-                        Ok(repo) => repo,
-                        Err(err) => {
-                            log::warn!("Failed to create repository {:?}: {:#?}", name, err);
-                            continue;
-                        }
-                    };
-
-                    self.manager.add(Arc::new(repo));
-                }
-            }
-            res @ _ => {
-                log::warn!("failed to read repositories from config: {:#?}", res);
-            }
-        }
+        self.load_repositories_from_config().await;
+        self.load_registrations_from_config(cx).await;
 
         match ffx_config::get::<String, _>("repository.server.listen").await {
             Ok(address) => {
@@ -475,6 +618,12 @@ impl FidlService for Repo {
             }
         }
 
+        // Drop all repositories.
+        self.manager.clear();
+
+        // Drop all registered targets.
+        self.registered_targets.lock().await.clear();
+
         log::info!("Repository service has been stopped");
 
         Ok(())
@@ -495,11 +644,8 @@ mod tests {
     };
 
     const REPO_NAME: &str = "some_repo";
-    const TARGET_NAME: &str = "some_target";
+    const TARGET_NODENAME: &str = "some_target";
     const EMPTY_REPO_PATH: &str = "host_x64/test_data/ffx_daemon_service_repo/empty-repo";
-
-    #[derive(Default)]
-    struct FakeRepositoryManager {}
 
     fn test_repo_config() -> RepositoryConfig {
         RepositoryConfig {
@@ -517,6 +663,9 @@ mod tests {
             ..RepositoryConfig::EMPTY
         }
     }
+
+    #[derive(Default)]
+    struct FakeRepositoryManager;
 
     #[async_trait(?Send)]
     impl FidlService for FakeRepositoryManager {
@@ -685,6 +834,69 @@ mod tests {
             })
             .register_fidl_service::<FakeEngine>()
             .register_fidl_service::<Repo>()
+            .nodename(TARGET_NODENAME.to_string())
+            .build();
+
+        let proxy = add_repo(&daemon).await;
+        proxy
+            .register_target(bridge::RepositoryTarget {
+                repo_name: Some(REPO_NAME.to_string()),
+                target_identifier: Some(TARGET_NODENAME.to_string()),
+                aliases: Some(vec!["fuchsia.com".to_string()]),
+                ..bridge::RepositoryTarget::EMPTY
+            })
+            .await
+            .expect("communicated with proxy")
+            .expect("target registration to succeed");
+
+        assert_eq!(
+            events.lock().unwrap().drain(..).collect::<Vec<_>>(),
+            vec![Event::Add { repo: test_repo_config() }]
+        );
+
+        proxy
+            .deregister_target(REPO_NAME, Some(TARGET_NODENAME))
+            .await
+            .expect("communicated with proxy")
+            .expect("target unregistration to succeed");
+
+        assert_eq!(
+            events.lock().unwrap().drain(..).collect::<Vec<_>>(),
+            vec![Event::Remove { repo_url: format!("fuchsia-pkg://{}", REPO_NAME) }]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_register_default_target() {
+        ffx_config::init_config_test().unwrap();
+
+        #[derive(Debug, PartialEq)]
+        enum Event {
+            Add { repo: RepositoryConfig },
+            Remove { repo_url: String },
+        }
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let events_closure = Arc::clone(&events);
+
+        let daemon = FakeDaemonBuilder::new()
+            .register_instanced_service_closure::<RepositoryManagerMarker, _>(move |_cx, req| {
+                match req {
+                    RepositoryManagerRequest::Add { repo, responder } => {
+                        events_closure.lock().unwrap().push(Event::Add { repo });
+                        responder.send(&mut Ok(()))?;
+                        Ok(())
+                    }
+                    RepositoryManagerRequest::Remove { repo_url, responder } => {
+                        events_closure.lock().unwrap().push(Event::Remove { repo_url });
+                        responder.send(&mut Ok(()))?;
+                        Ok(())
+                    }
+                    _ => panic!("unexpected request: {:?}", req),
+                }
+            })
+            .register_fidl_service::<FakeEngine>()
+            .register_fidl_service::<Repo>()
+            .nodename(TARGET_NODENAME.to_string())
             .build();
 
         let proxy = add_repo(&daemon).await;
@@ -703,17 +915,6 @@ mod tests {
             events.lock().unwrap().drain(..).collect::<Vec<_>>(),
             vec![Event::Add { repo: test_repo_config() }]
         );
-
-        proxy
-            .deregister_target(REPO_NAME, Some(TARGET_NAME))
-            .await
-            .expect("communicated with proxy")
-            .expect("target unregistration to succeed");
-
-        assert_eq!(
-            events.lock().unwrap().drain(..).collect::<Vec<_>>(),
-            vec![Event::Remove { repo_url: format!("fuchsia-pkg://{}", REPO_NAME) }]
-        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -724,13 +925,14 @@ mod tests {
             .register_fidl_service::<FakeRepositoryManager>()
             .register_fidl_service::<FakeEngine>()
             .register_fidl_service::<Repo>()
+            .nodename(TARGET_NODENAME.to_string())
             .build();
 
         let proxy = add_repo(&daemon).await;
         proxy
             .register_target(bridge::RepositoryTarget {
                 repo_name: Some(REPO_NAME.to_string()),
-                target_identifier: None,
+                target_identifier: Some(TARGET_NODENAME.to_string()),
                 aliases: Some(vec![]),
                 ..bridge::RepositoryTarget::EMPTY
             })
@@ -747,13 +949,14 @@ mod tests {
             .register_fidl_service::<FakeRepositoryManager>()
             .register_fidl_service::<FakeEngine>()
             .register_fidl_service::<Repo>()
+            .nodename(TARGET_NODENAME.to_string())
             .build();
 
         let proxy = add_repo(&daemon).await;
         proxy
             .register_target(bridge::RepositoryTarget {
                 repo_name: Some(REPO_NAME.to_string()),
-                target_identifier: None,
+                target_identifier: Some(TARGET_NODENAME.to_string()),
                 aliases: None,
                 ..bridge::RepositoryTarget::EMPTY
             })
@@ -770,6 +973,7 @@ mod tests {
             .register_fidl_service::<ErroringRepositoryManager>()
             .register_fidl_service::<FakeEngine>()
             .register_fidl_service::<Repo>()
+            .nodename(TARGET_NODENAME.to_string())
             .build();
 
         let proxy = add_repo(&daemon).await;
@@ -777,7 +981,7 @@ mod tests {
             proxy
                 .register_target(bridge::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
-                    target_identifier: None,
+                    target_identifier: Some(TARGET_NODENAME.to_string()),
                     aliases: None,
                     ..bridge::RepositoryTarget::EMPTY
                 })
@@ -794,6 +998,7 @@ mod tests {
             .register_fidl_service::<ErroringRepositoryManager>()
             .register_fidl_service::<FakeEngine>()
             .register_fidl_service::<Repo>()
+            .nodename(TARGET_NODENAME.to_string())
             .build();
 
         let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -801,7 +1006,7 @@ mod tests {
             proxy
                 .register_target(bridge::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
-                    target_identifier: None,
+                    target_identifier: Some(TARGET_NODENAME.to_string()),
                     aliases: None,
                     ..bridge::RepositoryTarget::EMPTY
                 })
@@ -818,11 +1023,12 @@ mod tests {
             .register_fidl_service::<ErroringRepositoryManager>()
             .register_fidl_service::<FakeEngine>()
             .register_fidl_service::<Repo>()
+            .nodename(TARGET_NODENAME.to_string())
             .build();
 
         let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
         assert_eq!(
-            proxy.deregister_target(REPO_NAME, Some(TARGET_NAME),).await.unwrap().unwrap_err(),
+            proxy.deregister_target(REPO_NAME, Some(TARGET_NODENAME)).await.unwrap().unwrap_err(),
             bridge::RepositoryError::NoMatchingRepository
         );
     }

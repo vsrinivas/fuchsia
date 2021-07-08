@@ -5,11 +5,14 @@
 use {
     fidl_fuchsia_developer_bridge as fidl,
     serde::{Deserialize, Serialize},
-    std::{convert::TryFrom, path::PathBuf},
+    std::{
+        convert::{TryFrom, TryInto},
+        path::PathBuf,
+    },
     thiserror::Error,
 };
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum RepositorySpec {
     FileSystem { path: PathBuf },
@@ -77,6 +80,62 @@ impl From<RepositoryStorageType> for fidl::RepositoryStorageType {
         match storage_type {
             RepositoryStorageType::Ephemeral => fidl::RepositoryStorageType::Ephemeral,
             RepositoryStorageType::Persistent => fidl::RepositoryStorageType::Persistent,
+        }
+    }
+}
+
+/// The below types exist to provide definitions with Serialize.
+/// TODO(fxbug.dev/76041) They should be removed in favor of the
+/// corresponding fidl-fuchsia-pkg-ext types.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RepositoryConfig {
+    pub name: String,
+    pub spec: RepositorySpec,
+}
+
+impl TryFrom<fidl::RepositoryConfig> for RepositoryConfig {
+    type Error = RepositoryError;
+
+    fn try_from(repo_config: fidl::RepositoryConfig) -> Result<Self, Self::Error> {
+        Ok(RepositoryConfig { name: repo_config.name, spec: repo_config.spec.try_into()? })
+    }
+}
+
+impl From<RepositoryConfig> for fidl::RepositoryConfig {
+    fn from(repo_config: RepositoryConfig) -> Self {
+        fidl::RepositoryConfig { name: repo_config.name, spec: repo_config.spec.into() }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RepositoryTarget {
+    pub repo_name: String,
+    pub target_identifier: Option<String>,
+    pub aliases: Vec<String>,
+    pub storage_type: Option<RepositoryStorageType>,
+}
+
+impl TryFrom<fidl::RepositoryTarget> for RepositoryTarget {
+    type Error = RepositoryError;
+
+    fn try_from(repo_target: fidl::RepositoryTarget) -> Result<Self, Self::Error> {
+        Ok(RepositoryTarget {
+            repo_name: repo_target.repo_name.ok_or(RepositoryError::MissingRepositoryName)?,
+            target_identifier: repo_target.target_identifier,
+            aliases: repo_target.aliases.unwrap_or_else(Vec::new),
+            storage_type: repo_target.storage_type.map(|storage_type| storage_type.into()),
+        })
+    }
+}
+
+impl From<RepositoryTarget> for fidl::RepositoryTarget {
+    fn from(repo_target: RepositoryTarget) -> Self {
+        fidl::RepositoryTarget {
+            repo_name: Some(repo_target.repo_name),
+            target_identifier: repo_target.target_identifier,
+            aliases: Some(repo_target.aliases),
+            storage_type: repo_target.storage_type.map(|storage_type| storage_type.into()),
+            ..fidl::RepositoryTarget::EMPTY
         }
     }
 }
