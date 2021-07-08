@@ -48,8 +48,12 @@
         {
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.deprecatedtimezone.Timezone",
+                "fuchsia.feedback.CrashReporter",
                 "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.intl.PropertyProvider",
                 "fuchsia.logger.LogSink",
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.sys.Launcher",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",

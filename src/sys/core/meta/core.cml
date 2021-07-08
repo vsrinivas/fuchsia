@@ -846,6 +846,10 @@
         {
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.deprecatedtimezone.Timezone",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys2.Realm",
                 "fuchsia.tracing.provider.Registry",
