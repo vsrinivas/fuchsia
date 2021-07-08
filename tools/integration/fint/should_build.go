@@ -76,9 +76,7 @@ func isSupportedFileType(path string) bool {
 	supportedExtensions := []string{
 		".c",
 		".cc",
-		".cml",
 		".cmake",
-		".cmx",
 		".cpp",
 		".dart",
 		".fidl",
