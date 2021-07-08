@@ -1,0 +1,18 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mock-acpi") {
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//zircon/public/lib/zx",
+  ]
+
+  public_deps =
+      [ "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp" ]
+
+  include_dirs = [ "." ]
+  sources = [ "mock-acpi.cc" ]
+}

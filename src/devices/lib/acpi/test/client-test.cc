@@ -10,27 +10,9 @@
 
 #include <zxtest/zxtest.h>
 
-class MockAcpiDevice : public fidl::WireServer<fuchsia_hardware_acpi::Device> {
- public:
-  using EvaluateObjectFn =
-      std::function<void(EvaluateObjectRequestView, EvaluateObjectCompleter::Sync &)>;
-  explicit MockAcpiDevice(EvaluateObjectFn callback) : evaluate_object_(std::move(callback)) {}
+#include "src/devices/lib/acpi/mock/mock-acpi.h"
 
-  void GetBusId(GetBusIdRequestView request, GetBusIdCompleter::Sync &completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void EvaluateObject(EvaluateObjectRequestView request,
-                      EvaluateObjectCompleter::Sync &completer) override {
-    if (evaluate_object_ == nullptr) {
-      completer.ReplyError(fuchsia_hardware_acpi::wire::Status::kError);
-    } else {
-      evaluate_object_(request, completer);
-    }
-  }
-
-  EvaluateObjectFn evaluate_object_ = nullptr;
-};
+using MockAcpiDevice = acpi::mock::Device;
 
 class AcpiClientTest : public zxtest::Test {
  public:
@@ -50,8 +32,9 @@ TEST_F(AcpiClientTest, TestCallDsm) {
       /* 0008 */ 0xa4, 0x1f, 0x7b, 0x5d, 0xce, 0x24, 0xc5, 0x53};
   ASSERT_BYTES_EQ(uuid.bytes, kNhltUuid, countof(kNhltUuid));
 
-  MockAcpiDevice server([](MockAcpiDevice::EvaluateObjectRequestView request,
-                           MockAcpiDevice::EvaluateObjectCompleter::Sync &sync) {
+  MockAcpiDevice server;
+  server.SetEvaluateObject([](MockAcpiDevice::EvaluateObjectRequestView request,
+                              MockAcpiDevice::EvaluateObjectCompleter::Sync &sync) {
     ASSERT_BYTES_EQ(request->path.data(), "_DSM", request->path.size());
     ASSERT_EQ(request->mode, fuchsia_hardware_acpi::wire::EvaluateObjectMode::kPlainObject);
     ASSERT_EQ(request->parameters.count(), 3);
@@ -72,8 +55,10 @@ TEST_F(AcpiClientTest, TestCallDsm) {
   ASSERT_OK(endpoints.status_value());
   fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(endpoints->server), &server);
 
-  auto helper = acpi::Client::Create(
-      fidl::WireSyncClient<fuchsia_hardware_acpi::Device>(std::move(endpoints->client)));
+  auto client = server.CreateClient(loop_.dispatcher());
+  ASSERT_OK(client.status_value());
+
+  auto helper = std::move(client.value());
   auto result = helper.CallDsm(uuid, 1, 3, std::nullopt);
   ASSERT_OK(result.status_value());
 }
