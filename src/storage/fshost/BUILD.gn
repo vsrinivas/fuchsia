@@ -427,6 +427,7 @@ fuchsia_test_package("fshost-tests") {
     ":test-fshost",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
+    "//src/storage/blobfs:decompressor-sandbox",
   ]
 }
 
@@ -498,8 +499,8 @@ template("fshost_config") {
     if (defined(invoker.use_default_loader) && invoker.use_default_loader) {
       contents += [ "use-default-loader" ]
     }
-    if (defined(invoker.sandbox_decompression) &&
-        invoker.sandbox_decompression) {
+    if (!defined(invoker.sandbox_decompression) ||
+        !invoker.sandbox_decompression) {
       contents += [ "sandbox-decompression" ]
     }
 
@@ -534,17 +535,12 @@ fshost_config("gpt_all") {
   }
 }
 
-# Maintains the above semantics for target gpt_all while adding the blobfs decompression sandbox.
-fshost_config("sandbox_decompression_with_gpt_all") {
-  sandbox_decompression = true
-  gpt_all = true
-}
-
 # Writes default configuration plus any changes to global variables.
 fshost_config("default_config") {
   minfs_ramdisk = false
   gpt_all = false
   no_minfs_zxcrypt = false
+  sandbox_decompression = false
 }
 
 fshost_config("integration_test_config") {

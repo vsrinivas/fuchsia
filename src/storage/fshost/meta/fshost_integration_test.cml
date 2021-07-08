@@ -15,6 +15,10 @@
             name: "isolated-devmgr",
             url: "fuchsia-pkg://fuchsia.com/storage-isolated-devmgr#meta/isolated-devmgr.cm",
         },
+        {
+            name: "decompressor",
+            url: "fuchsia-pkg://fuchsia.com/fshost-tests#meta/decompressor-sandbox.cm",
+        },
     ],
     collections: [
         {
@@ -40,6 +44,7 @@
             ],
             from: "parent",
             to: [
+                "#decompressor",
                 "#fshost-collection",
                 "#isolated-devmgr",
             ],
@@ -47,6 +52,11 @@
         {
             directory: "dev",
             from: "#isolated-devmgr",
+            to: "#fshost-collection",
+        },
+        {
+            protocol: "fuchsia.blobfs.internal.DecompressorCreator",
+            from: "#decompressor",
             to: "#fshost-collection",
         },
     ],
