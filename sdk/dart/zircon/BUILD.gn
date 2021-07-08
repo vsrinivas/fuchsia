@@ -5,13 +5,17 @@
 import("//build/components/fuchsia_test_package.gni")
 import("//build/dart/dart_library.gni")
 import("//build/dart/dart_test_component.gni")
+import("//build/python/python_binary.gni")
 
 _zircon_pkg_root = "$target_gen_dir/zircon"
 _zircon_lib_dir = "$_zircon_pkg_root/lib"
 
+python_binary("extract_zircon_constants_bin") {
+  main_source = "extract_zircon_constants.py"
+}
+
 action("generate_zircon_constants") {
   inputs = [
-    "extract-zircon-constants.py",
     "//zircon/system/public/zircon/errors.h",
     "//zircon/system/public/zircon/rights.h",
     "//zircon/system/public/zircon/types.h",
@@ -19,10 +23,13 @@ action("generate_zircon_constants") {
   ]
   _output = "$_zircon_lib_dir/src/constants.dart"
   outputs = [ _output ]
+  deps = [ ":extract_zircon_constants_bin" ]
 
-  script = python_exe_src
+  _bin_outputs = get_target_outputs(":extract_zircon_constants_bin")
+  assert(_bin_outputs == [ _bin_outputs[0] ],
+         "python_binary produced more than 1 outputs")
+  script = _bin_outputs[0]
   args = [
-    rebase_path("extract-zircon-constants.py", root_build_dir),
     "--errors",
     rebase_path("//zircon/system/public/zircon/errors.h", root_build_dir),
     "--rights",

@@ -4,53 +4,11 @@
 # found in the LICENSE file.
 
 import argparse
-import glob
-import os
 import re
 import sys
 import subprocess
 
-parser = argparse.ArgumentParser(
-    description=
-    "Generates dart constants from a parsing of corresponding values in zircon")
-parser.add_argument(
-    '--dry-run',
-    help='Whether to run in dry-run mode; if true, no file will be generated',
-    action='store_true')
-parser.add_argument('--errors', help='Path to the zircon errors.h header file')
-parser.add_argument('--types', help='Path to the zircon types.h header file')
-parser.add_argument('--rights', help='Path to the zircon rights.h header file')
-parser.add_argument('--dart', help='Path to the dart tool')
-parser.add_argument(
-    '--dart-constants', help='Where to generate the dart constants file')
-parser.set_defaults(dry_run=False)
-args = parser.parse_args()
-
-# If args are unset, assume the script is being run out of the checkout.
-source_dir = os.path.dirname(__file__)
-zircon_errors = args.errors
-zircon_types = args.types
-zircon_rights = args.rights
-if not zircon_errors or not zircon_types or not zircon_rights:
-    zircon_include_dir = os.path.join(
-        source_dir, '../../../../zircon/system/public/zircon')
-    zircon_errors = zircon_errors or os.path.join(
-        zircon_include_dir, 'errors.h')
-    zircon_types = zircon_types or os.path.join(zircon_include_dir, 'types.h')
-    zircon_rights = zircon_rights or os.path.join(
-        zircon_include_dir, 'rights.h')
-
-dart = args.dart
-if not dart:
-    dart_globs = glob.glob(
-        os.path.join(
-            source_dir, '../../../../prebuilt/third_party/dart/*/bin/dart'))
-    dart = dart_globs[0]
-
-dart_constants = args.dart_constants or os.path.join(
-    source_dir, 'lib/src/constants.dart')
-
-file_header = """// Copyright 2018 The Fuchsia Authors. All rights reserved.
+_FILE_HEADER = """// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -63,8 +21,7 @@ part of zircon;
 // ignore_for_file: public_member_api_docs
 """
 
-prefix = 'ZX_'
-prefix_len = len(prefix)
+_PREFIX = 'ZX_'
 
 
 def read_header(header):
@@ -97,24 +54,23 @@ def extract_defines(header, guard):
                 (match.groupdict()['symbol'], match.groupdict()['value']))
         else:
             # ignore the header guard
-            if line.startswith('#define %s' % guard) or \
-                line.startswith('#define SYSROOT_%s' % guard):
+            if line.startswith(f'#define {guard}') or \
+                line.startswith(f'#define SYSROOT_{guard}'):
                 continue
             # ignore function-like macros
             if not re.match(r'#define\s+[A-Za-z0-9_]+\(', line):
-                print('Unrecognized line: %s in %s' % (line, header))
-                sys.exit(1)
+                raise ValueError(f'Unrecognized line: {line} in {header}')
 
     # quadratic time is best time
     public_constants = [
-        (k[prefix_len:], c_to_dart_value(v, defines))
+        (k[len(_PREFIX):], c_to_dart_value(v, defines))
         for k, v in defines
-        if k.startswith(prefix)
+        if k.startswith(_PREFIX)
     ]
     private_constants = [
         (k, c_to_dart_value(v, defines))
         for k, v in defines
-        if not k.startswith(prefix)
+        if not k.startswith(_PREFIX)
     ]
     return public_constants + private_constants
 
@@ -136,17 +92,15 @@ def c_to_dart_value(value, defines):
     # strip outer parens
     value = re.sub(r'^\((.*)\)$', r'\1', value)
 
-    # strip prefix from references to other constants
-    value = re.sub(r'\b' + prefix + r'(\w*)\b', r'\1', value)
+    # strip _PREFIX from references to other constants
+    value = re.sub(r'\b' + _PREFIX + r'(\w*)\b', r'\1', value)
 
     return value
 
 
 class DartWriter(object):
 
-    def __init__(self, path):
-        if args.dry_run:
-            path = '/dev/null'
+    def __init__(self, path, dart):
         dest = open(path, 'w')
         self.popen = subprocess.Popen(
             [dart, 'format', '-o', 'show'],
@@ -166,12 +120,13 @@ class DartWriter(object):
         assert self.popen.returncode == 0
 
 
-def write_constants():
+def write_constants(
+        zircon_errors, zircon_types, zircon_rights, dart_constants, dart):
     error_defines = extract_defines(zircon_errors, 'ZIRCON_ERRORS_H_')
     type_defines = extract_defines(zircon_types, 'ZIRCON_TYPES_H_')
     right_defines = extract_defines(zircon_rights, 'ZIRCON_RIGHTS_H_')
-    with DartWriter(dart_constants) as f:
-        f.write(file_header)
+    with DartWriter(dart_constants, dart) as f:
+        f.write(_FILE_HEADER)
         f.write('abstract class ZX {\n')
         f.write('  ZX._();')
         for symbol, value in error_defines + type_defines + right_defines:
@@ -183,17 +138,48 @@ def write_constants():
             if symbol.startswith('_'):
                 # private constant, it's okay if it's unused.
                 f.write('  // ignore: unused_field\n')
-            f.write('  static const int %s = %s;\n' % (symbol, value))
+            f.write(f'  static const int {symbol} = {value};\n')
         f.write('}\n')
 
         f.write('String getStringForStatus(int status) {\n')
         f.write('  switch(status) {\n')
         for symbol, value in error_defines:
-            f.write('    case ZX.%s: return \'%s\';\n' % (symbol, symbol))
-        f.write('    default: return \'(unknown: $status)\';\n')
+            f.write(f"    case ZX.{symbol}: return '{symbol}';\n")
+        f.write("    default: return '(unknown: $status)';\n")
         f.write('  }\n')
         f.write('}\n')
 
 
+def main():
+    parser = argparse.ArgumentParser(
+        description=
+        'Generates dart constants from a parsing of corresponding values in zircon'
+    )
+    parser.add_argument(
+        '--errors',
+        required=True,
+        help='Path to the zircon errors.h header file')
+    parser.add_argument(
+        '--types', required=True, help='Path to the zircon types.h header file')
+    parser.add_argument(
+        '--rights',
+        required=True,
+        help='Path to the zircon rights.h header file')
+    parser.add_argument('--dart', required=True, help='Path to the dart tool')
+    parser.add_argument(
+        '--dart-constants',
+        required=True,
+        help='Where to generate the dart constants file')
+    args = parser.parse_args()
+
+    write_constants(
+        zircon_errors=args.errors,
+        zircon_types=args.types,
+        zircon_rights=args.rights,
+        dart_constants=args.dart_constants,
+        dart=args.dart,
+    )
+
+
 if __name__ == '__main__':
-    write_constants()
+    sys.exit(main())
