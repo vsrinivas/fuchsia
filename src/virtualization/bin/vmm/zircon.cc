@@ -27,6 +27,7 @@
 
 #include "src/virtualization/bin/vmm/dev_mem.h"
 #include "src/virtualization/bin/vmm/guest.h"
+#include "src/virtualization/bin/vmm/memory.h"
 #include "src/virtualization/bin/vmm/zbi.h"
 
 #if __aarch64__
@@ -51,7 +52,6 @@ static constexpr dcfg_arm_generic_timer_driver_t kTimerDriver = {
 static constexpr uintptr_t kKernelOffset = 0x100000;
 
 #include "src/virtualization/bin/vmm/arch/x64/acpi.h"
-#include "src/virtualization/bin/vmm/arch/x64/e820.h"
 #endif
 
 static constexpr uintptr_t kRamdiskOffset = 0x4000000;
@@ -182,6 +182,14 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
     }
   }
 
+  std::vector<zbi_mem_range_t> zbi_ranges = ZbiMemoryRanges(cfg.memory(), phys_mem.size(), dev_mem);
+  status = LogIfZbiError(
+      image.Append(zbi_header_t{.type = ZBI_TYPE_MEM_CONFIG}, zbitl::AsBytes(zbi_ranges)),
+      "Failed to append memory configuration");
+  if (status != ZX_OK) {
+    return status;
+  }
+
 #if __aarch64__
   // CPU config.
   uint8_t cpu_buffer[sizeof(zbi_cpu_config_t) + sizeof(zbi_cpu_cluster_t)] = {};
@@ -191,51 +199,6 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
   status = LogIfZbiError(
       image.Append(zbi_header_t{.type = ZBI_TYPE_CPU_CONFIG}, zbitl::AsBytes(cpu_buffer)),
       "Failed to append CPU configuration");
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Memory config.
-  std::vector<zbi_mem_range_t> mem_config;
-  auto yield = [&mem_config](zx_gpaddr_t addr, size_t size) {
-    mem_config.emplace_back(zbi_mem_range_t{
-        .paddr = addr,
-        .length = size,
-        .type = ZBI_MEM_RANGE_RAM,
-    });
-  };
-  for (const fuchsia::virtualization::MemorySpec& spec : cfg.memory()) {
-    // Do not use device memory when yielding normal memory.
-    if (spec.policy != fuchsia::virtualization::MemoryPolicy::HOST_DEVICE) {
-      dev_mem.YieldInverseRange(spec.base, spec.size, yield);
-    }
-  }
-
-  // Zircon only supports a limited number of peripheral ranges so for any
-  // dev_mem ranges that are not in the RAM range we will build a single
-  // peripheral range to cover all of them.
-  zbi_mem_range_t periph_range = {.paddr = 0, .length = 0, .type = ZBI_MEM_RANGE_PERIPHERAL};
-  for (const auto& range : dev_mem) {
-    if (range.addr < phys_mem.size()) {
-      mem_config.emplace_back(zbi_mem_range_t{
-          .paddr = range.addr,
-          .length = range.size,
-          .type = ZBI_MEM_RANGE_PERIPHERAL,
-      });
-    } else {
-      if (periph_range.length == 0) {
-        periph_range.paddr = range.addr;
-      }
-      periph_range.length = range.addr + range.size - periph_range.paddr;
-    }
-  }
-  if (periph_range.length != 0) {
-    mem_config.emplace_back(std::move(periph_range));
-  }
-  zbitl::ByteView mem_config_bytes =
-      zbitl::AsBytes(mem_config.data(), sizeof(zbi_mem_range_t) * mem_config.size());
-  status = LogIfZbiError(image.Append(zbi_header_t{.type = ZBI_TYPE_MEM_CONFIG}, mem_config_bytes),
-                         "Failed to append memory configuration");
   if (status != ZX_OK) {
     return status;
   }
@@ -279,17 +242,6 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
       status != ZX_OK) {
     return status;
   }
-
-  // E820 memory map.
-  E820Map e820_map(phys_mem.size(), dev_mem);
-  for (const auto& range : dev_mem) {
-    e820_map.AddReservedRegion(range.addr, range.size);
-  }
-  const uint32_t e820_size = e820_map.size() * sizeof(e820entry_t);
-  auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_E820_TABLE, .length = e820_size});
-  LogIfZbiError(result);
-  auto it = std::move(result).value();
-  e820_map.copy(reinterpret_cast<e820entry_t*>((*it).payload.data()));
 #endif
 
   return ZX_OK;

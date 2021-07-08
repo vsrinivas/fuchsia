@@ -29,15 +29,15 @@ class E820Map {
   E820Map(size_t mem_size, const DevMem &dev_mem);
 
   void AddReservedRegion(zx_gpaddr_t addr, size_t size) {
-    entries.emplace_back(e820entry_t{addr, size, E820_RESERVED});
+    entries_.emplace_back(e820entry_t{addr, size, E820_RESERVED});
   }
 
-  size_t size() const { return entries.size(); }
+  size_t size() const { return entries_.size(); }
 
-  void copy(e820entry_t *dest) { std::copy(entries.begin(), entries.end(), dest); }
+  void copy(e820entry_t *dest) { std::copy(entries_.begin(), entries_.end(), dest); }
 
  private:
-  std::vector<e820entry_t> entries;
+  std::vector<e820entry_t> entries_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_E820_H_

@@ -74,6 +74,7 @@ source_set("lib") {
     sources += [
       "arch/arm64/gic_distributor.cc",
       "arch/arm64/gic_distributor.h",
+      "arch/arm64/memory.cc",
       "arch/arm64/pl011.cc",
       "arch/arm64/pl011.h",
       "arch/arm64/pl031.cc",
@@ -87,7 +88,6 @@ source_set("lib") {
       "arch/x64/acpi_priv.h",
       "arch/x64/decode.cc",
       "arch/x64/decode.h",
-      "arch/x64/e820.cc",
       "arch/x64/e820.h",
       "arch/x64/i8250.cc",
       "arch/x64/i8250.h",
@@ -96,6 +96,7 @@ source_set("lib") {
       "arch/x64/io_apic_registers.h",
       "arch/x64/io_port.cc",
       "arch/x64/io_port.h",
+      "arch/x64/memory.cc",
       "arch/x64/page_table.cc",
       "arch/x64/page_table.h",
       "arch/x64/vcpu.cc",
