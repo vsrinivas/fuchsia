@@ -20,7 +20,7 @@
 #include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 using ::testing::ContainerEq;
@@ -174,4 +174,4 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
 }
 
 }  // namespace
-}  // namespace devmgr
+}  // namespace fshost

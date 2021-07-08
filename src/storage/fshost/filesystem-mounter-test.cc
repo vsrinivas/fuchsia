@@ -20,7 +20,7 @@
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/fshost/block-watcher.h"
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 std::unique_ptr<FsHostMetrics> MakeMetrics() {
@@ -228,4 +228,4 @@ TEST_F(MounterTestWithDispatcher, PkgfsMountsWithBlobAndData) {
 }
 
 }  // namespace
-}  // namespace devmgr
+}  // namespace fshost

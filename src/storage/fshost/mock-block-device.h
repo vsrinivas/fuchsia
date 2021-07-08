@@ -13,9 +13,9 @@
 
 #include "src/storage/fshost/block-device-interface.h"
 
-namespace devmgr {
+namespace fshost {
 
-class MockBlockDevice : public devmgr::BlockDeviceInterface {
+class MockBlockDevice : public BlockDeviceInterface {
  public:
   static const std::string& BaseTopologicalPath() {
     static std::string* path = new std::string("/dev/mock_device/block");
@@ -308,6 +308,6 @@ class MockMinfsDevice : public MockBlockDevice {
   bool mounted_ = false;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_MOCK_BLOCK_DEVICE_H_

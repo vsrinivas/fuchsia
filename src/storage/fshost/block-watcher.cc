@@ -52,7 +52,7 @@
 #include "src/storage/fshost/pkgfs-launcher.h"
 #include "src/storage/minfs/minfs.h"
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 namespace fio = fuchsia_io;
@@ -385,4 +385,4 @@ void BlockWatcherServer::Resume(ResumeRequestView request, ResumeCompleter::Sync
   completer.Reply(watcher_.Resume());
 }
 
-}  // namespace devmgr
+}  // namespace fshost

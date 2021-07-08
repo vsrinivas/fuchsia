@@ -102,7 +102,7 @@ TEST_F(InspectManagerTest, ServeStats) {
   AddFile("a/c/d.txt", 16);
 
   // Serve inspect stats.
-  auto inspect_manager = devmgr::InspectManager();
+  auto inspect_manager = fshost::InspectManager();
   auto remote_dir = GetRemoteDir();
   inspect_manager.ServeStats("test_dir", remote_dir);
 
@@ -142,12 +142,12 @@ TEST_F(InspectManagerTest, DirectoryEntryIteratorGetNext) {
   ASSERT_EQ(ZX_OK, fdio_open(kTmpfsPath, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
                              server.TakeChannel().release()));
   fidl::ClientEnd<fuchsia_io::Node> test_dir_chan;
-  auto status = devmgr::OpenNode(root, "/iterator-test", S_IFDIR, &test_dir_chan);
+  auto status = fshost::OpenNode(root, "/iterator-test", S_IFDIR, &test_dir_chan);
   ASSERT_EQ(status, ZX_OK);
 
   // The opened node must be a directory because of the |MakeDir| call above.
   fidl::ClientEnd<fuchsia_io::Directory> test_dir(test_dir_chan.TakeChannel());
-  auto iterator = devmgr::DirectoryEntriesIterator(std::move(test_dir));
+  auto iterator = fshost::DirectoryEntriesIterator(std::move(test_dir));
   int64_t found = 0;
   while (auto entry = iterator.GetNext()) {
     if (entry->name.find("dir") == 0) {

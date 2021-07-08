@@ -13,7 +13,7 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/format.h>
 
-namespace devmgr {
+namespace fshost {
 
 struct DumpMetadataOptions {
   // A string to uniquely identify hex dump strings. This helps in grepping the logs for dump
@@ -46,6 +46,6 @@ bool ExtractMetadataEnabled();
 
 void MaybeDumpMetadata(fbl::unique_fd device_fd, DumpMetadataOptions options = {});
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_EXTRACT_METADATA_H_

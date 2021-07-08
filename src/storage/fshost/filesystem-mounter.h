@@ -19,7 +19,7 @@
 #include "src/storage/fshost/fshost-boot-args.h"
 #include "src/storage/fshost/metrics.h"
 
-namespace devmgr {
+namespace fshost {
 
 // FilesystemMounter is a utility class which wraps the FsManager
 // and helps clients mount filesystems within the fshost namespace.
@@ -106,6 +106,6 @@ class FilesystemMounter {
   bool factory_mounted_ = false;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_FILESYSTEM_MOUNTER_H_

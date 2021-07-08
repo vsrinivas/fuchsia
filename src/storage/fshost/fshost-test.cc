@@ -30,7 +30,7 @@
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/storage/fshost/block-watcher.h"
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 namespace fio = fuchsia_io;
@@ -232,4 +232,4 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
 }
 
 }  // namespace
-}  // namespace devmgr
+}  // namespace fshost

@@ -13,26 +13,26 @@
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/fshost/fs-manager.h"
 
-namespace devmgr {
+namespace fshost {
 
 class FsManager;
 
 class AdminServer final : public fidl::WireServer<fuchsia_fshost::Admin> {
  public:
-  AdminServer(devmgr::FsManager* fs_manager) : fs_manager_(fs_manager) {}
+  explicit AdminServer(FsManager* fs_manager) : fs_manager_(fs_manager) {}
 
   // Creates a new fs::Service backed by a new AdminServer, to be inserted into
   // a pseudo fs.
-  static fbl::RefPtr<fs::Service> Create(devmgr::FsManager* fs_manager,
+  static fbl::RefPtr<fs::Service> Create(FsManager* fs_manager,
                                          async_dispatcher* dispatcher);
 
   // Implementation of the Shutdown method from the FIDL protocol.
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override;
 
  private:
-  devmgr::FsManager* fs_manager_;
+  FsManager* fs_manager_;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_ADMIN_SERVER_H_

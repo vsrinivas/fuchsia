@@ -15,7 +15,7 @@
 
 #include <fs-management/format.h>
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 // Setting for the maximum bytes to allow a partition to grow to.
@@ -453,4 +453,4 @@ zx_status_t BlockDeviceManager::AddDevice(BlockDeviceInterface& device) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-}  // namespace devmgr
+}  // namespace fshost

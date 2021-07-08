@@ -29,7 +29,7 @@
 #include "src/storage/minfs/format.h"
 #include "src/storage/testing/ram_disk.h"
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 constexpr uint64_t kBlockSize = 512;
@@ -378,4 +378,4 @@ TEST_F(BlockDeviceTest, ExtractMinfsOnCorruptionToLog) {
 // TODO(unknown): Add tests for Zxcrypt binding.
 
 }  // namespace
-}  // namespace devmgr
+}  // namespace fshost

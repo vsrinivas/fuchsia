@@ -9,9 +9,9 @@
 
 #include "src/lib/storage/vfs/cpp/service.h"
 
-namespace devmgr {
+namespace fshost {
 
-fbl::RefPtr<fs::Service> AdminServer::Create(devmgr::FsManager* fs_manager,
+fbl::RefPtr<fs::Service> AdminServer::Create(FsManager* fs_manager,
                                              async_dispatcher* dispatcher) {
   return fbl::MakeRefCounted<fs::Service>(
       [dispatcher, fs_manager](fidl::ServerEnd<fuchsia_fshost::Admin> chan) {
@@ -37,4 +37,4 @@ void AdminServer::Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync&
   });
 }
 
-}  // namespace devmgr
+}  // namespace fshost

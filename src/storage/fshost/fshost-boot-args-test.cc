@@ -19,8 +19,11 @@
 #include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>
 
+namespace fshost {
+namespace {
+
 // Create a subclass to access the test-only constructor on FshostBootArgs.
-class FshostBootArgsForTest : public devmgr::FshostBootArgs {
+class FshostBootArgsForTest : public FshostBootArgs {
  public:
   explicit FshostBootArgsForTest(fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args)
       : FshostBootArgs(std::move(boot_args)) {}
@@ -124,3 +127,6 @@ TEST_F(FshostBootArgsTest, GetBlobfsEvictionPolicy_Unspecified) {
 
   EXPECT_EQ(std::nullopt, boot_args().blobfs_eviction_policy());
 }
+
+}  // namespace
+}  // namespace fshost

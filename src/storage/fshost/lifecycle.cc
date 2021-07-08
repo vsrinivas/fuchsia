@@ -7,9 +7,9 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/syslog/cpp/macros.h>
 
-namespace devmgr {
+namespace fshost {
 
-zx_status_t LifecycleServer::Create(async_dispatcher_t* dispatcher, devmgr::FsManager* fs_manager,
+zx_status_t LifecycleServer::Create(async_dispatcher_t* dispatcher, FsManager* fs_manager,
                                     fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> chan) {
   zx_status_t status = fidl::BindSingleInFlightOnly(dispatcher, std::move(chan),
                                                     std::make_unique<LifecycleServer>(fs_manager));
@@ -34,4 +34,4 @@ void LifecycleServer::Stop(StopRequestView request, StopCompleter::Sync& complet
   });
 }
 
-}  // namespace devmgr
+}  // namespace fshost

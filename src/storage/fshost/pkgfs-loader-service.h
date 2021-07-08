@@ -17,7 +17,7 @@
 #include "src/lib/loader_service/loader_service.h"
 #include "src/storage/fshost/fshost-boot-args.h"
 
-namespace devmgr {
+namespace fshost {
 
 // We bootstrap pkgfs from blobfs by using a custom loader service. This bootstrap is necessary
 // because pkgfs itself is what provides "symbolic filename to blobfs merkleroot resolution" for the
@@ -60,6 +60,6 @@ class PkgfsLoaderService : public loader::LoaderServiceBase {
   std::shared_ptr<FshostBootArgs> boot_args_;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_PKGFS_LOADER_SERVICE_H_

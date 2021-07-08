@@ -19,7 +19,7 @@
 #include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 constexpr uint32_t kBlockCount = 1024 * 256;
@@ -92,4 +92,4 @@ TEST_F(FshostExposedDirTest, ExposesDiagnosticsAndServicesForBlobfs) {
 }
 
 }  // namespace
-}  // namespace devmgr
+}  // namespace fshost

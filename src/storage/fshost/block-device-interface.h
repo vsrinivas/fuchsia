@@ -16,7 +16,7 @@
 
 #include <fs-management/mount.h>
 
-namespace devmgr {
+namespace fshost {
 
 constexpr char kFVMDriverPath[] = "fvm.so";
 constexpr char kGPTDriverPath[] = "gpt.so";
@@ -101,6 +101,6 @@ class BlockDeviceInterface {
   virtual zx_status_t SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_size) = 0;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_BLOCK_DEVICE_INTERFACE_H_

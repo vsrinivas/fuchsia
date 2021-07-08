@@ -7,7 +7,7 @@
 
 #include <zircon/status.h>
 
-namespace devmgr {
+namespace fshost {
 
 class EncryptedVolumeInterface {
  public:
@@ -29,6 +29,6 @@ class EncryptedVolumeInterface {
   virtual zx_status_t Format() = 0;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_ENCRYPTED_VOLUME_INTERFACE_H_

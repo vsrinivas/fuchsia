@@ -14,7 +14,7 @@
 
 namespace fio = fuchsia_io;
 
-namespace devmgr {
+namespace fshost {
 
 // static
 std::shared_ptr<PkgfsLoaderService> PkgfsLoaderService::Create(
@@ -71,4 +71,4 @@ zx::status<zx::vmo> PkgfsLoaderService::LoadBlob(std::string merkleroot) {
   return zx::ok(std::move(vmo));
 }
 
-}  // namespace devmgr
+}  // namespace fshost

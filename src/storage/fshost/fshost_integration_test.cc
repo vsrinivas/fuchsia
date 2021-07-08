@@ -6,7 +6,7 @@
 
 #include <sys/statfs.h>
 
-namespace devmgr {
+namespace fshost {
 
 void FshostIntegrationTest::SetUp() {
   std::string service_name = std::string("/svc/") + fuchsia::sys2::Realm::Name_;
@@ -94,4 +94,4 @@ fbl::unique_fd FshostIntegrationTest::WaitForMount(const std::string& name,
   return fbl::unique_fd();
 }
 
-}  // namespace devmgr
+}  // namespace fshost

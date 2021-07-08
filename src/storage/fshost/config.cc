@@ -8,7 +8,7 @@
 
 #include <cinttypes>
 
-namespace devmgr {
+namespace fshost {
 
 // Normally the partition limits (minfs-max-bytes and blofs-max-bytes) apply only to non-ramdisk
 // devices. This is to prevent device hardware configuration from leaking into ramdisk uses.
@@ -150,4 +150,4 @@ std::ostream& operator<<(std::ostream& stream, const Config::Options& options) {
   return stream;
 }
 
-}  // namespace devmgr
+}  // namespace fshost

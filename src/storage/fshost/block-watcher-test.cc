@@ -24,7 +24,7 @@
 #include "src/storage/fshost/fshost_integration_test.h"
 #include "src/storage/testing/ram_disk.h"
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 Config::Options TestOptions() { return Config::DefaultOptions(); }
@@ -523,7 +523,7 @@ TEST(AddDeviceTestCase, AddUnknownFormatBootPartitionDevice) {
 }
 
 TEST(AddDeviceTestCase, AddPermanentlyMiskeyedZxcryptVolume) {
-  class ZxcryptVolume : public devmgr::EncryptedVolumeInterface {
+  class ZxcryptVolume : public EncryptedVolumeInterface {
    public:
     zx_status_t Unseal() final {
       // Simulate a device where we've lost the key -- can't unlock until we
@@ -553,7 +553,7 @@ TEST(AddDeviceTestCase, AddPermanentlyMiskeyedZxcryptVolume) {
 }
 
 TEST(AddDeviceTestCase, AddTransientlyMiskeyedZxcryptVolume) {
-  class ZxcryptVolume : public devmgr::EncryptedVolumeInterface {
+  class ZxcryptVolume : public EncryptedVolumeInterface {
    public:
     zx_status_t Unseal() final {
       // Simulate a transient error -- fail the first time we try to unseal the
@@ -582,7 +582,7 @@ TEST(AddDeviceTestCase, AddTransientlyMiskeyedZxcryptVolume) {
 }
 
 TEST(AddDeviceTestCase, AddFailingZxcryptVolumeShouldNotFormat) {
-  class ZxcryptVolume : public devmgr::EncryptedVolumeInterface {
+  class ZxcryptVolume : public EncryptedVolumeInterface {
    public:
     zx_status_t Unseal() final {
       // Errors that are not ZX_ERR_ACCESS_DENIED should not trigger
@@ -882,4 +882,4 @@ TEST_F(BlockWatcherTest, TestResumeThenImmediatelyPause) {
 }
 
 }  // namespace
-}  // namespace devmgr
+}  // namespace fshost

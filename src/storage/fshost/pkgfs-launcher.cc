@@ -20,7 +20,7 @@
 
 namespace fio = fuchsia_io;
 
-namespace devmgr {
+namespace fshost {
 
 namespace {
 
@@ -157,4 +157,4 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
   return FinishPkgfsLaunch(filesystems, std::move(h0));
 }
 
-}  // namespace devmgr
+}  // namespace fshost

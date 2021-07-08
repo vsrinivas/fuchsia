@@ -12,7 +12,7 @@
 
 #include "lib/fidl/llcpp/connect_service.h"
 
-namespace devmgr {
+namespace fshost {
 
 // static
 std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
@@ -112,4 +112,4 @@ zx::status<std::string> FshostBootArgs::block_verity_seal() {
   return GetStringArgument("factory_verity_seal");
 }
 
-}  // namespace devmgr
+}  // namespace fshost

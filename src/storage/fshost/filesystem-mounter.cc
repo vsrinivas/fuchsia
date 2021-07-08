@@ -20,7 +20,7 @@
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/minfs/minfs.h"
 
-namespace devmgr {
+namespace fshost {
 
 namespace fio = fuchsia_io;
 
@@ -222,4 +222,4 @@ void FilesystemMounter::TryMountPkgfs() {
   }
 }
 
-}  // namespace devmgr
+}  // namespace fshost

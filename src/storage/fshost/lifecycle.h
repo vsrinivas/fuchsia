@@ -12,7 +12,7 @@
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/fshost/fs-manager.h"
 
-namespace devmgr {
+namespace fshost {
 
 class FsManager;
 
@@ -29,6 +29,6 @@ class LifecycleServer final : public fidl::WireServer<fuchsia_process_lifecycle:
   FsManager* fs_manager_;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_LIFECYCLE_H_

@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-namespace devmgr {
+namespace fshost {
 
 zx::channel FshostFsProvider::CloneFs(const char* path) {
   int flags = FS_READ_WRITE_DIR_FLAGS;
@@ -36,4 +36,4 @@ zx::channel FshostFsProvider::CloneFs(const char* path) {
   return client;
 }
 
-}  // namespace devmgr
+}  // namespace fshost

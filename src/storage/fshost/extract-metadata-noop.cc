@@ -4,10 +4,10 @@
 
 #include "extract-metadata.h"
 
-namespace devmgr {
+namespace fshost {
 
 bool ExtractMetadataEnabled() { return false; }
 
 void MaybeDumpMetadata(fbl::unique_fd device_fd, DumpMetadataOptions options) {}
 
-}  // namespace devmgr
+}  // namespace fshost

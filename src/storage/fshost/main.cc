@@ -46,7 +46,7 @@
 
 namespace fio = fuchsia_io;
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
@@ -323,7 +323,7 @@ int Main(bool disable_block_watcher) {
 }
 
 }  // namespace
-}  // namespace devmgr
+}  // namespace fshost
 
 int main(int argc, char** argv) {
   int disable_block_watcher = false;
@@ -333,5 +333,5 @@ int main(int argc, char** argv) {
   while (getopt_long(argc, argv, "", options, nullptr) != -1) {
   }
 
-  return devmgr::Main(disable_block_watcher);
+  return fshost::Main(disable_block_watcher);
 }

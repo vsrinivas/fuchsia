@@ -20,7 +20,7 @@
 
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 
-namespace devmgr {
+namespace fshost {
 
 // This class is an adapter for the cobalt-client interface, which is specialized for
 // fshost metrics.
@@ -75,6 +75,6 @@ class FsHostMetrics {
   std::thread thread_;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_METRICS_H_

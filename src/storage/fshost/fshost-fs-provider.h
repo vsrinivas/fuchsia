@@ -7,13 +7,13 @@
 
 #include "src/storage/fshost/fdio.h"
 
-namespace devmgr {
+namespace fshost {
 
 class FshostFsProvider : public FsProvider {
  public:
   zx::channel CloneFs(const char* path) override;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_FSHOST_FS_PROVIDER_H_

@@ -11,7 +11,7 @@
 
 #include "src/lib/loader_service/loader_service_test_fixture.h"
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 using namespace loader::test;
@@ -95,4 +95,4 @@ TEST_F(PkgfsLoaderServiceTest, LoadPkgfsFile) {
 }
 
 }  // namespace
-}  // namespace devmgr
+}  // namespace fshost

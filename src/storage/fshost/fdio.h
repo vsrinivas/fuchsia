@@ -11,7 +11,7 @@
 
 #include <memory>
 
-namespace devmgr {
+namespace fshost {
 
 // clang-format off
 
@@ -97,6 +97,6 @@ std::ostream& operator<<(std::ostream& stream, const ArgumentVector& arguments);
 // The env var to set to enable ld.so tracing.
 #define LDSO_TRACE_ENV "LD_TRACE=1"
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_FDIO_H_

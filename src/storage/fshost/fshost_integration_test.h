@@ -12,7 +12,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-namespace devmgr {
+namespace fshost {
 
 class FshostIntegrationTest : public testing::Test {
  public:
@@ -40,6 +40,6 @@ class FshostIntegrationTest : public testing::Test {
   zx::channel watcher_channel_;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_FSHOST_INTEGRATION_TEST_H_

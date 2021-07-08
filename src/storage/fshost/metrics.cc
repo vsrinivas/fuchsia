@@ -16,7 +16,7 @@
 
 #include <cobalt-client/cpp/metric_options.h>
 
-namespace devmgr {
+namespace fshost {
 namespace {
 cobalt_client::MetricOptions MakeMetricOptions(fs_metrics::Event event) {
   cobalt_client::MetricOptions options;
@@ -97,4 +97,4 @@ void FsHostMetrics::Run() {
   }
 }
 
-}  // namespace devmgr
+}  // namespace fshost

@@ -16,7 +16,7 @@
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
 
-namespace devmgr {
+namespace fshost {
 
 class BlockWatcher {
  public:
@@ -82,6 +82,6 @@ class BlockWatcherServer final : public fidl::WireServer<fuchsia_fshost::BlockWa
   BlockWatcher& watcher_;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_BLOCK_WATCHER_H_

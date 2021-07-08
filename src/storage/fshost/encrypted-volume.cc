@@ -11,7 +11,7 @@
 
 #include "src/security/zxcrypt/fdio-volume.h"
 
-namespace devmgr {
+namespace fshost {
 
 EncryptedVolume::EncryptedVolume(fbl::unique_fd fd, fbl::unique_fd devfs_root)
     : fd_(std::move(fd)), devfs_root_(std::move(devfs_root)) {}
@@ -103,4 +103,4 @@ zx_status_t EncryptedVolumeInterface::EnsureUnsealedAndFormatIfNeeded() {
   }
 }
 
-}  // namespace devmgr
+}  // namespace fshost

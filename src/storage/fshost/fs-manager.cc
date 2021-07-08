@@ -48,7 +48,7 @@
 
 #define ZXDEBUG 0
 
-namespace devmgr {
+namespace fshost {
 
 FsManager::FsManager(std::shared_ptr<FshostBootArgs> boot_args,
                      std::unique_ptr<FsHostMetrics> metrics)
@@ -75,8 +75,8 @@ FsManager::~FsManager() {
 
 zx_status_t FsManager::SetupLifecycleServer(
     fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request) {
-  return devmgr::LifecycleServer::Create(global_loop_->dispatcher(), this,
-                                         std::move(lifecycle_request));
+  return LifecycleServer::Create(global_loop_->dispatcher(), this,
+                                 std::move(lifecycle_request));
 }
 
 // Sets up the outgoing directory, and runs it on the PA_DIRECTORY_REQUEST
@@ -386,4 +386,4 @@ zx_status_t FsManager::ForwardFsService(MountPoint point, const char* service_na
   return svc_dir_->AddEntry(service_name, std::move(service_node));
 }
 
-}  // namespace devmgr
+}  // namespace fshost

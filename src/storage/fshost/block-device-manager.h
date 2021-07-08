@@ -13,7 +13,7 @@
 #include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fshost/config.h"
 
-namespace devmgr {
+namespace fshost {
 
 // BlockDeviceManager contains the logic that decides what to do with devices that appear, i.e. what
 // drivers to attach and what filesystems should be mounted.
@@ -52,6 +52,6 @@ class BlockDeviceManager {
   std::vector<std::unique_ptr<Matcher>> matchers_;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_BLOCK_DEVICE_MANAGER_H_

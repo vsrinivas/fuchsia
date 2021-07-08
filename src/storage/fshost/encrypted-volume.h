@@ -11,7 +11,7 @@
 
 #include "src/storage/fshost/encrypted-volume-interface.h"
 
-namespace devmgr {
+namespace fshost {
 
 class EncryptedVolume final : public EncryptedVolumeInterface {
  public:
@@ -25,6 +25,6 @@ class EncryptedVolume final : public EncryptedVolumeInterface {
   fbl::unique_fd devfs_root_;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_ENCRYPTED_VOLUME_H_

@@ -9,11 +9,11 @@
 
 #include "src/storage/fshost/filesystem-mounter.h"
 
-namespace devmgr {
+namespace fshost {
 
 // Launches pkgfs from blobfs. (More details on PkgfsLoaderService)
 zx::status<> LaunchPkgfs(FilesystemMounter* filesystems);
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_PKGFS_LAUNCHER_H_

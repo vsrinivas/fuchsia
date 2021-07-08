@@ -11,7 +11,7 @@
 
 namespace fio = fuchsia_io;
 
-namespace devmgr {
+namespace fshost {
 
 zx_status_t OpenNode(fidl::UnownedClientEnd<fio::Directory> root, const std::string& path,
                      uint32_t mode, fidl::ClientEnd<fio::Node>* result) {
@@ -53,7 +53,7 @@ void InspectManager::ServeStats(const std::string& name, fbl::RefPtr<fs::Vnode> 
       [this, name = std::move(name), root = std::move(root)] {
         inspect::Inspector insp;
         fidl::ClientEnd<fio::Node> root_chan;
-        zx_status_t status = devmgr::OpenNode(root->GetRemote(), "/", S_IFDIR, &root_chan);
+        zx_status_t status = OpenNode(root->GetRemote(), "/", S_IFDIR, &root_chan);
         if (status != ZX_OK) {
           return fit::make_result_promise(fit::ok(std::move(insp)));
         }
@@ -239,4 +239,4 @@ void DirectoryEntriesIterator::RefreshPendingEntries() {
   }
 }
 
-}  // namespace devmgr
+}  // namespace fshost

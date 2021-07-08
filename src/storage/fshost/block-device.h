@@ -20,7 +20,7 @@
 #include "src/storage/fshost/config.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 
-namespace devmgr {
+namespace fshost {
 
 // A concrete implementation of the block device interface.
 //
@@ -65,6 +65,6 @@ class BlockDevice final : public BlockDeviceInterface {
   mutable std::optional<fuchsia_hardware_block_partition_GUID> type_guid_;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_BLOCK_DEVICE_H_

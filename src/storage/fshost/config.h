@@ -11,7 +11,7 @@
 
 #include "src/storage/fshost/fshost-boot-args.h"
 
-namespace devmgr {
+namespace fshost {
 
 // Fshost configuration is via a map of strings to values.  Most options are booleans and are
 // considered true if present in the map.  This configuration is usually read from a configuration
@@ -86,6 +86,6 @@ inline std::ostream& operator<<(std::ostream& stream, const Config& config) {
   return stream << config.options_;
 }
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_CONFIG_H_

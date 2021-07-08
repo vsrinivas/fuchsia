@@ -16,7 +16,7 @@
 
 #include <fbl/unique_fd.h>
 
-namespace devmgr {
+namespace fshost {
 
 class FshostBootArgs {
  public:
@@ -61,6 +61,6 @@ class FshostBootArgs {
   std::optional<std::string> blobfs_eviction_policy_;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_FSHOST_BOOT_ARGS_H_

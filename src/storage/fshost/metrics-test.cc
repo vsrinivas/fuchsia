@@ -16,7 +16,7 @@
 
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 using EventIntType = std::underlying_type<fs_metrics::Event>::type;
@@ -139,4 +139,4 @@ TEST_F(MetricsTest, SuccessWithNullCollector) {
 }
 
 }  // namespace
-}  // namespace devmgr
+}  // namespace fshost

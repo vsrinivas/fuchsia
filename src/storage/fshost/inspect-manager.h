@@ -11,7 +11,7 @@
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
-namespace devmgr {
+namespace fshost {
 
 // Utility to open a directory at the given `path` under `root`. The resulting channel handle will
 // be in `result`. The returned `status` indicates whether the operation was successful or not.
@@ -85,6 +85,6 @@ class DirectoryEntriesIterator {
   void RefreshPendingEntries();
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_INSPECT_MANAGER_H_

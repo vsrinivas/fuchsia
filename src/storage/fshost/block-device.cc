@@ -49,7 +49,7 @@
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 const char kAllowAuthoringFactoryConfigFile[] = "/boot/config/allow-authoring-factory";
@@ -638,4 +638,4 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-}  // namespace devmgr
+}  // namespace fshost

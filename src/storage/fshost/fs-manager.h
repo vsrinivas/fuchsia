@@ -30,7 +30,7 @@
 #include "src/storage/fshost/inspect-manager.h"
 #include "src/storage/fshost/metrics.h"
 
-namespace devmgr {
+namespace fshost {
 
 class BlockWatcher;
 
@@ -152,7 +152,7 @@ class FsManager {
   InspectManager inspect_;
 
   // Used to lookup configuration options stored in fuchsia.boot.Arguments
-  std::shared_ptr<devmgr::FshostBootArgs> boot_args_;
+  std::shared_ptr<fshost::FshostBootArgs> boot_args_;
 
   // The outgoing service directory for fshost.
   fbl::RefPtr<fs::PseudoDir> svc_dir_;
@@ -173,6 +173,6 @@ class FsManager {
   fidl::Client<fuchsia_device_manager::Administrator> driver_admin_;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_FS_MANAGER_H_

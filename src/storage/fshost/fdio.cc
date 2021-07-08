@@ -33,7 +33,7 @@
 #include <fbl/array.h>
 #include <fbl/vector.h>
 
-namespace devmgr {
+namespace fshost {
 
 #define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS)
 
@@ -214,4 +214,4 @@ std::ostream& operator<<(std::ostream& stream, const ArgumentVector& arguments) 
   return stream;
 }
 
-}  // namespace devmgr
+}  // namespace fshost

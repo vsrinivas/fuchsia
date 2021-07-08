@@ -15,10 +15,13 @@
 
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 
+namespace fshost {
+namespace {
+
 // TODO(fxbug.dev/39588): delete this
 TEST(DelayedOutdirTest, MessagesWaitForStart) {
   // Create a new DelayedOutdir, and initialize it with a new channel
-  auto delayed_outdir = devmgr::DelayedOutdir();
+  auto delayed_outdir = DelayedOutdir();
 
   auto delayed = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(delayed.status_value());
@@ -78,3 +81,6 @@ TEST(DelayedOutdirTest, MessagesWaitForStart) {
   ASSERT_TRUE(result.is_ok());
   ASSERT_OK(result.value());
 }
+
+}  // namespace
+}  // namespace fshost

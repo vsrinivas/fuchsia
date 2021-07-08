@@ -28,7 +28,7 @@
 #include "src/storage/extractor/cpp/hex_dump_generator.h"
 #include "src/storage/minfs/format.h"
 
-namespace devmgr {
+namespace fshost {
 namespace {
 
 void Dump(fbl::unique_fd image_fd, DumpMetadataOptions& dump_options) {
@@ -155,4 +155,4 @@ void MaybeDumpMetadata(fbl::unique_fd device_fd, DumpMetadataOptions options) {
   zx::nanosleep(zx::deadline_after(options.log_settle_time));
 }
 
-}  // namespace devmgr
+}  // namespace fshost

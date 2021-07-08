@@ -21,7 +21,7 @@
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
-namespace devmgr {
+namespace fshost {
 
 // TODO(fxbug.dev/39588): This class is used to create a new RemoteDir that doesn't
 // respond to any messages until `.Start()` is called. This is important for
@@ -81,6 +81,6 @@ class DelayedOutdir {
   bool started_ = false;
 };
 
-}  // namespace devmgr
+}  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_DELAYED_OUTDIR_H_
