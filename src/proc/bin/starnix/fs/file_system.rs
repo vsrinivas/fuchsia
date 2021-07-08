@@ -8,31 +8,50 @@ use std::sync::Arc;
 use crate::fs::*;
 use crate::types::*;
 
-#[derive(Debug, Clone)]
+/// The mutable state for an FsContext.
+///
+/// This state is cloned in FsContext::fork.
+#[derive(Clone)]
 struct FsContextState {
+    /// The current working directory.
+    cwd: NamespaceNode,
+
     // See <https://man7.org/linux/man-pages/man2/umask.2.html>
     umask: mode_t,
 }
 
-impl Default for FsContextState {
-    fn default() -> FsContextState {
-        FsContextState { umask: 0o022 }
-    }
-}
-
+/// The file system context associated with a task.
+///
+/// File system operations, such as opening a file or mounting a directory, are
+/// performed using this context.
 pub struct FsContext {
-    pub namespace: Arc<Namespace>,
-    pub root_node: NamespaceNode,
+    /// The namespace tree for this FsContext.
+    ///
+    /// This field owns the mount table for this FsContext.
+    namespace: Arc<Namespace>,
 
-    // TODO: Add cwd and other state here. Some of this state should
-    // be copied in FsContext::fork below.
+    /// The root of the namespace tree for this FsContext.
+    ///
+    /// Operations on the file system are typically either relative to this
+    /// root or to the cwd().
+    pub root: NamespaceNode,
+
+    /// The mutable state for this FsContext.
     state: RwLock<FsContextState>,
 }
 
 impl FsContext {
+    /// Create an FsContext for the given namespace.
+    ///
+    /// The root and cwd of the FsContext are initialized to the root of the
+    /// namespace.
     pub fn new(namespace: Arc<Namespace>) -> Arc<FsContext> {
-        let root_node = namespace.root();
-        Arc::new(FsContext { namespace, root_node, state: RwLock::new(FsContextState::default()) })
+        let root = namespace.root();
+        Arc::new(FsContext {
+            namespace,
+            root: root.clone(),
+            state: RwLock::new(FsContextState { cwd: root, umask: 0o022 }),
+        })
     }
 
     pub fn fork(&self) -> Arc<FsContext> {
@@ -43,14 +62,29 @@ impl FsContext {
 
         Arc::new(FsContext {
             namespace: self.namespace.clone(),
-            root_node: self.root_node.clone(),
+            root: self.root.clone(),
             state: RwLock::new(self.state.read().clone()),
         })
     }
 
-    // This will eventually have the equivalent of a dir_fd parameter.
-    pub fn lookup_node(&self, path: &FsStr) -> Result<NamespaceNode, Errno> {
-        let mut node = self.root_node.clone();
+    /// Returns a reference to the current working directory.
+    pub fn cwd(&self) -> NamespaceNode {
+        let state = self.state.read();
+        state.cwd.clone()
+    }
+
+    /// Change the current working directory.
+    pub fn chdir(&self, file: &FileHandle) {
+        let mut state = self.state.write();
+        state.cwd = file.name().clone();
+    }
+
+    /// Lookup a namespace node in this file system.
+    ///
+    /// Consider using Task::open_file or Task::open_file_at rather than
+    /// calling this function directly.
+    pub fn lookup_node(&self, dir: NamespaceNode, path: &FsStr) -> Result<NamespaceNode, Errno> {
+        let mut node = dir;
         for component in path.split(|c| *c == b'/') {
             if component == b"." || component == b"" {
                 // ignore
@@ -99,5 +133,30 @@ mod test {
         assert_eq!(0o646, fs.apply_umask(0o666));
         assert_eq!(0o3646, fs.apply_umask(0o3666));
         assert_eq!(0o20, fs.set_umask(0o11));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_chdir() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+
+        let task = &task_owner.task;
+        let bin = task.open_file(b"bin").expect("missing bin directory");
+        task.fs.chdir(&bin);
+
+        // Now that we have changed directories to bin, we're opening a file
+        // relative to that directory, which doesn't exist.
+        assert!(task.open_file(b"bin").is_err());
+
+        // However, bin still exists in the root directory.
+        assert!(task.open_file(b"/bin").is_ok());
+
+        task.fs.chdir(&task.open_file(b"..").expect("failed to open .."));
+
+        // Now bin exists again because we've gone back to the root.
+        assert!(task.open_file(b"bin").is_ok());
+
+        // Repeating the .. doesn't do anything because we're already at the root.
+        task.fs.chdir(&task.open_file(b"..").expect("failed to open .."));
+        assert!(task.open_file(b"bin").is_ok());
     }
 }

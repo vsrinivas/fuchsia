@@ -9,7 +9,6 @@ use std::ffi::CString;
 use crate::fs::pipe::*;
 use crate::fs::*;
 use crate::not_implemented;
-use crate::strace;
 use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
@@ -168,29 +167,13 @@ fn open_internal(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,
-    fio_flags: u32,
-    mode: mode_t,
+    _fio_flags: u32,
+    _mode: mode_t,
 ) -> Result<FileHandle, Errno> {
     // TODO(tbodt): handle the flags properly
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
-    if path[0] != b'/' {
-        not_implemented!("non-absolute paths are unimplemented");
-        if dir_fd != FdNumber::AT_FDCWD {
-            not_implemented!("dirfds are unimplemented");
-        }
-        return Err(ENOENT);
-    }
-    strace!(
-        task,
-        "open_internal({}, {}, {:#x}, {:#o})",
-        dir_fd,
-        String::from_utf8_lossy(path),
-        fio_flags,
-        mode
-    );
-    let path = &path[1..];
-    Ok(task.fs.lookup_node(path)?.open()?)
+    task.open_file_at(dir_fd, path)
 }
 
 pub fn sys_openat(
@@ -243,6 +226,20 @@ pub fn sys_faccessat(
     };
 
     let _ = open_internal(&ctx.task, dir_fd, user_path, fio_flags, 0)?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_chdir(ctx: &SyscallContext<'_>, user_path: UserCString) -> Result<SyscallResult, Errno> {
+    let fio_flags = fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE;
+    let file = open_internal(&ctx.task, FdNumber::AT_FDCWD, user_path, fio_flags, 0)?;
+    ctx.task.fs.chdir(&file);
+    Ok(SUCCESS)
+}
+
+pub fn sys_fchdir(ctx: &SyscallContext<'_>, fd: FdNumber) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    // TODO: Check isdir and return ENOTDIR.
+    ctx.task.fs.chdir(&file);
     Ok(SUCCESS)
 }
 

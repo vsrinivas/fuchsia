@@ -138,13 +138,9 @@ pub fn load_executable(
         executable
             .read(&mut interp, interp_hdr.offset as u64)
             .map_err(Errno::from_status_like_fdio)?;
-        // TODO: once it exists, use the Starnix VFS to open and map the interpreter
-        let mut interp =
+        let interp =
             CStr::from_bytes_with_nul(&interp).map_err(|_| EINVAL)?.to_str().map_err(|_| EINVAL)?;
-        if interp.starts_with('/') {
-            interp = &interp[1..];
-        }
-        let interp_file = task.fs.lookup_node(interp.as_bytes())?.open()?;
+        let interp_file = task.open_file(interp.as_bytes())?;
         let interp_vmo =
             interp_file.get_vmo(task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
         Some(load_elf(&interp_vmo, &task.mm)?)

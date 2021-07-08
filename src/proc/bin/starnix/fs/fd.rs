@@ -250,6 +250,13 @@ impl FileObject {
         })
     }
 
+    /// The NamespaceNode associated with this FileObject.
+    ///
+    /// Represents the name the process used to open this file.
+    pub fn name(&self) -> &NamespaceNode {
+        &self.name
+    }
+
     /// The FsNode from which this FileObject was created.
     pub fn node(&self) -> &FsNodeHandle {
         &self.name.node

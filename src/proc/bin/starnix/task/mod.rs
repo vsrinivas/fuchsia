@@ -20,7 +20,7 @@ pub use waiter::*;
 
 use crate::auth::{Credentials, ShellJobControl};
 use crate::devices::DeviceRegistry;
-use crate::fs::{FdTable, FsContext};
+use crate::fs::*;
 use crate::loader::*;
 use crate::logging::*;
 use crate::mm::MemoryManager;
@@ -588,9 +588,9 @@ impl Task {
         argv: &Vec<CString>,
         environ: &Vec<CString>,
     ) -> Result<ThreadStartInfo, Errno> {
-        let executable_fd = self.fs.lookup_node(path.to_bytes())?.open()?;
-        let executable =
-            executable_fd.get_vmo(self, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
+        let executable_file = self.open_file(path.to_bytes())?;
+        let executable = executable_file
+            .get_vmo(self, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
 
         // TODO: Implement #!interpreter [optional-arg]
 
@@ -642,6 +642,23 @@ impl Task {
         if let Some(parent) = self.get_task(self.parent) {
             parent.remove_child(self.id);
         }
+    }
+
+    pub fn open_file(&self, path: &FsStr) -> Result<FileHandle, Errno> {
+        self.open_file_at(FdNumber::AT_FDCWD, path)
+    }
+
+    pub fn open_file_at(&self, dir_fd: FdNumber, mut path: &FsStr) -> Result<FileHandle, Errno> {
+        let dir = if path[0] == b'/' {
+            path = &path[1..];
+            self.fs.root.clone()
+        } else if dir_fd == FdNumber::AT_FDCWD {
+            self.fs.cwd()
+        } else {
+            let file = self.files.get(dir_fd)?;
+            file.name().clone()
+        };
+        self.fs.lookup_node(dir, path)?.open()
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
