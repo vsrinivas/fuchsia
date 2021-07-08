@@ -8,6 +8,7 @@ from __future__ import print_function
 import argparse
 import os.path
 import sys
+from typing import AbstractSet, Iterable
 
 # Exempt targets with these prefixes.
 EXEMPTION_PREFIXES = [
@@ -16,7 +17,7 @@ EXEMPTION_PREFIXES = [
 ]
 
 
-def parse_depfile(depfile_path):
+def parse_depfile(depfile_path: str) -> AbstractSet[str]:
     with open(depfile_path) as f:
         # Only the first line contains important information.
         line = f.readline().strip()
@@ -33,7 +34,7 @@ def parse_depfile(depfile_path):
         if source.strip())
 
 
-def build_file_source_path(target, source_path):
+def build_file_source_path(target: str, source_path: str) -> str:
     '''Returns a source path suitable for listing in a BUILD.gn file.
 
     The returned path is relative to the `target` GN label, or source absolute if the
@@ -53,7 +54,7 @@ def build_file_source_path(target, source_path):
     return '//{}'.format(source_path)
 
 
-def print_suggested_sources(varname, sources):
+def print_suggested_sources(varname: str, sources: Iterable[str]):
     '''Prints a GN list variable assignment with the variable name `varname`.
 
     Eg.
@@ -101,7 +102,9 @@ def main():
             return 0
 
     expected_sources = set(args.expected_sources)
-    actual_sources = parse_depfile(args.depfile)
+    actual_deps = parse_depfile(args.depfile)
+    # Ignore non-Rust dependencies, which could include support scripts/tools.
+    actual_sources = {f for f in actual_deps if f.endswith('.rs') or f.endswith('.rlib')}
 
     unlisted_sources = actual_sources.difference(expected_sources)
     if unlisted_sources:
