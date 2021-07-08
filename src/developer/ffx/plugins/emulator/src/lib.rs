@@ -18,7 +18,7 @@ mod types;
 pub mod vdl_files;
 mod vdl_proto_parser;
 
-#[ffx_plugin("vdl.experimental")]
+#[ffx_plugin("emu.experimental")]
 pub fn emulator(cmd: EmulatorCommand) -> Result<()> {
     process_command(cmd.command, cmd.sdk)
 }

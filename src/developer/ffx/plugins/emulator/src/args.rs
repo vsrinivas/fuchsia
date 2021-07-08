@@ -7,7 +7,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 /// entry point for ffx
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "vdl", description = "Start and manage Fuchsia emulators")]
+#[argh(subcommand, name = "emu", description = "Start and manage Fuchsia emulators")]
 pub struct EmulatorCommand {
     #[argh(subcommand)]
     pub command: VDLCommand,
