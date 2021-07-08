@@ -23,6 +23,13 @@
             backing_dir: "tmp",
             storage_id: "static_instance_id_or_moniker",
         },
+        {
+            storage: "laboratory-cache",
+            from: "parent",
+            subdir: "laboratory-cache",
+            backing_dir: "tmp",
+            storage_id: "static_instance_id_or_moniker",
+        },
     ],
     offer: [
         {
@@ -52,6 +59,12 @@
         {
             directory: "boot",
             from: "parent",
+            to: "#ffx-laboratory",
+        },
+        {
+            storage: "laboratory-cache",
+            from: "self",
+            as: "cache",
             to: "#ffx-laboratory",
         },
     ],
