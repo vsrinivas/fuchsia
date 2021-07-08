@@ -13,7 +13,9 @@ use crate::display::display_configuration::{
 use crate::display::types::{DisplayInfo, LowLightMode, Theme, ThemeBuilder, ThemeMode, ThemeType};
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
+use crate::handler::setting_handler::persist::{
+    controller as data_controller, ClientProxy, UpdateState,
+};
 use crate::handler::setting_handler::{
     controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
@@ -113,6 +115,9 @@ pub(crate) trait BrightnessManager: Sized {
         &self,
         info: DisplayInfo,
         client: &ClientProxy,
+        // Allows overriding of the check for whether info has changed. This is necessary for
+        // the initial restore call.
+        always_send: bool,
     ) -> SettingHandlerResult;
 }
 
@@ -128,6 +133,7 @@ impl BrightnessManager for () {
         &self,
         info: DisplayInfo,
         client: &ClientProxy,
+        _: bool,
     ) -> SettingHandlerResult {
         if !info.is_finite() {
             return Err(ControllerError::InvalidArgument(
@@ -161,6 +167,7 @@ impl BrightnessManager for ExternalBrightnessControl {
         &self,
         info: DisplayInfo,
         client: &ClientProxy,
+        always_send: bool,
     ) -> SettingHandlerResult {
         if !info.is_finite() {
             return Err(ControllerError::InvalidArgument(
@@ -169,7 +176,10 @@ impl BrightnessManager for ExternalBrightnessControl {
                 format!("{:?}", info).into(),
             ));
         }
-        client.write_setting(info.into(), false).await?;
+        let update_state = client.write_setting(info.into(), false).await?;
+        if (update_state == UpdateState::Unchanged && !always_send) {
+            return Ok(None);
+        }
 
         if info.auto_brightness {
             self.brightness_service.call(BrightnessControlProxy::set_auto_brightness)
@@ -226,7 +236,11 @@ where
                 assert!(display_info.is_finite());
 
                 // Load and set value.
-                Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
+                Some(
+                    self.brightness_manager
+                        .update_brightness(display_info, &self.client, true)
+                        .await,
+                )
             }
             Request::SetDisplayInfo(mut set_display_info) => {
                 let display_info = self.client.read_setting::<DisplayInfo>().await;
@@ -238,7 +252,11 @@ where
 
                 Some(
                     self.brightness_manager
-                        .update_brightness(display_info.merge(set_display_info), &self.client)
+                        .update_brightness(
+                            display_info.merge(set_display_info),
+                            &self.client,
+                            false,
+                        )
                         .await,
                 )
             }

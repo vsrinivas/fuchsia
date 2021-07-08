@@ -370,6 +370,33 @@ async fn test_theme_mode_auto_preserves_previous_type() {
     assert_eq!(settings.theme, expected_theme);
 }
 
+// Tests that calls to the external brightness component are only made when
+// the brightness changes.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_deduped_external_brightness_calls() {
+    let (display_proxy, brightness_service_handle) = setup_brightness_display_env().await;
+
+    let settings = display_proxy.watch().await.expect("watch completed");
+
+    assert_eq!(settings.brightness_value, Some(STARTING_BRIGHTNESS));
+
+    let mut display_settings = DisplaySettings::EMPTY;
+    display_settings.brightness_value = Some(STARTING_BRIGHTNESS);
+    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
+    let num_changes = *brightness_service_handle.get_num_changes().lock().await;
+    assert_eq!(num_changes, 0);
+
+    let mut display_settings_changed = DisplaySettings::EMPTY;
+    display_settings_changed.brightness_value = Some(CHANGED_BRIGHTNESS);
+    display_proxy
+        .set(display_settings_changed)
+        .await
+        .expect("set completed")
+        .expect("set successful");
+    let num_changes = *brightness_service_handle.get_num_changes().lock().await;
+    assert_eq!(num_changes, 1);
+}
+
 // Tests that the FIDL calls for screen enabled result in appropriate
 // commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]

@@ -15,6 +15,7 @@ use std::sync::Arc;
 pub(crate) struct BrightnessService {
     manual_brightness: Arc<Mutex<Option<f32>>>,
     auto_brightness: Arc<Mutex<Option<bool>>>,
+    num_changes: Arc<Mutex<u32>>,
 }
 
 impl BrightnessService {
@@ -22,6 +23,7 @@ impl BrightnessService {
         BrightnessService {
             manual_brightness: Arc::new(Mutex::new(None)),
             auto_brightness: Arc::new(Mutex::new(None)),
+            num_changes: Arc::new(Mutex::new(0)),
         }
     }
 
@@ -31,6 +33,10 @@ impl BrightnessService {
 
     pub(crate) fn get_auto_brightness(&self) -> Arc<Mutex<Option<bool>>> {
         self.auto_brightness.clone()
+    }
+
+    pub(crate) fn get_num_changes(&self) -> Arc<Mutex<u32>> {
+        self.num_changes.clone()
     }
 }
 
@@ -49,6 +55,7 @@ impl Service for BrightnessService {
 
         let auto_brightness_handle = self.auto_brightness.clone();
         let brightness_handle = self.manual_brightness.clone();
+        let num_changes_handle = self.num_changes.clone();
 
         fasync::Task::spawn(async move {
             while let Some(req) = manager_stream.try_next().await.unwrap() {
@@ -64,12 +71,14 @@ impl Service for BrightnessService {
                         control_handle: _,
                     } => {
                         *auto_brightness_handle.lock().await = Some(true);
+                        *num_changes_handle.lock().await += 1;
                     }
                     fidl_fuchsia_ui_brightness::ControlRequest::SetManualBrightness {
                         value,
                         control_handle: _,
                     } => {
                         *brightness_handle.lock().await = Some(value);
+                        *num_changes_handle.lock().await += 1;
                     }
                     fidl_fuchsia_ui_brightness::ControlRequest::WatchAutoBrightness {
                         responder,
