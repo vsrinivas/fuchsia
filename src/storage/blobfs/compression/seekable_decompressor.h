@@ -29,6 +29,7 @@ struct CompressionMapping {
 
 // A `SeekableDecompressor` is used to decompress parts of blobs transparently. See `Compressor`
 // documentation for properties of `Compressor`/`SeekableDecompressor` pair implementations.
+// Implementations must be thread-safe.
 class SeekableDecompressor {
  public:
   SeekableDecompressor() = default;

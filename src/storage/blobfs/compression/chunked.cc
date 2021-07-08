@@ -107,9 +107,10 @@ zx_status_t ChunkedDecompressor::Decompress(void* uncompressed_buf, size_t* unco
     return ToZxStatus(status);
   }
   size_t decompression_buf_size = *uncompressed_size;
-  if (decompressor_.Decompress(seek_table, compressed_buf, max_compressed_size, uncompressed_buf,
-                               decompression_buf_size,
-                               uncompressed_size) != chunked_compression::kStatusOk) {
+  chunked_compression::ChunkedDecompressor decompressor;
+  if (decompressor.Decompress(seek_table, compressed_buf, max_compressed_size, uncompressed_buf,
+                              decompression_buf_size,
+                              uncompressed_size) != chunked_compression::kStatusOk) {
     FX_LOGS(ERROR) << "Failed to decompress archive.";
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
@@ -118,17 +119,21 @@ zx_status_t ChunkedDecompressor::Decompress(void* uncompressed_buf, size_t* unco
 
 // SeekableChunkedDecompressor
 
+SeekableChunkedDecompressor::SeekableChunkedDecompressor(
+    std::unique_ptr<chunked_compression::SeekTable> seek_table)
+    : seek_table_(std::move(seek_table)) {}
+
 zx_status_t SeekableChunkedDecompressor::CreateDecompressor(
     const void* seek_table_buf, size_t max_seek_table_size, size_t max_compressed_size,
     std::unique_ptr<SeekableDecompressor>* out) {
-  auto decompressor = std::make_unique<SeekableChunkedDecompressor>();
+  auto seek_table = std::make_unique<chunked_compression::SeekTable>();
   chunked_compression::HeaderReader reader;
-  Status status = reader.Parse(seek_table_buf, max_seek_table_size, max_compressed_size,
-                               &decompressor->seek_table_);
+  Status status =
+      reader.Parse(seek_table_buf, max_seek_table_size, max_compressed_size, seek_table.get());
   if (status != chunked_compression::kStatusOk) {
     return ToZxStatus(status);
   }
-  *out = std::move(decompressor);
+  *out = std::make_unique<SeekableChunkedDecompressor>(std::move(seek_table));
   return ZX_OK;
 }
 
@@ -142,16 +147,17 @@ zx_status_t SeekableChunkedDecompressor::DecompressRange(void* uncompressed_buf,
   if (*uncompressed_size == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
-  std::optional<unsigned> first_idx = seek_table_.EntryForDecompressedOffset(offset);
+  std::optional<unsigned> first_idx = seek_table_->EntryForDecompressedOffset(offset);
   std::optional<unsigned> last_idx =
-      seek_table_.EntryForDecompressedOffset(offset + (*uncompressed_size) - 1);
+      seek_table_->EntryForDecompressedOffset(offset + (*uncompressed_size) - 1);
   if (!first_idx || !last_idx) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   size_t src_offset = 0;
   size_t dst_offset = 0;
+  chunked_compression::ChunkedDecompressor decompressor;
   for (unsigned i = *first_idx; i <= *last_idx; ++i) {
-    const chunked_compression::SeekTableEntry& entry = seek_table_.Entries()[i];
+    const chunked_compression::SeekTableEntry& entry = seek_table_->Entries()[i];
 
     ZX_DEBUG_ASSERT(src_offset + entry.compressed_size <= max_compressed_size);
     ZX_DEBUG_ASSERT(dst_offset + entry.decompressed_size <= *uncompressed_size);
@@ -160,8 +166,8 @@ zx_status_t SeekableChunkedDecompressor::DecompressRange(void* uncompressed_buf,
     uint8_t* dst = static_cast<uint8_t*>(uncompressed_buf) + dst_offset;
     size_t bytes_in_frame;
     chunked_compression::Status status =
-        decompressor_.DecompressFrame(seek_table_, i, src, max_compressed_size - src_offset, dst,
-                                      *uncompressed_size - dst_offset, &bytes_in_frame);
+        decompressor.DecompressFrame(*seek_table_, i, src, max_compressed_size - src_offset, dst,
+                                     *uncompressed_size - dst_offset, &bytes_in_frame);
     if (status != chunked_compression::kStatusOk) {
       FX_LOGS(ERROR) << "DecompressFrame failed: " << status;
       return ToZxStatus(status);
@@ -179,14 +185,14 @@ zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompress
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  std::optional<unsigned> first_idx = seek_table_.EntryForDecompressedOffset(offset);
-  std::optional<unsigned> last_idx = seek_table_.EntryForDecompressedOffset(offset + len - 1);
+  std::optional<unsigned> first_idx = seek_table_->EntryForDecompressedOffset(offset);
+  std::optional<unsigned> last_idx = seek_table_->EntryForDecompressedOffset(offset + len - 1);
   if (!first_idx || !last_idx) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
-  const chunked_compression::SeekTableEntry& first_entry = seek_table_.Entries()[*first_idx];
-  const chunked_compression::SeekTableEntry& last_entry = seek_table_.Entries()[*last_idx];
+  const chunked_compression::SeekTableEntry& first_entry = seek_table_->Entries()[*first_idx];
+  const chunked_compression::SeekTableEntry& last_entry = seek_table_->Entries()[*last_idx];
   size_t compressed_end = last_entry.compressed_offset + last_entry.compressed_size;
   size_t decompressed_end = last_entry.decompressed_offset + last_entry.decompressed_size;
   if (compressed_end < first_entry.compressed_offset ||
@@ -222,7 +228,7 @@ zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompress
   // Start at the entry that contains the offset (max_decompressed_end - 1) and work backwards until
   // we hit the required size constraint.
   std::optional<unsigned> max_idx =
-      seek_table_.EntryForDecompressedOffset(max_decompressed_end - 1);
+      seek_table_->EntryForDecompressedOffset(max_decompressed_end - 1);
   if (!max_idx) {
     // This again cannot happen for similar reasons as the overflow check above.
     FX_LOGS(ERROR) << "Seek table may be corrupted when finding compression offset";
@@ -230,7 +236,7 @@ zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompress
   }
   unsigned idx = *max_idx;
   while (idx >= first_idx) {
-    const chunked_compression::SeekTableEntry& max_entry = seek_table_.Entries()[idx];
+    const chunked_compression::SeekTableEntry& max_entry = seek_table_->Entries()[idx];
     compressed_end = max_entry.compressed_offset + max_entry.compressed_size;
     decompressed_end = max_entry.decompressed_offset + max_entry.decompressed_size;
     if (decompressed_end <= max_decompressed_end) {

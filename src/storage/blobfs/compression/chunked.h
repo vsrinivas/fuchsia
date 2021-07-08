@@ -14,6 +14,7 @@
 #include <src/lib/chunked-compression/chunked-decompressor.h>
 #include <src/lib/chunked-compression/streaming-chunked-compressor.h>
 
+#include "src/lib/chunked-compression/chunked-archive.h"
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/compression/decompressor.h"
 #include "src/storage/blobfs/compression/seekable_decompressor.h"
@@ -76,10 +77,10 @@ class ChunkedDecompressor : public Decompressor {
 };
 
 // Implementation of |SeekableDecompressor| backed by the "chunked-compression" library
-// (//src/lib/chunked-compression).
+// (//src/lib/chunked-compression). Thread-safe
 class SeekableChunkedDecompressor : public SeekableDecompressor {
  public:
-  SeekableChunkedDecompressor() = default;
+  explicit SeekableChunkedDecompressor(std::unique_ptr<chunked_compression::SeekTable> seek_table);
   DISALLOW_COPY_ASSIGN_AND_MOVE(SeekableChunkedDecompressor);
 
   // |max_seek_table_size| and |max_compressed_size| are used for validation purposes only.
@@ -99,8 +100,7 @@ class SeekableChunkedDecompressor : public SeekableDecompressor {
   CompressionAlgorithm algorithm() const final { return CompressionAlgorithm::kChunked; };
 
  private:
-  chunked_compression::SeekTable seek_table_;
-  chunked_compression::ChunkedDecompressor decompressor_;
+  const std::unique_ptr<chunked_compression::SeekTable> seek_table_;
 };
 
 }  // namespace blobfs
