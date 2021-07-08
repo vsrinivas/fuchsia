@@ -221,12 +221,18 @@ source_set("driver_sources") {
 
   # Assume for now that arm64 boards use the SDIO interface.
   if (target_cpu == "arm64") {
-    public_deps += [ "sdio" ]
+    public_deps += [
+      ":brcmfmac_sdio_bind",
+      "sdio",
+    ]
   }
 
   # Assume for now that x64 boards use the PCIE interface.
   if (target_cpu == "x64") {
-    public_deps += [ "pcie" ]
+    public_deps += [
+      ":brcmfmac_pcie_bind",
+      "pcie",
+    ]
   }
 }
 
@@ -234,9 +240,10 @@ bind_library("fuchsia.brcmfmac") {
   source = "fuchsia.brcmfmac.bind"
 }
 
-bind_rules("brcmfmac_pcie_bind") {
+driver_bind_rules("brcmfmac_pcie_bind") {
   rules = "brcmfmac_pcie.bind"
-  output = "brcmfmac_pcie_bind.h"
+  header_output = "brcmfmac_pcie_bind.h"
+  bind_output = "brcmfmac_pcie.bindbc"
   deps = [
     ":fuchsia.brcmfmac",
     "//src/devices/bind/fuchsia.pci",
@@ -244,9 +251,10 @@ bind_rules("brcmfmac_pcie_bind") {
   ]
 }
 
-bind_rules("brcmfmac_sdio_bind") {
+driver_bind_rules("brcmfmac_sdio_bind") {
   rules = "brcmfmac_sdio.bind"
-  output = "brcmfmac_sdio_bind.h"
+  header_output = "brcmfmac_sdio_bind.h"
+  bind_output = "brcmfmac_sdio.bindbc"
   deps = [ "//src/devices/bind/fuchsia.broadcom.platform" ]
 }
 
@@ -255,8 +263,8 @@ driver_module("driver_module") {
   output_name = "brcmfmac"
   sources = [ "binding.cc" ]
   deps = [
-    ":brcmfmac_pcie_bind",
-    ":brcmfmac_sdio_bind",
+    ":brcmfmac_pcie_bind_header",
+    ":brcmfmac_sdio_bind_header",
     ":core",
     ":driver_sources",
     "//src/connectivity/wlan/lib/common/cpp:common",

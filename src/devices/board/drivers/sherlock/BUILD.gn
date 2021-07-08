@@ -24,9 +24,10 @@ driver_bind_rules("sherlock-bind") {
   ]
 }
 
-bind_rules("luis-bind") {
+driver_bind_rules("luis-bind") {
   rules = "luis.bind"
-  output = "luis-bind.h"
+  header_output = "luis-bind.h"
+  bind_output = "luis.bindbc"
   tests = "luis-bind-tests.json"
   deps = [
     "//src/devices/bind/fuchsia.google.platform",
@@ -90,8 +91,6 @@ template("sherlock_driver") {
     ]
 
     deps = [
-      ":luis-bind",
-      ":sherlock-bind",
       "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
@@ -130,6 +129,19 @@ template("sherlock_driver") {
       "//zircon/public/lib/zircon-internal",
       "//zircon/public/lib/zx",
     ]
+
+    # We need both headers to build but we can only depend on one bindfile at a time.
+    deps += [
+      ":luis-bind_header",
+      ":sherlock-bind_header",
+    ]
+
+    if (defined(is_luis) && is_luis) {
+      defines = [ "IS_LUIS=1" ]
+      deps += [ ":luis-bind" ]
+    } else {
+      deps += [ ":sherlock-bind" ]
+    }
   }
 }
 
@@ -151,19 +163,19 @@ sherlock_driver("sherlock-factory-rndis") {
 sherlock_driver("luis") {
   use_factory = false
   enable_rndis = false
-  defines = [ "IS_LUIS=1" ]
+  is_luis = true
 }
 
 sherlock_driver("luis-factory") {
   use_factory = true
   enable_rndis = false
-  defines = [ "IS_LUIS=1" ]
+  is_luis = true
 }
 
 sherlock_driver("luis-factory-rndis") {
   use_factory = true
   enable_rndis = true
-  defines = [ "IS_LUIS=1" ]
+  is_luis = true
 }
 
 group("tests") {
