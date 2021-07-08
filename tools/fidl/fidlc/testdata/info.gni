@@ -198,7 +198,8 @@ fidl_testdata_info = [
   },
   {
     name = "experimental_maybe_from_type_alias"
-    target = "//tools/fidl/fidlc/testdata/type_aliases:fidl.test.experimentalmaybefromtypealias"
+    target =
+        "//tools/fidl/fidlc/testdata:fidl.test.experimentalmaybefromtypealias"
     denylist = [
       # TODO(fxbug.dev/62533): Fix many issues.
       "fidlgen_hlcpp",
@@ -497,6 +498,15 @@ foreach(info, _fidl_testdata_info) {
   info.library = info.target_name
   info.fidl_gen_dir =
       get_label_info("${info.target}($fidl_toolchain)", "target_gen_dir")
+
+  # Enforce consistent naming. This also ensures that subdirectories are only
+  # used for wiring up dependencies, not for categorization (see README.md).
+  desired_target_name = "fidl.test." + string_replace(info.name, "_", "")
+  assert(info.target_name == desired_target_name,
+         "Expected ${info.target} to have name $desired_target_name")
+  dir_name = get_path_info(get_label_info(info.target, "dir"), "file")
+  assert(dir_name == "testdata" || dir_name == info.name,
+         "Expected ${info.target} to be in testdata/ or testdata/${info.name}/")
 
   if (!defined(info.denylist)) {
     info.denylist = []

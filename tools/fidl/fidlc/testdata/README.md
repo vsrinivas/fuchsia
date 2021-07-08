@@ -21,7 +21,11 @@ To add a new standalone library:
 }
 ```
 
-To add a new library with dependencies:
+## Add a new library with dependencies
+
+To add a new library with dependencies, you must create a subdirectory
+containing multiple FIDL files. This should only be done to accommodate
+dependencies, not to group together similar standalone libraries.
 
 1. Choose a **name**, e.g. `foo_bar`.
 2. Create a subdirectory named **name** containing two or more FIDL files ending
@@ -41,8 +45,7 @@ To add a new library with dependencies:
 ## Golden tests
 
 FIDL tools in //tools/fidl use the test libraries as input when defining golden
-tests with //build/testing/golden_test.gni. The fidlc goldens are in
-//tools/fidl/fidlc -- eventually all fidlc source code will move there.
+tests with //build/testing/golden_test.gni.
 
 To regenerate all goldens, run `fx regen-goldens fidl`.
 

@@ -11,12 +11,6 @@ fidl("fidl.test.typealiases") {
   host_llcpp = true
 }
 
-fidl("fidl.test.experimentalmaybefromtypealias") {
-  testonly = true
-  sources = [ "experimental_maybe_from_type_alias.test.fidl" ]
-  host_llcpp = true
-}
-
 fidl("someotherlibrary") {
   testonly = true
   sources = [ "someotherlibrary.test.fidl" ]

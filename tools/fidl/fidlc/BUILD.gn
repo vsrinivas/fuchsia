@@ -152,5 +152,8 @@ if (is_host) {
 
 group("tests") {
   testonly = true
-  deps = [ ":fidlc_golden_tests($host_toolchain)" ]
+  deps = [
+    ":fidlc_golden_tests($host_toolchain)",
+    "testdata:verify_files_exist",
+  ]
 }

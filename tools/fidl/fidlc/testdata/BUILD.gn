@@ -46,3 +46,14 @@ foreach(filename, standalone_libraries) {
     host_llcpp = true
   }
 }
+
+# Ensure the files above exist. The test library targets are only reachable
+# through fidl_testdata_info in info.gni, so when removing a library it's easy
+# to forget to remove it from standalone_libraries.
+action("verify_files_exist") {
+  testonly = true
+  script = "stamp.sh"
+  sources = standalone_libraries
+  outputs = [ "$target_out_dir/files_in_standalone_libraries_exist.verified" ]
+  args = [ rebase_path(outputs[0], root_build_dir) ]
+}
