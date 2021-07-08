@@ -62,6 +62,10 @@ class App extends StatelessWidget {
                   // Show scrim and overlay layers if an overlay is visible.
                   if (app.overlaysVisible.value)
                     WidgetFactory.create(() => Overlays(app)),
+
+                  // Show blank screen saver when idle.
+                  if (app.isIdle.value)
+                    WidgetFactory.create(() => Container(color: Colors.black)),
                 ],
               );
             }),
