@@ -298,20 +298,7 @@ func TestGetAll(t *testing.T) {
 				},
 			},
 			},
-			expected: []string{
-				`{
- "device-name": "<unknown>",
- "bucket": "",
- "image": "",
- "device-ip": "",
- "ssh-port": "",
- "package-repo": "",
- "package-port": "",
- "default": true,
- "discoverable": false
-}
-`,
-			},
+			expected: []string{},
 		},
 	}
 	for _, test := range tests {
