@@ -9,7 +9,7 @@
 
 #include "src/devices/lib/driver2/namespace.h"
 
-#define FDF_LOGL(severity, logger, msg...) logger.log(FX_LOG_##severity, __FILE__, __LINE__, msg)
+#define FDF_LOGL(severity, logger, msg...) logger.log((FX_LOG_##severity), __FILE__, __LINE__, msg)
 #define FDF_LOG(severity, msg...) FDF_LOGL(severity, logger_, msg)
 
 namespace driver {

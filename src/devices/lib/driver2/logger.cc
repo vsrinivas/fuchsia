@@ -70,7 +70,7 @@ void Logger::log(fx_log_severity_t severity, const char* file, int line, const c
 
 void Logger::log(fx_log_severity_t severity, const char* file, int line, const char* msg,
                  va_list args) {
-  fx_logger_logf_with_source(logger_, severity, nullptr, file, line, msg, args);
+  fx_logger_logvf_with_source(logger_, severity, nullptr, file, line, msg, args);
 }
 
 }  // namespace driver
