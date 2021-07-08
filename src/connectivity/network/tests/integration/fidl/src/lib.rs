@@ -14,7 +14,6 @@ use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 
 use anyhow::Context as _;
-use fidl::endpoints::create_endpoints;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip, std_ip_v4, std_ip_v6, std_socket_addr};
 use netemul::RealmUdpSocket as _;
@@ -409,10 +408,11 @@ async fn test_log_packets() -> Result {
         .context("failed to create realm")?;
     let log = fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_logger::LogMarker>()
         .context("failed to connect to log")?;
-    let (client_end, server_end) = create_endpoints::<fidl_fuchsia_logger::LogListenerSafeMarker>()
-        .context("failed to create log listener endpoints")?;
+    let (client_end, stream) =
+        fidl::endpoints::create_request_stream::<fidl_fuchsia_logger::LogListenerSafeMarker>()
+            .context("failed to create log listener endpoints")?;
 
-    stack_log.set_log_packets(true).await.context("failed to enable packet logging")?;
+    let () = stack_log.set_log_packets(true).await.context("failed to enable packet logging")?;
 
     let sock =
         fuchsia_async::net::UdpSocket::bind_in_realm(&realm, std_socket_addr!("127.0.0.1:0"))
@@ -424,36 +424,54 @@ async fn test_log_packets() -> Result {
     const PAYLOAD: [u8; 4] = [1u8, 2, 3, 4];
     let sent = sock.send_to(&PAYLOAD[..], addr).await.context("send_to failed")?;
     assert_eq!(sent, PAYLOAD.len());
-    log.listen_safe(client_end, None).context("failed to call listen_safe")?;
+    let () = log.listen_safe(client_end, None).context("failed to call listen_safe")?;
 
     let patterns = ["send", "recv"]
         .iter()
         .map(|t| format!("{} udp {} -> {} len:{}", t, addr, addr, PAYLOAD.len()))
         .collect::<Vec<_>>();
 
-    let stream =
-        server_end.into_stream()?.map_err(anyhow::Error::new).map(|request| match request {
-            Ok(fidl_fuchsia_logger::LogListenerSafeRequest::LogMany { log, responder }) => {
-                let () = responder.send().context("failed to acknowledge log request")?;
-                Ok(log)
-            }
-            Ok(fidl_fuchsia_logger::LogListenerSafeRequest::Log { log, responder }) => {
-                let () = responder.send().context("failed to acknowledge log request")?;
-                Ok(vec![log])
-            }
-            Ok(fidl_fuchsia_logger::LogListenerSafeRequest::Done { control_handle: _ }) => {
-                Ok(Vec::new())
-            }
-            Err(err) => Err(err),
-        });
-    let () = async_utils::fold::try_fold_while(stream, patterns, |mut patterns, logs| {
-        let () = patterns.retain(|pattern| !logs.iter().any(|log| log.msg.contains(pattern)));
-        futures::future::ok(if patterns.is_empty() {
-            async_utils::fold::FoldWhile::Done(())
-        } else {
-            async_utils::fold::FoldWhile::Continue(patterns)
+    let stream = stream
+        .map(|request| {
+            let request = request.context("stream error")?;
+            let stream = match request {
+                fidl_fuchsia_logger::LogListenerSafeRequest::LogMany { log, responder } => {
+                    let () = responder.send().context("failed to acknowledge log request")?;
+                    futures::stream::iter(log).left_stream()
+                }
+                fidl_fuchsia_logger::LogListenerSafeRequest::Log { log, responder } => {
+                    let () = responder.send().context("failed to acknowledge log request")?;
+                    futures::stream::iter(Some(log)).right_stream()
+                }
+                fidl_fuchsia_logger::LogListenerSafeRequest::Done { control_handle: _ } => {
+                    // Not stream::empty because {left,right}_stream only gives us two variants.
+                    futures::stream::iter(None).right_stream()
+                }
+            };
+            Result::Ok(stream.map(Result::Ok))
         })
-    })
+        .try_flatten();
+    let () = async_utils::fold::try_fold_while(
+        stream,
+        patterns,
+        |mut patterns,
+         fidl_fuchsia_logger::LogMessage {
+             pid: _,
+             tid: _,
+             time: _,
+             severity: _,
+             dropped_logs: _,
+             tags: _,
+             msg,
+         }| {
+            let () = patterns.retain(|pattern| msg.contains(pattern));
+            futures::future::ok(if patterns.is_empty() {
+                async_utils::fold::FoldWhile::Done(())
+            } else {
+                async_utils::fold::FoldWhile::Continue(patterns)
+            })
+        },
+    )
     .await
     .context("failed to observe expected patterns")?
     .short_circuited()
