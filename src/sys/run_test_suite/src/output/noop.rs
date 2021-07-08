@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::output::{ArtifactReporter, ArtifactType, EntityId, ReportedOutcome, Reporter};
+use crate::output::{
+    ArtifactReporter, ArtifactType, EntityId, ReportedOutcome, Reporter, Timestamp,
+};
 use std::io::{Error, Sink};
 
 /// A reporter that acts as a data sink and does not save results or artifacts.
@@ -25,11 +27,11 @@ impl Reporter for NoopReporter {
         Ok(())
     }
 
-    fn entity_started(&self, _: &EntityId) -> Result<(), Error> {
+    fn entity_started(&self, _: &EntityId, _: Timestamp) -> Result<(), Error> {
         Ok(())
     }
 
-    fn entity_stopped(&self, _: &EntityId, _: &ReportedOutcome) -> Result<(), Error> {
+    fn entity_stopped(&self, _: &EntityId, _: &ReportedOutcome, _: Timestamp) -> Result<(), Error> {
         Ok(())
     }
 

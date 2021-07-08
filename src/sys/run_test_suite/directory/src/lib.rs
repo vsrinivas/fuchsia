@@ -35,6 +35,11 @@ pub enum TestRunResult {
         artifacts: Vec<PathBuf>,
         outcome: Outcome,
         suites: Vec<SuiteEntryV0>,
+        /// Approximate start time, as milliseconds since the epoch.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        start_time: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        duration_milliseconds: Option<u64>,
     },
 }
 
@@ -59,6 +64,11 @@ pub enum SuiteResult {
         outcome: Outcome,
         name: String,
         cases: Vec<TestCaseResultV0>,
+        /// Approximate start time, as milliseconds since the epoch.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        start_time: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        duration_milliseconds: Option<u64>,
     },
 }
 
@@ -70,6 +80,11 @@ pub struct TestCaseResultV0 {
     pub artifacts: Vec<PathBuf>,
     pub outcome: Outcome,
     pub name: String,
+    /// Approximate start time, as milliseconds since the epoch.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_time: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_milliseconds: Option<u64>,
 }
 
 #[cfg(test)]
@@ -82,8 +97,13 @@ mod test {
     #[test]
     fn run_version_serialized() {
         // This is a sanity check that verifies version is serialized.
-        let run_result =
-            TestRunResult::V0 { artifacts: vec![], outcome: Outcome::Inconclusive, suites: vec![] };
+        let run_result = TestRunResult::V0 {
+            artifacts: vec![],
+            outcome: Outcome::Inconclusive,
+            suites: vec![],
+            duration_milliseconds: None,
+            start_time: None,
+        };
 
         let serialized = to_string(&run_result).expect("serialize result");
         let value = from_str::<Value>(&serialized).expect("deserialize result");
@@ -119,6 +139,8 @@ mod test {
             outcome: Outcome::Inconclusive,
             cases: vec![],
             name: "suite".to_string(),
+            duration_milliseconds: None,
+            start_time: None,
         };
 
         let serialized = to_string(&suite_result).expect("serialize result");
@@ -159,11 +181,19 @@ mod test {
             scope.compile_and_return(run_schema, false).expect("compile json schema");
 
         let cases = vec![
-            TestRunResult::V0 { artifacts: vec![], outcome: Outcome::Skipped, suites: vec![] },
+            TestRunResult::V0 {
+                artifacts: vec![],
+                outcome: Outcome::Skipped,
+                suites: vec![],
+                duration_milliseconds: None,
+                start_time: None,
+            },
             TestRunResult::V0 {
                 artifacts: vec![Path::new("a/b.txt").to_path_buf()],
                 outcome: Outcome::Skipped,
                 suites: vec![SuiteEntryV0 { summary: "suite-summary.json".to_string() }],
+                duration_milliseconds: None,
+                start_time: None,
             },
             TestRunResult::V0 {
                 artifacts: vec![
@@ -175,6 +205,8 @@ mod test {
                     SuiteEntryV0 { summary: "suite-summary-1.json".to_string() },
                     SuiteEntryV0 { summary: "suite-summary-2.json".to_string() },
                 ],
+                duration_milliseconds: Some(65),
+                start_time: Some(01),
             },
         ];
 
@@ -204,6 +236,8 @@ mod test {
                 outcome: Outcome::Passed,
                 name: "my test suite".to_string(),
                 cases: vec![],
+                duration_milliseconds: None,
+                start_time: None,
             },
             SuiteResult::V0 {
                 artifacts: vec![],
@@ -213,7 +247,11 @@ mod test {
                     artifacts: vec![],
                     outcome: Outcome::Inconclusive,
                     name: "test case".to_string(),
+                    duration_milliseconds: Some(12),
+                    start_time: Some(100),
                 }],
+                duration_milliseconds: Some(80),
+                start_time: Some(200),
             },
             SuiteResult::V0 {
                 artifacts: vec![Path::new("suite/a.txt").to_path_buf()],
@@ -227,6 +265,8 @@ mod test {
                         ],
                         outcome: Outcome::Timedout,
                         name: "test case".to_string(),
+                        duration_milliseconds: None,
+                        start_time: Some(37),
                     },
                     TestCaseResultV0 {
                         artifacts: vec![
@@ -235,8 +275,12 @@ mod test {
                         ],
                         outcome: Outcome::Error,
                         name: "test case 2".to_string(),
+                        duration_milliseconds: Some(37),
+                        start_time: None,
                     },
                 ],
+                duration_milliseconds: Some(37),
+                start_time: None,
             },
         ];
 

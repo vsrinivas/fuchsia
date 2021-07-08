@@ -96,13 +96,13 @@ impl RunReporter {
     }
 
     /// Record that the test run has started.
-    pub fn started(&self) -> Result<(), Error> {
-        self.reporter.entity_started(&EntityId::TestRun)
+    pub fn started(&self, timestamp: Timestamp) -> Result<(), Error> {
+        self.reporter.entity_started(&EntityId::TestRun, timestamp)
     }
 
     /// Record the outcome of the test run.
-    pub fn stopped(&self, outcome: &ReportedOutcome) -> Result<(), Error> {
-        self.reporter.entity_stopped(&EntityId::TestRun, outcome)
+    pub fn stopped(&self, outcome: &ReportedOutcome, timestamp: Timestamp) -> Result<(), Error> {
+        self.reporter.entity_stopped(&EntityId::TestRun, outcome, timestamp)
     }
 
     /// Record a new suite under the test run.
@@ -128,13 +128,13 @@ impl<'a> SuiteReporter<'a> {
     }
 
     /// Record that the suite has started.
-    pub fn started(&self) -> Result<(), Error> {
-        self.reporter.entity_started(&EntityId::Suite(self.suite_id))
+    pub fn started(&self, timestamp: Timestamp) -> Result<(), Error> {
+        self.reporter.entity_started(&EntityId::Suite(self.suite_id), timestamp)
     }
 
     /// Record the outcome of the suite.
-    pub fn stopped(&self, outcome: &ReportedOutcome) -> Result<(), Error> {
-        self.reporter.entity_stopped(&EntityId::Suite(self.suite_id), outcome)
+    pub fn stopped(&self, outcome: &ReportedOutcome, timestamp: Timestamp) -> Result<(), Error> {
+        self.reporter.entity_stopped(&EntityId::Suite(self.suite_id), outcome, timestamp)
     }
 
     /// Record a new suite under the suite.
@@ -157,13 +157,13 @@ impl<'a> CaseReporter<'a> {
     }
 
     /// Record that the case has started.
-    pub fn started(&self) -> Result<(), Error> {
-        self.reporter.entity_started(&self.entity_id)
+    pub fn started(&self, timestamp: Timestamp) -> Result<(), Error> {
+        self.reporter.entity_started(&self.entity_id, timestamp)
     }
 
     /// Record the outcome of the test case.
-    pub fn stopped(&self, outcome: &ReportedOutcome) -> Result<(), Error> {
-        self.reporter.entity_stopped(&self.entity_id, outcome)
+    pub fn stopped(&self, outcome: &ReportedOutcome, timestamp: Timestamp) -> Result<(), Error> {
+        self.reporter.entity_stopped(&self.entity_id, outcome, timestamp)
     }
 
     /// Record the outcome of the test case.
@@ -236,10 +236,15 @@ trait Reporter {
     fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error>;
 
     /// Record that a test run, suite or case has started.
-    fn entity_started(&self, entity: &EntityId) -> Result<(), Error>;
+    fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error>;
 
     /// Record that a test run, suite, or case has stopped.
-    fn entity_stopped(&self, entity: &EntityId, outcome: &ReportedOutcome) -> Result<(), Error>;
+    fn entity_stopped(
+        &self,
+        entity: &EntityId,
+        outcome: &ReportedOutcome,
+        timestamp: Timestamp,
+    ) -> Result<(), Error>;
 
     /// Record that a test run, suite, or case has stopped. After this method is called for
     /// an entity, no additional events or artifacts may be added to the entity.
@@ -259,4 +264,38 @@ trait ArtifactReporter {
         entity: &EntityId,
         artifact_type: &ArtifactType,
     ) -> Result<Self::Writer, Error>;
+}
+
+/// A wrapper around Fuchsia's representation of time.
+/// This is added as fuchsia-zircon is not available on host.
+#[derive(Clone, Copy)]
+pub struct ZxTime(i64);
+
+impl ZxTime {
+    pub const fn from_nanos(nanos: i64) -> Self {
+        ZxTime(nanos)
+    }
+
+    pub fn checked_sub(&self, rhs: Self) -> Option<std::time::Duration> {
+        let nanos = self.0 - rhs.0;
+        if nanos < 0 {
+            None
+        } else {
+            Some(std::time::Duration::from_nanos(nanos as u64))
+        }
+    }
+}
+
+pub enum Timestamp {
+    Unknown,
+    Given(ZxTime),
+}
+
+impl Timestamp {
+    pub fn from_nanos(nanos: Option<i64>) -> Self {
+        match nanos {
+            None => Self::Unknown,
+            Some(n) => Self::Given(ZxTime::from_nanos(n)),
+        }
+    }
 }

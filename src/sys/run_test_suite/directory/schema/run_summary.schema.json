@@ -1,6 +1,7 @@
 {
     "$defs": {
         "suiteEntry": {
+            "additionalProperties": false,
             "properties": {
                 "summary": {
                     "description": "Relative path to a suite summary json",
@@ -14,6 +15,7 @@
     },
     "$id": "https://fuchsia.dev/schema/src/sys/run_test_suite/directory/schema/run_summary.schema.json",
     "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
     "description": "Format for the top level run summary of a fuchsia test output directory.",
     "properties": {
         "artifacts": {
@@ -22,6 +24,10 @@
                 "type": "string"
             },
             "type": "array"
+        },
+        "duration_milliseconds": {
+            "description": "Run duration in milliseconds",
+            "type": "integer"
         },
         "outcome": {
             "description": "The outcome of the test",
@@ -34,6 +40,10 @@
                 "SKIPPED"
             ],
             "type": "string"
+        },
+        "start_time": {
+            "description": "Start time as milliseconds since the UNIX epoch",
+            "type": "integer"
         },
         "suites": {
             "description": "List of suite runs under the test run",

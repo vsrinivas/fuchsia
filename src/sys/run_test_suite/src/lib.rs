@@ -32,7 +32,9 @@ pub mod output;
 
 use {
     artifact::{Artifact, ArtifactSender},
-    output::{AnsiFilterWriter, ArtifactType, CaseId, RunReporter, SuiteId, SuiteReporter},
+    output::{
+        AnsiFilterWriter, ArtifactType, CaseId, RunReporter, SuiteId, SuiteReporter, Timestamp,
+    },
 };
 
 /// Duration after which to emit an excessive duration log.
@@ -140,6 +142,7 @@ async fn collect_results_for_suite(
     let mut test_cases_executed = HashSet::new();
     let mut test_cases_output = HashMap::new();
     let mut suite_log_tasks = vec![];
+    let mut suite_finish_timestamp = Timestamp::Unknown;
     let mut outcome = Outcome::Passed;
     let mut test_cases_passed = HashSet::new();
     let mut test_cases_failed = HashSet::new();
@@ -149,7 +152,7 @@ async fn collect_results_for_suite(
     loop {
         match suite_controller.get_events().await? {
             Err(e) => {
-                suite_reporter.stopped(&Outcome::Error.into())?;
+                suite_reporter.stopped(&Outcome::Error.into(), Timestamp::Unknown)?;
                 return Err(anyhow::anyhow!(convert_launch_error_to_str(e)));
             }
             Ok(events) => {
@@ -157,8 +160,7 @@ async fn collect_results_for_suite(
                     break;
                 }
                 for event in events {
-                    // use this timestamp eventually
-                    let _timestamp = event.timestamp;
+                    let timestamp = Timestamp::from_nanos(event.timestamp);
                     match event.payload.expect("event cannot be None") {
                         ftest_manager::SuiteEventPayload::CaseFound(CaseFound {
                             test_case_name,
@@ -179,6 +181,10 @@ async fn collect_results_for_suite(
                                     identifier
                                 ))?
                                 .clone();
+                            let reporter = test_case_reporters.get(&identifier).unwrap();
+                            // TODO(fxbug.dev/79712): Record per-case runtime once we have an
+                            // accurate way to measure it.
+                            reporter.started(Timestamp::Unknown)?;
                             if test_cases_executed.contains(&identifier) {
                                 return Err(anyhow::anyhow!(
                                     "test case: '{}' started twice",
@@ -386,7 +392,9 @@ async fn collect_results_for_suite(
                                 ))
                                 .await
                                 .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
-                            reporter.stopped(&status.into())?;
+                            // TODO(fxbug.dev/79712): Record per-case runtime once we have an
+                            // accurate way to measure it.
+                            reporter.stopped(&status.into(), Timestamp::Unknown)?;
                         }
                         ftest_manager::SuiteEventPayload::CaseFinished(CaseFinished {
                             identifier,
@@ -439,10 +447,11 @@ async fn collect_results_for_suite(
                             }
                         },
                         ftest_manager::SuiteEventPayload::SuiteStarted(_) => {
-                            // Do nothing, in the future this event is used to record timing
+                            suite_reporter.started(timestamp)?;
                         }
                         ftest_manager::SuiteEventPayload::SuiteStopped(SuiteStopped { status }) => {
                             successful_completion = true;
+                            suite_finish_timestamp = timestamp;
                             outcome = match status {
                                 ftest_manager::SuiteStatus::Passed => Outcome::Passed,
                                 ftest_manager::SuiteStatus::Failed => Outcome::Failed,
@@ -512,7 +521,7 @@ async fn collect_results_for_suite(
     test_cases_passed.sort();
     test_cases_failed.sort();
 
-    suite_reporter.stopped(&outcome.into())?;
+    suite_reporter.stopped(&outcome.into(), suite_finish_timestamp)?;
 
     Ok(SuiteRunResult {
         outcome,
@@ -760,7 +769,7 @@ pub async fn run_tests_and_get_outcome(
         println!("One or more test runs failed.");
     }
 
-    let report_result = match reporter.stopped(&test_outcome.into()) {
+    let report_result = match reporter.stopped(&test_outcome.into(), Timestamp::Unknown) {
         Ok(()) => reporter.finished(),
         Err(e) => Err(e),
     };

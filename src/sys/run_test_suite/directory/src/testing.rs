@@ -32,10 +32,46 @@ pub fn parse_json_in_output(path: &Path) -> (TestRunResult, Vec<SuiteResult>) {
     (run_result, suite_results)
 }
 
+enum MatchOption<T> {
+    AnyOrNone,
+    None,
+    Any,
+    Specified(T),
+}
+
+macro_rules! assert_match_option {
+    ($expected:expr, $actual:expr, $field:literal) => {
+        match $expected {
+            MatchOption::AnyOrNone => (),
+            MatchOption::None => {
+                assert_eq!(None, $actual, "Expected {} to be None but was {:?}", $field, $actual)
+            }
+            MatchOption::Any => {
+                assert!($actual.is_some(), "Expected {} to contain a value but was None", $field)
+            }
+            MatchOption::Specified(val) => assert_eq!(
+                Some(val),
+                $actual,
+                "Expected {} to be {:?} but was {:?}",
+                $field,
+                Some(val),
+                $actual
+            ),
+        }
+    };
+}
+
 /// Assert that the run results contained in `actual_run` and the directory specified by `root`
 /// contain the results and artifacts in `expected_run`.
 pub fn assert_run_result(root: &Path, actual_run: &TestRunResult, expected_run: &ExpectedTestRun) {
-    let &TestRunResult::V0 { artifacts, outcome, .. } = &actual_run;
+    let &TestRunResult::V0 { artifacts, outcome, suites: _, start_time, duration_milliseconds } =
+        &actual_run;
+    assert_match_option!(
+        expected_run.duration_milliseconds,
+        *duration_milliseconds,
+        "run duration"
+    );
+    assert_match_option!(expected_run.start_time, *start_time, "run start time");
     assert_eq!(outcome, &expected_run.outcome);
     assert_artifacts(root, &artifacts, &expected_run.artifacts);
 }
@@ -72,9 +108,16 @@ pub fn assert_suite_result(
     actual_suite: &SuiteResult,
     expected_suite: &ExpectedSuite,
 ) {
-    let &SuiteResult::V0 { artifacts, outcome, name, cases } = &actual_suite;
+    let &SuiteResult::V0 { artifacts, outcome, name, cases, duration_milliseconds, start_time } =
+        &actual_suite;
     assert_eq!(outcome, &expected_suite.outcome);
     assert_eq!(name, &expected_suite.name);
+    assert_match_option!(
+        expected_suite.duration_milliseconds,
+        *duration_milliseconds,
+        "suite duration"
+    );
+    assert_match_option!(expected_suite.start_time, *start_time, "suite start time");
 
     assert_artifacts(root, &artifacts, &expected_suite.artifacts);
 
@@ -91,6 +134,12 @@ fn assert_case_result(
 ) {
     assert_eq!(actual_case.name, expected_case.name);
     assert_eq!(actual_case.outcome, expected_case.outcome);
+    assert_match_option!(
+        expected_case.duration_milliseconds,
+        actual_case.duration_milliseconds,
+        "case duration"
+    );
+    assert_match_option!(expected_case.start_time, actual_case.start_time, "case start time");
     assert_artifacts(root, &actual_case.artifacts, &expected_case.artifacts);
 }
 
@@ -122,6 +171,8 @@ fn assert_artifacts(
 pub struct ExpectedTestRun {
     artifacts: HashMap<String, Box<dyn Fn(&str)>>,
     outcome: Outcome,
+    start_time: MatchOption<u64>,
+    duration_milliseconds: MatchOption<u64>,
 }
 
 /// A version of a suite run result that contains all output in memory. This should only be used
@@ -131,6 +182,8 @@ pub struct ExpectedSuite {
     name: String,
     outcome: Outcome,
     cases: HashMap<String, ExpectedTestCase>,
+    start_time: MatchOption<u64>,
+    duration_milliseconds: MatchOption<u64>,
 }
 
 /// A version of a test case result that contains all output in memory. This should only be used
@@ -139,37 +192,86 @@ pub struct ExpectedTestCase {
     artifacts: HashMap<String, Box<dyn Fn(&str)>>,
     name: String,
     outcome: Outcome,
+    start_time: MatchOption<u64>,
+    duration_milliseconds: MatchOption<u64>,
+}
+
+macro_rules! common_impl {
+    {} => {
+        /// Add an artifact matching the exact contents.
+        pub fn with_artifact<S: AsRef<str>, T: AsRef<str>>(self, name: S, contents: T) -> Self {
+            let owned_expected = contents.as_ref().to_string();
+            let owned_name = name.as_ref().to_string();
+            self.with_matching_artifact(name, move |actual| {
+                assert_eq!(
+                    &owned_expected, actual,
+                    "Mismatch in artifact '{}'. Expected: '{}', actual:'{}'",
+                    owned_name, &owned_expected, actual
+                )
+            })
+        }
+
+        /// Add an artifact. `matcher` will be run against the contents of
+        /// the actual artifact and may contain assertions.
+        pub fn with_matching_artifact<S: AsRef<str>, F: 'static + Fn(&str)>(
+            mut self,
+            name: S,
+            matcher: F,
+        ) -> Self {
+            self.artifacts.insert(name.as_ref().to_string(), Box::new(matcher));
+            self
+        }
+
+        /// Verify an exact start time.
+        pub fn with_start_time(mut self, millis: u64) -> Self {
+            self.start_time = MatchOption::Specified(millis);
+            self
+        }
+
+        /// Verify an exact run duration.
+        pub fn with_run_duration(mut self, millis: u64) -> Self {
+            self.duration_milliseconds = MatchOption::Specified(millis);
+            self
+        }
+
+        /// Verify that a start time is present.
+        pub fn with_any_start_time(mut self) -> Self {
+            self.start_time = MatchOption::Any;
+            self
+        }
+
+        /// Verify that a run duration is present.
+        pub fn with_any_run_duration(mut self) -> Self {
+            self.duration_milliseconds = MatchOption::Any;
+            self
+        }
+
+        /// Verify that no start time is present.
+        pub fn with_no_start_time(mut self) -> Self {
+            self.start_time = MatchOption::None;
+            self
+        }
+
+        /// Verify that no run duration is present.
+        pub fn with_no_run_duration(mut self) -> Self {
+            self.duration_milliseconds = MatchOption::None;
+            self
+        }
+    };
 }
 
 impl ExpectedTestRun {
     /// Create a new `ExpectedTestRun` with the given `outcome`.
     pub fn new(outcome: Outcome) -> Self {
-        Self { artifacts: HashMap::new(), outcome }
+        Self {
+            artifacts: HashMap::new(),
+            outcome,
+            start_time: MatchOption::AnyOrNone,
+            duration_milliseconds: MatchOption::AnyOrNone,
+        }
     }
 
-    /// Add an artifact scoped to the test run.
-    pub fn with_artifact<S: AsRef<str>, T: AsRef<str>>(self, name: S, contents: T) -> Self {
-        let owned_expected = contents.as_ref().to_string();
-        let owned_name = name.as_ref().to_string();
-        self.with_matching_artifact(name, move |actual| {
-            assert_eq!(
-                &owned_expected, actual,
-                "Mismatch in artifact '{}'. Expected: '{}', actual:'{}'",
-                owned_name, &owned_expected, actual
-            )
-        })
-    }
-
-    /// Add an artifact scoped to the test run. `matcher` will be run against the contents of
-    /// the actual artifact and may contain assertions.
-    pub fn with_matching_artifact<S: AsRef<str>, F: 'static + Fn(&str)>(
-        mut self,
-        name: S,
-        matcher: F,
-    ) -> Self {
-        self.artifacts.insert(name.as_ref().to_string(), Box::new(matcher));
-        self
-    }
+    common_impl! {}
 }
 
 impl ExpectedSuite {
@@ -180,6 +282,8 @@ impl ExpectedSuite {
             name: name.as_ref().to_string(),
             outcome,
             cases: HashMap::new(),
+            start_time: MatchOption::AnyOrNone,
+            duration_milliseconds: MatchOption::AnyOrNone,
         }
     }
 
@@ -189,58 +293,20 @@ impl ExpectedSuite {
         self
     }
 
-    /// Add an artifact scoped to the test suite.
-    pub fn with_artifact<S: AsRef<str>, T: AsRef<str>>(self, name: S, contents: T) -> Self {
-        let owned_expected = contents.as_ref().to_string();
-        let owned_name = name.as_ref().to_string();
-        self.with_matching_artifact(name, move |actual| {
-            assert_eq!(
-                &owned_expected, actual,
-                "Mismatch in artifact '{}'. Expected: '{}', actual:'{}'",
-                owned_name, &owned_expected, actual
-            )
-        })
-    }
-
-    /// Add an artifact scoped to the test suite. `matcher` will be run against the contents of
-    /// the actual artifact and may contain assertions.
-    pub fn with_matching_artifact<S: AsRef<str>, F: 'static + Fn(&str)>(
-        mut self,
-        name: S,
-        matcher: F,
-    ) -> Self {
-        self.artifacts.insert(name.as_ref().to_string(), Box::new(matcher));
-        self
-    }
+    common_impl! {}
 }
 
 impl ExpectedTestCase {
     /// Create a new `ExpectedTestCase` with the given `name` and `outcome`.
     pub fn new<S: AsRef<str>>(name: S, outcome: Outcome) -> Self {
-        Self { artifacts: HashMap::new(), name: name.as_ref().to_string(), outcome }
+        Self {
+            artifacts: HashMap::new(),
+            name: name.as_ref().to_string(),
+            outcome,
+            start_time: MatchOption::AnyOrNone,
+            duration_milliseconds: MatchOption::AnyOrNone,
+        }
     }
 
-    /// Add an artifact scoped to the test case.
-    pub fn with_artifact<S: AsRef<str>, T: AsRef<str>>(self, name: S, contents: T) -> Self {
-        let owned_expected = contents.as_ref().to_string();
-        let owned_name = name.as_ref().to_string();
-        self.with_matching_artifact(name, move |actual| {
-            assert_eq!(
-                &owned_expected, actual,
-                "Mismatch in artifact '{}'. Expected: '{}', actual:'{}'",
-                owned_name, &owned_expected, actual
-            )
-        })
-    }
-
-    /// Add an artifact scoped to the test case. `matcher` will be run against the contents of
-    /// the actual artifact and may contain assertions.
-    pub fn with_matching_artifact<S: AsRef<str>, F: 'static + Fn(&str)>(
-        mut self,
-        name: S,
-        matcher: F,
-    ) -> Self {
-        self.artifacts.insert(name.as_ref().to_string(), Box::new(matcher));
-        self
-    }
+    common_impl! {}
 }

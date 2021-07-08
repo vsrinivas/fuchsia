@@ -155,7 +155,7 @@ async fn launch_and_test_passing_v2_test() {
     .expect("run test");
     let run_result = streams.collect::<Vec<_>>().await.pop().unwrap().unwrap();
 
-    reporter.stopped(&output::ReportedOutcome::Passed).unwrap();
+    reporter.stopped(&output::ReportedOutcome::Passed, output::Timestamp::Unknown).unwrap();
     reporter.finished().unwrap();
 
     let expected_output = "[RUNNING]	Example.Test1
@@ -241,7 +241,7 @@ async fn launch_and_test_stderr_test() {
     .expect("run test");
     let run_result = streams.collect::<Vec<_>>().await.pop().unwrap().unwrap();
 
-    reporter.stopped(&output::ReportedOutcome::Passed).unwrap();
+    reporter.stopped(&output::ReportedOutcome::Passed, output::Timestamp::Unknown).unwrap();
     reporter.finished().unwrap();
 
     let expected_output = "[RUNNING]	Example.Test1
@@ -940,7 +940,9 @@ async fn test_stdout_to_directory() {
 
     assert_eq!(outcome, Outcome::Passed);
 
-    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
+    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed)
+        .with_no_start_time()
+        .with_no_run_duration();
     let expected_test_suites = vec![ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
         directory::Outcome::Passed,
@@ -953,12 +955,18 @@ async fn test_stdout_to_directory() {
     })
     .with_case(
         ExpectedTestCase::new("stdout_ansi_test", directory::Outcome::Passed)
-            .with_artifact("stdout.txt", "\u{1b}[31mred stdout\u{1b}[0m\n"),
+            .with_artifact("stdout.txt", "\u{1b}[31mred stdout\u{1b}[0m\n")
+            .with_no_run_duration()
+            .with_any_start_time(),
     )
     .with_case(
         ExpectedTestCase::new("log_ansi_test", directory::Outcome::Passed)
-            .with_artifact("stdout.txt", ""),
-    )];
+            .with_artifact("stdout.txt", "")
+            .with_no_run_duration()
+            .with_any_start_time(),
+    )
+    .with_any_run_duration()
+    .with_any_start_time()];
 
     let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
 
@@ -1005,11 +1013,15 @@ async fn test_syslog_to_directory() {
     )
     .with_case(
         ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed)
-            .with_artifact("stdout.txt", ""),
+            .with_artifact("stdout.txt", "")
+            .with_any_start_time()
+            .with_no_run_duration(),
     )
     .with_matching_artifact("syslog.txt", |actual| {
         assert_output!(actual.as_bytes(), EXPECTED_SYSLOG);
-    })];
+    })
+    .with_any_start_time()
+    .with_any_run_duration()];
 
     let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
 

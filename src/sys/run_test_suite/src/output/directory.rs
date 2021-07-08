@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::output::{ArtifactReporter, ArtifactType, EntityId, ReportedOutcome, Reporter};
+use crate::output::{
+    ArtifactReporter, ArtifactType, EntityId, ReportedOutcome, Reporter, Timestamp, ZxTime,
+};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
@@ -36,6 +38,44 @@ struct EntityEntry {
     artifacts: Vec<String>,
     /// Most recently known outcome for the entity.
     outcome: ReportedOutcome,
+    /// The approximate UTC start time as measured by the host.
+    approximate_host_start_time: Option<std::time::SystemTime>,
+    /// Timer used to measure durations as the difference between monotonic timestamps on
+    /// start and stop events.
+    timer: MonotonicTimer,
+}
+
+enum MonotonicTimer {
+    Unknown,
+    /// Entity has started but not stopped.
+    Started {
+        /// Monotonic start timestamp reported by the target.
+        mono_start_time: ZxTime,
+    },
+    /// Entity has completed running.
+    Stopped {
+        /// Runtime of the entity, calculated using timestamps reported by the target.
+        mono_run_time: std::time::Duration,
+    },
+}
+
+impl EntityEntry {
+    /// Returns the start timestamp, if any, as milliseconds since the UNIX epoch.
+    fn start_time_millis(&self) -> Option<u64> {
+        self.approximate_host_start_time.map(|time| {
+            time.duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .expect("host time after the epoch")
+                .as_millis() as u64
+        })
+    }
+
+    fn run_time_millis(&self) -> Option<u64> {
+        match self.timer {
+            MonotonicTimer::Unknown => None,
+            MonotonicTimer::Started { .. } => None,
+            MonotonicTimer::Stopped { mono_run_time, .. } => Some(mono_run_time.as_millis() as u64),
+        }
+    }
 }
 
 impl DirectoryReporter {
@@ -54,6 +94,8 @@ impl DirectoryReporter {
                 artifacts: vec![],
                 children: vec![],
                 outcome: ReportedOutcome::Inconclusive,
+                timer: MonotonicTimer::Unknown,
+                approximate_host_start_time: None,
             },
         );
         Ok(Self { root, entries: Mutex::new(entries) })
@@ -113,25 +155,48 @@ impl Reporter for DirectoryReporter {
                 artifacts: vec![],
                 children: vec![],
                 outcome: ReportedOutcome::Inconclusive,
+                timer: MonotonicTimer::Unknown,
+                approximate_host_start_time: None,
             },
         );
 
         Ok(())
     }
 
-    fn entity_started(&self, _: &EntityId /*timestamp: zx::Time*/) -> Result<(), Error> {
+    fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error> {
+        let mut entries = self.entries.lock();
+        let entry =
+            entries.get_mut(entity).expect("Outcome reported for an entity that does not exist");
+        entry.approximate_host_start_time = Some(std::time::SystemTime::now());
+        match (&entry.timer, timestamp) {
+            (MonotonicTimer::Unknown, Timestamp::Given(mono_start_time)) => {
+                entry.timer = MonotonicTimer::Started { mono_start_time };
+            }
+            _ => (),
+        }
         Ok(())
     }
 
     fn entity_stopped(
         &self,
         entity: &EntityId,
-        outcome: &ReportedOutcome, /*timestamp: zx::Time*/
+        outcome: &ReportedOutcome,
+        timestamp: Timestamp,
     ) -> Result<(), Error> {
         let mut entries = self.entries.lock();
         let entry =
             entries.get_mut(entity).expect("Outcome reported for an entity that does not exist");
         entry.outcome = *outcome;
+
+        if let (MonotonicTimer::Started { mono_start_time }, Timestamp::Given(mono_end_time)) =
+            (&entry.timer, timestamp)
+        {
+            entry.timer = MonotonicTimer::Stopped {
+                mono_run_time: mono_end_time
+                    .checked_sub(*mono_start_time)
+                    .expect("end time must be after start time"),
+            };
+        }
         Ok(())
     }
 
@@ -216,6 +281,8 @@ fn construct_serializable_run(run_entry: EntityEntry) -> directory::TestRunResul
             .collect(),
         outcome: into_serializable_outcome(run_entry.outcome),
         suites,
+        duration_milliseconds: run_entry.run_time_millis(),
+        start_time: run_entry.start_time_millis(),
     }
 }
 
@@ -233,6 +300,8 @@ fn construct_serializable_suite(
                 .map(|name| case_entry.artifact_dir.join(name))
                 .collect(),
             outcome: into_serializable_outcome(case_entry.outcome),
+            duration_milliseconds: case_entry.run_time_millis(),
+            start_time: case_entry.start_time_millis(),
             name: case_entry.name,
         })
         .collect::<Vec<_>>();
@@ -244,6 +313,8 @@ fn construct_serializable_suite(
             .collect(),
         outcome: into_serializable_outcome(suite_entry.outcome),
         cases,
+        duration_milliseconds: suite_entry.run_time_millis(),
+        start_time: suite_entry.start_time_millis(),
         name: suite_entry.name,
     }
 }
@@ -272,21 +343,39 @@ mod test {
     #[test]
     fn no_artifacts() {
         let dir = tempdir().expect("create temp directory");
+        const CASE_TIMES: [(ZxTime, ZxTime); 3] = [
+            (ZxTime::from_nanos(0x1100000), ZxTime::from_nanos(0x2100000)),
+            (ZxTime::from_nanos(0x1200000), ZxTime::from_nanos(0x2200000)),
+            (ZxTime::from_nanos(0x1300000), ZxTime::from_nanos(0x2300000)),
+        ];
+        const SUITE_TIMES: (ZxTime, ZxTime) =
+            (ZxTime::from_nanos(0x1000000), ZxTime::from_nanos(0x2400000));
+
         let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
         for suite_no in 0..3 {
             let suite_reporter = run_reporter
                 .new_suite(&format!("suite-{:?}", suite_no), &SuiteId(suite_no))
                 .expect("create suite reporter");
+            suite_reporter.started(Timestamp::Given(SUITE_TIMES.0)).expect("start suite");
             for case_no in 0..3 {
                 let case_reporter = suite_reporter
                     .new_case(&format!("case-{:?}-{:?}", suite_no, case_no), &CaseId(case_no))
                     .expect("create suite reporter");
-                case_reporter.stopped(&ReportedOutcome::Passed).expect("set case outcome");
+                case_reporter
+                    .started(Timestamp::Given(CASE_TIMES[case_no as usize].0))
+                    .expect("start case");
+                case_reporter
+                    .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+                    .expect("stop case");
             }
-            suite_reporter.stopped(&ReportedOutcome::Failed).expect("set suite outcome");
+            suite_reporter
+                .stopped(&ReportedOutcome::Failed, Timestamp::Unknown)
+                .expect("set suite outcome");
             suite_reporter.finished().expect("record suite");
         }
-        run_reporter.stopped(&ReportedOutcome::Timedout).expect("set run outcome");
+        run_reporter
+            .stopped(&ReportedOutcome::Timedout, Timestamp::Unknown)
+            .expect("set run outcome");
         run_reporter.finished().expect("record run");
 
         // assert on directory
@@ -322,27 +411,36 @@ mod test {
         let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
         let suite_reporter =
             run_reporter.new_suite("suite-1", &SuiteId(0)).expect("create new suite");
+        run_reporter.started(Timestamp::Unknown).expect("start run");
         for case_no in 0..3 {
             let case_reporter = suite_reporter
                 .new_case(&format!("case-1-{:?}", case_no), &CaseId(case_no))
                 .expect("create new case");
+            case_reporter.started(Timestamp::Unknown).expect("start case");
             let mut artifact =
                 case_reporter.new_artifact(&ArtifactType::Stdout).expect("create case artifact");
             writeln!(artifact, "stdout from case {:?}", case_no).expect("write to artifact");
-            case_reporter.stopped(&ReportedOutcome::Passed).expect("report case outcome");
+            case_reporter
+                .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+                .expect("report case outcome");
         }
 
         let mut suite_artifact =
             suite_reporter.new_artifact(&ArtifactType::Stdout).expect("create suite artifact");
         writeln!(suite_artifact, "stdout from suite").expect("write to artifact");
-        suite_reporter.stopped(&ReportedOutcome::Passed).expect("report suite outcome");
+        suite_reporter.started(Timestamp::Unknown).expect("start suite");
+        suite_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .expect("report suite outcome");
         suite_reporter.finished().expect("record suite");
         drop(suite_artifact); // want to flush contents
 
         let mut run_artifact =
             run_reporter.new_artifact(&ArtifactType::Stdout).expect("create run artifact");
         writeln!(run_artifact, "stdout from run").expect("write to artifact");
-        run_reporter.stopped(&ReportedOutcome::Passed).expect("record run outcome");
+        run_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .expect("record run outcome");
         run_reporter.finished().expect("record run");
         drop(run_artifact); // want to flush contents
 
@@ -380,7 +478,9 @@ mod test {
 
         let success_suite_reporter =
             run_reporter.new_suite("suite", &SuiteId(0)).expect("create new suite");
-        success_suite_reporter.stopped(&ReportedOutcome::Passed).expect("report suite outcome");
+        success_suite_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .expect("report suite outcome");
         success_suite_reporter
             .new_artifact(&ArtifactType::Stdout)
             .expect("create new artifact")
@@ -390,10 +490,14 @@ mod test {
 
         let failed_suite_reporter =
             run_reporter.new_suite("suite", &SuiteId(1)).expect("create new suite");
-        failed_suite_reporter.stopped(&ReportedOutcome::Failed).expect("report suite outcome");
+        failed_suite_reporter
+            .stopped(&ReportedOutcome::Failed, Timestamp::Unknown)
+            .expect("report suite outcome");
         failed_suite_reporter.finished().expect("record suite");
 
-        run_reporter.stopped(&ReportedOutcome::Failed).expect("report run outcome");
+        run_reporter
+            .stopped(&ReportedOutcome::Failed, Timestamp::Unknown)
+            .expect("report run outcome");
         run_reporter.finished().expect("record run");
 
         let (run_result, suite_results) = parse_json_in_output(dir.path());

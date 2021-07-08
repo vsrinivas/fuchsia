@@ -8,9 +8,14 @@
             "type": "array"
         },
         "caseEntry": {
+            "additionalProperties": false,
             "properties": {
                 "artifacts": {
                     "$ref": "#/$defs/artifacts"
+                },
+                "duration_milliseconds": {
+                    "description": "Run duration in milliseconds",
+                    "type": "integer"
                 },
                 "name": {
                     "description": "name of the test case",
@@ -18,6 +23,10 @@
                 },
                 "outcome": {
                     "$ref": "#/$defs/outcome"
+                },
+                "start_time": {
+                    "description": "Start time as milliseconds since the UNIX epoch",
+                    "type": "integer"
                 }
             },
             "required": [
@@ -40,6 +49,7 @@
     },
     "$id": "https://fuchsia.dev/schema/src/sys/run_test_suite/directory/schema/suite_summary.schema.json",
     "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
     "description": "Format for the summary of a suite run in a fuchsia test output directory.",
     "properties": {
         "artifacts": {
@@ -52,12 +62,20 @@
             },
             "type": "array"
         },
+        "duration_milliseconds": {
+            "description": "Run duration in milliseconds",
+            "type": "integer"
+        },
         "name": {
             "description": "name of the test suite",
             "type": "string"
         },
         "outcome": {
             "$ref": "#/$defs/outcome"
+        },
+        "start_time": {
+            "description": "Start time as milliseconds since the UNIX epoch",
+            "type": "integer"
         },
         "version": {
             "description": "Schema version",
