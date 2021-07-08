@@ -431,13 +431,8 @@ async fn test_log_packets() -> Result {
         .map(|t| format!("{} udp {} -> {} len:{}", t, addr, addr, PAYLOAD.len()))
         .collect::<Vec<_>>();
 
-    let stream = server_end
-        .into_stream()?
-        .map_err(anyhow::Error::new)
-        .inspect(|request| {
-            println!("received LogListenerSafeRequest: {:#?}", request);
-        })
-        .map(|request| match request {
+    let stream =
+        server_end.into_stream()?.map_err(anyhow::Error::new).map(|request| match request {
             Ok(fidl_fuchsia_logger::LogListenerSafeRequest::LogMany { log, responder }) => {
                 let () = responder.send().context("failed to acknowledge log request")?;
                 Ok(log)
