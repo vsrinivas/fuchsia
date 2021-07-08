@@ -194,7 +194,6 @@ pub enum SignalAction {
 ///   - A signal action can be ignored by calling `ignore`.
 ///   - A signal action can be set to a custom handler via `set_handler`.
 ///   - A signal action can be restored to its default via `reset`.
-#[derive(Debug)]
 pub struct SignalActions {
     actions: HashMap<Signal, SignalAction>,
 }
