@@ -276,8 +276,8 @@ ACPI_STATUS AcpiOsInitialize() {
     return status;
   }
 
-  status =
-      thrd_status_to_acpi_status(thrd_create(&os_execute_state.thread, AcpiOsExecuteTask, nullptr));
+  status = thrd_status_to_acpi_status(
+      thrd_create_with_name(&os_execute_state.thread, AcpiOsExecuteTask, nullptr, "acpi_os_task"));
   if (status != AE_OK) {
     return status;
   }
@@ -958,7 +958,7 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptLevel, ACPI_OSD_HANDLE
   arg->context = Context;
   arg->irq_handle = handle;
 
-  int ret = thrd_create(&arg->thread, acpi_irq_thread, arg.get());
+  int ret = thrd_create_with_name(&arg->thread, acpi_irq_thread, arg.get(), "acpi_irq");
   if (ret != 0) {
     return AE_ERROR;
   }
