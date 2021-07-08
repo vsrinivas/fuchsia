@@ -20,6 +20,7 @@ ffx_plugin("ffx_packaging") {
     "//third_party/rust_crates:home",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:ring",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
   ]
 

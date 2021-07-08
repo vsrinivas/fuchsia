@@ -85,7 +85,6 @@ mod test {
             &repo,
         )?;
         assert_eq!(std::str::from_utf8(stdout.get_ref())?, format!("{}\n", TEST_PACKAGE_HASHES[0]));
-        validate_blobs(tmpdir.path(), &TEST_PACKAGE_HASHES)?;
-        Ok(())
+        validate_blobs(tmpdir.path(), &TEST_PACKAGE_HASHES)
     }
 }

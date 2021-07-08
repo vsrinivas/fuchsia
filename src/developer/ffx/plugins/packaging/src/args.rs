@@ -39,15 +39,13 @@ pub struct BuildCommand {
     pub entries: Vec<String>,
     #[argh(
         option,
+        short = 's',
         description = "base directory for the <src> part of entries; defaults to the current directory"
     )]
     pub source_dir: Option<String>,
 
     #[argh(option, description = "write the package hash to this file instead of stdout")]
     pub hash_out: Option<String>,
-
-    #[argh(option, description = "write a gcc-format depfile for use in build systems")]
-    pub depfile: Option<String>,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
