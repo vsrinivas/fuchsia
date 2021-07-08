@@ -59,7 +59,12 @@ def main():
 
     # ZBI Config
     kernel_metadata = json.load(args.kernel_image_metadata)
-    config["kernel_image"] = kernel_metadata[0]["path"]
+
+    # The build_api_module("images") entry with name "kernel" and type "zbi"
+    # is the kernel ZBI to include in the bootable ZBI.  There can be only one.
+    [kernel_path] = [image["path"] for image in kernel_metadata
+                     if image["name"] == "kernel" and image["type"] == "zbi"]
+    config["kernel_image"] = kernel_path
 
     zbi_config_entries = json.load(args.zbi_config_entries)
     kernel_boot_args = []
