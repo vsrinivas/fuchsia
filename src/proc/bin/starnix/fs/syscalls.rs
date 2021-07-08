@@ -4,6 +4,7 @@
 
 use fidl_fuchsia_io as fio;
 use std::convert::TryInto;
+use std::usize;
 
 use crate::fs::pipe::*;
 use crate::fs::*;
@@ -104,9 +105,10 @@ pub fn sys_pread64(
     fd: FdNumber,
     address: UserAddress,
     length: usize,
-    offset: usize,
+    offset: off_t,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
+    let offset = offset.try_into().map_err(|_| EINVAL)?;
     Ok(file.read_at(&ctx.task, offset, &[UserBuffer { address, length }])?.into())
 }
 
@@ -115,9 +117,10 @@ pub fn sys_pwrite64(
     fd: FdNumber,
     address: UserAddress,
     length: usize,
-    offset: usize,
+    offset: off_t,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
+    let offset = offset.try_into().map_err(|_| EINVAL)?;
     Ok(file.write_at(&ctx.task, offset, &[UserBuffer { address, length }])?.into())
 }
 
@@ -382,4 +385,44 @@ pub fn sys_ioctl(
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     file.ioctl(&ctx.task, request, in_addr, out_addr)
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use fuchsia_async as fasync;
+
+    use crate::testing::*;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sys_lseek() -> Result<(), Errno> {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let fd = FdNumber::from_raw(10);
+        let file_handle = task_owner.task.open_file(b"data/testfile.txt")?;
+        let file_size = file_handle.node().stat().st_size;
+        task_owner.task.files.insert(fd, file_handle);
+
+        assert_eq!(sys_lseek(&ctx, fd, 0, SeekOrigin::CUR as u32)?, SyscallResult::Success(0));
+        assert_eq!(sys_lseek(&ctx, fd, 1, SeekOrigin::CUR as u32)?, SyscallResult::Success(1));
+        assert_eq!(sys_lseek(&ctx, fd, 3, SeekOrigin::SET as u32)?, SyscallResult::Success(3));
+        assert_eq!(sys_lseek(&ctx, fd, -3, SeekOrigin::CUR as u32)?, SyscallResult::Success(0));
+        assert_eq!(
+            sys_lseek(&ctx, fd, 0, SeekOrigin::END as u32)?,
+            SyscallResult::Success(file_size.try_into().unwrap())
+        );
+        assert_eq!(sys_lseek(&ctx, fd, -5, SeekOrigin::SET as u32), Err(EINVAL));
+
+        // Make sure that the failed call above did not change the offset.
+        assert_eq!(sys_lseek(&ctx, fd, 0, SeekOrigin::CUR as u32)?, SyscallResult::Success(0));
+
+        // Prepare for an overflow.
+        assert_eq!(sys_lseek(&ctx, fd, 3, SeekOrigin::CUR as u32)?, SyscallResult::Success(3));
+
+        // Check for overflow.
+        assert_eq!(sys_lseek(&ctx, fd, i64::MAX, SeekOrigin::CUR as u32), Err(EOVERFLOW));
+
+        Ok(())
+    }
 }

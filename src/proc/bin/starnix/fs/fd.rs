@@ -181,8 +181,8 @@ macro_rules! fd_impl_seekable {
             data: &[UserBuffer],
         ) -> Result<usize, Errno> {
             let mut offset = file.offset.lock();
-            let size = self.read_at(file, task, *offset, data)?;
-            *offset += size;
+            let size = self.read_at(file, task, *offset as usize, data)?;
+            *offset += size as off_t;
             Ok(size)
         }
         fn write(
@@ -192,19 +192,37 @@ macro_rules! fd_impl_seekable {
             data: &[UserBuffer],
         ) -> Result<usize, Errno> {
             let mut offset = file.offset.lock();
-            let size = self.write_at(file, task, *offset, data)?;
-            *offset += size;
+            let size = self.write_at(file, task, *offset as usize, data)?;
+            *offset += size as off_t;
             Ok(size)
         }
         fn seek(
             &self,
-            _file: &FileObject,
+            file: &FileObject,
             _task: &Task,
-            _offset: off_t,
-            _whence: SeekOrigin,
+            offset: off_t,
+            whence: SeekOrigin,
         ) -> Result<off_t, Errno> {
-            not_implemented!("seek is not implemented");
-            Err(ENOSYS)
+            let mut current_offset = file.offset.lock();
+            let temp = *current_offset;
+            let value = match whence {
+                SeekOrigin::SET => Some(offset),
+                SeekOrigin::CUR => temp.checked_add(offset),
+                SeekOrigin::END => {
+                    let stat = file.node().stat();
+                    offset.checked_add(stat.st_size as off_t)
+                }
+            };
+            if let Some(new_offset) = value {
+                if new_offset >= 0 {
+                    *current_offset = new_offset;
+                } else {
+                    return Err(EINVAL);
+                }
+            } else {
+                return Err(EOVERFLOW);
+            }
+            Ok(*current_offset)
         }
     };
 }
@@ -223,7 +241,7 @@ pub fn default_ioctl(request: u32) -> Result<SyscallResult, Errno> {
 pub struct FileObject {
     ops: Box<dyn FileOps>,
     name: NamespaceNode,
-    pub offset: Mutex<usize>,
+    pub offset: Mutex<off_t>,
     pub flags: Mutex<u32>,
     pub async_owner: Mutex<pid_t>,
 }

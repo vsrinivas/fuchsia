@@ -115,9 +115,15 @@ if (target_cpu == "x64") {
     manifest = "meta/starnix_runner.cml"
   }
 
+  resource("starnix-test-files") {
+    sources = [ "data/testfile.txt" ]
+    outputs = [ "data/testfile.txt" ]
+  }
+
   fuchsia_unittest_package("starnix-tests") {
     manifest = "meta/starnix-tests.cml"
     deps = [
+      ":starnix-test-files",
       ":starnix_runner_bin_test",
       "//src/proc/tests/hello_starnix:bin",
     ]
