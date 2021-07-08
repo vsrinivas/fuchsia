@@ -475,7 +475,7 @@ class AppStateImpl with Disposable implements AppState {
 
         // Active (focused) view.
         if (view == topView.value) {
-          node.stringProperty('activeView')?.setValue('view-$i');
+          node.intProperty('activeView')?.setValue(i);
         }
 
         // View title, url, focused and viewport.

@@ -53,7 +53,7 @@ void main() {
     expect(
         await ermine.waitFor(() async {
           var views = (await ermine.launchedViews())
-              .where((view) => view['url'] == componentUrl)
+              .where((view) => view.url == componentUrl)
               .toList();
           return views.length == 1;
         }),

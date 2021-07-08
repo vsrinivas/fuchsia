@@ -52,7 +52,7 @@ void main() {
     expect(
         await ermine.waitFor(() async {
           final view = await ermine.waitForView(terminalUrl);
-          return view!['focused'] == true;
+          return view.focused == true;
         }),
         isTrue);
     // Verify terminal is displaying a prompt.

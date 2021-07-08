@@ -290,50 +290,41 @@ class ErmineDriver {
 
   Future<Rectangle> getViewRect(String viewUrl,
       [Duration timeout = waitForTimeout]) async {
-    final component = await waitForView(viewUrl, timeout);
-    final viewport = component!['viewport'];
-    final viewRect =
-        viewport.split(',').map((e) => double.parse(e).round()).toList();
-
-    return Rectangle(viewRect[0], viewRect[1], viewRect[2], viewRect[3]);
+    final view = await waitForView(viewUrl, timeout);
+    return view.viewport;
   }
 
   /// Finds the first launched component given its [viewUrl] and returns it's
   /// Inspect data. Waits for [timeout] duration for view to launch.
-  Future<Map<String, dynamic>?> waitForView(String viewUrl,
+  Future<ViewSnapshot> waitForView(String viewUrl,
       [Duration timeout = waitForTimeout]) async {
     return waitFor(() async {
-      await _driver!
-          .waitUntilNoTransientCallbacks(timeout: Duration(seconds: 2));
-      List<Map<String, dynamic>?> views = await launchedViews();
-      final view = views.firstWhere((view) => view!['url'] == viewUrl,
-          orElse: () => null);
-      return view;
+      final views = await launchedViews(filterByUrl: viewUrl);
+      return views.isNotEmpty ? views.first : null;
     }, timeout: timeout);
   }
 
+  Future<Map<String, dynamic>> inspectSnapshot(String componentSelector,
+      {Duration timeout = waitForTimeout}) {
+    return waitFor(() async {
+      final snapshot = await Inspect(sl4f).snapshotRoot(componentSelector);
+      return snapshot.isNotEmpty ? snapshot : null;
+    }, timeout: timeout);
+  }
+
+  /// Returns the current shell snapshot from inspect data.
+  Future<ShellSnapshot> get snapshot async =>
+      ShellSnapshot(await inspectSnapshot('ermine.cmx'));
+
+  /// Returns the list of launched views from inspect data.
+  Future<List<ViewSnapshot>> get views async => (await snapshot).views;
+
   /// Returns [Inspect] data for all launched views.
-  Future<List<Map<String, dynamic>>> launchedViews() async {
-    final views = <Map<String, dynamic>>[];
-    final snapshot = await Inspect(sl4f).snapshotRoot('ermine.cmx');
-    final workspace = snapshot['workspaces'];
-    if (workspace == null) {
-      return views;
-    }
-
-    final clusters = <Map<String, dynamic>>[];
-    int instance = 0;
-    while (workspace['cluster-$instance'] != null) {
-      clusters.add(workspace['cluster-${instance++}']);
-    }
-
-    for (final cluster in clusters) {
-      int instance = 0;
-      while (cluster['component-$instance'] != null) {
-        views.add(cluster['component-${instance++}']);
-      }
-    }
-    return views;
+  Future<List<ViewSnapshot>> launchedViews({String? filterByUrl}) async {
+    final allViews = await views;
+    return filterByUrl == null
+        ? allViews
+        : allViews.where((view) => view.url == filterByUrl).toList();
   }
 
   /// Take a screenshot of a View given its screen co-ordinates.
@@ -454,11 +445,12 @@ class ErmineDriver {
 
   /// A helper function to wait for completion of a computation within timeout.
   /// The computation is repeated until it returns a boolean true or non-null
-  /// result.
-  Future<T> waitFor<T>(WaitForCompletion<T> completion,
+  /// result or the timeout expires. It throws a [TimeoutException] if the
+  /// timeout expires.
+  Future<T> waitFor<T>(WaitForCompletion<T?> completion,
       {Duration timeout = waitForTimeout}) async {
     final end = DateTime.now().add(timeout);
-    late T result;
+    T? result;
     while (DateTime.now().isBefore(end)) {
       result = await completion();
       if (result == null || result is bool && result == false) {
@@ -466,8 +458,53 @@ class ErmineDriver {
         await Future.delayed(Duration(seconds: 1));
         continue;
       }
-      break;
+      return result;
+    }
+    // We ran out of time.
+    throw TimeoutException('waitFor timeout expired', timeout);
+  }
+}
+
+/// Holds Ermine shell state which is derived from inspect data.
+class ShellSnapshot {
+  final Map<String, dynamic> inspectData;
+
+  ShellSnapshot(this.inspectData);
+
+  int get numViews => inspectData['numViews'] ?? 0;
+  bool get appBarVisible => inspectData['appBarVisible'] == true;
+  bool get sideBarVisible => inspectData['sideBarVisible'] == true;
+  bool get overlaysVisible => inspectData['overlaysVisible'] == true;
+  ViewSnapshot? get activeView =>
+      numViews > 0 ? views[inspectData['activeView'] ?? 0] : null;
+
+  List<ViewSnapshot> get views {
+    final result = <ViewSnapshot>[];
+    for (int i = 0; i < numViews; i++) {
+      result.add(ViewSnapshot(inspectData['view-$i']));
     }
     return result;
+  }
+}
+
+/// Holds a launched view's state which is derived from inspect data.
+class ViewSnapshot {
+  final Map<String, dynamic> inspectData;
+
+  ViewSnapshot(this.inspectData);
+
+  bool get focused => inspectData['focused'] == true;
+  String get title => inspectData['title'] ?? '';
+  String get url => inspectData['url'] ?? '';
+
+  Rectangle get viewport {
+    final viewRect = inspectData['viewportLTRB'];
+    if (viewRect != null) {
+      return Rectangle.fromPoints(
+        Point(viewRect[0], viewRect[1]),
+        Point(viewRect[2], viewRect[3]),
+      );
+    }
+    return Rectangle(0, 0, 0, 0);
   }
 }

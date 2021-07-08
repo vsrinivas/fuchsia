@@ -39,7 +39,7 @@ void main() {
     // The inspect data should show that the view has focus.
     const componentUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
     final inspect = await ermine.waitForView(componentUrl);
-    expect(inspect!['focused'], isTrue);
+    expect(inspect.focused, isTrue);
 
     // Close the terminal view.
     await ermine.driver.requestData('close');

@@ -2,15 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ignore_for_file: import_of_legacy_library_into_null_safe
+
 import 'package:ermine_driver/ermine_driver.dart';
-import 'package:flutter_driver/flutter_driver.dart';
+import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
 /// Tests that the DUT running ermine can do the following:
-///  - Launch 3 instances of terminal package.
-///  - Close them by typing exit, keyboard shortcut and clicking close
-///    button on the title bar of the view.
+///  - Launch 2 instances of terminal package and close them by typing exit
+///  and keyboard shortcut.
+///  - ping localhost
+///  - ls /hub
+///  -  ls, cd, pwd
+///  - dm reboot
 void main() {
   late Sl4f sl4f;
   late ErmineDriver ermine;
@@ -18,7 +23,7 @@ void main() {
 
   const componentUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
 
-  setUpAll(() async {
+  setUp(() async {
     sl4f = Sl4f.fromEnvironment();
     await sl4f.startServer();
 
@@ -28,39 +33,21 @@ void main() {
     input = Input(sl4f);
   });
 
-  tearDownAll(() async {
+  tearDown(() async {
     // Any of these may end up being null if the test fails in setup.
     await ermine.tearDown();
     await sl4f.stopServer();
     sl4f.close();
   });
 
-  setUp(() async {
-    // Close all running views.
-    await ermine.driver.requestData('closeAll');
-    await ermine.gotoOverview();
-  });
-
-  Future<bool> _waitForInstances(String componentUrl, int instances,
-      {Duration timeout = const Duration(seconds: 30)}) async {
-    return ermine.waitFor(() async {
-      var components = await ermine.component.list();
-      return components.where((e) => e.contains(componentUrl)).length ==
-          instances;
-    }, timeout: timeout);
-  }
-
-  Future<List<Map<String, dynamic>>?> _waitForViews(
-      String componentUrl, int instances,
+  Future<List<ViewSnapshot>> _waitForViews(String componentUrl, int instances,
       {bool testForFocus = false,
       Duration timeout = const Duration(seconds: 30)}) async {
     return ermine.waitFor(() async {
-      var views = (await ermine.launchedViews())
-          .where((view) => view['url'] == componentUrl)
-          .toList();
+      var views = await ermine.launchedViews(filterByUrl: componentUrl);
       if (views.length == instances) {
         if (testForFocus) {
-          expect(views.any((view) => view['focused']), isTrue);
+          expect(views.any((view) => view.focused), isTrue);
         }
         return views;
       }
@@ -72,16 +59,17 @@ void main() {
   // instance is running.
   Future<String> waitForBuffer() {
     return ermine.waitFor(() async {
-      final snapshot = await Inspect(sl4f).snapshotRoot('terminal.cmx');
-      return snapshot['grid'].toString();
+      final snapshot = await ermine.inspectSnapshot('terminal.cmx');
+      return snapshot['grid'];
     });
   }
 
   // Waits for terminal to display the starting prompt. This assumes only one
   // terminal instance is running.
-  Future<bool> waitForPrompt() {
+  Future<bool> waitForPrompt() async {
     return ermine.waitFor(() async {
-      return (await waitForBuffer()).endsWith('\$');
+      final buffer = await waitForBuffer();
+      return buffer.endsWith('\$');
     });
   }
 
@@ -95,6 +83,7 @@ void main() {
       // Wait for command to start executing.
       await Future.delayed(delay);
       final snapshot = await Inspect(sl4f).snapshotRoot('terminal.cmx');
+      // ignore: unnecessary_null_comparison
       if (snapshot != null && snapshot.containsKey('grid')) {
         return snapshot['grid'].toString().contains(cmd);
       }
@@ -102,49 +91,34 @@ void main() {
     });
   }
 
-  test('Launch and close three terminal instances', () async {
-    // Launch three instances of component.
+  test('Launch and close two terminal instances', () async {
+    // Launch two instances of component.
     await ermine.launch(componentUrl);
     await ermine.launch(componentUrl);
-    await ermine.launch(componentUrl);
-    expect(await _waitForInstances(componentUrl, 3), isTrue);
-    await _waitForViews(componentUrl, 3, testForFocus: true);
-
-    print('Launched 3 terminal instances');
-
-    // Close first instance by clicking the close button on view title bar.
-    await ermine.driver.waitUntilNoTransientCallbacks();
-    final close = find.descendant(
-        of: find.byType('TileChrome'),
-        matching: find.byValueKey('close'),
-        firstMatchOnly: true);
-    await ermine.driver.waitFor(close);
-    await ermine.driver.tap(close);
     await _waitForViews(componentUrl, 2, testForFocus: true);
+
+    print('Launched 2 terminal instances');
+
+    // Close the first instance using keyboard shortcut.
+    await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
+    await ermine.driver.waitUntilNoTransientCallbacks();
+    await _waitForViews(componentUrl, 1, testForFocus: true);
 
     print('Closed first instance');
 
-    // Close the second instance using keyboard shortcut.
-    // TODO(http://fxb/66076): Replace action with shortcut when implemented.
-    await ermine.driver.requestData('close');
-    await _waitForViews(componentUrl, 1, testForFocus: true);
-
-    print('Closed second instance');
-
-    // Close the third instance by injecting 'exit\n'.
+    // Close the second instance by injecting 'exit\n'.
     await waitForPrompt();
     await input.text('exit');
     await input.keyPress(kEnterKey);
     await Future.delayed(Duration(seconds: 1));
     await _waitForViews(componentUrl, 0);
 
-    print('Closed third instance');
+    print('Closed second instance');
   }, timeout: Timeout(Duration(minutes: 1)));
 
   test('Ping localhost', () async {
     // Launch three instances of component.
     await ermine.launch(componentUrl);
-    expect(await _waitForInstances(componentUrl, 1), isTrue);
     await _waitForViews(componentUrl, 1, testForFocus: true);
     await waitForPrompt();
 
@@ -153,13 +127,12 @@ void main() {
 
     // Verify that terminal buffer contains result of ping.
     final result = await waitForBuffer();
-    expect(result.contains('33 bytes from localhost'), isTrue);
+    expect(result.contains('bytes from localhost'), isTrue);
   });
 
   test('ls /hub', () async {
     // Launch three instances of component.
     await ermine.launch(componentUrl);
-    expect(await _waitForInstances(componentUrl, 1), isTrue);
     await _waitForViews(componentUrl, 1, testForFocus: true);
     await waitForPrompt();
 
@@ -174,7 +147,6 @@ void main() {
   test('Navigate filesystem: ls, cd, pwd', () async {
     // Launch three instances of component.
     await ermine.launch(componentUrl);
-    expect(await _waitForInstances(componentUrl, 1), isTrue);
     await _waitForViews(componentUrl, 1, testForFocus: true);
     await waitForPrompt();
 
@@ -199,7 +171,6 @@ void main() {
   test('dm reboot', () async {
     // Launch three instances of component.
     await ermine.launch(componentUrl);
-    expect(await _waitForInstances(componentUrl, 1), isTrue);
     await _waitForViews(componentUrl, 1, testForFocus: true);
     await waitForPrompt();
 
