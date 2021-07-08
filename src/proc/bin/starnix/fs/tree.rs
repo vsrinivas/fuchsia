@@ -79,7 +79,13 @@ impl FsNode {
             state: Default::default(),
         })
     }
-    fn name(&self) -> &FsStr {
+
+    /// The name that this node's parent calls this node.
+    ///
+    /// If this node is mounted in a namespace, the parent of this node in that
+    /// namespace might have a different name for the point in the namespace at
+    /// which this node is mounted.
+    pub fn local_name(&self) -> &FsStr {
         &self.name
     }
     pub fn parent<'a>(self: &'a FsNodeHandle) -> Option<&'a FsNodeHandle> {
@@ -168,14 +174,14 @@ impl FsNode {
             .read()
             .children
             .values()
-            .map(|child| child.upgrade().unwrap().name().to_owned())
+            .map(|child| child.upgrade().unwrap().local_name().to_owned())
             .collect()
     }
 
     fn internal_remove_child(&self, child: &mut FsNode) {
         // possible deadlock? this is called from Drop, so we need to be careful about dropping any
         // FsNodeHandle while locking the state.
-        let removed = self.state.write().children.remove(child.name());
+        let removed = self.state.write().children.remove(child.local_name());
         assert!(removed.is_some(), "a node should always be in its parent's set of children!");
     }
 }

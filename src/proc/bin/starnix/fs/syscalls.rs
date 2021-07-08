@@ -4,7 +4,6 @@
 
 use fidl_fuchsia_io as fio;
 use std::convert::TryInto;
-use std::ffi::CString;
 
 use crate::fs::pipe::*;
 use crate::fs::*;
@@ -328,14 +327,12 @@ pub fn sys_getcwd(
     buf: UserAddress,
     size: usize,
 ) -> Result<SyscallResult, Errno> {
-    // TODO: We should get the cwd from the file system context.
-    let cwd = CString::new("/").unwrap();
-
-    let bytes = cwd.as_bytes_with_nul();
+    let mut bytes = ctx.task.fs.cwd().path();
+    bytes.push(b'\0');
     if bytes.len() > size {
         return Err(ERANGE);
     }
-    ctx.task.mm.write_memory(buf, bytes)?;
+    ctx.task.mm.write_memory(buf, &bytes)?;
     return Ok(bytes.len().into());
 }
 

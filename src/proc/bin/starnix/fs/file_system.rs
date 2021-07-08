@@ -140,8 +140,11 @@ mod test {
         let (_kernel, task_owner) = create_kernel_and_task();
 
         let task = &task_owner.task;
+        assert_eq!(b"/".to_vec(), task.fs.cwd().path());
+
         let bin = task.open_file(b"bin").expect("missing bin directory");
         task.fs.chdir(&bin);
+        assert_eq!(b"/bin".to_vec(), task.fs.cwd().path());
 
         // Now that we have changed directories to bin, we're opening a file
         // relative to that directory, which doesn't exist.
@@ -151,12 +154,14 @@ mod test {
         assert!(task.open_file(b"/bin").is_ok());
 
         task.fs.chdir(&task.open_file(b"..").expect("failed to open .."));
+        assert_eq!(b"/".to_vec(), task.fs.cwd().path());
 
         // Now bin exists again because we've gone back to the root.
         assert!(task.open_file(b"bin").is_ok());
 
         // Repeating the .. doesn't do anything because we're already at the root.
         task.fs.chdir(&task.open_file(b"..").expect("failed to open .."));
+        assert_eq!(b"/".to_vec(), task.fs.cwd().path());
         assert!(task.open_file(b"bin").is_ok());
     }
 }

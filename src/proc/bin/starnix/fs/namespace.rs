@@ -5,12 +5,13 @@
 #[cfg(test)]
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Weak};
 
 use parking_lot::RwLock;
 
-use super::{FileHandle, FileObject, FsNodeHandle, FsStr};
+use super::{FileHandle, FileObject, FsNodeHandle, FsStr, FsString};
 use crate::types::*;
 
 /// A mount namespace.
@@ -76,7 +77,7 @@ pub struct NamespaceNode {
     /// field distinguishes between them.
     mount: Option<MountHandle>,
 
-    /// The FsNode that cooresponds to this namespace entry.
+    /// The FsNode that corresponds to this namespace entry.
     pub node: FsNodeHandle,
 }
 
@@ -100,7 +101,7 @@ impl NamespaceNode {
     /// Traverse down a parent-to-child link in the namespace.
     ///
     /// This traversal matches the parent-to-child link in the underlying
-    /// FsNode except at mount points, where the link switches from one
+    /// FsNode except at mountpoints, where the link switches from one
     /// filesystem to another.
     pub fn lookup(&self, name: &FsStr) -> Result<NamespaceNode, Errno> {
         let child = self.with_new_node(self.node.component_lookup(name)?);
@@ -115,15 +116,43 @@ impl NamespaceNode {
     /// Traverse up a child-to-parent link in the namespace.
     ///
     /// This traversal matches the child-to-parent link in the underlying
-    /// FsNode except at mount points, where the link switches from one
+    /// FsNode except at mountpoints, where the link switches from one
     /// filesystem to another.
     pub fn parent(&self) -> Option<NamespaceNode> {
+        let current = self.mountpoint().unwrap_or_else(|| self.clone());
+        Some(current.with_new_node(current.node.parent()?.clone()))
+    }
+
+    /// Returns the mountpoint at this location in the namespace.
+    ///
+    /// If this node is mounted in another node, this function returns the node
+    /// at which this node is mounted. Otherwise, returns None.
+    fn mountpoint(&self) -> Option<NamespaceNode> {
         if let Some(mount) = &self.mount {
             if Arc::ptr_eq(&self.node, &mount.root) {
                 return mount.mountpoint();
             }
         }
-        Some(self.with_new_node(self.node.parent()?.clone()))
+        None
+    }
+
+    /// The path from the root of the namespace to this node.
+    pub fn path(&self) -> FsString {
+        if self.mount.is_none() {
+            return self.node.local_name().to_vec();
+        }
+        let mut components = vec![];
+        let mut current = self.mountpoint().unwrap_or_else(|| self.clone());
+        while let Some(parent) = current.parent() {
+            components.push(current.node.local_name().to_vec());
+            current = parent.mountpoint().unwrap_or(parent);
+        }
+        if components.is_empty() {
+            return b"/".to_vec();
+        }
+        components.push(vec![]);
+        components.reverse();
+        components.join(&b'/')
     }
 
     #[cfg(test)]
@@ -158,6 +187,14 @@ impl NamespaceNode {
     }
 }
 
+impl fmt::Debug for NamespaceNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NamespaceNode")
+            .field("node.local_name", &String::from_utf8_lossy(self.node.local_name()))
+            .finish()
+    }
+}
+
 // Eq/Hash impls intended for the MOUNT_POINTS hash
 impl PartialEq for NamespaceNode {
     fn eq(&self, other: &Self) -> bool {
@@ -177,17 +214,87 @@ impl Hash for NamespaceNode {
 mod test {
     use super::*;
     use crate::fs::tmp::new_tmpfs;
+
     #[test]
     fn test_namespace() -> anyhow::Result<()> {
         let root_node = new_tmpfs();
-        let _dev_node = root_node.mkdir(b"dev".to_vec())?;
+        let _dev_node = root_node.mkdir(b"dev".to_vec()).expect("failed to mkdir dev");
         let dev_root_node = new_tmpfs();
-        let _dev_pts_node = dev_root_node.mkdir(b"pts".to_vec())?;
+        let _dev_pts_node = dev_root_node.mkdir(b"pts".to_vec()).expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_node);
-        ns.root().lookup(b"dev")?.mount(&dev_root_node)?;
+        let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
+        dev.mount(&dev_root_node).expect("failed to mount dev root node");
 
-        ns.root().lookup(b"dev")?.lookup(b"pts")?;
+        let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
+        let pts = dev.lookup(b"pts").expect("failed to lookup pts");
+        let pts_parent = pts.parent().ok_or(ENOENT).expect("failed to get parent of pts");
+        assert!(Arc::ptr_eq(&pts_parent.node, &dev.node));
+
+        let dev_parent = dev.parent().ok_or(ENOENT).expect("failed to get parent of dev");
+        assert!(Arc::ptr_eq(&dev_parent.node, &ns.root().node));
+        Ok(())
+    }
+
+    #[test]
+    fn test_mount_does_not_upgrade() -> anyhow::Result<()> {
+        let root_node = new_tmpfs();
+        let _dev_node = root_node.mkdir(b"dev".to_vec()).expect("failed to mkdir dev");
+        let dev_root_node = new_tmpfs();
+        let _dev_pts_node = dev_root_node.mkdir(b"pts".to_vec()).expect("failed to mkdir pts");
+
+        let ns = Namespace::new(root_node);
+        let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
+        dev.mount(&dev_root_node).expect("failed to mount dev root node");
+        let new_dev = ns.root().lookup(b"dev").expect("failed to lookup dev again");
+        assert!(!Arc::ptr_eq(&dev.node, &new_dev.node));
+        assert_ne!(&dev, &new_dev);
+
+        let _new_pts = new_dev.lookup(b"pts").expect("failed to lookup pts");
+        assert!(dev.lookup(b"pts").is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_path() -> anyhow::Result<()> {
+        let root_node = new_tmpfs();
+        let _dev_node = root_node.mkdir(b"dev".to_vec()).expect("failed to mkdir dev");
+        let dev_root_node = new_tmpfs();
+        let _dev_pts_node = dev_root_node.mkdir(b"pts".to_vec()).expect("failed to mkdir pts");
+
+        let ns = Namespace::new(root_node);
+        let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
+        dev.mount(&dev_root_node).expect("failed to mount dev root node");
+
+        let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
+        let pts = dev.lookup(b"pts").expect("failed to lookup pts");
+
+        assert_eq!(b"/".to_vec(), ns.root().path());
+        assert_eq!(b"/dev".to_vec(), dev.path());
+        assert_eq!(b"/dev/pts".to_vec(), pts.path());
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_path() -> anyhow::Result<()> {
+        let root_node = new_tmpfs();
+        let _dev_node = root_node.mkdir(b"dev".to_vec()).expect("failed to mkdir dev");
+        let dev_root_node = new_tmpfs();
+        let parent_node = dev_root_node.mkdir(b"parent".to_vec()).expect("failed to mkdir parent");
+        let _dev_pts_node = parent_node.mkdir(b"pts".to_vec()).expect("failed to mkdir pts");
+
+        let ns = Namespace::new(root_node);
+        let dev = ns.root().lookup(b"dev").expect("failed to find dev");
+        dev.mount(&parent_node).expect("failed to mount parent");
+
+        let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
+        let pts = dev.lookup(b"pts").expect("failed to lookup pts");
+
+        assert_eq!(b"/".to_vec(), ns.root().path());
+        assert_eq!(b"/dev".to_vec(), dev.path());
+        assert_eq!(b"/dev/pts".to_vec(), pts.path());
+
         Ok(())
     }
 }
