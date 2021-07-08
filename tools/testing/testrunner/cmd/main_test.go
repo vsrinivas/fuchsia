@@ -345,7 +345,7 @@ func TestRunAndOutputTest(t *testing.T) {
 			},
 			runAlgorithm: testsharder.StopOnSuccess,
 			runs:         2,
-			testErr:      context.DeadlineExceeded,
+			testErr:      &timeoutError{timeout: time.Minute},
 			expectedResult: []*testrunner.TestResult{
 				{
 					Name:     "bar",

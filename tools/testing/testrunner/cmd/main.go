@@ -326,7 +326,7 @@ func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outp
 
 	for i := 0; i < test.Runs; i++ {
 		outDir := filepath.Join(outDir, url.PathEscape(strings.ReplaceAll(test.Name, ":", "")), strconv.Itoa(i))
-		result, err := runTestOnce(ctx, test, t, perTestTimeout, collectiveStdout, collectiveStderr, outDir)
+		result, err := runTestOnce(ctx, test, t, collectiveStdout, collectiveStderr, outDir)
 		if err != nil {
 			return nil, err
 		}
@@ -353,18 +353,10 @@ func runTestOnce(
 	ctx context.Context,
 	test testsharder.Test,
 	t tester,
-	timeout time.Duration,
 	collectiveStdout io.Writer,
 	collectiveStderr io.Writer,
 	outDir string,
 ) (*testrunner.TestResult, error) {
-	parentCtx := ctx
-	if timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
-	}
-
 	// The test case parser specifically uses stdout, so we need to have a
 	// dedicated stdout buffer.
 	stdout := new(bytes.Buffer)
@@ -388,7 +380,7 @@ func runTestOnce(
 	startTime := clock.Now(ctx)
 	dataSinks, err := t.Test(ctx, test, multistdout, multistderr, outDir)
 	if err != nil {
-		if parentCtx.Err() != nil {
+		if ctx.Err() != nil {
 			// testrunner is shutting down, give up running tests.
 			return nil, err
 		} else if sshutil.IsConnectionError(err) {
@@ -400,10 +392,11 @@ func runTestOnce(
 			return nil, err
 		}
 		result = runtests.TestFailure
-		if errors.Is(err, context.DeadlineExceeded) {
+		var timeoutErr *timeoutError
+		if errors.As(err, &timeoutErr) {
 			// TODO(fxbug.dev/49266): Emit a different "Timeout" result if the
 			// test timed out.
-			logger.Errorf(ctx, "Test %s timed out after %s", test.Name, timeout)
+			logger.Errorf(ctx, "Test %s timed out after %s", test.Name, timeoutErr.timeout)
 		} else {
 			logger.Errorf(ctx, "Error running test %s: %s", test.Name, err)
 		}

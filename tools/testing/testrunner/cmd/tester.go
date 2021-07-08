@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -56,17 +57,26 @@ const (
 	// Printed to the serial console when ready to accept user input.
 	serialConsoleCursor = "\n$"
 
+	// Number of times to try running a test command over serial before giving
+	// up. This value was somewhat arbitrarily chosen and can be adjusted higher
+	// or lower if deemed appropriate.
+	startSerialCommandMaxAttempts = 10
+
 	llvmProfileEnvKey    = "LLVM_PROFILE_FILE"
 	llvmProfileExtension = ".profraw"
 	llvmProfileSinkType  = "llvm-profile"
 )
 
+// timeoutError should be returned by a Test() function to indicate that the
+// test timed out. It is up to each tester to enforce timeouts, since the
+// process for gracefully cleaning up after a timeout differs depending on how
+// the tests are run.
 type timeoutError struct {
 	timeout time.Duration
 }
 
 func (e *timeoutError) Error() string {
-	return fmt.Sprintf("test killed because timeout reached (%v)", e.timeout)
+	return fmt.Sprintf("test killed because timeout reached (%s)", e.timeout)
 }
 
 // For testability
@@ -313,7 +323,7 @@ func (t *fuchsiaSSHTester) reconnect(ctx context.Context) error {
 	return nil
 }
 
-func (t *fuchsiaSSHTester) isTimeoutError(test testsharder.Test, err error) bool {
+func (t *fuchsiaSSHTester) isTimeoutError(err error) bool {
 	if t.perTestTimeout <= 0 {
 		return false
 	}
@@ -363,7 +373,7 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		return sinks, testErr
 	}
 
-	if t.isTimeoutError(test, testErr) {
+	if t.isTimeoutError(testErr) {
 		testErr = &timeoutError{t.perTestTimeout}
 	}
 
@@ -620,31 +630,46 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	// completion. Thus we save the last read from the socket and replay it when searching for completion.
 	lastWrite := &lastWriteSaver{}
 	startedReader := iomisc.NewMatchingReader(io.TeeReader(t.socket, lastWrite), [][]byte{[]byte(runtests.StartedSignature + test.Name)})
-	for ctx.Err() == nil {
-		if err := serial.RunCommands(ctx, t.socket, []serial.Command{{command, 0}}); err != nil {
-			return sinks, fmt.Errorf("failed to write to serial socket: %v", err)
+	commandStarted := false
+	for i := 0; i < startSerialCommandMaxAttempts; i++ {
+		if err := serial.RunCommands(ctx, t.socket, []serial.Command{{Cmd: command}}); err != nil {
+			return sinks, fmt.Errorf("failed to write to serial socket: %w", err)
 		}
 		startedCtx, cancel := newTestStartedContext(ctx)
 		_, err := iomisc.ReadUntilMatch(startedCtx, startedReader)
 		cancel()
 		if err == nil {
+			commandStarted = true
 			break
+		} else if errors.Is(err, startedCtx.Err()) {
+			logger.Warningf(ctx, "test not started after timeout, retrying")
+		} else {
+			logger.Errorf(ctx, "unexpected error checking for test start signature: %s", err)
 		}
-		logger.Warningf(ctx, "test not started after timeout, retrying")
+	}
+	if !commandStarted {
+		return sinks, fmt.Errorf(
+			"failed to start test within %d attempts: %w",
+			startSerialCommandMaxAttempts, err)
 	}
 
-	if ctx.Err() != nil {
-		return sinks, ctx.Err()
+	// runtests sometimes doesn't respect the --timeout flag, so we impose a
+	// (slightly longer) timeout at a higher level to ensure we stop running the
+	// test after the timeout is exceeded even if runtests doesn't respect
+	// --timeout.
+	// TODO(fxbug.dev/80127): Ensure that runtests respects the --timeout flag,
+	// and remove this timeout.
+	if t.perTestTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, t.perTestTimeout+30*time.Second)
+		defer cancel()
 	}
-
 	testOutputReader := io.TeeReader(
 		// See comment above lastWrite declaration.
 		&parseOutKernelReader{ctx: ctx, reader: io.MultiReader(bytes.NewReader(lastWrite.buf), t.socket)},
 		// Writes to stdout as it reads from the above reader.
 		stdout)
-	success, err := runtests.TestPassed(ctx, testOutputReader, test.Name)
-
-	if err != nil {
+	if success, err := runtests.TestPassed(ctx, testOutputReader, test.Name); err != nil {
 		return sinks, err
 	} else if !success {
 		return sinks, fmt.Errorf("test failed")
