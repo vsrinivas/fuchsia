@@ -637,6 +637,7 @@ type Union struct {
 	Strictness   `json:"strict"`
 	Resourceness `json:"resource"`
 	TypeShapeV1  TypeShape `json:"type_shape_v1"`
+	TypeShapeV2  TypeShape `json:"type_shape_v2"`
 
 	MethodResult *MethodResult
 }
@@ -659,6 +660,7 @@ type Table struct {
 	Members      []TableMember `json:"members"`
 	Resourceness `json:"resource"`
 	TypeShapeV1  TypeShape `json:"type_shape_v1"`
+	TypeShapeV2  TypeShape `json:"type_shape_v2"`
 }
 
 // TableMember represents the declaration of a field in a FIDL table.
@@ -707,6 +709,7 @@ type Struct struct {
 	Members      []StructMember `json:"members"`
 	Resourceness `json:"resource"`
 	TypeShapeV1  TypeShape `json:"type_shape_v1"`
+	TypeShapeV2  TypeShape `json:"type_shape_v2"`
 
 	MethodResult *MethodResult
 }
@@ -719,6 +722,7 @@ type StructMember struct {
 	MaybeDefaultValue *Constant  `json:"maybe_default_value,omitempty"`
 	MaxHandles        int        `json:"max_handles"`
 	FieldShapeV1      FieldShape `json:"field_shape_v1"`
+	FieldShapeV2      FieldShape `json:"field_shape_v2"`
 }
 
 // EmptyStructMember returns a StructMember that's suitable as the sole member
@@ -796,12 +800,14 @@ type Method struct {
 	Request             []Parameter               `json:"maybe_request,omitempty"`
 	RequestPayload      EncodedCompoundIdentifier `json:"maybe_request_payload,omitempty"`
 	RequestTypeShapeV1  TypeShape                 `json:"maybe_request_type_shape_v1,omitempty"`
+	RequestTypeShapeV2  TypeShape                 `json:"maybe_request_type_shape_v2,omitempty"`
 	RequestPadding      bool                      `json:"maybe_request_has_padding,omitempty"`
 	RequestFlexible     bool                      `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
 	HasResponse         bool                      `json:"has_response"`
 	Response            []Parameter               `json:"maybe_response,omitempty"`
 	ResponsePayload     EncodedCompoundIdentifier `json:"maybe_response_payload,omitempty"`
 	ResponseTypeShapeV1 TypeShape                 `json:"maybe_response_type_shape_v1,omitempty"`
+	ResponseTypeShapeV2 TypeShape                 `json:"maybe_response_type_shape_v2,omitempty"`
 	ResponsePadding     bool                      `json:"maybe_response_has_padding,omitempty"`
 	ResponseFlexible    bool                      `json:"experimental_maybe_response_has_flexible_envelope,omitempty"`
 

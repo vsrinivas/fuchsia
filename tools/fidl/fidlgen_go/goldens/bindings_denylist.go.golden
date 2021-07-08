@@ -11,7 +11,7 @@ const (
 )
 
 type OnlyGo struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1"`
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
 }
 
 var _mOnlyGo = _bindings.CreateLazyMarshaler(OnlyGo{})

@@ -217,40 +217,40 @@ func (x ObjType) String() string {
 }
 
 type Handles struct {
-	_                         struct{}                            `fidl:"s" fidl_size_v1:"132" fidl_alignment_v1:"4"`
-	PlainHandle               _zx.Handle                          `fidl_offset_v1:"0" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	BtiHandle                 _zx.Handle                          `fidl_offset_v1:"4" fidl_handle_subtype:"24" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	ChannelHandle             _zx.Channel                         `fidl_offset_v1:"8" fidl_handle_subtype:"4" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	ClockHandle               _zx.Handle                          `fidl_offset_v1:"12" fidl_handle_subtype:"30" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	DebuglogHandle            _zx.Log                             `fidl_offset_v1:"16" fidl_handle_subtype:"12" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	EventHandle               _zx.Event                           `fidl_offset_v1:"20" fidl_handle_subtype:"5" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	EventpairHandle           _zx.Handle                          `fidl_offset_v1:"24" fidl_handle_subtype:"16" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	ExceptionHandle           _zx.Handle                          `fidl_offset_v1:"28" fidl_handle_subtype:"29" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	FifoHandle                _zx.Handle                          `fidl_offset_v1:"32" fidl_handle_subtype:"19" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	GuestHandle               _zx.Handle                          `fidl_offset_v1:"36" fidl_handle_subtype:"20" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	InterruptHandle           _zx.Handle                          `fidl_offset_v1:"40" fidl_handle_subtype:"9" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	IommuHandle               _zx.Handle                          `fidl_offset_v1:"44" fidl_handle_subtype:"23" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	JobHandle                 _zx.Handle                          `fidl_offset_v1:"48" fidl_handle_subtype:"17" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	PagerHandle               _zx.Handle                          `fidl_offset_v1:"52" fidl_handle_subtype:"28" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	PcideviceHandle           _zx.Handle                          `fidl_offset_v1:"56" fidl_handle_subtype:"11" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	PmtHandle                 _zx.Handle                          `fidl_offset_v1:"60" fidl_handle_subtype:"26" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	PortHandle                _zx.Port                            `fidl_offset_v1:"64" fidl_handle_subtype:"6" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	ProcessHandle             _zx.Handle                          `fidl_offset_v1:"68" fidl_handle_subtype:"1" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	ProfileHandle             _zx.Handle                          `fidl_offset_v1:"72" fidl_handle_subtype:"25" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	ResourceHandle            _zx.Handle                          `fidl_offset_v1:"76" fidl_handle_subtype:"15" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	SocketHandle              _zx.Socket                          `fidl_offset_v1:"80" fidl_handle_subtype:"14" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	SuspendtokenHandle        _zx.Handle                          `fidl_offset_v1:"84" fidl_handle_subtype:"27" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	ThreadHandle              _zx.Handle                          `fidl_offset_v1:"88" fidl_handle_subtype:"2" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	TimerHandle               _zx.Handle                          `fidl_offset_v1:"92" fidl_handle_subtype:"22" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	VcpuHandle                _zx.Handle                          `fidl_offset_v1:"96" fidl_handle_subtype:"21" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	VmarHandle                _zx.VMAR                            `fidl_offset_v1:"100" fidl_handle_subtype:"18" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	VmoHandle                 _zx.VMO                             `fidl_offset_v1:"104" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	RightsHandle              _zx.VMO                             `fidl_offset_v1:"108" fidl_handle_subtype:"3" fidl_handle_rights:"5" fidl_bounds:"0"`
-	AliasedPlainHandleField   _zx.Handle                          `fidl_offset_v1:"112" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	AliasedSubtypeHandleField _zx.VMO                             `fidl_offset_v1:"116" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	AliasedRightsHandleField  _zx.VMO                             `fidl_offset_v1:"120" fidl_handle_subtype:"3" fidl_handle_rights:"1" fidl_bounds:"0"`
-	SomeProtocol              SomeProtocolWithCtxInterface        `fidl_offset_v1:"124" fidl_handle_subtype:"4"`
-	RequestSomeProtocol       SomeProtocolWithCtxInterfaceRequest `fidl_offset_v1:"128" fidl_handle_subtype:"4" fidl_bounds:"0"`
+	_                         struct{}                            `fidl:"s" fidl_size_v1:"132" fidl_alignment_v1:"4" fidl_size_v2:"132" fidl_alignment_v2:"4"`
+	PlainHandle               _zx.Handle                          `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	BtiHandle                 _zx.Handle                          `fidl_offset_v1:"4" fidl_offset_v2:"4" fidl_handle_subtype:"24" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	ChannelHandle             _zx.Channel                         `fidl_offset_v1:"8" fidl_offset_v2:"8" fidl_handle_subtype:"4" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	ClockHandle               _zx.Handle                          `fidl_offset_v1:"12" fidl_offset_v2:"12" fidl_handle_subtype:"30" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	DebuglogHandle            _zx.Log                             `fidl_offset_v1:"16" fidl_offset_v2:"16" fidl_handle_subtype:"12" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	EventHandle               _zx.Event                           `fidl_offset_v1:"20" fidl_offset_v2:"20" fidl_handle_subtype:"5" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	EventpairHandle           _zx.Handle                          `fidl_offset_v1:"24" fidl_offset_v2:"24" fidl_handle_subtype:"16" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	ExceptionHandle           _zx.Handle                          `fidl_offset_v1:"28" fidl_offset_v2:"28" fidl_handle_subtype:"29" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	FifoHandle                _zx.Handle                          `fidl_offset_v1:"32" fidl_offset_v2:"32" fidl_handle_subtype:"19" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	GuestHandle               _zx.Handle                          `fidl_offset_v1:"36" fidl_offset_v2:"36" fidl_handle_subtype:"20" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	InterruptHandle           _zx.Handle                          `fidl_offset_v1:"40" fidl_offset_v2:"40" fidl_handle_subtype:"9" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	IommuHandle               _zx.Handle                          `fidl_offset_v1:"44" fidl_offset_v2:"44" fidl_handle_subtype:"23" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	JobHandle                 _zx.Handle                          `fidl_offset_v1:"48" fidl_offset_v2:"48" fidl_handle_subtype:"17" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	PagerHandle               _zx.Handle                          `fidl_offset_v1:"52" fidl_offset_v2:"52" fidl_handle_subtype:"28" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	PcideviceHandle           _zx.Handle                          `fidl_offset_v1:"56" fidl_offset_v2:"56" fidl_handle_subtype:"11" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	PmtHandle                 _zx.Handle                          `fidl_offset_v1:"60" fidl_offset_v2:"60" fidl_handle_subtype:"26" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	PortHandle                _zx.Port                            `fidl_offset_v1:"64" fidl_offset_v2:"64" fidl_handle_subtype:"6" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	ProcessHandle             _zx.Handle                          `fidl_offset_v1:"68" fidl_offset_v2:"68" fidl_handle_subtype:"1" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	ProfileHandle             _zx.Handle                          `fidl_offset_v1:"72" fidl_offset_v2:"72" fidl_handle_subtype:"25" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	ResourceHandle            _zx.Handle                          `fidl_offset_v1:"76" fidl_offset_v2:"76" fidl_handle_subtype:"15" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	SocketHandle              _zx.Socket                          `fidl_offset_v1:"80" fidl_offset_v2:"80" fidl_handle_subtype:"14" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	SuspendtokenHandle        _zx.Handle                          `fidl_offset_v1:"84" fidl_offset_v2:"84" fidl_handle_subtype:"27" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	ThreadHandle              _zx.Handle                          `fidl_offset_v1:"88" fidl_offset_v2:"88" fidl_handle_subtype:"2" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	TimerHandle               _zx.Handle                          `fidl_offset_v1:"92" fidl_offset_v2:"92" fidl_handle_subtype:"22" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	VcpuHandle                _zx.Handle                          `fidl_offset_v1:"96" fidl_offset_v2:"96" fidl_handle_subtype:"21" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	VmarHandle                _zx.VMAR                            `fidl_offset_v1:"100" fidl_offset_v2:"100" fidl_handle_subtype:"18" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	VmoHandle                 _zx.VMO                             `fidl_offset_v1:"104" fidl_offset_v2:"104" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	RightsHandle              _zx.VMO                             `fidl_offset_v1:"108" fidl_offset_v2:"108" fidl_handle_subtype:"3" fidl_handle_rights:"5" fidl_bounds:"0"`
+	AliasedPlainHandleField   _zx.Handle                          `fidl_offset_v1:"112" fidl_offset_v2:"112" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	AliasedSubtypeHandleField _zx.VMO                             `fidl_offset_v1:"116" fidl_offset_v2:"116" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	AliasedRightsHandleField  _zx.VMO                             `fidl_offset_v1:"120" fidl_offset_v2:"120" fidl_handle_subtype:"3" fidl_handle_rights:"1" fidl_bounds:"0"`
+	SomeProtocol              SomeProtocolWithCtxInterface        `fidl_offset_v1:"124" fidl_offset_v2:"124" fidl_handle_subtype:"4"`
+	RequestSomeProtocol       SomeProtocolWithCtxInterfaceRequest `fidl_offset_v1:"128" fidl_offset_v2:"128" fidl_handle_subtype:"4" fidl_bounds:"0"`
 }
 
 var _mHandles = _bindings.CreateLazyMarshaler(Handles{})

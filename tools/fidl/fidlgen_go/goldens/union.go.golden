@@ -7,8 +7,8 @@ import (
 )
 
 type Pizza struct {
-	_        struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Toppings []string `fidl_offset_v1:"0" fidl_bounds:",16"`
+	_        struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Toppings []string `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_bounds:",16"`
 }
 
 var _mPizza = _bindings.CreateLazyMarshaler(Pizza{})
@@ -18,8 +18,8 @@ func (msg *Pizza) Marshaler() _bindings.Marshaler {
 }
 
 type Pasta struct {
-	_     struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Sauce string   `fidl_offset_v1:"0" fidl_bounds:"16"`
+	_     struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Sauce string   `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_bounds:"16"`
 }
 
 var _mPasta = _bindings.CreateLazyMarshaler(Pasta{})
@@ -29,8 +29,8 @@ func (msg *Pasta) Marshaler() _bindings.Marshaler {
 }
 
 type NullableUnionStruct struct {
-	_        struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	TheUnion *Union   `fidl_offset_v1:"0"`
+	_        struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	TheUnion *Union   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
 var _mNullableUnionStruct = _bindings.CreateLazyMarshaler(NullableUnionStruct{})
@@ -40,7 +40,7 @@ func (msg *NullableUnionStruct) Marshaler() _bindings.Marshaler {
 }
 
 type Empty struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1"`
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
 }
 
 var _mEmpty = _bindings.CreateLazyMarshaler(Empty{})
@@ -50,8 +50,8 @@ func (msg *Empty) Marshaler() _bindings.Marshaler {
 }
 
 type StructWithNullableXUnion struct {
-	_  struct{}          `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	X1 *OlderSimpleUnion `fidl_offset_v1:"0"`
+	_  struct{}          `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	X1 *OlderSimpleUnion `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
 var _mStructWithNullableXUnion = _bindings.CreateLazyMarshaler(StructWithNullableXUnion{})
@@ -61,8 +61,8 @@ func (msg *StructWithNullableXUnion) Marshaler() _bindings.Marshaler {
 }
 
 type testProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse struct {
-	_  struct{}            `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Xu StrictBoundedXUnion `fidl_offset_v1:"0"`
+	_  struct{}            `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Xu StrictBoundedXUnion `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
 var _mtestProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse{})
@@ -72,8 +72,8 @@ func (msg *testProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedRespon
 }
 
 type testProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse struct {
-	_  struct{}         `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Xu OlderSimpleUnion `fidl_offset_v1:"0"`
+	_  struct{}         `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Xu OlderSimpleUnion `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
 var _mtestProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{})
@@ -90,7 +90,7 @@ const (
 )
 
 type PizzaOrPasta struct {
-	I_pizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_pizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Pizza             Pizza `fidl_ordinal:"1"`
 	Pasta             Pasta `fidl_ordinal:"2"`
 }
@@ -146,7 +146,7 @@ const (
 )
 
 type ExplicitPizzaOrPasta struct {
-	I_explicitPizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_explicitPizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Pizza                     Pizza `fidl_ordinal:"1"`
 	Pasta                     Pasta `fidl_ordinal:"4"`
 }
@@ -203,7 +203,7 @@ const (
 )
 
 type FlexiblePizzaOrPasta struct {
-	I_flexiblePizzaOrPastaTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_flexiblePizzaOrPastaTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData             interface{}
 	Pizza                     Pizza `fidl_ordinal:"1"`
 	Pasta                     Pasta `fidl_ordinal:"2"`
@@ -273,7 +273,7 @@ const (
 )
 
 type StrictPizzaOrPasta struct {
-	I_strictPizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_strictPizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Pizza                   Pizza `fidl_ordinal:"1"`
 	Pasta                   Pasta `fidl_ordinal:"2"`
 }
@@ -330,7 +330,7 @@ const (
 )
 
 type Union struct {
-	I_unionTag                       `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_unionTag                       `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Primitive                        int32    `fidl_ordinal:"1"`
 	StringNeedsConstructor           string   `fidl_bounds:"" fidl_ordinal:"2"`
 	VectorStringAlsoNeedsConstructor []string `fidl_bounds:"" fidl_ordinal:"3"`
@@ -404,7 +404,7 @@ const (
 )
 
 type FlexibleUnion struct {
-	I_flexibleUnionTag               `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_flexibleUnionTag               `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData                    interface{}
 	Primitive                        int32    `fidl_ordinal:"1"`
 	StringNeedsConstructor           string   `fidl_bounds:"" fidl_ordinal:"2"`
@@ -493,7 +493,7 @@ const (
 )
 
 type StrictUnion struct {
-	I_strictUnionTag                 `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_strictUnionTag                 `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Primitive                        int32    `fidl_ordinal:"1"`
 	StringNeedsConstructor           string   `fidl_bounds:"" fidl_ordinal:"2"`
 	VectorStringAlsoNeedsConstructor []string `fidl_bounds:"" fidl_ordinal:"3"`
@@ -564,7 +564,7 @@ const (
 )
 
 type FieldCollision struct {
-	I_fieldCollisionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_fieldCollisionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	FieldCollisionTag   int32 `fidl_ordinal:"1"`
 }
 
@@ -604,7 +604,7 @@ const (
 )
 
 type ExplicitUnion struct {
-	I_explicitUnionTag     `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_explicitUnionTag     `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Primitive              int32  `fidl_ordinal:"1"`
 	StringNeedsConstructor string `fidl_bounds:"" fidl_ordinal:"3"`
 }
@@ -660,7 +660,7 @@ const (
 )
 
 type ReverseOrdinalUnion struct {
-	I_reverseOrdinalUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_reverseOrdinalUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Second                   uint32 `fidl_ordinal:"2"`
 	First                    uint32 `fidl_ordinal:"1"`
 }
@@ -717,7 +717,7 @@ const (
 )
 
 type FlexibleFoo struct {
-	I_flexibleFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_flexibleFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData    interface{}
 	S                string `fidl_bounds:"" fidl_ordinal:"1"`
 	I                int32  `fidl_ordinal:"2"`
@@ -787,7 +787,7 @@ const (
 )
 
 type StrictFoo struct {
-	I_strictFooTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_strictFooTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	S              string `fidl_bounds:"" fidl_ordinal:"1"`
 	I              int32  `fidl_ordinal:"2"`
 }
@@ -844,7 +844,7 @@ const (
 )
 
 type ExplicitFoo struct {
-	I_explicitFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_explicitFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData    interface{}
 	S                string `fidl_bounds:"" fidl_ordinal:"2"`
 	I                int32  `fidl_ordinal:"1"`
@@ -914,7 +914,7 @@ const (
 )
 
 type ExplicitStrictFoo struct {
-	I_explicitStrictFooTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_explicitStrictFooTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	S                      string `fidl_bounds:"" fidl_ordinal:"3"`
 	I                      int32  `fidl_ordinal:"2"`
 }
@@ -971,7 +971,7 @@ const (
 )
 
 type OlderSimpleUnion struct {
-	I_olderSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_olderSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData         interface{}
 	I                     int64   `fidl_ordinal:"1"`
 	F                     float32 `fidl_ordinal:"2"`
@@ -1043,7 +1043,7 @@ const (
 )
 
 type NewerSimpleUnion struct {
-	I_newerSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_newerSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData         interface{}
 	I                     int64    `fidl_ordinal:"1"`
 	S                     string   `fidl_bounds:"" fidl_ordinal:"2"`
@@ -1132,7 +1132,7 @@ const (
 )
 
 type StrictSimpleXUnion struct {
-	I_strictSimpleXUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_strictSimpleXUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I                       int32   `fidl_ordinal:"1"`
 	F                       float32 `fidl_ordinal:"2"`
 	S                       string  `fidl_bounds:"" fidl_ordinal:"3"`
@@ -1204,7 +1204,7 @@ const (
 )
 
 type XUnionContainingEmptyStruct struct {
-	I_xUnionContainingEmptyStructTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_xUnionContainingEmptyStructTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData                    interface{}
 	Empty                            Empty `fidl_ordinal:"1"`
 }
@@ -1255,7 +1255,7 @@ const (
 )
 
 type StrictBoundedXUnion struct {
-	I_strictBoundedXUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_strictBoundedXUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	V                        []uint8 `fidl_bounds:"10" fidl_ordinal:"1"`
 }
 
@@ -1296,7 +1296,7 @@ const (
 )
 
 type ExplicitXUnion struct {
-	I_explicitXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_explicitXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData       interface{}
 	I                   int64   `fidl_ordinal:"1"`
 	F                   float32 `fidl_ordinal:"4"`

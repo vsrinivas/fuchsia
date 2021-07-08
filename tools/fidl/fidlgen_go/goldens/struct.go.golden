@@ -7,9 +7,9 @@ import (
 )
 
 type Simple struct {
-	_  struct{} `fidl:"s" fidl_size_v1:"2" fidl_alignment_v1:"1"`
-	F1 uint8    `fidl_offset_v1:"0"`
-	F2 bool     `fidl_offset_v1:"1"`
+	_  struct{} `fidl:"s" fidl_size_v1:"2" fidl_alignment_v1:"1" fidl_size_v2:"2" fidl_alignment_v2:"1"`
+	F1 uint8    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	F2 bool     `fidl_offset_v1:"1" fidl_offset_v2:"1"`
 }
 
 var _mSimple = _bindings.CreateLazyMarshaler(Simple{})
@@ -19,9 +19,9 @@ func (msg *Simple) Marshaler() _bindings.Marshaler {
 }
 
 type BasicStruct struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	X uint32   `fidl_offset_v1:"0"`
-	Y string   `fidl_offset_v1:"8" fidl_bounds:""`
+	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"24" fidl_alignment_v2:"8"`
+	X uint32   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	Y string   `fidl_offset_v1:"8" fidl_offset_v2:"8" fidl_bounds:""`
 }
 
 var _mBasicStruct = _bindings.CreateLazyMarshaler(BasicStruct{})

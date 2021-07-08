@@ -94,8 +94,8 @@ func (x ExampleBits) String() string {
 }
 
 type ExampleStruct struct {
-	_      struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4"`
-	Member uint32   `fidl_offset_v1:"0"`
+	_      struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	Member uint32   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
 var _mExampleStruct = _bindings.CreateLazyMarshaler(ExampleStruct{})
@@ -105,8 +105,8 @@ func (msg *ExampleStruct) Marshaler() _bindings.Marshaler {
 }
 
 type exampleProtocolWithCtxMethodRequest struct {
-	_   struct{}           `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
-	Arg exampleusing.Empty `fidl_offset_v1:"0"`
+	_   struct{}           `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	Arg exampleusing.Empty `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
 var _mexampleProtocolWithCtxMethodRequest = _bindings.CreateLazyMarshaler(exampleProtocolWithCtxMethodRequest{})
@@ -122,7 +122,7 @@ const (
 )
 
 type ExampleUnion struct {
-	I_exampleUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_exampleUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Variant           uint32 `fidl_ordinal:"1"`
 }
 
@@ -162,7 +162,7 @@ const (
 )
 
 type ExampleXUnion struct {
-	I_exampleXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
+	I_exampleXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData      interface{}
 	Variant            uint32 `fidl_ordinal:"1"`
 }
@@ -207,7 +207,7 @@ func (_m *ExampleXUnion) GetUnknownData() _bindings.UnknownData {
 }
 
 type ExampleTable struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_resource:"false"`
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	Member        uint32 `fidl_ordinal:"1"`
 	MemberPresent bool

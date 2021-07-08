@@ -8,9 +8,9 @@ import (
 )
 
 type Int8Int32 struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"4"`
-	A int8     `fidl_offset_v1:"0"`
-	B int32    `fidl_offset_v1:"4"`
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"4" fidl_size_v2:"8" fidl_alignment_v2:"4"`
+	A int8     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	B int32    `fidl_offset_v1:"4" fidl_offset_v2:"4"`
 }
 
 var _mInt8Int32 = _bindings.CreateLazyMarshaler(Int8Int32{})
@@ -20,9 +20,9 @@ func (msg *Int8Int32) Marshaler() _bindings.Marshaler {
 }
 
 type Int16Int8 struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"2"`
-	A int16    `fidl_offset_v1:"0"`
-	B int8     `fidl_offset_v1:"2"`
+	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"2" fidl_size_v2:"4" fidl_alignment_v2:"2"`
+	A int16    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	B int8     `fidl_offset_v1:"2" fidl_offset_v2:"2"`
 }
 
 var _mInt16Int8 = _bindings.CreateLazyMarshaler(Int16Int8{})
@@ -32,8 +32,8 @@ func (msg *Int16Int8) Marshaler() _bindings.Marshaler {
 }
 
 type ArrayInt16Int8 struct {
-	_   struct{}     `fidl:"s" fidl_size_v1:"12" fidl_alignment_v1:"2"`
-	Arr [3]Int16Int8 `fidl_offset_v1:"0"`
+	_   struct{}     `fidl:"s" fidl_size_v1:"12" fidl_alignment_v1:"2" fidl_size_v2:"12" fidl_alignment_v2:"2"`
+	Arr [3]Int16Int8 `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
 var _mArrayInt16Int8 = _bindings.CreateLazyMarshaler(ArrayInt16Int8{})
@@ -43,10 +43,10 @@ func (msg *ArrayInt16Int8) Marshaler() _bindings.Marshaler {
 }
 
 type StructPaddingTestStruct struct {
-	_        struct{}       `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"4"`
-	Trailing Int16Int8      `fidl_offset_v1:"0"`
-	Inner    Int8Int32      `fidl_offset_v1:"4"`
-	Array    ArrayInt16Int8 `fidl_offset_v1:"12"`
+	_        struct{}       `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"4" fidl_size_v2:"24" fidl_alignment_v2:"4"`
+	Trailing Int16Int8      `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	Inner    Int8Int32      `fidl_offset_v1:"4" fidl_offset_v2:"4"`
+	Array    ArrayInt16Int8 `fidl_offset_v1:"12" fidl_offset_v2:"12"`
 }
 
 var _mStructPaddingTestStruct = _bindings.CreateLazyMarshaler(StructPaddingTestStruct{})
@@ -56,9 +56,9 @@ func (msg *StructPaddingTestStruct) Marshaler() _bindings.Marshaler {
 }
 
 type NonInlineStructTestStruct struct {
-	_       struct{}   `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Element *Int16Int8 `fidl_offset_v1:"0"`
-	H       _zx.Handle `fidl_offset_v1:"8" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	_       struct{}   `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Element *Int16Int8 `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	H       _zx.Handle `fidl_offset_v1:"8" fidl_offset_v2:"8" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 }
 
 var _mNonInlineStructTestStruct = _bindings.CreateLazyMarshaler(NonInlineStructTestStruct{})
@@ -68,9 +68,9 @@ func (msg *NonInlineStructTestStruct) Marshaler() _bindings.Marshaler {
 }
 
 type TopLevelStruct struct {
-	_ struct{}                  `fidl:"s" fidl_size_v1:"40" fidl_alignment_v1:"8"`
-	A StructPaddingTestStruct   `fidl_offset_v1:"0"`
-	B NonInlineStructTestStruct `fidl_offset_v1:"24"`
+	_ struct{}                  `fidl:"s" fidl_size_v1:"40" fidl_alignment_v1:"8" fidl_size_v2:"40" fidl_alignment_v2:"8"`
+	A StructPaddingTestStruct   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	B NonInlineStructTestStruct `fidl_offset_v1:"24" fidl_offset_v2:"24"`
 }
 
 var _mTopLevelStruct = _bindings.CreateLazyMarshaler(TopLevelStruct{})

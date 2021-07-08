@@ -7,9 +7,9 @@ import (
 )
 
 type ExampleUseOfVectors struct {
-	_                    struct{} `fidl:"s" fidl_size_v1:"32" fidl_alignment_v1:"8"`
-	VectorOfUint8        []uint8  `fidl_offset_v1:"0" fidl_bounds:""`
-	VectorOfVectorOfBool [][]bool `fidl_offset_v1:"16" fidl_bounds:""`
+	_                    struct{} `fidl:"s" fidl_size_v1:"32" fidl_alignment_v1:"8" fidl_size_v2:"32" fidl_alignment_v2:"8"`
+	VectorOfUint8        []uint8  `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_bounds:""`
+	VectorOfVectorOfBool [][]bool `fidl_offset_v1:"16" fidl_offset_v2:"16" fidl_bounds:""`
 }
 
 var _mExampleUseOfVectors = _bindings.CreateLazyMarshaler(ExampleUseOfVectors{})
