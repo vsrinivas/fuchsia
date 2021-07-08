@@ -260,7 +260,7 @@ Code that runs on the host does not have this restriction.
 
 Are there any examples of CTS tests?
 
-  * Yes!  See [//sdk/cts/examples](https://osscs.corp.google.com/fuchsia/fuchsia/+/main:sdk/cts/examples/) for some examples, or peruse the complete set of tests under [//sdk/cts/tests](https://osscs.corp.google.com/fuchsia/fuchsia/+/main:sdk/cts/tests/).
+  * Yes!  See [//sdk/cts/examples](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/examples/) for some examples, or peruse the complete set of tests under [//sdk/cts/tests](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/tests/).
 
 Is CTS appropriate for unit tests of my service?
 
