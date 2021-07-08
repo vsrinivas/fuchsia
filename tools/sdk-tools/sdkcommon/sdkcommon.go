@@ -628,16 +628,16 @@ func checkSSHConfig(sdk SDKProperties) error {
 				hostname = "unknown"
 			}
 			if err := generateSSHKey(keyFile, userName, hostname); err != nil {
-				return fmt.Errorf("Could generate private SSH key: %v", err)
+				return fmt.Errorf("Could not generate private SSH key: %v", err)
 			}
 		}
 		if err := generatePublicSSHKeyfile(keyFile, authFile); err != nil {
-			return fmt.Errorf("Could get public keys from private SSH key: %v", err)
+			return fmt.Errorf("Could not get public keys from private SSH key: %v", err)
 		}
 	}
 
 	if err := writeSSHConfigFile(sshConfigFile, sshConfigTag, keyFile); err != nil {
-		return fmt.Errorf("Could write sshconfig file %v: %v", sshConfigFile, err)
+		return fmt.Errorf("Could not write sshconfig file %v: %v", sshConfigFile, err)
 	}
 	return nil
 }

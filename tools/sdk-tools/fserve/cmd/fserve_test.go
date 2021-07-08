@@ -344,6 +344,7 @@ func TestDownloadImageIfNeededCopiedFails(t *testing.T) {
 		ExecCommand = exec.Command
 		sdkcommon.ExecCommand = exec.Command
 		sdkcommon.ExecLookPath = exec.LookPath
+		os.Setenv("FSERVE_TEST_COPY_FAILS", "")
 	}()
 	version := "any-version"
 	bucket := "test-bucket"
@@ -658,6 +659,194 @@ func TestCopyDir(t *testing.T) {
 	}
 }
 
+func TestMain(t *testing.T) {
+	dataDir := t.TempDir()
+	savedArgs := os.Args
+	savedCommandLine := flag.CommandLine
+	ExecCommand = helperCommandForFServe
+	sdkcommon.ExecCommand = helperCommandForFServe
+	sdkcommon.ExecLookPath = func(name string) (string, error) {
+		if name == "gsutil" {
+			return "/path/to/fake/gsutil", nil
+		}
+		return exec.LookPath(name)
+	}
+	syscallWait4 = mockWait4NoError
+	defer func() {
+		ExecCommand = exec.Command
+		sdkcommon.ExecCommand = exec.Command
+		sdkcommon.ExecLookPath = exec.LookPath
+		syscallWait4 = defaultsyscallWait4
+		os.Args = savedArgs
+		flag.CommandLine = savedCommandLine
+	}()
+
+	os.Setenv("FSERVE_TEST_NO_SERVERS", "1")
+
+	if err := os.MkdirAll(dataDir+"/path/to/archive", 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting mkdir temp dir: %v\n", err)
+		t.Fail()
+	}
+	tests := []struct {
+		args                []string
+		deviceConfiguration string
+		defaultConfigDevice string
+		ffxDefaultDevice    string
+		ffxTargetList       string
+		ffxTargetDefault    string
+		expectedPMArgs      string
+		expectedAddSrcArgs  string
+	}{
+		// Test case for no configuration, but 1 device discoverable.
+		{
+			args:               []string{os.Args[0], "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--level", "debug"},
+			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
+			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+		},
+		{
+			args:               []string{os.Args[0], "-data-path", dataDir, "--bucket", "test-bucket", "--image", "test-image", "--version", "1.0.0"},
+			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
+			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+		},
+		{
+			args:               []string{os.Args[0], "-data-path", dataDir, "--clean", "--image", "test-image", "--version", "1.0.0"},
+			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
+			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+		},
+		{
+			args:               []string{os.Args[0], "-data-path", dataDir, "--device-ip", "::2", "--image", "test-image", "--version", "1.0.0", "--repo-dir", dataDir + "/custom/packages/amber-files"},
+			expectedPMArgs:     "serve -repo " + dataDir + "/custom/packages/amber-files  -l :8083",
+			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::2 amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+		},
+		{
+			args:          []string{os.Args[0], "-data-path", dataDir, "--kill", "--version", "1.0.0"},
+			ffxTargetList: `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+		},
+		{
+			args:               []string{os.Args[0], "-data-path", dataDir, "--name", "test-devhost", "--image", "test-image", "--version", "1.0.0"},
+			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
+			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n test-devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+		},
+		{
+			args:               []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive"},
+			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
+			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+		},
+		{
+			args:               []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--persist"},
+			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
+			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json -p", dataDir),
+		},
+		{
+			args:          []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--prepare"},
+			ffxTargetList: `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+		},
+		{
+			args:               []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--private-key", "/path/to/key"},
+			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
+			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -i /path/to/key -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+		},
+		{
+			args:               []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--sshconfig", "/path/to/custom/sshconfig"},
+			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
+			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs: fmt.Sprintf("-F /path/to/custom/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json"),
+		},
+		{
+			args:               []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--server-port", "8999"},
+			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8999",
+			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8999/config.json", dataDir),
+		},
+		{
+			args:               []string{os.Args[0], "-data-path", dataDir, "--device-name", "test-device", "--image", "test-image", "--version", "1.0.0"},
+			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "test-device/packages/amber-files") + " -l :8083",
+			ffxTargetList:      `[{"nodename":"test-device","rcs_state":"N","serial":"N","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+		},
+		{
+			args:           []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive"},
+			expectedPMArgs: "serve -repo " + filepath.Join(dataDir, "remote-target-name/packages/amber-files") + " -l :8083",
+			ffxTargetList:  `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
+			"remote-target-name":{
+				"bucket":"fuchsia-bucket",
+				"device-ip":"::1f",
+				"device-name":"remote-target-name",
+				"image":"release",
+				"package-port":"",
+				"package-repo":"",
+				"ssh-port":"2202",
+				"default": "true"},
+				"test-device":{
+					"bucket":"fuchsia-bucket",
+					"device-ip":"::ff",
+					"device-name":"test-device",
+					"image":"release",
+					"package-port":"",
+					"package-repo":"",
+					"ssh-port":"",
+					"default": "false"}
+			}`,
+			defaultConfigDevice: "\"remote-target-name\"",
+			expectedAddSrcArgs:  fmt.Sprintf("-F %s/sshconfig  -p 2202 -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+		}, {
+			args:           []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--device-name", "test-device"},
+			expectedPMArgs: "serve -repo " + filepath.Join(dataDir, "test-device/packages/amber-files") + " -l :8083",
+			ffxTargetList:  `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
+			"remote-target-name":{
+				"bucket":"fuchsia-bucket",
+				"device-ip":"::1f",
+				"device-name":"remote-target-name",
+				"image":"release",
+				"package-port":"",
+				"package-repo":"",
+				"ssh-port":"2202",
+				"default": "true"},
+				"test-device":{
+					"bucket":"fuchsia-bucket",
+					"device-ip":"::ff",
+					"device-name":"test-device",
+					"image":"release",
+					"package-port":"",
+					"package-repo":"",
+					"ssh-port":"",
+					"default": "false"}
+			}`,
+			defaultConfigDevice: "\"remote-target-name\"",
+			expectedAddSrcArgs:  fmt.Sprintf("-F %s/sshconfig -v ::ff amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+		},
+	}
+
+	for testcase, test := range tests {
+		t.Run(fmt.Sprintf("testcase_%d", testcase), func(t *testing.T) {
+			os.Args = test.args
+			os.Setenv("_EXPECTED_ADD_SRC_ARGS", test.expectedAddSrcArgs)
+			os.Setenv("FSERVE_EXPECTED_ARGS", test.expectedPMArgs)
+			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DATA", test.deviceConfiguration)
+			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE", test.defaultConfigDevice)
+			os.Setenv("_FAKE_FFX_TARGET_DEFAULT", test.ffxTargetDefault)
+			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
+			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+			osExit = func(code int) {
+				if code != 0 {
+					t.Fatalf("Non-zero error code %d", code)
+				}
+			}
+			main()
+		})
+	}
+}
+
 func listDirectory(dirname string) ([]string, error) {
 	contents := []string{}
 	err := filepath.Walk(dirname,
@@ -711,16 +900,104 @@ func TestFakeFServe(t *testing.T) {
 		fakePM(args)
 	case "gsutil":
 		fakeGSUtil(args)
+	case "ffx":
+		fakeFFX(args)
+	case "ssh":
+		fakeSSH(args)
+	case "ssh-keygen":
+		fakeKeygen(args)
 	default:
 		fmt.Fprintf(os.Stderr, "Unexpected command %v", cmd)
 		os.Exit(1)
 	}
 }
 
+func fakeKeygen(args []string) {
+	// accept all invocations
+	os.Exit(0)
+}
+
+func fakeSSH(args []string) {
+
+	if args[len(args)-1] == "$SSH_CONNECTION" {
+		fmt.Printf("%v 54545 fe80::c00f:f0f0:eeee:cccc 22\n", hostaddr)
+		os.Exit(0)
+	}
+
+	if strings.HasSuffix(args[len(args)-1], "config.json") || strings.HasSuffix(args[len(args)-2], "config.json") {
+		expected := strings.Fields(os.Getenv("_EXPECTED_ADD_SRC_ARGS"))
+		if len(args) != len(expected) {
+			fmt.Fprintf(os.Stderr, "Argument count mismatch. Expected %v, actual: %v\n", len(args), len(expected))
+			fmt.Fprintf(os.Stderr, "Expected: %v\n", expected)
+			fmt.Fprintf(os.Stderr, "Actual  : %v\n", args)
+			os.Exit(1)
+		}
+		for i := range args {
+			if args[i] != expected[i] {
+				fmt.Fprintf(os.Stderr,
+					"Mismatched args index %v. Expected: %v actual: %v\n",
+					i, expected[i], args[i])
+				fmt.Fprintf(os.Stderr, "Full args Expected: %v actual: %v",
+					expected, args)
+				os.Exit(3)
+			}
+		}
+		os.Exit(0)
+	}
+
+	fmt.Fprintf(os.Stderr, "Unknown mocked ssh command: %v", args)
+	os.Exit(2)
+
+}
+
+func fakeFFX(args []string) {
+	if args[0] == "config" && args[1] == "env" {
+		if len(args) == 3 && args[2] == "get" {
+			fmt.Printf("Environment:\n")
+			fmt.Printf("User: none\n")
+			fmt.Printf("Build: none\n")
+			fmt.Printf("Global: none\n")
+			os.Exit(0)
+		} else if args[2] == "set" {
+			os.Exit(0)
+		}
+	}
+	if args[0] == "config" && args[1] == "get" {
+		if args[2] == "DeviceConfiguration" {
+			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DATA"))
+			os.Exit(0)
+		} else if args[2] == "DeviceConfiguration._DEFAULT_DEVICE_" {
+			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE"))
+			os.Exit(0)
+		} else if args[2] == "DeviceConfiguration.remote-target-name" {
+			fmt.Println(`{"bucket":"","device-ip":"","device-name":"remote-target-name","image":"","package-port":"","package-repo":"/some/custom/repo/path","ssh-port":""}`)
+			os.Exit(0)
+		}
+
+	}
+	if args[0] == "target" && args[1] == "default" && args[2] == "get" {
+		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_DEFAULT"))
+		os.Exit(0)
+	}
+
+	if args[0] == "target" && args[1] == "list" && args[2] == "--format" && args[3] == "json" {
+		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_LIST"))
+		os.Exit(0)
+	}
+	fmt.Fprintf(os.Stderr, "Unexpected ffx sub command: %v", args)
+	os.Exit(2)
+}
+
 func fakeGSUtil(args []string) {
 	expected := []string{}
-	expectedLS := []string{"ls", "gs://test-bucket/path/on/GCS/theImage.tgz"}
-	expectedCP := []string{"cp", "gs://test-bucket/path/on/GCS/theImage.tgz", "/.*/theImage.tgz"}
+	expectedLS := [][]string{
+		{"ls", "gs://test-bucket/path/on/GCS/theImage.tgz"},
+		{"ls", "gs://fuchsia/development/1.0.0/packages/test-image.tar.gz"},
+	}
+	expectedCP := [][]string{
+		{"cp", "gs://test-bucket/path/on/GCS/theImage.tgz", "/.*/theImage.tgz"},
+		{"cp", "gs://fuchsia/development/1.0.0/packages/test-image.tar.gz", "/.*/1.0.0_test-image.tar.gz"},
+	}
 
 	if len(args) == 0 {
 		fmt.Fprintf(os.Stderr, "Expected arguments to gsutil\n")
@@ -728,8 +1005,19 @@ func fakeGSUtil(args []string) {
 	}
 	switch args[0] {
 	case "ls":
-		expected = expectedLS
+		expected = expectedLS[0]
+		for _, ls := range expectedLS {
+			if args[1] == ls[1] {
+				expected = ls
+			}
+		}
 	case "cp":
+		expected = expectedCP[0]
+		for _, cp := range expectedCP {
+			if args[1] == cp[1] {
+				expected = cp
+			}
+		}
 		if os.Getenv("FSERVE_TEST_ASSERT_NO_DOWNLOAD") != "" {
 			fmt.Fprintf(os.Stderr, "Unexpected call to gsutil cp: %v\n", args)
 			os.Exit(1)
@@ -738,7 +1026,6 @@ func fakeGSUtil(args []string) {
 			fmt.Fprintf(os.Stderr, "BucketNotFoundException: 404 %v bucket does not exist.", args[1])
 			os.Exit(2)
 		}
-		expected = expectedCP
 		// Copy the test data to the expected path.
 		testRoot := os.Getenv("FSERVE_TEST_TESTROOT")
 		testdata := filepath.Join(testRoot, "testdata", "testdata.tgz")
@@ -775,12 +1062,17 @@ func fakeGSUtil(args []string) {
 
 func fakePM(args []string) {
 	expected := []string{"serve"}
-	logLevel := os.Getenv("TEST_LOGLEVEL")
-	// only debug and trace have non-quiet mode.
-	if logLevel != "debug" && logLevel != "trace" {
-		expected = append(expected, "-q")
+
+	if os.Getenv("FSERVE_EXPECTED_ARGS") != "" {
+		expected = strings.Fields(os.Getenv("FSERVE_EXPECTED_ARGS"))
+	} else {
+		logLevel := os.Getenv("TEST_LOGLEVEL")
+		// only debug and trace have non-quiet mode.
+		if logLevel != "debug" && logLevel != "trace" {
+			expected = append(expected, "-q")
+		}
+		expected = append(expected, "-repo", "/fake/repo/path", "-l", ":8083")
 	}
-	expected = append(expected, "-repo", "/fake/repo/path", "-l", ":8083")
 	ok := len(args) == len(expected)
 	if ok {
 		for i := range args {

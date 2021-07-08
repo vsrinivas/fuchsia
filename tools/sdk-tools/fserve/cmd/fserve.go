@@ -36,6 +36,8 @@ var (
 	level = logger.InfoLevel
 )
 
+var osExit = os.Exit
+
 // Allow mocking of Kill.
 type osProcess interface {
 	Kill() error
@@ -70,11 +72,7 @@ func main() {
 		err error
 	)
 
-	sdk, err := sdkcommon.New()
-	if err != nil {
-		log.Fatalf("Could not initialize SDK: %v", err)
-	}
-
+	dataPathFlag := flag.String("data-path", "", "Specifies the data path for SDK tools. Defaults to $HOME/.fuchsia.")
 	helpFlag := flag.Bool("help", false, "Show the usage message")
 	repoFlag := flag.String("repo-dir", "", "Specify the path to the package repository.")
 	bucketFlag := flag.String("bucket", "", "Specify the GCS bucket for the prebuilt packages.")
@@ -84,7 +82,7 @@ func main() {
 	killFlag := flag.Bool("kill", false, "Kills any existing package manager server.")
 	cleanFlag := flag.Bool("clean", false, "Cleans the package repository first.")
 	prepareFlag := flag.Bool("prepare", false, "Downloads any dependencies but does not start the package server.")
-	versionFlag := flag.String("version", sdk.GetSDKVersion(), "SDK Version to use for prebuilt packages.")
+	versionFlag := flag.String("version", "", "SDK Version to use for prebuilt packages.")
 	persistFlag := flag.Bool("persist", false, "Persist repository metadata to allow serving resolved packages across reboot.")
 	packageArchiveFlag := flag.String("package-archive", "",
 		"Specify the source package archive in .tgz or directory format. If specified, no packages are downloaded from GCS.")
@@ -100,13 +98,18 @@ func main() {
 
 	flag.Parse()
 
+	sdk, err := sdkcommon.NewWithDataPath(*dataPathFlag)
+	if err != nil {
+		log.Fatalf("Could not initialize SDK: %v", err)
+	}
+
 	log := logger.NewLogger(level, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "fserve ")
 	log.SetFlags(logFlags)
 	ctx := logger.WithLogger(context.Background(), log)
 
 	if *helpFlag {
 		usage()
-		os.Exit(0)
+		osExit(0)
 	}
 
 	deviceConfig, err := sdk.ResolveTargetAddress(*deviceIPFlag, *deviceNameFlag)
@@ -117,6 +120,10 @@ func main() {
 
 	// Set the defaults from the SDK if not present.
 	if *repoFlag == "" {
+		// The device-name is needed to build the repo path.
+		if deviceConfig.DeviceName == "" {
+			log.Fatalf("Package repository directory cannot be determined. Use --repo-dir to set, or --device-name to select the target device.")
+		}
 		flag.Set("repo-dir", deviceConfig.PackageRepo)
 	}
 
@@ -140,7 +147,7 @@ func main() {
 	// device name which is needed to look up the property.
 	sshPort := ""
 	if *deviceIPFlag == "" {
-		sshPort := deviceConfig.SSHPort
+		sshPort = deviceConfig.SSHPort
 		if err != nil {
 			log.Fatalf("Error reading SSH port configuration: %v", err)
 		}
@@ -159,7 +166,9 @@ func main() {
 		log.Fatalf("Could not kill existing package servers: %v\n", err)
 	}
 	if *killFlag {
-		os.Exit(0)
+		osExit(0)
+		// this return is needed for tests that overload osExit to not exit.
+		return
 	}
 
 	if *cleanFlag {
@@ -182,9 +191,12 @@ func main() {
 		log.Fatalf("Could not prepare packages: %v\n", err)
 	}
 	if *prepareFlag {
-		os.Exit(0)
+		osExit(0)
+		// this return is needed for tests that overload osExit to not exit.
+		return
 	}
 
+	log.Debugf("Starting package server")
 	_, err = startServer(sdk, *repoFlag, *repoPortFlag)
 	if err != nil {
 		log.Fatalf("Could start package server: %v\n", err)
@@ -197,7 +209,7 @@ func main() {
 
 	log.Infof("Successfully started the package server! It is running the background.")
 
-	os.Exit(0)
+	osExit(0)
 }
 
 func usage() {
@@ -237,9 +249,13 @@ func prepareFromArchive(ctx context.Context, repoPath string, archivePath string
 // prepare method -  downloads and untars the packages from GCS if needed.
 func prepare(ctx context.Context, sdk sdkcommon.SDKProperties, version string, repoPath string, bucket string, image string) error {
 	log := logger.LoggerFromContext(ctx)
+	log.Debugf("Preparing package repository at %v for %v:%v@%v", repoPath, bucket, image, version)
 	if image == "list" || image == "" {
+		if image == "" {
+			log.Warningf("Cannot determine image name")
+		}
 		printValidImages(sdk, version, bucket)
-		os.Exit(1)
+		osExit(1)
 	}
 
 	targetPackage := sdk.GetPackageSourcePath(version, bucket, image)
@@ -275,6 +291,7 @@ func cleanPmRepo(ctx context.Context, repoDir string) error {
 
 func killServers(ctx context.Context, portNum string) error {
 	log := logger.LoggerFromContext(ctx)
+	log.Debugf("Killing existing servers")
 	// First get all the pm commands for the user
 	cmd := ExecCommand("pgrep", "pm")
 	output, err := cmd.Output()
@@ -650,7 +667,7 @@ func copyDir(ctx context.Context, srcDir string, destDir string) error {
 		return fmt.Errorf("Source %v is not a directory", srcDir)
 	}
 
-	err = os.Mkdir(destDir, 0755)
+	err = os.MkdirAll(destDir, 0755)
 	if err != nil {
 		return err
 	}
