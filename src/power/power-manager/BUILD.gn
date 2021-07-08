@@ -54,6 +54,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.power.profile:fuchsia.power.profile-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.thermal:fuchsia.thermal-rustc",
+    "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity-rustc",
     "//src/lib/async-utils",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/diagnostics/inspect/contrib/rust",
@@ -82,6 +83,7 @@ rustc_binary("bin") {
   ]
 
   sources = [
+    "src/activity_handler.rs",
     "src/cobalt_metrics.rs",
     "src/cpu_control_handler.rs",
     "src/cpu_stats_handler.rs",
@@ -136,6 +138,7 @@ rustc_test("bin_test") {
     "//sdk/fidl/fuchsia.power.profile:fuchsia.power.profile-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.thermal:fuchsia.thermal-rustc",
+    "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity-rustc",
     "//src/lib/async-utils",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/diagnostics/inspect/contrib/rust",
@@ -167,6 +170,7 @@ rustc_test("bin_test") {
   ]
 
   sources = [
+    "src/activity_handler.rs",
     "src/cobalt_metrics.rs",
     "src/cpu_control_handler.rs",
     "src/cpu_stats_handler.rs",

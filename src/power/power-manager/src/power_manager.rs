@@ -18,10 +18,10 @@ use std::rc::Rc;
 
 // nodes
 use crate::{
-    cpu_control_handler, cpu_stats_handler, crash_report_handler, dev_control_handler,
-    driver_manager_handler, lid_shutdown, shutdown_watcher, system_profile_handler,
-    system_shutdown_handler, temperature_handler, thermal_limiter, thermal_policy,
-    thermal_shutdown,
+    activity_handler, cpu_control_handler, cpu_stats_handler, crash_report_handler,
+    dev_control_handler, driver_manager_handler, lid_shutdown, shutdown_watcher,
+    system_profile_handler, system_shutdown_handler, temperature_handler, thermal_limiter,
+    thermal_policy, thermal_shutdown,
 };
 
 /// Path to the node config JSON file.
@@ -99,6 +99,10 @@ impl PowerManager {
         node_futures: &FuturesUnordered<LocalBoxFuture<'c, ()>>,
     ) -> Result<Rc<dyn Node>, Error> {
         Ok(match json_data["type"].as_str().unwrap() {
+            "ActivityHandler" => {
+                activity_handler::ActivityHandlerBuilder::new_from_json(json_data, &self.nodes)
+                    .build(node_futures)?
+            }
             "CrashReportHandler" => {
                 crash_report_handler::CrashReportHandlerBuilder::new().build()?
             }

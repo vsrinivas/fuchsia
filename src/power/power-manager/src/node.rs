@@ -20,7 +20,9 @@ pub trait Node {
     ///
     /// All nodes must implement this message to support communication between nodes. This
     /// is the entry point for a Node to receive new messages.
-    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError>;
+    async fn handle_message(&self, _msg: &Message) -> Result<MessageReturn, PowerManagerError> {
+        Err(PowerManagerError::Unsupported)
+    }
 
     /// Send a message to another node
     ///
