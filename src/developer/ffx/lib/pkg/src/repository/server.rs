@@ -21,7 +21,7 @@ use {
     serde::{Deserialize, Serialize},
     std::{
         collections::{hash_map::Entry, HashMap},
-        convert::{Infallible, TryInto},
+        convert::Infallible,
         future::Future,
         io,
         net::SocketAddr,
@@ -116,7 +116,6 @@ impl RepositoryServerBuilder {
                     handle_request(
                         Arc::clone(&repo_manager),
                         req,
-                        local_addr.clone(),
                         Arc::clone(&sse_response_creators),
                     )
                     .inspect(move |resp| {
@@ -156,7 +155,6 @@ impl RepositoryServerBuilder {
 async fn handle_request(
     repo_manager: Arc<RepositoryManager>,
     req: Request<Body>,
-    local_addr: SocketAddr,
     sse_response_creators: Arc<SseResponseCreatorMap>,
 ) -> Response<Body> {
     let mut path = req.uri().path();
@@ -197,25 +195,6 @@ async fn handle_request(
     };
 
     let resource = match resource_path {
-        // FIXME(http://fxbug.dev/80013): This is no longer necessary.
-        "repo.json" => {
-            // Since this is scheduled to be removed, don't specify the storage_type.
-            let config = match repo.get_config(&local_addr.to_string(), None).await {
-                Ok(c) => c,
-                Err(e) => {
-                    error!("failed to generate config: {:?}", e);
-                    return status_response(StatusCode::INTERNAL_SERVER_ERROR);
-                }
-            };
-
-            match config.try_into() {
-                Ok(c) => c,
-                Err(e) => {
-                    error!("failed to generate config: {:?}", e);
-                    return status_response(StatusCode::INTERNAL_SERVER_ERROR);
-                }
-            }
-        }
         "auto" => {
             if repo.supports_watch() {
                 return handle_auto(repo, sse_response_creators).await;
@@ -424,10 +403,7 @@ impl tokio::io::AsyncWrite for HyperStream {
 mod tests {
     use {
         super::*,
-        crate::{
-            repository::{MirrorConfig, RepositoryConfig, RepositoryManager},
-            test_utils::{make_writable_empty_repository, repo_key},
-        },
+        crate::{repository::RepositoryManager, test_utils::make_writable_empty_repository},
         anyhow::Result,
         bytes::Bytes,
         fuchsia_async as fasync,
@@ -454,25 +430,6 @@ mod tests {
         let mut tmp = tempfile::NamedTempFile::new().unwrap();
         tmp.write(body).unwrap();
         tmp.persist(path).unwrap();
-    }
-
-    async fn verify_repo_json(devhost: &str, server_url: &str) {
-        let url = format!("{}/{}/repo.json", server_url, devhost);
-        let json: RepositoryConfig =
-            serde_json::from_slice(&get_bytes(&url).await.unwrap()).unwrap();
-
-        let expected = RepositoryConfig {
-            repo_url: Some(format!("fuchsia-pkg://{}", devhost)),
-            root_keys: Some(vec![repo_key()]),
-            root_version: Some(1),
-            storage_type: None,
-            mirrors: Some(vec![MirrorConfig {
-                mirror_url: Some(server_url.to_string()),
-                subscribe: Some(true),
-            }]),
-        };
-
-        assert_eq!(json, expected);
     }
 
     async fn run_test<F, R>(manager: Arc<RepositoryManager>, test: F)
@@ -549,7 +506,6 @@ mod tests {
                     let url = format!("{}/{}/{}", server_url, devhost, body);
                     assert_matches!(get_bytes(&url).await, Ok(bytes) if bytes == &body[..]);
                 }
-                verify_repo_json(devhost, &server_url).await;
             }
         })
         .await
