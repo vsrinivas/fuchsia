@@ -36,6 +36,7 @@ use {
         StreamExt,
     },
     lazy_static::lazy_static,
+    maplit::hashmap,
     regex::Regex,
     std::collections::{HashMap, HashSet},
     std::sync::{
@@ -69,6 +70,41 @@ lazy_static! {
         | fio2::Operations::GetAttributes
         | fio2::Operations::UpdateAttributes;
     static ref ADMIN_RIGHTS: fio2::Operations = fio2::Operations::Admin;
+    static ref ABOVE_ROOT_PROTOCOLS: Vec<&'static str> = vec![
+        "fuchsia.boot.WriteOnlyLog",
+        "fuchsia.hardware.display.Provider",
+        "fuchsia.kernel.VmexResource",
+        "fuchsia.kernel.RootJobForInspect",
+        "fuchsia.kernel.Stats",
+        "fuchsia.process.Launcher",
+        "fuchsia.scheduler.ProfileProvider",
+        "fuchsia.sys.Loader",
+        "fuchsia.sys.Environment",
+        "fuchsia.sys2.EventSource",
+        "fuchsia.sysmem.Allocator",
+        "fuchsia.tracing.provider.Registry",
+        "fuchsia.vulkan.loader.Loader",
+    ];
+    static ref ABOVE_ROOT_DIRECTORIES: HashMap<fio2::Operations, Vec<&'static str>> = hashmap! {
+        *READ_WRITE_RIGHTS => vec![
+            "dev-display-controller",
+            "dev-goldfish-address-space",
+            "dev-goldfish-control",
+            "dev-goldfish-pipe",
+            "dev-goldfish-sync",
+            "dev-gpu",
+            "dev-input-report",
+        ],
+        *READ_RIGHTS => vec![
+            "config-data",
+            "root-ssl-certificates",
+        ],
+        *ADMIN_RIGHTS | *READ_WRITE_RIGHTS => vec![
+            "deprecated-tmp",
+        ]
+    };
+    static ref ABOVE_ROOT_STORAGE: Vec<(&'static str, &'static str)> =
+        vec![("temp", "/tmp"), ("data", "/data"), ("cache", "/cache"),];
 }
 
 struct TestMapValue {
@@ -1150,37 +1186,9 @@ async fn get_realm(
         )
         .await?
         .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.process.Launcher"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.boot.WriteOnlyLog"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
             capability: Capability::protocol("fuchsia.sys2.EventSource"),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![
-                RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH),
-                RouteEndpoint::component(ARCHIVIST_REALM_PATH),
-            ],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::storage("temp", "/tmp"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::storage("data", "/data"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::storage("cache", "/cache"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::protocol("fuchsia.logger.LogSink"),
@@ -1242,112 +1250,30 @@ async fn get_realm(
             capability: Capability::protocol("fuchsia.test.Suite"),
             source: RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH),
             targets: vec![RouteEndpoint::AboveRoot],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.hardware.display.Provider"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.kernel.VmexResource"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.kernel.RootJobForInspect"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.kernel.Stats"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.scheduler.ProfileProvider"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.sysmem.Allocator"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.tracing.provider.Registry"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.vulkan.loader.Loader"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("root-ssl-certificates", "", *READ_RIGHTS),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("config-data", "", *READ_RIGHTS),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory(
-                "deprecated-tmp",
-                "",
-                *ADMIN_RIGHTS | *READ_WRITE_RIGHTS,
-            ),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("dev-input-report", "", *READ_WRITE_RIGHTS),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("dev-display-controller", "", *READ_WRITE_RIGHTS),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("dev-goldfish-address-space", "", *READ_WRITE_RIGHTS),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("dev-goldfish-control", "", *READ_WRITE_RIGHTS),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("dev-goldfish-pipe", "", *READ_WRITE_RIGHTS),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("dev-goldfish-sync", "", *READ_WRITE_RIGHTS),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("dev-gpu", "", *READ_WRITE_RIGHTS),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        // The two following are for v1 components being run by the nested realm builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.sys.Loader"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.sys.Environment"),
+        })?;
+    for protocol in ABOVE_ROOT_PROTOCOLS.iter() {
+        builder.add_route(CapabilityRoute {
+            capability: Capability::protocol(*protocol),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?;
+    }
+    for (rights, directories) in ABOVE_ROOT_DIRECTORIES.iter() {
+        for directory in directories {
+            builder.add_route(CapabilityRoute {
+                capability: Capability::directory(*directory, "", *rights),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+            })?;
+        }
+    }
+    for (storage, path) in ABOVE_ROOT_STORAGE.iter() {
+        builder.add_route(CapabilityRoute {
+            capability: Capability::storage(*storage, *path),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?;
+    }
 
     Ok(builder.build())
 }
