@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
+import("//build/toolchain/rbe.gni")
 
 # Defines a Rust library
 #
@@ -76,6 +77,9 @@ import("//build/rust/rustc_test.gni")
 #   output_dir (optional)
 #     Directory that the resulting library should be placed in.
 #     See: `gn help output_dir`
+#
+#   disable_rbe (optional)
+#     Set to true to force this target to build locally, overriding the global `enable_rbe`.
 #
 # Example of usage:
 #
@@ -197,5 +201,18 @@ template("rustc_library") {
                              "testonly",
                              "visibility",
                            ])
+
+    inputs = []
+    if (defined(invoker.inputs)) {
+      inputs = invoker.inputs
+    }
+    _use_rbe = enable_rbe
+    if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
+      _use_rbe = false
+    }
+    if (_use_rbe) {
+      # Depend on Rust/RBE scripts and tools
+      inputs += rust_rbe_deps
+    }
   }
 }

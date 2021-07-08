@@ -82,9 +82,6 @@ do
 done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
-# The relative path to the project root, which is the opposite of out/out_dir:
-project_root_rel="$(realpath --relative-to=. "$project_root")"
-
 # Copy the original command.
 # Prefix with env, in case command starts with VAR=VALUE ...
 rustc_command=(env "$@")
@@ -436,22 +433,6 @@ else
     test "${#abs_deps[@]}" = 0 || status=1
     # error message below
   fi
-
-  # Append RBE scripts and tools to the depfile.
-  # TODO(fangism): un-hardcode host platform once there is Mac support
-  reclient_bin_dir="$project_root_rel/prebuilt/proprietary/third_party/reclient/linux-x64"
-  rbe_deps=(
-    "$reclient_bin_dir/bootstrap"
-    "$reclient_bin_dir/reproxy"
-    "$reclient_bin_dir/rewrapper"
-    "$script_dir/fuchsia-rbe-action.sh"
-    "$script_dir/fuchsia-re-client.cfg"
-    "$script_dir/fuchsia-reproxy-wrap.sh"
-    "$script"
-  )
-  # Note: depfiles do not support implicit dependencies in the way ninja does.
-  # Thus, dependencies are appended without a '|' separator.
-  sed -i -e "/: /s|\$| ${rbe_deps[*]}|" "$depfile"
 
   test "$status" = 0 || {
     # On any failure, dump debug info, even if it is not related to RBE.

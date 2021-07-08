@@ -4,6 +4,24 @@
 
 # Defines the configuration of RBE.
 
+# Prebuilt RBE binaries
+rbe_common_tools = [
+  "//prebuilt/proprietary/third_party/reclient/$host_platform/bootstrap",
+  "//prebuilt/proprietary/third_party/reclient/$host_platform/reproxy",
+  "//prebuilt/proprietary/third_party/reclient/$host_platform/rewrapper",
+]
+
+# Toolchain-agnostic RBE scripts and configuration.
+rbe_common_scripts = [
+  "//build/rbe/fuchsia-rbe-action.sh",
+  "//build/rbe/fuchsia-re-client.cfg",
+  "//build/rbe/fuchsia-reproxy-wrap.sh",
+]
+
+# Dependencies for all RBE-enabled rust actions.
+rust_rbe_deps = rbe_common_tools + rbe_common_scripts +
+                [ "//build/rbe/rustc-remote-wrapper.sh" ]
+
 declare_args() {
   # Set to true to enable distributed compilation using RBE.
   enable_rbe = false

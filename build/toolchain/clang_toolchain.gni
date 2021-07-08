@@ -53,6 +53,9 @@ import("//build/toolchain/rbe.gni")
 #   propagates_configs
 #     Optional: public_configs should escape this toolchain via deps
 #
+#   diable_rbe
+#     Optional: set to true to build locally, overriding the global `enable_rbe`.
+#
 template("clang_toolchain") {
   toolchain(target_name) {
     assert(defined(invoker.toolchain_cpu),
@@ -89,7 +92,11 @@ template("clang_toolchain") {
     # Configure Rust remote builds.
     _rust_wrapper = ""
     _rust_concurrent_jobs = concurrent_jobs.local
-    if (enable_rbe && (!defined(invoker.use_rbe) || invoker.use_rbe)) {
+    _use_rbe = enable_rbe
+    if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
+      _use_rbe = false
+    }
+    if (_use_rbe) {
       # TODO(fxb/79963): allow targets to pass additional inputs to this wrapper
       _rust_wrapper = _rustc_remote_wrapper + " -- "
 
