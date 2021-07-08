@@ -57,7 +57,7 @@ Welcome to the [Fuchsia home page](www.fuchsia.dev).
 ```
 
 You can read more about reference style links in the external
-[Markdown Guide][markdown-reference-links]{:.external}.
+[Markdown Guide][markdown-reference-links].
 
 ## Headers
 
@@ -169,6 +169,5 @@ Update the [state header][sh]
 [doc-standard]: /docs/contribute/docs/documentation-standards.md
 [style-guide]: /docs/contribute/docs/documentation-style-guide.md
 [google-dev-doc-style-guide]: https://developers.google.com/style
-[markdown-reference-links]: https://www.markdownguide.org/basic-syntax/#reference-style-links
+[markdown-reference-links]: /docs/reference/documentation/markdown.md
 [external-link-example]: http://example.com
-
