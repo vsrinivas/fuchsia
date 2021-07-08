@@ -18,7 +18,7 @@
 
 namespace blobfs {
 
-// BlobVerifier verifies the contents of a blob against a merkle tree.
+// BlobVerifier verifies the contents of a blob against a merkle tree. Thread-safe.
 class BlobVerifier {
  public:
   // Creates an instance of BlobVerifier for blobs named |digest|, using the provided merkle tree
@@ -63,23 +63,23 @@ class BlobVerifier {
     return tree_verifier_.Align(data_off, buf_len);
   }
 
-  size_t GetTreeLength() const { return tree_verifier_.GetTreeLength(); }
-
   const Digest& digest() { return digest_; }
 
  private:
   // Use |Create| or |CreateWithoutTree| to construct.
-  explicit BlobVerifier(std::shared_ptr<BlobfsMetrics> metrics);
+  explicit BlobVerifier(digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics);
 
   BlobVerifier(const BlobVerifier&) = delete;
   BlobVerifier& operator=(const BlobVerifier&) = delete;
 
-  // Verifies the tail between |data_size| and |buffer_size| is zeroed.
-  [[nodiscard]] zx_status_t VerifyTailZeroed(const void* data, size_t data_size,
-                                             size_t buffer_size);
-
   const BlobCorruptionNotifier* corruption_notifier_;
-  digest::Digest digest_;
+  const digest::Digest digest_;
+  // The verification lock is to be used whenever calling Verify() on the |tree_verifier_| since
+  // the call mutates internal state variables which makes the call not thread-safe. The member is
+  // not guarded by the mutex because there are perfectly safe const calls within it that do not
+  // require locking. Failing to take this lock when running Verify() will make this class no longer
+  // thread-safe.
+  std::mutex verification_lock_;
   digest::MerkleTreeVerifier tree_verifier_;
   std::shared_ptr<BlobfsMetrics> metrics_;
 };

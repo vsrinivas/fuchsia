@@ -17,15 +17,15 @@
 
 namespace blobfs {
 
-BlobVerifier::BlobVerifier(std::shared_ptr<BlobfsMetrics> metrics) : metrics_(std::move(metrics)) {}
+BlobVerifier::BlobVerifier(digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics)
+    : digest_(std::move(digest)), metrics_(std::move(metrics)) {}
 
 zx_status_t BlobVerifier::Create(digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics,
                                  const void* merkle, size_t merkle_size,
                                  BlobLayoutFormat blob_layout_format, size_t data_size,
                                  const BlobCorruptionNotifier* notifier,
                                  std::unique_ptr<BlobVerifier>* out) {
-  std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(std::move(metrics)));
-  verifier->digest_ = std::move(digest);
+  std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(std::move(digest), std::move(metrics)));
   verifier->corruption_notifier_ = notifier;
   verifier->tree_verifier_.SetUseCompactFormat(
       ShouldUseCompactMerkleTreeFormat(blob_layout_format));
@@ -54,8 +54,7 @@ zx_status_t BlobVerifier::CreateWithoutTree(digest::Digest digest,
                                             size_t data_size,
                                             const BlobCorruptionNotifier* notifier,
                                             std::unique_ptr<BlobVerifier>* out) {
-  std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(std::move(metrics)));
-  verifier->digest_ = std::move(digest);
+  std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(std::move(digest), std::move(metrics)));
   verifier->corruption_notifier_ = notifier;
   zx_status_t status = verifier->tree_verifier_.SetDataLength(data_size);
   if (status != ZX_OK) {
@@ -74,7 +73,7 @@ zx_status_t BlobVerifier::CreateWithoutTree(digest::Digest digest,
   return ZX_OK;
 }
 
-zx_status_t BlobVerifier::VerifyTailZeroed(const void* data, size_t data_size, size_t buffer_size) {
+zx_status_t VerifyTailZeroed(const void* data, size_t data_size, size_t buffer_size) {
   size_t tail;
   if (!safemath::CheckSub(buffer_size, data_size).AssignIfValid(&tail)) {
     return ZX_ERR_INVALID_ARGS;
@@ -107,7 +106,11 @@ zx_status_t BlobVerifier::Verify(const void* data, size_t data_size, size_t buff
   TRACE_DURATION("blobfs", "BlobVerifier::Verify", "data_size", data_size);
   fs::Ticker ticker(metrics_->Collecting());
 
-  zx_status_t status = tree_verifier_.Verify(data, data_size, 0);
+  zx_status_t status;
+  {
+    std::lock_guard l(verification_lock_);
+    status = tree_verifier_.Verify(data, data_size, 0);
+  }
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Verify(" << digest_.ToString() << ", " << data_size << ", " << buffer_size
                    << ") failed: " << zx_status_get_string(status);
@@ -132,7 +135,11 @@ zx_status_t BlobVerifier::VerifyPartial(const void* data, size_t length, size_t 
   TRACE_DURATION("blobfs", "BlobVerifier::VerifyPartial", "length", length, "offset", data_offset);
   fs::Ticker ticker(metrics_->Collecting());
 
-  zx_status_t status = tree_verifier_.Verify(data, length, data_offset);
+  zx_status_t status;
+  {
+    std::lock_guard l(verification_lock_);
+    status = tree_verifier_.Verify(data, length, data_offset);
+  }
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "VerifyPartial(" << digest_.ToString() << ", " << data_offset << ", "
                    << length << ", " << buffer_size << ") failed: " << zx_status_get_string(status);
