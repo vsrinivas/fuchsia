@@ -130,18 +130,6 @@ group("tests") {
   ]
 }
 
-config_data("startup_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "bt-a2dp-startup.config" ]
-  sources = [ "startup.config" ]
-}
-
-config_data("service_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "bt-a2dp-manager.config" ]
-  sources = [ "service.config" ]
-}
-
 rustc_test("encoding_integration_bin") {
   output_name = "bt_a2dp_encoding_tests"
   features = [ "test_encoding" ]

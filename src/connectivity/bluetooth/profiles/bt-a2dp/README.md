@@ -33,27 +33,27 @@ startup if it cannot.
 
 ### Profile Startup
 
-There are two ways that the A2DP profile can be started on a fuchsia system: automatically started
-on boot, or through service discovery.
+There are two ways that the A2DP profile can be started on a fuchsia system: service discovery or
+manual startup.
 
-When started through service discovery, the profile will
-not be started until the A2DP Audio Mode is set through the `fuchsia.bluetooth.a2dp.AudioMode` FIDL
-service. To start the profile through service discovery, include the `service_config` target in
-your fuchsia build set, for example by using
-`--with //src/connectivity/bluetooth/profiles/bt-a2dp:service_config` on an `fx set` line, or by
-depending on it alongside the bt-a2dp component in your product config target.
+When started through service discovery, the profile will not be started until the
+`fuchsia.bluetooth.a2dp.AudioMode` FIDL capability is requested. The capabilities provided by the
+A2DP component are specified in the `core_shard`. Product integrators should include this
+`core_shard` for configurations that require Bluetooth A2DP functionality.
 
-When started automatically, the `fuchsia.bluetooth.a2dp.AudioMode` FIDL service will not be
-available. To start the A2DP profile automatically on startup include the `startup_config` target
-in your fuchsia build set by using
-`--with //src/connectivity/bluetooth/profiles/bt-a2dp:startup_config` on an `fx set` line, or by
-depending on it alongside the bt-a2dp component in your product config target.
+Manual starting of the component is done via the `ffx` tool. To run the component, do:
+`ffx component run fuchsia-pkg://fuchsia.com/bt-a2dp#meta/bt-a2dp.cm`. A limited set of capabilities
+is offered to the component in this case, and should primarily be used for debugging.
+
+In the future, we plan to allow product integrators the ability to specify
+[startup on boot](https://fxbug.dev/78801). This can be done by marking the component as `eager`
+in the `core_shard`.
 
 ## Inspection
 
-The `bt-a2dp.cmx` component implements
+The `bt-a2dp.cm` component implements
 [component inspection](https://fuchsia.dev/fuchsia-src/development/diagnostics/inspect).
-To view the current state of the profile, use `fx iquery show bt-a2dp.cmx`.
+To view the current state of the profile, use `fx iquery show core/bt-a2dp`.
 
 ### Hierarchy
 
