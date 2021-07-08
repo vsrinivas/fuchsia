@@ -51,6 +51,12 @@ static constexpr dcfg_arm_generic_timer_driver_t kTimerDriver = {
 #elif __x86_64__
 static constexpr uintptr_t kKernelOffset = 0x100000;
 
+// If the kernel specifies a load address smaller than this cut off,
+// we assume it is position-independent.
+//
+// TODO(fxbug.dev/32255): Delete once the x86 kernel is position-independent.
+constexpr uintptr_t kX86PositionIndependentLoadAddressCutOff = 0x100000;
+
 #include "src/virtualization/bin/vmm/arch/x64/acpi.h"
 #endif
 
@@ -146,12 +152,14 @@ zx_status_t read_unified_zbi(fbl::unique_fd zbi_fd, const uintptr_t kernel_zbi_o
     return status;
   }
 
-  // On arm64, the kernel is relocatable so the entry point must be offset by
-  // kKernelOffset. On x64, the entry point is absolute.
-#if __aarch64__
   *guest_ip = kernel_payload_header.entry + kKernelOffset;
-#elif __x86_64__
-  *guest_ip = kernel_payload_header.entry;
+
+  // TODO(fxbug.dev/32255): Transitionally, we assume the x86 entrypoint is
+  // absolute if it is greater than the fixed load address.
+#if __x86_64__
+  if (kernel_payload_header.entry > kX86PositionIndependentLoadAddressCutOff) {
+    *guest_ip = kernel_payload_header.entry;
+  }
 #endif
 
   return ZX_OK;
