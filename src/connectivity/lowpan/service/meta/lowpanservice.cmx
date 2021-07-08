@@ -4,5 +4,10 @@
     ],
     "program": {
         "binary": "bin/lowpanservice"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.lowpan.device.Lookup"
+        ]
     }
 }
