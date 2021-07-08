@@ -17,6 +17,7 @@ FUCHSIA_DIR="${FUCHSIA_DIR:-$HOME/fuchsia}"
 RELEASE_DIR_REL="prebuilt/cts/test"
 RELEASE_DIR="$FUCHSIA_DIR/$RELEASE_DIR_REL"
 PRODUCT_BOARD="core.x64"
+PYTHON3="$FUCHSIA_DIR/prebuilt/third_party/python3/linux-x64/bin/python3"
 
 # TODO(jcecil): consider using "auto-dir", which will change the OUT_DIR path.
 # https://fuchsia.dev/reference/tools/fx/cmd/set?hl=en
@@ -34,14 +35,18 @@ function generate_archive() {
 }
 
 function build_archive_contents() {
-  # Copy the CTS archive into the test release directory
+  # Untar the CTS archive into the test release directory and generate BUILD.gn
+  # files for its dependencies.
   cd $FUCHSIA_DIR
+  rm -rf $RELEASE_DIR
   mkdir -p $RELEASE_DIR
-  cd $RELEASE_DIR
-  rm -rf arch BUILD.gn docs examples fidl json meta pkg tests
-  cp $ARCHIVE_DIR/$ARCHIVE .
-  tar -xvf $ARCHIVE
-  rm $ARCHIVE
+
+  # Use the vendored python3 binary so that the script does not rely on the host
+  # having python3 installed.
+  $PYTHON3 $FUCHSIA_DIR/scripts/sdk/gn/generate.py \
+    --archive $ARCHIVE_DIR/$ARCHIVE \
+    --output $RELEASE_DIR \
+    >/dev/null  # Ignore gn-format output.
 
   # `fx set` with the newly extracted archive tests.
   # Verify they build successfully.
