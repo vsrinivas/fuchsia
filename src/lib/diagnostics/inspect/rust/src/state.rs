@@ -409,6 +409,14 @@ impl<'a> LockedStateGuard<'a> {
         self.inner_lock.set_bool(block_index, value)
     }
 
+    #[cfg(test)]
+    // TODO(fxbug.dev/80337) -- this test function is so that a block can be inserted into
+    // the VMO using a string reference created manually while there is still no specific
+    // create_string_reference function in State. It will be removed.
+    pub fn allocate_block(&mut self, size: usize) -> Result<Block<Arc<Mapping>>, Error> {
+        self.inner_lock.allocate_block(size)
+    }
+
     locked_state_metric_fns!(int, i64);
     locked_state_metric_fns!(uint, u64);
     locked_state_metric_fns!(double, f64);
@@ -738,6 +746,14 @@ impl InnerState {
             }
         }
         Ok(head_extent_index)
+    }
+
+    #[cfg(test)]
+    // TODO(fxbug.dev/80337) -- this test function is so that a block can be inserted into
+    // the VMO using a string reference created manually while there is still no specific
+    // create_string_reference function in State. It will be removed.
+    fn allocate_block(&mut self, size_in_bytes: usize) -> Result<Block<Arc<Mapping>>, Error> {
+        self.heap.allocate_block(size_in_bytes)
     }
 }
 

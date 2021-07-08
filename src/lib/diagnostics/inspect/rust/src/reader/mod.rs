@@ -335,7 +335,31 @@ impl<'a> ScanResult<'a> {
     }
 
     fn get_name(&self, index: u32) -> Option<String> {
-        self.snapshot.get_block(index).and_then(|block| block.name_contents().ok())
+        let block = self.snapshot.get_block(index)?;
+
+        match block.block_type() {
+            BlockType::Name => self.load_name(block),
+            BlockType::StringReference => self.load_string_reference(block),
+            _ => None,
+        }
+    }
+
+    fn load_name(&self, block: ScannedBlock<'_>) -> Option<String> {
+        block.name_contents().ok()
+    }
+
+    fn load_string_reference(&self, block: ScannedBlock<'_>) -> Option<String> {
+        let mut data = block.inline_string_reference().ok()?;
+        let total_length = block.total_length().ok()?;
+        if data.len() == total_length {
+            return String::from_utf8(data).ok();
+        }
+
+        let extent_index = block.next_extent().ok()?;
+        let still_to_read_length = total_length - data.len();
+        data.append(&mut self.read_extents(still_to_read_length, extent_index).ok()?);
+
+        String::from_utf8(data).ok()
     }
 
     fn parse_node(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
@@ -440,24 +464,10 @@ impl<'a> ScanResult<'a> {
         let name_index = block.name_index()?;
         let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
         let parent_index = block.parent_index()?;
+        let total_length = block.total_length().map_err(ReaderError::VmoFormat)?;
+        let extent_index = block.property_extent_index()?;
+        let buffer = self.read_extents(total_length, extent_index)?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
-        let total_length = block.total_length()?;
-        let mut buffer = vec![0u8; block.total_length().map_err(ReaderError::VmoFormat)?];
-        let mut extent_index = block.property_extent_index()?;
-        let mut offset = 0;
-        // Incrementally add the contents of each extent in the extent linked list
-        // until we reach the last extent or the maximum expected length.
-        while extent_index != 0 && offset < total_length {
-            let extent = self
-                .snapshot
-                .get_block(extent_index)
-                .ok_or(ReaderError::GetExtent(extent_index))?;
-            let content = extent.extent_contents()?;
-            let extent_length = min(total_length - offset, content.len());
-            buffer[offset..offset + extent_length].copy_from_slice(&content[..extent_length]);
-            offset += extent_length;
-            extent_index = extent.next_extent()?;
-        }
         match block.property_format().map_err(ReaderError::VmoFormat)? {
             PropertyFormat::String => {
                 parent
@@ -475,17 +485,35 @@ impl<'a> ScanResult<'a> {
     fn parse_link(&mut self, block: &ScannedBlock<'_>) -> Result<(), ReaderError> {
         let name_index = block.name_index()?;
         let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
+        let link_content_index = block.link_content_index()?;
+        let content =
+            self.get_name(link_content_index).ok_or(ReaderError::ParseName(link_content_index))?;
+        let disposition = block.link_node_disposition()?;
         let parent_index = block.parent_index()?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
-        let link_content_index = block.link_content_index()?;
-        let content = self
-            .snapshot
-            .get_block(link_content_index)
-            .ok_or(ReaderError::GetLinkContent(link_content_index))?
-            .name_contents()?;
-        let disposition = block.link_node_disposition()?;
         parent.partial_hierarchy.links.push(LinkValue { name, content, disposition });
         Ok(())
+    }
+
+    // Incrementally add the contents of each extent in the extent linked list
+    // until we reach the last extent or the maximum expected length.
+    fn read_extents(&self, total_length: usize, first_extent: u32) -> Result<Vec<u8>, ReaderError> {
+        let mut buffer = vec![0u8; total_length];
+        let mut offset = 0;
+        let mut extent_index = first_extent;
+        while extent_index != 0 && offset < total_length {
+            let extent = self
+                .snapshot
+                .get_block(extent_index)
+                .ok_or(ReaderError::GetExtent(extent_index))?;
+            let content = extent.extent_contents()?;
+            let extent_length = min(total_length - offset, content.len());
+            buffer[offset..offset + extent_length].copy_from_slice(&content[..extent_length]);
+            offset += extent_length;
+            extent_index = extent.next_extent()?;
+        }
+
+        Ok(buffer)
     }
 }
 
@@ -501,6 +529,52 @@ mod tests {
         futures::prelude::*,
         inspect_format::{constants, Payload},
     };
+
+    #[fuchsia::test]
+    async fn test_load_string_reference() {
+        let inspector = Inspector::new();
+        let state = inspector.state().unwrap();
+        let mut locked_state = state.try_lock().unwrap();
+
+        let _root = inspector.root();
+
+        // TODO(fxbug.dev/80337) -- all of the generic calls to allocate_block can changed later.
+
+        let name_of_node = locked_state.allocate_block(16).unwrap();
+        name_of_node.become_string_reference().unwrap();
+        name_of_node.write_string_reference_inline("abc".as_bytes()).unwrap();
+
+        let root_node = locked_state.allocate_block(16).unwrap();
+        root_node.become_node(name_of_node.index(), 0).unwrap();
+        name_of_node.increment_string_reference_count().unwrap();
+
+        let child_node = locked_state.allocate_block(16).unwrap();
+        child_node.become_int_value(5, name_of_node.index(), root_node.index()).unwrap();
+        name_of_node.increment_string_reference_count().unwrap();
+
+        let longer = locked_state.allocate_block(16).unwrap();
+        longer.become_string_reference().unwrap();
+        longer.write_string_reference_inline("abcdefg".as_bytes()).unwrap();
+
+        let linked = locked_state.allocate_block(16).unwrap();
+        linked.become_extent(0).unwrap();
+        linked.extent_set_contents("efg".as_bytes()).unwrap();
+
+        longer.set_extent_next_index(linked.index()).unwrap();
+
+        let bool_val = locked_state.allocate_block(16).unwrap();
+        bool_val.become_bool_value(false, longer.index(), 0).unwrap();
+
+        drop(locked_state);
+
+        let result = read(&inspector).await.unwrap();
+        assert_data_tree!(result, root: {
+            abc: {
+                abc: 5i64,
+            },
+            abcdefg: false,
+        });
+    }
 
     #[fuchsia::test]
     async fn read_vmo() {
