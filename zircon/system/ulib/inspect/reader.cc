@@ -8,10 +8,12 @@
 #include <lib/inspect/cpp/vmo/snapshot.h>
 #include <lib/stdcompat/optional.h>
 
+#include <cstdint>
 #include <iterator>
 #include <set>
 #include <stack>
 #include <unordered_map>
+#include <vector>
 
 using inspect::internal::BlockIndex;
 using inspect::internal::SnapshotTree;
@@ -147,9 +149,20 @@ class Reader {
   // Parse a link block and attach it to the given parent.
   void InnerParseLink(ParsedNode* parent, const Block* block);
 
+  // Load the contents of an extent chain into buf.
+  void ReadExtents(BlockIndex head_extent, size_t remaining_length,
+                   std::vector<uint8_t>* buf) const;
+
+  // Helper to load a std::string from either a NAME or STRING_REFERENCE.
+  cpp17::optional<std::string> GetAndValidateName(BlockIndex index);
+
   // Helper to interpret the given block as a NAME block and return a
   // copy of the name contents.
-  cpp17::optional<std::string> GetAndValidateName(BlockIndex index);
+  static cpp17::optional<std::string> LoadName(const Block* block);
+
+  // Helper to interpret the given block as a STRING_REFERENCE and return
+  // a copy of the canonical value.
+  cpp17::optional<std::string> LoadStringReference(const Block* block) const;
 
   // Contents of the read VMO.
   Snapshot snapshot_;
@@ -158,8 +171,7 @@ class Reader {
   std::unordered_map<BlockIndex, ParsedNode> parsed_nodes_;
 };
 
-cpp17::optional<std::string> Reader::GetAndValidateName(BlockIndex index) {
-  const Block* block = internal::GetBlock(&snapshot_, index);
+cpp17::optional<std::string> Reader::LoadName(const Block* const block) {
   if (!block) {
     return {};
   }
@@ -172,6 +184,51 @@ cpp17::optional<std::string> Reader::GetAndValidateName(BlockIndex index) {
   }
 
   return std::string(block->payload_ptr(), len);
+}
+
+cpp17::optional<std::string> Reader::LoadStringReference(const Block* const block) const {
+  if (!block) {
+    return {};
+  }
+
+  std::vector<uint8_t> buffer;
+
+  const auto total_length =
+      StringReferenceBlockPayload::TotalLength::Get<size_t>(block->payload.u64);
+  buffer.reserve(total_length);
+  const auto max_inlinable_length =
+      PayloadCapacity(GetOrder(block)) - StringReferenceBlockPayload::TotalLength::SizeInBytes();
+  buffer.insert(buffer.cend(),
+                block->payload_ptr() + StringReferenceBlockPayload::TotalLength::SizeInBytes(),
+                block->payload_ptr() + StringReferenceBlockPayload::TotalLength::SizeInBytes() +
+                    std::min(total_length, max_inlinable_length));
+
+  if (total_length == buffer.size()) {
+    return std::string{buffer.cbegin(), buffer.cend()};
+  }
+
+  ReadExtents(StringReferenceBlockFields::NextExtentIndex::Get<BlockIndex>(block->header),
+              total_length - max_inlinable_length, &buffer);
+
+  return std::string{buffer.cbegin(), buffer.cend()};
+}
+
+cpp17::optional<std::string> Reader::GetAndValidateName(BlockIndex index) {
+  const auto* const block = internal::GetBlock(&snapshot_, index);
+  if (!block) {
+    return {};
+  }
+
+  switch (GetType(block)) {
+    case BlockType::kName:
+      return LoadName(block);
+      break;
+    case BlockType::kStringReference:
+      return LoadStringReference(block);
+      break;
+    default:
+      return {};
+  }
 }
 
 void Reader::InnerScanBlocks() {
@@ -366,6 +423,23 @@ void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
   }
 }
 
+void Reader::ReadExtents(const BlockIndex head_extent, size_t remaining_length,
+                         std::vector<uint8_t>* buf) const {
+  auto* extent = internal::GetBlock(&snapshot_, head_extent);
+  while (remaining_length > 0) {
+    if (!extent || GetType(extent) != BlockType::kExtent) {
+      break;
+    }
+    size_t len = std::min(remaining_length, PayloadCapacity(GetOrder(extent)));
+    buf->insert(buf->cend(), extent->payload_ptr(), extent->payload_ptr() + len);
+    remaining_length -= len;
+
+    BlockIndex next_extent = ExtentBlockFields::NextExtentIndex::Get<BlockIndex>(extent->header);
+
+    extent = internal::GetBlock(&snapshot_, next_extent);
+  }
+}
+
 void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
   auto name = GetAndValidateName(ValueBlockFields::NameIndex::Get<size_t>(block->header));
   if (!name.has_value()) {
@@ -376,22 +450,11 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
   // against cycles and excessive memory usage.
   size_t remaining_length = std::min(
       snapshot_.size(), PropertyBlockPayload::TotalLength::Get<size_t>(block->payload.u64));
-  std::vector<uint8_t> buf;
-
   BlockIndex cur_extent = PropertyBlockPayload::ExtentIndex::Get<BlockIndex>(block->payload.u64);
-  auto* extent = internal::GetBlock(&snapshot_, cur_extent);
-  while (remaining_length > 0) {
-    if (!extent || GetType(extent) != BlockType::kExtent) {
-      break;
-    }
-    size_t len = std::min(remaining_length, PayloadCapacity(GetOrder(extent)));
-    buf.insert(buf.end(), extent->payload_ptr(), extent->payload_ptr() + len);
-    remaining_length -= len;
 
-    BlockIndex next_extent = ExtentBlockFields::NextExtentIndex::Get<BlockIndex>(extent->header);
-
-    extent = internal::GetBlock(&snapshot_, next_extent);
-  }
+  std::vector<uint8_t> buf;
+  buf.reserve(remaining_length);
+  ReadExtents(cur_extent, remaining_length, &buf);
 
   auto* parent_node = parent->hierarchy.node_ptr();
   if (PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64) &
@@ -399,9 +462,9 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
     parent_node->add_property(
         inspect::PropertyValue(std::move(name.value()), inspect::ByteVectorPropertyValue(buf)));
   } else {
-    parent_node->add_property(
-        inspect::PropertyValue(std::move(name.value()),
-                               inspect::StringPropertyValue(std::string(buf.begin(), buf.end()))));
+    parent_node->add_property(inspect::PropertyValue(
+        std::move(name.value()),
+        inspect::StringPropertyValue(std::string(buf.cbegin(), buf.cend()))));
   }
 }
 

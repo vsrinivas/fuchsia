@@ -8,9 +8,12 @@
 #include <lib/inspect/cpp/reader.h>
 
 #include <condition_variable>
+#include <cstdint>
 #include <mutex>
+#include <string_view>
 #include <thread>
 #include <type_traits>
+#include <vector>
 
 #include <zxtest/zxtest.h>
 
@@ -30,6 +33,8 @@ using inspect::internal::LinkBlockDisposition;
 using inspect::internal::NameBlockFields;
 using inspect::internal::PropertyBlockPayload;
 using inspect::internal::State;
+using inspect::internal::StringReferenceBlockFields;
+using inspect::internal::StringReferenceBlockPayload;
 using inspect::internal::ValueBlockFields;
 
 namespace {
@@ -47,6 +52,81 @@ TEST(Reader, GetByPath) {
   EXPECT_NOT_NULL(hierarchy.GetByPath({"test"}));
   EXPECT_NOT_NULL(hierarchy.GetByPath({"test", "test2"}));
   EXPECT_NULL(hierarchy.GetByPath({"test", "test2", "test3"}));
+}
+
+void MakeStringReference(uint64_t index, const std::string_view data, uint64_t next_extent,
+                         size_t total_size, std::vector<uint8_t>* buf) {
+  auto* string_ref = reinterpret_cast<Block*>(buf->data() + kMinOrderSize * index);
+  string_ref->header = StringReferenceBlockFields::Order::Make(0) |
+                       StringReferenceBlockFields::Type::Make(BlockType::kStringReference) |
+                       StringReferenceBlockFields::NextExtentIndex::Make(next_extent) |
+                       StringReferenceBlockFields::ReferenceCount::Make(0);
+
+  string_ref->payload.u64 = StringReferenceBlockPayload::TotalLength::Make(total_size);
+  memcpy(string_ref->payload.data + StringReferenceBlockPayload::TotalLength::SizeInBytes(),
+         data.data(), std::size(data));
+}
+
+void MakeHeader(std::vector<uint8_t>* buf) {
+  auto* header = reinterpret_cast<Block*>(buf->data());
+  header->header = HeaderBlockFields::Order::Make(0) |
+                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
+                   HeaderBlockFields::Version::Make(0);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
+  header->payload.u64 = 0;
+}
+
+TEST(Reader, InterpretInlineStringReferences) {
+  std::vector<uint8_t> buf;
+  buf.resize(128);
+
+  MakeHeader(&buf);
+  MakeStringReference(1, "a", 0, 1, &buf);
+
+  Block* value = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 2);
+  value->header = ValueBlockFields::Order::Make(0) |
+                  ValueBlockFields::Type::Make(BlockType::kNodeValue) |
+                  ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(1);
+
+  Block* value2 = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 3);
+  value2->header = ValueBlockFields::Order::Make(0) |
+                   ValueBlockFields::Type::Make(BlockType::kIntValue) |
+                   ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(1);
+  value2->payload.i64 = 5;
+
+  auto result = inspect::ReadFromBuffer(std::move(buf));
+  EXPECT_TRUE(result.is_ok());
+  EXPECT_EQ("root", result.value().node().name());
+  EXPECT_EQ(1u, result.value().children().size());
+  EXPECT_EQ(1u, result.value().node().properties().size());
+  EXPECT_EQ("a", result.value().children().at(0).node().name());
+  EXPECT_EQ("a", result.value().node().properties().at(0).name());
+}
+
+TEST(Reader, InterpretStringReferences) {
+  std::vector<uint8_t> buf;
+  buf.resize(128);
+
+  MakeHeader(&buf);
+
+  // Manually create a node.
+  MakeStringReference(1, "abcd", 2, 12, &buf);
+  auto* next_extent = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 2);
+  next_extent->header = ExtentBlockFields::Order::Make(0) |
+                        ExtentBlockFields::Type::Make(BlockType::kExtent) |
+                        ExtentBlockFields::NextExtentIndex::Make(0);
+  memcpy(next_extent->payload.data, "efghijkl", 8);
+
+  Block* value = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 3);
+  value->header = ValueBlockFields::Order::Make(0) |
+                  ValueBlockFields::Type::Make(BlockType::kNodeValue) |
+                  ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(1);
+
+  auto result = inspect::ReadFromBuffer(std::move(buf));
+  EXPECT_TRUE(result.is_ok());
+  EXPECT_EQ(result.value().node().name(), "root");
+  EXPECT_EQ(1u, result.value().children().size());
+  EXPECT_EQ("abcdefghijkl", result.value().children().at(0).node().name());
 }
 
 TEST(Reader, VisitHierarchy) {

@@ -5,7 +5,7 @@
   "pkg/inspect/include/lib/inspect/cpp/inspector.h": "0a5cc1510252a12ace872f380e888b11",
   "pkg/inspect/include/lib/inspect/cpp/reader.h": "40bda3b98af3dcdc8070be3691fa7cd8",
   "pkg/inspect/include/lib/inspect/cpp/value_list.h": "fd978c9dc996904cd05937c393c74842",
-  "pkg/inspect/include/lib/inspect/cpp/vmo/block.h": "04d6288164114cc7be5fe856cad409ea",
+  "pkg/inspect/include/lib/inspect/cpp/vmo/block.h": "7aa515ee986acc68e01ea23cf104f843",
   "pkg/inspect/include/lib/inspect/cpp/vmo/heap.h": "62c84fab02e1ce2f31e13ed2f4e4a40d",
   "pkg/inspect/include/lib/inspect/cpp/vmo/limits.h": "2be268d32acb5e7d844c03c07dd6b8be",
   "pkg/inspect/include/lib/inspect/cpp/vmo/scanner.h": "eddde27e2cc24b722fea75cdc024a850",

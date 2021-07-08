@@ -29,6 +29,7 @@ enum class BlockType : uint8_t {
   kArrayValue = 11,
   kLinkValue = 12,
   kBoolValue = 13,
+  kStringReference = 14,
 };
 
 enum class PropertyBlockFormat : uint8_t {
@@ -126,6 +127,10 @@ struct Field final {
   static constexpr void Set(uint64_t* word, uint64_t value) {
     *word = (*word & ~(kMask << begin)) | (value << begin);
   }
+
+  // The size of a field in bytes. This will truncate the size of values which
+  // are not byte aligned.
+  static constexpr size_t SizeInBytes() { return ((end + 1) - begin) / 8; }
 };
 
 // Describes the base fields present for all blocks.
@@ -147,6 +152,15 @@ struct FreeBlockFields final : public BlockFields {
 struct ValueBlockFields final : public BlockFields {
   using ParentIndex = Field<16, 39>;
   using NameIndex = Field<40, 63>;
+};
+
+struct StringReferenceBlockFields final : public BlockFields {
+  using NextExtentIndex = Field<16, 39>;
+  using ReferenceCount = Field<40, 63>;
+};
+
+struct StringReferenceBlockPayload final {
+  using TotalLength = Field<0, 31>;
 };
 
 struct PropertyBlockPayload final {
