@@ -10,8 +10,8 @@ go_library("main") {
   source_dir = "cmd"
   deps = [ "//tools/sdk-tools/sdkcommon" ]
   sources = [
+    "fpublish.go",
     "fpublish_test.go",
-    "main.go",
   ]
 }
 

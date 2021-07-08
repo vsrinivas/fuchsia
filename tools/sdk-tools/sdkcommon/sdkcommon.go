@@ -1141,7 +1141,12 @@ func initFFXGlobalConfig(sdk SDKProperties) error {
 		line   string
 	)
 	if output, err = sdk.RunFFX(args, false); err != nil {
-		return fmt.Errorf("Error getting config environment %v", err)
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
+			return fmt.Errorf("Error getting config environment: %v %v: %v",
+				args, string(exitError.Stderr), exitError)
+		}
+		return fmt.Errorf("Error getting config environment: %v %v", args, err)
 	}
 	reader := bufio.NewReader(bytes.NewReader([]byte(output)))
 	hasGlobal := false
