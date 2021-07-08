@@ -45,7 +45,7 @@ std::vector<std::unique_ptr<ThreadHandle>> ZirconProcessHandle::GetChildThreads(
   return result;
 }
 
-zx_status_t ZirconProcessHandle::Kill() { return process_.kill(); }
+debug::Status ZirconProcessHandle::Kill() { return debug::ZxStatus(process_.kill()); }
 
 int64_t ZirconProcessHandle::GetReturnCode() const {
   zx_info_process_t info = {};
@@ -54,7 +54,7 @@ int64_t ZirconProcessHandle::GetReturnCode() const {
   return 0;
 }
 
-zx_status_t ZirconProcessHandle::Attach(ProcessHandleObserver* observer) {
+debug::Status ZirconProcessHandle::Attach(ProcessHandleObserver* observer) {
   FX_DCHECK(observer);
   observer_ = observer;
 
@@ -69,9 +69,9 @@ zx_status_t ZirconProcessHandle::Attach(ProcessHandleObserver* observer) {
     config.process_handle = process_.get();
     config.process_koid = GetKoid();
     config.watcher = this;
-    return loop->WatchProcessExceptions(std::move(config), &process_watch_handle_);
+    return debug::ZxStatus(loop->WatchProcessExceptions(std::move(config), &process_watch_handle_));
   }
-  return ZX_OK;
+  return debug::Status();
 }
 
 void ZirconProcessHandle::Detach() {
@@ -113,7 +113,7 @@ std::vector<debug_ipc::Module> ZirconProcessHandle::GetModules(uint64_t dl_debug
   return GetElfModulesForProcess(*this, dl_debug_addr);
 }
 
-fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandle>> ZirconProcessHandle::GetHandles()
+fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> ZirconProcessHandle::GetHandles()
     const {
   // Query the handle table size.
   size_t handles_actual = 0;
@@ -121,7 +121,7 @@ fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandle>> ZirconProcessHandl
   if (zx_status_t status =
           process_.get_info(ZX_INFO_HANDLE_TABLE, nullptr, 0, &handles_actual, &handles_avail);
       status != ZX_OK)
-    return fitx::error(status);
+    return fitx::error(debug::ZxStatus(status));
 
   // We're technically racing with the program, so add some extra buffer in case the process has
   // opened more handles since the above query.
@@ -133,7 +133,7 @@ fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandle>> ZirconProcessHandl
                                              handles_avail * sizeof(zx_info_handle_extended_t),
                                              &handles_actual, &handles_avail);
       status != ZX_OK)
-    return fitx::error(status);
+    return fitx::error(debug::ZxStatus(status));
   handles.resize(handles_actual);
 
   // Query the VMO table size.
@@ -142,7 +142,7 @@ fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandle>> ZirconProcessHandl
   if (zx_status_t status =
           process_.get_info(ZX_INFO_PROCESS_VMOS, nullptr, 0, &vmo_actual, &vmo_avail);
       status != ZX_OK)
-    return fitx::error(status);
+    return fitx::error(debug::ZxStatus(status));
   vmo_avail += 64;  // Try to prevent races as above.
 
   // Read the VMO table.
@@ -151,7 +151,7 @@ fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandle>> ZirconProcessHandl
           process_.get_info(ZX_INFO_PROCESS_VMOS, vmos.data(), vmo_avail * sizeof(zx_info_vmo_t),
                             &vmo_actual, &vmo_avail);
       status != ZX_OK)
-    return fitx::error(status);
+    return fitx::error(debug::ZxStatus(status));
   vmos.resize(vmo_actual);
 
   // Index VMOs by koid to allow merging below.
@@ -193,14 +193,14 @@ fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandle>> ZirconProcessHandl
   return fitx::success(std::move(result));
 }
 
-zx_status_t ZirconProcessHandle::ReadMemory(uintptr_t address, void* buffer, size_t len,
-                                            size_t* actual) const {
-  return process_.read_memory(address, buffer, len, actual);
+debug::Status ZirconProcessHandle::ReadMemory(uintptr_t address, void* buffer, size_t len,
+                                              size_t* actual) const {
+  return debug::ZxStatus(process_.read_memory(address, buffer, len, actual));
 }
 
-zx_status_t ZirconProcessHandle::WriteMemory(uintptr_t address, const void* buffer, size_t len,
-                                             size_t* actual) {
-  return process_.write_memory(address, buffer, len, actual);
+debug::Status ZirconProcessHandle::WriteMemory(uintptr_t address, const void* buffer, size_t len,
+                                               size_t* actual) {
+  return debug::ZxStatus(process_.write_memory(address, buffer, len, actual));
 }
 
 std::vector<debug_ipc::MemoryBlock> ZirconProcessHandle::ReadMemoryBlocks(uint64_t address,

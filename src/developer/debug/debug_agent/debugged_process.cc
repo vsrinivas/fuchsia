@@ -120,8 +120,8 @@ void DebuggedProcess::DetachFromProcess() {
 
 zx_status_t DebuggedProcess::Init() {
   // Watch for process events.
-  if (zx_status_t status = process_handle_->Attach(this); status != ZX_OK)
-    return status;
+  if (debug::Status status = process_handle_->Attach(this); status.has_error())
+    return status.platform_error();
 
   RegisterDebugState();
 
@@ -192,7 +192,14 @@ void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request, debug_ipc::K
   // threads. This makes cleanup code more straightforward, as there are no
   // threads to resume/handle.
   threads_.clear();
-  reply->status = process_handle_->Kill();
+
+  // TODO(brettw) replace with a serialized Status and unconditionally:
+  //   reply->status = process_handle_->Kill();
+  if (debug::Status status = process_handle_->Kill(); status.has_error()) {
+    reply->status = status.platform_error();
+  } else {
+    reply->status = ZX_OK;
+  }
 }
 
 DebuggedThread* DebuggedProcess::GetThread(zx_koid_t thread_koid) const {
@@ -612,17 +619,25 @@ void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
 void DebuggedProcess::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
                                     debug_ipc::WriteMemoryReply* reply) {
   size_t actual = 0;
-  reply->status = process_handle_->WriteMemory(request.address, request.data.data(),
-                                               request.data.size(), &actual);
-  if (reply->status == ZX_OK && actual != request.data.size())
+
+  // TODO(brettw) replace reply with a serialized Status.
+  if (debug::Status status = process_handle_->WriteMemory(request.address, request.data.data(),
+                                                          request.data.size(), &actual);
+      status.has_error()) {
+    reply->status = status.platform_error();
+  } else if (actual != request.data.size()) {
     reply->status = ZX_ERR_IO;  // Convert partial writes to errors.
+  } else {
+    reply->status = ZX_OK;
+  }
 }
 
 void DebuggedProcess::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableRequest& request,
                                             debug_ipc::LoadInfoHandleTableReply* reply) {
   auto result = process_handle_->GetHandles();
   if (result.is_error()) {
-    reply->status = result.error_value();
+    // TODO(brettw) replace reply with a serialized status.
+    reply->status = result.error_value().platform_error();
   } else {
     reply->status = ZX_OK;
     reply->handles = std::move(std::move(result).value());

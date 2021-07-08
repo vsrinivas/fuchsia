@@ -27,13 +27,13 @@ std::vector<std::unique_ptr<ThreadHandle>> MockProcessHandle::GetChildThreads() 
   return result;
 }
 
-zx_status_t MockProcessHandle::Kill() { return kill_status_; }
+debug::Status MockProcessHandle::Kill() { return kill_status_; }
 
 int64_t MockProcessHandle::GetReturnCode() const { return 0; }
 
-zx_status_t MockProcessHandle::Attach(ProcessHandleObserver* observer) {
+debug::Status MockProcessHandle::Attach(ProcessHandleObserver* observer) {
   is_attached_ = true;
-  return ZX_OK;
+  return debug::Status();
 }
 
 void MockProcessHandle::Detach() { is_attached_ = false; }
@@ -48,23 +48,23 @@ std::vector<debug_ipc::Module> MockProcessHandle::GetModules(uint64_t dl_debug_a
   return {};
 }
 
-fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandle>> MockProcessHandle::GetHandles()
+fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> MockProcessHandle::GetHandles()
     const {
   // Not currently implemented in this mock.
   return fitx::success(std::vector<debug_ipc::InfoHandle>());
 }
 
-zx_status_t MockProcessHandle::ReadMemory(uintptr_t address, void* buffer, size_t len,
-                                          size_t* actual) const {
+debug::Status MockProcessHandle::ReadMemory(uintptr_t address, void* buffer, size_t len,
+                                            size_t* actual) const {
   auto vect = mock_memory_.ReadMemory(address, len);
   if (!vect.empty())
     memcpy(buffer, vect.data(), vect.size());
   *actual = vect.size();
-  return ZX_OK;
+  return debug::Status();
 }
 
-zx_status_t MockProcessHandle::WriteMemory(uintptr_t address, const void* buffer, size_t len,
-                                           size_t* actual) {
+debug::Status MockProcessHandle::WriteMemory(uintptr_t address, const void* buffer, size_t len,
+                                             size_t* actual) {
   // This updates the underlying memory object to account for the change. Otherwise some tests
   // become much more complex because they have to manually manage the memory expected by the
   // code under test.
@@ -79,7 +79,7 @@ zx_status_t MockProcessHandle::WriteMemory(uintptr_t address, const void* buffer
   mock_memory_.AddMemory(address, std::vector<uint8_t>(src, src + len));
 
   memory_writes_.emplace_back(address, std::vector<uint8_t>(src, &src[len]));
-  return ZX_OK;
+  return debug::Status();
 }
 
 std::vector<debug_ipc::MemoryBlock> MockProcessHandle::ReadMemoryBlocks(uint64_t address,

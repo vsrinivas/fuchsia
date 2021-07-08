@@ -12,6 +12,8 @@
 #include <memory>
 #include <vector>
 
+#include "src/developer/debug/shared/status.h"
+
 namespace debug_ipc {
 struct AddressRegion;
 struct MemoryBlock;
@@ -41,7 +43,7 @@ class ProcessHandle {
   virtual std::vector<std::unique_ptr<ThreadHandle>> GetChildThreads() const = 0;
 
   // Terminates the process. The actually termination will normally happen asynchronously.
-  virtual zx_status_t Kill() = 0;
+  virtual debug::Status Kill() = 0;
 
   // Retrieves the return code for an exited process. Returns some default value if the process is
   // still running (as defined by the kernel).
@@ -50,7 +52,7 @@ class ProcessHandle {
   // Registers for process notifications on the given interface. The pointer must outlive this class
   // or until Detach() is called. The observer nust not be null (use Detach() instead). Calling
   // multiple times will replace the observer pointer.
-  virtual zx_status_t Attach(ProcessHandleObserver* observer) = 0;
+  virtual debug::Status Attach(ProcessHandleObserver* observer) = 0;
 
   // Unregisters for process notifications. See Attach(). It is legal to call Detach() multiple
   // times or when not already attached.
@@ -69,12 +71,12 @@ class ProcessHandle {
   virtual std::vector<debug_ipc::Module> GetModules(uint64_t dl_debug_addr) const = 0;
 
   // Returns the handles opened by the process.
-  virtual fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandle>> GetHandles() const = 0;
+  virtual fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> GetHandles() const = 0;
 
-  virtual zx_status_t ReadMemory(uintptr_t address, void* buffer, size_t len,
-                                 size_t* actual) const = 0;
-  virtual zx_status_t WriteMemory(uintptr_t address, const void* buffer, size_t len,
-                                  size_t* actual) = 0;
+  virtual debug::Status ReadMemory(uintptr_t address, void* buffer, size_t len,
+                                   size_t* actual) const = 0;
+  virtual debug::Status WriteMemory(uintptr_t address, const void* buffer, size_t len,
+                                    size_t* actual) = 0;
 
   // Does a mapped-memory-aware read of the process memory. The result can contain holes which
   // the normal ReadMemory call above can't handle. On failure, there will be one block returned

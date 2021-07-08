@@ -475,7 +475,7 @@ TEST_F(DebugAgentTests, Kill) {
   constexpr zx_koid_t kLimboThreadKoid = 101;
   MockProcessHandle mock_process(kLimboProcKoid, "proc");
   // This is a limbo process so we can not kill it.
-  mock_process.set_kill_status(ZX_ERR_ACCESS_DENIED);
+  mock_process.set_kill_status(debug::ZxStatus(ZX_ERR_ACCESS_DENIED));
   MockThreadHandle mock_thread(kLimboThreadKoid, "thread");
   MockExceptionHandle mock_exception(kLimboThreadKoid);
   mock_process.set_threads({mock_thread});

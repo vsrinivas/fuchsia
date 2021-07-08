@@ -67,18 +67,18 @@ zx_status_t SoftwareBreakpoint::Install() {
 
   // Read previous instruction contents.
   size_t actual = 0;
-  zx_status_t status = process_->process_handle().ReadMemory(
-      address(), &previous_data_, sizeof(arch::BreakInstructionType), &actual);
-  if (status != ZX_OK)
-    return status;
+  if (debug::Status status = process_->process_handle().ReadMemory(
+          address(), &previous_data_, sizeof(arch::BreakInstructionType), &actual);
+      status.has_error())
+    return status.platform_error();
   if (actual != sizeof(arch::BreakInstructionType))
     return ZX_ERR_UNAVAILABLE;
 
   // Replace with breakpoint instruction.
-  status = process_->process_handle().WriteMemory(address(), &arch::kBreakInstruction,
-                                                  sizeof(arch::BreakInstructionType), &actual);
-  if (status != ZX_OK)
-    return status;
+  if (debug::Status status = process_->process_handle().WriteMemory(
+          address(), &arch::kBreakInstruction, sizeof(arch::BreakInstructionType), &actual);
+      status.has_error())
+    return status.platform_error();
   if (actual != sizeof(arch::BreakInstructionType))
     return ZX_ERR_UNAVAILABLE;
 
@@ -96,9 +96,9 @@ zx_status_t SoftwareBreakpoint::Uninstall() {
   // breakpoint instruction before doing any writes.
   arch::BreakInstructionType current_contents = 0;
   size_t actual = 0;
-  zx_status_t status = process_->process_handle().ReadMemory(
+  debug::Status status = process_->process_handle().ReadMemory(
       address(), &current_contents, sizeof(arch::BreakInstructionType), &actual);
-  if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType))
+  if (status.has_error() || actual != sizeof(arch::BreakInstructionType))
     return ZX_OK;  // Probably unmapped, safe to ignore.
 
   if (current_contents != arch::kBreakInstruction) {
@@ -109,9 +109,8 @@ zx_status_t SoftwareBreakpoint::Uninstall() {
 
   status = process_->process_handle().WriteMemory(address(), &previous_data_,
                                                   sizeof(arch::BreakInstructionType), &actual);
-  if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType)) {
-    FX_LOGS(WARNING) << "Unable to remove breakpoint at 0x" << std::hex << address() << ": "
-                     << zx_status_get_string(status);
+  if (status.has_error() || actual != sizeof(arch::BreakInstructionType)) {
+    FX_LOGS(WARNING) << "Unable to remove breakpoint at 0x" << std::hex << address();
   }
 
   installed_ = false;

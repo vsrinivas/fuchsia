@@ -38,7 +38,7 @@ class MockProcessHandle final : public ProcessHandle {
   std::vector<MemoryWrite>& memory_writes() { return memory_writes_; }
 
   // Value to return from Kill().
-  void set_kill_status(zx_status_t s) { kill_status_ = s; }
+  void set_kill_status(debug::Status s) { kill_status_ = std::move(s); }
 
   bool is_attached() const { return is_attached_; }
 
@@ -48,17 +48,17 @@ class MockProcessHandle final : public ProcessHandle {
   zx_koid_t GetKoid() const override { return process_koid_; }
   std::string GetName() const override { return name_; }
   std::vector<std::unique_ptr<ThreadHandle>> GetChildThreads() const override;
-  zx_status_t Kill() override;
+  debug::Status Kill() override;
   int64_t GetReturnCode() const override;
-  zx_status_t Attach(ProcessHandleObserver* observer) override;
+  debug::Status Attach(ProcessHandleObserver* observer) override;
   void Detach() override;
   std::vector<debug_ipc::AddressRegion> GetAddressSpace(uint64_t address) const override;
   std::vector<debug_ipc::Module> GetModules(uint64_t dl_debug_addr) const override;
-  fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandle>> GetHandles() const override;
-  zx_status_t ReadMemory(uintptr_t address, void* buffer, size_t len,
-                         size_t* actual) const override;
-  zx_status_t WriteMemory(uintptr_t address, const void* buffer, size_t len,
-                          size_t* actual) override;
+  fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> GetHandles() const override;
+  debug::Status ReadMemory(uintptr_t address, void* buffer, size_t len,
+                           size_t* actual) const override;
+  debug::Status WriteMemory(uintptr_t address, const void* buffer, size_t len,
+                            size_t* actual) override;
   std::vector<debug_ipc::MemoryBlock> ReadMemoryBlocks(uint64_t address,
                                                        uint32_t size) const override;
 
@@ -77,7 +77,7 @@ class MockProcessHandle final : public ProcessHandle {
   debug_ipc::MockMemory mock_memory_;
   std::vector<MemoryWrite> memory_writes_;
 
-  zx_status_t kill_status_ = ZX_OK;
+  debug::Status kill_status_;
 };
 
 }  // namespace debug_agent

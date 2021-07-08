@@ -24,6 +24,8 @@ static_library("shared") {
     "message_loop.h",
     "regex.cc",
     "regex.h",
+    "status.cc",
+    "status.h",
     "stream_buffer.cc",
     "stream_buffer.h",
     "test_stream_buffer.cc",

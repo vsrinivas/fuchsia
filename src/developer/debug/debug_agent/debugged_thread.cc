@@ -612,8 +612,9 @@ void DebuggedThread::UpdateForHitProcessBreakpoint(
 bool DebuggedThread::IsBreakpointInstructionAtAddress(uint64_t address) const {
   arch::BreakInstructionType instruction = 0;
   size_t bytes_read = 0;
-  if (process_->process_handle().ReadMemory(address, &instruction, sizeof(instruction),
-                                            &bytes_read) != ZX_OK ||
+  if (process_->process_handle()
+          .ReadMemory(address, &instruction, sizeof(instruction), &bytes_read)
+          .has_error() ||
       bytes_read != sizeof(instruction))
     return false;
   return arch::IsBreakpointInstruction(instruction);

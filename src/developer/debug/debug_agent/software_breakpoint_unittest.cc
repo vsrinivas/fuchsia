@@ -94,7 +94,7 @@ bool MemoryContains(MockProcessHandle& handle, uint64_t address, const void* dat
 
   std::unique_ptr<uint8_t[]> read(new uint8_t[data_len]);
   size_t actual = 0;
-  if (handle.ReadMemory(address, read.get(), data_len, &actual) != ZX_OK || actual != data_len)
+  if (handle.ReadMemory(address, read.get(), data_len, &actual).has_error() || actual != data_len)
     return false;
 
   return memcmp(data, read.get(), data_len) == 0;
