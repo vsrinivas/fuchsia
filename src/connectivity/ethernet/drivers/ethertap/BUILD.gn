@@ -55,7 +55,7 @@ test("ethertap-unittest") {
     "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_llcpp",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/devices/lib/dev-operation",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/pretty",
