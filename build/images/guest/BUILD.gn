@@ -94,6 +94,7 @@ assemble_system("guest") {
     "//src/storage/bin/df",
     "//src/storage/bin/mount",
     "//src/storage/bin/umount",
+    "//src/storage/blobfs:decompressor-sandbox",
     "//src/storage/fshost:bootfs",
     "//src/storage/fshost:no_minfs_zxcrypt",
     "//src/storage/fshost",
