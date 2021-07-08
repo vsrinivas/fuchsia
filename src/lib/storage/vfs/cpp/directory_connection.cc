@@ -25,6 +25,7 @@
 
 #include <fbl/string_buffer.h>
 
+#include "src/lib/storage/vfs/cpp/advisory_lock.h"
 #include "src/lib/storage/vfs/cpp/debug.h"
 #include "src/lib/storage/vfs/cpp/fidl_transaction.h"
 #include "src/lib/storage/vfs/cpp/mount_channel.h"
@@ -480,6 +481,25 @@ void DirectoryConnection::GetDevicePath(GetDevicePathRequestView request,
   size_t actual = 0;
   zx_status_t status = vnode()->GetDevicePath(sizeof(name), name, &actual);
   completer.Reply(status, fidl::StringView(name, actual));
+}
+
+void DirectoryConnection::AdvisoryLock(AdvisoryLockRequestView request,
+                                       AdvisoryLockCompleter::Sync& completer) {
+  zx_koid_t owner = GetChannelOwnerKoid();
+  // advisory_lock replies to the completer
+  auto async_completer = completer.ToAsync();
+  fit::callback<void(zx_status_t)> callback = file_lock::lock_completer_t(
+      [lock_completer = std::move(async_completer)](zx_status_t status) mutable {
+        auto reply = fidl::ObjectView<int32_t>::FromExternal(&status);
+        auto result = fuchsia_io2::wire::AdvisoryLockingAdvisoryLockResult::WithErr(reply);
+        lock_completer.Reply(std::move(result));
+      });
+
+  advisory_lock(owner, vnode(), false, request->request, std::move(callback));
+}
+void DirectoryConnection::OnTeardown() {
+  auto owner = GetChannelOwnerKoid();
+  vnode()->DeleteFileLockInTeardown(owner);
 }
 
 }  // namespace internal

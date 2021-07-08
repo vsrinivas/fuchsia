@@ -27,6 +27,9 @@ class DirectoryConnection final : public Connection,
 
   ~DirectoryConnection() final = default;
 
+ protected:
+  void OnTeardown();
+
  private:
   //
   // |fuchsia.io/Node| operations.
@@ -71,6 +74,12 @@ class DirectoryConnection final : public Connection,
                        QueryFilesystemCompleter::Sync& completer) final;
   void GetDevicePath(GetDevicePathRequestView request,
                      GetDevicePathCompleter::Sync& completer) final;
+
+  //
+  // |fuchsia.io2/AdvisoryLocking| operations.
+  //
+
+  void AdvisoryLock(AdvisoryLockRequestView request, AdvisoryLockCompleter::Sync& _completer) final;
 
   // Directory cookie for readdir operations.
   fs::VdirCookie dircookie_;

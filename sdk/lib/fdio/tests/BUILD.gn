@@ -53,6 +53,7 @@ test("fdio-test") {
   # FDIO tests that can run on host as well as target.
   sources = [
     "fdio_eventfd.cc",
+    "fdio_lock.cc",
     "fdio_poll.cc",
     "fdio_select.cc",
     "fdio_timerfd.cc",
@@ -95,6 +96,7 @@ test("fdio-test") {
       "//sdk/lib/fdio",
       "//sdk/lib/stdcompat",
       "//sdk/lib/zxio",
+      "//src/storage/memfs",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/async:async-cpp",

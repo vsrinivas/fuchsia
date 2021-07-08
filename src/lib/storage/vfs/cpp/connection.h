@@ -94,6 +94,10 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   void RegisterInflightTransaction() { vnode_->RegisterInflightTransaction(); }
   void UnregisterInflightTransaction() { vnode_->UnregisterInflightTransaction(); }
 
+  // For AdvisoryLocking - the KOID of the incoming FIDL channel acts as the identifier
+  // (or owner) for the remote file or directory.
+  zx_koid_t GetChannelOwnerKoid();
+
   fbl::RefPtr<fs::Vnode>& vnode() { return vnode_; }
 
  protected:
@@ -170,6 +174,8 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   Vfs* vfs() const { return vfs_; }
 
   zx::event& token() { return token_; }
+
+  virtual void OnTeardown() {}
 
   // Flags which can be modified by SetFlags.
   constexpr static uint32_t kSettableStatusFlags = fuchsia_io::wire::kOpenFlagAppend;

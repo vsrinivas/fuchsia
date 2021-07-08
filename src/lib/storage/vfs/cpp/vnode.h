@@ -35,6 +35,7 @@
 #ifdef __Fuchsia__
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/io2/llcpp/fidl.h>
+#include <lib/file-lock/file-lock.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/stream.h>
 #include <zircon/device/vfs.h>
@@ -430,15 +431,27 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Returns the number of open connections, not counting node_reference connections. See Open().
   size_t open_count() const __TA_REQUIRES_SHARED(mutex_) { return open_count_; }
 
- private:
 #ifdef __Fuchsia__
-  zx_status_t CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask event)
-      __TA_EXCLUDES(gInotifyLock);
+ public:
+  // Instead of adding a |file_lock::FileLock| member variable to |Vnode|,
+  // maintain a map from |this| to the lock objects. This is done, because
+  // file locking only applies to regular files, so we want to avoid the
+  // memory overhead for all other |Vnode| types.
+  std::shared_ptr<file_lock::FileLock> GetVnodeFileLock();
+  bool DeleteFileLock(zx_koid_t owner);
+  // This is the same as |DeleteFileLock|, but if there is no
+  // lock, do not acquire |gLockAccess|.
+  bool DeleteFileLockInTeardown(zx_koid_t owner);
 #endif
+ private:
   Vfs* vfs_ __TA_GUARDED(mutex_) = nullptr;  // Possibly null, see getter above.
   size_t inflight_transactions_ __TA_GUARDED(mutex_) = 0;
   size_t open_count_ __TA_GUARDED(mutex_) = 0;
 #ifdef __Fuchsia__
+  static std::mutex gLockAccess;
+  static std::map<const Vnode*, std::shared_ptr<file_lock::FileLock>> gLockMap;
+  zx_status_t CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask event)
+      __TA_EXCLUDES(gInotifyLock);
   struct InotifyFilter {
     fio2::wire::InotifyWatchMask filter_;
     uint32_t watch_descriptor_;

@@ -132,6 +132,7 @@ Connection::~Connection() {
 }
 
 void Connection::AsyncTeardown() {
+  OnTeardown();
   if (std::shared_ptr<Binding> binding = binding_; binding) {
     binding->AsyncTeardown();
   }
@@ -258,6 +259,7 @@ bool Connection::OnMessage() {
 }
 
 void Connection::SyncTeardown() {
+  OnTeardown();
   EnsureVnodeClosed();
   binding_.reset();
 
@@ -390,6 +392,25 @@ Connection::Result<> Connection::NodeNodeSetFlags(uint32_t flags) {
   auto options = VnodeConnectionOptions::FromIoV1Flags(flags);
   set_append(options.flags.append);
   return fit::ok();
+}
+
+zx_koid_t Connection::GetChannelOwnerKoid() {
+  if (binding_ == nullptr) {
+    return ZX_KOID_INVALID;
+  }
+  auto& channel = binding_->channel();
+
+  if (!channel.is_valid()) {
+    return ZX_KOID_INVALID;
+  }
+
+  zx_info_handle_basic_t owner_info;
+  if (zx_object_get_info(channel.get(), ZX_INFO_HANDLE_BASIC, &owner_info, sizeof(owner_info),
+                         nullptr, nullptr) != ZX_OK) {
+    return ZX_KOID_INVALID;
+  }
+
+  return owner_info.koid;
 }
 
 }  // namespace internal

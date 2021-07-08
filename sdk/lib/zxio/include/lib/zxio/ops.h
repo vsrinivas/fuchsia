@@ -72,6 +72,7 @@ typedef struct zxio_ops {
   zx_status_t (*isatty)(zxio_t* io, bool* tty);
   zx_status_t (*get_window_size)(zxio_t* io, uint32_t* width, uint32_t* height);
   zx_status_t (*set_window_size)(zxio_t* io, uint32_t width, uint32_t height);
+  zx_status_t (*advisory_lock)(zxio_t* io, struct advisory_lock_req* req);
 } zxio_ops_t;
 
 // Initialize a |zxio_t| object with the given |ops| table.

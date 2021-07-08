@@ -8,9 +8,12 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/private.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zxio/posix_mode.h>
+#include <lib/zxio/types.h>
 #include <poll.h>
+#include <sys/file.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/select.h>
@@ -980,6 +983,40 @@ int fcntl(int fd, int cmd, ...) {
   }
 
 #undef GET_INT_ARG
+}
+
+__EXPORT
+int flock(int fd, int operation) {
+  zxio_advisory_lock_req_t lock_req;
+  lock_req.wait = true;
+  if (operation & LOCK_NB) {
+    lock_req.wait = false;
+    operation &= ~LOCK_NB;
+  }
+  switch (operation) {
+    case LOCK_SH:
+      lock_req.type = ADVISORY_LOCK_SHARED;
+      break;
+    case LOCK_EX:
+      lock_req.type = ADVISORY_LOCK_EXCLUSIVE;
+      break;
+    case LOCK_UN:
+      lock_req.type = ADVISORY_LOCK_UNLOCK;
+      break;
+    default: {
+      return ERRNO(EINVAL);
+    }
+  }
+
+  fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
+  if (fdio == nullptr) {
+    return ERRNO(EBADF);
+  }
+  zxio_t* io = fdio_get_zxio(fdio);
+  zx_status_t status = zxio_get_ops(io)->advisory_lock(io, &lock_req);
+
+  fdio_unsafe_release(fdio);
+  return STATUS(status);
 }
 
 __EXPORT

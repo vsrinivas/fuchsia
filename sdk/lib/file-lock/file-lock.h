@@ -40,6 +40,7 @@ class FileLock final {
 
   void Lock(zx_koid_t owner, LockRequest& req, lock_completer_t& completer);
   bool Forget(zx_koid_t owner);
+  bool NoLocksHeld();
 
  private:
   std::mutex lock_mtx_;

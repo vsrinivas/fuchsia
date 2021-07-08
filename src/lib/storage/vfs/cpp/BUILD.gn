@@ -65,6 +65,8 @@ static_library("cpp") {
       "watcher.h",
     ]
     sources += [
+      "advisory_lock.cc",
+      "advisory_lock.h",
       "connection.cc",
       "connection.h",
       "directory_connection.cc",
@@ -103,6 +105,7 @@ static_library("cpp") {
       # <fs/vnode.h> has #include <fuchsia/io/llcpp/fidl.h>.
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
+      "//sdk/lib/file-lock:cpp",
       "//zircon/public/lib/async",
 
       # <fs/tracked_remote_dir.h> has #include <lib/async/cpp/wait.h>.
@@ -203,6 +206,7 @@ test("fs-vnode-test") {
 test("fs-connection-test") {
   output_name = "fs-connection-test"
   sources = [
+    "advisory_lock_tests.cc",
     "connection_contract_tests.cc",
     "connection_integration_tests.cc",
     "connection_rights_tests.cc",

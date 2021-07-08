@@ -30,6 +30,8 @@ namespace fs {
 #ifdef __Fuchsia__
 std::mutex Vnode::gInotifyLock;
 std::map<const Vnode*, std::vector<Vnode::InotifyFilter>> Vnode::gInotifyMap;
+std::mutex Vnode::gLockAccess;
+std::map<const Vnode*, std::shared_ptr<file_lock::FileLock>> Vnode::gLockMap;
 #endif
 
 Vnode::Vnode(Vfs* vfs) : vfs_(vfs) {
@@ -42,6 +44,11 @@ Vnode::~Vnode() {
 
   ZX_DEBUG_ASSERT_MSG(inflight_transactions_ == 0, "Inflight transactions in dtor %zu\n",
                       inflight_transactions_);
+
+#ifdef __Fuchsia__
+  ZX_DEBUG_ASSERT_MSG(gLockMap.find(this) == gLockMap.end(),
+                      "lock entry in gLockMap not cleaned up for Vnode");
+#endif
 
   if (vfs_)
     vfs_->UnregisterVnode(this);
@@ -307,6 +314,40 @@ fidl::UnownedClientEnd<fuchsia_io::Directory> Vnode::GetRemote() const {
 }
 
 void Vnode::SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote) { ZX_DEBUG_ASSERT(false); }
+
+std::shared_ptr<file_lock::FileLock> Vnode::GetVnodeFileLock() {
+  std::lock_guard lock_access(gLockAccess);
+  auto lock = gLockMap.find(this);
+  if (lock == gLockMap.end()) {
+    auto inserted = gLockMap.emplace(std::pair(this, std::make_shared<file_lock::FileLock>()));
+    if (inserted.second) {
+      lock = inserted.first;
+    } else {
+      return nullptr;
+    }
+  }
+  return lock->second;
+}
+bool Vnode::DeleteFileLock(zx_koid_t owner) {
+  std::lock_guard lock_access(gLockAccess);
+  bool deleted = false;
+  auto lock = gLockMap.find(this);
+  if (lock != gLockMap.end()) {
+    deleted = lock->second->Forget(owner);
+    if (lock->second->NoLocksHeld()) {
+      gLockMap.erase(this);
+    }
+  }
+  return deleted;
+}
+
+// There is no guard here, as the connection is in teardown.
+bool Vnode::DeleteFileLockInTeardown(zx_koid_t owner) {
+  if (gLockMap.find(this) == gLockMap.end()) {
+    return false;
+  }
+  return DeleteFileLock(owner);
+}
 
 #endif  // __Fuchsia__
 

@@ -157,4 +157,9 @@ bool FileLock::Forget(zx_koid_t owner) {
   return forgotten;
 }
 
+bool FileLock::NoLocksHeld() {
+  return exclusive_ == ZX_KOID_INVALID && shared_.empty() && pending_exclusive_.empty() &&
+         pending_shared_.empty();
+}
+
 }  // namespace file_lock

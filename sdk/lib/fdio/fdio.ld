@@ -81,6 +81,7 @@
 		fdio_watch_directory;
 		fdio_zxio_create;
 		fdopendir;
+		flock;
 		freeifaddrs;
 		fstat;
 		fstatat;

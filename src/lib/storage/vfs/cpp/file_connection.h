@@ -29,6 +29,8 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   ~FileConnection() = default;
 
  protected:
+  void OnTeardown();
+
   //
   // |fuchsia.io/Node| operations.
   //
@@ -50,6 +52,13 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
   void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
   void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) final;
+
+  //
+  // |fuchsia.io2/AdvisoryLocking| operations.
+  //
+
+  void AdvisoryLock(fidl::WireServer<fuchsia_io::File>::AdvisoryLockRequestView request,
+                    AdvisoryLockCompleter::Sync& _completer) final;
 };
 
 }  // namespace internal

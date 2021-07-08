@@ -514,6 +514,34 @@ zx_status_t zxio_remote_attr_set(zxio_t* io, const zxio_node_attributes_t* attr)
   return zxio_common_attr_set(rio.control(), ToIo1ModePermissionsForFile(), attr);
 }
 
+zx_status_t zxio_common_advisory_lock(zx::unowned_channel control, advisory_lock_req* req) {
+  fuchsia_io2::wire::AdvisoryLockType lock_type;
+  switch (req->type) {
+    case ADVISORY_LOCK_SHARED:
+      lock_type = fuchsia_io2::wire::AdvisoryLockType::kRead;
+      break;
+    case ADVISORY_LOCK_EXCLUSIVE:
+      lock_type = fuchsia_io2::wire::AdvisoryLockType::kWrite;
+      break;
+    case ADVISORY_LOCK_UNLOCK:
+      lock_type = fuchsia_io2::wire::AdvisoryLockType::kUnlock;
+      break;
+    default:
+      return ZX_ERR_INTERNAL;
+  }
+  fidl::FidlAllocator allocator;
+  fuchsia_io2::wire::AdvisoryLockRequest lock_req;
+  lock_req.Allocate(allocator);
+  lock_req.set_type(allocator, lock_type);
+  lock_req.set_wait(allocator, req->wait);
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::AdvisoryLocking>(control))
+                    .AdvisoryLock(std::move(lock_req));
+  if (!result.ok()) {
+    return result.status();
+  }
+  return result.Unwrap()->result.err();
+}
+
 template <typename F>
 static zx_status_t zxio_remote_do_vector(const Remote& rio, const zx_iovec_t* vector,
                                          size_t vector_count, zxio_flags_t flags,
@@ -1011,6 +1039,11 @@ zx_status_t zxio_dir_attr_set(zxio_t* io, const zxio_node_attributes_t* attr) {
   return zxio_common_attr_set(rio.control(), ToIo1ModePermissionsForDirectory(), attr);
 }
 
+zx_status_t zxio_remote_advisory_lock(zxio_t* io, advisory_lock_req* req) {
+  Remote rio(io);
+  return zxio_common_advisory_lock(rio.control(), req);
+}
+
 }  // namespace
 
 static constexpr zxio_ops_t zxio_dir_ops = []() {
@@ -1037,6 +1070,7 @@ static constexpr zxio_ops_t zxio_dir_ops = []() {
   ops.dirent_iterator_init = zxio_remote_dirent_iterator_init;
   ops.dirent_iterator_next = zxio_remote_dirent_iterator_next;
   ops.dirent_iterator_destroy = zxio_remote_dirent_iterator_destroy;
+  ops.advisory_lock = zxio_remote_advisory_lock;
   return ops;
 }();
 
@@ -1109,6 +1143,7 @@ static constexpr zxio_ops_t zxio_file_ops = []() {
   ops.flags_get = zxio_remote_flags_get;
   ops.flags_set = zxio_remote_flags_set;
   ops.vmo_get = zxio_remote_vmo_get;
+  ops.advisory_lock = zxio_remote_advisory_lock;
   return ops;
 }();
 

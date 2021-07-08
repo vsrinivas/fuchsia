@@ -293,6 +293,17 @@ typedef uint32_t zxio_shutdown_options_t;
 #define ZXIO_SHUTDOWN_OPTIONS_WRITE ((zxio_shutdown_options_t)1ul << 0)
 #define ZXIO_SHUTDOWN_OPTIONS_READ ((zxio_shutdown_options_t)1ul << 1)
 
+enum advisory_lock_type {
+  ADVISORY_LOCK_SHARED = 0x1,
+  ADVISORY_LOCK_EXCLUSIVE = 0x2,
+  ADVISORY_LOCK_UNLOCK = 0x4
+};
+
+typedef struct advisory_lock_req {
+  enum advisory_lock_type type;
+  bool wait;
+} zxio_advisory_lock_req_t;
+
 __END_CDECLS
 
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_TYPES_H_
