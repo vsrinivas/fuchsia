@@ -57,6 +57,8 @@ void AmlTdmInDevice::Initialize() {
   // ack delay = 0
   // set destination tdm block and enable that selection
   switch (version_) {
+    case metadata::AmlVersion::kS905D3G:
+      __FALLTHROUGH;
     case metadata::AmlVersion::kS905D2G:
       mmio_.Write32((0x30 << 16) |       // Enable interrupts for FIFO errors.
                         (0x00 << 13) |   // Packed.
@@ -64,9 +66,6 @@ void AmlTdmInDevice::Initialize() {
                         (16 << 3) |      // LSB position of data.
                         (tdm_ch_ << 0),  // select TDM_IN A/B/C as data source.
                     GetToddrOffset(TODDR_CTRL0_OFFS));
-      break;
-    case metadata::AmlVersion::kS905D3G:
-      ZX_ASSERT(0);  // Not supported.
       break;
   }
 
@@ -93,7 +92,7 @@ void AmlTdmInDevice::Initialize() {
       pad1 = EE_AUDIO_MST_PAD_CTRL1;
       break;
     case metadata::AmlVersion::kS905D3G:
-      ZX_ASSERT(0);  // Not supported.
+      pad1 = EE_AUDIO_MST_PAD_CTRL1_D3G;
       break;
   }
   switch (tdm_ch_) {
@@ -140,6 +139,8 @@ zx_status_t AmlTdmInDevice::SetBuffer(zx_paddr_t buf, size_t len) {
 void AmlTdmInDevice::ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
                                    uint8_t bits_per_sample, uint8_t mix_mask, bool i2s_mode) {
   switch (version_) {
+    case metadata::AmlVersion::kS905D3G:
+      __FALLTHROUGH;
     case metadata::AmlVersion::kS905D2G: {
       uint32_t src = 0;
       switch (tdm_ch_) {
@@ -161,9 +162,6 @@ void AmlTdmInDevice::ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_
                       (bit_offset << 16) |  // Add delay to ws or data for skew modification.
                       bits_per_slot;
       mmio_.Write32(reg0, GetTdmOffset(TDMIN_CTRL_OFFS));
-    } break;
-    case metadata::AmlVersion::kS905D3G: {
-      ZX_ASSERT(0);  // Not supported.
     } break;
   }
 }

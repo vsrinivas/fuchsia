@@ -23,6 +23,9 @@
 #include TAS5805M_CONFIG_PATH
 #endif
 
+// Enables BT PCM audio.
+#define ENABLE_BT
+
 namespace nelson {
 static const zx_bind_inst_t ref_out_i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
@@ -111,7 +114,7 @@ zx_status_t Nelson::AudioInit() {
     return status;
   }
 
-  const pbus_mmio_t mmios_out[] = {
+  const pbus_mmio_t audio_mmios[] = {
       {
           .base = S905D3_EE_AUDIO_BASE,
           .length = S905D3_EE_AUDIO_LENGTH,
@@ -138,7 +141,7 @@ zx_status_t Nelson::AudioInit() {
       },
   };
 
-  const pbus_mmio_t mmios_in[] = {
+  const pbus_mmio_t pdm_mmios[] = {
       {
           .base = S905D3_EE_PDM_BASE,
           .length = S905D3_EE_PDM_LENGTH,
@@ -165,6 +168,17 @@ zx_status_t Nelson::AudioInit() {
   gpio_impl_.SetDriveStrength(S905D3_GPIOA(1), ua, nullptr);
   gpio_impl_.SetDriveStrength(S905D3_GPIOA(2), ua, nullptr);
   gpio_impl_.SetDriveStrength(S905D3_GPIOA(3), ua, nullptr);
+
+#ifdef ENABLE_BT
+  // PCM pin assignments.
+  gpio_impl_.SetAltFunction(S905D3_GPIOX(8), S905D3_GPIOX_8_TDMA_DIN1_FN);
+  gpio_impl_.SetAltFunction(S905D3_GPIOX(9), S905D3_GPIOX_9_TDMA_D0_FN);
+  gpio_impl_.SetAltFunction(S905D3_GPIOX(10), S905D3_GPIOX_10_TDMA_FS_FN);
+  gpio_impl_.SetAltFunction(S905D3_GPIOX(11), S905D3_GPIOX_11_TDMA_SCLK_FN);
+  gpio_impl_.SetDriveStrength(S905D3_GPIOX(9), ua, nullptr);
+  gpio_impl_.SetDriveStrength(S905D3_GPIOX(10), ua, nullptr);
+  gpio_impl_.SetDriveStrength(S905D3_GPIOX(11), ua, nullptr);
+#endif
 
   // PDM pin assignments
   gpio_impl_.SetAltFunction(S905D3_GPIOA(7), S905D3_GPIOA_7_PDM_DCLK_FN);
@@ -215,8 +229,8 @@ zx_status_t Nelson::AudioInit() {
   controller_out.vid = PDEV_VID_AMLOGIC;
   controller_out.pid = PDEV_PID_AMLOGIC_S905D3;
   controller_out.did = PDEV_DID_AMLOGIC_TDM;
-  controller_out.mmio_list = mmios_out;
-  controller_out.mmio_count = countof(mmios_out);
+  controller_out.mmio_list = audio_mmios;
+  controller_out.mmio_count = countof(audio_mmios);
   controller_out.bti_list = btis_out;
   controller_out.bti_count = countof(btis_out);
   controller_out.irq_list = frddr_b_irqs;
@@ -315,7 +329,115 @@ zx_status_t Nelson::AudioInit() {
     }
   }
 
-  // Input device.
+#ifdef ENABLE_BT
+  // Add TDM OUT for BT.
+  {
+    const pbus_bti_t pcm_out_btis[] = {
+        {
+            .iommu_index = 0,
+            .bti_id = BTI_AUDIO_BT_OUT,
+        },
+    };
+    metadata::AmlConfig metadata = {};
+    snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
+    snprintf(metadata.product_name, sizeof(metadata.product_name), "nelson");
+
+    metadata.is_input = false;
+    // Compatible clocks with other TDM drivers.
+    metadata.mClockDivFactor = 10;
+    metadata.sClockDivFactor = 25;
+    metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT;
+    metadata.bus = metadata::AmlBus::TDM_A;
+    metadata.version = metadata::AmlVersion::kS905D3G;
+    metadata.dai.type = metadata::DaiType::Tdm1;
+    metadata.dai.sclk_on_raising = true;
+    metadata.dai.bits_per_sample = 16;
+    metadata.dai.bits_per_slot = 16;
+    metadata.ring_buffer.number_of_channels = 1;
+    metadata.dai.number_of_channels = 1;
+    metadata.lanes_enable_mask[0] = 1;
+    pbus_metadata_t tdm_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
+            .data_size = sizeof(metadata),
+        },
+    };
+
+    pbus_dev_t tdm_dev = {};
+    tdm_dev.name = "nelson-pcm-dai-out";
+    tdm_dev.vid = PDEV_VID_AMLOGIC;
+    tdm_dev.pid = PDEV_PID_AMLOGIC_S905D3;
+    tdm_dev.did = PDEV_DID_AMLOGIC_DAI_OUT;
+    tdm_dev.mmio_list = audio_mmios;
+    tdm_dev.mmio_count = countof(audio_mmios);
+    tdm_dev.bti_list = pcm_out_btis;
+    tdm_dev.bti_count = countof(pcm_out_btis);
+    tdm_dev.metadata_list = tdm_metadata;
+    tdm_dev.metadata_count = countof(tdm_metadata);
+    status = pbus_.DeviceAdd(&tdm_dev);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "PCM CompositeDeviceAdd failed %s", zx_status_get_string(status));
+      return status;
+    }
+  }
+#endif
+
+  // Input devices.
+#ifdef ENABLE_BT
+  // Add TDM IN for BT.
+  {
+    const pbus_bti_t pcm_in_btis[] = {
+        {
+            .iommu_index = 0,
+            .bti_id = BTI_AUDIO_BT_IN,
+        },
+    };
+    metadata::AmlConfig metadata = {};
+    snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
+    snprintf(metadata.product_name, sizeof(metadata.product_name), "nelson");
+    metadata.is_input = true;
+    // Compatible clocks with other TDM drivers.
+    metadata.mClockDivFactor = 10;
+    metadata.sClockDivFactor = 25;
+    metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT;
+    metadata.bus = metadata::AmlBus::TDM_A;
+    metadata.version = metadata::AmlVersion::kS905D3G;
+    metadata.dai.type = metadata::DaiType::Tdm1;
+    metadata.dai.sclk_on_raising = true;
+    metadata.dai.bits_per_sample = 16;
+    metadata.dai.bits_per_slot = 16;
+    metadata.ring_buffer.number_of_channels = 1;
+    metadata.dai.number_of_channels = 1;
+    metadata.swaps = 0x0200;
+    metadata.lanes_enable_mask[1] = 1;
+    pbus_metadata_t tdm_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
+            .data_size = sizeof(metadata),
+        },
+    };
+    pbus_dev_t tdm_dev = {};
+    tdm_dev.name = "nelson-pcm-dai-in";
+    tdm_dev.vid = PDEV_VID_AMLOGIC;
+    tdm_dev.pid = PDEV_PID_AMLOGIC_S905D3;
+    tdm_dev.did = PDEV_DID_AMLOGIC_DAI_IN;
+    tdm_dev.mmio_list = audio_mmios;
+    tdm_dev.mmio_count = countof(audio_mmios);
+    tdm_dev.bti_list = pcm_in_btis;
+    tdm_dev.bti_count = countof(pcm_in_btis);
+    tdm_dev.metadata_list = tdm_metadata;
+    tdm_dev.metadata_count = countof(tdm_metadata);
+    status = pbus_.DeviceAdd(&tdm_dev);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "PCM CompositeDeviceAdd failed %s", zx_status_get_string(status));
+      return status;
+    }
+  }
+#endif
+
+  // PDM.
   {
     metadata::AmlPdmConfig metadata = {};
     snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
@@ -337,8 +459,8 @@ zx_status_t Nelson::AudioInit() {
     dev_in.vid = PDEV_VID_AMLOGIC;
     dev_in.pid = PDEV_PID_AMLOGIC_S905D3;
     dev_in.did = PDEV_DID_AMLOGIC_PDM;
-    dev_in.mmio_list = mmios_in;
-    dev_in.mmio_count = countof(mmios_in);
+    dev_in.mmio_list = pdm_mmios;
+    dev_in.mmio_count = countof(pdm_mmios);
     dev_in.bti_list = btis_in;
     dev_in.bti_count = countof(btis_in);
     dev_in.irq_list = toddr_b_irqs;

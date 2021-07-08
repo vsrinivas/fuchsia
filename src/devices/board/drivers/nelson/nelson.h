@@ -36,6 +36,8 @@ enum {
   BTI_SYSMEM,
   BTI_AML_SECURE_MEM,
   BTI_NNA,
+  BTI_AUDIO_BT_IN,
+  BTI_AUDIO_BT_OUT,
 };
 
 // MAC address metadata indices
