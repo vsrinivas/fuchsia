@@ -82,20 +82,6 @@ TEST(RunTests, RunTestDontPublishData) {
   EXPECT_EQ(0, result->data_sinks.size());
 }
 
-TEST(RunTests, RunTestPublishData) {
-  ScopedTestDir test_dir;
-  fbl::String test_name = PublishDataHelperBin();
-
-  const char* argv[] = {test_name.c_str(), nullptr};
-  const fbl::String output_dir = JoinPath(test_dir.path(), "output");
-  ASSERT_EQ(0, MkDirAll(output_dir));
-  std::unique_ptr<Result> result = RunTest(argv, output_dir.c_str(), test_name.c_str(), 0, nullptr);
-  EXPECT_STR_EQ(argv[0], result->name.c_str());
-  EXPECT_EQ(SUCCESS, result->launch_status);
-  EXPECT_EQ(0, result->return_code);
-  EXPECT_EQ(1, result->data_sinks.size());
-}
-
 TEST(RunTests, RunTestsPublishData) {
   ScopedTestDir test_dir;
   fbl::String test_name = PublishDataHelperBin();
@@ -171,7 +157,7 @@ TEST(RunTests, RunAllTestsPublishData) {
   fclose(output_file);
 
   EXPECT_TRUE(std::regex_search(buf, expected_output_regex));
-  EXPECT_SUBSTR(buf, expected_data_sink_buf.c_str());
+  EXPECT_NOT_NULL(strstr(buf, expected_data_sink_buf.c_str()));
 }
 
 TEST(RunTests, RunProfileMergeData) {

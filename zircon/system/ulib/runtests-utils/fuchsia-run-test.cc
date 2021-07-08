@@ -34,7 +34,6 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
 #include <fbl/string.h>
@@ -66,24 +65,6 @@ fbl::String RootName(const fbl::String& path) {
   }
   return fbl::String::Concat({"/", fbl::String(start, end - start)});
 }
-
-// Hash implementation provided for using DumpFile in std::unordered_map
-struct HashDumpFile {
-  size_t operator()(const debugdata::DumpFile& dump_file) const {
-    std::hash<std::string> string_hash;
-    size_t hashes[2] = {string_hash(dump_file.name), string_hash(dump_file.file)};
-    std::hash<size_t*> size_t_hash;
-    return size_t_hash(hashes);
-  }
-};
-
-// Equivalence implementation provided for using DumpFile in std::unordered_map
-struct EqDumpFile {
-  bool operator()(const debugdata::DumpFile& left, const debugdata::DumpFile& right) const {
-    std::equal_to<std::string> string_eq;
-    return string_eq(left.name, right.name) && string_eq(left.file, right.file);
-  }
-};
 
 }  // namespace
 
@@ -175,10 +156,6 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
   // destructor. We do this explicitly at the end of the function in the non-error case, but in
   // error cases we just rely on the destructors to clean things up.
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  std::unordered_map<std::string, std::unordered_set<debugdata::DumpFile, HashDumpFile, EqDumpFile>>
-      dump_files;
-  bool data_collection_err_occurred = false;
-  fbl::unique_fd data_sink_dir_fd;
   std::unique_ptr<debugdata::DebugData> debug_data;
 
   // Export the root namespace.
@@ -225,30 +202,8 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
       }
     }
 
-    data_sink_dir_fd = fbl::unique_fd(open(output_dir, O_RDONLY | O_DIRECTORY));
-    if (!data_sink_dir_fd) {
-      fprintf(stderr, "FAILURE: Could not open output directory %s: %s\n", "/tmp", strerror(errno));
-      return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
-    }
-
     // Setup DebugData service implementation.
-    debug_data = std::make_unique<debugdata::DebugData>(
-        loop.dispatcher(), std::move(root_dir_fd), [&](std::string data_sink, zx::vmo vmo) {
-          auto optional_dump_files = debugdata::ProcessSingleDebugData(
-              data_sink_dir_fd, data_sink, std::move(vmo),
-              [&](const std::string& error) {
-                fprintf(stderr, "FAILURE: %s\n", error.c_str());
-                data_collection_err_occurred = true;
-              },
-              [&](const std::string& warning) {
-                fprintf(stderr, "WARNING: %s\n", warning.c_str());
-              });
-          if (optional_dump_files) {
-            for (const debugdata::DumpFile dump_file : *optional_dump_files) {
-              dump_files[data_sink].insert(std::move(dump_file));
-            }
-          }
-        });
+    debug_data = std::make_unique<debugdata::DebugData>(std::move(root_dir_fd));
 
     // Setup proxy dir.
     proxy_dir = fbl::MakeRefCounted<ServiceProxyDir>(std::move(svc_handle));
@@ -345,9 +300,24 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
     return std::make_unique<Result>(test_name, FAILED_TO_RETURN_CODE, 0, duration_milliseconds);
   }
 
+  // The emitted signature, eg "[runtests][PASSED] /test/name", is used by the CQ/CI testrunners to
+  // match test names and outcomes. Changes to this format must be matched in
+  // https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/testing/runtests/output.go
+  std::unique_ptr<Result> result;
+  if (proc_info.return_code == 0) {
+    result = std::make_unique<Result>(test_name, SUCCESS, 0, duration_milliseconds);
+  } else {
+    fprintf(stderr, "%s exited with nonzero status: %" PRId64, test_name, proc_info.return_code);
+    result = std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code,
+                                      duration_milliseconds);
+  }
+
+  if (output_dir == nullptr) {
+    return result;
+  }
+
   // Make sure that all job processes are dead before touching any data.
   auto_call_kill_job.call();
-  test_job.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr);
 
   // Stop the loop.
   loop.Quit();
@@ -362,29 +332,21 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
   // Tear down the the VFS.
   vfs.reset();
 
-  // Ensure any outstanding VMOs are processed.
-  if (debug_data) {
-    debug_data->DrainData();
+  fbl::unique_fd data_sink_dir_fd{open(output_dir, O_RDONLY | O_DIRECTORY)};
+  if (!data_sink_dir_fd) {
+    fprintf(stderr, "FAILURE: Could not open output directory %s: %s\n", "/tmp", strerror(errno));
+    return result;
   }
 
-  // The emitted signature, eg "[runtests][PASSED] /test/name", is used by the CQ/CI testrunners to
-  // match test names and outcomes. Changes to this format must be matched in
-  // https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/testing/runtests/output.go
-  std::unique_ptr<Result> result;
-  if (proc_info.return_code == 0) {
-    result = std::make_unique<Result>(test_name, SUCCESS, 0, duration_milliseconds);
-    if (data_collection_err_occurred) {
-      result->launch_status = FAILED_COLLECTING_SINK_DATA;
-    }
-  } else {
-    fprintf(stderr, "%s exited with nonzero status: %" PRId64, test_name, proc_info.return_code);
-    result = std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code,
-                                      duration_milliseconds);
-  }
-  for (auto& [data_sink, files] : dump_files) {
-    std::vector<debugdata::DumpFile> vec_files(files.begin(), files.end());
-    result->data_sinks.emplace(data_sink, std::move(vec_files));
-  }
+  result->data_sinks = debugdata::ProcessDebugData(
+      data_sink_dir_fd, debug_data->TakeData(),
+      [&](const std::string& error) {
+        fprintf(stderr, "FAILURE: %s\n", error.c_str());
+        if (result->return_code == 0) {
+          result->launch_status = FAILED_COLLECTING_SINK_DATA;
+        }
+      },
+      [&](const std::string& warning) { fprintf(stderr, "WARNING: %s\n", warning.c_str()); });
 
   return result;
 }

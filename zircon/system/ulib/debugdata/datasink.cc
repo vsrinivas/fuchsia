@@ -406,24 +406,4 @@ std::unordered_map<std::string, std::vector<DumpFile>> ProcessDebugData(
   return data_sinks;
 }
 
-std::optional<std::vector<DumpFile>> ProcessSingleDebugData(const fbl::unique_fd& data_sink_dir_fd,
-                                                            const std::string& data_sink,
-                                                            zx::vmo debug_data,
-                                                            DataSinkCallback error_callback,
-                                                            DataSinkCallback warning_callback) {
-  if (data_sink == kProfileSink) {
-    std::vector<zx::vmo> data;
-    data.push_back(std::move(debug_data));
-    return ProcessProfiles(data, data_sink_dir_fd, error_callback, warning_callback);
-  } else {
-    if (auto dump_file = ProcessDataSinkDump(data_sink, debug_data, data_sink_dir_fd,
-                                             error_callback, warning_callback)) {
-      std::vector<DumpFile> result;
-      result.push_back(*dump_file);
-      return result;
-    }
-  }
-  return {};
-}
-
 }  // namespace debugdata
