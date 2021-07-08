@@ -31,12 +31,8 @@ executable("display_detect") {
   ]
 }
 
-executable("display-color") {
-  crate_name = "display_color"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  sources = [ "display-color.rs" ]
+rustc_binary("display_color") {
+  source_root = "display-color.rs"
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -47,6 +43,13 @@ executable("display-color") {
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:thiserror",
   ]
+
+  sources = [ "display-color.rs" ]
+}
+
+fuchsia_package_with_single_component("display-color") {
+  manifest = "meta/display-color.cmx"
+  deps = [ ":display_color" ]
 }
 
 rustc_binary("display_png") {
