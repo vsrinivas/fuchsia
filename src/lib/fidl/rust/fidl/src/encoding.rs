@@ -2503,7 +2503,7 @@ macro_rules! fidl_empty_struct {
     };
 }
 
-/// Encode the provided unknown bytes and handles behind a FIDL "envelope".
+/// Encodes the provided unknown bytes and handles behind a FIDL envelope.
 #[doc(hidden)] // only exported for macro use
 pub fn encode_unknown_data(
     val: &mut UnknownData,
@@ -2522,7 +2522,7 @@ pub fn encode_unknown_data(
     Ok(())
 }
 
-/// Encode the provided unknown bytes behind a FIDL "envelope".
+/// Encodes the provided unknown bytes behind a FIDL envelope.
 #[doc(hidden)] // only exported for macro use
 pub fn encode_unknown_bytes(
     val: &[u8],
@@ -2537,7 +2537,7 @@ pub fn encode_unknown_bytes(
     Ok(())
 }
 
-/// Encode the provided value behind a FIDL "envelope".
+/// Encodes the provided value behind a FIDL envelope.
 #[doc(hidden)] // only exported for macro use
 pub fn encode_in_envelope(
     val: &mut Option<&mut dyn Encodable>,
@@ -2545,14 +2545,10 @@ pub fn encode_in_envelope(
     offset: usize,
     recursion_depth: usize,
 ) -> Result<()> {
-    // u32 num_bytes
-    // u32 num_handles
-    // 64-bit presence indicator
-
     match val {
         Some(x) => {
-            // Start at offset 8 because we write the first 8 bytes (number of bytes and number
-            // number of handles, both u32) at the end.
+            // Start at offset 8 because we write the first 8 bytes (number of
+            // bytes and number number of handles, both u32) at the end.
             ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
             let bytes_before = encoder.buf.len();
             let handles_before = encoder.handles.len();
@@ -2576,32 +2572,30 @@ pub fn encode_in_envelope(
     Ok(())
 }
 
-/// Decodes the unknown bytes behind a FIDL "envelope", erroring if there are
-/// any handles. The result is None if the envelope is absent.
+/// Decodes and validates an envelope header. Returns `None` if absent and
+/// `Some((num_bytes, num_handles))` if present.
 #[doc(hidden)] // only exported for macro use
-#[inline]
-pub fn decode_unknown_bytes(decoder: &mut Decoder<'_>, offset: usize) -> Result<Option<Vec<u8>>> {
+#[inline(always)]
+pub fn decode_envelope_header(
+    decoder: &mut Decoder<'_>,
+    offset: usize,
+) -> Result<Option<(u32, u32)>> {
     let mut num_bytes: u32 = 0;
     num_bytes.decode(decoder, offset)?;
+
     let mut num_handles: u32 = 0;
     num_handles.decode(decoder, offset + 4)?;
+
     let mut present: u64 = 0;
     present.decode(decoder, offset + 8)?;
 
     match present {
         ALLOC_PRESENT_U64 => {
             if num_bytes % 8 != 0 {
-                return Err(Error::InvalidNumBytesInEnvelope);
+                Err(Error::InvalidNumBytesInEnvelope)
+            } else {
+                Ok(Some((num_bytes, num_handles)))
             }
-            if num_handles != 0 {
-                for _ in 0..num_handles {
-                    decoder.drop_next_handle()?;
-                }
-                return Err(Error::CannotStoreUnknownHandles);
-            }
-            decoder.read_out_of_line(num_bytes as usize, |decoder, offset| {
-                Ok(Some(decoder.buffer()[offset..offset + (num_bytes as usize)].to_vec()))
-            })
         }
         ALLOC_ABSENT_U64 => {
             if num_bytes != 0 {
@@ -2616,40 +2610,42 @@ pub fn decode_unknown_bytes(decoder: &mut Decoder<'_>, offset: usize) -> Result<
     }
 }
 
-/// Decodes the unknown bytes and handles behind a FIDL "envelope". The result
-/// is None if the envelope is absent.
+/// Decodes a FIDL envelope, returning the unknown bytes or `None` if the
+/// envelope is absent. Fails if there are any handles.
+#[doc(hidden)] // only exported for macro use
+#[inline]
+pub fn decode_unknown_bytes(decoder: &mut Decoder<'_>, offset: usize) -> Result<Option<Vec<u8>>> {
+    match decode_envelope_header(decoder, offset)? {
+        Some((num_bytes, num_handles)) => {
+            if num_handles != 0 {
+                for _ in 0..num_handles {
+                    decoder.drop_next_handle()?;
+                }
+                return Err(Error::CannotStoreUnknownHandles);
+            }
+            decoder.read_out_of_line(num_bytes as usize, |decoder, offset| {
+                Ok(Some(decoder.buffer()[offset..offset + (num_bytes as usize)].to_vec()))
+            })
+        }
+        None => Ok(None),
+    }
+}
+
+/// Decodes a FIDL envelope, returning the unknown bytes and handles, or `None`
+/// if the envelope is absent.
 #[doc(hidden)] // only exported for macro use
 #[inline]
 pub fn decode_unknown_data(
     decoder: &mut Decoder<'_>,
     offset: usize,
 ) -> Result<Option<UnknownData>> {
-    let mut num_bytes: u32 = 0;
-    num_bytes.decode(decoder, offset)?;
-    let mut num_handles: u32 = 0;
-    num_handles.decode(decoder, offset + 4)?;
-    let mut present: u64 = 0;
-    present.decode(decoder, offset + 8)?;
-
-    match present {
-        ALLOC_PRESENT_U64 => {
-            if num_bytes % 8 != 0 {
-                return Err(Error::InvalidNumBytesInEnvelope);
-            }
+    match decode_envelope_header(decoder, offset)? {
+        Some((num_bytes, num_handles)) => {
             decoder.read_out_of_line(num_bytes as usize, |decoder, offset| {
                 decode_unknown_data_contents(decoder, offset, num_bytes, num_handles).map(Some)
             })
         }
-        ALLOC_ABSENT_U64 => {
-            if num_bytes != 0 {
-                Err(Error::InvalidNumBytesInEnvelope)
-            } else if num_handles != 0 {
-                Err(Error::InvalidNumHandlesInEnvelope)
-            } else {
-                Ok(None)
-            }
-        }
-        _ => Err(Error::InvalidPresenceIndicator),
+        None => Ok(None),
     }
 }
 
@@ -2882,49 +2878,31 @@ macro_rules! fidl_table {
                             next_offset += 16;
                         }
 
-                        let mut num_bytes: u32 = 0;
-                        num_bytes.decode(decoder, next_offset)?;
-                        let mut num_handles: u32 = 0;
-                        num_handles.decode(decoder, next_offset + 4)?;
-                        let mut present: u64 = 0;
-                        present.decode(decoder, next_offset + 8)?;
                         let next_out_of_line = decoder.next_out_of_line();
                         let handles_before = decoder.remaining_handles();
-                        match present {
-                            $crate::encoding::ALLOC_PRESENT_U64 => {
-                                if num_bytes % 8 != 0 {
-                                    return Err($crate::Error::InvalidNumBytesInEnvelope);
-                                }
-                                decoder.read_out_of_line(
-                                    decoder.inline_size_of::<$member_ty>(),
-                                    |decoder, offset| {
-                                        $(
-                                            decoder.set_next_handle_subtype($member_handle_subtype);
-                                            decoder.set_next_handle_rights($member_handle_rights);
-                                        )?
-                                        let val_ref =
-                                            self.$member_name.get_or_insert_with(
-                                                || <$member_ty>::new_empty());
-                                        val_ref.decode(decoder, offset)?;
-                                        Ok(())
-                                    },
-                                )?;
+                        if let Some((num_bytes, num_handles)) =
+                            $crate::encoding::decode_envelope_header(decoder, next_offset)?
+                        {
+                            decoder.read_out_of_line(
+                                decoder.inline_size_of::<$member_ty>(),
+                                |decoder, offset| {
+                                    $(
+                                        decoder.set_next_handle_subtype($member_handle_subtype);
+                                        decoder.set_next_handle_rights($member_handle_rights);
+                                    )?
+                                    let val_ref =
+                                        self.$member_name.get_or_insert_with(
+                                            || <$member_ty>::new_empty());
+                                    val_ref.decode(decoder, offset)?;
+                                    Ok(())
+                                },
+                            )?;
+                            if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
+                                return Err($crate::Error::InvalidNumBytesInEnvelope);
                             }
-                            $crate::encoding::ALLOC_ABSENT_U64 => {
-                                if num_bytes != 0 {
-                                    return Err($crate::Error::InvalidNumBytesInEnvelope);
-                                }
-                                if num_handles != 0 {
-                                    return Err($crate::Error::InvalidNumHandlesInEnvelope);
-                                }
+                            if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
+                                return Err($crate::Error::InvalidNumHandlesInEnvelope);
                             }
-                            _ => return Err($crate::Error::InvalidPresenceIndicator),
-                        }
-                        if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
-                            return Err($crate::Error::InvalidNumBytesInEnvelope);
-                        }
-                        if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
-                            return Err($crate::Error::InvalidNumHandlesInEnvelope);
                         }
 
                         next_offset += 16;
@@ -2997,34 +2975,10 @@ pub fn decode_xunion_inline_portion(
     let mut ordinal: u64 = 0;
     ordinal.decode(decoder, offset)?;
 
-    let mut num_bytes: u32 = 0;
-    num_bytes.decode(decoder, offset + 8)?;
-
-    let mut num_handles: u32 = 0;
-    num_handles.decode(decoder, offset + 12)?;
-
-    let mut present: u64 = 0;
-    present.decode(decoder, offset + 16)?;
-
-    match present {
-        ALLOC_PRESENT_U64 => {
-            if num_bytes % 8 != 0 {
-                return Err(Error::InvalidNumBytesInEnvelope);
-            }
-        }
-        ALLOC_ABSENT_U64 => {
-            return Err(if num_bytes != 0 {
-                Error::InvalidNumBytesInEnvelope
-            } else if num_handles != 0 {
-                Error::InvalidNumHandlesInEnvelope
-            } else {
-                Error::UnexpectedNullRef
-            })
-        }
-        _ => return Err(Error::InvalidPresenceIndicator),
+    match decode_envelope_header(decoder, offset + 8)? {
+        Some((num_bytes, num_handles)) => Ok((ordinal, num_bytes, num_handles)),
+        None => Err(Error::UnexpectedNullRef),
     }
-
-    Ok((ordinal, num_bytes, num_handles))
 }
 
 impl<O, E> Layout for std::result::Result<O, E>
