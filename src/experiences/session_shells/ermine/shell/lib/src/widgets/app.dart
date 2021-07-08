@@ -56,7 +56,7 @@ class App extends StatelessWidget {
                 fit: StackFit.expand,
                 children: <Widget>[
                   // Show fullscreen top view.
-                  if (app.views.isNotEmpty)
+                  if (app.viewsVisible.value)
                     WidgetFactory.create(() => AppView(app)),
 
                   // Show scrim and overlay layers if an overlay is visible.

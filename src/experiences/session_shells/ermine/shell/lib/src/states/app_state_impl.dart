@@ -180,6 +180,11 @@ class AppStateImpl with Disposable implements AppState {
   final views = <ViewState>[].asObservable();
 
   @override
+  late final viewsVisible = () {
+    return views.isNotEmpty && !isIdle.value;
+  }.asComputed();
+
+  @override
   final ObservableStream<Locale> localeStream;
 
   late final shellHasFocus = (() {
