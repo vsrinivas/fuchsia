@@ -557,6 +557,14 @@ impl SSHKeys {
         Ok(())
     }
 
+    pub fn update_paths_from_args(&mut self, start_command: &StartCommand) {
+        if let Some(path) = &start_command.ssh {
+            let ssh_path = PathBuf::from(path);
+            self.authorized_keys = ssh_path.join("fuchsia_authorized_keys").to_path_buf();
+            self.private_key = ssh_path.join("fuchsia_ed25519").to_path_buf();
+        }
+    }
+
     pub fn stage_files(&mut self, dir: &PathBuf) -> Result<()> {
         let vdl_priv_key_dest = dir.join("id_ed25519");
         let vdl_priv_key_src = self.private_key.as_path();
@@ -891,6 +899,32 @@ mod tests {
         let tmp_dir = Builder::new().prefix("fvdl_test_ssh_").tempdir()?;
         ssh_files.stage_files(&tmp_dir.path().to_owned())?;
         assert!(ssh_files.private_key.ends_with("id_ed25519"));
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_ssh_dir() -> Result<()> {
+        let mut ssh_files = SSHKeys::from_sdk_env()?;
+        assert_eq!(
+            ssh_files.private_key,
+            home_dir().unwrap_or_default().join(".ssh/fuchsia_ed25519")
+        );
+        assert_eq!(
+            ssh_files.authorized_keys,
+            home_dir().unwrap_or_default().join(".ssh/fuchsia_authorized_keys")
+        );
+
+        ssh_files.update_paths_from_args(&StartCommand {
+            ssh: Some("/path/to/ssh".to_string()),
+            ..Default::default()
+        });
+
+        assert_eq!(ssh_files.private_key.to_str().unwrap(), "/path/to/ssh/fuchsia_ed25519");
+        assert_eq!(
+            ssh_files.authorized_keys.to_str().unwrap(),
+            "/path/to/ssh/fuchsia_authorized_keys"
+        );
         Ok(())
     }
 

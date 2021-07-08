@@ -332,6 +332,7 @@ impl VDLFiles {
 
         // overriding image files via args will make cache a no-op
         self.image_files.update_paths_from_args(&start_command);
+        self.ssh_files.update_paths_from_args(&start_command);
 
         // If minimum required image files are specified & exist, skip download by clearing out gcs related flags even
         // if user has specified --sdk-version etc.

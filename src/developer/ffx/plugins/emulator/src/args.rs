@@ -242,6 +242,12 @@ pub struct StartCommand {
     #[argh(option, short = 'A')]
     pub image_architecture: Option<String>,
 
+    /// string, specifies an alternative path for ssh keys. The emulator defaults to the user's
+    /// $HOME/.ssh directory if none is specified. The path indicated must contain the files
+    /// `fuchsia_authorized_keys` and `fuchsia_ed25519`.
+    #[argh(option)]
+    pub ssh: Option<String>,
+
     /// bool, enables extra logging for debugging
     #[argh(switch, short = 'V')]
     pub verbose: bool,
