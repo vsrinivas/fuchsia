@@ -3,18 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::Error,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     futures::StreamExt,
     tracing::{info, warn},
 };
 
-fn main() -> Result<(), Error> {
-    fuchsia_syslog::init()?;
+#[fuchsia::component]
+async fn main() -> Result<(), Error> {
     info!("started");
-    let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
     let mut fs = ServiceFs::new();
     let test_map = test_manager_lib::TestMap::new(zx::Duration::from_minutes(5));
     let test_map_clone = test_map.clone();
@@ -49,6 +48,6 @@ fn main() -> Result<(), Error> {
             .detach();
         });
     fs.take_and_serve_directory_handle()?;
-    executor.run_singlethreaded(fs.collect::<()>());
+    fs.collect::<()>().await;
     Ok(())
 }
