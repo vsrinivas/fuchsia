@@ -765,19 +765,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/a7177e8bec03774c827e512d5babc7daf4bdaefa/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/e481b16bf411407c4497e6a4cb01e2a9cae20a10/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/a7177e8bec03774c827e512d5babc7daf4bdaefa/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/e481b16bf411407c4497e6a4cb01e2a9cae20a10/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/a7177e8bec03774c827e512d5babc7daf4bdaefa/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/e481b16bf411407c4497e6a4cb01e2a9cae20a10/util/net/tls.gni#30)
 
 ### current_cpu
 
@@ -1029,7 +1029,7 @@ using '--args=ermine_app_entries="config/app_launch_entries.json"'
 
 **Current value (from the default):** `"config/app_launch_entries.json"`
 
-From //src/experiences/session_shells/ermine/shell/BUILD.gn:24
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:25
 
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
@@ -2229,13 +2229,13 @@ From //build/images/fvm.gni:79
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/a7177e8bec03774c827e512d5babc7daf4bdaefa/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/e481b16bf411407c4497e6a4cb01e2a9cae20a10/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/a7177e8bec03774c827e512d5babc7daf4bdaefa/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/e481b16bf411407c4497e6a4cb01e2a9cae20a10/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -3094,7 +3094,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"JmVBLrdv3M4J7lAYcDur2SXD377UMASSTRa98b9ww2AC"`
+**Current value (from the default):** `"ADBc9wupx1i9yY5W9s4j8uwM8V_cKCHvb_oAIHMoSskC"`
 
 From //build/rust/config.gni:32
 
@@ -3377,7 +3377,7 @@ Whether or not to launch OOBE workflow on startup.
 
 **Current value (from the default):** `false`
 
-From //src/experiences/session_shells/ermine/shell/BUILD.gn:27
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:28
 
 ### sysmgr_golden_warn_override
 Used by config_package().
