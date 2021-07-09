@@ -76,20 +76,47 @@ executable("bin") {
   ]
 }
 
-core_shard("add_to_core") {
-  shard_file = "meta/add_to_core.cml"
+fuchsia_component("component") {
+  component_name = "memory_monitor"
+  manifest = "meta/memory_monitor.cml"
+  deps = [
+    ":bin",
+    ":dummy_config",
+  ]
 }
 
-fuchsia_package_with_single_component("monitor") {
-  package_name = "memory_monitor"
+# Allow launching legacy v1 component to support existing use cases in tests.
+# TODO(fxbug.dev/76751): delete this.
+fuchsia_component("legacy_component") {
+  component_name = "memory_monitor"
   manifest = "meta/memory_monitor.cmx"
   deps = [ ":bin" ]
 }
 
+fuchsia_package("monitor") {
+  package_name = "memory_monitor"
+  deps = [
+    ":component",
+    ":legacy_component",
+  ]
+}
+
+core_shard("memory_monitor_core_shard") {
+  shard_file = "meta/memory_monitor.core_shard.cml"
+}
+
 config_data("userdebug_config") {
   for_pkg = "memory_monitor"
-
   sources = [ "config/send_critical_pressure_crash_reports" ]
-
   outputs = [ "send_critical_pressure_crash_reports" ]
+}
+
+# TODO(fxbug.dev/77872): memory_monitor crashes if there is no sub-directory for
+# memory_monitor in config-data. Ensure that there is always *something*, even
+# if it's useless.
+# After the bug above is fixed, delete this target.
+config_data("dummy_config") {
+  for_pkg = "memory_monitor"
+  sources = [ "config/send_critical_pressure_crash_reports" ]
+  outputs = [ "dummy" ]
 }

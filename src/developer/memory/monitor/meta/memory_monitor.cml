@@ -1,0 +1,58 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/memory_monitor",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.memory.Debugger",
+                "fuchsia.memory.Monitor",
+                "fuchsia.memorypressure.Provider",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+        {
+            directory: "dev-aml-ram",
+            rights: [ "r*" ],
+            path: "/dev/class/aml-ram",
+        },
+        {
+            storage: "cache",
+            path: "/cache",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.memory.Debugger",
+                "fuchsia.memory.Monitor",
+                "fuchsia.memorypressure.Provider",
+            ],
+            from: "self",
+        },
+    ],
+}

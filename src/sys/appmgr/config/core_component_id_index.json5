@@ -67,7 +67,7 @@
         },
         {
             instance_id: "18f6b0d52208bab5e5dd65ef6021b7e47d7a6b3d09f6668dcea18f93161e9b1d",
-            moniker: "/core/wlancfg"
+            moniker: "/core/wlancfg",
         },
         {
             // TODO(fxbug.dev/73132): Entry needed to preserve /cache across the v2 migration.
@@ -215,13 +215,7 @@
         // See https://fxbug.dev/74359 for more details.
         {
             instance_id: "1325984af473b7d90c8160b881d28d57e0c15a4805548092349cd262efab2677",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
+            moniker: "/core/memory_monitor",
         },
 
         // An entry for `regulatory_region` is needed to preserve /cache across the v2 migration.

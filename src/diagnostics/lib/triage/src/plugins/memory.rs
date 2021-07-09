@@ -17,7 +17,7 @@ use {
 
 pub struct MemoryPlugin();
 
-const SELECTOR: &'static str = "INSPECT:memory_monitor.cmx:root:current_digest";
+const SELECTOR: &'static str = "INSPECT:core/memory_monitor:root:current_digest";
 
 impl Plugin for MemoryPlugin {
     fn name(&self) -> &'static str {
@@ -67,7 +67,7 @@ impl Plugin for MemoryPlugin {
                         match parsed{
                             Some(parsed) => Some((name, value, mult*parsed)),
                             None => {
-                                results.add_warning(format!("[DEBUG: BAD DATA] Could not parse '{}' as a valid size. Something is wrong with the output of memory_monitor.cmx.", value));
+                                results.add_warning(format!("[DEBUG: BAD DATA] Could not parse '{}' as a valid size. Something is wrong with the output of memory_monitor.", value));
                                 None
                             }
                         }
@@ -100,14 +100,14 @@ mod tests {
                 .map(|s| s.to_string())
                 .collect();
         let expected_warnings: Vec<String> =
-            vec!["[DEBUG: BAD DATA] Could not parse 'ABCD' as a valid size. Something is wrong with the output of memory_monitor.cmx."]
+            vec!["[DEBUG: BAD DATA] Could not parse 'ABCD' as a valid size. Something is wrong with the output of memory_monitor."]
                 .into_iter()
                 .map(|s| s.to_string())
                 .collect();
         let fetcher: InspectFetcher = r#"
 [
   {
-    "moniker": "memory_monitor.cmx",
+    "moniker": "core/memory_monitor",
     "payload": {
         "root": {
             "current_digest": "Abcd: 10.3k\nOther: 7M\nBbb: 9999\n\nTestCmx: 2G\ninvalid_line\ninvalid: \ninvalid_again: ABCD\n\nFree: 100M\ntimestamp: 10234\n\n"

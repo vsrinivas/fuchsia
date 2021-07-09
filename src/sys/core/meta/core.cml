@@ -1020,12 +1020,6 @@
             to: [ "#bt-avrcp" ],
             dependency: "weak_for_migration",
         },
-        {
-            protocol: "fuchsia.memorypressure.Provider",
-            from: "#appmgr",
-            to: [ "#vulkan_loader" ],
-            dependency: "weak_for_migration",
-        },
     ],
     expose: [
         // Non-zircon services for svchost

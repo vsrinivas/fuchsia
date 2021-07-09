@@ -62,8 +62,8 @@ int main(int argc, const char** argv) {
       profile_provider.NewRequest());
   zx_status_t fidl_status;
   zx::profile profile;
-  auto status = profile_provider->GetProfile(8 /* LOW_PRIORITY */, "memory_monitor.cmx",
-                                             &fidl_status, &profile);
+  auto status =
+      profile_provider->GetProfile(8 /* LOW_PRIORITY */, "memory_monitor", &fidl_status, &profile);
   FX_CHECK(status == ZX_OK);
   FX_CHECK(fidl_status == ZX_OK);
   auto set_status = zx_object_set_profile(zx_thread_self(), profile.get(), 0);

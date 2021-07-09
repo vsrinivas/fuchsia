@@ -1,5 +1,6 @@
 {
     include: [
+        "//src/developer/memory/monitor/meta/memory_monitor.sys_shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],

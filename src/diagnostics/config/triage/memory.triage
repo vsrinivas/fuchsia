@@ -1,9 +1,9 @@
 {
     select: {
-        free_bytes: "INSPECT:memory_monitor.cmx:root/values:free_bytes",
-        total_bytes: "INSPECT:memory_monitor.cmx:root/values:total_bytes",
-        kmem_free_bytes: "INSPECT:memory_monitor.cmx:root/values:free_heap_bytes",
-        kmem_total_bytes: "INSPECT:memory_monitor.cmx:root/values:kmem_total_bytes",
+        free_bytes: "INSPECT:core/memory_monitor:root/values:free_bytes",
+        total_bytes: "INSPECT:core/memory_monitor:root/values:total_bytes",
+        kmem_free_bytes: "INSPECT:core/memory_monitor:root/values:free_heap_bytes",
+        kmem_total_bytes: "INSPECT:core/memory_monitor:root/values:kmem_total_bytes",
     },
     eval: {
         free_ratio: "free_bytes / total_bytes",

@@ -122,6 +122,7 @@
                     "/bootstrap/netsvc",
                     "/core",
                     "/core/appmgr",
+                    "/core/memory_monitor",
                     "/core/test_manager/tests:**",
                 ],
             },
