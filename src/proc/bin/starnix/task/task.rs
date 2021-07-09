@@ -420,22 +420,9 @@ impl Task {
         flags: OpenFlags,
     ) -> Result<FileHandle, Errno> {
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
-
         if flags.contains(OpenFlags::CREAT) {
-            // TODO put path manipulations into a library
-            let mut parent_path: Vec<u8> = Vec::new();
-            let mut path_elts = path.split(|c| *c == b'/');
-            let mut file_name = path_elts.next().ok_or(ENOENT)?;
-            for elt in path_elts {
-                parent_path.push(b'/');
-                for b in file_name {
-                    parent_path.push(*b);
-                }
-                file_name = elt;
-            }
-
-            let parent_dir = self.fs.lookup_node(dir, parent_path.as_slice())?;
-            parent_dir.create(file_name)?.open(flags)
+            let (dirname, basename) = path::split(path);
+            self.fs.lookup_node(dir, dirname)?.create(basename)?.open(flags)
         } else {
             self.fs.lookup_node(dir, path)?.open(flags)
         }

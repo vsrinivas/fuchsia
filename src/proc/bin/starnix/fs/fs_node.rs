@@ -10,11 +10,9 @@ use fuchsia_zircon::Time;
 
 use super::{FileOps, ObserverList};
 use crate::devices::DeviceHandle;
+use crate::fs::*;
 use crate::syscalls::system::time_to_timespec;
 use crate::types::*;
-
-pub type FsString = Vec<u8>;
-pub type FsStr = [u8];
 
 pub struct FsNode {
     ops: OnceCell<Box<dyn FsNodeOps>>,

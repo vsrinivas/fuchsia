@@ -23,6 +23,9 @@ pub use namespace::*;
 pub use observer_list::*;
 
 pub mod fuchsia;
+pub mod path;
 pub mod pipe;
 pub mod syscalls;
 pub mod tmpfs;
+
+pub use path::{FsStr, FsString};
