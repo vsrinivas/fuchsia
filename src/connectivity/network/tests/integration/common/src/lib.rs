@@ -214,7 +214,7 @@ pub async fn wait_for_interface_up_and_address(
 
 /// The name of the netemul sandbox component, which is the parent component of
 /// managed test realms.
-const NETEMUL_SANDBOX_COMPONENT_NAME: &str = "sandbox";
+const NETEMUL_SANDBOX_MONIKER: &str = "sandbox";
 
 /// Gets inspect data in realm.
 ///
@@ -222,17 +222,19 @@ const NETEMUL_SANDBOX_COMPONENT_NAME: &str = "sandbox";
 /// `tree_selector` and with inspect file starting with `file_prefix`.
 pub async fn get_inspect_data<'a>(
     realm: &netemul::TestRealm<'a>,
-    component: impl Into<String>,
+    component_moniker: impl Into<String>,
     tree_selector: impl Into<String>,
     file_prefix: &str,
 ) -> Result<diagnostics_hierarchy::DiagnosticsHierarchy> {
-    let moniker = realm.get_moniker().await.context("calling get moniker")?;
+    let realm_moniker = selectors::sanitize_string_for_selectors(
+        &realm.get_moniker().await.context("calling get moniker")?,
+    );
     let mut data = diagnostics_reader::ArchiveReader::new()
         .add_selector(
             diagnostics_reader::ComponentSelector::new(vec![
-                NETEMUL_SANDBOX_COMPONENT_NAME.into(),
-                moniker,
-                component.into(),
+                NETEMUL_SANDBOX_MONIKER.into(),
+                realm_moniker,
+                component_moniker.into(),
             ])
             .with_tree_selector(tree_selector.into()),
         )

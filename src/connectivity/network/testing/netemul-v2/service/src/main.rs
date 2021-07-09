@@ -295,8 +295,7 @@ impl ManagedRealm {
         while let Some(request) = stream.try_next().await.context("FIDL error")? {
             match request {
                 ManagedRealmRequest::GetMoniker { responder } => {
-                    let moniker =
-                        format!("{}\\:{}", REALM_COLLECTION_NAME, realm.root.child_name());
+                    let moniker = format!("{}:{}", REALM_COLLECTION_NAME, realm.root.child_name());
                     let () =
                         responder.send(&moniker).context("responding to GetMoniker request")?;
                 }
@@ -931,7 +930,7 @@ mod tests {
                 .get_moniker()
                 .await
                 .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
-            format!("{}\\:set_realm_name0-test-realm-name", REALM_COLLECTION_NAME),
+            format!("{}:set_realm_name0-test-realm-name", REALM_COLLECTION_NAME),
         );
     }
 
@@ -953,7 +952,7 @@ mod tests {
                     .get_moniker()
                     .await
                     .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
-                format!("{}\\:auto_generated_realm_name{}", REALM_COLLECTION_NAME, i),
+                format!("{}:auto_generated_realm_name{}", REALM_COLLECTION_NAME, i),
             );
         }
     }
@@ -993,9 +992,8 @@ mod tests {
             }
             let TestRealm { realm } = realm;
             let selector = vec![
-                realm.get_moniker().await.expect(&format!(
-                    "fuchsia.netemul/ManagedRealm.get_moniker call failed on realm {}",
-                    i
+                selectors::sanitize_string_for_selectors(&realm.get_moniker().await.expect(
+                    &format!("fuchsia.netemul/ManagedRealm.get_moniker call failed on realm {}", i),
                 )),
                 COUNTER_COMPONENT_NAME.into(),
             ];
