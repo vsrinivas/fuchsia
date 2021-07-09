@@ -24,6 +24,8 @@ use {
         stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
     },
     log::info,
+    parking_lot::Mutex,
+    std::sync::Arc,
     void::ResultVoidErrExt,
     wlan_common::{
         channel::{Cbw, Channel, Phy},
@@ -119,36 +121,91 @@ impl From<ApConfig> for fidl_sme::ApConfig {
     }
 }
 
-fn send_state_update(
-    sender: &ApListenerMessageSender,
-    update: ApStateUpdate,
-) -> Result<(), anyhow::Error> {
-    let updates = ApStatesUpdate { access_points: [update].to_vec() };
-    sender
-        .clone()
-        .unbounded_send(NotifyListeners(updates))
-        .or_else(|e| Err(format_err!("failed to send state update: {}", e)))
+struct ApStateTrackerInner {
+    state: Option<ApStateUpdate>,
+    sender: ApListenerMessageSender,
 }
 
-fn send_ap_stopped_update(sender: &ApListenerMessageSender) -> Result<(), anyhow::Error> {
-    let updates = ApStatesUpdate { access_points: [].to_vec() };
-    sender
-        .clone()
-        .unbounded_send(NotifyListeners(updates))
-        .or_else(|e| Err(format_err!("failed to send state update: {}", e)))
+impl ApStateTrackerInner {
+    fn send_update(&mut self) -> Result<(), anyhow::Error> {
+        let updates = match self.state.clone() {
+            Some(state) => ApStatesUpdate { access_points: [state].to_vec() },
+            None => ApStatesUpdate { access_points: [].to_vec() },
+        };
+
+        self.sender
+            .clone()
+            .unbounded_send(NotifyListeners(updates))
+            .or_else(|e| Err(format_err!("failed to send state update: {}", e)))
+    }
 }
 
-fn consume_sme_status_update(state: &mut ApStateUpdate, cbw: Cbw, update: fidl_sme::Ap) {
-    let channel = Channel::new(update.channel, cbw);
-    let frequency = match channel.get_center_freq() {
-        Ok(frequency) => Some(frequency as u32),
-        Err(e) => {
-            info!("failed to convert channel to frequency: {}", e);
-            None
+struct ApStateTracker {
+    inner: Mutex<ApStateTrackerInner>,
+}
+
+impl ApStateTracker {
+    fn new(sender: ApListenerMessageSender) -> Self {
+        ApStateTracker { inner: Mutex::new(ApStateTrackerInner { state: None, sender }) }
+    }
+
+    fn reset_state(&self, state: ApStateUpdate) -> Result<(), anyhow::Error> {
+        let mut inner = self.inner.lock();
+        inner.state = Some(state);
+        inner.send_update()
+    }
+
+    fn consume_sme_status_update(
+        &self,
+        cbw: Cbw,
+        update: fidl_sme::Ap,
+    ) -> Result<(), anyhow::Error> {
+        let mut inner = self.inner.lock();
+
+        if let Some(ref mut state) = inner.state {
+            let channel = Channel::new(update.channel, cbw);
+            let frequency = match channel.get_center_freq() {
+                Ok(frequency) => Some(frequency as u32),
+                Err(e) => {
+                    info!("failed to convert channel to frequency: {}", e);
+                    None
+                }
+            };
+
+            let client_info = Some(ConnectedClientInformation { count: update.num_clients as u8 });
+
+            if frequency != state.frequency || client_info != state.clients {
+                state.frequency = frequency;
+                state.clients = client_info;
+                inner.send_update()?;
+            }
         }
-    };
-    state.frequency = frequency;
-    state.clients = Some(ConnectedClientInformation { count: update.num_clients as u8 })
+
+        Ok(())
+    }
+
+    fn update_operating_state(
+        &self,
+        new_state: types::OperatingState,
+    ) -> Result<(), anyhow::Error> {
+        let mut inner = self.inner.lock();
+
+        // If there is a new operating state, update the existing operating state if present.
+        if let Some(ref mut state) = inner.state {
+            if state.state != new_state {
+                state.state = new_state;
+            }
+            inner.send_update()?;
+        }
+
+        Ok(())
+    }
+
+    fn set_stopped_state(&self) -> Result<(), anyhow::Error> {
+        let mut inner = self.inner.lock();
+        inner.state = None;
+        inner.send_update()
+    }
 }
 
 pub async fn serve(
@@ -158,8 +215,9 @@ pub async fn serve(
     req_stream: mpsc::Receiver<ManualRequest>,
     message_sender: ApListenerMessageSender,
 ) {
+    let state_tracker = Arc::new(ApStateTracker::new(message_sender));
     let state_machine =
-        stopped_state(proxy, req_stream.into_future(), message_sender).into_state_machine();
+        stopped_state(proxy, req_stream.into_future(), state_tracker.clone()).into_state_machine();
     let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
     select! {
         state_machine = state_machine.fuse() => {
@@ -170,19 +228,23 @@ pub async fn serve(
                 }
             }
         },
-        removal_watcher = removal_watcher.fuse() => if let Err(e) = removal_watcher {
-            info!("Error reading from AP SME channel of iface #{}: {}",
-                iface_id, e);
-        },
+        removal_watcher = removal_watcher.fuse() => {
+            match removal_watcher {
+                Ok(()) => info!("AP interface was unexpectedly removed: {}", iface_id),
+                Err(e) => {
+                    info!("Error reading from AP SME channel of iface #{}: {}", iface_id, e);
+                }
+            }
+            let _ = state_tracker.update_operating_state(types::OperatingState::Failed);
+        }
     }
-    info!("Removed AP for iface #{}", iface_id);
 }
 
 fn perform_manual_request(
     proxy: fidl_sme::ApSmeProxy,
     req: Option<ManualRequest>,
     req_stream: mpsc::Receiver<ManualRequest>,
-    sender: ApListenerMessageSender,
+    state_tracker: Arc<ApStateTracker>,
 ) -> Result<State, ExitReason> {
     match req {
         Some(ManualRequest::Start((req, responder))) => Ok(starting_state(
@@ -191,20 +253,28 @@ fn perform_manual_request(
             req,
             AP_START_MAX_RETRIES,
             Some(responder),
-            sender,
+            state_tracker,
         )
         .into_state()),
         Some(ManualRequest::Stop(responder)) => {
-            Ok(stopping_state(responder, proxy, req_stream.into_future(), sender).into_state())
+            Ok(stopping_state(responder, proxy, req_stream.into_future(), state_tracker)
+                .into_state())
         }
         Some(ManualRequest::Exit(responder)) => {
             responder.send(()).unwrap_or_else(|_| ());
             Err(ExitReason(Ok(())))
         }
         None => {
+            // It is possible that the state machine will be cleaned up before it has the
+            // opportunity to realize that the SME is no longer functional.  In this scenario,
+            // listeners need to be notified of the failure.
+            state_tracker
+                .update_operating_state(types::OperatingState::Failed)
+                .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+
             return Err(ExitReason(Err(format_err!(
                 "The stream of user requests ended unexpectedly"
-            ))))
+            ))));
         }
     }
 }
@@ -216,9 +286,10 @@ fn transition_to_starting(
     req: ApConfig,
     remaining_retries: u16,
     responder: Option<oneshot::Sender<()>>,
-    sender: ApListenerMessageSender,
+    state_tracker: Arc<ApStateTracker>,
 ) -> Result<State, ExitReason> {
-    Ok(starting_state(proxy, next_req, req, remaining_retries, responder, sender).into_state())
+    Ok(starting_state(proxy, next_req, req, remaining_retries, responder, state_tracker)
+        .into_state())
 }
 
 /// In the starting state, a request to ApSmeProxy::Start is made.  If the start request fails,
@@ -247,12 +318,8 @@ async fn starting_state(
     mut req: ApConfig,
     remaining_retries: u16,
     responder: Option<oneshot::Sender<()>>,
-    sender: ApListenerMessageSender,
+    state_tracker: Arc<ApStateTracker>,
 ) -> Result<State, ExitReason> {
-    // Create an initial AP state
-    let mut state =
-        ApStateUpdate::new(req.id.clone(), types::OperatingState::Starting, req.mode, req.band);
-
     // Apply default PHY, CBW, and channel settings.
     let _ = req.radio_config.phy.get_or_insert(DEFAULT_PHY);
     let _ = req.radio_config.cbw.get_or_insert(DEFAULT_CBW);
@@ -267,20 +334,30 @@ async fn starting_state(
 
     // If the stop operation failed, send a failure update and exit the state machine.
     if stop_result.is_err() {
-        let mut failed_state = state.clone();
-        failed_state.state = types::OperatingState::Failed;
-        send_state_update(&sender, failed_state)
+        state_tracker
+            .reset_state(ApStateUpdate::new(
+                req.id.clone(),
+                types::OperatingState::Failed,
+                req.mode,
+                req.band,
+            ))
             .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
 
         stop_result.map_err(|e| ExitReason(Err(e)))?;
     }
 
     // If the stop operation was successful, update all listeners that the AP is stopped.
-    send_ap_stopped_update(&sender).map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+    state_tracker.set_stopped_state().map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
 
     // Update all listeners that a new AP is starting if this is the first attempt to start the AP.
     if remaining_retries == AP_START_MAX_RETRIES {
-        send_state_update(&sender, state.clone())
+        state_tracker
+            .reset_state(ApStateUpdate::new(
+                req.id.clone(),
+                types::OperatingState::Starting,
+                req.mode,
+                req.band,
+            ))
             .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
     }
 
@@ -305,14 +382,15 @@ async fn starting_state(
                             req,
                             remaining_retries - 1,
                             responder,
-                            sender,
+                            state_tracker,
                         );
                     },
                     (req, req_stream) = next_req => {
                         // If a new request comes in, clear out the current AP state.
-                        send_ap_stopped_update(&sender)
+                        state_tracker
+                            .set_stopped_state()
                             .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
-                        return perform_manual_request(proxy, req, req_stream, sender);
+                        return perform_manual_request(proxy, req, req_stream, state_tracker);
                     }
                 }
             }
@@ -329,8 +407,14 @@ async fn starting_state(
 
     start_result.map_err(|e| {
         // Send a failure notification.
-        state.state = types::OperatingState::Failed;
-        let _ = send_state_update(&sender, state.clone());
+        if let Err(e) = state_tracker.reset_state(ApStateUpdate::new(
+            req.id.clone(),
+            types::OperatingState::Failed,
+            req.mode,
+            req.band,
+        )) {
+            info!("Unable to notify listeners of AP start failure: {:?}", e);
+        }
         ExitReason(Err(e))
     })?;
 
@@ -339,10 +423,10 @@ async fn starting_state(
         None => {}
     }
 
-    state.state = types::OperatingState::Active;
-    send_state_update(&sender, state.clone())
+    state_tracker
+        .update_operating_state(types::OperatingState::Active)
         .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
-    return Ok(started_state(proxy, next_req, req, state, sender).into_state());
+    return Ok(started_state(proxy, next_req, req, state_tracker).into_state());
 }
 
 /// In the stopping state, an ApSmeProxy::Stop is requested.  Once the stop request has been
@@ -360,7 +444,7 @@ async fn stopping_state(
     responder: oneshot::Sender<()>,
     proxy: fidl_sme::ApSmeProxy,
     next_req: NextReqFut,
-    sender: ApListenerMessageSender,
+    state_tracker: Arc<ApStateTracker>,
 ) -> Result<State, ExitReason> {
     let result = match proxy.stop().await {
         Ok(fidl_sme::StopApResultCode::Success) => Ok(()),
@@ -371,19 +455,19 @@ async fn stopping_state(
     // If the stop command fails, the SME is probably unusable.  If the state is not updated before
     // evaluating the stop result code, the AP state updates may end up with a lingering reference
     // to a started or starting AP.
-    send_ap_stopped_update(&sender).map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+    state_tracker.set_stopped_state().map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
     result.map_err(|e| ExitReason(Err(e)))?;
 
     // Ack the request to stop the AP.
     responder.send(()).unwrap_or_else(|_| ());
 
-    Ok(stopped_state(proxy, next_req, sender).into_state())
+    Ok(stopped_state(proxy, next_req, state_tracker).into_state())
 }
 
 async fn stopped_state(
     proxy: fidl_sme::ApSmeProxy,
     mut next_req: NextReqFut,
-    sender: ApListenerMessageSender,
+    state_tracker: Arc<ApStateTracker>,
 ) -> Result<State, ExitReason> {
     // Wait for the next request from the caller
     loop {
@@ -395,7 +479,9 @@ async fn stopped_state(
                 req_stream.into_future()
             }
             // All other requests are handled manually
-            other => return perform_manual_request(proxy.clone(), other, req_stream, sender),
+            other => {
+                return perform_manual_request(proxy.clone(), other, req_stream, state_tracker)
+            }
         }
     }
 }
@@ -404,8 +490,7 @@ async fn started_state(
     proxy: fidl_sme::ApSmeProxy,
     mut next_req: NextReqFut,
     req: ApConfig,
-    mut prev_state: ApStateUpdate,
-    sender: ApListenerMessageSender,
+    state_tracker: Arc<ApStateTracker>,
 ) -> Result<State, ExitReason> {
     // Holds a pending status request.  Request status immediately upon entering the started state.
     let mut pending_status_req = FuturesUnordered::new();
@@ -425,8 +510,7 @@ async fn started_state(
                     Err(e) => {
                         // If querying AP status fails, notify listeners and exit the state
                         // machine.
-                        prev_state.state = types::OperatingState::Failed;
-                        send_state_update(&sender, prev_state)
+                        state_tracker.update_operating_state(types::OperatingState::Failed)
                             .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
 
                         return Err(ExitReason(Err(anyhow::Error::from(e))));
@@ -434,18 +518,12 @@ async fn started_state(
                 };
 
                 match status_response.running_ap {
-                    Some(state) => {
-                        let mut new_state = prev_state.clone();
-                        consume_sme_status_update(&mut new_state, cbw, *state);
-                        if new_state != prev_state {
-                            prev_state = new_state;
-                            send_state_update(&sender, prev_state.clone())
-                                .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
-                        }
+                    Some(sme_state) => {
+                        state_tracker.consume_sme_status_update(cbw, *sme_state)
+                            .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
                     }
                     None => {
-                        prev_state.state = types::OperatingState::Failed;
-                        send_state_update(&sender, prev_state)
+                        state_tracker.update_operating_state(types::OperatingState::Failed)
                             .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
 
                         return transition_to_starting(
@@ -454,7 +532,7 @@ async fn started_state(
                             req,
                             AP_START_MAX_RETRIES,
                             None,
-                            sender
+                            state_tracker
                         );
                     }
                 }
@@ -465,7 +543,7 @@ async fn started_state(
                 }
             },
             (req, req_stream) = next_req => {
-                return perform_manual_request(proxy, req, req_stream, sender);
+                return perform_manual_request(proxy, req, req_stream, state_tracker);
             },
             complete => {
                 panic!("AP state machine terminated unexpectedly");
@@ -494,7 +572,7 @@ mod tests {
         sme_req_stream: fidl_sme::ApSmeRequestStream,
         ap_req_sender: mpsc::Sender<ManualRequest>,
         ap_req_stream: mpsc::Receiver<ManualRequest>,
-        update_sender: mpsc::UnboundedSender<listener::ApMessage>,
+        update_sender: Arc<ApStateTracker>,
         update_receiver: mpsc::UnboundedReceiver<listener::ApMessage>,
     }
 
@@ -510,7 +588,7 @@ mod tests {
             sme_req_stream,
             ap_req_sender,
             ap_req_stream,
-            update_sender,
+            update_sender: Arc::new(ApStateTracker::new(update_sender)),
             update_receiver,
         }
     }
@@ -555,19 +633,21 @@ mod tests {
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         };
-        let state = ApStateUpdate::new(
-            create_network_id(),
-            types::OperatingState::Starting,
-            types::ConnectivityMode::Unrestricted,
-            types::OperatingBand::Any,
-        );
+        {
+            let state = ApStateUpdate::new(
+                create_network_id(),
+                types::OperatingState::Starting,
+                types::ConnectivityMode::Unrestricted,
+                types::OperatingBand::Any,
+            );
+            test_values.update_sender.inner.lock().state = Some(state);
+        }
 
         // Run the started state and ignore the status request
         let fut = started_state(
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             req,
-            state,
             test_values.update_sender,
         );
         let fut = run_state_machine(fut);
@@ -621,19 +701,21 @@ mod tests {
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         };
-        let state = ApStateUpdate::new(
-            create_network_id(),
-            types::OperatingState::Starting,
-            types::ConnectivityMode::Unrestricted,
-            types::OperatingBand::Any,
-        );
+        {
+            let state = ApStateUpdate::new(
+                create_network_id(),
+                types::OperatingState::Starting,
+                types::ConnectivityMode::Unrestricted,
+                types::OperatingBand::Any,
+            );
+            test_values.update_sender.inner.lock().state = Some(state);
+        }
 
         // Run the started state and ignore the status request
         let fut = started_state(
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             req,
-            state,
             test_values.update_sender,
         );
         let fut = run_state_machine(fut);
@@ -678,19 +760,21 @@ mod tests {
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         };
-        let state = ApStateUpdate::new(
-            create_network_id(),
-            types::OperatingState::Starting,
-            types::ConnectivityMode::Unrestricted,
-            types::OperatingBand::Any,
-        );
+        {
+            let state = ApStateUpdate::new(
+                create_network_id(),
+                types::OperatingState::Starting,
+                types::ConnectivityMode::Unrestricted,
+                types::OperatingBand::Any,
+            );
+            test_values.update_sender.inner.lock().state = Some(state);
+        }
 
         // Run the started state and ignore the status request
         let fut = started_state(
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             req,
-            state,
             test_values.update_sender,
         );
         let fut = run_state_machine(fut);
@@ -762,21 +846,23 @@ mod tests {
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         };
-        let mut state = ApStateUpdate::new(
-            create_network_id(),
-            types::OperatingState::Starting,
-            types::ConnectivityMode::Unrestricted,
-            types::OperatingBand::Any,
-        );
-        state.frequency = Some(2437);
-        state.clients = Some(ConnectedClientInformation { count: 0 });
+        {
+            let mut state = ApStateUpdate::new(
+                create_network_id(),
+                types::OperatingState::Starting,
+                types::ConnectivityMode::Unrestricted,
+                types::OperatingBand::Any,
+            );
+            state.frequency = Some(2437);
+            state.clients = Some(ConnectedClientInformation { count: 0 });
+            test_values.update_sender.inner.lock().state = Some(state);
+        }
 
         // Run the started state and send back an identical status.
         let fut = started_state(
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             req,
-            state,
             test_values.update_sender,
         );
         let fut = run_state_machine(fut);
@@ -819,21 +905,23 @@ mod tests {
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         };
-        let mut state = ApStateUpdate::new(
-            create_network_id(),
-            types::OperatingState::Starting,
-            types::ConnectivityMode::Unrestricted,
-            types::OperatingBand::Any,
-        );
-        state.frequency = Some(0);
-        state.clients = Some(ConnectedClientInformation { count: 0 });
+        {
+            let mut state = ApStateUpdate::new(
+                create_network_id(),
+                types::OperatingState::Starting,
+                types::ConnectivityMode::Unrestricted,
+                types::OperatingBand::Any,
+            );
+            state.frequency = Some(0);
+            state.clients = Some(ConnectedClientInformation { count: 0 });
+            test_values.update_sender.inner.lock().state = Some(state);
+        }
 
         // Run the started state and send back an identical status.
         let fut = started_state(
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             req,
-            state,
             test_values.update_sender,
         );
         let fut = run_state_machine(fut);
@@ -880,21 +968,23 @@ mod tests {
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         };
-        let mut state = ApStateUpdate::new(
-            create_network_id(),
-            types::OperatingState::Starting,
-            types::ConnectivityMode::Unrestricted,
-            types::OperatingBand::Any,
-        );
-        state.frequency = Some(0);
-        state.clients = Some(ConnectedClientInformation { count: 0 });
+        {
+            let mut state = ApStateUpdate::new(
+                create_network_id(),
+                types::OperatingState::Starting,
+                types::ConnectivityMode::Unrestricted,
+                types::OperatingBand::Any,
+            );
+            state.frequency = Some(0);
+            state.clients = Some(ConnectedClientInformation { count: 0 });
+            test_values.update_sender.inner.lock().state = Some(state);
+        }
 
         // Run the started state and send back an identical status.
         let fut = started_state(
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             req,
-            state,
             test_values.update_sender,
         );
         let fut = run_state_machine(fut);
@@ -2107,17 +2197,381 @@ mod tests {
         let sme_fut = test_values.sme_req_stream.into_future();
         pin_mut!(sme_fut);
 
+        let update_sender = test_values.update_sender.inner.lock().sender.clone();
+
         let fut = serve(
             0,
             test_values.sme_proxy,
             sme_event_stream,
             test_values.ap_req_stream,
-            test_values.update_sender,
+            update_sender,
         );
         pin_mut!(fut);
 
         // Run the state machine. No request is made initially.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         assert_variant!(poll_sme_req(&mut exec, &mut sme_fut), Poll::Pending);
+    }
+
+    #[test]
+    fn test_no_notification_when_sme_fails_while_stopped() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let sme_event_stream = test_values.sme_proxy.take_event_stream();
+        let update_sender = test_values.update_sender.inner.lock().sender.clone();
+
+        let fut = serve(
+            0,
+            test_values.sme_proxy,
+            sme_event_stream,
+            test_values.ap_req_stream,
+            update_sender,
+        );
+        pin_mut!(fut);
+
+        // Cause the SME event stream to terminate.
+        drop(test_values.sme_req_stream);
+
+        // Run the state machine and observe that it has terminated.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+
+        // There should be no notification of failure since no AP is actively running.
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
+            Poll::Pending
+        );
+    }
+
+    #[test]
+    fn test_failure_notification_when_configured() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let sme_event_stream = test_values.sme_proxy.take_event_stream();
+        let mut sme_fut = Box::pin(test_values.sme_req_stream.into_future());
+
+        let update_sender = test_values.update_sender.inner.lock().sender.clone();
+        let fut = serve(
+            0,
+            test_values.sme_proxy,
+            sme_event_stream,
+            test_values.ap_req_stream,
+            update_sender,
+        );
+        pin_mut!(fut);
+
+        // Make a request to start the access point.
+        let mut ap = AccessPoint::new(test_values.ap_req_sender);
+        let (sender, _receiver) = oneshot::channel();
+        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let config = ApConfig {
+            id: create_network_id(),
+            credential: vec![],
+            radio_config,
+            mode: types::ConnectivityMode::Unrestricted,
+            band: types::OperatingBand::Any,
+        };
+        ap.start(config, sender).expect("failed to make start request");
+
+        // Expect that the state machine issues a stop request followed by a start request.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
+                responder.send(fidl_sme::StopApResultCode::Success).expect("could not send AP stop response");
+            }
+        );
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // At this point, the state machine will have sent an empty notification and a starting
+        // notification.
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(update))) => {
+                assert!(update.access_points.is_empty());
+            }
+        );
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(update))) => {
+                assert_eq!(update.access_points.len(), 1);
+                assert_eq!(update.access_points[0].state, types::OperatingState::Starting);
+            }
+        );
+
+        // Cause the SME event stream to terminate.
+        drop(sme_fut);
+
+        // Run the state machine and observe that it has terminated.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+
+        // There should be a failure notification.
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(update))) => {
+                assert_eq!(update.access_points.len(), 1);
+                assert_eq!(update.access_points[0].state, types::OperatingState::Failed);
+            }
+        );
+    }
+
+    #[test]
+    fn test_state_tracker_reset() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (sender, mut receiver) = mpsc::unbounded();
+
+        // A new state tracker should initially have no state.
+        let state = ApStateTracker::new(sender);
+        {
+            assert!(state.inner.lock().state.is_none());
+        }
+
+        // And there should be no updates.
+        assert_variant!(receiver.try_next(), Err(_));
+
+        // Reset the state to starting and verify that the internal state has been updated.
+        let new_state = ApStateUpdate::new(
+            create_network_id(),
+            types::OperatingState::Starting,
+            types::ConnectivityMode::Unrestricted,
+            types::OperatingBand::Any,
+        );
+        state.reset_state(new_state).expect("failed to reset state");
+        assert_variant!(state.inner.lock().state.as_ref(), Some(ApStateUpdate {
+                id: types::NetworkIdentifier {
+                    ssid,
+                    type_: fidl_policy::SecurityType::None,
+                },
+                state: types::OperatingState::Starting,
+                mode: Some(types::ConnectivityMode::Unrestricted),
+                band: Some(types::OperatingBand::Any),
+                frequency: None,
+                clients: None,
+        }) => {
+            let expected_ssid = b"test_ssid".to_vec();
+            assert_eq!(ssid, &expected_ssid);
+        });
+
+        // Resetting the state should result in an update.
+        assert_variant!(
+            receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(ApStatesUpdate { access_points }))) => {
+            assert_eq!(access_points.len(), 1);
+
+            let expected_id = types::NetworkIdentifier {
+                ssid: b"test_ssid".to_vec(),
+                type_: fidl_policy::SecurityType::None,
+            };
+            assert_eq!(access_points[0].id, expected_id);
+            assert_eq!(access_points[0].state, types::OperatingState::Starting);
+            assert_eq!(access_points[0].mode, Some(types::ConnectivityMode::Unrestricted));
+            assert_eq!(access_points[0].band, Some(types::OperatingBand::Any));
+            assert_eq!(access_points[0].frequency, None);
+            assert_eq!(access_points[0].clients, None);
+            }
+        );
+    }
+
+    #[test]
+    fn test_state_tracker_consume_sme_update() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (sender, mut receiver) = mpsc::unbounded();
+        let state = ApStateTracker::new(sender);
+
+        // Reset the state to started and send an update.
+        let new_state = ApStateUpdate::new(
+            create_network_id(),
+            types::OperatingState::Active,
+            types::ConnectivityMode::Unrestricted,
+            types::OperatingBand::Any,
+        );
+        state.reset_state(new_state).expect("failed to reset state");
+
+        // The update should note that the AP is active.
+        assert_variant!(
+            receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(ApStatesUpdate { access_points }))
+        ) => {
+            assert_eq!(access_points.len(), 1);
+
+            let expected_id = types::NetworkIdentifier {
+                ssid: b"test_ssid".to_vec(),
+                type_: fidl_policy::SecurityType::None,
+            };
+            assert_eq!(access_points[0].id, expected_id);
+            assert_eq!(access_points[0].state, types::OperatingState::Active);
+            assert_eq!(access_points[0].mode, Some(types::ConnectivityMode::Unrestricted));
+            assert_eq!(access_points[0].band, Some(types::OperatingBand::Any));
+            assert_eq!(access_points[0].frequency, None);
+            assert_eq!(access_points[0].clients, None);
+        });
+
+        // Consume a status update and expect a new notification to be generated.
+        let ap_info = fidl_sme::Ap { ssid: b"test_ssid".to_vec(), channel: 6, num_clients: 123 };
+        state
+            .consume_sme_status_update(Cbw::Cbw20, ap_info)
+            .expect("failure while updating SME status");
+
+        assert_variant!(
+            receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(ApStatesUpdate { access_points }))
+        ) => {
+            assert_eq!(access_points.len(), 1);
+
+            let expected_id = types::NetworkIdentifier {
+                ssid: b"test_ssid".to_vec(),
+                type_: fidl_policy::SecurityType::None,
+            };
+            assert_eq!(access_points[0].id, expected_id);
+            assert_eq!(access_points[0].state, types::OperatingState::Active);
+            assert_eq!(access_points[0].mode, Some(types::ConnectivityMode::Unrestricted));
+            assert_eq!(access_points[0].band, Some(types::OperatingBand::Any));
+            assert_eq!(access_points[0].frequency, Some(2437));
+            assert_eq!(access_points[0].clients, Some(ConnectedClientInformation { count: 123 }));
+        });
+    }
+
+    #[test]
+    fn test_state_tracker_update_operating_state() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (sender, mut receiver) = mpsc::unbounded();
+        let state = ApStateTracker::new(sender);
+
+        // Reset the state to started and send an update.
+        let new_state = ApStateUpdate::new(
+            create_network_id(),
+            types::OperatingState::Starting,
+            types::ConnectivityMode::Unrestricted,
+            types::OperatingBand::Any,
+        );
+        state.reset_state(new_state).expect("failed to reset state");
+
+        // The update should note that the AP is starting.
+        assert_variant!(
+            receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(ApStatesUpdate { access_points }))
+        ) => {
+            assert_eq!(access_points.len(), 1);
+
+            let expected_id = types::NetworkIdentifier {
+                ssid: b"test_ssid".to_vec(),
+                type_: fidl_policy::SecurityType::None,
+            };
+            assert_eq!(access_points[0].id, expected_id);
+            assert_eq!(access_points[0].state, types::OperatingState::Starting);
+            assert_eq!(access_points[0].mode, Some(types::ConnectivityMode::Unrestricted));
+            assert_eq!(access_points[0].band, Some(types::OperatingBand::Any));
+            assert_eq!(access_points[0].frequency, None);
+            assert_eq!(access_points[0].clients, None);
+        });
+
+        // Give another update that the state is starting and ensure that a notification is sent.
+        state
+            .update_operating_state(types::OperatingState::Starting)
+            .expect("failed to send duplicate update.");
+        assert_variant!(
+            receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(ApStatesUpdate { access_points }))
+        ) => {
+            assert_eq!(access_points.len(), 1);
+
+            let expected_id = types::NetworkIdentifier {
+                ssid: b"test_ssid".to_vec(),
+                type_: fidl_policy::SecurityType::None,
+            };
+            assert_eq!(access_points[0].id, expected_id);
+            assert_eq!(access_points[0].state, types::OperatingState::Starting);
+            assert_eq!(access_points[0].mode, Some(types::ConnectivityMode::Unrestricted));
+            assert_eq!(access_points[0].band, Some(types::OperatingBand::Any));
+            assert_eq!(access_points[0].frequency, None);
+            assert_eq!(access_points[0].clients, None);
+        });
+
+        // Now update that the state is active and expect a notification to be generated.
+        state
+            .update_operating_state(types::OperatingState::Active)
+            .expect("failed to send active update.");
+        assert_variant!(
+            receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(ApStatesUpdate { access_points }))
+        ) => {
+            assert_eq!(access_points.len(), 1);
+
+            let expected_id = types::NetworkIdentifier {
+                ssid: b"test_ssid".to_vec(),
+                type_: fidl_policy::SecurityType::None,
+            };
+            assert_eq!(access_points[0].id, expected_id);
+            assert_eq!(access_points[0].state, types::OperatingState::Active);
+            assert_eq!(access_points[0].mode, Some(types::ConnectivityMode::Unrestricted));
+            assert_eq!(access_points[0].band, Some(types::OperatingBand::Any));
+            assert_eq!(access_points[0].frequency, None);
+            assert_eq!(access_points[0].clients, None);
+        });
+    }
+
+    #[test]
+    fn test_state_tracker_set_stopped_state() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (sender, mut receiver) = mpsc::unbounded();
+        let state = ApStateTracker::new(sender);
+
+        // Set up some initial state.
+        {
+            let new_state = ApStateUpdate::new(
+                create_network_id(),
+                types::OperatingState::Active,
+                types::ConnectivityMode::Unrestricted,
+                types::OperatingBand::Any,
+            );
+            state.inner.lock().state = Some(new_state);
+        }
+
+        // Set the state to stopped and verify that the internal state information has been
+        // removed.
+        state.set_stopped_state().expect("failed to send stopped notification");
+        {
+            assert!(state.inner.lock().state.is_none());
+        }
+
+        // Verify that an empty update has arrived.
+        assert_variant!(
+            receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(ApStatesUpdate { access_points }))
+        ) => {
+            assert!(access_points.is_empty());
+        });
+    }
+
+    #[test]
+    fn test_state_tracker_failure_modes() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (sender, receiver) = mpsc::unbounded();
+        let state = ApStateTracker::new(sender);
+        {
+            let new_state = ApStateUpdate::new(
+                create_network_id(),
+                types::OperatingState::Active,
+                types::ConnectivityMode::Unrestricted,
+                types::OperatingBand::Any,
+            );
+            state.inner.lock().state = Some(new_state);
+        }
+
+        // Currently, the only reason any of the state tracker methods might fail is because of a
+        // failure to enqueue a state change notification.  Drop the receiving end to trigger this
+        // condition.
+        drop(receiver);
+
+        let _ = state
+            .update_operating_state(types::OperatingState::Failed)
+            .expect_err("unexpectedly able to set operating state");
+        let _ = state
+            .consume_sme_status_update(
+                Cbw::Cbw20,
+                fidl_sme::Ap { ssid: b"test_ssid".to_vec(), channel: 6, num_clients: 123 },
+            )
+            .expect_err("unexpectedly able to update SME status");
+        let _ = state.set_stopped_state().expect_err("unexpectedly able to set stopped state");
     }
 }
