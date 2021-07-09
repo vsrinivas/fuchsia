@@ -33,8 +33,8 @@
 
 #ifndef __ASSEMBLER__
 
-#include <zircon/types.h>
 #include <bits.h>
+#include <zircon/types.h>
 
 // Holds the register state used to restore a host.
 struct HostState {

@@ -697,11 +697,6 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   }
   free_vpid.cancel();
 
-  status = vcpu->local_apic_state_.interrupt_tracker.Init();
-  if (status != ZX_OK) {
-    return status;
-  }
-
   vcpu->pv_clock_state_.is_stable = x86_hypervisor_has_pv_clock()
                                         ? pv_clock_is_stable()
                                         : x86_feature_test(X86_FEATURE_INVAR_TSC);

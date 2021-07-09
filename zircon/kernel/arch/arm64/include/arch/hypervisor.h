@@ -64,7 +64,7 @@ class Guest {
 // Stores the state of the GICH across VM exits.
 class GichState {
  public:
-  zx_status_t Init();
+  GichState();
 
   bool Pending() { return interrupt_tracker_.Pending(); }
   hypervisor::InterruptType Pop(uint32_t* vector) { return interrupt_tracker_.Pop(vector); }

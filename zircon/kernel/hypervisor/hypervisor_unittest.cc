@@ -526,7 +526,6 @@ static bool interrupt_bitmap() {
   hypervisor::InterruptBitmap<8> bitmap;
 
   uint32_t vector = UINT32_MAX;
-  ASSERT_EQ(ZX_OK, bitmap.Init());
   EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(0));
   EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Get(1));
   EXPECT_EQ(hypervisor::InterruptType::INACTIVE, bitmap.Scan(&vector));

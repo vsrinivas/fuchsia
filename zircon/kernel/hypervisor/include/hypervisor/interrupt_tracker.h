@@ -28,7 +28,11 @@ enum class InterruptType : uint8_t {
 template <uint32_t N>
 class InterruptBitmap {
  public:
-  zx_status_t Init() { return bitmap_.Reset(kNumBits); }
+  InterruptBitmap() {
+    zx_status_t result = bitmap_.Reset(kNumBits);
+    // `bitmap_` uses static storage, so `Reset` cannot fail.
+    DEBUG_ASSERT(result == ZX_OK);
+  }
 
   InterruptType Get(uint32_t vector) const {
     if (vector >= N) {
@@ -92,11 +96,6 @@ class InterruptBitmap {
 template <uint32_t N>
 class InterruptTracker {
  public:
-  zx_status_t Init() {
-    Guard<SpinLock, IrqSave> lock{&lock_};
-    return bitmap_.Init();
-  }
-
   // Returns whether there are pending interrupts.
   bool Pending() {
     uint32_t vector;

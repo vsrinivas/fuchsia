@@ -103,12 +103,10 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
   }
 }
 
-zx_status_t GichState::Init() {
-  zx_status_t status = interrupt_tracker_.Init();
-  if (status != ZX_OK) {
-    return status;
-  }
-  return lr_tracker_.Reset(kNumInterrupts);
+GichState::GichState() {
+  zx_status_t status = lr_tracker_.Reset(kNumInterrupts);
+  // `lr_tracker_` uses static storage, so `Reset` cannot fail.
+  DEBUG_ASSERT(status == ZX_OK);
 }
 
 void GichState::TrackAllListRegisters(IchState* ich_state) {
@@ -193,10 +191,6 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   free_vpid.cancel();
 
   status = vcpu->el2_state_.Alloc();
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = vcpu->gich_state_.Init();
   if (status != ZX_OK) {
     return status;
   }
