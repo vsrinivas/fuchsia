@@ -1935,7 +1935,7 @@ zx::status<std::vector<fdd::wire::DeviceInfo>> Coordinator::GetDeviceInfo(
 
     device_info.set_topological_path(allocator, fidl::StringView(allocator, {path, strlen(path)}));
 
-    device_info.set_bound_driver_url(
+    device_info.set_bound_driver_libname(
         allocator,
         fidl::StringView(allocator, {device->libname().data(), device->libname().size()}));
 

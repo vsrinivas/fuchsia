@@ -11,6 +11,7 @@ ffx_plugin("ffx_driver") {
   plugin_deps = [
     "debug-bind:ffx_driver_debug_bind",
     "list:ffx_driver_list",
+    "list-devices:ffx_driver_list_devices",
     "register:ffx_driver_register",
     "restart:ffx_driver_restart",
   ]
