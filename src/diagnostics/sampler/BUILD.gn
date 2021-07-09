@@ -22,6 +22,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics-rustc",
     "//src/diagnostics/control:controller-rustc",
+    "//src/diagnostics/lib/sampler-config",
     "//src/diagnostics/lib/selectors",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/hierarchy/rust",
@@ -46,15 +47,11 @@ rustc_library("lib") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:serde_json5",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
 
   sources = [
-    "src/config.rs",
     "src/diagnostics.rs",
     "src/executor.rs",
     "src/lib.rs",

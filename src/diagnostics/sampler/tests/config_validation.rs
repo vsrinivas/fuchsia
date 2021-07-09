@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use sampler::config::SamplerConfig;
+use sampler_config::SamplerConfig;
 
 /// Parses every config file in the production config directory
 /// to make sure there are no malformed configurations being submitted.

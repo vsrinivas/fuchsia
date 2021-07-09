@@ -13,6 +13,7 @@ rustc_test("config-validation") {
   testonly = true
   name = "config_validation_test"
   deps = [
+    "//src/diagnostics/lib/sampler-config",
     "//src/diagnostics/sampler:lib",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

@@ -10,9 +10,9 @@ use {
     fuchsia_inspect::{self as inspect, health::Reporter},
     futures::{StreamExt, TryStreamExt},
     log::{info, warn},
+    sampler_config as config,
 };
 
-pub mod config;
 mod diagnostics;
 mod executor;
 

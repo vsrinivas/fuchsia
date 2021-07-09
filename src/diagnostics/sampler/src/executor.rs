@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{
-        config::{DataType, MetricConfig, ProjectConfig, SamplerConfig},
-        diagnostics::*,
-    },
+    crate::diagnostics::*,
     anyhow::{format_err, Context, Error},
     diagnostics_data,
     diagnostics_hierarchy::{ArrayContent, DiagnosticsHierarchy, Property},
@@ -26,6 +23,7 @@ use {
     futures::{channel::oneshot, future::join_all, select, stream::FuturesUnordered},
     itertools::Itertools,
     log::{error, info, warn},
+    sampler_config::{DataType, MetricConfig, ProjectConfig, SamplerConfig},
     selectors,
     std::{
         collections::HashMap,

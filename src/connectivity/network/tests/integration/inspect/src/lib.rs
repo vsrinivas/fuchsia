@@ -579,7 +579,7 @@ async fn inspect_for_sampler() {
 
     // We can pass any sample rate here. It is not used at all in this test.
     const MINIMUM_SAMPLE_RATE_SEC: i64 = 60;
-    let sampler_config = sampler::config::SamplerConfig::from_directory(
+    let sampler_config = sampler_config::SamplerConfig::from_directory(
         MINIMUM_SAMPLE_RATE_SEC,
         "/pkg/data/sampler-config",
     )

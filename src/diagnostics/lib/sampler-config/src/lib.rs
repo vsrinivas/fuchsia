@@ -139,6 +139,7 @@ impl SamplerConfig {
 mod tests {
     use super::SamplerConfig;
     use std::fs;
+
     #[test]
     fn parse_valid_configs() {
         let dir = tempfile::tempdir().unwrap();
