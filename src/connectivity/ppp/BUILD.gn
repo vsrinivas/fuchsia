@@ -3,13 +3,12 @@
 # found in the LICENSE file.
 
 group("drivers") {
-  deps = [ "drivers/serial-ppp:serial-ppp_driver" ]
+  deps = []
 }
 
 group("tests") {
   testonly = true
   deps = [
-    "drivers/serial-ppp:tests",
     "lib:ppp-tests",
     "lib/ppp_packet:ppp-packet-tests",
     "lib/ppp_protocol:ppp-protocol-tests",
