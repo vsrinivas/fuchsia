@@ -6,12 +6,14 @@
 
 #include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <zircon/types.h>
 
+#include "src/devices/lib/acpi/object.h"
 #include "util.h"
 
 namespace acpi {
-
 zx::status<Client> Client::Create(zx_device_t* parent) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
@@ -41,9 +43,8 @@ Client Client::Create(fidl::WireSyncClient<fuchsia_hardware_acpi::Device> client
   return Client(std::move(client));
 }
 
-zx::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult> Client::CallDsm(
-    Uuid uuid, uint64_t revision, uint64_t func_index,
-    std::optional<fuchsia_hardware_acpi::wire::Object> params) {
+zx::status<Object> Client::CallDsm(Uuid uuid, uint64_t revision, uint64_t func_index,
+                                   std::optional<fuchsia_hardware_acpi::wire::Object> params) {
   std::array<fuchsia_hardware_acpi::wire::Object, 4> args;
   auto uuid_buf = fidl::VectorView<uint8_t>::FromExternal(uuid.bytes, kUuidBytes);
   args[0].set_buffer_val(fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&uuid_buf));
@@ -63,7 +64,16 @@ zx::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult> Client::Call
     return zx::error(result.status());
   }
 
-  return zx::ok(result->result);
+  if (result->result.is_err()) {
+    return zx::ok(Object(result->result.err()));
+  }
+
+  if (!result->result.response().result.is_object()) {
+    // We called EvaluateObject with mode == PlainObject, so don't expect anything else back.
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+
+  return zx::ok(Object(result->result.response().result.object()));
 }
 
 }  // namespace acpi

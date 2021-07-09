@@ -8,9 +8,11 @@
 #include <lib/ddk/driver.h>
 #include <lib/zx/status.h>
 
+#include "src/devices/lib/acpi/object.h"
 #include "src/devices/lib/acpi/util.h"
 
 namespace acpi {
+
 // This class is a wrapper around the underlying FIDL ACPI protocol.
 // It provides helper functions to make calling common ACPI methods more ergonomic.
 class Client {
@@ -25,9 +27,8 @@ class Client {
 
   // This calls _DSM on the device with the given arguments. See
   // ACPI Spec 6.4, 9.1.1 "_DSM (Device Specific Method)" for more information.
-  zx::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult> CallDsm(
-      Uuid uuid, uint64_t revision, uint64_t func_index,
-      std::optional<fuchsia_hardware_acpi::wire::Object> params);
+  zx::status<Object> CallDsm(Uuid uuid, uint64_t revision, uint64_t func_index,
+                             std::optional<fuchsia_hardware_acpi::wire::Object> params);
 
  private:
   explicit Client(fidl::WireSyncClient<fuchsia_hardware_acpi::Device> client)
