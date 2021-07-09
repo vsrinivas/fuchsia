@@ -22,6 +22,10 @@ import (
 )
 
 var (
+	// explainRegex matches a singular line of Ninja explain stdout,
+	// e.g. "ninja explain: host_x64/pm is dirty"
+	explainRegex = regexp.MustCompile(`^\s*ninja explain:.*`)
+
 	// ruleRegex matches a regular line of Ninja stdout in the default format,
 	// e.g. "[56/1234] CXX host_x64/foo.o"
 	ruleRegex = regexp.MustCompile(`^\s*\[\d+/\d+\] \S+`)
@@ -99,6 +103,10 @@ type ninjaParser struct {
 	// ninjaStdio emits the combined stdout and stderr of a Ninja command.
 	ninjaStdio io.Reader
 
+	// explainOutputSink is a writer to which all ninja explain output
+	// will be redirected.
+	explainOutputSink io.Writer
+
 	// Lines of output produced by failed Ninja steps, with all successful steps
 	// filtered out to make the logs easy to read.
 	failureOutputLines []string
@@ -118,12 +126,14 @@ func (p *ninjaParser) parse(ctx context.Context) error {
 			return ctx.Err()
 		}
 		line := scanner.Text()
-		p.parseLine(line)
+		if err := p.parseLine(line); err != nil {
+			return err
+		}
 	}
 	return scanner.Err()
 }
 
-func (p *ninjaParser) parseLine(line string) {
+func (p *ninjaParser) parseLine(line string) error {
 	// Trailing whitespace isn't significant, as it doesn't affect the way the
 	// line shows up in the logs. However, leading whitespace may be
 	// significant, especially for compiler error messages.
@@ -147,8 +157,13 @@ func (p *ninjaParser) parseLine(line string) {
 		// An "error" log comes at the end of the output and should only be one
 		// line.
 		p.failureOutputLines = append(p.failureOutputLines, line)
+	} else if explainRegex.MatchString(line) && p.explainOutputSink != nil {
+		if _, err := p.explainOutputSink.Write([]byte(line + "\n")); err != nil {
+			return err
+		}
 	}
 	p.previousLine = line
+	return nil
 }
 
 func (p *ninjaParser) failureMessage() string {
@@ -165,10 +180,11 @@ func runNinja(
 	r ninjaRunner,
 	targets []string,
 	explain bool,
+	explainSink io.Writer,
 ) (string, error) {
 	stdioReader, stdioWriter := io.Pipe()
 	defer stdioReader.Close()
-	parser := &ninjaParser{ninjaStdio: stdioReader}
+	parser := &ninjaParser{ninjaStdio: stdioReader, explainOutputSink: explainSink}
 
 	parserErrs := make(chan error)
 	go func() {

@@ -109,12 +109,23 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		// instead of printing each log on a new line.
 		ninjaErr = runner.run(ctx, targets, os.Stdout, os.Stderr)
 	} else {
+		var explainSink io.Writer
+		if contextSpec.Incremental {
+			f, err := ioutil.TempFile(contextSpec.ArtifactDir, "")
+			if err != nil {
+				return nil, err
+			}
+			defer f.Close()
+			artifacts.LogFiles["explain_output.txt"] = f.Name()
+			explainSink = f
+		}
 		artifacts.FailureSummary, ninjaErr = runNinja(
 			ctx,
 			runner,
 			targets,
 			// Add -d explain to incremental builds.
 			contextSpec.Incremental,
+			explainSink,
 		)
 	}
 	ninjaDuration := time.Since(ninjaStartTime)

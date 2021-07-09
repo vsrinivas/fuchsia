@@ -5,6 +5,7 @@
 package fint
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -30,6 +31,10 @@ func TestRunNinja(t *testing.T) {
 		// Mock Ninja stdout.
 		stdout                 string
 		expectedFailureMessage string
+		// If not nil, runNinja will copy any explain output to this sink.
+		// The contents of the sink should match the output string below.
+		explainSink           *bytes.Buffer
+		expectedExplainOutput string
 	}{
 		{
 			name: "success",
@@ -153,6 +158,16 @@ func TestRunNinja(t *testing.T) {
             `,
 			expectedFailureMessage: unrecognizedFailureMsg,
 		},
+		{
+			name: "explain output",
+			stdout: `
+				ninja: Entering directory /foo
+				[1/1] ACTION //foo
+				ninja explain: obj/build/foo is dirty
+	     `,
+			explainSink:           bytes.NewBuffer([]byte{}),
+			expectedExplainOutput: "\t\t\t\tninja explain: obj/build/foo is dirty\n",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -170,7 +185,11 @@ func TestRunNinja(t *testing.T) {
 				buildDir:  filepath.Join(t.TempDir(), "out"),
 				jobCount:  23, // Arbitrary but distinctive value.
 			}
-			msg, err := runNinja(ctx, r, []string{"foo", "bar"}, false)
+			explain := false
+			if tc.explainSink != nil {
+				explain = true
+			}
+			msg, err := runNinja(ctx, r, []string{"foo", "bar"}, explain, tc.explainSink)
 			if tc.fail {
 				if !errors.Is(err, errSubprocessFailure) {
 					t.Fatalf("Expected a subprocess failure error but got: %s", err)
@@ -201,6 +220,11 @@ func TestRunNinja(t *testing.T) {
 
 			if diff := cmp.Diff(tc.expectedFailureMessage, msg); diff != "" {
 				t.Errorf("Unexpected failure message diff (-want +got):\n%s", diff)
+			}
+			if tc.explainSink != nil {
+				if diff := cmp.Diff(tc.expectedExplainOutput, tc.explainSink.String()); diff != "" {
+					t.Errorf("unexpected explain output diff (-want +got):\n%s", diff)
+				}
 			}
 		})
 	}
