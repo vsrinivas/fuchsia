@@ -100,7 +100,7 @@ zx_status_t Nelson::TouchInit() {
       .fragments = goodix_fragments,
       .fragments_count = countof(goodix_fragments),
       .primary_fragment = "i2c",
-      .coresident_device_index = UINT32_MAX,
+      .spawn_colocated = false,
       .metadata_list = touch_metadata,
       .metadata_count = countof(touch_metadata),
   };
@@ -134,7 +134,7 @@ zx_status_t Nelson::TouchInitP1() {
         .fragments = goodix_fragments,
         .fragments_count = countof(goodix_fragments),
         .primary_fragment = "i2c",
-        .coresident_device_index = UINT32_MAX,
+        .spawn_colocated = false,
         .metadata_list = nullptr,
         .metadata_count = 0,
     };
@@ -156,7 +156,7 @@ zx_status_t Nelson::TouchInitP1() {
         .fragments = ft_fragments,
         .fragments_count = countof(ft_fragments),
         .primary_fragment = "i2c",
-        .coresident_device_index = UINT32_MAX,
+        .spawn_colocated = false,
         .metadata_list = ft3x27_touch_metadata,
         .metadata_count = std::size(ft3x27_touch_metadata),
     };

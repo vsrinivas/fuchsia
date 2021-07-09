@@ -81,7 +81,7 @@ constexpr composite_device_desc_t power_domain_big_core_desc = {
     .fragments = power_domain_arm_core_fragments,
     .fragments_count = countof(power_domain_arm_core_fragments),
     .primary_fragment = "power",
-    .coresident_device_index = 0,
+    .spawn_colocated = true,
     .metadata_list = power_domain_big_core,
     .metadata_count = countof(power_domain_big_core),
 };
@@ -104,7 +104,7 @@ constexpr composite_device_desc_t power_domain_little_core_desc = {
     .fragments = power_domain_arm_core_fragments,
     .fragments_count = countof(power_domain_arm_core_fragments),
     .primary_fragment = "power",
-    .coresident_device_index = 0,
+    .spawn_colocated = true,
     .metadata_list = power_domain_little_core,
     .metadata_count = countof(power_domain_little_core),
 };
@@ -193,7 +193,7 @@ zx_status_t Sherlock::LuisPowerPublishBuck(const char* name, uint32_t bus_id, ui
       .fragments = fragments,
       .fragments_count = countof(fragments),
       .primary_fragment = "i2c",
-      .coresident_device_index = 0,
+      .spawn_colocated = true,
       .metadata_list = metadata,
       .metadata_count = countof(metadata),
   };

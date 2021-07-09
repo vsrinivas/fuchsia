@@ -113,7 +113,7 @@ zx_status_t Sherlock::PwmInit() {
       .fragments = composite,
       .fragments_count = countof(composite),
       .primary_fragment = "pwm",
-      .coresident_device_index = 0,
+      .spawn_colocated = true,
       .metadata_list = nullptr,
       .metadata_count = 0,
   };

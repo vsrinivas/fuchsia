@@ -60,7 +60,7 @@ static composite_device_desc_t composite_dev = []() {
   desc.fragments = fragments;
   desc.fragments_count = countof(fragments);
   desc.primary_fragment = "spi";
-  desc.coresident_device_index = UINT32_MAX;
+  desc.spawn_colocated = false;
   return desc;
 }();
 

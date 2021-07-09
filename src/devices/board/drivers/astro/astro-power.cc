@@ -78,7 +78,7 @@ constexpr composite_device_desc_t power_domain_arm_core_desc = {
     .fragments = power_domain_arm_core_fragments,
     .fragments_count = countof(power_domain_arm_core_fragments),
     .primary_fragment = "power-impl",
-    .coresident_device_index = 0,
+    .spawn_colocated = true,
     .metadata_list = power_domain_arm_core_metadata,
     .metadata_count = countof(power_domain_arm_core_metadata),
 };

@@ -289,7 +289,7 @@ zx_status_t Astro::AudioInit() {
     composite_device_desc_t comp_desc = {};
     comp_desc.props = props;
     comp_desc.props_count = countof(props);
-    comp_desc.coresident_device_index = UINT32_MAX;
+    comp_desc.spawn_colocated = false;
     comp_desc.fragments = dai_test_out_fragments;
     comp_desc.fragments_count = countof(dai_test_out_fragments);
     comp_desc.primary_fragment = "dai-out", comp_desc.metadata_list = test_metadata;
@@ -332,7 +332,7 @@ zx_status_t Astro::AudioInit() {
     composite_device_desc_t comp_desc = {};
     comp_desc.props = props;
     comp_desc.props_count = countof(props);
-    comp_desc.coresident_device_index = UINT32_MAX;
+    comp_desc.spawn_colocated = false;
     comp_desc.fragments = codec_fragments;
     comp_desc.fragments_count = countof(codec_fragments);
     comp_desc.primary_fragment = "i2c";
@@ -491,7 +491,7 @@ zx_status_t Astro::AudioInit() {
   composite_device_desc_t comp_desc = {};
   comp_desc.props = props;
   comp_desc.props_count = countof(props);
-  comp_desc.coresident_device_index = UINT32_MAX;
+  comp_desc.spawn_colocated = false;
   comp_desc.fragments = dai_test_in_fragments;
   comp_desc.fragments_count = countof(dai_test_in_fragments);
   comp_desc.primary_fragment = "dai-in";

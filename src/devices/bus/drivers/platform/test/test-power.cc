@@ -45,7 +45,7 @@ const composite_device_desc_t power_domain_1_desc = {
     .fragments = power_domain_1_fragments,
     .fragments_count = countof(power_domain_1_fragments),
     .primary_fragment = "power-impl",
-    .coresident_device_index = 0,
+    .spawn_colocated = true,
     .metadata_list = power_metadata_1,
     .metadata_count = countof(power_metadata_1),
 };
@@ -78,7 +78,7 @@ const composite_device_desc_t power_domain_3_desc = {
     .fragments = power_domain_3_fragments,
     .fragments_count = countof(power_domain_3_fragments),
     .primary_fragment = "power-impl",
-    .coresident_device_index = 0,
+    .spawn_colocated = true,
     .metadata_list = power_metadata_3,
     .metadata_count = countof(power_metadata_3),
 };

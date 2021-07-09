@@ -119,7 +119,7 @@ zx_status_t Astro::PwmInit() {
       .fragments = composite,
       .fragments_count = countof(composite),
       .primary_fragment = "pwm",
-      .coresident_device_index = UINT32_MAX,
+      .spawn_colocated = false,
       .metadata_list = nullptr,
       .metadata_count = 0,
   };

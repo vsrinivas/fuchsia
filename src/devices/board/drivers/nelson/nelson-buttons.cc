@@ -94,7 +94,7 @@ zx_status_t Nelson::ButtonsInit() {
       .fragments = fragments,
       .fragments_count = countof(fragments),
       .primary_fragment = "volume-up",  // ???
-      .coresident_device_index = UINT32_MAX,
+      .spawn_colocated = false,
       .metadata_list = available_buttons_metadata,
       .metadata_count = countof(available_buttons_metadata),
   };

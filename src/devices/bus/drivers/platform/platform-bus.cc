@@ -308,8 +308,9 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(
       .props_count = std::size(props),
       .fragments = fragments,
       .fragments_count = fragments_count + 1,
-      .primary_fragment = "pdev",
-      .coresident_device_index = coresident_device_index,
+      .primary_fragment =
+          coresident_device_index == UINT32_MAX ? "pdev" : fragments[coresident_device_index].name,
+      .spawn_colocated = coresident_device_index != UINT32_MAX,
       .metadata_list = nullptr,
       .metadata_count = 0,
   };

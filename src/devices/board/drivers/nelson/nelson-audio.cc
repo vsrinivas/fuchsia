@@ -248,7 +248,7 @@ zx_status_t Nelson::AudioInit() {
     composite_device_desc_t codec_desc = {};
     codec_desc.props = props;
     codec_desc.props_count = countof(props);
-    codec_desc.coresident_device_index = UINT32_MAX;
+    codec_desc.spawn_colocated = false;
     codec_desc.fragments = ref_codec_fragments;
     codec_desc.fragments_count = countof(ref_codec_fragments);
     codec_desc.primary_fragment = "i2c";
@@ -311,7 +311,7 @@ zx_status_t Nelson::AudioInit() {
     composite_device_desc_t codec_desc = {};
     codec_desc.props = props;
     codec_desc.props_count = countof(props);
-    codec_desc.coresident_device_index = UINT32_MAX;
+    codec_desc.spawn_colocated = false;
     codec_desc.fragments = p2_codec_fragments;
     codec_desc.fragments_count = countof(p2_codec_fragments);
     codec_desc.primary_fragment = "i2c";

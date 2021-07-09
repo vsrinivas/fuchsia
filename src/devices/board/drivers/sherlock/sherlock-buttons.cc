@@ -122,7 +122,7 @@ zx_status_t Sherlock::ButtonsInit() {
       .fragments = fragments,
       .fragments_count = button_count,
       .primary_fragment = "volume-up",  // ???
-      .coresident_device_index = UINT32_MAX,
+      .spawn_colocated = false,
       .metadata_list = available_buttons_metadata,
       .metadata_count = countof(available_buttons_metadata),
   };

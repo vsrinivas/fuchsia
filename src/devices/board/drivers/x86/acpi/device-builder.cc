@@ -289,7 +289,7 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Acpi* acpi, zx_device_t* platfo
       .fragments = fragments.get(),
       .fragments_count = fragment_count,
       .primary_fragment = "acpi",
-      .coresident_device_index = 0,
+      .spawn_colocated = true,
   };
 
 #ifndef IS_TEST

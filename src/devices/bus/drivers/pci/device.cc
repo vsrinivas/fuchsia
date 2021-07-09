@@ -190,7 +190,7 @@ zx_status_t Device::CreateProxy() {
       .fragments = fragments,
       .fragments_count = countof(fragments),
       .primary_fragment = "pci",
-      .coresident_device_index = UINT32_MAX,  // create a new devhost
+      .spawn_colocated = false,
   };
 
   char composite_name[ZX_DEVICE_NAME_MAX];

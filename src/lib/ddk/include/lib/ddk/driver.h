@@ -331,9 +331,9 @@ typedef struct device_metadata {
 } device_metadata_t;
 
 // A description of the composite device with properties |props| and made of
-// |fragments| devices. The composite device will reside in the same devhost
-// as the device that matches |fragments[coresident_device_index]|, unless
-// |coresident_device_index| is UINT32_MAX, in which case it reside in a new devhost.
+// |fragments| devices. If |spawn_colocated| is true, the composite device will
+// reside in the same driver host as the driver which adds the |primary_fragment|,
+// otherwise it will spawn in a new driver host.
 // |metadata_list| contains the metadata to be added to the composite device, if any.
 typedef struct composite_device_desc {
   const zx_device_prop_t* props;
@@ -343,7 +343,7 @@ typedef struct composite_device_desc {
   const device_fragment_t* fragments;
   size_t fragments_count;
   const char* primary_fragment;
-  uint32_t coresident_device_index;
+  bool spawn_colocated;
   const device_metadata_t* metadata_list;
   size_t metadata_count;
 } composite_device_desc_t;

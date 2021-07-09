@@ -234,7 +234,7 @@ zx_status_t Vim::ThermalInit() {
       .fragments = fragments,
       .fragments_count = countof(fragments),
       .primary_fragment = "scpi",
-      .coresident_device_index = 0,
+      .spawn_colocated = true,
       .metadata_list = nullptr,
       .metadata_count = 0,
   };

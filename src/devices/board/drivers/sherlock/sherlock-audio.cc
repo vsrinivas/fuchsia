@@ -300,7 +300,7 @@ zx_status_t Sherlock::AudioInit() {
     composite_device_desc_t comp_desc = {};
     comp_desc.props = props;
     comp_desc.props_count = countof(props);
-    comp_desc.coresident_device_index = UINT32_MAX;
+    comp_desc.spawn_colocated = false;
     comp_desc.fragments = woofer_fragments;
     comp_desc.fragments_count = countof(woofer_fragments);
     comp_desc.primary_fragment = "i2c";
@@ -367,7 +367,7 @@ zx_status_t Sherlock::AudioInit() {
       composite_device_desc_t comp_desc = {};
       comp_desc.props = props;
       comp_desc.props_count = countof(props);
-      comp_desc.coresident_device_index = UINT32_MAX;
+      comp_desc.spawn_colocated = false;
       comp_desc.fragments = ernie_woofer_fragments;
       comp_desc.fragments_count = countof(ernie_woofer_fragments);
       comp_desc.primary_fragment = "i2c";
@@ -394,7 +394,7 @@ zx_status_t Sherlock::AudioInit() {
       composite_device_desc_t comp_desc = {};
       comp_desc.props = props;
       comp_desc.props_count = countof(props);
-      comp_desc.coresident_device_index = UINT32_MAX;
+      comp_desc.spawn_colocated = false;
       comp_desc.fragments = luis_codec_fragments;
       comp_desc.fragments_count = countof(luis_codec_fragments);
       comp_desc.primary_fragment = "i2c";

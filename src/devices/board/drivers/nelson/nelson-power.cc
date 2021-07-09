@@ -97,7 +97,7 @@ constexpr composite_device_desc_t mlb_power_sensor_dev = {
     .fragments = mlb_fragments,
     .fragments_count = countof(mlb_fragments),
     .primary_fragment = "i2c",
-    .coresident_device_index = 0,
+    .spawn_colocated = true,
     .metadata_list = kMlbMetadata,
     .metadata_count = countof(kMlbMetadata),
 };
@@ -108,7 +108,7 @@ constexpr composite_device_desc_t speakers_power_sensor_dev = {
     .fragments = speakers_fragments,
     .fragments_count = countof(speakers_fragments),
     .primary_fragment = "i2c",
-    .coresident_device_index = 0,
+    .spawn_colocated = true,
     .metadata_list = kAudioMetadata,
     .metadata_count = countof(kAudioMetadata),
 };
@@ -159,7 +159,7 @@ constexpr composite_device_desc_t brownout_protection_dev = {
     .fragments = brownout_protection_fragments,
     .fragments_count = countof(brownout_protection_fragments),
     .primary_fragment = "codec",  // ???
-    .coresident_device_index = UINT32_MAX,
+    .spawn_colocated = false,
 };
 
 zx_status_t Nelson::PowerInit() {

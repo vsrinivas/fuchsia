@@ -1149,7 +1149,8 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
                                                   const char* name,
                                                   const composite_device_desc_t* comp_desc) {
   if (comp_desc == nullptr || (comp_desc->props == nullptr && comp_desc->props_count > 0) ||
-      comp_desc->fragments == nullptr || name == nullptr) {
+      comp_desc->fragments == nullptr || name == nullptr ||
+      comp_desc->primary_fragment == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
   const auto& client = dev->coordinator_client;
@@ -1213,6 +1214,19 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
     str_props.push_back(convert_device_str_prop(comp_desc->str_props[i], allocator));
   }
 
+  uint32_t colocated_device_index = UINT32_MAX;
+  if (comp_desc->spawn_colocated) {
+    for (size_t i = 0; i < comp_desc->fragments_count; i++) {
+      if (strcmp(comp_desc->primary_fragment, comp_desc->fragments[i].name) == 0) {
+        colocated_device_index = i;
+        break;
+      }
+    }
+    if (colocated_device_index == UINT32_MAX) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
   fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_dev = {
       .props =
           ::fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty>::FromExternal(props),
@@ -1221,7 +1235,7 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
               str_props),
       .fragments =
           ::fidl::VectorView<fuchsia_device_manager::wire::DeviceFragment>::FromExternal(compvec),
-      .coresident_device_index = comp_desc->coresident_device_index,
+      .coresident_device_index = colocated_device_index,
       .metadata =
           ::fidl::VectorView<fuchsia_device_manager::wire::DeviceMetadata>::FromExternal(metadata)};
 

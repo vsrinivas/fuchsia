@@ -64,7 +64,7 @@ zx_status_t Sherlock::LightInit() {
       .fragments = fragments,
       .fragments_count = countof(fragments),
       .primary_fragment = "i2c",
-      .coresident_device_index = UINT32_MAX,
+      .spawn_colocated = false,
       .metadata_list = metadata,
       .metadata_count = countof(metadata),
   };

@@ -131,7 +131,7 @@ zx_status_t Sysdev::MakeComposite() {
       .fragments = fragments,
       .fragments_count = countof(fragments),
       .primary_fragment = "fragment-1",
-      .coresident_device_index = UINT32_MAX,
+      .spawn_colocated = false,
       .metadata_list = nullptr,
       .metadata_count = 0,
   };

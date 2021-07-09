@@ -253,7 +253,7 @@ zx_status_t Nelson::SdioInit() {
       .fragments = wifi_composite,
       .fragments_count = countof(wifi_composite),
       .primary_fragment = "sdio-function-1",  // ???
-      .coresident_device_index = 0,
+      .spawn_colocated = true,
       .metadata_list = nullptr,
       .metadata_count = 0,
   };

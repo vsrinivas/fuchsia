@@ -87,7 +87,7 @@ static const composite_device_desc_t luis_comp_desc = {
     .fragments = luis_fragments,
     .fragments_count = countof(luis_fragments),
     .primary_fragment = "i2c",
-    .coresident_device_index = UINT32_MAX,
+    .spawn_colocated = false,
 };
 
 zx_status_t Sherlock::TouchInit() {
@@ -110,7 +110,7 @@ zx_status_t Sherlock::TouchInit() {
         .fragments = sherlock_fragments,
         .fragments_count = countof(sherlock_fragments),
         .primary_fragment = "i2c",
-        .coresident_device_index = UINT32_MAX,
+        .spawn_colocated = false,
         .metadata_list = ft5726_touch_metadata,
         .metadata_count = std::size(ft5726_touch_metadata),
     };

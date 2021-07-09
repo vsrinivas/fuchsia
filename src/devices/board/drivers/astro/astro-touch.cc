@@ -97,7 +97,7 @@ zx_status_t Astro::TouchInit() {
         .fragments = goodix_fragments,
         .fragments_count = countof(goodix_fragments),
         .primary_fragment = "i2c",
-        .coresident_device_index = UINT32_MAX,
+        .spawn_colocated = false,
         .metadata_list = nullptr,
         .metadata_count = 0,
     };
@@ -120,7 +120,7 @@ zx_status_t Astro::TouchInit() {
         .fragments = ft_fragments,
         .fragments_count = countof(ft_fragments),
         .primary_fragment = "i2c",
-        .coresident_device_index = UINT32_MAX,
+        .spawn_colocated = false,
         .metadata_list = ft3x27_touch_metadata,
         .metadata_count = std::size(ft3x27_touch_metadata),
     };

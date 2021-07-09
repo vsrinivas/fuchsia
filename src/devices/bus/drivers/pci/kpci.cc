@@ -115,7 +115,7 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device, 
       .fragments = fragments,
       .fragments_count = uses_acpi ? countof(fragments) : countof(fragments) - 1,
       .primary_fragment = "pci",
-      .coresident_device_index = UINT32_MAX,  // create a new devhost
+      .spawn_colocated = false,
   };
 
   char composite_name[ZX_DEVICE_NAME_MAX];

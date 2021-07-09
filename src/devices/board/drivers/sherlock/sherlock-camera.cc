@@ -414,7 +414,7 @@ zx_status_t Sherlock::CameraInit() {
       .fragments = camera_controller_fragments,
       .fragments_count = countof(camera_controller_fragments),
       .primary_fragment = "isp",
-      .coresident_device_index = 0,
+      .spawn_colocated = true,
       .metadata_list = nullptr,
       .metadata_count = 0,
   };
