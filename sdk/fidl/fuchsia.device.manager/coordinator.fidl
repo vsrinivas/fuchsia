@@ -115,7 +115,8 @@ struct CompositeDeviceDescriptor {
     vector<DeviceProperty>:PROPERTIES_MAX props;
     vector<DeviceStrProperty>:STR_PROPERTIES_MAX str_props;
     vector<DeviceFragment>:FRAGMENTS_MAX fragments;
-    uint32 coresident_device_index;
+    uint32 primary_fragment_index;
+    bool spawn_colocated;
     vector<DeviceMetadata>:METADATA_MAX? metadata;
 };
 

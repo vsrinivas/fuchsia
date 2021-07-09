@@ -1205,17 +1205,15 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
     str_props.push_back(convert_device_str_prop(comp_desc->str_props[i], allocator));
   }
 
-  uint32_t colocated_device_index = UINT32_MAX;
-  if (comp_desc->spawn_colocated) {
-    for (size_t i = 0; i < comp_desc->fragments_count; i++) {
-      if (strcmp(comp_desc->primary_fragment, comp_desc->fragments[i].name) == 0) {
-        colocated_device_index = i;
-        break;
-      }
+  uint32_t primary_fragment_index = UINT32_MAX;
+  for (size_t i = 0; i < comp_desc->fragments_count; i++) {
+    if (strcmp(comp_desc->primary_fragment, comp_desc->fragments[i].name) == 0) {
+      primary_fragment_index = i;
+      break;
     }
-    if (colocated_device_index == UINT32_MAX) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+  }
+  if (primary_fragment_index == UINT32_MAX) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
   fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_dev = {
@@ -1226,7 +1224,8 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
               str_props),
       .fragments =
           ::fidl::VectorView<fuchsia_device_manager::wire::DeviceFragment>::FromExternal(compvec),
-      .coresident_device_index = colocated_device_index,
+      .primary_fragment_index = primary_fragment_index,
+      .spawn_colocated = comp_desc->spawn_colocated,
       .metadata =
           ::fidl::VectorView<fuchsia_device_manager::wire::DeviceMetadata>::FromExternal(metadata)};
 

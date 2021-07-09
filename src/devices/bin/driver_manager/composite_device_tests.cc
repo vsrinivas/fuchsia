@@ -117,7 +117,8 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
           props_list),
       .fragments =
           ::fidl::VectorView<fuchsia_device_manager::wire::DeviceFragment>::FromExternal(fragments),
-      .coresident_device_index = 0,
+      .primary_fragment_index = 0,
+      .spawn_colocated = true,
       .metadata = ::fidl::VectorView<fuchsia_device_manager::wire::DeviceMetadata>::FromExternal(
           metadata_list),
   };

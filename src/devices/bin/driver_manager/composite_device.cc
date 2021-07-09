@@ -18,13 +18,15 @@
 
 CompositeDevice::CompositeDevice(fbl::String name, fbl::Array<const zx_device_prop_t> properties,
                                  fbl::Array<const StrProperty> str_properties,
-                                 uint32_t fragments_count, uint32_t coresident_device_index,
+                                 uint32_t fragments_count, uint32_t primary_fragment_index,
+                                 bool spawn_colocated,
                                  fbl::Array<std::unique_ptr<Metadata>> metadata)
     : name_(std::move(name)),
       properties_(std::move(properties)),
       str_properties_(std::move(str_properties)),
       fragments_count_(fragments_count),
-      coresident_device_index_(coresident_device_index),
+      primary_fragment_index_(primary_fragment_index),
+      spawn_colocated_(spawn_colocated),
       metadata_(std::move(metadata)) {}
 
 CompositeDevice::~CompositeDevice() = default;
@@ -73,7 +75,8 @@ zx_status_t CompositeDevice::Create(
 
   auto dev = std::make_unique<CompositeDevice>(
       std::move(name), std::move(properties), std::move(str_properties),
-      comp_desc.fragments.count(), comp_desc.coresident_device_index, std::move(metadata));
+      comp_desc.fragments.count(), comp_desc.primary_fragment_index, comp_desc.spawn_colocated,
+      std::move(metadata));
   for (uint32_t i = 0; i < comp_desc.fragments.count(); ++i) {
     const auto& fidl_fragment = comp_desc.fragments[i];
     size_t parts_count = fidl_fragment.parts.count();
@@ -147,16 +150,20 @@ zx_status_t CompositeDevice::TryAssemble() {
     return ZX_ERR_SHOULD_WAIT;
   }
 
-  fbl::RefPtr<DriverHost> driver_host;
   for (auto& fragment : bound_) {
-    // Find the driver_host to put everything in (if we don't find one, nullptr
-    // means "a new driver_host").
-    if (fragment.index() == coresident_device_index_) {
-      driver_host = fragment.bound_device()->host();
-    }
     // Make sure the fragment driver has created its device
     if (fragment.fragment_device() == nullptr) {
       return ZX_ERR_SHOULD_WAIT;
+    }
+  }
+
+  // Find the driver_host to put everything in, nullptr means "a new driver_host".
+  fbl::RefPtr<DriverHost> driver_host;
+  if (spawn_colocated_) {
+    for (auto& fragment : bound_) {
+      if (fragment.index() == primary_fragment_index_) {
+        driver_host = fragment.bound_device()->host();
+      }
     }
   }
 

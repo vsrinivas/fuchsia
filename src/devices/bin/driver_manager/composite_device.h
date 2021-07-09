@@ -104,7 +104,8 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   // Only public because of make_unique.  You probably want Create().
   CompositeDevice(fbl::String name, fbl::Array<const zx_device_prop_t> properties,
                   fbl::Array<const StrProperty> str_properties, uint32_t fragments_count,
-                  uint32_t coresident_device_index, fbl::Array<std::unique_ptr<Metadata>> metadata);
+                  uint32_t primary_fragment_index, bool spawn_colocated,
+                  fbl::Array<std::unique_ptr<Metadata>> metadata);
 
   CompositeDevice(CompositeDevice&&) = delete;
   CompositeDevice& operator=(CompositeDevice&&) = delete;
@@ -159,7 +160,8 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   const fbl::Array<const zx_device_prop_t> properties_;
   const fbl::Array<const StrProperty> str_properties_;
   const uint32_t fragments_count_;
-  const uint32_t coresident_device_index_;
+  const uint32_t primary_fragment_index_;
+  const bool spawn_colocated_;
   const fbl::Array<std::unique_ptr<Metadata>> metadata_;
 
   FragmentList unbound_;
