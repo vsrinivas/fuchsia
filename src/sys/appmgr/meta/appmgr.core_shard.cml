@@ -10,14 +10,6 @@
             url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm",
         },
     ],
-    capabilities: [
-        // Note: `data`, `cache`, and `temp` storage capabilities are defined in a shard and
-        // included as part of the build process. See restricted-storage.core_shard.cml or
-        // unrestricted-storage.core_shard.cml
-        {
-            protocol: [ "fuchsia.appmgr.Startup" ],
-        },
-    ],
     offer: [
         {
             protocol: [
