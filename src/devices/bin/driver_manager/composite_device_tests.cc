@@ -74,6 +74,7 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
                                   const char* name, zx_status_t expected_status = ZX_OK,
                                   const device_metadata_t* metadata = nullptr,
                                   size_t metadata_count = 0) {
+  fidl::FidlAllocator allocator;
   std::vector<fuchsia_device_manager::wire::DeviceFragment> fragments = {};
   for (size_t i = 0; i < fragment_count; ++i) {
     // Define a union type to avoid violating the strict aliasing rule.
@@ -83,8 +84,8 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
 
     fuchsia_device_manager::wire::DeviceFragment fragment;  // = &fragments[i];
     fragment.name = ::fidl::StringView("unnamed-fragment");
-    fragment.parts_count = 1;
-    fragment.parts[0].match_program_count = 1;
+    fragment.parts.Allocate(allocator, 1);
+    fragment.parts[0].match_program.Allocate(allocator, 1);
     fragment.parts[0].match_program[0] = fuchsia_device_manager::wire::BindInstruction{
         .op = protocol.op,
         .arg = protocol.arg,

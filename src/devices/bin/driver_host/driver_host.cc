@@ -1159,34 +1159,26 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
   }
 
   VLOGD(1, *dev, "create-composite");
+  fidl::FidlAllocator allocator;
   std::vector<fuchsia_device_manager::wire::DeviceFragment> compvec = {};
   for (size_t i = 0; i < comp_desc->fragments_count; i++) {
-    ::fidl::Array<fuchsia_device_manager::wire::DeviceFragmentPart,
-                  fuchsia_device_manager::wire::kDeviceFragmentPartsMax>
-        parts{};
+    fuchsia_device_manager::wire::DeviceFragment dc;
+    dc.name = ::fidl::StringView::FromExternal(comp_desc->fragments[i].name,
+                                               strnlen(comp_desc->fragments[i].name, 32));
+    dc.parts.Allocate(allocator, comp_desc->fragments[i].parts_count);
+
     for (uint32_t j = 0; j < comp_desc->fragments[i].parts_count; j++) {
-      ::fidl::Array<fuchsia_device_manager::wire::BindInstruction,
-                    fuchsia_device_manager::wire::kDeviceFragmentPartInstructionsMax>
-          bind_instructions{};
+      dc.parts[j].match_program.Allocate(allocator,
+                                         comp_desc->fragments[i].parts[j].instruction_count);
+
       for (uint32_t k = 0; k < comp_desc->fragments[i].parts[j].instruction_count; k++) {
-        bind_instructions[k] = fuchsia_device_manager::wire::BindInstruction{
+        dc.parts[j].match_program[k] = fuchsia_device_manager::wire::BindInstruction{
             .op = comp_desc->fragments[i].parts[j].match_program[k].op,
             .arg = comp_desc->fragments[i].parts[j].match_program[k].arg,
             .debug = comp_desc->fragments[i].parts[j].match_program[k].debug,
         };
       }
-      auto part = fuchsia_device_manager::wire::DeviceFragmentPart{
-          .match_program_count = comp_desc->fragments[i].parts[j].instruction_count,
-          .match_program = bind_instructions,
-      };
-      parts[j] = part;
     }
-    auto dc = fuchsia_device_manager::wire::DeviceFragment{
-        .name = ::fidl::StringView::FromExternal(comp_desc->fragments[i].name,
-                                                 strnlen(comp_desc->fragments[i].name, 32)),
-        .parts_count = comp_desc->fragments[i].parts_count,
-        .parts = parts,
-    };
     compvec.push_back(std::move(dc));
   }
 
@@ -1205,7 +1197,6 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
     props.push_back(convert_device_prop(comp_desc->props[i]));
   }
 
-  fidl::FidlAllocator allocator;
   std::vector<fuchsia_device_manager::wire::DeviceStrProperty> str_props = {};
   for (size_t i = 0; i < comp_desc->str_props_count; i++) {
     if (!property_value_type_valid(comp_desc->str_props[i].property_value.value_type)) {

@@ -76,7 +76,7 @@ zx_status_t CompositeDevice::Create(
       comp_desc.fragments.count(), comp_desc.coresident_device_index, std::move(metadata));
   for (uint32_t i = 0; i < comp_desc.fragments.count(); ++i) {
     const auto& fidl_fragment = comp_desc.fragments[i];
-    size_t parts_count = fidl_fragment.parts_count;
+    size_t parts_count = fidl_fragment.parts.count();
     if (parts_count != 1) {
       LOGF(ERROR, "Composite fragments with multiple parts are deprecated. %s has %zd parts.",
            name.data(), parts_count);
@@ -84,7 +84,7 @@ zx_status_t CompositeDevice::Create(
     }
 
     const auto& fidl_part = fidl_fragment.parts[0];
-    size_t program_count = fidl_part.match_program_count;
+    size_t program_count = fidl_part.match_program.count();
     fbl::Array<zx_bind_inst_t> bind_rules(new zx_bind_inst_t[program_count], program_count);
     for (size_t j = 0; j < program_count; ++j) {
       bind_rules[j] = zx_bind_inst_t{

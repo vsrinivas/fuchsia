@@ -95,21 +95,13 @@ bits AddDeviceConfig : uint32 {
 
 /// A part of a description of a DeviceFragment
 struct DeviceFragmentPart {
-    // This is an awful hack around the LLCPP bindings not being ready yet.
-    // Since we're using the C ones for now, we can only embed these structures as
-    // arrays instead of vectors.
-    uint32 match_program_count;
-    array<BindInstruction>:DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX match_program;
+    vector<BindInstruction>:DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX match_program;
 };
 
 /// A piece of a composite device
 struct DeviceFragment {
-    // This is an awful hack around the LLCPP bindings not being ready yet.
-    // Since we're using the C ones for now, we can only embed these structures as
-    // arrays instead of vectors.
     string:32 name;
-    uint32 parts_count;
-    array<DeviceFragmentPart>:DEVICE_FRAGMENT_PARTS_MAX parts;
+    vector<DeviceFragmentPart>:DEVICE_FRAGMENT_PARTS_MAX parts;
 };
 
 /// Metadata that can be added to a device
