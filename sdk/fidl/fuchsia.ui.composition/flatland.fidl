@@ -202,7 +202,7 @@ alias FuturePresentationInfos = vector<fuchsia.scenic.scheduling.PresentationInf
 
 /// Fields that a client needs in order to produce its next frame, returned in
 /// [`OnPresentProcessed`]. For a non-error case, each field is guaranteed to be
-/// set and contain valid information.
+/// set and contain valid information.  Otherwise, no field will be set.
 table OnPresentProcessedValues {
     /// The number of *additional* [`Present`] calls allowed to the client so that they
     /// can call [`Present`] further times. This is a delta in the present
