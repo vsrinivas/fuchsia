@@ -63,6 +63,12 @@ class Speaker {
   virtual fit::promise<> SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds message_id,
                                                  Options options);
 
+  // Returns a speech task that speaks the node's canonicalized label. The
+  // |ScreenReaderMessageGenerator| object maintains a list of labels that are canonicalized, in
+  // order to support the correct pronunciation of symbol names across different TTS services.
+  virtual fit::promise<> SpeakNodeCanonicalizedLabelPromise(
+      const fuchsia::accessibility::semantics::Node* node, Options options);
+
   // Returns a promise that cancels pending or in progress tts utterances.
   virtual fit::promise<> CancelTts();
 

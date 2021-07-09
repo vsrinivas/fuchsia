@@ -15,6 +15,13 @@ fit::promise<> MockScreenReaderContext::MockSpeaker::SpeakNodePromise(
   return fit::make_ok_promise();
 }
 
+fit::promise<> MockScreenReaderContext::MockSpeaker::SpeakNodeCanonicalizedLabelPromise(
+    const fuchsia::accessibility::semantics::Node* node, Options options) {
+  received_speak_label_ = true;
+  node_ids_.push_back(node->node_id());
+  return fit::make_ok_promise();
+}
+
 fit::promise<> MockScreenReaderContext::MockSpeaker::SpeakMessagePromise(
     fuchsia::accessibility::tts::Utterance utterance, Options options) {
   received_speak_ = true;

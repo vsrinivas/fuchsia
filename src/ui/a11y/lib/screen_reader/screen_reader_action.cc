@@ -76,6 +76,12 @@ fit::promise<> ScreenReaderAction::BuildSpeechTaskFromNodePromise(zx_koid_t view
 
     auto* speaker = screen_reader_context_->speaker();
     FX_DCHECK(speaker);
+    if (screen_reader_context_->IsVirtualKeyboardFocused()) {
+      // Read the key in the virtual keyboard.
+      return speaker->SpeakNodeCanonicalizedLabelPromise(node, {.interrupt = true});
+    }
+
+    // When not focusing a virtual keyboard node, just describe the node.
     return speaker->SpeakNodePromise(node, {.interrupt = true});
   });
 }

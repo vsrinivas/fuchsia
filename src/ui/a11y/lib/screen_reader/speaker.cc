@@ -87,6 +87,19 @@ fit::promise<> Speaker::SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds 
       .and_then(DispatchUtterances(task, options.interrupt));
 }
 
+fit::promise<> Speaker::SpeakNodeCanonicalizedLabelPromise(
+    const fuchsia::accessibility::semantics::Node* node, Options options) {
+  const std::string label =
+      node->has_attributes() && node->attributes().has_label() ? node->attributes().label() : "";
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> utterances;
+  utterances.emplace_back(screen_reader_message_generator_->FormatCharacterForSpelling(label));
+  FX_DCHECK(!utterances.empty());
+  auto task = std::make_shared<SpeechTask>(std::move(utterances));
+
+  return PrepareTask(task, options.interrupt, options.save_utterance)
+      .and_then(DispatchUtterances(task, options.interrupt));
+}
+
 fit::promise<> Speaker::PrepareTask(std::shared_ptr<SpeechTask> task, bool interrupt,
                                     bool save_utterance) {
   return fit::make_promise([this, task, interrupt, save_utterance]() mutable -> fit::promise<> {

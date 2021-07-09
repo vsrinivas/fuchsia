@@ -243,5 +243,26 @@ TEST_F(ExploreActionTest, ContinuousExploreDropsWhenA11yFocusIsTheSame) {
   ASSERT_TRUE(mock_speaker()->node_ids().empty());
 }
 
+TEST_F(ExploreActionTest, ReadsKeyboardKey) {
+  a11y::ExploreAction explore_action(action_context(), mock_screen_reader_context());
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+  gesture_context.current_pointer_locations[0].local_point.x = kLocalCoordForTesting;
+  gesture_context.current_pointer_locations[0].local_point.y = kLocalCoordForTesting;
+
+  fuchsia::accessibility::semantics::Hit hit;
+  hit.set_node_id(0u);
+  mock_semantics_source()->SetHitTestResult(mock_semantic_provider()->koid(), std::move(hit));
+
+  mock_screen_reader_context()->set_virtual_keyboard_focused(true);
+
+  explore_action.Run(gesture_context);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(mock_speaker()->ReceivedSpeakLabel());
+  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
+}
+
 }  // namespace
 }  // namespace accessibility_test

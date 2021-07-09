@@ -38,10 +38,17 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
                                            Options options) override;
 
     // |Speaker|
+    fit::promise<> SpeakNodeCanonicalizedLabelPromise(
+        const fuchsia::accessibility::semantics::Node* node, Options options) override;
+
+    // |Speaker|
     fit::promise<> CancelTts() override;
 
     // Returns true whether any speak request was done.
     bool ReceivedSpeak() const { return received_speak_; }
+
+    // Returns if SpeakNodeCanonicalizedLabelPromise was called.
+    bool ReceivedSpeakLabel() const { return received_speak_label_; }
 
     // Returns whether speech was cancelled.
     bool ReceivedCancel() const { return received_cancel_; }
@@ -64,6 +71,7 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
     std::vector<uint32_t> node_ids_;
     std::vector<fuchsia::intl::l10n::MessageIds> message_ids_;
     bool received_speak_ = false;
+    bool received_speak_label_ = false;
     bool received_cancel_ = false;
     OnDestructionCallback on_destruction_callback_;
     fuchsia::intl::l10n::MessageIds epitaph_ = fuchsia::intl::l10n::MessageIds::ROLE_HEADER;
@@ -83,13 +91,16 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
   a11y::Speaker* speaker() override { return speaker_.get(); }
 
   // |ScreenReaderContext|
-  bool IsVirtualKeyboardFocused() const override { return false; }
+  bool IsVirtualKeyboardFocused() const override { return virtual_keyboard_focused_; }
+
+  void set_virtual_keyboard_focused(bool value) { virtual_keyboard_focused_ = value; }
 
  private:
   std::unique_ptr<a11y::A11yFocusManager> a11y_focus_manager_;
   MockA11yFocusManager* mock_a11y_focus_manager_ptr_;
   std::unique_ptr<a11y::Speaker> speaker_;
   MockSpeaker* mock_speaker_ptr_;
+  bool virtual_keyboard_focused_ = false;
 };
 
 class MockScreenReaderContextFactory : public a11y::ScreenReaderContextFactory {
