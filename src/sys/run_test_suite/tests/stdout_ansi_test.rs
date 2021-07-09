@@ -13,4 +13,10 @@ fn stdout_ansi_test() {
 fn log_ansi_test() {
     fuchsia_syslog::init().expect("initializing log");
     log::info!("{}", Red.paint("red log"));
+
+    // TODO(fxbug.dev/79121): Component manager may send the Stop event to Archivist before it
+    // sends CapabilityRequested. In this case the logs may be lost. This sleep delays
+    // terminating the test to give component manager time to send the CapabilityRequested
+    // event. This sleep should be removed once component manager orders the events.
+    std::thread::sleep(std::time::Duration::from_secs(2));
 }
