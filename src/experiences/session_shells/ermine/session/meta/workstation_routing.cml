@@ -67,8 +67,13 @@
         },
         {
             protocol: [
+                "fuchsia.deprecatedtimezone.Timezone",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.intl.PropertyProvider",
                 "fuchsia.logger.LogSink",
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.sys.Launcher",
+                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.keyboard.focus.Controller",
@@ -97,9 +102,9 @@
         },
         {
             protocol: [
-              "fuchsia.input.injection.InputDeviceRegistry",
-              "fuchsia.input.keymap.Configuration",
-              "fuchsia.ui.accessibility.view.Registry",
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.input.keymap.Configuration",
+                "fuchsia.ui.accessibility.view.Registry",
             ],
             from: "#scene_manager",
         },

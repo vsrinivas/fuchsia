@@ -4,6 +4,18 @@
         runner: "elf",
         binary: "bin/workstation_session",
     },
+    children: [
+        {
+            name: "dart_jit_runner",
+            url: "fuchsia-pkg://fuchsia.com/dart_jit_runner#meta/dart_jit_runner.cm",
+            startup: "lazy",
+        },
+        {
+            name: "dart_aot_runner",
+            url: "fuchsia-pkg://fuchsia.com/dart_aot_runner#meta/dart_aot_runner.cm",
+            startup: "lazy",
+        },
+    ],
     collections: [
         {
             name: "element_launchers",
@@ -11,6 +23,7 @@
         },
         {
             name: "elements",
+            environment: "#element-env",
             durability: "transient",
         },
     ],
@@ -29,8 +42,13 @@
         },
         {
             protocol: [
+                "fuchsia.deprecatedtimezone.Timezone",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.session.scene.Manager",
                 "fuchsia.sys.Launcher",
+                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.keyboard.focus.Controller",
@@ -51,11 +69,73 @@
             from: "self",
             to: [ "#element_launchers" ],
         },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#elements" ],
+        },
+        {
+            protocol: [
+                "fuchsia.deprecatedtimezone.Timezone",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [
+                "#dart_aot_runner",
+                "#dart_jit_runner",
+            ],
+        },
+        {
+            runner: "dart_aot_runner",
+            from: "#dart_aot_runner",
+            to: [ "#elements" ],
+        },
+        {
+            runner: "dart_jit_runner",
+            from: "#dart_jit_runner",
+            to: [ "#elements" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [
+                "#dart_aot_runner",
+                "#dart_jit_runner",
+            ],
+        },
     ],
     expose: [
         {
             protocol: [ "fuchsia.session.ElementManager" ],
             from: "self",
+        },
+        {
+            runner: "dart_aot_runner",
+            from: "#dart_aot_runner",
+        },
+        {
+            runner: "dart_jit_runner",
+            from: "#dart_jit_runner",
+        },
+    ],
+    environments: [
+        {
+            name: "element-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "dart_aot_runner",
+                    from: "#dart_aot_runner",
+                },
+                {
+                    runner: "dart_jit_runner",
+                    from: "#dart_jit_runner",
+                },
+            ],
         },
     ],
 }
