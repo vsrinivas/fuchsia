@@ -210,7 +210,9 @@
             rights: [ "r*" ],
         },
 
-        // Some components run under test need access to /config/data.
+        // Test realms may offer subdirectories of config-data to test
+        // components. See:
+        // https://fuchsia.dev/fuchsia-src/development/components/data#product-specific_configuration_with_config_data
         {
             directory: "config-data",
             from: "parent",

@@ -1,0 +1,155 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Add test_manager to core
+{
+    children: [
+        {
+            name: "test_manager",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
+            environment: "#universe-resolver-env",
+        },
+    ],
+    offer: [
+        // Needed by test_manager and/or some test runners
+        {
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+            from: "#appmgr",
+            to: "#test_manager",
+            dependency: "weak_for_migration",
+        },
+        {
+            storage: "tmp",
+            from: "self",
+            to: "#test_manager",
+        },
+
+        // Test realms may offer subdirectories of config-data to test
+        // components. See:
+        // https://fuchsia.dev/fuchsia-src/development/components/data#product-specific_configuration_with_config_data
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#test_manager",
+        },
+
+        // Needed by some non-hermetic tests
+        {
+            protocol: [
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
+                "fuchsia.process.Launcher",
+                "fuchsia.scheduler.ProfileProvider",
+            ],
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
+            protocol: [
+                "fuchsia.hardware.display.Provider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#appmgr",
+            to: "#test_manager",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            from: "#vulkan_loader",
+            to: "#test_manager",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-display-controller",
+            to: "#test_manager",
+            subdir: "class/display-controller",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-goldfish-address-space",
+            to: "#test_manager",
+            subdir: "class/goldfish-address-space",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-goldfish-control",
+            to: "#test_manager",
+            subdir: "class/goldfish-control",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-goldfish-pipe",
+            to: "#test_manager",
+            subdir: "class/goldfish-pipe",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-goldfish-sync",
+            to: "#test_manager",
+            subdir: "class/goldfish-sync",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-gpu",
+            to: "#test_manager",
+            subdir: "class/gpu",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input-report",
+            to: "#test_manager",
+            subdir: "class/input-report",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#test_manager",
+        },
+
+        // Integrate with Remote Control Service
+        {
+            protocol: [
+                "fuchsia.test.manager.Query",
+                "fuchsia.test.manager.RunBuilder",
+            ],
+            from: "#test_manager",
+            to: "#remote-control",
+        },
+
+        // Integrate with run_test_suite
+        {
+            protocol: [
+                "fuchsia.test.manager.Query",
+                "fuchsia.test.manager.RunBuilder",
+            ],
+            from: "#test_manager",
+            to: "#appmgr",
+        },
+    ],
+}

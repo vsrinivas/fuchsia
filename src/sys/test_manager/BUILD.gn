@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 rustc_library("test_lib") {
   testonly = true
@@ -131,6 +132,10 @@ fuchsia_package("test_manager_pkg") {
     "debug_data",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
   ]
+}
+
+core_shard("test_manager_core_shard") {
+  shard_file = "meta/test_manager.core_shard.cml"
 }
 
 fuchsia_unittest_package("test-manager-unittests") {

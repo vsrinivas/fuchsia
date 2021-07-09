@@ -76,11 +76,6 @@
             url: "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cm",
         },
         {
-            name: "test_manager",
-            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
-            environment: "#universe-resolver-env",
-        },
-        {
             name: "font_provider",
             url: "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cm",
         },
@@ -348,11 +343,6 @@
             to: "#appmgr",
         },
         {
-            protocol: [ "fuchsia.boot.WriteOnlyLog" ],
-            from: "parent",
-            to: "#test_manager",
-        },
-        {
             protocol: [
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
@@ -363,7 +353,6 @@
             to: [
                 "#log-stats",
                 "#sampler",
-                "#test_manager",
             ],
         },
         {
@@ -427,7 +416,6 @@
                 "#system-metrics-logger",
                 "#system-update-committer",
                 "#temperature-logger",
-                "#test_manager",
                 "#universe-resolver",
                 "#vulkan_loader",
             ],
@@ -447,104 +435,9 @@
             to: "#starnix_manager",
         },
         {
-            protocol: [
-                "fuchsia.kernel.VmexResource",
-                "fuchsia.sys2.EventSource",
-            ],
-            from: "parent",
-            to: "#test_manager",
-        },
-        {
-            storage: "tmp",
-            from: "self",
-            to: "#test_manager",
-        },
-        {
-            directory: "config-data",
-            from: "parent",
-            to: "#test_manager",
-        },
-        {
             protocol: "fuchsia.diagnostics.persist.DataPersistence-wlan",
             from: "#diagnostics-persistence",
             to: "#appmgr",
-        },
-
-        // These capabilities are offered to test_manager for use by certain non-hermetic tests.
-        {
-            protocol: [
-                "fuchsia.kernel.RootJobForInspect",
-                "fuchsia.kernel.Stats",
-                "fuchsia.process.Launcher",
-                "fuchsia.scheduler.ProfileProvider",
-            ],
-            from: "parent",
-            to: "#test_manager",
-        },
-        {
-            protocol: [
-                "fuchsia.hardware.display.Provider",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
-            ],
-            from: "#appmgr",
-            to: "#test_manager",
-            dependency: "weak_for_migration",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-display-controller",
-            to: "#test_manager",
-            subdir: "class/display-controller",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-goldfish-address-space",
-            to: "#test_manager",
-            subdir: "class/goldfish-address-space",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-goldfish-control",
-            to: "#test_manager",
-            subdir: "class/goldfish-control",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-goldfish-pipe",
-            to: "#test_manager",
-            subdir: "class/goldfish-pipe",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-goldfish-sync",
-            to: "#test_manager",
-            subdir: "class/goldfish-sync",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-gpu",
-            to: "#test_manager",
-            subdir: "class/gpu",
-        },
-        {
-            protocol: "fuchsia.vulkan.loader.Loader",
-            from: "#vulkan_loader",
-            to: "#test_manager",
-        },
-        {
-            protocol: [
-                "fuchsia.test.manager.Query",
-                "fuchsia.test.manager.RunBuilder",
-            ],
-            from: "#test_manager",
-            to: "#remote-control",
         },
         {
             protocol: [
@@ -623,16 +516,6 @@
             to: "#appmgr",
         },
         {
-            protocol: "fuchsia.test.manager.Query",
-            from: "#test_manager",
-            to: "#appmgr",
-        },
-        {
-            protocol: "fuchsia.test.manager.RunBuilder",
-            from: "#test_manager",
-            to: "#appmgr",
-        },
-        {
             protocol: "fuchsia.kernel.Stats",
             from: "parent",
             to: "#system-metrics-logger",
@@ -682,7 +565,6 @@
             to: [
                 "#http-client",
                 "#pkg-resolver",
-                "#test_manager",
             ],
         },
         {
@@ -761,10 +643,7 @@
             directory: "dev",
             from: "parent",
             as: "dev-input-report",
-            to: [
-                "#session-manager",
-                "#test_manager",
-            ],
+            to: "#session-manager",
             subdir: "class/input-report",
         },
         {
@@ -925,15 +804,6 @@
             as: "dev-goldfish-sync",
             to: "#vulkan_loader",
             subdir: "class/goldfish-sync",
-        },
-        {
-            protocol: [
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Loader",
-            ],
-            from: "#appmgr",
-            to: "#test_manager",
-            dependency: "weak_for_migration",
         },
         {
             protocol: [
