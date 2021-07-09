@@ -612,6 +612,20 @@ Include the vulkan validation layers in carnelian examples.
 
 From //src/lib/ui/carnelian/BUILD.gn:13
 
+### carnelian_static_rives_extras
+Point this to the location of external rives files to be included as extras
+
+**Current value (from the default):** `[]`
+
+From //src/lib/ui/carnelian/BUILD.gn:16
+
+### carnelian_static_txts_extras
+Point this to the location of external txt files to be included as extras
+
+**Current value (from the default):** `[]`
+
+From //src/lib/ui/carnelian/BUILD.gn:19
+
 ### check_production_eligibility
 Whether to perform check on the build's eligibility for production.
 If true, base_packages and cache_packages are checked against dependencies
@@ -778,6 +792,21 @@ From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.
 **Current value (from the default):** `true`
 
 From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/e481b16bf411407c4497e6a4cb01e2a9cae20a10/util/net/tls.gni#30)
+
+### cts_version
+Name of the CTS version.
+
+Used to change the dependency paths of CTS deps.
+
+Example of path change:
+  //zircon/system/ulib/zxtest -> //prebuilt/cts/${cts_version}/pkg/zxtest
+
+Usage:
+  `fx set PRODUCT.BOARD --args cts_version='"version_name"'`
+
+**Current value (from the default):** `""`
+
+From //sdk/cts/build/cts_copy_to_sdk.gni:16
 
 ### current_cpu
 
