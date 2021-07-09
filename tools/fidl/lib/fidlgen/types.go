@@ -549,7 +549,7 @@ func (el Attributes) GetAttribute(name Identifier) Attribute {
 }
 
 func (el Attributes) DocComments() []string {
-	doc, ok := el.LookupAttribute("Doc")
+	doc, ok := el.LookupAttribute("doc")
 	if !ok || doc.Value == "" {
 		return nil
 	}
@@ -558,7 +558,7 @@ func (el Attributes) DocComments() []string {
 
 func (el Attributes) Transports() map[string]struct{} {
 	transports := make(map[string]struct{})
-	raw, ok := el.LookupAttribute("Transport")
+	raw, ok := el.LookupAttribute("transport")
 	if ok && raw.Value != "" {
 		for _, transport := range strings.Split(raw.Value, ",") {
 			transports[strings.TrimSpace(transport)] = struct{}{}
@@ -571,11 +571,11 @@ func (el Attributes) Transports() map[string]struct{} {
 	return transports
 }
 
-// BindingsDenylistIncludes returns true if the comma-separated BindingsDenyList
-// attribute includes targetLanguage (meaning the bindings for targetLanguage
-// should not emit this declaration).
+// BindingsDenylistIncludes returns true if the comma-separated
+// bindings_denylist attribute includes targetLanguage (meaning the bindings for
+// targetLanguage should not emit this declaration).
 func (el Attributes) BindingsDenylistIncludes(targetLanguage string) bool {
-	raw, ok := el.LookupAttribute("BindingsDenylist")
+	raw, ok := el.LookupAttribute("bindings_denylist")
 	if ok && raw.Value != "" {
 		for _, language := range strings.Split(raw.Value, ",") {
 			if strings.TrimSpace(language) == targetLanguage {
@@ -755,7 +755,7 @@ type Protocol struct {
 }
 
 func (d *Protocol) GetServiceName() string {
-	_, found := d.LookupAttribute("Discoverable")
+	_, found := d.LookupAttribute("discoverable")
 	if found {
 		ci := ParseCompoundIdentifier(d.Name)
 		var parts []string
@@ -816,7 +816,7 @@ type Method struct {
 
 // IsTransitional returns whether this method has the `Transitional` attribute.
 func (m *Method) IsTransitional() bool {
-	_, transitional := m.LookupAttribute("Transitional")
+	_, transitional := m.LookupAttribute("transitional")
 	return transitional
 }
 

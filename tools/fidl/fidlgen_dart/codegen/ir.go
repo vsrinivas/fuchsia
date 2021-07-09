@@ -332,7 +332,7 @@ type Annotated interface {
 }
 
 func docString(node Annotated) Documented {
-	attribute, ok := node.LookupAttribute("Doc")
+	attribute, ok := node.LookupAttribute("doc")
 	if !ok {
 		return Documented{nil}
 	}
@@ -901,7 +901,7 @@ func (c *compiler) compileMethod(val fidlgen.Method, protocol Protocol, fidlProt
 		}
 	}
 
-	_, transitional := val.LookupAttribute("Transitional")
+	_, transitional := val.LookupAttribute("transitional")
 	return Method{
 		Ordinal:            val.Ordinal,
 		OrdinalName:        fmt.Sprintf("_k%s_%s_Ordinal", protocol.Name, val.Name),

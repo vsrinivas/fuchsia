@@ -352,12 +352,12 @@ func GenerateFidl(templatePath string, ir fidlgen.Root, outputBase *string, opti
 		},
 		// Determines if a protocol is discoverable.
 		"isDiscoverable": func(i fidlgen.Protocol) bool {
-			_, found := i.LookupAttribute("Discoverable")
+			_, found := i.LookupAttribute("discoverable")
 			return found
 		},
 		// Determines if a method is transitional.
 		"isTransitional": func(m fidlgen.Method) bool {
-			_, found := m.LookupAttribute("Transitional")
+			_, found := m.LookupAttribute("transitional")
 			return found
 		},
 		// Converts a primitive subtype to its C equivalent.
