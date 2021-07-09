@@ -82,13 +82,20 @@ struct CapabilityRoute {
 };
 
 // A reference to a component via its component URL.
+// For example, `fuchsia-pkg://fuchsia.com/foo#meta/bar.cm`.
 struct ComponentUrl {
+  std::string url;
+};
+
+// A reference to a component via its legacy component URL.
+// For example, `fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx`.
+struct LegacyComponentUrl {
   std::string url;
 };
 
 // The source of a component. If it's `ComponentUrl`, then it will be located
 // via its component URL.
-using Source = std::variant<ComponentUrl>;
+using Source = std::variant<ComponentUrl, LegacyComponentUrl>;
 
 // A component as referred to by its source.
 struct Component {

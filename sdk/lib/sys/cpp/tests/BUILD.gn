@@ -108,6 +108,13 @@ fuchsia_component("echo_server") {
   testonly = true
 }
 
+fuchsia_component("echo_server_legacy") {
+  component_name = "echo_server"
+  deps = [ ":helper_proc_bin" ]
+  manifest = "meta/echo_server.cmx"
+  testonly = true
+}
+
 executable("constructor_helper_proc") {
   testonly = true
 
@@ -157,6 +164,7 @@ fuchsia_test_package("component_cpp_tests") {
   deps = [
     ":constructor_helper_proc",
     ":echo_server",
+    ":echo_server_legacy",
     ":helper_proc",
   ]
 }

@@ -80,6 +80,9 @@ fuchsia::realm::builder::Component ConvertToFidl(Source source) {
   if (auto url = std::get_if<ComponentUrl>(&source)) {
     return fuchsia::realm::builder::Component::WithUrl(std::move(url->url));
   }
+  if (auto url = std::get_if<LegacyComponentUrl>(&source)) {
+    return fuchsia::realm::builder::Component::WithLegacyUrl(std::move(url->url));
+  }
 
   ZX_PANIC("ConvertToFidl(Source) reached unreachable block!");
 }

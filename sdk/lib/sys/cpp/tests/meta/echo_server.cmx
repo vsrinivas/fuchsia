@@ -1,0 +1,11 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "--echo"
+        ],
+        "binary": "bin/helper_proc_bin"
+    }
+}

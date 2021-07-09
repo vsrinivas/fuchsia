@@ -16,6 +16,8 @@ using namespace sys::testing;
 
 constexpr char kEchoServerUrl[] =
     "fuchsia-pkg://fuchsia.com/component_cpp_tests#meta/echo_server.cm";
+constexpr char kEchoServerLegacyUrl[] =
+    "fuchsia-pkg://fuchsia.com/component_cpp_tests#meta/echo_server.cmx";
 
 TEST(RealmBuilderTest, RoutesProtocolFromChild) {
   auto context = sys::ComponentContext::Create();
@@ -40,6 +42,22 @@ TEST(RealmBuilderTest, RoutesProtocolFromGrandchild) {
                              Component{.source = ComponentUrl{kEchoServerUrl}});
   realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"test.placeholders.Echo"},
                                          .source = Moniker{"parent/echo_server"},
+                                         .targets = {AboveRoot()}});
+  auto realm = realm_builder.Build(context.get());
+  test::placeholders::EchoSyncPtr echo_proxy;
+  ASSERT_EQ(realm.Connect(echo_proxy.NewRequest()), ZX_OK);
+  fidl::StringPtr response;
+  ASSERT_EQ(echo_proxy->EchoString("hello", &response), ZX_OK);
+  EXPECT_EQ(response, fidl::StringPtr("hello"));
+}
+
+TEST(RealmBuilderTest, RoutesProtocolFromLegacyChild) {
+  auto context = sys::ComponentContext::Create();
+  auto realm_builder = Realm::Builder::New(context.get());
+  realm_builder.AddComponent(Moniker{"echo_server"},
+                             Component{.source = LegacyComponentUrl{kEchoServerLegacyUrl}});
+  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"test.placeholders.Echo"},
+                                         .source = Moniker{"echo_server"},
                                          .targets = {AboveRoot()}});
   auto realm = realm_builder.Build(context.get());
   test::placeholders::EchoSyncPtr echo_proxy;
