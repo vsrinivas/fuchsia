@@ -47,13 +47,11 @@ class InterruptManager {
   }
 
   zx_status_t MaskInterrupt(unsigned int vector) {
-    Guard<SpinLock, IrqSave> guard{&lock_};
     IoApic::MaskIrq(vector, IO_APIC_IRQ_MASK);
     return ZX_OK;
   }
 
   zx_status_t UnmaskInterrupt(unsigned int vector) {
-    Guard<SpinLock, IrqSave> guard{&lock_};
     IoApic::MaskIrq(vector, IO_APIC_IRQ_UNMASK);
     return ZX_OK;
   }
