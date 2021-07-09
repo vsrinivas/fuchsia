@@ -90,16 +90,6 @@ void SystemInstance::ServiceStarter(Coordinator* coordinator) {
   coordinator->StartLoadingNonBootDrivers();
 }
 
-// TODO(fxbug.dev/34633): DEPRECATED. Do not add new dependencies on the fshost loader service!
-zx_status_t SystemInstance::clone_fshost_ldsvc(zx::channel* loader) {
-  zx::channel remote;
-  zx_status_t status = zx::channel::create(0, loader, &remote);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return fdio_service_connect("/svc/fuchsia.fshost.Loader", remote.release());
-}
-
 fidl::ClientEnd<fuchsia_io::Directory> SystemInstance::CloneFs(const char* path) {
   if (!strcmp(path, "dev")) {
     return fidl::ClientEnd<fuchsia_io::Directory>(devfs_root_clone());

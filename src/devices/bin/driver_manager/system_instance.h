@@ -44,9 +44,6 @@ class SystemInstance : public FsProvider {
   void ServiceStarter(Coordinator* coordinator);
   int WaitForSystemAvailable(Coordinator* coordinator);
 
-  // TODO(fxbug.dev/34633): DEPRECATED. Do not add new dependencies on the fshost loader service!
-  zx_status_t clone_fshost_ldsvc(zx::channel* loader);
-
  protected:
   DevmgrLauncher& launcher() { return launcher_; }
 

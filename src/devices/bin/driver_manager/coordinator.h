@@ -308,8 +308,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   ResumeContext& resume_context() { return resume_context_; }
   const ResumeContext& resume_context() const { return resume_context_; }
 
-  zx_status_t BindFidlServiceProxy(zx::channel listen_on);
-
   const Driver* fragment_driver() const { return fragment_driver_; }
 
   InspectManager& inspect_manager() { return *inspect_manager_; }
