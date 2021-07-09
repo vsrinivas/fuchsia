@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.diagnostics;
 
 using fuchsia.mem;
@@ -33,9 +32,9 @@ flexible union SelectorArgument {
     /// A raw string representing a [fuchsia.diagnostics/Selector].
     /// The Selector defines a pattern-matcher which selects for components within a hierarchy
     /// and properties in a data hierarchy namespaced by component.
-    /// NOTE: All StringSelectors parsed from the raw_selector will be interperetted in
+    /// NOTE: All StringSelectors parsed from the raw_selector will be interpreted in
     ///       string_pattern mode, giving significance to special characters.
-    /// TODO(fxbug.dev/4601): Link to in-tree documentation for raw selector strings.
+    /// See https://fuchsia.dev/fuchsia-src/reference/diagnostics/selectors for more information
     2: string:MAXIMUM_RAW_SELECTOR_LENGTH raw_selector;
 };
 
