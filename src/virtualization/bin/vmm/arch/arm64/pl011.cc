@@ -34,8 +34,10 @@ enum class Pl011Register : uint64_t {
     ICR     = 0x44,
 };
 
-static constexpr uint64_t kPl011PhysBase = 0x808300000;
-static constexpr uint64_t kPl011Size     = 0x1000;
+constexpr uint64_t kPl011PhysBase = 0x808300000;
+constexpr uint64_t kPl011Size     = 0x1000;
+
+constexpr uint16_t kPl011FlagRegisterTxFifoEmpty = 1u << 7;
 
 // clang-format on
 
@@ -53,6 +55,10 @@ zx_status_t Pl011::Read(uint64_t addr, IoValue* value) const {
       return ZX_OK;
     }
     case Pl011Register::FR:
+      // Incoming data is immediately processed, so might as well always report
+      // that the TX FIFO is empty.
+      value->u16 = kPl011FlagRegisterTxFifoEmpty;
+      return ZX_OK;
     case Pl011Register::IMSC:
       value->u16 = 0;
       return ZX_OK;
