@@ -58,8 +58,8 @@ form](rfc_process.md). It is also summarized below.
     {% endfor %}
     {% if found %}
       <div class="checkbox-div">
-        <input type="checkbox" id="checkbox-reset-{{ area|replace(" ", "-") }}" checked>
-        <label for="checkbox-reset-{{ area|replace(" ", "-") }}">{{ area }}</label>
+        <input type="checkbox" id="checkbox-reset-{{ area|replace(" ", "-")|replace(".", "-")  }}" checked>
+        <label for="checkbox-reset-{{ area|replace(" ", "-")|replace(".", "-") }}">{{ area }}</label>
       </div>
     {% endif %}
   {% endfor %}

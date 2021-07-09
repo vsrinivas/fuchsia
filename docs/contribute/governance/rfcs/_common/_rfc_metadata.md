@@ -89,10 +89,10 @@
 
 <div class="edit-buttons">
   <div class="edit-buttons-left">
-    <p><img src="https://fonts.gstatic.com/s/i/googlematerialicons/edit/v6/googblue-24dp/1x/gm_edit_googblue_24dp.png" class="inline-icon" alt=""> <a href="{{ fuchsia_editor }}{{ rfcs_dir }}{{ rfc.file }}">Edit this RFC</a></p>
+    <p><a href="{{ fuchsia_editor }}{{ rfcs_dir }}{{ rfc.file }}"><span class="material-icons">edit</span>Edit this RFC</a></p>
   </div>
   <div class="edit-buttons-right">
-    <p><img src="https://fonts.gstatic.com/s/i/googlematerialicons/edit/v6/googblue-24dp/1x/gm_edit_googblue_24dp.png" class="inline-icon" alt=""> <a href="{{ fuchsia_editor }}{{ rfcs_dir }}{{ rfcs_metadata_file }}">Edit RFC metadata</a></p>
+    <p><a href="{{ fuchsia_editor }}{{ rfcs_dir }}{{ rfcs_metadata_file }}"><span class="material-icons">edit</span>Edit RFC metadata</a></p>
   </div>
 </div>
 
