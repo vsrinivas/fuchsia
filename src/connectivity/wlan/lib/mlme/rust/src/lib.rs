@@ -14,6 +14,8 @@ pub mod disconnect;
 pub mod error;
 pub mod key;
 mod logger;
+#[allow(unused)] // TODO(fxbug.dev/79543): Remove annotation once used.
+mod probe_sequence;
 pub mod timer;
 
 pub use {ddk_converter::*, wlan_common as common};
