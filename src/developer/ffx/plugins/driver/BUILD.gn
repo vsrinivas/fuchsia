@@ -10,6 +10,7 @@ ffx_plugin("ffx_driver") {
   with_unit_tests = true
   plugin_deps = [
     "debug-bind:ffx_driver_debug_bind",
+    "dump:ffx_driver_dump",
     "list:ffx_driver_list",
     "list-devices:ffx_driver_list_devices",
     "register:ffx_driver_register",
