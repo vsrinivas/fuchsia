@@ -183,7 +183,7 @@ class FakeDdkOptee : public zxtest::Test {
   };
   void SetUp() override {
     fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[3], 3);
-    fragments[0].name = "fuchsia.hardware.platform.device.PDev";
+    fragments[0].name = "pdev";
     fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
         ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
     fragments[1].name = "sysmem";

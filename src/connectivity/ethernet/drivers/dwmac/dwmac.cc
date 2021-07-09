@@ -35,7 +35,7 @@ namespace {
 // MMIO Indexes.
 constexpr uint32_t kEthMacMmio = 0;
 
-constexpr char kPdevFragment[] = "fuchsia.hardware.platform.device.PDev";
+constexpr char kPdevFragment[] = "pdev";
 
 }  // namespace
 

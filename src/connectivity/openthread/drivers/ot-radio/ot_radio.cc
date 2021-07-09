@@ -215,9 +215,8 @@ zx_status_t OtRadioDevice::Init() {
 
   size_t actual;
   uint32_t device_id;
-  status =
-      device_get_fragment_metadata(parent(), "fuchsia.hardware.platform.device.PDev",
-                                   DEVICE_METADATA_PRIVATE, &device_id, sizeof(device_id), &actual);
+  status = device_get_fragment_metadata(parent(), "pdev", DEVICE_METADATA_PRIVATE, &device_id,
+                                        sizeof(device_id), &actual);
   if (status != ZX_OK || sizeof(device_id) != actual) {
     zxlogf(ERROR, "ot-radio: failed to read metadata");
     return status == ZX_OK ? ZX_ERR_INTERNAL : status;

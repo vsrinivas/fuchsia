@@ -18,7 +18,7 @@ class MmioBuffer;
 
 class PDev : public PDevProtocolClient {
  public:
-  static constexpr char kFragmentName[] = "fuchsia.hardware.platform.device.PDev";
+  static constexpr char kFragmentName[] = "pdev";
 
   PDev() {}
 

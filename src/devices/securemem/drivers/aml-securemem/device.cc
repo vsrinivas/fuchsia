@@ -40,8 +40,7 @@ zx_status_t AmlogicSecureMemDevice::Bind() {
   ddk_loop_closure_queue_.SetDispatcher(async_get_default_dispatcher(), ddk_dispatcher_thread_);
 
   zx_status_t status = ZX_OK;
-  status = ddk::PDevProtocolClient::CreateFromDevice(
-      parent(), "fuchsia.hardware.platform.device.PDev", &pdev_proto_client_);
+  status = ddk::PDevProtocolClient::CreateFromDevice(parent(), "pdev", &pdev_proto_client_);
   if (status != ZX_OK) {
     LOG(ERROR, "Unable to get pdev protocol - status: %d", status);
     return status;

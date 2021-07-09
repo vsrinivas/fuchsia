@@ -292,7 +292,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(
       {countof(pdev_match), pdev_match},
   };
 
-  fragments[0].name = "fuchsia.hardware.platform.device.PDev";
+  fragments[0].name = "pdev";
   fragments[0].parts_count = std::size(pdev_fragment);
   fragments[0].parts = pdev_fragment;
 
@@ -308,7 +308,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(
       .props_count = std::size(props),
       .fragments = fragments,
       .fragments_count = fragments_count + 1,
-      .primary_fragment = "fuchsia.hardware.platform.device.PDev",
+      .primary_fragment = "pdev",
       .coresident_device_index = coresident_device_index,
       .metadata_list = nullptr,
       .metadata_count = 0,

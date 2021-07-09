@@ -577,7 +577,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   }
 
   pdev_protocol_t pdev;
-  if (strncmp(fragments[FRAGMENT_PDEV_1].name, "fuchsia.hardware.platform.device.PDev", 32)) {
+  if (strncmp(fragments[FRAGMENT_PDEV_1].name, "pdev", 32)) {
     zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_PDEV_1].name);
     return ZX_ERR_INTERNAL;
   }
