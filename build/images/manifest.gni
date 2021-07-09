@@ -112,7 +112,8 @@ template("generate_manifest") {
     args = extra_manifest_args + [
              "--depfile=" + rebase_path(depfile, root_build_dir),
              "--stripped-dir=" + rebase_path(stripped_dir, root_build_dir),
-             "--build-id-dir=" + rebase_path("$root_build_dir/.build-id"),
+             "--build-id-dir=" +
+                 rebase_path("$root_build_dir/.build-id", root_build_dir),
              "--toolchain-lib-dir=" + clang_lib_dir,
              "--toolchain-lib-dir=" + rustc_lib_dir,
              "@" + rebase_path(response_file, root_build_dir),

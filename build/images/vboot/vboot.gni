@@ -203,15 +203,15 @@ template("esp") {
     inputs = [ mkfs_bin ]
     args = [
       "--output",
-      rebase_path(output_file),
+      rebase_path(output_file, root_build_dir),
       "--mkfs",
-      rebase_path(mkfs_bin),
+      rebase_path(mkfs_bin, root_build_dir),
     ]
 
     if (defined(invoker.zircon_bin)) {
       args += [
         "--zircon",
-        rebase_path(invoker.zircon_bin),
+        rebase_path(invoker.zircon_bin, root_build_dir),
       ]
       inputs += [ invoker.zircon_bin ]
     }
@@ -219,7 +219,7 @@ template("esp") {
     if (defined(invoker.bootdata_bin)) {
       args += [
         "--bootdata",
-        rebase_path(invoker.bootdata_bin),
+        rebase_path(invoker.bootdata_bin, root_build_dir),
       ]
       inputs += [ invoker.bootdata_bin ]
     }
@@ -227,7 +227,7 @@ template("esp") {
     if (defined(invoker.zedboot)) {
       args += [
         "--zedboot",
-        rebase_path(invoker.zedboot),
+        rebase_path(invoker.zedboot, root_build_dir),
       ]
       inputs += [ invoker.zedboot ]
     }
@@ -235,7 +235,7 @@ template("esp") {
     if (defined(invoker.cmdline)) {
       args += [
         "--cmdline",
-        rebase_path(invoker.cmdline),
+        rebase_path(invoker.cmdline, root_build_dir),
       ]
       inputs += [ invoker.cmdline ]
     }
@@ -250,7 +250,7 @@ template("esp") {
           get_label_info(gigaboot_target, "root_out_dir") + "/bootx64.efi"
       args += [
         "--efi-bootloader",
-        rebase_path(gigaboot_bin),
+        rebase_path(gigaboot_bin, root_build_dir),
       ]
       inputs += [ gigaboot_bin ]
       deps += [ gigaboot_target ]
