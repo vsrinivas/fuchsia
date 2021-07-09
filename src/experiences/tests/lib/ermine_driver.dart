@@ -308,7 +308,8 @@ class ErmineDriver {
       {Duration timeout = waitForTimeout}) {
     return waitFor(() async {
       final snapshot = await Inspect(sl4f).snapshotRoot(componentSelector);
-      return snapshot.isNotEmpty ? snapshot : null;
+      // ignore: unnecessary_null_comparison
+      return snapshot == null || snapshot.isEmpty ? null : snapshot;
     }, timeout: timeout);
   }
 

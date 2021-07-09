@@ -82,9 +82,8 @@ void main() {
       await input.keyPress(kEnterKey);
       // Wait for command to start executing.
       await Future.delayed(delay);
-      final snapshot = await Inspect(sl4f).snapshotRoot('terminal.cmx');
-      // ignore: unnecessary_null_comparison
-      if (snapshot != null && snapshot.containsKey('grid')) {
+      final snapshot = await ermine.inspectSnapshot('terminal.cmx');
+      if (snapshot.containsKey('grid')) {
         return snapshot['grid'].toString().contains(cmd);
       }
       return false;
@@ -127,6 +126,7 @@ void main() {
 
     // Verify that terminal buffer contains result of ping.
     final result = await waitForBuffer();
+    print('ping response: $result');
     expect(result.contains('bytes from localhost'), isTrue);
   });
 
