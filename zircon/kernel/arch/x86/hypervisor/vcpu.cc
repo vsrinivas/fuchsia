@@ -43,8 +43,8 @@ static zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
   uint8_t err;
   uint64_t descriptor[] = {eptp, 0};
 
-  __asm__ __volatile__("invept %[descriptor], %[invalidation];" VMX_ERR_CHECK(err)
-                       : [err] "=r"(err)
+  __asm__ __volatile__("invept %[descriptor], %[invalidation]"
+                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
                        : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
                        : "cc");
 
@@ -54,8 +54,8 @@ static zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
 static zx_status_t vmptrld(paddr_t pa) {
   uint8_t err;
 
-  __asm__ __volatile__("vmptrld %[pa];" VMX_ERR_CHECK(err)
-                       : [err] "=r"(err)
+  __asm__ __volatile__("vmptrld %[pa]"
+                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
                        : [pa] "m"(pa)
                        : "cc", "memory");
 
@@ -65,8 +65,8 @@ static zx_status_t vmptrld(paddr_t pa) {
 static zx_status_t vmclear(paddr_t pa) {
   uint8_t err;
 
-  __asm__ __volatile__("vmclear %[pa];" VMX_ERR_CHECK(err)
-                       : [err] "=r"(err)
+  __asm__ __volatile__("vmclear %[pa]"
+                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
                        : [pa] "m"(pa)
                        : "cc", "memory");
 
@@ -77,24 +77,23 @@ static uint64_t vmread(uint64_t field) {
   uint8_t err;
   uint64_t val;
 
-  __asm__ __volatile__("vmread %[field], %[val];" VMX_ERR_CHECK(err)
-                       : [err] "=r"(err), [val] "=m"(val)
+  __asm__ __volatile__("vmread %[field], %[val]"
+                       : [val] "=r"(val),
+                         "=@ccna"(err)  // Set `err` on error (C or Z flag set)
                        : [field] "r"(field)
                        : "cc");
-
-  DEBUG_ASSERT(err == ZX_OK);
+  DEBUG_ASSERT(!err);
   return val;
 }
 
 static void vmwrite(uint64_t field, uint64_t val) {
   uint8_t err;
 
-  __asm__ __volatile__("vmwrite %[val], %[field];" VMX_ERR_CHECK(err)
-                       : [err] "=r"(err)
+  __asm__ __volatile__("vmwrite %[val], %[field]"
+                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
                        : [val] "r"(val), [field] "r"(field)
                        : "cc");
-
-  DEBUG_ASSERT(err == ZX_OK);
+  DEBUG_ASSERT(!err);
 }
 
 AutoVmcs::AutoVmcs(paddr_t vmcs_address) : vmcs_address_(vmcs_address) {

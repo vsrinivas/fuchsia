@@ -27,8 +27,6 @@
 #define X86_MSR_IA32_FEATURE_CONTROL_LOCK   (1u << 0) // Locked
 #define X86_MSR_IA32_FEATURE_CONTROL_VMXON  (1u << 2) // Enable VMXON
 
-#define VMX_ERR_CHECK(var)                  "setna %[" #var "];" // Check CF and ZF for error.
-
 // clang-format on
 
 /* Stores VMX info from the IA32_VMX_BASIC MSR. */
