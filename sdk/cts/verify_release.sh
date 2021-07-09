@@ -30,7 +30,7 @@ ARCHIVE_DIR="$FUCHSIA_DIR/$OUT_DIR/sdk/archive"
 function generate_archive() {
   cd $FUCHSIA_DIR
   # `fx set` with the right arguments to build the cts archive.
-  fx set $PRODUCT_BOARD --with //sdk:cts --args build_sdk_archives=true
+  fx set $PRODUCT_BOARD --with //sdk:cts --args build_sdk_archives=true --args cts_version='"test"'
   fx build
 }
 

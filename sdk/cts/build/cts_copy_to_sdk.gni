@@ -3,6 +3,19 @@
 # found in the LICENSE file.
 import("//build/sdk/sdk_atom.gni")
 
+declare_args() {
+  # Name of the CTS version.
+  #
+  # Used to change the dependency paths of CTS deps.
+  #
+  # Example of path change:
+  #   //zircon/system/ulib/zxtest -> //prebuilt/cts/${cts_version}/pkg/zxtest
+  #
+  # Usage:
+  #   `fx set PRODUCT.BOARD --args cts_version='"version_name"'`
+  cts_version = ""
+}
+
 # Copies specific sources to an SDK.
 #
 # This template should only be used directly to copy BUILD.gn files
@@ -72,6 +85,12 @@ template("cts_copy_to_sdk") {
         "--dest",
         rebase_path(output_path),
       ]
+      if (cts_version != "") {
+        args += [
+          "--cts_version",
+          cts_version,
+        ]
+      }
     }
   }
 

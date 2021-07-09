@@ -8,8 +8,14 @@ import os
 import shutil
 import sys
 
+_targets_to_remove = [
+    "cts_copy_to_sdk",
+    "cts_source_library",
+    "sdk_molecule",
+]
 
-def transform_build_gn(src, dest):
+
+def transform_build_gn(src, dest, in_tree_mappings):
     """
     Naively transforms a BUILD.gn file to work in the CTS archive.
     """
@@ -20,8 +26,13 @@ def transform_build_gn(src, dest):
     count = 0
     for line in lines:
         # Naively match curly braces and exclude them from the output.
-        if "cts_copy_to_sdk" in line or "sdk_molecule" in line or count:
+        if any(target in line for target in _targets_to_remove) or count:
             count = _find_brace(line, count)
+        # Replace dependency with CTS version.
+        elif any(key in line for key in in_tree_mappings.keys()):
+            for key in in_tree_mappings.keys():
+                if key in line:
+                    output.append(line.replace(key, in_tree_mappings[key]))
         else:
             output.append(line)
 
@@ -46,6 +57,8 @@ def main():
         "--source", required=True, help="Source path to BUILD.gn to update.")
     parser.add_argument(
         "--dest", required=True, help="Destination path of updated BUILD.gn.")
+    parser.add_argument(
+        "--cts_version", required=False, help="CTS version name.")
     args = parser.parse_args()
 
     if not os.path.isfile(args.source):
@@ -56,9 +69,17 @@ def main():
         print("Destination dir: %s does not exist" % args.dest)
         return 1
 
+    version = ""
+    if args.cts_version:
+        version = args.cts_version
+    in_tree_mappings = {
+        "//zircon/system/ulib/fbl": f"//prebuilt/cts/{version}/pkg/fbl",
+        "//zircon/system/ulib/zxtest": f"//prebuilt/cts/{version}/pkg/zxtest",
+    }
+
     ext = os.path.splitext(args.source)[1]
     if ext == ".gn":
-        transform_build_gn(args.source, args.dest)
+        transform_build_gn(args.source, args.dest, in_tree_mappings)
     else:
         shutil.copy(args.source, args.dest)
 

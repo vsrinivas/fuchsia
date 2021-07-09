@@ -115,7 +115,9 @@ cts_executable("fidl_hlcpp_conformance_tests_bin") {
   non_cts_deps = [ ":conformance_test_sources" ]
 }
 
-cts_fuchsia_unittest_component("fidl_hlcpp_conformance_tests") {
+cts_fuchsia_component("fidl_hlcpp_conformance_tests") {
+  manifest = "meta/fidl_hlcpp_conformance_tests.cml"
+  testonly = true
   visibility = [ ":*" ]
   deps = [ ":fidl_hlcpp_conformance_tests_bin" ]
 }
@@ -137,7 +139,9 @@ cts_executable("fidl_hlcpp_unit_tests_bin") {
   ]
 }
 
-cts_fuchsia_unittest_component("fidl_hlcpp_unit_tests") {
+cts_fuchsia_component("fidl_hlcpp_unit_tests") {
+  manifest = "meta/fidl_hlcpp_unit_tests.cml"
+  testonly = true
   visibility = [ ":*" ]
   deps = [ ":fidl_hlcpp_unit_tests_bin" ]
 }
@@ -190,9 +194,6 @@ cts_source_set("test_util") {
   sources = [ "test/test_util.h" ]
 
   public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
-
-  # TODO(77889): Either remove this or add this to the CTS.
-  non_cts_deps = [ "//zircon/system/public" ]
 }
 
 cts_source_set("handle_util") {
@@ -213,11 +214,17 @@ cts_copy_to_sdk("build") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fidl_hlcpp_conformance_tests_host($host_toolchain)",
-    ":fidl_hlcpp_tests",
-    ":fidl_hlcpp_unit_tests_host($host_toolchain)",
-  ]
+  deps = [ ":fidl_hlcpp_tests" ]
+
+  current_dir = get_label_info(":${target_name}", "dir")
+  is_prebuilt_cts =
+      string_replace(current_dir, "//prebuilt/cts", "") != current_dir
+  if (!is_prebuilt_cts) {
+    deps += [
+      ":fidl_hlcpp_conformance_tests_host($host_toolchain)",
+      ":fidl_hlcpp_unit_tests_host($host_toolchain)",
+    ]
+  }
 }
 
 sdk_molecule("test_sdks") {
@@ -225,7 +232,9 @@ sdk_molecule("test_sdks") {
   deps = [
     ":build_sdk",
     ":fidl_hlcpp_conformance_tests_bin_sdk",
+    ":fidl_hlcpp_conformance_tests_sdk",
     ":fidl_hlcpp_unit_tests_bin_sdk",
+    ":fidl_hlcpp_unit_tests_sdk",
     ":handle_util_sdk",
     ":host_test_sources_sdk",
     ":test_sources_sdk",
