@@ -59,11 +59,8 @@ golib("github.com/creack/pty") {
 }
 golib("github.com/dustin/go-humanize") {
 }
-golib("github.com/flynn/go-docopt") {
-}
 golib("github.com/theupdateframework/go-tuf") {
   deps = [
-    ":github.com/flynn/go-docopt",
     ":github.com/tent/canonical-json-go",
     ":golang.org/x/crypto",
   ]
@@ -98,8 +95,6 @@ golib("github.com/golang/groupcache/lru") {
 golib("github.com/google/shlex") {
 }
 golib("github.com/google/subcommands") {
-}
-golib("github.com/google/uuid") {
 }
 golib("github.com/kr/fs") {
 }
