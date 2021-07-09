@@ -291,3 +291,9 @@
   available_in_git: '21d77ff05881f8af8a5c6e0f87608abd587e91cd'
   areas: ['Kernel', 'Board']
   path: '/zircon/kernel/target/arm64/board/c18'
+- short_description: 'serial-ppp driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '553093'
+  available_in_git: '442b29735720936f85cc5372113e101b00cfba4e'
+  areas: ['Connectivity', 'Uart']
+  path: '/src/connectivity/ppp/drivers/serial-ppp'
