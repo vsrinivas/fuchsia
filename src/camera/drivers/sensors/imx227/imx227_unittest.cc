@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/clock/cpp/banjo-mock.h>
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/mipicsi/cpp/banjo-mock.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
 #include <zxtest/zxtest.h>
@@ -17,6 +16,7 @@
 #include "src/camera/drivers/sensors/imx227/imx227_id.h"
 #include "src/camera/drivers/sensors/imx227/imx227_seq.h"
 #include "src/camera/drivers/sensors/imx227/mipi_ccs_regs.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 // The following equality operators are necessary for mocks.
 
@@ -48,8 +48,8 @@ std::vector<uint8_t> SplitBytes(uint16_t bytes) {
 
 class FakeImx227Device : public Imx227Device {
  public:
-  FakeImx227Device()
-      : Imx227Device(fake_ddk::FakeParent()), proto_({&camera_sensor2_protocol_ops_, this}) {
+  FakeImx227Device(zx_device_t* parent)
+      : Imx227Device(parent), proto_({&camera_sensor2_protocol_ops_, this}) {
     SetProtocols();
     ExpectInitPdev();
     ASSERT_OK(InitPdev());
@@ -173,7 +173,9 @@ class FakeImx227Device : public Imx227Device {
 
 class Imx227DeviceTest : public zxtest::Test {
  public:
-  Imx227DeviceTest() : dut_() { ddk_.SetProtocol(ZX_PROTOCOL_CAMERA_SENSOR2, dut_.proto()); }
+  Imx227DeviceTest() : dut_(fake_parent_.get()) {
+    fake_parent_->AddProtocol(ZX_PROTOCOL_CAMERA_SENSOR2, dut_.proto()->ops, &dut_);
+  }
 
   void SetUp() override {
     dut_.ExpectInit();
@@ -188,7 +190,7 @@ class Imx227DeviceTest : public zxtest::Test {
   FakeImx227Device& dut() { return dut_; }
 
  private:
-  fake_ddk::Bind ddk_;
+  std::shared_ptr<MockDevice> fake_parent_ = MockDevice::FakeRootParent();
   FakeImx227Device dut_;
 };
 
