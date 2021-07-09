@@ -24,6 +24,8 @@ TEST(ElfSymbol, Names) {
       "debug_agent::SocketConnection::Accept(debug_ipc::MessageLoop*, "
       "int)::$_0::operator()()::'lambda0'()::operator()() const";
   EXPECT_EQ(kUnmangled, elf_symbol->GetFullName());
+  EXPECT_EQ(std::string("$elf(") + kUnmangled + ")",
+            elf_symbol->GetIdentifier().GetFullNameNoQual());
 
   // Currently everything is stuffed into one identifier component.
   // TODO(bug 41928) at least fix this for function calls. This will likely always be the case for
@@ -31,6 +33,11 @@ TEST(ElfSymbol, Names) {
   Identifier ident = elf_symbol->GetIdentifier();
   ASSERT_EQ(1u, ident.components().size());
   EXPECT_EQ(kUnmangled, ident.components()[0].name());
+
+  // Test a PLT symbol.
+  ElfSymbolRecord close_record(ElfSymbolType::kPlt, kAddress, 0, "zx_handle_close");
+  elf_symbol = fxl::MakeRefCounted<ElfSymbol>(fxl::WeakPtr<ModuleSymbols>(), close_record);
+  EXPECT_EQ("$plt(zx_handle_close)", elf_symbol->GetIdentifier().GetFullNameNoQual());
 }
 
 }  // namespace zxdb

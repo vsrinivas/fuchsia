@@ -12,17 +12,26 @@ std::string ElfSymbol::ComputeFullName() const {
 }
 
 Identifier ElfSymbol::ComputeIdentifier() const {
-  // For now, throw everything into the first identifier component. Many of the ELF symbols are
-  // not simple identifiers, and the parent mess up our identifier parsing.
-  // TODO(bug 41928) fix identifier parsing when there are function parameter types.
-  //
-  // Some examples:
-  // clang-format off
-  //  - "vtable for debug_agent::DebugAgent"
-  //  - "virtual thunk to std::__2::basic_istream<char, std::__2::char_traits<char> >::~basic_istream()"
-  //  - "(anonymous namespace)::TransformerBase::TransformString((anonymous namespace)::Position const&, (anonymous namespace)::TraversalResult*)::string_as_coded_vector"
-  // clang-format on
-  return Identifier(IdentifierComponent(record_.unmangled_name));
+  switch (elf_type()) {
+    case ElfSymbolType::kPlt:
+      // Annotate the name with a "PLT" special identifier type.
+      return Identifier(IdentifierComponent(SpecialIdentifier::kPlt, record_.unmangled_name));
+
+    case ElfSymbolType::kNormal:
+    default:
+      // For now, throw everything else into the first identifier component. Many of the ELF symbols
+      // are not simple identifiers, and the parent mess up our identifier parsing.
+      //
+      // TODO(bug 41928) fix identifier parsing when there are function parameter types.
+      //
+      // Some examples:
+      // clang-format off
+      //  - "vtable for debug_agent::DebugAgent"
+      //  - "virtual thunk to std::__2::basic_istream<char, std::__2::char_traits<char> >::~basic_istream()"
+      //  - "(anonymous namespace)::TransformerBase::TransformString((anonymous namespace)::Position const&, (anonymous namespace)::TraversalResult*)::string_as_coded_vector"
+      // clang-format on
+      return Identifier(IdentifierComponent(SpecialIdentifier::kElf, record_.unmangled_name));
+  }
 }
 
 }  // namespace zxdb

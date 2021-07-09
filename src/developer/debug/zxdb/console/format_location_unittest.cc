@@ -93,12 +93,12 @@ TEST(FormatLocation, FormatLocation_ELF) {
       fxl::WeakPtr<ModuleSymbols>(),
       ElfSymbolRecord(ElfSymbolType::kPlt, kFunctionAddress, 0, "memset")));
   EXPECT_EQ(
-      "memset",
+      "$plt(memset)",
       FormatLocation(Location(kFunctionAddress, FileLine(), 0, symbol_context, elf_symbol), options)
           .AsString());
 
   // Address with an offset from the beginning.
-  EXPECT_EQ("memset + 0x6",
+  EXPECT_EQ("$plt(memset) + 0x6",
             FormatLocation(
                 Location(kFunctionAddress + 6, FileLine(), 0, symbol_context, elf_symbol), options)
                 .AsString());
