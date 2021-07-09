@@ -5,6 +5,8 @@
 #ifndef SRC_UI_INPUT_DRIVERS_I2C_HID_I2C_HID_H_
 #define SRC_UI_INPUT_DRIVERS_I2C_HID_I2C_HID_H_
 
+#include <fuchsia/hardware/acpi/cpp/banjo.h>
+#include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
@@ -17,6 +19,8 @@
 #include <ddktl/device.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
+
+#include "src/devices/lib/acpi/client.h"
 
 namespace i2c_hid {
 
@@ -50,7 +54,8 @@ using DeviceType = ddk::Device<I2cHidbus, ddk::Initializable, ddk::Unbindable>;
 
 class I2cHidbus : public DeviceType, public ddk::HidbusProtocol<I2cHidbus, ddk::base_protocol> {
  public:
-  explicit I2cHidbus(zx_device_t* device) : DeviceType(device) {}
+  explicit I2cHidbus(zx_device_t* device, acpi::Client client)
+      : DeviceType(device), acpi_client_(std::move(client)) {}
   ~I2cHidbus() = default;
 
   // Methods required by the ddk mixins.
@@ -109,6 +114,8 @@ class I2cHidbus : public DeviceType, public ddk::HidbusProtocol<I2cHidbus, ddk::
   ddk::I2cChannel i2c_ __TA_GUARDED(i2c_lock_);
   // True if reset-in-progress. Initalize as true so no work gets done until this is cleared.
   bool i2c_pending_reset_ __TA_GUARDED(i2c_lock_) = true;
+
+  acpi::Client acpi_client_;
 };
 
 }  // namespace i2c_hid

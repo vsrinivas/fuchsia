@@ -5,6 +5,8 @@
 #include "i2c-hid.h"
 
 #include <endian.h>
+#include <fuchsia/hardware/acpi/cpp/banjo.h>
+#include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -14,6 +16,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/hw/i2c.h>
 #include <zircon/types.h>
 
@@ -21,6 +24,7 @@
 
 #include <fbl/auto_lock.h>
 
+#include "src/devices/lib/acpi/client.h"
 #include "src/ui/input/drivers/i2c-hid/i2c_hid_bind.h"
 
 namespace i2c_hid {
@@ -431,13 +435,34 @@ void I2cHidbus::DdkUnbind(ddk::UnbindTxn txn) {
 void I2cHidbus::DdkRelease() { delete this; }
 
 zx_status_t I2cHidbus::ReadI2cHidDesc(I2cHidDesc* hiddesc) {
-  // TODO: get the address out of ACPI
   uint8_t buf[2];
-  uint8_t* data = buf;
-  *data++ = 0x01;
-  *data++ = 0x00;
   uint8_t out[4];
   zx_status_t status;
+
+  // Get the address of the HID descriptor from ACPI.
+  // https://docs.microsoft.com/en-us/windows-hardware/drivers/bringup/hidi2c-device-specific-method---dsm-
+  // i2c-hid DSM UUID: 3cdff6f7-4267-4555-ad05-b30a3d8938de
+  auto result = acpi_client_.CallDsm(
+      acpi::Uuid::Create(0x3cdff6f7, 0x4267, 0x4555, 0xad05, 0xb30a3d8938de), 1, 1, std::nullopt);
+  if (result.is_error()) {
+    zxlogf(ERROR, "Failed to EvaluateObject call: %s", result.status_string());
+    return result.error_value();
+  }
+
+  if (result->is_status()) {
+    zxlogf(ERROR, "EvaluateObject failed: 0x%x", int(result->status_val()));
+    return ZX_ERR_INTERNAL;
+  }
+
+  if (!result->is_integer()) {
+    zxlogf(ERROR, "I2CHID _DSM has wrong return type!");
+    return ZX_ERR_WRONG_TYPE;
+  }
+
+  uint64_t address = result->integer_val();
+  zxlogf(INFO, "i2c-hid using address=0x%lx", address);
+  buf[0] = address & 0xff;
+  buf[1] = (address >> 8) & 0xff;
 
   fbl::AutoLock lock(&i2c_lock_);
 
@@ -551,8 +576,13 @@ void I2cHidbus::DdkInit(ddk::InitTxn txn) {
 }
 
 static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* parent) {
-  zx_status_t status;
-  auto dev = std::make_unique<I2cHidbus>(parent);
+  auto client = acpi::Client::Create(parent);
+  if (client.is_error()) {
+    zxlogf(ERROR, "i2c-hid: could not get ACPI device");
+    return client.error_value();
+  }
+
+  auto dev = std::make_unique<I2cHidbus>(parent, std::move(client.value()));
 
   ddk::I2cChannel i2c(parent, "i2c000");
   if (!i2c.is_valid()) {
@@ -560,7 +590,7 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  status = dev->Bind(std::move(i2c));
+  zx_status_t status = dev->Bind(std::move(i2c));
   if (status == ZX_OK) {
     // devmgr is now in charge of the memory for dev.
     __UNUSED auto ptr = dev.release();

@@ -5,6 +5,7 @@
 #include "i2c-hid.h"
 
 #include <endian.h>
+#include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/ddk/debug.h>
@@ -15,6 +16,7 @@
 #include <lib/fake-hidbus-ifc/fake-hidbus-ifc.h>
 #include <lib/fake-i2c/fake-i2c.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/interrupt.h>
@@ -32,6 +34,8 @@
 
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
+
+#include "src/devices/lib/acpi/mock/mock-acpi.h"
 
 namespace i2c_hid {
 
@@ -210,8 +214,25 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
 
 class I2cHidTest : public zxtest::Test {
  public:
+  I2cHidTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   void SetUp() override {
-    device_ = new I2cHidbus(fake_ddk::kFakeParent);
+    ASSERT_OK(loop_.StartThread("i2c-hid-test-thread"));
+    acpi_device_.SetEvaluateObject(
+        [](acpi::mock::Device::EvaluateObjectRequestView view,
+           acpi::mock::Device::EvaluateObjectCompleter::Sync& completer) {
+          fidl::FidlAllocator<> alloc;
+          fuchsia_hardware_acpi::wire::Object obj;
+          // Always use address 0x01. This should match FakeI2cHid::kHidDescCommand.
+          obj.set_integer_val(alloc, 0x1);
+          fuchsia_hardware_acpi::wire::EncodedObject encoded;
+          encoded.set_object(alloc, obj);
+
+          ASSERT_TRUE(completer.ReplySuccess(encoded).ok());
+        });
+
+    auto client = acpi_device_.CreateClient(loop_.dispatcher());
+    ASSERT_OK(client.status_value());
+    device_ = new I2cHidbus(fake_ddk::kFakeParent, std::move(client.value()));
 
     zx_handle_t interrupt;
     ASSERT_OK(zx_interrupt_create(ZX_HANDLE_INVALID, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
@@ -232,6 +253,8 @@ class I2cHidTest : public zxtest::Test {
   void StartHidBus() { device_->HidbusStart(fake_hid_bus_.GetProto()); }
 
  protected:
+  async::Loop loop_;
+  acpi::mock::Device acpi_device_;
   I2cHidbus* device_;
   fake_ddk::Bind ddk_;
   FakeI2cHid fake_i2c_hid_;
@@ -286,7 +309,9 @@ TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {
   fake_hidbus_ifc::FakeHidbusIfc fake_hid_bus_;
   ddk::I2cChannel channel_;
 
-  device_ = new I2cHidbus(fake_ddk::kFakeParent);
+  device_ =
+      new I2cHidbus(fake_ddk::kFakeParent,
+                    acpi::Client::Create(fidl::WireSyncClient<fuchsia_hardware_acpi::Device>()));
   channel_ = ddk::I2cChannel(fake_i2c_hid_.GetProto());
 
   fake_i2c_hid_.SetHidDescriptorFailure(ZX_ERR_TIMED_OUT);

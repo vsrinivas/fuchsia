@@ -36,7 +36,7 @@ class Device : public fidl::WireServer<fuchsia_hardware_acpi::Device> {
   void Set##name(name##Fn fn) { name##_fn_ = std::move(fn); }                       \
                                                                                     \
  private:                                                                           \
-  name##Fn name##_fn_ = nullptr;
+  name##Fn name##_fn_ = nullptr /* deliberate missing semicolon */
 
   MOCK_FN_IMPL(GetBusId, ZX_ERR_NOT_SUPPORTED);
   MOCK_FN_IMPL(EvaluateObject, fuchsia_hardware_acpi::wire::Status::kNotImplemented);
