@@ -509,6 +509,9 @@ impl MemoryManager {
     }
 
     pub fn read_all(&self, data: &[UserBuffer], bytes: &mut [u8]) -> Result<(), Errno> {
+        if bytes.len() == 0 {
+            return Ok(());
+        }
         let mut offset = 0;
         for buffer in data {
             let end = std::cmp::min(offset + buffer.length, bytes.len());
@@ -553,6 +556,9 @@ impl MemoryManager {
     }
 
     pub fn write_all(&self, data: &[UserBuffer], bytes: &[u8]) -> Result<(), Errno> {
+        if bytes.len() == 0 {
+            return Ok(());
+        }
         let mut offset = 0;
         for buffer in data {
             let end = std::cmp::min(offset + buffer.length, bytes.len());

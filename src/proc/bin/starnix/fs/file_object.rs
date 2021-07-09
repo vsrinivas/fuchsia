@@ -259,6 +259,18 @@ impl FileObject {
         &self.name.node
     }
 
+    pub fn can_read(&self) -> bool {
+        // TODO: Consider caching the access mode outside of this lock
+        // because it cannot change.
+        self.flags.lock().can_read()
+    }
+
+    pub fn can_write(&self) -> bool {
+        // TODO: Consider caching the access mode outside of this lock
+        // because it cannot change.
+        self.flags.lock().can_write()
+    }
+
     fn ops(&self) -> &dyn FileOps {
         &*self.ops
     }
@@ -279,14 +291,23 @@ impl FileObject {
     }
 
     pub fn read(&self, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+        if !self.can_read() {
+            return Err(EBADF);
+        }
         self.blocking_op(task, || self.ops().read(self, task, data), FdEvents::POLLIN)
     }
 
     pub fn read_at(&self, task: &Task, offset: usize, data: &[UserBuffer]) -> Result<usize, Errno> {
+        if !self.can_read() {
+            return Err(EBADF);
+        }
         self.blocking_op(task, || self.ops().read_at(self, task, offset, data), FdEvents::POLLIN)
     }
 
     pub fn write(&self, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+        if !self.can_write() {
+            return Err(EBADF);
+        }
         self.blocking_op(task, || self.ops().write(self, task, data), FdEvents::POLLOUT)
     }
 
@@ -296,6 +317,9 @@ impl FileObject {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
+        if !self.can_write() {
+            return Err(EBADF);
+        }
         self.blocking_op(task, || self.ops().write_at(self, task, offset, data), FdEvents::POLLOUT)
     }
 
@@ -304,6 +328,13 @@ impl FileObject {
     }
 
     pub fn get_vmo(&self, task: &Task, prot: zx::VmarFlags) -> Result<zx::Vmo, Errno> {
+        if prot.contains(zx::VmarFlags::PERM_READ) && !self.can_read() {
+            return Err(EACCES);
+        }
+        if prot.contains(zx::VmarFlags::PERM_WRITE) && !self.can_write() {
+            return Err(EACCES);
+        }
+        // TODO: Check for PERM_EXECUTE by checking whether the filesystem is mounted as noexec.
         self.ops().get_vmo(self, task, prot)
     }
 

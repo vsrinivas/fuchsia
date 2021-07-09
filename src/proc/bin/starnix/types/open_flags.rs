@@ -40,13 +40,11 @@ bitflags! {
 }
 
 impl OpenFlags {
-    #[cfg(test)]
     pub fn can_read(&self) -> bool {
         let access_mode = self.bits() & O_ACCESS_MASK;
         return access_mode == uapi::O_RDONLY || access_mode == uapi::O_RDWR;
     }
 
-    #[cfg(test)]
     pub fn can_write(&self) -> bool {
         let access_mode = self.bits() & O_ACCESS_MASK;
         return access_mode == uapi::O_WRONLY || access_mode == uapi::O_RDWR;

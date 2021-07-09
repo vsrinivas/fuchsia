@@ -163,4 +163,24 @@ mod test {
 
         assert_eq!(test_bytes, &*read_vec);
     }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_permissions() {
+        let fs_context = FsContext::new(Namespace::new(new_tmpfs()));
+        let (_kernel, task_owner) = create_kernel_and_task_with_fs(fs_context);
+        let task = &task_owner.task;
+
+        let path = b"test.bin";
+        let file = task.open_file(path, OpenFlags::CREAT).expect("failed to create file");
+        assert_eq!(0, file.read(task, &[]).expect("failed to read"));
+        assert!(file.write(task, &[]).is_err());
+
+        let file = task.open_file(path, OpenFlags::WRONLY).expect("failed to open file WRONLY");
+        assert!(file.read(task, &[]).is_err());
+        assert_eq!(0, file.write(task, &[]).expect("failed to write"));
+
+        let file = task.open_file(path, OpenFlags::RDWR).expect("failed to open file RDWR");
+        assert_eq!(0, file.read(task, &[]).expect("failed to read"));
+        assert_eq!(0, file.write(task, &[]).expect("failed to write"));
+    }
 }
