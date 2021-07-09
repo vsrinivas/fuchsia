@@ -45,10 +45,6 @@ class StepIntoThreadController : public ThreadController {
   bool should_skip_prologue() const { return should_skip_prologue_; }
   void set_should_skip_prologue(bool skip) { should_skip_prologue_ = skip; }
 
-  // Forwards the setting from the underlying StepThreadController.
-  bool stop_on_no_symbols() const { return step_into_->stop_on_no_symbols(); }
-  void set_stop_on_no_symbols(bool stop) { step_into_->set_stop_on_no_symbols(stop); }
-
   // ThreadController implementation.
   void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override;
   ContinueOp GetContinueOp() override;

@@ -107,11 +107,6 @@ class ProcessSymbols {
   // ModuleSymbols::LineDetailsForAddress() for more).
   LineDetails LineDetailsForAddress(uint64_t address, bool greedy = false) const;
 
-  // Returns true if the code location is inside a module where there are symbols loaded. If we did
-  // something like index ELF exports, those wouldn't count. "Symbols loaded" here means there is
-  // real DWARF debugging information available.
-  bool HaveSymbolsLoadedForModuleAt(uint64_t address) const;
-
  private:
   struct ModuleInfo {
     std::string name;

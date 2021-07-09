@@ -18,8 +18,6 @@ namespace zxdb {
 
 namespace {
 
-constexpr int kStepIntoUnsymbolized = 1;
-
 const char kStepShortHelp[] = "step / s: Step one source line, going into subroutines.";
 const char kStepHelp[] =
     R"(step [ <function-fragment> ]
@@ -51,12 +49,10 @@ Stepping into specific functions
   contains this fragment, and automatically complete that function call
   otherwise.
 
-Arguments
+Unsymbolized functions
 
-  --unsymbolized | -u
-      Force stepping into functions with no symbols. Normally "step" will
-      skip over library calls or thunks with no symbols. This option allows
-      one to step into these unsymbolized calls.
+  The step command follows the "skip-unsymbolized" setting when an unsymbolized
+  function is encountered. See "get skip-unsymbolized" for more.
 
 Examples
 
@@ -91,16 +87,10 @@ Err RunVerbStep(ConsoleContext* context, const Command& cmd) {
   if (cmd.args().empty()) {
     // Step for a single line.
     auto controller = std::make_unique<StepIntoThreadController>(StepMode::kSourceLine);
-    controller->set_stop_on_no_symbols(cmd.HasSwitch(kStepIntoUnsymbolized));
     cmd.thread()->ContinueWith(std::move(controller), std::move(completion));
   } else if (cmd.args().size() == 1) {
     // Step into a specific named subroutine. This uses the "step over" controller with a special
     // condition.
-    if (cmd.HasSwitch(kStepIntoUnsymbolized)) {
-      return Err(
-          "The --unsymbolized switch is not compatible with a named "
-          "subroutine to step\ninto.");
-    }
     auto controller = std::make_unique<StepOverThreadController>(StepMode::kSourceLine);
     controller->set_subframe_should_stop_callback(
         [substr = cmd.args()[0]](const Frame* frame) -> bool {
@@ -120,11 +110,8 @@ Err RunVerbStep(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 VerbRecord GetStepVerbRecord() {
-  SwitchRecord step_force(kStepIntoUnsymbolized, false, "unsymbolized", 'u');
-  VerbRecord step(&RunVerbStep, {"step", "s"}, kStepShortHelp, kStepHelp, CommandGroup::kStep,
+  return VerbRecord(&RunVerbStep, {"step", "s"}, kStepShortHelp, kStepHelp, CommandGroup::kStep,
                   SourceAffinity::kSource);
-  step.switches.push_back(step_force);
-  return step;
 }
 
 }  // namespace zxdb

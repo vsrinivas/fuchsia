@@ -40,6 +40,8 @@ struct ClientSettings {
 
     static const char* kSecondChanceExceptions;
 
+    static const char* kSkipUnsymbolized;
+
     // Symbol lookup.
     static const char* kSymbolIndexFiles;
     static const char* kSymbolPaths;

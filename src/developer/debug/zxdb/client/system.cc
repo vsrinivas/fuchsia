@@ -94,6 +94,11 @@ static const char* kSecondChanceExceptionsDescription =
    • "ui": undefined instruction
    • "ua": unaligned access)";
 
+const char* ClientSettings::System::kSkipUnsymbolized = "skip-unsymbolized";
+static const char* kSkipUnsymbolizedDescription =
+    R"(  When true, the "step" command will automatically skip over unsymbolized
+  function calls. When false, it will stop.)";
+
 // Symbol lookup.
 const char* ClientSettings::System::kSymbolIndexFiles = "symbol-index-files";
 static const char* kSymbolIndexFilesDescription =
@@ -156,6 +161,7 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
                       kUnalignedAccessExcpTypeShorthand,
                       kPolicyErrorExcpTypeShorthand,
                   });
+  schema->AddBool(ClientSettings::System::kSkipUnsymbolized, kSkipUnsymbolizedDescription, true);
 
   // Symbol lookup.
   schema->AddList(ClientSettings::System::kSymbolIndexFiles, kSymbolIndexFilesDescription, {});

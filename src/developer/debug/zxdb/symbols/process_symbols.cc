@@ -199,11 +199,6 @@ LineDetails ProcessSymbols::LineDetailsForAddress(uint64_t address, bool greedy)
                                                                 address, greedy);
 }
 
-bool ProcessSymbols::HaveSymbolsLoadedForModuleAt(uint64_t address) const {
-  const ModuleInfo* info = InfoForAddress(address);
-  return info && info->symbols->module_symbols();
-}
-
 ProcessSymbols::ModuleInfo* ProcessSymbols::SaveModuleInfo(const debug_ipc::Module& module,
                                                            Err* symbol_load_err) {
   ModuleInfo info;

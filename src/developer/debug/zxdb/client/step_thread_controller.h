@@ -42,13 +42,6 @@ class StepThreadController : public ThreadController {
 
   ~StepThreadController() override;
 
-  // Controls whether the thread will stop when it encounters code with no symbols. When false, if a
-  // function is called with no symbols, it will automatically step out or through it.
-  //
-  // This only affects "step by line" mode which is symbol-aware.
-  bool stop_on_no_symbols() const { return stop_on_no_symbols_; }
-  void set_stop_on_no_symbols(bool stop) { stop_on_no_symbols_ = stop; }
-
   // ThreadController implementation.
   void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override;
   ContinueOp GetContinueOp() override;
@@ -74,9 +67,6 @@ class StepThreadController : public ThreadController {
   // starting at the current address.
   bool TrySteppingIntoInline(StepIntoInline command);
 
-  // Version of OnThreadStop that handles the case where the current code has no line information.
-  StopOp OnThreadStopOnUnsymbolizedCode();
-
   StepMode step_mode_;
 
   // When step_mode_ == kSourceLine, this represents the line information and the stack fingerprint
@@ -91,11 +81,8 @@ class StepThreadController : public ThreadController {
   // instruction.
   AddressRanges current_ranges_;
 
-  bool stop_on_no_symbols_ = false;
-
-  // Used to step out of unsymbolized functions. When non-null, the user wants to skip unsymbolized
-  // code and has stepped into an unsymbolized function.
-  std::unique_ptr<FinishThreadController> finish_unsymolized_function_;
+  // Handles stepping out or through special functions we want to ignore.
+  std::unique_ptr<ThreadController> function_step_;
 };
 
 }  // namespace zxdb
