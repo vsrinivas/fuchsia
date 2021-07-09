@@ -11,6 +11,12 @@ import("//src/lib/vulkan/layers.gni")
 declare_args() {
   # Include the vulkan validation layers in carnelian examples.
   carnelian_enable_vulkan_validation = is_debug
+
+  # Point this to the location of external rives files to be included as extras
+  carnelian_static_rives_extras = []
+
+  # Point this to the location of external txt files to be included as extras
+  carnelian_static_txts_extras = []
 }
 
 rustc_library("carnelian") {
@@ -471,19 +477,17 @@ resource("static_sheds") {
 
 resource("static_rives") {
   sources = [
-    "examples/static/dark.riv",
-    "examples/static/juice.riv",
-    "examples/static/knight.riv",
-    "examples/static/light.riv",
-  ]
+              "examples/static/juice.riv",
+              "examples/static/knight.riv",
+            ] + carnelian_static_rives_extras
   outputs = [ "data/static/{{source_file_part}}" ]
 }
 
 resource("static_txts") {
   sources = [
-    "examples/static/nyancat.txt",
-    "examples/static/spinningcursor.txt",
-  ]
+              "examples/static/nyancat.txt",
+              "examples/static/spinningcursor.txt",
+            ] + carnelian_static_txts_extras
   outputs = [ "data/static/{{source_file_part}}" ]
 }
 
