@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_io as fio;
 use std::convert::TryInto;
 use std::usize;
 
@@ -77,16 +76,16 @@ pub fn sys_fcntl(
         }
         F_GETFL => {
             let file = ctx.task.files.get(fd)?;
-            let flags = file.flags.lock();
-            Ok((*flags).into())
+            Ok(file.flags().bits().into())
         }
         F_SETFL => {
             // TODO: Add O_ASYNC once we have a decl for it.
-            const SETTABLE_FLAGS: u32 = O_APPEND | O_DIRECT | O_NOATIME | O_NONBLOCK;
-            let requested_flags = (arg as u32) & SETTABLE_FLAGS;
+            let settable_flags =
+                OpenFlags::APPEND | OpenFlags::DIRECT | OpenFlags::NOATIME | OpenFlags::NONBLOCK;
+            let requested_flags =
+                OpenFlags::from_bits_truncate((arg as u32) & settable_flags.bits());
             let file = ctx.task.files.get(fd)?;
-            let mut file_flags = file.flags.lock();
-            *file_flags = (*file_flags & !SETTABLE_FLAGS) | requested_flags;
+            file.update_file_flags(requested_flags, settable_flags);
             Ok(SUCCESS)
         }
         F_GETPIPE_SZ | F_SETPIPE_SZ => {
@@ -156,28 +155,32 @@ pub fn sys_fstatfs(
     Ok(SUCCESS)
 }
 
-fn get_fio_flags_from_open_flags(open_flags: u32) -> Result<u32, Errno> {
-    match open_flags & O_RDWR {
-        O_RDONLY => Ok(fio::OPEN_RIGHT_READABLE),
-        O_WRONLY => Ok(fio::OPEN_RIGHT_WRITABLE),
-        O_RDWR => Ok(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE),
-        _ => Err(EINVAL),
-    }
-}
-
-fn open_internal(
+/// A convenient wrapper for Task::open_file_at.
+///
+/// Reads user_path from user memory and then calls through to Task::open_file_at.
+fn open_file_internal(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,
-    fio_flags: u32,
+    flags: u32,
     _mode: mode_t,
 ) -> Result<FileHandle, Errno> {
-    // TODO(tbodt): handle the flags properly
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
+    task.open_file_at(dir_fd, path, OpenFlags::from_bits_truncate(flags))
+}
 
-    let open_flags = if fio_flags & O_CREAT != 0 { OpenFlags::CREATE } else { OpenFlags::empty() };
-    task.open_file_at(dir_fd, path, open_flags)
+/// A convenient wrapper for Task::open_node_at.
+///
+/// Reads user_path from user memory and then calls through to Task::open_file_at.
+fn open_node_internal(
+    task: &Task,
+    dir_fd: FdNumber,
+    user_path: UserCString,
+) -> Result<FsNodeHandle, Errno> {
+    let mut buf = [0u8; PATH_MAX as usize];
+    let path = task.mm.read_c_string(user_path, &mut buf)?;
+    task.open_node_at(dir_fd, path)
 }
 
 pub fn sys_openat(
@@ -187,8 +190,7 @@ pub fn sys_openat(
     flags: u32,
     mode: mode_t,
 ) -> Result<SyscallResult, Errno> {
-    let fio_flags = get_fio_flags_from_open_flags(flags)?;
-    let file = open_internal(&ctx.task, dir_fd, user_path, fio_flags, mode)?;
+    let file = open_file_internal(&ctx.task, dir_fd, user_path, flags, mode)?;
     Ok(ctx.task.files.add(file)?.into())
 }
 
@@ -208,34 +210,33 @@ pub fn sys_faccessat(
         return Err(EINVAL);
     }
 
-    let fio_flags = if mode == F_OK {
-        // TODO: Using open_internal to implement faccessat is not quite correct.
-        //       For example, we cannot properly implement F_OK, which could
-        //       succeed for write-only files. Implementing faccessat properly
-        //       will require a more complete VFS that can perform access checks
-        //       directly.
-        fio::OPEN_RIGHT_READABLE
-    } else {
-        let mut fio_flags = 0;
-        if mode & X_OK != 0 {
-            fio_flags |= fio::OPEN_RIGHT_EXECUTABLE;
-        }
-        if mode & W_OK != 0 {
-            fio_flags |= fio::OPEN_RIGHT_WRITABLE;
-        }
-        if mode & R_OK != 0 {
-            fio_flags |= fio::OPEN_RIGHT_READABLE;
-        }
-        fio_flags
-    };
+    let node = open_node_internal(&ctx.task, dir_fd, user_path)?;
 
-    let _ = open_internal(&ctx.task, dir_fd, user_path, fio_flags, 0)?;
+    if mode == F_OK {
+        return Ok(SUCCESS);
+    }
+
+    // TODO: These access checks are not quite correct because they don't
+    // consider the current uid and they don't consider GRO or OTH bits.
+    // Really, these checks should be done by the auth system once that
+    // exists.
+    let stat = node.update_stat()?;
+    if mode & X_OK != 0 && stat.st_mode & S_IRUSR == 0 {
+        return Err(EACCES);
+    }
+    if mode & W_OK != 0 && stat.st_mode & S_IWUSR == 0 {
+        return Err(EACCES);
+    }
+    if mode & R_OK != 0 && stat.st_mode & S_IXUSR == 0 {
+        return Err(EACCES);
+    }
+
     Ok(SUCCESS)
 }
 
 pub fn sys_chdir(ctx: &SyscallContext<'_>, user_path: UserCString) -> Result<SyscallResult, Errno> {
-    let fio_flags = fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE;
-    let file = open_internal(&ctx.task, FdNumber::AT_FDCWD, user_path, fio_flags, 0)?;
+    let file =
+        open_file_internal(&ctx.task, FdNumber::AT_FDCWD, user_path, O_RDONLY | O_DIRECTORY, 0)?;
     ctx.task.fs.chdir(&file);
     Ok(SUCCESS)
 }
@@ -277,9 +278,8 @@ pub fn sys_newfstatat(
         not_implemented!("newfstatat: flags 0x{:x}", flags);
         return Err(ENOSYS);
     }
-    let fio_flags = fio::OPEN_RIGHT_READABLE;
-    let file = open_internal(&ctx.task, dir_fd, user_path, fio_flags, 0)?;
-    let result = file.node().update_stat()?;
+    let node = open_node_internal(&ctx.task, dir_fd, user_path)?;
+    let result = node.update_stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
 }
@@ -291,7 +291,7 @@ pub fn sys_readlinkat(
     _buffer: UserAddress,
     _buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    let _ = open_internal(&ctx.task, dir_fd, user_path, fio::OPEN_RIGHT_READABLE, 0)?;
+    let _ = open_node_internal(&ctx.task, dir_fd, user_path)?;
     Err(EINVAL)
 }
 
@@ -310,9 +310,9 @@ pub fn sys_truncate(
     length: off_t,
 ) -> Result<SyscallResult, Errno> {
     let length = length.try_into().map_err(|_| EINVAL)?;
-    let file =
-        open_internal(&ctx.task, FdNumber::AT_FDCWD, user_path, fio::OPEN_RIGHT_WRITABLE, 0)?;
-    file.node().truncate(length)?;
+    let node = open_node_internal(&ctx.task, FdNumber::AT_FDCWD, user_path)?;
+    // TODO: Check for writability.
+    node.truncate(length)?;
     Ok(SUCCESS)
 }
 
@@ -323,6 +323,7 @@ pub fn sys_ftruncate(
 ) -> Result<SyscallResult, Errno> {
     let length = length.try_into().map_err(|_| EINVAL)?;
     let file = ctx.task.files.get(fd)?;
+    // TODO: Check for writability.
     file.node().truncate(length)?;
     Ok(SUCCESS)
 }
@@ -358,14 +359,15 @@ pub fn sys_pipe2(
     user_pipe: UserRef<FdNumber>,
     flags: u32,
 ) -> Result<SyscallResult, Errno> {
-    if flags & !(O_CLOEXEC | O_NONBLOCK | O_DIRECT) != 0 {
+    let supported_file_flags = OpenFlags::NONBLOCK | OpenFlags::DIRECT;
+    if flags & !(O_CLOEXEC | supported_file_flags.bits()) != 0 {
         return Err(EINVAL);
     }
     let (read, write) = new_pipe(ctx.kernel());
 
-    let file_flags = flags & (O_NONBLOCK | O_DIRECT);
-    read.set_file_flags(O_RDONLY | file_flags);
-    write.set_file_flags(O_WRONLY | file_flags);
+    let file_flags = OpenFlags::from_bits_truncate(flags & supported_file_flags.bits());
+    read.update_file_flags(file_flags, supported_file_flags);
+    write.update_file_flags(file_flags, supported_file_flags);
 
     let fd_flags = get_fd_flags(flags);
     let fd_read = ctx.task.files.add_with_flags(read, fd_flags)?;
@@ -402,7 +404,7 @@ mod tests {
         let (_kernel, task_owner) = create_kernel_and_task();
         let ctx = SyscallContext::new(&task_owner.task);
         let fd = FdNumber::from_raw(10);
-        let file_handle = task_owner.task.open_file(b"data/testfile.txt")?;
+        let file_handle = task_owner.task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
         let file_size = file_handle.node().stat().st_size;
         task_owner.task.files.insert(fd, file_handle);
 

@@ -215,8 +215,8 @@ pub struct FileObject {
     ops: Box<dyn FileOps>,
     name: NamespaceNode,
     pub offset: Mutex<off_t>,
-    pub flags: Mutex<u32>,
-    pub async_owner: Mutex<pid_t>,
+    flags: Mutex<OpenFlags>,
+    async_owner: Mutex<pid_t>,
 }
 
 pub type FileHandle = Arc<FileObject>;
@@ -225,20 +225,24 @@ impl FileObject {
     /// Create a FileObject that is not mounted in a namespace.
     ///
     /// The returned FileObject does not have a name.
-    pub fn new_unmounted<T: FileOps + 'static>(ops: T, node: FsNodeHandle) -> FileHandle {
-        Self::new(Box::new(ops), NamespaceNode::new_unmounted(node))
+    pub fn new_unmounted<T: FileOps + 'static>(
+        ops: T,
+        node: FsNodeHandle,
+        flags: OpenFlags,
+    ) -> FileHandle {
+        Self::new(Box::new(ops), NamespaceNode::new_unmounted(node), flags)
     }
 
     /// Create a FileObject with an associated NamespaceNode.
     ///
     /// This function is not typically called directly. Instead, consider
     /// calling NamespaceNode::open.
-    pub fn new(ops: Box<dyn FileOps>, name: NamespaceNode) -> FileHandle {
+    pub fn new(ops: Box<dyn FileOps>, name: NamespaceNode, flags: OpenFlags) -> FileHandle {
         Arc::new(Self {
             name,
             ops,
             offset: Mutex::new(0),
-            flags: Mutex::new(0),
+            flags: Mutex::new(flags),
             async_owner: Mutex::new(0),
         })
     }
@@ -265,7 +269,7 @@ impl FileObject {
     {
         loop {
             match op() {
-                Err(EAGAIN) if !self.has_file_flag(O_NONBLOCK) => {
+                Err(EAGAIN) if !self.flags().contains(OpenFlags::NONBLOCK) => {
                     self.ops().wait_async(self, &task.waiter, events);
                     task.waiter.wait()?;
                 }
@@ -317,14 +321,15 @@ impl FileObject {
         self.ops().fcntl(self, task, cmd, arg)
     }
 
-    pub fn set_file_flags(&self, value: u32) {
+    pub fn update_file_flags(&self, value: OpenFlags, mask: OpenFlags) {
+        let mask_bits = mask.bits();
         let mut flags = self.flags.lock();
-        *flags = value;
+        let bits = (flags.bits() & !mask_bits) | (value.bits() & mask_bits);
+        *flags = OpenFlags::from_bits_truncate(bits);
     }
 
-    pub fn has_file_flag(&self, flag: u32) -> bool {
-        let flags = self.flags.lock();
-        return *flags & flag != 0;
+    pub fn flags(&self) -> OpenFlags {
+        *self.flags.lock()
     }
 
     /// Get the async owner of this file.

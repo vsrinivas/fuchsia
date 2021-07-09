@@ -318,7 +318,7 @@ impl Task {
         argv: &Vec<CString>,
         environ: &Vec<CString>,
     ) -> Result<ThreadStartInfo, Errno> {
-        let executable_file = self.open_file(path.to_bytes())?;
+        let executable_file = self.open_file(path.to_bytes(), OpenFlags::RDONLY)?;
         let executable = executable_file
             .get_vmo(self, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
 
@@ -374,16 +374,11 @@ impl Task {
         }
     }
 
-    pub fn open_file(&self, path: &FsStr) -> Result<FileHandle, Errno> {
-        self.open_file_at(FdNumber::AT_FDCWD, path, OpenFlags::empty())
-    }
-
-    pub fn open_file_at(
+    fn resolve_dir_fd<'a>(
         &self,
         dir_fd: FdNumber,
-        mut path: &FsStr,
-        flags: OpenFlags,
-    ) -> Result<FileHandle, Errno> {
+        mut path: &'a FsStr,
+    ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
         let dir = if path[0] == b'/' {
             path = &path[1..];
             self.fs.root.clone()
@@ -393,8 +388,35 @@ impl Task {
             let file = self.files.get(dir_fd)?;
             file.name().clone()
         };
+        Ok((dir, path))
+    }
 
-        if flags.contains(OpenFlags::CREATE) {
+    /// A convenient wrapper for opening files relative to FdNumber::AT_FDCWD.
+    ///
+    /// Returns a FileHandle but does not install the FileHandle in the FdTable
+    /// for this task.
+    pub fn open_file(&self, path: &FsStr, flags: OpenFlags) -> Result<FileHandle, Errno> {
+        self.open_file_at(FdNumber::AT_FDCWD, path, flags)
+    }
+
+    /// The primary entry point for opening files relative to a task.
+    ///
+    /// Absolute paths are resolve relative to the root of the FsContext for
+    /// this task. Relative paths are resolve relative to dir_fd. To resolve
+    /// relative to the current working directory, pass FdNumber::AT_FDCWD for
+    /// dir_fd.
+    ///
+    /// Returns a FileHandle but does not install the FileHandle in the FdTable
+    /// for this task.
+    pub fn open_file_at(
+        &self,
+        dir_fd: FdNumber,
+        path: &FsStr,
+        flags: OpenFlags,
+    ) -> Result<FileHandle, Errno> {
+        let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
+
+        if flags.contains(OpenFlags::CREAT) {
             // TODO put path manipulations into a library
             let mut parent_path: Vec<u8> = Vec::new();
             let mut path_elts = path.split(|c| *c == b'/');
@@ -408,10 +430,19 @@ impl Task {
             }
 
             let parent_dir = self.fs.lookup_node(dir, parent_path.as_slice())?;
-            parent_dir.create(file_name)?.open()
+            parent_dir.create(file_name)?.open(flags)
         } else {
-            self.fs.lookup_node(dir, path)?.open()
+            self.fs.lookup_node(dir, path)?.open(flags)
         }
+    }
+
+    /// Opens an FsNode at the given path relative to the given dir_fd.
+    ///
+    /// Similar to open_file_at but rather than creating a FileObject, this
+    /// function returns the underlying FsNode.
+    pub fn open_node_at(&self, dir_fd: FdNumber, path: &FsStr) -> Result<FsNodeHandle, Errno> {
+        let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
+        Ok(self.fs.lookup_node(dir, path)?.node.clone())
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {

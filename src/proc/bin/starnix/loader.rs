@@ -140,7 +140,7 @@ pub fn load_executable(
             .map_err(Errno::from_status_like_fdio)?;
         let interp =
             CStr::from_bytes_with_nul(&interp).map_err(|_| EINVAL)?.to_str().map_err(|_| EINVAL)?;
-        let interp_file = task.open_file(interp.as_bytes())?;
+        let interp_file = task.open_file(interp.as_bytes(), OpenFlags::RDONLY)?;
         let interp_vmo =
             interp_file.get_vmo(task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
         Some(load_elf(&interp_vmo, &task.mm)?)

@@ -15,7 +15,7 @@ pub struct SyslogFile;
 impl SyslogFile {
     #[cfg(test)]
     pub fn new(kernel: &Kernel) -> FileHandle {
-        Anon::new_file(kernel, SyslogFile, AnonNodeType::Misc)
+        Anon::new_file(kernel, SyslogFile, AnonNodeType::Misc, OpenFlags::RDWR)
     }
 }
 

@@ -146,8 +146,8 @@ pub fn new_pipe(kernel: &Kernel) -> (FileHandle, FileHandle) {
 
     let node = Anon::new_node(kernel, AnonNodeType::Pipe);
     node.state_mut().block_size = ATOMIC_IO_BYTES;
-    let read = FileObject::new_unmounted(read_end, node.clone());
-    let write = FileObject::new_unmounted(write_end, node);
+    let read = FileObject::new_unmounted(read_end, node.clone(), OpenFlags::RDONLY);
+    let write = FileObject::new_unmounted(write_end, node, OpenFlags::WRONLY);
 
     (read, write)
 }

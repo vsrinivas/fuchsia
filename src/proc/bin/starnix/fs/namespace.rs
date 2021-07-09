@@ -94,8 +94,8 @@ impl NamespaceNode {
     /// This function is the primary way of instantiating FileObjects. Each
     /// FileObject records the NamespaceNode that created it in order to
     /// remember its path in the Namespace.
-    pub fn open(&self) -> Result<FileHandle, Errno> {
-        Ok(FileObject::new(self.node.open()?, self.clone()))
+    pub fn open(&self, flags: OpenFlags) -> Result<FileHandle, Errno> {
+        Ok(FileObject::new(self.node.open()?, self.clone(), flags))
     }
 
     /// Create a file

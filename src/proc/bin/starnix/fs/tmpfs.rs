@@ -142,7 +142,7 @@ mod test {
         let path = b"test.bin";
         let _file_node = fs.create(path).unwrap();
 
-        let wr_file = task_owner.task.open_file(path).unwrap();
+        let wr_file = task_owner.task.open_file(path, OpenFlags::RDWR).unwrap();
 
         let flags = zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE;
         let test_addr =

@@ -124,6 +124,7 @@ mod test {
     use fuchsia_async as fasync;
 
     use crate::testing::*;
+    use crate::types::*;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_umask() {
@@ -142,26 +143,26 @@ mod test {
         let task = &task_owner.task;
         assert_eq!(b"/".to_vec(), task.fs.cwd().path());
 
-        let bin = task.open_file(b"bin").expect("missing bin directory");
+        let bin = task.open_file(b"bin", OpenFlags::RDONLY).expect("missing bin directory");
         task.fs.chdir(&bin);
         assert_eq!(b"/bin".to_vec(), task.fs.cwd().path());
 
         // Now that we have changed directories to bin, we're opening a file
         // relative to that directory, which doesn't exist.
-        assert!(task.open_file(b"bin").is_err());
+        assert!(task.open_file(b"bin", OpenFlags::RDONLY).is_err());
 
         // However, bin still exists in the root directory.
-        assert!(task.open_file(b"/bin").is_ok());
+        assert!(task.open_file(b"/bin", OpenFlags::RDONLY).is_ok());
 
-        task.fs.chdir(&task.open_file(b"..").expect("failed to open .."));
+        task.fs.chdir(&task.open_file(b"..", OpenFlags::RDONLY).expect("failed to open .."));
         assert_eq!(b"/".to_vec(), task.fs.cwd().path());
 
         // Now bin exists again because we've gone back to the root.
-        assert!(task.open_file(b"bin").is_ok());
+        assert!(task.open_file(b"bin", OpenFlags::RDONLY).is_ok());
 
         // Repeating the .. doesn't do anything because we're already at the root.
-        task.fs.chdir(&task.open_file(b"..").expect("failed to open .."));
+        task.fs.chdir(&task.open_file(b"..", OpenFlags::RDONLY).expect("failed to open .."));
         assert_eq!(b"/".to_vec(), task.fs.cwd().path());
-        assert!(task.open_file(b"bin").is_ok());
+        assert!(task.open_file(b"bin", OpenFlags::RDONLY).is_ok());
     }
 }

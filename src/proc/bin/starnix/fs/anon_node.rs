@@ -23,8 +23,9 @@ impl Anon {
         kernel: &Kernel,
         ops: T,
         name: AnonNodeType,
+        flags: OpenFlags,
     ) -> FileHandle {
-        FileObject::new_unmounted(ops, Self::new_node(kernel, name))
+        FileObject::new_unmounted(ops, Self::new_node(kernel, name), flags)
     }
 }
 
