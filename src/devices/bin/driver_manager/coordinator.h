@@ -157,6 +157,8 @@ struct CoordinatorConfig {
 };
 
 class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDevelopment>,
+                    public fidl::WireServer<fuchsia_device_manager::Administrator>,
+                    public fidl::WireServer<fuchsia_device_manager::DebugDumper>,
                     public fidl::WireServer<fuchsia_driver_registrar::DriverRegistrar> {
  public:
   Coordinator(const Coordinator&) = delete;
@@ -401,6 +403,18 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   void GetDeviceInfo(GetDeviceInfoRequestView request,
                      GetDeviceInfoCompleter::Sync& completer) override;
 
+  // fuchsia.device.manager/Administrator interface
+  void Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) override;
+  void UnregisterSystemStorageForShutdown(
+      UnregisterSystemStorageForShutdownRequestView request,
+      UnregisterSystemStorageForShutdownCompleter::Sync& completer) override;
+
+  // fuchsia.device.manager/DebugDumper interface
+  void DumpTree(DumpTreeRequestView request, DumpTreeCompleter::Sync& completer) override;
+  void DumpDrivers(DumpDriversRequestView request, DumpDriversCompleter::Sync& completer) override;
+  void DumpBindingProperties(DumpBindingPropertiesRequestView request,
+                             DumpBindingPropertiesCompleter::Sync& completer) override;
+
   // Driver registrar interface
   void Register(RegisterRequestView request, RegisterCompleter::Sync& completer) override;
 
@@ -420,8 +434,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   void DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const;
   void DumpDeviceProps(VmoWriter* vmo, const Device* dev) const;
-  void DumpGlobalDeviceProps(VmoWriter* vmo) const;
-  void DumpDrivers(VmoWriter* vmo) const;
 
   void BuildSuspendList();
   void Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback);

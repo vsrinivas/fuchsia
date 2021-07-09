@@ -328,55 +328,6 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
   }
 }
 
-void Coordinator::DumpGlobalDeviceProps(VmoWriter* vmo) const {
-  DumpDeviceProps(vmo, root_device_.get());
-  DumpDeviceProps(vmo, misc_device_.get());
-  DumpDeviceProps(vmo, sys_device_.get());
-  DumpDeviceProps(vmo, test_device_.get());
-}
-
-void Coordinator::DumpDrivers(VmoWriter* vmo) const {
-  bool first = true;
-  for (const auto& drv : drivers_) {
-    vmo->Printf("%sName    : %s\n", first ? "" : "\n", drv.name.c_str());
-    vmo->Printf("Driver  : %s\n", !drv.libname.empty() ? drv.libname.c_str() : "(null)");
-    vmo->Printf("Flags   : %#08x\n", drv.flags);
-    vmo->Printf("Bytecode Version   : %u\n", drv.bytecode_version);
-
-    if (!drv.binding_size) {
-      continue;
-    }
-
-    if (drv.bytecode_version == 1) {
-      auto* binding = std::get_if<std::unique_ptr<zx_bind_inst_t[]>>(&drv.binding);
-      if (!binding) {
-        continue;
-      }
-
-      char line[256];
-      uint32_t count = drv.binding_size / static_cast<uint32_t>(sizeof(binding->get()[0]));
-      vmo->Printf("Binding : %u instruction%s (%u bytes)\n", count, (count == 1) ? "" : "s",
-                  drv.binding_size);
-      for (uint32_t i = 0; i < count; ++i) {
-        di_dump_bind_inst(&binding->get()[i], line, sizeof(line));
-        vmo->Printf("[%u/%u]: %s\n", i + 1, count, line);
-      }
-    } else if (drv.bytecode_version == 2) {
-      auto* binding = std::get_if<std::unique_ptr<uint8_t[]>>(&drv.binding);
-      if (!binding) {
-        continue;
-      }
-
-      vmo->Printf("Bytecode (%u byte%s): \n", drv.binding_size, (drv.binding_size == 1) ? "" : "s");
-      for (uint32_t i = 0; i < drv.binding_size; ++i) {
-        vmo->Printf("0x%02x", (binding->get()[i]));
-      }
-      vmo->Printf("\n");
-    }
-    first = false;
-  }
-}
-
 zx_handle_t get_service_root();
 
 zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out,
@@ -2016,44 +1967,88 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
   }
 }
 
-zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  const auto admin = [this](zx::channel request) {
-    static_assert(fdm::wire::kSuspendFlagReboot == DEVICE_SUSPEND_FLAG_REBOOT);
-    static_assert(fdm::wire::kSuspendFlagPoweroff == DEVICE_SUSPEND_FLAG_POWEROFF);
+void Coordinator::Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) {
+  Suspend(request->flags, [completer = completer.ToAsync()](zx_status_t status) mutable {
+    completer.Reply(status);
+  });
+}
 
-    static constexpr fuchsia_device_manager_Administrator_ops_t kOps = {
-        .Suspend =
-            [](void* ctx, uint32_t flags, fidl_txn_t* txn) {
-              auto* async_txn = fidl_async_txn_create(txn);
-              static_cast<Coordinator*>(ctx)->Suspend(flags, [async_txn](zx_status_t status) {
-                fuchsia_device_manager_AdministratorSuspend_reply(fidl_async_txn_borrow(async_txn),
-                                                                  status);
-                fidl_async_txn_complete(async_txn, true);
-              });
-              return ZX_ERR_ASYNC;
-            },
-        .UnregisterSystemStorageForShutdown =
-            [](void* ctx, fidl_txn_t* txn) {
-              auto* async_txn = fidl_async_txn_create(txn);
-              static_cast<Coordinator*>(ctx)->suspend_handler().UnregisterSystemStorageForShutdown(
-                  [async_txn](zx_status_t status) {
-                    fuchsia_device_manager_AdministratorUnregisterSystemStorageForShutdown_reply(
-                        fidl_async_txn_borrow(async_txn), status);
-                    fidl_async_txn_complete(async_txn, true);
-                  });
-              return ZX_ERR_ASYNC;
-            },
-    };
+void Coordinator::UnregisterSystemStorageForShutdown(
+    UnregisterSystemStorageForShutdownRequestView request,
+    UnregisterSystemStorageForShutdownCompleter::Sync& completer) {
+  suspend_handler().UnregisterSystemStorageForShutdown(
+      [completer = completer.ToAsync()](zx_status_t status) mutable { completer.Reply(status); });
+}
 
-    zx_status_t status =
-        fidl_bind(dispatcher_, request.release(),
-                  reinterpret_cast<fidl_dispatch_t*>(fuchsia_device_manager_Administrator_dispatch),
-                  this, &kOps);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           fidl::DiscoverableProtocolName<fdm::Administrator>, zx_status_get_string(status));
+void Coordinator::DumpTree(DumpTreeRequestView request, DumpTreeCompleter::Sync& completer) {
+  VmoWriter writer{std::move(request->output)};
+  DumpState(&writer);
+  completer.Reply(writer.status(), writer.written(), writer.available());
+}
+
+void Coordinator::DumpDrivers(DumpDriversRequestView request,
+                              DumpDriversCompleter::Sync& completer) {
+  VmoWriter writer{std::move(request->output)};
+  bool first = true;
+  for (const auto& drv : drivers_) {
+    writer.Printf("%sName    : %s\n", first ? "" : "\n", drv.name.c_str());
+    writer.Printf("Driver  : %s\n", !drv.libname.empty() ? drv.libname.c_str() : "(null)");
+    writer.Printf("Flags   : %#08x\n", drv.flags);
+    writer.Printf("Bytecode Version   : %u\n", drv.bytecode_version);
+
+    if (!drv.binding_size) {
+      continue;
     }
-    return status;
+
+    if (drv.bytecode_version == 1) {
+      auto* binding = std::get_if<std::unique_ptr<zx_bind_inst_t[]>>(&drv.binding);
+      if (!binding) {
+        continue;
+      }
+
+      char line[256];
+      uint32_t count = drv.binding_size / static_cast<uint32_t>(sizeof(binding->get()[0]));
+      writer.Printf("Binding : %u instruction%s (%u bytes)\n", count, (count == 1) ? "" : "s",
+                    drv.binding_size);
+      for (uint32_t i = 0; i < count; ++i) {
+        di_dump_bind_inst(&binding->get()[i], line, sizeof(line));
+        writer.Printf("[%u/%u]: %s\n", i + 1, count, line);
+      }
+    } else if (drv.bytecode_version == 2) {
+      auto* binding = std::get_if<std::unique_ptr<uint8_t[]>>(&drv.binding);
+      if (!binding) {
+        continue;
+      }
+
+      writer.Printf("Bytecode (%u byte%s): \n", drv.binding_size,
+                    (drv.binding_size == 1) ? "" : "s");
+      for (uint32_t i = 0; i < drv.binding_size; ++i) {
+        writer.Printf("0x%02x", (binding->get()[i]));
+      }
+      writer.Printf("\n");
+    }
+    first = false;
+  }
+  completer.Reply(writer.status(), writer.written(), writer.available());
+}
+
+void Coordinator::DumpBindingProperties(DumpBindingPropertiesRequestView request,
+                                        DumpBindingPropertiesCompleter::Sync& completer) {
+  VmoWriter writer{std::move(request->output)};
+  DumpDeviceProps(&writer, root_device_.get());
+  DumpDeviceProps(&writer, misc_device_.get());
+  DumpDeviceProps(&writer, sys_device_.get());
+  DumpDeviceProps(&writer, test_device_.get());
+  completer.Reply(writer.status(), writer.written(), writer.available());
+}
+
+zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
+  static_assert(fdm::wire::kSuspendFlagReboot == DEVICE_SUSPEND_FLAG_REBOOT);
+  static_assert(fdm::wire::kSuspendFlagPoweroff == DEVICE_SUSPEND_FLAG_POWEROFF);
+
+  const auto admin = [this](zx::channel request) {
+    fidl::BindServer<fidl::WireServer<fdm::Administrator>>(dispatcher_, std::move(request), this);
+    return ZX_OK;
   };
   zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdm::Administrator>,
                                          fbl::MakeRefCounted<fs::Service>(admin));
@@ -2108,39 +2103,8 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   }
 
   const auto debug = [this](zx::channel request) {
-    static constexpr fuchsia_device_manager_DebugDumper_ops_t kOps = {
-        .DumpTree =
-            [](void* ctx, zx_handle_t vmo, fidl_txn_t* txn) {
-              VmoWriter writer{zx::vmo(vmo)};
-              static_cast<Coordinator*>(ctx)->DumpState(&writer);
-              return fuchsia_device_manager_DebugDumperDumpTree_reply(
-                  txn, writer.status(), writer.written(), writer.available());
-            },
-        .DumpDrivers =
-            [](void* ctx, zx_handle_t vmo, fidl_txn_t* txn) {
-              VmoWriter writer{zx::vmo(vmo)};
-              static_cast<Coordinator*>(ctx)->DumpDrivers(&writer);
-              return fuchsia_device_manager_DebugDumperDumpDrivers_reply(
-                  txn, writer.status(), writer.written(), writer.available());
-            },
-        .DumpBindingProperties =
-            [](void* ctx, zx_handle_t vmo, fidl_txn_t* txn) {
-              VmoWriter writer{zx::vmo(vmo)};
-              static_cast<Coordinator*>(ctx)->DumpGlobalDeviceProps(&writer);
-              return fuchsia_device_manager_DebugDumperDumpBindingProperties_reply(
-                  txn, writer.status(), writer.written(), writer.available());
-            },
-    };
-
-    auto status =
-        fidl_bind(dispatcher_, request.release(),
-                  reinterpret_cast<fidl_dispatch_t*>(fuchsia_device_manager_DebugDumper_dispatch),
-                  this, &kOps);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           fidl::DiscoverableProtocolName<fdm::DebugDumper>, zx_status_get_string(status));
-    }
-    return status;
+    fidl::BindServer<fidl::WireServer<fdm::DebugDumper>>(dispatcher_, std::move(request), this);
+    return ZX_OK;
   };
   return svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdm::DebugDumper>,
                            fbl::MakeRefCounted<fs::Service>(debug));
