@@ -1,0 +1,8 @@
+{
+    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
+    program: {
+        binary: "system/bin/clock_getres_test",
+        environ: [ "TEST_ON_GVISOR=1" ],
+        root: "root",
+    },
+}

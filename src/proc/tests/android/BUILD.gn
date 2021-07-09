@@ -121,6 +121,12 @@ template("gvisor_test_component") {
   }
 }
 
+gvisor_test_component("clock_getres_test") {
+}
+
+gvisor_test_component("clock_gettime_test") {
+}
+
 gvisor_test_component("brk_test") {
 }
 
@@ -143,6 +149,8 @@ fuchsia_test_package("test_android_distro") {
 
   test_components = [
     ":brk_test",
+    ":clock_getres_test",
+    ":clock_gettime_test",
     ":pipe_test",
     ":sh_test",
     ":sigaction_test",

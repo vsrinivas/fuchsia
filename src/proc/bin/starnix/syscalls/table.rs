@@ -118,6 +118,7 @@ pub fn dispatch_syscall(
         brk[1],
         chdir[1],
         clock_gettime[2],
+        clock_getres[2],
         clone[5],
         close[1],
         execve[3],
