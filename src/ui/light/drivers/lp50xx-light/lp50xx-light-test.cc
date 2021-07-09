@@ -5,16 +5,17 @@
 #include "lp50xx-light.h"
 
 #include <lib/ddk/platform-defs.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace lp50xx_light {
 
 class Lp50xxLightTest : public Lp50xxLight {
  public:
-  Lp50xxLightTest() : Lp50xxLight(fake_ddk::kFakeParent) {}
+  Lp50xxLightTest(zx_device_t* parent) : Lp50xxLight(parent) {}
 
   virtual zx_status_t InitHelper() {
     auto proto = ddk::I2cProtocolClient(mock_i2c.GetProto());
@@ -38,19 +39,18 @@ class Lp50xxLightTest : public Lp50xxLight {
   void Verify() { mock_i2c.VerifyAndClear(); }
 
   mock_i2c::MockI2c mock_i2c;
-
- private:
-  fake_ddk::Bind ddk;
 };
 
 TEST(Lp50xxLightTest, InitTest) {
-  Lp50xxLightTest dut;
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  Lp50xxLightTest dut(fake_parent.get());
   EXPECT_OK(dut.Init());
   dut.Verify();
 }
 
 TEST(Lp50xxLightTest, GetRgbTest) {
-  Lp50xxLightTest dut;
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  Lp50xxLightTest dut(fake_parent.get());
   EXPECT_OK(dut.Init());
 
   dut.mock_i2c.ExpectWrite({0x10})
@@ -70,7 +70,8 @@ TEST(Lp50xxLightTest, GetRgbTest) {
 }
 
 TEST(Lp50xxLightTest, SetRgbTest) {
-  Lp50xxLightTest dut;
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  Lp50xxLightTest dut(fake_parent.get());
   EXPECT_OK(dut.Init());
 
   fuchsia_hardware_light::wire::Rgb rgb = {};
