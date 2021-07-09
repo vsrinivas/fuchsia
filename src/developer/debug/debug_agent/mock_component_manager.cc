@@ -6,11 +6,11 @@
 
 namespace debug_agent {
 
-zx_status_t MockComponentManager::LaunchComponent(DebuggedJob* root_job,
-                                                  const std::vector<std::string>& argv,
-                                                  uint64_t* component_id) {
+debug::Status MockComponentManager::LaunchComponent(DebuggedJob* root_job,
+                                                    const std::vector<std::string>& argv,
+                                                    uint64_t* component_id) {
   *component_id = 0;
-  return ZX_ERR_NOT_SUPPORTED;
+  return debug::Status("Not supported");
 }
 
 uint64_t MockComponentManager::OnProcessStart(const std::string& filter, StdioHandles& out_stdio) {

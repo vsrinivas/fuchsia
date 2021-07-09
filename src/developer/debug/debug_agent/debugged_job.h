@@ -67,7 +67,7 @@ class DebuggedJob {
   const std::vector<FilterInfo>& filters() const { return filters_; }
 
   // Returns ZX_OK on success. On failure, the object may not be used further.
-  zx_status_t Init();
+  debug::Status Init();
 
  private:
   void OnProcessStarting(std::unique_ptr<ProcessHandle> process);

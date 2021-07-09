@@ -35,13 +35,13 @@ class JobSink : public RemoteAPI {
   void Attach(const debug_ipc::AttachRequest& request,
               fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) override {}
 
-  void set_status(uint32_t status) { status_ = status; };
+  void set_status(debug::Status status) { status_ = std::move(status); };
   void set_err(Err err) { err_ = err; }
   void set_pids(std::vector<uint64_t> pids) { pids_ = std::move(pids); }
 
   const std::vector<debug_ipc::JobFilterRequest>& requests() const { return requests_; }
 
-  uint32_t status_ = debug_ipc::kZxOk;
+  debug::Status status_;
   Err err_;
   std::vector<uint64_t> pids_;
 
@@ -151,7 +151,7 @@ TEST_F(JobTest, NoZX_OKShouldNotSignal) {
   MockFilterObserver observer;
   session().AddFilterObserver(&observer);
 
-  sink()->set_status(debug_ipc::kZxErrInvalidArgs);
+  sink()->set_status(debug::Status("Invalid args"));
 
   constexpr uint64_t kJobKoid = 0x1234;
   Job job(&session(), false);

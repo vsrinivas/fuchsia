@@ -179,8 +179,6 @@ class ProcessDetachRemoteAPI : public MockRemoteAPI {
   void Detach(const debug_ipc::DetachRequest& request,
               fit::callback<void(const Err&, debug_ipc::DetachReply)> cb) override {
     debug_ipc::DetachReply reply;
-    reply.status = debug_ipc::kZxOk;
-
     cb(Err(), reply);
   }
 };

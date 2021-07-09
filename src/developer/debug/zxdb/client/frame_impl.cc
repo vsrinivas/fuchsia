@@ -130,9 +130,9 @@ void FrameImpl::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> dat
         if (err.has_error())
           return cb(err);  // Transport error.
 
-        if (reply.status != 0) {
+        if (reply.status.has_error()) {
           // Agent error.
-          return cb(Err("Error writing register (%s).", debug_ipc::ZxStatusToString(reply.status)));
+          return cb(Err("Error writing register: " + reply.status.message()));
         }
 
         if (weak_frame)

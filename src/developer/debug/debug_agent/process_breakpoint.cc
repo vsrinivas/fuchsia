@@ -26,20 +26,20 @@ ProcessBreakpoint::ProcessBreakpoint(Breakpoint* breakpoint, DebuggedProcess* pr
 
 ProcessBreakpoint::~ProcessBreakpoint() = default;
 
-zx_status_t ProcessBreakpoint::Init() { return Update(); }
+debug::Status ProcessBreakpoint::Init() { return Update(); }
 
 fxl::WeakPtr<ProcessBreakpoint> ProcessBreakpoint::GetWeakPtr() {
   return weak_factory_.GetWeakPtr();
 }
 
-zx_status_t ProcessBreakpoint::RegisterBreakpoint(Breakpoint* breakpoint) {
+debug::Status ProcessBreakpoint::RegisterBreakpoint(Breakpoint* breakpoint) {
   // Shouldn't get duplicates.
   if (std::find(breakpoints_.begin(), breakpoints_.end(), breakpoint) != breakpoints_.end())
-    return ZX_ERR_ALREADY_BOUND;
+    return debug::Status("Breakpoint already registered");
 
   // Should be the same type.
   if (Type() != breakpoint->settings().type)
-    return ZX_ERR_INVALID_ARGS;
+    return debug::Status("Breakpoint should be the same type");
 
   breakpoints_.push_back(breakpoint);
   // Check if we need to install/uninstall a breakpoint.

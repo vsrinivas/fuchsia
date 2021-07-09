@@ -25,7 +25,7 @@ class ZirconJobHandle final : public JobHandle, public debug_ipc::ZirconExceptio
   std::string GetName() const override;
   std::vector<std::unique_ptr<JobHandle>> GetChildJobs() const override;
   std::vector<std::unique_ptr<ProcessHandle>> GetChildProcesses() const override;
-  zx_status_t WatchJobExceptions(fit::function<void(std::unique_ptr<ProcessHandle>)> cb) override;
+  debug::Status WatchJobExceptions(fit::function<void(std::unique_ptr<ProcessHandle>)> cb) override;
 
  private:
   // ZirconExceptionWatcher implementation.

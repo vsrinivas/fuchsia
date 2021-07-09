@@ -15,11 +15,14 @@ namespace {
 
 class MockProcessDelegate : public Breakpoint::ProcessDelegate {
  public:
-  zx_status_t RegisterBreakpoint(Breakpoint*, zx_koid_t, uint64_t) override { return ZX_OK; }
+  debug::Status RegisterBreakpoint(Breakpoint*, zx_koid_t, uint64_t) override {
+    return debug::Status();
+  }
   void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override {}
 
-  zx_status_t RegisterWatchpoint(Breakpoint*, zx_koid_t, const debug_ipc::AddressRange&) override {
-    return ZX_OK;
+  debug::Status RegisterWatchpoint(Breakpoint*, zx_koid_t,
+                                   const debug_ipc::AddressRange&) override {
+    return debug::Status();
   }
   void UnregisterWatchpoint(Breakpoint*, zx_koid_t, const debug_ipc::AddressRange&) override {}
 };
@@ -93,7 +96,7 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   Breakpoint breakpoint(&process_delegate);
   breakpoint.SetSettings(settings);
 
-  ASSERT_ZX_EQ(process.RegisterBreakpoint(&breakpoint, kAddress1), ZX_OK);
+  ASSERT_TRUE(process.RegisterBreakpoint(&breakpoint, kAddress1).ok());
 
   ASSERT_EQ(process.software_breakpoints().size(), 1u);
   auto it = process.software_breakpoints().begin();
@@ -101,8 +104,8 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   EXPECT_EQ(it, process.software_breakpoints().end());
 
   // Add 2 other breakpoints.
-  ASSERT_ZX_EQ(process.RegisterBreakpoint(&breakpoint, kAddress2), ZX_OK);
-  ASSERT_ZX_EQ(process.RegisterBreakpoint(&breakpoint, kAddress3), ZX_OK);
+  ASSERT_TRUE(process.RegisterBreakpoint(&breakpoint, kAddress2).ok());
+  ASSERT_TRUE(process.RegisterBreakpoint(&breakpoint, kAddress3).ok());
   ASSERT_EQ(process.software_breakpoints().size(), 3u);
   it = process.software_breakpoints().begin();
   EXPECT_EQ(it++->first, kAddress1);
@@ -125,8 +128,8 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   hw_settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddress4));
   hw_breakpoint.SetSettings(hw_settings);
 
-  ASSERT_ZX_EQ(process.RegisterBreakpoint(&hw_breakpoint, kAddress3), ZX_OK);
-  ASSERT_ZX_EQ(process.RegisterBreakpoint(&hw_breakpoint, kAddress4), ZX_OK);
+  ASSERT_TRUE(process.RegisterBreakpoint(&hw_breakpoint, kAddress3).ok());
+  ASSERT_TRUE(process.RegisterBreakpoint(&hw_breakpoint, kAddress4).ok());
 
   // Should've inserted 2 HW breakpoint.
   ASSERT_EQ(process.software_breakpoints().size(), 2u);
@@ -151,7 +154,7 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   wp_settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddressRange1));
   wp_breakpoint.SetSettings(wp_settings);
 
-  ASSERT_ZX_EQ(process.RegisterWatchpoint(&wp_breakpoint, kAddressRange1), ZX_OK);
+  ASSERT_TRUE(process.RegisterWatchpoint(&wp_breakpoint, kAddressRange1).ok());
   ASSERT_EQ(process.software_breakpoints().size(), 2u);
   ASSERT_EQ(process.hardware_breakpoints().size(), 1u);
   ASSERT_EQ(process.watchpoints().size(), 1u);
@@ -170,7 +173,7 @@ TEST(DebuggedProcess, WatchpointRegistration) {
   for (uint32_t i = 0; i < 16; i++) {
     debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 1};
     SetLocation(&breakpoint, process.koid(), range);
-    ASSERT_ZX_EQ(process.RegisterWatchpoint(&breakpoint, range), ZX_OK);
+    ASSERT_TRUE(process.RegisterWatchpoint(&breakpoint, range).ok());
   }
 
   // 2 bytes.
@@ -179,16 +182,16 @@ TEST(DebuggedProcess, WatchpointRegistration) {
     SetLocation(&breakpoint, process.koid(), range);
 
     // Only aligned values should work.
-    zx_status_t expected = (range.begin() & 0b1) == 0 ? ZX_OK : ZX_ERR_INVALID_ARGS;
+    bool expected_ok = (range.begin() & 0b1) == 0;
     SCOPED_TRACE(range.ToString());
-    ASSERT_ZX_EQ(process.RegisterWatchpoint(&breakpoint, range), expected);
+    ASSERT_EQ(process.RegisterWatchpoint(&breakpoint, range).ok(), expected_ok);
   }
 
   // 3 bytes.
   for (uint32_t i = 0; i < 16; i++) {
     debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 3};
     SetLocation(&breakpoint, process.koid(), range);
-    ASSERT_ZX_EQ(process.RegisterWatchpoint(&breakpoint, range), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(process.RegisterWatchpoint(&breakpoint, range).has_error());
   }
 
   // 4 bytes.
@@ -197,37 +200,37 @@ TEST(DebuggedProcess, WatchpointRegistration) {
     SetLocation(&breakpoint, process.koid(), range);
 
     // Only aligned values should work.
-    zx_status_t expected = (range.begin() & 0b11) == 0 ? ZX_OK : ZX_ERR_INVALID_ARGS;
+    bool expected_ok = (range.begin() & 0b11) == 0;
     SCOPED_TRACE(range.ToString());
-    ASSERT_ZX_EQ(process.RegisterWatchpoint(&breakpoint, range), expected);
+    ASSERT_EQ(process.RegisterWatchpoint(&breakpoint, range).ok(), expected_ok);
   }
 
   // 5 bytes.
   for (uint32_t i = 0; i < 16; i++) {
     debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 5};
     SetLocation(&breakpoint, process.koid(), range);
-    ASSERT_ZX_EQ(process.RegisterWatchpoint(&breakpoint, range), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(process.RegisterWatchpoint(&breakpoint, range).has_error());
   }
 
   // 6 bytes.
   for (uint32_t i = 0; i < 16; i++) {
     debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 6};
     SetLocation(&breakpoint, process.koid(), range);
-    ASSERT_ZX_EQ(process.RegisterWatchpoint(&breakpoint, range), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(process.RegisterWatchpoint(&breakpoint, range).has_error());
   }
 
   // 6 bytes.
   for (uint32_t i = 0; i < 16; i++) {
     debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 6};
     SetLocation(&breakpoint, process.koid(), range);
-    ASSERT_ZX_EQ(process.RegisterWatchpoint(&breakpoint, range), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(process.RegisterWatchpoint(&breakpoint, range).has_error());
   }
 
   // 7 bytes.
   for (uint32_t i = 0; i < 16; i++) {
     debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 7};
     SetLocation(&breakpoint, process.koid(), range);
-    ASSERT_ZX_EQ(process.RegisterWatchpoint(&breakpoint, range), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(process.RegisterWatchpoint(&breakpoint, range).has_error());
   }
 
   // 8 bytes.
@@ -236,9 +239,9 @@ TEST(DebuggedProcess, WatchpointRegistration) {
     SetLocation(&breakpoint, process.koid(), range);
 
     // Only aligned values should work.
-    zx_status_t expected = (range.begin() & 0b111) == 0 ? ZX_OK : ZX_ERR_INVALID_ARGS;
+    bool expected_ok = (range.begin() & 0b111) == 0;
     SCOPED_TRACE(range.ToString());
-    ASSERT_ZX_EQ(process.RegisterWatchpoint(&breakpoint, range), expected);
+    ASSERT_EQ(process.RegisterWatchpoint(&breakpoint, range).ok(), expected_ok);
   }
 }
 

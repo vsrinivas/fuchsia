@@ -39,22 +39,12 @@ enum class WarningType {
   kUninstall,
 };
 
-// Passing OK as the status omits printing it.
 void Warn(debug_ipc::FileLineFunction origin, WarningType type, zx_koid_t thread_koid,
-          uint64_t address, zx_status_t status = ZX_OK) {
-  // This happens normally when we receive a ZX_EXCP_THREAD_EXITING exception,
-  // making the system ignore our uninstall requests.
-  if (status == ZX_ERR_NOT_FOUND)
-    return;
-
+          uint64_t address) {
   const char* verb = type == WarningType::kInstall ? "install" : "uninstall";
   printf("[%s:%d][%s] Could not %s HW breakpoint for thread %u at %" PRIX64, origin.file().c_str(),
          origin.line(), origin.function().c_str(), verb, static_cast<uint32_t>(thread_koid),
          address);
-  if (status == ZX_OK)
-    printf("\n");
-  else
-    printf(": %s\n", zx_status_get_string(status));
 
   fflush(stdout);
 }
@@ -160,7 +150,7 @@ void Watchpoint::EndStepOver(DebuggedThread* thread) {
 
 // Update ------------------------------------------------------------------------------------------
 
-zx_status_t Watchpoint::Update() {
+debug::Status Watchpoint::Update() {
   // We get a snapshot of which threads are already installed.
   auto current_installs = installed_threads_;
   auto koids_to_install = ThreadsTargeted(*this);
@@ -173,8 +163,7 @@ zx_status_t Watchpoint::Update() {
     // The ProcessBreakpoint not longer tracks this. Remove.
     DebuggedThread* thread = process()->GetThread(thread_koid);
     if (thread) {
-      zx_status_t status = Uninstall(thread);
-      if (status != ZX_OK)
+      if (Uninstall(thread).has_error())
         continue;
 
       installed_threads_.erase(thread_koid);
@@ -191,21 +180,18 @@ zx_status_t Watchpoint::Update() {
     if (!thread)
       continue;
 
-    zx_status_t status = Install(thread);
-    if (status != ZX_OK)
+    if (!Install(thread))
       continue;
   }
 
-  return ZX_OK;
+  return debug::Status();
 }
 
 // Install -----------------------------------------------------------------------------------------
 
 bool Watchpoint::Install(DebuggedThread* thread) {
-  if (!thread) {
-    Warn(FROM_HERE, WarningType::kInstall, thread->koid(), address(), ZX_ERR_NOT_FOUND);
+  if (!thread)
     return false;
-  }
 
   DEBUG_LOG(Watchpoint) << "Installing watchpoint on thread " << thread->koid() << " on address 0x"
                         << std::hex << address();
@@ -225,14 +211,14 @@ bool Watchpoint::Install(DebuggedThread* thread) {
 
 // Uninstall ---------------------------------------------------------------------------------------
 
-zx_status_t Watchpoint::Uninstall() {
+debug::Status Watchpoint::Uninstall() {
   std::vector<zx_koid_t> uninstalled_threads;
   for (auto& [thread_koid, installation] : installed_threads_) {
     DebuggedThread* thread = process()->GetThread(thread_koid);
     if (!thread)
       continue;
 
-    if (Uninstall(thread) != ZX_OK)
+    if (Uninstall(thread).has_error())
       continue;
 
     uninstalled_threads.push_back(thread_koid);
@@ -243,14 +229,12 @@ zx_status_t Watchpoint::Uninstall() {
     installed_threads_.erase(thread_koid);
   }
 
-  return ZX_OK;
+  return debug::Status();
 }
 
-zx_status_t Watchpoint::Uninstall(DebuggedThread* thread) {
-  if (!thread) {
-    Warn(FROM_HERE, WarningType::kUninstall, thread->koid(), address(), ZX_ERR_NOT_FOUND);
-    return ZX_ERR_NOT_FOUND;
-  }
+debug::Status Watchpoint::Uninstall(DebuggedThread* thread) {
+  if (!thread)
+    return debug::Status("Thread expected for uninstalling watchpoint.");
 
   DEBUG_LOG(Watchpoint) << "Removing watchpoint on thread " << thread->koid() << " on address 0x"
                         << std::hex << address();
@@ -259,10 +243,10 @@ zx_status_t Watchpoint::Uninstall(DebuggedThread* thread) {
 
   if (!thread->thread_handle().UninstallWatchpoint(range_)) {
     Warn(FROM_HERE, WarningType::kUninstall, thread->koid(), address());
-    return ZX_ERR_INTERNAL;
+    return debug::Status("Unable to uninstall watchpoint.");
   }
 
-  return ZX_OK;
+  return debug::Status();
 }
 
 }  // namespace debug_agent

@@ -127,7 +127,6 @@ void MockRemoteAPI::WriteRegisters(
   last_write_registers_ = request;
   debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
     debug_ipc::WriteRegistersReply reply;
-    reply.status = 0;
     cb(Err(), reply);
   });
 }

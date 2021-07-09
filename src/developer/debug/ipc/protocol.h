@@ -6,13 +6,11 @@
 #define SRC_DEVELOPER_DEBUG_IPC_PROTOCOL_H_
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/status.h"
 
 namespace debug_ipc {
 
-// As defined in zircon/types.h
-using zx_status_t = int32_t;
-
-constexpr uint32_t kProtocolVersion = 35;
+constexpr uint32_t kProtocolVersion = 36;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -127,8 +125,7 @@ struct ProcessStatusRequest {
 };
 
 struct ProcessStatusReply {
-  // Returns ZX_OK if the process exists and the agent was able to retrieve the data.
-  uint32_t status = 0;
+  debug::Status status;
 };
 
 struct LaunchRequest {
@@ -146,8 +143,8 @@ struct LaunchReply {
   // process or a component.
   InferiorType inferior_type;
 
-  // zx_status_t value from launch, ZX_OK on success.
-  zx_status_t status = 0;
+  // Result of launch.
+  debug::Status status;
 
   // These fields are mutually exclusive. If InferiorType is process, then
   // process_id != 0 and component_id == 0. If it's component, it's the other
@@ -163,7 +160,7 @@ struct KillRequest {
 };
 struct KillReply {
   uint64_t timestamp = kTimestampDefault;
-  zx_status_t status = 0;
+  debug::Status status;
 };
 
 enum class TaskType : uint32_t { kProcess = 0, kJob, kSystemRoot, kComponentRoot, kLast };
@@ -179,7 +176,7 @@ struct AttachRequest {
 struct AttachReply {
   uint64_t timestamp = kTimestampDefault;
   uint64_t koid = 0;
-  zx_status_t status = 0;  // zx_status_t value from attaching. ZX_OK on success.
+  debug::Status status;  // Result of attaching.
   std::string name;
 };
 
@@ -189,7 +186,7 @@ struct DetachRequest {
 };
 struct DetachReply {
   uint64_t timestamp = kTimestampDefault;
-  zx_status_t status = 0;
+  debug::Status status;
 };
 
 struct PauseRequest {
@@ -264,16 +261,14 @@ struct AddOrChangeBreakpointRequest {
   BreakpointSettings breakpoint;
 };
 struct AddOrChangeBreakpointReply {
-  // A variety of race conditions could cause a breakpoint modification or
-  // set to fail. For example, updating or setting a breakpoint could race
-  // with the library containing that code unloading.
+  // A variety of race conditions could cause a breakpoint modification or set to fail. For example,
+  // updating or setting a breakpoint could race with the library containing that code unloading.
   //
-  // The update or set will always apply the breakpoint to any contexts that
-  // it can apply to (if there are multiple locations, we don't want to
-  // remove them all just because one failed). Therefore, you can't
-  // definitively say the breakpoint is invalid just because it has a failure
+  // The update or set will always apply the breakpoint to any contexts that it can apply to (if
+  // there are multiple locations, we don't want to remove them all just because one failed).
+  // Therefore, you can't definitively say the breakpoint is invalid just because it has a failure
   // code here. If necessary, we can add more information in the failure.
-  zx_status_t status = 0;
+  debug::Status status;
 };
 
 struct RemoveBreakpointRequest {
@@ -327,7 +322,7 @@ struct JobFilterRequest {
 };
 
 struct JobFilterReply {
-  zx_status_t status = 0;  // zx_status for filter request
+  debug::Status status;
 
   // List of koids for currently running processes that match any of the filters.
   // Guaranteed that each koid is unique.
@@ -341,14 +336,14 @@ struct WriteMemoryRequest {
 };
 
 struct WriteMemoryReply {
-  zx_status_t status = 0;
+  debug::Status status;
 };
 
 struct LoadInfoHandleTableRequest {
   uint64_t process_koid = 0;
 };
 struct LoadInfoHandleTableReply {
-  zx_status_t status = 0;
+  debug::Status status;
   std::vector<InfoHandle> handles;
 };
 
@@ -363,7 +358,7 @@ struct UpdateGlobalSettingsRequest {
 };
 
 struct UpdateGlobalSettingsReply {
-  zx_status_t status = 0;
+  debug::Status status;
 };
 
 // ReadRegisters ---------------------------------------------------------------
@@ -387,7 +382,7 @@ struct WriteRegistersRequest {
 };
 
 struct WriteRegistersReply {
-  zx_status_t status = 0;
+  debug::Status status;
 
   // The latest registers from all affected categories after the write.
   //
@@ -406,7 +401,7 @@ struct ConfigAgentRequest {
 };
 
 struct ConfigAgentReply {
-  std::vector<zx_status_t> results;
+  std::vector<debug::Status> results;
 };
 
 // Notifications ---------------------------------------------------------------

@@ -182,7 +182,7 @@ TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
     static constexpr const char kExecutable[] = "/pkg/bin/multithreaded_breakpoint_test_exe";
     auto [lnch_request, lnch_reply] = GetLaunchRequest(backend, kExecutable);
     remote_api->OnLaunch(lnch_request, &lnch_reply);
-    ASSERT_EQ(lnch_reply.status, ZX_OK) << ZxStatusToString(lnch_reply.status);
+    ASSERT_TRUE(lnch_reply.status.ok());
 
     backend.ResumeAllThreadsAndRunLoop();
 
@@ -208,7 +208,7 @@ TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
     auto [brk_request, brk_reply] =
         GetBreakpointRequest(backend.process_koid(), thread_koid, module_function);
     remote_api->OnAddOrChangeBreakpoint(brk_request, &brk_reply);
-    ASSERT_EQ(brk_reply.status, ZX_OK) << ZxStatusToString(brk_reply.status);
+    ASSERT_TRUE(brk_reply.status.ok());
 
     backend.ResumeAllThreadsAndRunLoop();
 

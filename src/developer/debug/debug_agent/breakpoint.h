@@ -11,6 +11,7 @@
 #include <string>
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/status.h"
 #include "src/lib/fxl/macros.h"
 
 namespace debug_agent {
@@ -50,14 +51,14 @@ class Breakpoint {
    public:
     // Called to register a new ProcessBreakpoint with the appropriate
     // location. If this fails, the breakpoint has not been set.
-    virtual zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                           uint64_t address);
+    virtual debug::Status RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                             uint64_t address);
 
     // Called When the breakpoint no longer applies to this location.
     virtual void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address);
 
-    virtual zx_status_t RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                           const debug_ipc::AddressRange& range);
+    virtual debug::Status RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                             const debug_ipc::AddressRange& range);
 
     virtual void UnregisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
                                       const debug_ipc::AddressRange& range);
@@ -74,8 +75,8 @@ class Breakpoint {
 
   // Calling SetSettings() will update the settings and install/move the breakpoint as required.
   // The one taking an address is for internal process-wide software breakpoints that have no ID.
-  zx_status_t SetSettings(const debug_ipc::BreakpointSettings& settings);
-  zx_status_t SetSettings(std::string name, zx_koid_t process_koid, uint64_t address);
+  debug::Status SetSettings(const debug_ipc::BreakpointSettings& settings);
+  debug::Status SetSettings(std::string name, zx_koid_t process_koid, uint64_t address);
   const debug_ipc::BreakpointSettings& settings() const { return settings_; }
 
   // A breakpoint can be set to apply to a specific set of threads. A thread
@@ -86,8 +87,8 @@ class Breakpoint {
   HitResult OnHit();
 
  private:
-  zx_status_t SetBreakpointLocations(const debug_ipc::BreakpointSettings&);
-  zx_status_t SetWatchpointLocations(const debug_ipc::BreakpointSettings&);
+  debug::Status SetBreakpointLocations(const debug_ipc::BreakpointSettings&);
+  debug::Status SetWatchpointLocations(const debug_ipc::BreakpointSettings&);
 
   // A process koid + address identifies one unique location.
   using LocationPair = std::pair<zx_koid_t, uint64_t>;

@@ -118,10 +118,10 @@ void DebuggedProcess::DetachFromProcess() {
   process_handle_->Detach();
 }
 
-zx_status_t DebuggedProcess::Init() {
+debug::Status DebuggedProcess::Init() {
   // Watch for process events.
   if (debug::Status status = process_handle_->Attach(this); status.has_error())
-    return status.platform_error();
+    return status;
 
   RegisterDebugState();
 
@@ -147,7 +147,7 @@ zx_status_t DebuggedProcess::Init() {
     }
   }
 
-  return ZX_OK;
+  return debug::Status();
 }
 
 void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
@@ -193,13 +193,7 @@ void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request, debug_ipc::K
   // threads to resume/handle.
   threads_.clear();
 
-  // TODO(brettw) replace with a serialized Status and unconditionally:
-  //   reply->status = process_handle_->Kill();
-  if (debug::Status status = process_handle_->Kill(); status.has_error()) {
-    reply->status = status.platform_error();
-  } else {
-    reply->status = ZX_OK;
-  }
+  reply->status = process_handle_->Kill();
 }
 
 DebuggedThread* DebuggedProcess::GetThread(zx_koid_t thread_koid) const {
@@ -278,8 +272,9 @@ bool DebuggedProcess::RegisterDebugState() {
   // Register a breakpoint for dynamic loads.
   if (auto load_addr = GetLoaderBreakpointAddress(process_handle(), dl_debug_addr_)) {
     loader_breakpoint_ = std::make_unique<Breakpoint>(debug_agent_, true);
-    if (loader_breakpoint_->SetSettings("Internal shared library load breakpoint", koid(),
-                                        load_addr) != ZX_OK) {
+    if (loader_breakpoint_
+            ->SetSettings("Internal shared library load breakpoint", koid(), load_addr)
+            .has_error()) {
       DEBUG_LOG(Process) << LogPreamble(this) << "Could not set shared library load breakpoint at "
                          << std::hex << load_addr;
       // Continue even in the error case: we can continue with most things working even if the
@@ -385,7 +380,7 @@ Watchpoint* DebuggedProcess::FindWatchpoint(const debug_ipc::AddressRange& range
   return nullptr;
 }
 
-zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address) {
+debug::Status DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address) {
   LogRegisterBreakpoint(FROM_HERE, this, bp, address);
 
   switch (bp->settings().type) {
@@ -397,10 +392,10 @@ zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address
     case debug_ipc::BreakpointType::kWrite:
       FX_NOTREACHED() << "Watchpoints are registered through RegisterWatchpoint.";
       // TODO(donosoc): Reactivate once the transition is complete.
-      return ZX_ERR_INVALID_ARGS;
+      return debug::Status("Watchpoints are registered through RegisterWatchpoint.");
     case debug_ipc::BreakpointType::kLast:
       FX_NOTREACHED();
-      return ZX_ERR_INVALID_ARGS;
+      return debug::Status("Invalid breakpoint type.");
   }
 
   FX_NOTREACHED();
@@ -427,8 +422,8 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
   FX_NOTREACHED();
 }
 
-zx_status_t DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
-                                                const debug_ipc::AddressRange& range) {
+debug::Status DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
+                                                  const debug_ipc::AddressRange& range) {
   FX_DCHECK(debug_ipc::IsWatchpointType(bp->settings().type))
       << "Breakpoint type must be kWatchpoint, got: "
       << debug_ipc::BreakpointTypeToString(bp->settings().type);
@@ -440,16 +435,16 @@ zx_status_t DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
   //       We make that check here and fail early if the range is not correctly aligned.
   auto aligned_range = AlignRange(range);
   if (!aligned_range.has_value() || aligned_range.value() != range)
-    return ZX_ERR_INVALID_ARGS;
+    return debug::Status("Watchpoint range must be aligned.");
 
   auto it = watchpoints_.find(range);
   if (it == watchpoints_.end()) {
     auto watchpoint = std::make_unique<Watchpoint>(bp->settings().type, bp, this, range);
-    if (zx_status_t status = watchpoint->Init(); status != ZX_OK)
+    if (auto status = watchpoint->Init(); status.has_error())
       return status;
 
     watchpoints_[range] = std::move(watchpoint);
-    return ZX_OK;
+    return debug::Status();
   } else {
     return it->second->RegisterBreakpoint(bp);
   }
@@ -624,11 +619,13 @@ void DebuggedProcess::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request
   if (debug::Status status = process_handle_->WriteMemory(request.address, request.data.data(),
                                                           request.data.size(), &actual);
       status.has_error()) {
-    reply->status = status.platform_error();
+    reply->status = status;
   } else if (actual != request.data.size()) {
-    reply->status = ZX_ERR_IO;  // Convert partial writes to errors.
+    // Convert partial writes to errors.
+    reply->status = debug::Status("Partial write of " + std::to_string(actual) +
+                                  " bytes instead of " + std::to_string(request.data.size()));
   } else {
-    reply->status = ZX_OK;
+    reply->status = debug::Status();
   }
 }
 
@@ -637,9 +634,9 @@ void DebuggedProcess::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTable
   auto result = process_handle_->GetHandles();
   if (result.is_error()) {
     // TODO(brettw) replace reply with a serialized status.
-    reply->status = result.error_value().platform_error();
+    reply->status = result.error_value();
   } else {
-    reply->status = ZX_OK;
+    reply->status = debug::Status();
     reply->handles = std::move(std::move(result).value());
   }
 }
@@ -748,15 +745,15 @@ void DebuggedProcess::PruneStepOverQueue(DebuggedThread* optional_thread) {
   step_over_queue_ = std::move(good_tickets);
 }
 
-zx_status_t DebuggedProcess::RegisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address) {
+debug::Status DebuggedProcess::RegisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address) {
   auto found = software_breakpoints_.find(address);
   if (found == software_breakpoints_.end()) {
     auto breakpoint = std::make_unique<SoftwareBreakpoint>(bp, this, address);
-    if (zx_status_t status = breakpoint->Init(); status != ZX_OK)
+    if (auto status = breakpoint->Init(); status.has_error())
       return status;
 
     software_breakpoints_[address] = std::move(breakpoint);
-    return ZX_OK;
+    return debug::Status();
   } else {
     return found->second->RegisterBreakpoint(bp);
   }
@@ -776,15 +773,15 @@ void DebuggedProcess::UnregisterSoftwareBreakpoint(Breakpoint* bp, uint64_t addr
   }
 }
 
-zx_status_t DebuggedProcess::RegisterHardwareBreakpoint(Breakpoint* bp, uint64_t address) {
+debug::Status DebuggedProcess::RegisterHardwareBreakpoint(Breakpoint* bp, uint64_t address) {
   auto found = hardware_breakpoints_.find(address);
   if (found == hardware_breakpoints_.end()) {
     auto breakpoint = std::make_unique<HardwareBreakpoint>(bp, this, address);
-    if (zx_status_t status = breakpoint->Init(); status != ZX_OK)
+    if (auto status = breakpoint->Init(); status.has_error())
       return status;
 
     hardware_breakpoints_[address] = std::move(breakpoint);
-    return ZX_OK;
+    return debug::Status();
   } else {
     return found->second->RegisterBreakpoint(bp);
   }

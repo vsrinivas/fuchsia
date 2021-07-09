@@ -44,7 +44,7 @@ SoftwareBreakpoint::SoftwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* 
 
 SoftwareBreakpoint::~SoftwareBreakpoint() { Uninstall(); }
 
-zx_status_t SoftwareBreakpoint::Update() {
+debug::Status SoftwareBreakpoint::Update() {
   // Software breakpoints remain installed as long as even one remains active, regardless of which
   // threads are targeted.
   int sw_bp_count = 0;
@@ -59,10 +59,10 @@ zx_status_t SoftwareBreakpoint::Update() {
     return Install();
   }
 
-  return ZX_OK;
+  return debug::Status();
 }
 
-zx_status_t SoftwareBreakpoint::Install() {
+debug::Status SoftwareBreakpoint::Install() {
   FX_DCHECK(!installed_);
 
   // Read previous instruction contents.
@@ -70,25 +70,25 @@ zx_status_t SoftwareBreakpoint::Install() {
   if (debug::Status status = process_->process_handle().ReadMemory(
           address(), &previous_data_, sizeof(arch::BreakInstructionType), &actual);
       status.has_error())
-    return status.platform_error();
+    return status;
   if (actual != sizeof(arch::BreakInstructionType))
-    return ZX_ERR_UNAVAILABLE;
+    return debug::Status("Could not read breakpoint memory.");
 
   // Replace with breakpoint instruction.
   if (debug::Status status = process_->process_handle().WriteMemory(
           address(), &arch::kBreakInstruction, sizeof(arch::BreakInstructionType), &actual);
       status.has_error())
-    return status.platform_error();
+    return status;
   if (actual != sizeof(arch::BreakInstructionType))
-    return ZX_ERR_UNAVAILABLE;
+    return debug::Status("Could not write breakpoint memory.");
 
   installed_ = true;
-  return ZX_OK;
+  return debug::Status();
 }
 
-zx_status_t SoftwareBreakpoint::Uninstall() {
+debug::Status SoftwareBreakpoint::Uninstall() {
   if (!installed_)
-    return ZX_OK;  // Not installed.
+    return debug::Status();  // Not installed.
 
   // If the breakpoint was previously installed it means the memory address was valid and writable,
   // so we generally expect to be able to do the same write to uninstall it. But it could have been
@@ -99,12 +99,12 @@ zx_status_t SoftwareBreakpoint::Uninstall() {
   debug::Status status = process_->process_handle().ReadMemory(
       address(), &current_contents, sizeof(arch::BreakInstructionType), &actual);
   if (status.has_error() || actual != sizeof(arch::BreakInstructionType))
-    return ZX_OK;  // Probably unmapped, safe to ignore.
+    return debug::Status();  // Probably unmapped, safe to ignore.
 
   if (current_contents != arch::kBreakInstruction) {
     FX_LOGS(WARNING) << "Debug break instruction unexpectedly replaced at 0x" << std::hex
                      << address();
-    return ZX_OK;  // Replaced with something else, ignore.
+    return debug::Status();  // Replaced with something else, ignore.
   }
 
   status = process_->process_handle().WriteMemory(address(), &previous_data_,
@@ -114,7 +114,7 @@ zx_status_t SoftwareBreakpoint::Uninstall() {
   }
 
   installed_ = false;
-  return ZX_OK;
+  return debug::Status();
 }
 
 void SoftwareBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {

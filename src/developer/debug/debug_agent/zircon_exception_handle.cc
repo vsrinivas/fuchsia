@@ -18,12 +18,12 @@ debug_ipc::ExceptionType ZirconExceptionHandle::GetType(const ThreadHandle& thre
   return arch::DecodeExceptionType(thread.GetNativeHandle(), info_.type);
 }
 
-fitx::result<zx_status_t, ExceptionHandle::Resolution> ZirconExceptionHandle::GetResolution()
+fitx::result<debug::Status, ExceptionHandle::Resolution> ZirconExceptionHandle::GetResolution()
     const {
   uint32_t state = 0;
   if (zx_status_t status = exception_.get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
       status != ZX_OK)
-    return fitx::error(status);
+    return fitx::error(debug::ZxStatus(status));
 
   switch (state) {
     case ZX_EXCEPTION_STATE_TRY_NEXT:
@@ -32,10 +32,10 @@ fitx::result<zx_status_t, ExceptionHandle::Resolution> ZirconExceptionHandle::Ge
       return fitx::ok(Resolution::kHandled);
   }
   FX_NOTREACHED();
-  return fitx::error(ZX_ERR_BAD_STATE);
+  return fitx::error(debug::ZxStatus(ZX_ERR_BAD_STATE));
 }
 
-zx_status_t ZirconExceptionHandle::SetResolution(Resolution state) {
+debug::Status ZirconExceptionHandle::SetResolution(Resolution state) {
   uint32_t zx_state = 0;
   switch (state) {
     case Resolution::kTryNext:
@@ -45,30 +45,32 @@ zx_status_t ZirconExceptionHandle::SetResolution(Resolution state) {
       zx_state = ZX_EXCEPTION_STATE_HANDLED;
       break;
   }
-  return exception_.set_property(ZX_PROP_EXCEPTION_STATE, &zx_state, sizeof(state));
+  return debug::ZxStatus(
+      exception_.set_property(ZX_PROP_EXCEPTION_STATE, &zx_state, sizeof(state)));
 }
 
-fitx::result<zx_status_t, debug_ipc::ExceptionStrategy> ZirconExceptionHandle::GetStrategy() const {
+fitx::result<debug::Status, debug_ipc::ExceptionStrategy> ZirconExceptionHandle::GetStrategy()
+    const {
   uint32_t raw_strategy = 0;
   zx_status_t status =
       exception_.get_property(ZX_PROP_EXCEPTION_STRATEGY, &raw_strategy, sizeof(raw_strategy));
   if (status != ZX_OK) {
-    return fitx::error(status);
+    return fitx::error(debug::ZxStatus(status));
   }
   auto strategy = debug_ipc::ToExceptionStrategy(raw_strategy);
   if (!strategy.has_value()) {
-    return fitx::error(ZX_ERR_BAD_STATE);
+    return fitx::error(debug::ZxStatus(ZX_ERR_BAD_STATE));
   }
   return fitx::ok(strategy.value());
 }
 
-zx_status_t ZirconExceptionHandle::SetStrategy(debug_ipc::ExceptionStrategy strategy) {
+debug::Status ZirconExceptionHandle::SetStrategy(debug_ipc::ExceptionStrategy strategy) {
   auto raw_strategy = debug_ipc::ToRawValue(strategy);
   if (!raw_strategy.has_value()) {
-    return ZX_ERR_BAD_STATE;
+    return debug::ZxStatus(ZX_ERR_BAD_STATE);
   }
-  return exception_.set_property(ZX_PROP_EXCEPTION_STRATEGY, &raw_strategy.value(),
-                                 sizeof(raw_strategy.value()));
+  return debug::ZxStatus(exception_.set_property(ZX_PROP_EXCEPTION_STRATEGY, &raw_strategy.value(),
+                                                 sizeof(raw_strategy.value())));
 }
 
 }  // namespace debug_agent

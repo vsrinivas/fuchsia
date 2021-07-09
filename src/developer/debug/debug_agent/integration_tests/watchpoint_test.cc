@@ -115,7 +115,7 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
     static constexpr const char kExecutable[] = "/pkg/bin/watchpoint_test_exe";
     auto [lnch_request, lnch_reply] = GetLaunchRequest(backend, kExecutable);
     remote_api->OnLaunch(lnch_request, &lnch_reply);
-    ASSERT_EQ(lnch_reply.status, ZX_OK) << ZxStatusToString(lnch_reply.status);
+    ASSERT_TRUE(lnch_reply.status.ok());
 
     backend.ResumeAllThreadsAndRunLoop();
 
@@ -132,7 +132,7 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
 
     auto [wp_request, wp_reply] = GetWatchpointRequest(backend, address);
     remote_api->OnAddOrChangeBreakpoint(wp_request, &wp_reply);
-    ASSERT_EQ(wp_reply.status, ZX_OK) << ZxStatusToString(wp_reply.status);
+    ASSERT_TRUE(wp_reply.status.ok());
 
     backend.ResumeAllThreadsAndRunLoop();
 

@@ -56,7 +56,7 @@ class MockRemoteAPIForRegister : public MockRemoteAPI {
 
     // Respond with the two registers we know.
     debug_ipc::WriteRegistersReply reply;
-    reply.status = 0;
+    reply.status = debug::Status();
     reply.registers.emplace_back(debug_ipc::RegisterID::kX64_rbx,
                                  std::vector<uint8_t>(std::begin(kRbxValue), std::end(kRbxValue)));
     reply.registers.emplace_back(debug_ipc::RegisterID::kX64_rcx,

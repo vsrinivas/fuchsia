@@ -29,8 +29,9 @@ class ZirconLimboProvider final : public LimboProvider {
   bool Valid() const override { return valid_; }
   bool IsProcessInLimbo(zx_koid_t process_koid) const override;
   const RecordMap& GetLimboRecords() const override { return limbo_; }
-  fitx::result<zx_status_t, RetrievedException> RetrieveException(zx_koid_t process_koid) override;
-  zx_status_t ReleaseProcess(zx_koid_t process_koid) override;
+  fitx::result<debug::Status, RetrievedException> RetrieveException(
+      zx_koid_t process_koid) override;
+  debug::Status ReleaseProcess(zx_koid_t process_koid) override;
 
  private:
   void WatchActive();

@@ -148,7 +148,6 @@ TEST_F(TargetImplTest, LaunchKill) {
   const uint64_t kKoid = 1234;
   sink().set_launch_err(Err());
   debug_ipc::LaunchReply requested_reply;
-  requested_reply.status = 0;
   requested_reply.process_id = kKoid;
   requested_reply.process_name = "my name";
   sink().set_launch_reply(requested_reply);
@@ -278,7 +277,8 @@ TEST_F(TargetImplTest, AttachToAlreadyAttached) {
   debug_ipc::AttachReply reply = {};
   reply.koid = kProcessKoid;
   reply.name = kProcessName;
-  reply.status = debug_ipc::kZxErrAlreadyBound;
+  reply.status = debug::Status(debug::Status::InternalValues(), debug_ipc::kZxErrAlreadyBound,
+                               "Already bound");
   sink().set_attach_reply(reply);
 
   TargetImpl* target = target_impls[0];

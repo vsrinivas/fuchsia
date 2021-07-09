@@ -224,7 +224,7 @@ bool ReadRequest(MessageReader* reader, ProcessStatusRequest* request, uint32_t*
 
 void WriteReply(const ProcessStatusReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kProcessStatus, transaction_id);
-  writer->WriteUint32(reply.status);
+  Serialize(reply.status, writer);
 }
 
 // Launch ------------------------------------------------------------------------------------------
@@ -249,7 +249,7 @@ void WriteReply(const LaunchReply& reply, uint32_t transaction_id, MessageWriter
   writer->WriteHeader(MsgHeader::Type::kLaunch, transaction_id);
   writer->WriteUint64(reply.timestamp);
   writer->WriteUint32(static_cast<uint32_t>(reply.inferior_type));
-  writer->WriteUint32(reply.status);
+  Serialize(reply.status, writer);
   writer->WriteUint64(reply.process_id);
   writer->WriteUint64(reply.component_id);
   writer->WriteString(reply.process_name);
@@ -268,7 +268,7 @@ bool ReadRequest(MessageReader* reader, KillRequest* request, uint32_t* transact
 void WriteReply(const KillReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kKill, transaction_id);
   writer->WriteUint64(reply.timestamp);
-  writer->WriteUint32(reply.status);
+  Serialize(reply.status, writer);
 }
 
 // Attach ------------------------------------------------------------------------------------------
@@ -291,7 +291,7 @@ void WriteReply(const AttachReply& reply, uint32_t transaction_id, MessageWriter
   writer->WriteHeader(MsgHeader::Type::kAttach, transaction_id);
   writer->WriteUint64(reply.timestamp);
   writer->WriteUint64(reply.koid);
-  writer->WriteUint32(reply.status);
+  Serialize(reply.status, writer);
   writer->WriteString(reply.name);
 }
 
@@ -314,7 +314,7 @@ bool ReadRequest(MessageReader* reader, DetachRequest* request, uint32_t* transa
 void WriteReply(const DetachReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kDetach, transaction_id);
   writer->WriteUint64(reply.timestamp);
-  writer->WriteUint32(reply.status);
+  Serialize(reply.status, writer);
 }
 
 // Pause -------------------------------------------------------------------------------------------
@@ -435,7 +435,7 @@ bool ReadRequest(MessageReader* reader, AddOrChangeBreakpointRequest* request,
 void WriteReply(const AddOrChangeBreakpointReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAddOrChangeBreakpoint, transaction_id);
-  writer->WriteUint32(reply.status);
+  Serialize(reply.status, writer);
 }
 
 // RemoveBreakpoint --------------------------------------------------------------------------------
@@ -517,7 +517,7 @@ bool ReadRequest(MessageReader* reader, JobFilterRequest* request, uint32_t* tra
 
 void WriteReply(const JobFilterReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kJobFilter, transaction_id);
-  writer->WriteUint32(reply.status);
+  Serialize(reply.status, writer);
   Serialize(reply.matched_processes, writer);
 }
 
@@ -537,11 +537,10 @@ bool ReadRequest(MessageReader* reader, WriteMemoryRequest* request, uint32_t* t
 
 void WriteReply(const WriteMemoryReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kWriteMemory, transaction_id);
-  writer->WriteUint64(reply.status);
+  Serialize(reply.status, writer);
 }
 
-// LoadInfoHandleTable
-// -------------------------------------------------------------------------------------
+// LoadInfoHandleTable -----------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, LoadInfoHandleTableRequest* request,
                  uint32_t* transaction_id) {
@@ -555,7 +554,7 @@ bool ReadRequest(MessageReader* reader, LoadInfoHandleTableRequest* request,
 void WriteReply(const LoadInfoHandleTableReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kLoadInfoHandleTable, transaction_id);
-  writer->WriteUint32(reply.status);
+  Serialize(reply.status, writer);
   Serialize(reply.handles, writer);
 }
 
@@ -573,7 +572,7 @@ bool ReadRequest(MessageReader* reader, UpdateGlobalSettingsRequest* request,
 void WriteReply(const UpdateGlobalSettingsReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kUpdateGlobalSettings, transaction_id);
-  writer->WriteUint32(reply.status);
+  Serialize(reply.status, writer);
 }
 
 // ReadRegisters -----------------------------------------------------------------------------------
@@ -610,7 +609,7 @@ bool ReadRequest(MessageReader* reader, WriteRegistersRequest* request, uint32_t
 
 void WriteReply(const WriteRegistersReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kWriteRegisters, transaction_id);
-  writer->WriteUint32(reply.status);
+  Serialize(reply.status, writer);
   Serialize(reply.registers, writer);
 }
 

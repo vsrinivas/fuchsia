@@ -5,13 +5,12 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_COMPONENT_MANAGER_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_COMPONENT_MANAGER_H_
 
-#include <zircon/status.h>
-
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "src/developer/debug/debug_agent/stdio_handles.h"
+#include "src/developer/debug/shared/status.h"
 
 namespace debug_agent {
 
@@ -31,8 +30,8 @@ class ComponentManager {
   //
   // The root_job is the job for the attached component or system root job. The requirement is
   // that this job must cover where components are launched.
-  virtual zx_status_t LaunchComponent(DebuggedJob* root_job, const std::vector<std::string>& argv,
-                                      uint64_t* component_id) = 0;
+  virtual debug::Status LaunchComponent(DebuggedJob* root_job, const std::vector<std::string>& argv,
+                                        uint64_t* component_id) = 0;
 
   // Notification that a process has started.
   //

@@ -66,21 +66,21 @@ class TargetImpl : public Target {
  private:
   static void OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
                                          CallbackWithTimestamp callback, const Err& err,
-                                         uint64_t koid, debug_ipc::zx_status_t status,
+                                         uint64_t koid, const debug::Status& status,
                                          const std::string& process_name, uint64_t timestamp);
   void OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err& err, uint64_t koid,
-                             debug_ipc::zx_status_t status, const std::string& process_name,
+                             const debug::Status& status, const std::string& process_name,
                              uint64_t timestamp);
 
   // Different status returned by the agent can mean different things.
   // ZX_ERR_IO = Process doesn't exist.
   // ZX_ERR_ALREADY_BOUND = The agent is already bound.
-  void HandleAttachStatus(CallbackWithTimestamp callback, uint64_t koid,
-                          debug_ipc::zx_status_t status, const std::string& process_name,
-                          uint64_t timestamp);
+  void HandleAttachErrorStatus(CallbackWithTimestamp callback, uint64_t koid,
+                               const debug::Status& status, const std::string& process_name,
+                               uint64_t timestamp);
 
   void OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,
-                           debug_ipc::zx_status_t status, Callback callback, uint64_t timestamp);
+                           const debug::Status& status, Callback callback, uint64_t timestamp);
 
   // Actual creation that unified common behaviour.
   std::unique_ptr<ProcessImpl> CreateProcessImpl(uint64_t koid, const std::string& name,

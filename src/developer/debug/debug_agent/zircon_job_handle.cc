@@ -9,7 +9,6 @@
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/debug_agent/zircon_utils.h"
 #include "src/developer/debug/shared/message_loop_target.h"
-#include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
 
@@ -40,9 +39,9 @@ std::vector<std::unique_ptr<ProcessHandle>> ZirconJobHandle::GetChildProcesses()
   return result;
 }
 
-zx_status_t ZirconJobHandle::WatchJobExceptions(
+debug::Status ZirconJobHandle::WatchJobExceptions(
     fit::function<void(std::unique_ptr<ProcessHandle>)> cb) {
-  zx_status_t status = ZX_OK;
+  debug::Status status;
 
   if (!cb) {
     // Unregistering.
@@ -57,7 +56,7 @@ zx_status_t ZirconJobHandle::WatchJobExceptions(
     config.job_handle = job_.get();
     config.job_koid = job_koid_;
     config.watcher = this;
-    status = loop->WatchJobExceptions(std::move(config), &job_watch_handle_);
+    status = debug::ZxStatus(loop->WatchJobExceptions(std::move(config), &job_watch_handle_));
   }
 
   process_callback_ = std::move(cb);
@@ -68,7 +67,7 @@ void ZirconJobHandle::OnProcessStarting(zx::exception exception_token,
                                         zx_exception_info_t exception_info) {
   zx_handle_t zircon_handle = ZX_HANDLE_INVALID;
   zx_status_t status = zx_exception_get_process(exception_token.get(), &zircon_handle);
-  FX_DCHECK(status == ZX_OK) << "Got: " << debug_ipc::ZxStatusToString(status);
+  FX_DCHECK(status == ZX_OK) << "Got: " << zx_status_get_string(status);
 
   process_callback_(std::make_unique<ZirconProcessHandle>(zx::process(zircon_handle)));
 

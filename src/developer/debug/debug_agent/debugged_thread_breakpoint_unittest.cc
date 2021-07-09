@@ -140,8 +140,10 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   // Add a watchpoint.
   const debug_ipc::AddressRange kRange = {0x1000, 0x1008};
   constexpr uint32_t kBreakpointId = 99;
-  ASSERT_EQ(ZX_OK, harness.AddOrChangeBreakpoint(kBreakpointId, kProcKoid, kThreadKoid, kRange,
-                                                 debug_ipc::BreakpointType::kWrite));
+  ASSERT_TRUE(harness
+                  .AddOrChangeBreakpoint(kBreakpointId, kProcKoid, kThreadKoid, kRange,
+                                         debug_ipc::BreakpointType::kWrite)
+                  .ok());
 
   // Set the exception information in the debug registers to return. This should indicate the
   // watchpoint that was set up and triggered.
@@ -181,7 +183,7 @@ TEST(DebuggedThreadBreakpoint, BreakpointStepSuspendResume) {
   process->mock_process_handle().mock_memory().AddMemory(kBreakpointAddress, {0, 0, 0, 0});
 
   // Create the breakpoint we'll hit.
-  EXPECT_EQ(ZX_OK, harness.AddOrChangeBreakpoint(1, kProcKoid, kBreakpointAddress));
+  EXPECT_TRUE(harness.AddOrChangeBreakpoint(1, kProcKoid, kBreakpointAddress).ok());
 
   // Set up a hit of the breakpoint.
   const uint64_t kBreakpointExceptionAddr =

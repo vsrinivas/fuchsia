@@ -18,7 +18,7 @@ DebuggedJob::DebuggedJob(ProcessStartHandler* handler, std::unique_ptr<JobHandle
 
 DebuggedJob::~DebuggedJob() = default;
 
-zx_status_t DebuggedJob::Init() {
+debug::Status DebuggedJob::Init() {
   // Register for debug exceptions. Since this class owks the job_handle_ it is safe to capture
   // |this| here.
   return job_handle_->WatchJobExceptions(

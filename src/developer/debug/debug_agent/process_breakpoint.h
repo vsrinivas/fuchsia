@@ -10,6 +10,7 @@
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/status.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -48,7 +49,7 @@ class ProcessBreakpoint {
   virtual debug_ipc::BreakpointType Type() const = 0;
 
   // Call immediately after construction. If it returns failure, the breakpoint will not work.
-  zx_status_t Init();
+  debug::Status Init();
 
   virtual bool Installed(zx_koid_t thread_koid) const = 0;
 
@@ -63,7 +64,7 @@ class ProcessBreakpoint {
   // Adds or removes breakpoints associated with this process/address. Unregister returns whether
   // there are still any breakpoints referring to this address (false means this is unused and
   // should be deleted).
-  zx_status_t RegisterBreakpoint(Breakpoint* breakpoint);
+  debug::Status RegisterBreakpoint(Breakpoint* breakpoint);
   bool UnregisterBreakpoint(Breakpoint* breakpoint);
 
   // When a thread receives a breakpoint exception installed by a process breakpoint, it must check
@@ -129,15 +130,15 @@ class ProcessBreakpoint {
   // See the comments of |EndStepOver| for more details.
   virtual void StepOverCleanup(DebuggedThread* thread) = 0;
 
-  virtual zx_status_t Update() = 0;
+  virtual debug::Status Update() = 0;
 
  protected:
   DebuggedProcess* process_;  // Not-owning.
   uint64_t address_;
 
  private:
-  virtual zx_status_t Uninstall(DebuggedThread* thread) = 0;
-  virtual zx_status_t Uninstall() = 0;  // Uninstall for all the threads.
+  virtual debug::Status Uninstall(DebuggedThread* thread) = 0;
+  virtual debug::Status Uninstall() = 0;  // Uninstall for all the threads.
 
   // Breakpoints that refer to this ProcessBreakpoint. More than one Breakpoint can refer to the
   // same memory address.

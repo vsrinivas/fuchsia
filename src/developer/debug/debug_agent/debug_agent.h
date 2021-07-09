@@ -130,26 +130,27 @@ class DebugAgent : public RemoteAPI,
 
   // Breakpoint::ProcessDelegate implementation ----------------------------------------------------
 
-  zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override;
+  debug::Status RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                   uint64_t address) override;
   void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override;
   void SetupBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
                        debug_ipc::AddOrChangeBreakpointReply* reply);
 
-  zx_status_t RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                 const debug_ipc::AddressRange& range) override;
+  debug::Status RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                   const debug_ipc::AddressRange& range) override;
   void UnregisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
                             const debug_ipc::AddressRange& range) override;
 
   // Job/Process/Thread Management -----------------------------------------------------------------
 
-  zx_status_t AddDebuggedJob(std::unique_ptr<JobHandle> job);
-  zx_status_t AddDebuggedProcess(DebuggedProcessCreateInfo&&, DebuggedProcess** added);
+  debug::Status AddDebuggedJob(std::unique_ptr<JobHandle> job);
+  debug::Status AddDebuggedProcess(DebuggedProcessCreateInfo&&, DebuggedProcess** added);
 
   // Attempts to attach to the given process and sends a AttachReply message
   // to the client with the result.
   void AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id);
-  zx_status_t AttachToLimboProcess(zx_koid_t process_koid, uint32_t transaction_id);
-  zx_status_t AttachToExistingProcess(zx_koid_t process_koid, uint32_t transaction_id);
+  debug::Status AttachToLimboProcess(zx_koid_t process_koid, uint32_t transaction_id);
+  debug::Status AttachToExistingProcess(zx_koid_t process_koid, uint32_t transaction_id);
 
   void LaunchProcess(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
 

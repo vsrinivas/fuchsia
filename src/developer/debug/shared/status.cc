@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/shared/status.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
 
 namespace debug {
@@ -13,13 +14,13 @@ namespace debug {
 Status ZxStatus(zx_status_t s) {
   if (s == ZX_OK)
     return Status();
-  return Status(static_cast<int64_t>(s), zx_status_get_string(s));
+  return Status(Status::InternalValues(), static_cast<int64_t>(s), zx_status_get_string(s));
 }
 
 Status ZxStatus(zx_status_t s, std::string msg) {
   if (s == ZX_OK)
     return Status();
-  return Status(static_cast<int64_t>(s), std::move(msg));
+  return Status(Status::InternalValues(), static_cast<int64_t>(s), std::move(msg));
 }
 
 #else
@@ -27,15 +28,17 @@ Status ZxStatus(zx_status_t s, std::string msg) {
 Status ErrnoStatus(int en) {
   if (en == 0)
     return Status();
-  return Status(static_cast<int64_t>(en), strerror(en));
+  return Status(Status::InternalValues(), static_cast<int64_t>(en), strerror(en));
 }
 
 Status ErrnoStatus(int en, std::string msg) {
   if (en == 0)
     return Status();
-  return Status(static_cast<int64_t>(en), std::move(msg));
+  return Status(Status::InternalValues(), static_cast<int64_t>(en), std::move(msg));
 }
 
 #endif
+
+Status::Status(std::string msg) : message_(std::move(msg)) { FX_DCHECK(!message_.empty()); }
 
 }  // namespace debug

@@ -6,16 +6,6 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#if defined(__Fuchsia__)
-
-#include <zircon/types.h>
-
-// If this static assertion fails, then we have to redefine
-// debug_ipc::zx_status_t appropriately.
-static_assert(std::is_same<::zx_status_t, debug_ipc::zx_status_t>::value);
-
-#endif
-
 namespace debug_ipc {
 
 constexpr uint32_t MsgHeader::kSerializedHeaderSize;

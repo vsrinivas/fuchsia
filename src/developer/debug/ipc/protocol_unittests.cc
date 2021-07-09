@@ -86,9 +86,9 @@ TEST(Protocol, ConfigAgentRequest) {
 
 TEST(Protocol, ConfigAgentReply) {
   ConfigAgentReply initial;
-  initial.results.push_back(debug_ipc::kZxOk);
-  initial.results.push_back(debug_ipc::kZxErrIO);
-  initial.results.push_back(debug_ipc::kZxErrFileBig);
+  initial.results.push_back(debug::Status());
+  initial.results.push_back(debug::Status("This is an error message"));
+  initial.results.push_back(debug::Status(debug::Status::InternalValues(), 45, "foo"));
 
   ConfigAgentReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -199,7 +199,7 @@ TEST(Protocol, ProcessStatusRequest) {
 
 TEST(Protocol, ProcessStatusReply) {
   ProcessStatusReply initial;
-  initial.status = 0x1234;
+  initial.status = debug::Status();
 
   ProcessStatusReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -225,7 +225,7 @@ TEST(Protocol, LaunchRequest) {
 TEST(Protocol, LaunchReply) {
   LaunchReply initial;
   initial.inferior_type = InferiorType::kComponent;
-  initial.status = 67;
+  initial.status = debug::Status(debug::Status::InternalValues(), 1346, "message");
   initial.process_id = 0x1234;
   initial.component_id = 0x5678;
   initial.process_name = "winword.exe";
@@ -255,7 +255,7 @@ TEST(Protocol, KillRequest) {
 TEST(Protocol, KillReply) {
   KillReply initial;
   initial.timestamp = kTestTimestampDefault;
-  initial.status = 67;
+  initial.status = debug::Status();
 
   KillReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -280,7 +280,7 @@ TEST(Protocol, AttachReply) {
   AttachReply initial;
   initial.koid = 2312;
   initial.timestamp = kTestTimestampDefault;
-  initial.status = 67;
+  initial.status = debug::Status();
   initial.name = "virtual console";
 
   AttachReply second;
@@ -306,7 +306,7 @@ TEST(Protocol, DetachRequest) {
 TEST(Protocol, DetachReply) {
   DetachReply initial;
   initial.timestamp = kTestTimestampDefault;
-  initial.status = 67;
+  initial.status = debug::Status();
 
   DetachReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -582,7 +582,7 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
 
 TEST(Protocol, AddOrChangeBreakpointReply) {
   AddOrChangeBreakpointReply initial;
-  initial.status = 78;
+  initial.status = debug::Status("error");
 
   AddOrChangeBreakpointReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -766,7 +766,7 @@ TEST(Protocol, JobFilterRequest) {
 
 TEST(Protocol, JobFilterReply) {
   JobFilterReply initial;
-  initial.status = 67;
+  initial.status = debug::Status();
   initial.matched_processes = {1234, 5678};
 
   JobFilterReply second;
@@ -796,7 +796,7 @@ TEST(Protocol, WriteMemoryRequest) {
 
 TEST(Protocol, WriteMemoryReply) {
   WriteMemoryReply initial;
-  initial.status = 7645;
+  initial.status = debug::Status();
 
   WriteMemoryReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -817,7 +817,7 @@ TEST(Protocol, LoadInfoHandleTableRequest) {
 
 TEST(Protocol, LoadInfoHandleTableReply) {
   LoadInfoHandleTableReply initial;
-  initial.status = 7645;
+  initial.status = debug::Status();
 
   InfoHandle info;
   info.type = 4;
@@ -880,7 +880,7 @@ TEST(Protocol, UpdateGlobalSettingsRequest) {
 
 TEST(Protocol, UpdateGlobalSettingsReply) {
   UpdateGlobalSettingsReply initial;
-  initial.status = 7645;
+  initial.status = debug::Status(debug::Status::InternalValues(), 12345, "foo");
 
   UpdateGlobalSettingsReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -958,7 +958,7 @@ TEST(Protocol, WriteRegistersRequest) {
 
 TEST(Protocol, WriteRegistersReply) {
   WriteRegistersReply initial = {};
-  initial.status = 0x1234u;
+  initial.status = debug::Status("Not so good");
   initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x0, 1));
   initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x1, 2));
 

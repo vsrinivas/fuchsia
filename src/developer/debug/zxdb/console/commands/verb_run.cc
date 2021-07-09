@@ -116,10 +116,10 @@ void LaunchComponent(const Command& cmd) {
     FX_DCHECK(reply.inferior_type == debug_ipc::InferiorType::kComponent)
         << "Expected Component, Got: " << debug_ipc::InferiorTypeToString(reply.inferior_type);
 
-    if (reply.status != debug_ipc::kZxOk) {
+    if (reply.status.has_error()) {
       // TODO(donosoc): This should interpret the component termination reason values.
       Console::get()->Output(Err("Could not start component %s: %s", reply.process_name.c_str(),
-                                 debug_ipc::ZxStatusToString(reply.status)));
+                                 reply.status.message().c_str()));
       return;
     }
 

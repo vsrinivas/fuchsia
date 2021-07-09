@@ -33,19 +33,19 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
     unregister_calls_.clear();
   }
 
-  zx_status_t RegisterBreakpoint(Breakpoint*, zx_koid_t process_koid, uint64_t address) override {
+  debug::Status RegisterBreakpoint(Breakpoint*, zx_koid_t process_koid, uint64_t address) override {
     register_calls_.push_back(std::make_pair(process_koid, address));
-    return ZX_OK;
+    return debug::Status();
   }
 
   void UnregisterBreakpoint(Breakpoint*, zx_koid_t process_koid, uint64_t address) override {
     unregister_calls_.push_back(std::make_pair(process_koid, address));
   }
 
-  zx_status_t RegisterWatchpoint(Breakpoint*, zx_koid_t process_koid,
-                                 const debug_ipc::AddressRange& range) override {
+  debug::Status RegisterWatchpoint(Breakpoint*, zx_koid_t process_koid,
+                                   const debug_ipc::AddressRange& range) override {
     wp_register_calls_.push_back(std::make_pair(process_koid, range));
-    return ZX_OK;
+    return debug::Status();
   }
 
   void UnregisterWatchpoint(Breakpoint*, zx_koid_t process_koid,
@@ -89,7 +89,7 @@ TEST(Breakpoint, Registration) {
   pr_settings.address = kAddress1;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK, bp.SetSettings(settings));
+  ASSERT_TRUE(bp.SetSettings(settings).ok());
   EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}), delegate.register_calls());
   EXPECT_TRUE(delegate.unregister_calls().empty());
 
@@ -101,7 +101,7 @@ TEST(Breakpoint, Registration) {
   pr_settings.id = {.process = kProcess2, .thread = 0};
   pr_settings.address = kAddress2;
 
-  ASSERT_EQ(ZX_OK, bp.SetSettings(settings));
+  ASSERT_TRUE(bp.SetSettings(settings).ok());
   EXPECT_EQ(CallVector({CallPair{kProcess2, kAddress2}}), delegate.register_calls());
   EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}), delegate.unregister_calls());
 
@@ -124,7 +124,7 @@ TEST(Breakpoint, Registration) {
   settings.locations.push_back(old_pr_settings);
   settings.locations.push_back(new_pr_settings);
 
-  ASSERT_EQ(ZX_OK, bp.SetSettings(settings));
+  ASSERT_TRUE(bp.SetSettings(settings).ok());
 
   EXPECT_EQ(CallVector({{kProcess1, kAddress1}, {kProcess3, kAddress3}}),
             delegate.register_calls());
@@ -149,7 +149,7 @@ TEST(Breakpoint, Destructor) {
   pr_settings.address = kAddress1;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK, bp->SetSettings(settings));
+  ASSERT_TRUE(bp->SetSettings(settings).ok());
   EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}), delegate.register_calls());
   EXPECT_TRUE(delegate.unregister_calls().empty());
 
@@ -179,7 +179,7 @@ TEST(Breakpoint, HitCount) {
   pr_settings.address = kAddress1;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK, bp->SetSettings(settings));
+  ASSERT_TRUE(bp->SetSettings(settings).ok());
   delegate.Clear();
 
   EXPECT_EQ(kBreakpointId, bp->stats().id);
@@ -215,7 +215,7 @@ TEST(Breakpoint, OneShot) {
   pr_settings.address = kAddress;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK, bp->SetSettings(settings));
+  ASSERT_TRUE(bp->SetSettings(settings).ok());
   delegate.Clear();
 
   EXPECT_EQ(kBreakpointId, bp->stats().id);
@@ -244,10 +244,10 @@ TEST(Breakpoint, WatchpointLocations) {
   settings.locations.push_back(CreateLocation(kProcess2Koid, 0, kProcess2Range));
 
   settings.type = debug_ipc::BreakpointType::kReadWrite;
-  ASSERT_ZX_EQ(breakpoint.SetSettings(settings), ZX_OK);
+  ASSERT_TRUE(breakpoint.SetSettings(settings).ok());
 
   settings.type = debug_ipc::BreakpointType::kWrite;
-  ASSERT_ZX_EQ(breakpoint.SetSettings(settings), ZX_OK);
+  ASSERT_TRUE(breakpoint.SetSettings(settings).ok());
 
   EXPECT_EQ(
       process_delegate.wp_register_calls(),

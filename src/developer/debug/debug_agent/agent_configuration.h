@@ -17,8 +17,8 @@ struct AgentConfiguration {
 
 // Receives a list of actions and resolves them. Returns a status for each
 // action received, in the same order.
-std::vector<debug_ipc::zx_status_t> HandleActions(
-    const std::vector<debug_ipc::ConfigAction>& actions, AgentConfiguration* config);
+std::vector<debug::Status> HandleActions(const std::vector<debug_ipc::ConfigAction>& actions,
+                                         AgentConfiguration* config);
 
 }  // namespace debug_agent
 

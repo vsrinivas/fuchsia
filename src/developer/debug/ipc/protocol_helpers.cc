@@ -12,6 +12,10 @@ void Serialize(const std::string& s, MessageWriter* writer) { writer->WriteStrin
 
 bool Deserialize(MessageReader* reader, std::string* s) { return reader->ReadString(s); }
 
+void Serialize(int64_t data, MessageWriter* writer) { writer->WriteInt64(data); }
+
+bool Deserialize(MessageReader* reader, int64_t* data) { return reader->ReadInt64(data); }
+
 void Serialize(uint64_t data, MessageWriter* writer) { writer->WriteUint64(data); }
 
 bool Deserialize(MessageReader* reader, uint64_t* data) { return reader->ReadUint64(data); }
@@ -19,6 +23,21 @@ bool Deserialize(MessageReader* reader, uint64_t* data) { return reader->ReadUin
 void Serialize(int32_t data, MessageWriter* writer) { writer->WriteInt32(data); }
 
 bool Deserialize(MessageReader* reader, int32_t* data) { return reader->ReadInt32(data); }
+
+void Serialize(const debug::Status& status, MessageWriter* writer) {
+  SerializeOptional(status.platform_error(), writer);
+  Serialize(status.message(), writer);
+}
+
+bool Deserialize(MessageReader* reader, debug::Status* status) {
+  std::optional<int64_t> platform_error;
+  std::string msg;
+  if (!DeserializeOptional(reader, &platform_error) || !Deserialize(reader, &msg))
+    return false;
+
+  *status = debug::Status(debug::Status::InternalValues(), platform_error, std::move(msg));
+  return true;
+}
 
 void Serialize(const ProcessThreadId& ids, MessageWriter* writer) {
   writer->WriteUint64(ids.process);

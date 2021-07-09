@@ -34,14 +34,14 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
   }
 
   // This only gets called if Breakpoint.SetSettings() is called.
-  zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t koid, uint64_t address) override {
+  debug::Status RegisterBreakpoint(Breakpoint* bp, zx_koid_t koid, uint64_t address) override {
     auto found = bps_.find(address);
     if (found == bps_.end()) {
       auto pbp = std::make_unique<SoftwareBreakpoint>(bp, procs_[koid].get(), address);
 
-      zx_status_t status = pbp->Init();
-      if (status != ZX_OK) {
-        fprintf(stderr, "Failure initializing %d\n", (int)status);
+      auto status = pbp->Init();
+      if (status.has_error()) {
+        fprintf(stderr, "Failure initializing %s\n", status.message().c_str());
         return status;
       }
 
@@ -49,7 +49,7 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
     } else {
       found->second->RegisterBreakpoint(bp);
     }
-    return ZX_OK;
+    return debug::Status();
   }
   void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t, uint64_t address) override {
     auto found = bps_.find(address);
@@ -150,7 +150,7 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
   LoadOriginalMemory(process.mock_process_handle());
 
   SoftwareBreakpoint bp(&main_breakpoint, &process, kAddress);
-  ASSERT_EQ(ZX_OK, bp.Init());
+  ASSERT_TRUE(bp.Init().ok());
 
   // Should have written the breakpoint instruction.
   EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress));
@@ -208,7 +208,7 @@ TEST(ProcessBreakpoint, StepSingle) {
   mock_thread5->ClientSuspend();
 
   SoftwareBreakpoint bp(&main_breakpoint, &process, kAddress);
-  ASSERT_EQ(ZX_OK, bp.Init());
+  ASSERT_TRUE(bp.Init().ok());
 
   // The breakpoint should be installed.
   EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress));
@@ -436,9 +436,9 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   SoftwareBreakpoint breakpoint2(&main_breakpoint2, &process, kAddress2);
   SoftwareBreakpoint breakpoint3(&main_breakpoint3, &process, kAddress3);
 
-  ASSERT_EQ(ZX_OK, breakpoint1.Init());
-  ASSERT_EQ(ZX_OK, breakpoint2.Init());
-  ASSERT_EQ(ZX_OK, breakpoint3.Init());
+  ASSERT_TRUE(breakpoint1.Init().ok());
+  ASSERT_TRUE(breakpoint2.Init().ok());
+  ASSERT_TRUE(breakpoint3.Init().ok());
 
   // The breakpoint should be installed at all locations.
   EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress1));
@@ -739,7 +739,7 @@ TEST(ProcessBreakpoint, RecursiveStep) {
   MockThread* mock_thread = process.AddThread(kThreadKoid);
 
   SoftwareBreakpoint bp(&main_breakpoint, &process, kAddress);
-  ASSERT_EQ(ZX_OK, bp.Init());
+  ASSERT_TRUE(bp.Init().ok());
 
   // The breakpoint should be installed.
   EXPECT_TRUE(MemoryContainsBreak(process.mock_process_handle(), kAddress));
@@ -791,14 +791,14 @@ TEST(ProcessBreakpoint, HitCount) {
   // Create a ProcessBreakpoint referencing the two Breakpoint objects
   // (corresponds to two logical breakpoints at the same address).
   std::unique_ptr<Breakpoint> main_breakpoint1 = std::make_unique<Breakpoint>(&process_delegate);
-  zx_status_t status = main_breakpoint1->SetSettings(settings);
-  ASSERT_EQ(ZX_OK, status);
+  auto status = main_breakpoint1->SetSettings(settings);
+  ASSERT_TRUE(status.ok());
 
   std::unique_ptr<Breakpoint> main_breakpoint2 = std::make_unique<Breakpoint>(&process_delegate);
   constexpr uint32_t kBreakpointId2 = 13;
   settings.id = kBreakpointId2;
   status = main_breakpoint2->SetSettings(settings);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_TRUE(status.ok());
 
   // There should only be one address with a breakpoint.
   ASSERT_EQ(1u, process_delegate.bps().size());

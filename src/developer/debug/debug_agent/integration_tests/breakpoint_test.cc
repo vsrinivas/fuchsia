@@ -160,7 +160,7 @@ TEST(BreakpointIntegration, DISABLED_SWBreakpoint) {
     launch_request.inferior_type = debug_ipc::InferiorType::kBinary;
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
-    ASSERT_EQ(launch_reply.status, ZX_OK) << "Got: " << zx_status_get_string(launch_reply.status);
+    ASSERT_TRUE(launch_reply.status.ok());
 
     // We run the loop which will stop at the new thread notification.
     loop->Run();
@@ -207,7 +207,7 @@ TEST(BreakpointIntegration, DISABLED_SWBreakpoint) {
 
     debug_ipc::AddOrChangeBreakpointReply breakpoint_reply;
     remote_api->OnAddOrChangeBreakpoint(breakpoint_request, &breakpoint_reply);
-    ASSERT_EQ(breakpoint_reply.status, ZX_OK);
+    ASSERT_TRUE(breakpoint_reply.status.ok());
 
     // Resume the process now that the breakpoint is installed.
     DEBUG_LOG(Test) << "Resuming thread.";
@@ -292,7 +292,7 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
     launch_request.argv.push_back(kTestExecutablePath);
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
-    ASSERT_EQ(launch_reply.status, ZX_OK) << "Got: " << zx_status_get_string(launch_reply.status);
+    ASSERT_TRUE(launch_reply.status.ok());
 
     // We run the loop which will stop at the new thread notification.
     loop->Run();
@@ -334,8 +334,7 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
     breakpoint_request.breakpoint.locations.push_back(location);
     debug_ipc::AddOrChangeBreakpointReply breakpoint_reply;
     remote_api->OnAddOrChangeBreakpoint(breakpoint_request, &breakpoint_reply);
-    ASSERT_EQ(breakpoint_reply.status, ZX_OK)
-        << "Received: " << debug_ipc::ZxStatusToString(breakpoint_reply.status);
+    ASSERT_TRUE(breakpoint_reply.status.ok());
 
     // Resume the process now that the breakpoint is installed.
     remote_api->OnResume(resume_request, &resume_reply);

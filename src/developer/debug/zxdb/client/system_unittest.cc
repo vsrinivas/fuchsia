@@ -38,7 +38,7 @@ class APISink : public MockRemoteAPI {
     auto info = next_infos_[info_count_++];
 
     debug_ipc::AttachReply reply;
-    reply.status = debug_ipc::kZxOk;
+    reply.status = debug::Status();
     reply.koid = info.koid;
     reply.name = info.name;
     cb(Err(), std::move(reply));
@@ -56,7 +56,7 @@ class APISink : public MockRemoteAPI {
       const debug_ipc::UpdateGlobalSettingsRequest& request,
       fit::callback<void(const Err&, debug_ipc::UpdateGlobalSettingsReply)> cb) override {
     global_setting_requests_.push_back(request);
-    debug_ipc::UpdateGlobalSettingsReply reply = {.status = debug_ipc::kZxOk};
+    debug_ipc::UpdateGlobalSettingsReply reply;
     cb(Err(), std::move(reply));
   }
 

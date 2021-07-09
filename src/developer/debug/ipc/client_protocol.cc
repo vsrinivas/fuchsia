@@ -216,7 +216,7 @@ bool ReadReply(MessageReader* reader, ProcessStatusReply* reply, uint32_t* trans
     return false;
   *transaction_id = header.transaction_id;
 
-  if (!reader->ReadUint32(&reply->status))
+  if (!Deserialize(reader, &reply->status))
     return false;
   return true;
 }
@@ -245,7 +245,7 @@ bool ReadReply(MessageReader* reader, LaunchReply* reply, uint32_t* transaction_
   }
   reply->inferior_type = static_cast<InferiorType>(inferior_type);
 
-  if (!reader->ReadInt32(&reply->status))
+  if (!Deserialize(reader, &reply->status))
     return false;
   if (!reader->ReadUint64(&reply->process_id))
     return false;
@@ -271,7 +271,7 @@ bool ReadReply(MessageReader* reader, KillReply* reply, uint32_t* transaction_id
 
   if (!reader->ReadUint64(&reply->timestamp))
     return false;
-  if (!reader->ReadInt32(&reply->status))
+  if (!Deserialize(reader, &reply->status))
     return false;
   return true;
 }
@@ -294,7 +294,7 @@ bool ReadReply(MessageReader* reader, AttachReply* reply, uint32_t* transaction_
     return false;
   if (!reader->ReadUint64(&reply->koid))
     return false;
-  if (!reader->ReadInt32(&reply->status))
+  if (!Deserialize(reader, &reply->status))
     return false;
   if (!reader->ReadString(&reply->name))
     return false;
@@ -317,7 +317,7 @@ bool ReadReply(MessageReader* reader, DetachReply* reply, uint32_t* transaction_
 
   if (!reader->ReadUint64(&reply->timestamp))
     return false;
-  if (!reader->ReadInt32(&reply->status))
+  if (!Deserialize(reader, &reply->status))
     return false;
   return true;
 }
@@ -453,7 +453,7 @@ bool ReadReply(MessageReader* reader, WriteRegistersReply* reply, uint32_t* tran
     return false;
 
   *transaction_id = header.transaction_id;
-  if (!reader->ReadInt32(&reply->status))
+  if (!Deserialize(reader, &reply->status))
     return false;
   return Deserialize(reader, &reply->registers);
 }
@@ -472,7 +472,7 @@ bool ReadReply(MessageReader* reader, AddOrChangeBreakpointReply* reply, uint32_
     return false;
   *transaction_id = header.transaction_id;
 
-  return reader->ReadInt32(&reply->status);
+  return Deserialize(reader, &reply->status);
 }
 
 // RemoveBreakpoint --------------------------------------------------------------------------------
@@ -577,7 +577,7 @@ bool ReadReply(MessageReader* reader, JobFilterReply* reply, uint32_t* transacti
     return false;
   *transaction_id = header.transaction_id;
 
-  if (!reader->ReadInt32(&reply->status))
+  if (!Deserialize(reader, &reply->status))
     return false;
   return Deserialize(reader, &reply->matched_processes);
 }
@@ -598,11 +598,10 @@ bool ReadReply(MessageReader* reader, WriteMemoryReply* reply, uint32_t* transac
     return false;
   *transaction_id = header.transaction_id;
 
-  return reader->ReadInt32(&reply->status);
+  return Deserialize(reader, &reply->status);
 }
 
-// LoadInfoHandleTable
-// -------------------------------------------------------------------------------------
+// LoadInfoHandleTable -----------------------------------------------------------------------------
 
 void WriteRequest(const LoadInfoHandleTableRequest& request, uint32_t transaction_id,
                   MessageWriter* writer) {
@@ -616,7 +615,7 @@ bool ReadReply(MessageReader* reader, LoadInfoHandleTableReply* reply, uint32_t*
     return false;
   *transaction_id = header.transaction_id;
 
-  if (!reader->ReadInt32(&reply->status))
+  if (!Deserialize(reader, &reply->status))
     return false;
   return Deserialize(reader, &reply->handles);
 }
@@ -635,7 +634,7 @@ bool ReadReply(MessageReader* reader, UpdateGlobalSettingsReply* reply, uint32_t
     return false;
   *transaction_id = header.transaction_id;
 
-  return reader->ReadInt32(&reply->status);
+  return Deserialize(reader, &reply->status);
 }
 
 // ConfigAgent -------------------------------------------------------------------------------------

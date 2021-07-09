@@ -186,7 +186,7 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::La
   }
 
   reply->timestamp = GetNowTimestamp();
-  reply->status = ZX_ERR_INVALID_ARGS;
+  reply->status = debug::Status("Invalid inferior type to launch.");
 }
 
 void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) {
@@ -202,7 +202,7 @@ void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillRe
   // Otherwise search locally.
   auto debug_process = GetDebuggedProcess(request.process_koid);
   if (!debug_process) {
-    reply->status = ZX_ERR_NOT_FOUND;
+    reply->status = debug::Status("Process is not currently being debugged.");
     return;
   }
 
@@ -210,9 +210,9 @@ void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillRe
 
   // Check if this was a limbo "kill". If so, mark this process to be removed from limbo when it
   // re-enters it and tell the client that we successfully killed it.
-  if (reply->status == ZX_ERR_ACCESS_DENIED && debug_process->from_limbo()) {
+  if (reply->status.has_error() && debug_process->from_limbo()) {
     killed_limbo_procs_.insert(debug_process->koid());
-    reply->status = ZX_OK;
+    reply->status = debug::Status();
   }
 
   RemoveDebuggedProcess(request.process_koid);
@@ -224,9 +224,10 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
     case debug_ipc::TaskType::kJob: {
       if (auto debug_job = GetDebuggedJob(request.koid)) {
         RemoveDebuggedJob(request.koid);
-        reply->status = ZX_OK;
+        reply->status = debug::Status();
       } else {
-        reply->status = ZX_ERR_NOT_FOUND;
+        reply->status = debug::Status("Not currently attached to job " +
+                                      std::to_string(request.koid) + " to detach from.");
       }
       break;
     }
@@ -241,14 +242,15 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
       auto debug_process = GetDebuggedProcess(request.koid);
       if (debug_process && debug_process->handle().is_valid()) {
         RemoveDebuggedProcess(request.koid);
-        reply->status = ZX_OK;
+        reply->status = debug::Status();
       } else {
-        reply->status = ZX_ERR_NOT_FOUND;
+        reply->status = debug::Status("Not currently attached to process " +
+                                      std::to_string(request.koid) + " to detach from.");
       }
       break;
     }
     default:
-      reply->status = ZX_ERR_INVALID_ARGS;
+      reply->status = debug::Status("Bad task type to detach from.");
   }
 }
 
@@ -362,10 +364,11 @@ void DebugAgent::OnWriteRegisters(const debug_ipc::WriteRegistersRequest& reques
                                   debug_ipc::WriteRegistersReply* reply) {
   DebuggedThread* thread = GetDebuggedThread(request.id);
   if (thread) {
-    reply->status = ZX_OK;
+    reply->status = debug::Status();
     reply->registers = thread->WriteRegisters(request.registers);
   } else {
-    reply->status = ZX_ERR_NOT_FOUND;
+    reply->status = debug::Status("Can not find thread " + std::to_string(request.id.thread) +
+                                  " to write registers.");
     FX_LOGS(ERROR) << "Cannot find thread with koid: " << request.id.thread;
   }
 }
@@ -404,7 +407,8 @@ void DebugAgent::OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
                                  debug_ipc::ProcessStatusReply* reply) {
   auto it = procs_.find(request.process_koid);
   if (it == procs_.end()) {
-    reply->status = ZX_ERR_NOT_FOUND;
+    reply->status =
+        debug::Status("Not currently attached to process " + std::to_string(request.process_koid));
     return;
   }
 
@@ -424,7 +428,7 @@ void DebugAgent::OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
     process->SuspendAndSendModulesIfKnown();
   });
 
-  reply->status = ZX_OK;
+  reply->status = debug::Status();
 }
 
 void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
@@ -438,15 +442,15 @@ void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
   }
 }
 
-zx_status_t DebugAgent::RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                           uint64_t address) {
+debug::Status DebugAgent::RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                             uint64_t address) {
   DebuggedProcess* proc = GetDebuggedProcess(process_koid);
   if (proc)
     return proc->RegisterBreakpoint(bp, address);
 
   // The process might legitimately be not found if there was a race between
   // the process terminating and a breakpoint add/change.
-  return ZX_ERR_NOT_FOUND;
+  return debug::Status("Process not found when adding breakpoint");
 }
 
 void DebugAgent::UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) {
@@ -472,15 +476,15 @@ void DebugAgent::SetupBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& 
   reply->status = found->second.SetSettings(request.breakpoint);
 }
 
-zx_status_t DebugAgent::RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                           const debug_ipc::AddressRange& range) {
+debug::Status DebugAgent::RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                             const debug_ipc::AddressRange& range) {
   DebuggedProcess* proc = GetDebuggedProcess(process_koid);
   if (proc)
     return proc->RegisterWatchpoint(bp, range);
 
-  // The process might legitimately be not found if there was a race between
-  // the process terminating and a breakpoint add/change.
-  return ZX_ERR_NOT_FOUND;
+  // The process might legitimately be not found if there was a race between the process terminating
+  // and a breakpoint add/change.
+  return debug::Status("Process not found when adding watchpoint");
 }
 
 void DebugAgent::UnregisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
@@ -502,22 +506,25 @@ void DebugAgent::OnJobFilter(const debug_ipc::JobFilterRequest& request,
                              debug_ipc::JobFilterReply* reply) {
   DebuggedJob* job = GetDebuggedJob(request.job_koid);
   if (!job) {
-    reply->status = ZX_ERR_INVALID_ARGS;
+    reply->status = debug::Status("Not attached to job " + std::to_string(request.job_koid) +
+                                  " while adding a filter.");
     return;
   }
 
   for (const auto& match : job->SetFilters(std::move(request.filters)))
     reply->matched_processes.push_back(match->GetKoid());
-  reply->status = ZX_OK;
+  reply->status = debug::Status();
 }
 
 void DebugAgent::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
                                debug_ipc::WriteMemoryReply* reply) {
   DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
-  if (proc)
+  if (proc) {
     proc->OnWriteMemory(request, reply);
-  else
-    reply->status = ZX_ERR_NOT_FOUND;
+  } else {
+    reply->status = debug::Status("Not attached to process " +
+                                  std::to_string(request.process_koid) + " while writing memory.");
+  }
 }
 
 void DebugAgent::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableRequest& request,
@@ -526,7 +533,9 @@ void DebugAgent::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableReque
   if (proc)
     proc->OnLoadInfoHandleTable(request, reply);
   else
-    reply->status = ZX_ERR_NOT_FOUND;
+    reply->status =
+        debug::Status("Not attached to process " + std::to_string(request.process_koid) +
+                      " while getting the handle table.");
 }
 
 void DebugAgent::OnUpdateGlobalSettings(const debug_ipc::UpdateGlobalSettingsRequest& request,
@@ -581,28 +590,28 @@ std::vector<debug_ipc::ProcessThreadId> DebugAgent::ClientSuspendAll(zx_koid_t e
   return affected;
 }
 
-zx_status_t DebugAgent::AddDebuggedJob(std::unique_ptr<JobHandle> job_handle) {
+debug::Status DebugAgent::AddDebuggedJob(std::unique_ptr<JobHandle> job_handle) {
   zx_koid_t koid = job_handle->GetKoid();
   auto job = std::make_unique<DebuggedJob>(this, std::move(job_handle));
-  if (zx_status_t status = job->Init(); status != ZX_OK)
+  if (auto status = job->Init(); status.has_error())
     return status;
 
   jobs_[koid] = std::move(job);
-  return ZX_OK;
+  return debug::Status();
 }
 
-zx_status_t DebugAgent::AddDebuggedProcess(DebuggedProcessCreateInfo&& create_info,
-                                           DebuggedProcess** new_process) {
+debug::Status DebugAgent::AddDebuggedProcess(DebuggedProcessCreateInfo&& create_info,
+                                             DebuggedProcess** new_process) {
   *new_process = nullptr;
 
   auto proc = std::make_unique<DebuggedProcess>(this, std::move(create_info));
-  if (zx_status_t status = proc->Init(); status != ZX_OK)
+  if (auto status = proc->Init(); status.has_error())
     return status;
 
   auto process_id = proc->koid();
   *new_process = proc.get();
   procs_[process_id] = std::move(proc);
-  return ZX_OK;
+  return debug::Status();
 }
 
 debug_ipc::ExceptionStrategy DebugAgent::GetExceptionStrategy(debug_ipc::ExceptionType type) {
@@ -617,10 +626,10 @@ debug_ipc::ExceptionStrategy DebugAgent::GetExceptionStrategy(debug_ipc::Excepti
 
 namespace {
 
-void SendAttachReply(DebugAgent* debug_agent, uint32_t transaction_id, zx_status_t status,
+void SendAttachReply(DebugAgent* debug_agent, uint32_t transaction_id, const debug::Status& status,
                      zx_koid_t process_koid = ZX_HANDLE_INVALID,
                      const std::string& process_name = "") {
-  debug_ipc::AttachReply reply = {};
+  debug_ipc::AttachReply reply;
   reply.status = status;
   reply.koid = process_koid;
   reply.name = process_name;
@@ -669,12 +678,10 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
   }
 
   debug_ipc::AttachReply reply;
-  reply.status = ZX_ERR_NOT_FOUND;
 
   // Don't return early since we always need to send the reply, even on fail.
   if (job) {
-    DEBUG_LOG(Agent) << "Attaching to job " << job->GetKoid() << ": "
-                     << zx_status_get_string(reply.status);
+    DEBUG_LOG(Agent) << "Attaching to job " << job->GetKoid();
 
     reply.name = job->GetName();
     reply.koid = job->GetKoid();
@@ -682,6 +689,7 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
     reply.timestamp = GetNowTimestamp();
   } else {
     DEBUG_LOG(Agent) << "Failed to attach to job.";
+    reply.status = debug::Status("Could not attach to job.");
   }
 
   // Send the reply.
@@ -696,42 +704,42 @@ void DebugAgent::AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id
   // See if we're already attached to this process.
   for (auto& [koid, proc] : procs_) {
     if (koid == process_koid) {
-      DEBUG_LOG(Agent) << "Already attached to " << proc->process_handle().GetName() << "("
-                       << proc->koid() << ").";
-      SendAttachReply(this, transaction_id, ZX_ERR_ALREADY_BOUND);
+      debug::Status error("Already attached to process " + std::to_string(proc->koid()));
+      DEBUG_LOG(Agent) << error.message();
+      SendAttachReply(this, transaction_id, error);
       return;
     }
   }
 
   // First check if the process is in limbo. Sends the appropiate replies/notifications.
   if (system_interface_->GetLimboProvider().Valid()) {
-    zx_status_t status = AttachToLimboProcess(process_koid, transaction_id);
-    if (status == ZX_OK)
+    auto status = AttachToLimboProcess(process_koid, transaction_id);
+    if (status.ok())
       return;
 
-    DEBUG_LOG(Agent) << "Could not attach to process in limbo: " << zx_status_get_string(status);
+    DEBUG_LOG(Agent) << "Could not attach to process in limbo: " << status.message();
   }
 
-  // Attempt to attach to an existing process. Sends the appropiate replies/notifications.
-  zx_status_t status = AttachToExistingProcess(process_koid, transaction_id);
-  if (status == ZX_OK)
+  // Attempt to attach to an existing process. Sends the appropriate replies/notifications.
+  auto status = AttachToExistingProcess(process_koid, transaction_id);
+  if (status.ok())
     return;
 
-  DEBUG_LOG(Agent) << "Could not attach to existing process: " << zx_status_get_string(status);
+  DEBUG_LOG(Agent) << "Could not attach to existing process: " << status.message();
 
   // We didn't find a process.
   SendAttachReply(this, transaction_id, status);
 }
 
-zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t transaction_id) {
+debug::Status DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t transaction_id) {
   LimboProvider& limbo = system_interface_->GetLimboProvider();
   FX_DCHECK(limbo.Valid());
 
   // Obtain the process and exception from limbo.
   auto retrieved = limbo.RetrieveException(process_koid);
   if (retrieved.is_error()) {
-    zx_status_t status = retrieved.error_value();
-    DEBUG_LOG(Agent) << "Could not retrieve exception from limbo: " << zx_status_get_string(status);
+    debug::Status status = retrieved.error_value();
+    DEBUG_LOG(Agent) << "Could not retrieve exception from limbo: " << status.message();
     return status;
   }
 
@@ -741,15 +749,15 @@ zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t tr
   create_info.from_limbo = true;
 
   DebuggedProcess* debugged_process = nullptr;
-  zx_status_t status = AddDebuggedProcess(std::move(create_info), &debugged_process);
-  if (status != ZX_OK)
+  debug::Status status = AddDebuggedProcess(std::move(create_info), &debugged_process);
+  if (status.has_error())
     return status;
 
   // Send the response, then the notifications about the process and threads.
   //
   // DO NOT RETURN FAILURE AFTER THIS POINT or the attach reply will be duplicated (the caller will
   // fall back on non-limbo processes if this function fails and will send another reply).
-  SendAttachReply(this, transaction_id, ZX_OK, process_koid,
+  SendAttachReply(this, transaction_id, debug::Status(), process_koid,
                   debugged_process->process_handle().GetName());
 
   debugged_process->PopulateCurrentThreads();
@@ -769,27 +777,28 @@ zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t tr
   if (exception_thread)
     exception_thread->set_exception_handle(std::move(exception.exception));
 
-  return ZX_OK;
+  return debug::Status();
 }
 
-zx_status_t DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32_t transaction_id) {
+debug::Status DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32_t transaction_id) {
   std::unique_ptr<ProcessHandle> process_handle = system_interface_->GetProcess(process_koid);
   if (!process_handle)
-    return ZX_ERR_NOT_FOUND;
+    return debug::Status("Can not fild process " + std::to_string(process_koid) + " to attach to.");
 
   DebuggedProcess* process = nullptr;
-  zx_status_t status =
-      AddDebuggedProcess(DebuggedProcessCreateInfo(std::move(process_handle)), &process);
-  if (status != ZX_OK)
+  if (auto status =
+          AddDebuggedProcess(DebuggedProcessCreateInfo(std::move(process_handle)), &process);
+      status.has_error())
     return status;
 
   // Send the response, then the notifications about the process and threads.
-  SendAttachReply(this, transaction_id, ZX_OK, process_koid, process->process_handle().GetName());
+  SendAttachReply(this, transaction_id, debug::Status(), process_koid,
+                  process->process_handle().GetName());
 
   process->PopulateCurrentThreads();
   process->SuspendAndSendModulesIfKnown();
 
-  return ZX_OK;
+  return debug::Status();
 }
 
 void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
@@ -800,7 +809,7 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
 
   std::unique_ptr<BinaryLauncher> launcher = system_interface_->GetLauncher();
   reply->status = launcher->Setup(request.argv);
-  if (reply->status != ZX_OK)
+  if (reply->status.has_error())
     return;
 
   DebuggedProcessCreateInfo create_info(launcher->GetProcess());
@@ -810,11 +819,11 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   // Starting the process to avoid racing with the program initialization.
   DebuggedProcess* new_process = nullptr;
   reply->status = AddDebuggedProcess(std::move(create_info), &new_process);
-  if (reply->status != ZX_OK)
+  if (reply->status.has_error())
     return;
 
   reply->status = launcher->Start();
-  if (reply->status != ZX_OK) {
+  if (reply->status.has_error()) {
     RemoveDebuggedProcess(new_process->koid());
     return;
   }
@@ -833,9 +842,10 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   // and not depend on what the client may have already attached to.
   DebuggedJob* job = GetDebuggedJob(attached_root_job_koid_);
   if (!job) {
-    FX_LOGS(WARNING) << "Could not obtain component root job. Are you running "
-                        "attached to another debugger?";
-    reply->status = ZX_ERR_BAD_STATE;
+    reply->status = debug::Status(
+        "Could not obtain component root job. It could be another debugger is "
+        "already running or this is a user OS build.");
+    FX_LOGS(WARNING) << reply->status.message();
     return;
   }
 

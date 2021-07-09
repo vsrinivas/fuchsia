@@ -19,11 +19,14 @@ using AddressRange = ::debug_ipc::AddressRange;
 
 class MockProcessDelegate : public Breakpoint::ProcessDelegate {
  public:
-  zx_status_t RegisterBreakpoint(Breakpoint*, zx_koid_t, uint64_t) override { return ZX_OK; }
+  debug::Status RegisterBreakpoint(Breakpoint*, zx_koid_t, uint64_t) override {
+    return debug::Status();
+  }
   void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override {}
 
-  zx_status_t RegisterWatchpoint(Breakpoint*, zx_koid_t, const debug_ipc::AddressRange&) override {
-    return ZX_OK;
+  debug::Status RegisterWatchpoint(Breakpoint*, zx_koid_t,
+                                   const debug_ipc::AddressRange&) override {
+    return debug::Status();
   }
   void UnregisterWatchpoint(Breakpoint*, zx_koid_t, const debug_ipc::AddressRange&) override {}
 };
@@ -80,7 +83,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
   // Update should install one thread
-  ASSERT_EQ(watchpoint.Update(), ZX_OK);
+  ASSERT_TRUE(watchpoint.Update().ok());
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
 
   EXPECT_EQ(thread1->mock_thread_handle().WatchpointInstallCount(kAddressRange), 1u);
@@ -88,7 +91,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
 
   // Binding again to the same breakpoint should fail.
 
-  ASSERT_EQ(watchpoint.RegisterBreakpoint(&breakpoint1), ZX_ERR_ALREADY_BOUND);
+  ASSERT_TRUE(watchpoint.RegisterBreakpoint(&breakpoint1).has_error());
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
   // Unregistering the breakpoint should issue an uninstall. As there are no more breakpoints,
@@ -102,7 +105,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
 
   // Registering again should add the breakpoint again.
 
-  ASSERT_EQ(watchpoint.RegisterBreakpoint(&breakpoint1), ZX_OK);
+  ASSERT_TRUE(watchpoint.RegisterBreakpoint(&breakpoint1).ok());
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
 
@@ -125,7 +128,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   Breakpoint breakpoint2(&process_delegate);
   breakpoint2.SetSettings(settings2);
 
-  ASSERT_EQ(watchpoint.RegisterBreakpoint(&breakpoint2), ZX_OK);
+  ASSERT_TRUE(watchpoint.RegisterBreakpoint(&breakpoint2).ok());
   ASSERT_EQ(watchpoint.breakpoints().size(), 2u);
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid(), thread2->koid()}));
   EXPECT_EQ(thread2->mock_thread_handle().WatchpointInstallCount(kAddressRange), 1u);
@@ -146,7 +149,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
 
   // Updating should've only installed for the third thread.
 
-  ASSERT_EQ(watchpoint.Update(), ZX_OK);
+  ASSERT_TRUE(watchpoint.Update().ok());
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread2->koid(), thread3->koid()}));
   EXPECT_EQ(thread3->mock_thread_handle().WatchpointInstallCount(kAddressRange), 1u);
 
@@ -168,7 +171,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   // Registering the breakpoint should add a breakpoint for all threads, but only updating the ones
   // that are not currently installed.
 
-  ASSERT_EQ(watchpoint.RegisterBreakpoint(&breakpoint3), ZX_OK);
+  ASSERT_TRUE(watchpoint.RegisterBreakpoint(&breakpoint3).ok());
   ASSERT_EQ(watchpoint.breakpoints().size(), 2u);
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid(), thread2->koid(), thread3->koid(),
                                          thread4->koid(), thread5->koid(), thread6->koid()}));
@@ -229,7 +232,7 @@ TEST(Watchpoint, InstalledRanges) {
   thread1->mock_thread_handle().set_watchpoint_slot_to_return(kSlot);
 
   // Update should install one thread
-  ASSERT_EQ(watchpoint.Update(), ZX_OK);
+  ASSERT_TRUE(watchpoint.Update().ok());
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
 
   // There should be an install with a different sub range.
@@ -275,7 +278,7 @@ TEST(Watchpoint, MatchesException) {
   thread1->mock_thread_handle().set_watchpoint_slot_to_return(kSlot);
 
   // Update should install one thread
-  ASSERT_EQ(watchpoint.Update(), ZX_OK);
+  ASSERT_TRUE(watchpoint.Update().ok());
   ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
 
   // There should be an install with a different sub range.
@@ -327,7 +330,7 @@ TEST(Watchpoint, DifferentTypes) {
     Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, kAddressRange);
     ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
-    ASSERT_EQ(watchpoint.Update(), ZX_OK);
+    ASSERT_TRUE(watchpoint.Update().ok());
     ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
 
     // There should be an install with a different sub range.
@@ -346,7 +349,7 @@ TEST(Watchpoint, DifferentTypes) {
                           kAddressRange);
     ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
-    ASSERT_EQ(watchpoint.Update(), ZX_OK);
+    ASSERT_TRUE(watchpoint.Update().ok());
     ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
 
     // There should be an install with a different sub range.

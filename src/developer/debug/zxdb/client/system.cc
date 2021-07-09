@@ -888,7 +888,7 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
     request.exception_strategies = updates.value();
     session()->remote_api()->UpdateGlobalSettings(
         request, [](const Err& err, debug_ipc::UpdateGlobalSettingsReply reply) {
-          if (reply.status != 0) {
+          if (reply.status.has_error()) {
             // TODO: handle me.
           }
         });

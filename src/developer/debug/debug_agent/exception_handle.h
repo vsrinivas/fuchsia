@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/status.h"
 #include "src/lib/fxl/macros.h"
 
 namespace debug_agent {
@@ -36,15 +37,15 @@ class ExceptionHandle {
   virtual debug_ipc::ExceptionType GetType(const ThreadHandle& thread) const = 0;
 
   // Returns the current resolution for the exception.
-  virtual fitx::result<zx_status_t, Resolution> GetResolution() const = 0;
+  virtual fitx::result<debug::Status, Resolution> GetResolution() const = 0;
 
-  virtual zx_status_t SetResolution(Resolution resolution) = 0;
+  virtual debug::Status SetResolution(Resolution resolution) = 0;
 
   // Returns the associated the exception handling strategy.
-  virtual fitx::result<zx_status_t, debug_ipc::ExceptionStrategy> GetStrategy() const = 0;
+  virtual fitx::result<debug::Status, debug_ipc::ExceptionStrategy> GetStrategy() const = 0;
 
   // Sets the handling strategy.
-  virtual zx_status_t SetStrategy(debug_ipc::ExceptionStrategy strategy) = 0;
+  virtual debug::Status SetStrategy(debug_ipc::ExceptionStrategy strategy) = 0;
 };
 
 }  // namespace debug_agent

@@ -21,8 +21,8 @@ namespace debug_agent {
 namespace {
 
 // Reads a null-terminated string from the given address of the given process.
-zx_status_t ReadNullTerminatedString(const ProcessHandle& process, zx_vaddr_t vaddr,
-                                     std::string* dest) {
+debug::Status ReadNullTerminatedString(const ProcessHandle& process, zx_vaddr_t vaddr,
+                                       std::string* dest) {
   // Max size of string we'll load as a sanity check.
   constexpr size_t kMaxString = 32768;
 
@@ -33,31 +33,31 @@ zx_status_t ReadNullTerminatedString(const ProcessHandle& process, zx_vaddr_t va
   while (dest->size() < kMaxString) {
     size_t num_read = 0;
     if (auto status = process.ReadMemory(vaddr, block, kBlockSize, &num_read); status.has_error())
-      return status.platform_error();
+      return status;
 
     for (size_t i = 0; i < num_read; i++) {
       if (block[i] == 0)
-        return ZX_OK;
+        return debug::Status();
       dest->push_back(block[i]);
     }
 
     if (num_read < kBlockSize)
-      return ZX_OK;  // Partial read: hit the mapped memory boundary.
+      return debug::Status();  // Partial read: hit the mapped memory boundary.
     vaddr += kBlockSize;
   }
-  return ZX_OK;
+  return debug::Status();
 }
 
 }  // namespace
 
-zx_status_t WalkElfModules(const ProcessHandle& process, uint64_t dl_debug_addr,
-                           std::function<bool(uint64_t base_addr, uint64_t lmap)> cb) {
+debug::Status WalkElfModules(const ProcessHandle& process, uint64_t dl_debug_addr,
+                             std::function<bool(uint64_t base_addr, uint64_t lmap)> cb) {
   size_t num_read = 0;
   uint64_t lmap = 0;
   if (auto status = process.ReadMemory(dl_debug_addr + offsetof(r_debug, r_map), &lmap,
                                        sizeof(lmap), &num_read);
       status.has_error())
-    return status.platform_error();
+    return status;
 
   size_t module_count = 0;
 
@@ -65,7 +65,7 @@ zx_status_t WalkElfModules(const ProcessHandle& process, uint64_t dl_debug_addr,
   constexpr size_t kMaxObjects = 512;  // Sanity threshold.
   while (lmap != 0) {
     if (module_count++ >= kMaxObjects)
-      return ZX_ERR_BAD_STATE;
+      return debug::Status("Too many modules, memory likely corrupted.");
 
     uint64_t base;
     if (process.ReadMemory(lmap + offsetof(link_map, l_addr), &base, sizeof(base), &num_read)
@@ -83,7 +83,7 @@ zx_status_t WalkElfModules(const ProcessHandle& process, uint64_t dl_debug_addr,
     lmap = next;
   }
 
-  return ZX_OK;
+  return debug::Status();
 }
 
 std::vector<debug_ipc::Module> GetElfModulesForProcess(const ProcessHandle& process,
@@ -101,7 +101,7 @@ std::vector<debug_ipc::Module> GetElfModulesForProcess(const ProcessHandle& proc
             .has_error())
       return false;
 
-    if (ReadNullTerminatedString(process, str_addr, &module.name) != ZX_OK)
+    if (ReadNullTerminatedString(process, str_addr, &module.name).has_error())
       return false;
 
     auto elf = elflib::ElfLib::Create(

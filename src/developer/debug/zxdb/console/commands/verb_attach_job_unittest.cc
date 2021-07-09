@@ -29,12 +29,12 @@ TEST_F(VerbAttachJob, Bad) {
   ASSERT_TRUE(attach_remote_api()->last_attach);
   ASSERT_EQ(kBadJobKoid, attach_remote_api()->last_attach->request.koid);
   debug_ipc::AttachReply reply;
-  reply.status = -25;
+  reply.status = debug::Status("Bad job");
   attach_remote_api()->last_attach->cb(Err(), reply);
 
   event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Job 1 attach-job failed.\nError attaching, status = -25.", event.output.AsString());
+  EXPECT_EQ("Job 1 attach-job failed.\nError attaching: Bad job", event.output.AsString());
 }
 
 TEST_F(VerbAttachJob, Good) {
@@ -45,7 +45,7 @@ TEST_F(VerbAttachJob, Good) {
   ASSERT_TRUE(attach_remote_api()->last_attach);
   ASSERT_EQ(kGoodJobKoid1, attach_remote_api()->last_attach->request.koid);
   debug_ipc::AttachReply reply;
-  reply.status = 0;
+  reply.status = debug::Status();
   reply.koid = kGoodJobKoid1;
   reply.name = "some job";
   attach_remote_api()->last_attach->cb(Err(), reply);
@@ -72,7 +72,7 @@ TEST_F(VerbAttachJob, Good) {
   // Report job attachment a success.
   ASSERT_TRUE(attach_remote_api()->last_attach);
   ASSERT_EQ(kGoodJobKoid2, attach_remote_api()->last_attach->request.koid);
-  reply.status = 0;
+  reply.status = debug::Status();
   reply.koid = kGoodJobKoid2;
   reply.name = "other job";
   attach_remote_api()->last_attach->cb(Err(), reply);

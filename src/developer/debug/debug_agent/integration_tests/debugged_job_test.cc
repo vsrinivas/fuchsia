@@ -230,8 +230,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   // We should've received an attach reply.
   const auto& attach_reply = backend.attach_reply();
   ASSERT_TRUE(attach_reply.has_value());
-  ASSERT_EQ(attach_reply->status, ZX_OK)
-      << "Expected ZX_OK, Got: " << ZxStatusToString(attach_reply->status);
+  ASSERT_TRUE(attach_reply->status.ok());
   ASSERT_NE(attach_reply->koid, 0u);
 
   FX_VLOGS(1) << "Setting job filters.";
@@ -242,8 +241,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   filter_request.filters = {"true", "false"};
   JobFilterReply filter_reply;
   remote_api->OnJobFilter(filter_request, &filter_reply);
-  ASSERT_EQ(filter_reply.status, ZX_OK)
-      << "Expected ZX_OK, Got: " << ZxStatusToString(filter_reply.status);
+  ASSERT_TRUE(filter_reply.status.ok());
 
   FX_VLOGS(1) << "Launching jobs.";
 
@@ -311,8 +309,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   // We change the filters. A partial match should work.
   filter_request.filters = {"breakpoint"};
   remote_api->OnJobFilter(filter_request, &filter_reply);
-  ASSERT_EQ(filter_reply.status, ZX_OK)
-      << "Expected ZX_OK, Got: " << ZxStatusToString(filter_reply.status);
+  ASSERT_TRUE(filter_reply.status.ok());
 
   FX_VLOGS(1) << "Launching new processes.";
 
@@ -366,8 +363,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   breakpoint_request.breakpoint.locations.push_back(location);
   AddOrChangeBreakpointReply breakpoint_reply;
   remote_api->OnAddOrChangeBreakpoint(breakpoint_request, &breakpoint_reply);
-  ASSERT_EQ(breakpoint_reply.status, ZX_OK)
-      << "Received: " << ZxStatusToString(breakpoint_reply.status);
+  ASSERT_TRUE(breakpoint_reply.status.ok());
 
   // Resume the process.
   ResumeAllProcesses(remote_api, backend);

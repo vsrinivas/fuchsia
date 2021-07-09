@@ -134,7 +134,7 @@ TEST(DynamicLoader, LoadUnload) {
 
     debug_ipc::LaunchReply launch_reply;
     agent.OnLaunch(launch_request, &launch_reply);
-    ASSERT_EQ(launch_reply.status, ZX_OK) << debug_ipc::ZxStatusToString(launch_reply.status);
+    ASSERT_TRUE(launch_reply.status.ok());
 
     loop->Run();
   }

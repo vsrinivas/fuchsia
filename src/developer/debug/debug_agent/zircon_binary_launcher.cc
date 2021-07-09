@@ -17,9 +17,9 @@ ZirconBinaryLauncher::ZirconBinaryLauncher(std::shared_ptr<sys::ServiceDirectory
     : builder_(env_services) {}
 ZirconBinaryLauncher::~ZirconBinaryLauncher() = default;
 
-zx_status_t ZirconBinaryLauncher::Setup(const std::vector<std::string>& argv) {
+debug::Status ZirconBinaryLauncher::Setup(const std::vector<std::string>& argv) {
   if (zx_status_t status = builder_.LoadPath(argv[0]); status != ZX_OK)
-    return status;
+    return debug::ZxStatus(status);
 
   builder_.AddArgs(argv);
   builder_.CloneJob();
@@ -29,7 +29,7 @@ zx_status_t ZirconBinaryLauncher::Setup(const std::vector<std::string>& argv) {
   stdio_handles_.out = AddStdioEndpoint(STDOUT_FILENO);
   stdio_handles_.err = AddStdioEndpoint(STDERR_FILENO);
 
-  return builder_.Prepare(nullptr);
+  return debug::ZxStatus(builder_.Prepare(nullptr));
 }
 
 std::unique_ptr<ProcessHandle> ZirconBinaryLauncher::GetProcess() const {
@@ -38,7 +38,7 @@ std::unique_ptr<ProcessHandle> ZirconBinaryLauncher::GetProcess() const {
   return std::make_unique<ZirconProcessHandle>(std::move(process));
 }
 
-zx_status_t ZirconBinaryLauncher::Start() { return builder_.Start(nullptr); }
+debug::Status ZirconBinaryLauncher::Start() { return debug::ZxStatus(builder_.Start(nullptr)); }
 
 zx::socket ZirconBinaryLauncher::AddStdioEndpoint(int fd) {
   zx::socket local;

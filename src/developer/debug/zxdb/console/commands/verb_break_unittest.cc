@@ -144,7 +144,7 @@ TEST_F(VerbBreak, BackendError) {
   // Issue the callback with a backend error.
   ASSERT_TRUE(breakpoint_remote_api()->last_cb);
   debug_ipc::AddOrChangeBreakpointReply reply;
-  reply.status = debug_ipc::kZxErrBadHandle;
+  reply.status = debug::Status("Bad handle");
   breakpoint_remote_api()->last_cb(Err(), reply);
 
   // The ConsoleContext should have printed out the error.
@@ -152,7 +152,7 @@ TEST_F(VerbBreak, BackendError) {
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
       "Error updating Breakpoint 1 @ 0x2345\n"
-      "System reported error -11 (ZX_ERR_BAD_HANDLE)",
+      "System reported error: Bad handle",
       event.output.AsString());
 }
 

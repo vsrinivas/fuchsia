@@ -27,8 +27,9 @@ class MockJobHandle final : public JobHandle {
   std::string GetName() const override { return name_; }
   std::vector<std::unique_ptr<JobHandle>> GetChildJobs() const override;
   std::vector<std::unique_ptr<ProcessHandle>> GetChildProcesses() const override;
-  zx_status_t WatchJobExceptions(fit::function<void(std::unique_ptr<ProcessHandle>)> cb) override {
-    return ZX_ERR_NOT_SUPPORTED;
+  debug::Status WatchJobExceptions(
+      fit::function<void(std::unique_ptr<ProcessHandle>)> cb) override {
+    return debug::Status("Mock doesn't implement watching job exceptions.");
   }
 
  private:

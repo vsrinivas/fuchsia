@@ -6,7 +6,6 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_WATCHPOINT_H_
 
 #include <stdint.h>
-#include <zircon/types.h>
 
 #include <set>
 
@@ -28,7 +27,7 @@ class Watchpoint : public ProcessBreakpoint {
 
   bool MatchesException(zx_koid_t thread_koid, uint64_t watchpoint_address, int slot);
 
-  zx_status_t Update() override;
+  debug::Status Update() override;
 
   // Public ProcessBreakpoint overrides. See ProcessBreakpoint for more details.
 
@@ -47,8 +46,8 @@ class Watchpoint : public ProcessBreakpoint {
  private:
   bool Install(DebuggedThread* thread);
 
-  zx_status_t Uninstall(DebuggedThread* thread) override;
-  zx_status_t Uninstall() override;
+  debug::Status Uninstall(DebuggedThread* thread) override;
+  debug::Status Uninstall() override;
 
   debug_ipc::BreakpointType type_ = debug_ipc::BreakpointType::kLast;
 

@@ -127,16 +127,16 @@ fuchsia::sys::ComponentControllerPtr ComponentLauncher::Launch() {
 ZirconComponentManager::ZirconComponentManager(std::shared_ptr<sys::ServiceDirectory> services)
     : services_(std::move(services)), weak_factory_(this) {}
 
-zx_status_t ZirconComponentManager::LaunchComponent(DebuggedJob* root_job,
-                                                    const std::vector<std::string>& argv,
-                                                    uint64_t* component_id) {
+debug::Status ZirconComponentManager::LaunchComponent(DebuggedJob* root_job,
+                                                      const std::vector<std::string>& argv,
+                                                      uint64_t* component_id) {
   *component_id = 0;
 
   ComponentLauncher launcher(services_);
   ComponentDescription description;
   StdioHandles handles;
   if (zx_status_t status = launcher.Prepare(argv, &description, &handles); status != ZX_OK) {
-    return status;
+    return debug::ZxStatus(status);
   }
   FX_DCHECK(expected_components_.count(description.filter) == 0);
 
@@ -166,7 +166,7 @@ zx_status_t ZirconComponentManager::LaunchComponent(DebuggedJob* root_job,
   auto controller = launcher.Launch();
   if (!controller) {
     FX_LOGS(WARNING) << "Could not launch component " << description.url;
-    return ZX_ERR_BAD_STATE;
+    return debug::Status("Could not launch component.");
   }
 
   // TODO(donosoc): This should hook into the debug agent so it can correctly
@@ -186,7 +186,7 @@ zx_status_t ZirconComponentManager::LaunchComponent(DebuggedJob* root_job,
   expected_component.controller = std::move(controller);
   expected_components_[description.filter] = std::move(expected_component);
 
-  return ZX_OK;
+  return debug::Status();
 }
 
 uint64_t ZirconComponentManager::OnProcessStart(const std::string& filter,

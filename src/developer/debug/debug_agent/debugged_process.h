@@ -70,7 +70,7 @@ class DebuggedProcess : public ProcessHandleObserver {
   const ModuleList& module_list() const { return module_list_; }
 
   // Returns true on success. On failure, the object may not be used further.
-  zx_status_t Init();
+  debug::Status Init();
 
   // IPC handlers.
   void OnResume(const debug_ipc::ResumeRequest& request);
@@ -129,10 +129,10 @@ class DebuggedProcess : public ProcessHandleObserver {
   virtual HardwareBreakpoint* FindHardwareBreakpoint(uint64_t address) const;
   virtual Watchpoint* FindWatchpoint(const debug_ipc::AddressRange&) const;
 
-  zx_status_t RegisterBreakpoint(Breakpoint* bp, uint64_t address);
+  debug::Status RegisterBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterBreakpoint(Breakpoint* bp, uint64_t address);
 
-  zx_status_t RegisterWatchpoint(Breakpoint* bp, const debug_ipc::AddressRange& range);
+  debug::Status RegisterWatchpoint(Breakpoint* bp, const debug_ipc::AddressRange& range);
   void UnregisterWatchpoint(Breakpoint* bp, const debug_ipc::AddressRange& range);
 
   // Each time a thread attempts to step over a breakpoint, the breakpoint will enqueue itself and
@@ -226,9 +226,9 @@ class DebuggedProcess : public ProcessHandleObserver {
   // returns true would need to be followed up with a SendModuleNotification.
   bool RegisterDebugState();
 
-  zx_status_t RegisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address);
+  debug::Status RegisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address);
-  zx_status_t RegisterHardwareBreakpoint(Breakpoint* bp, uint64_t address);
+  debug::Status RegisterHardwareBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterHardwareBreakpoint(Breakpoint* bp, uint64_t address);
 
   DebugAgent* debug_agent_ = nullptr;  // Non-owning.

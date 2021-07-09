@@ -222,7 +222,7 @@ void DebuggedThread::HandleGeneralException(debug_ipc::NotifyException* exceptio
   auto strategy = exception_handle_->GetStrategy();
   if (strategy.is_error()) {
     FX_LOGS(WARNING) << "Failed to determine current exception strategy: "
-                     << zx_status_get_string(strategy.error_value());
+                     << strategy.error_value().message();
     return;
   }
 
@@ -235,9 +235,8 @@ void DebuggedThread::HandleGeneralException(debug_ipc::NotifyException* exceptio
   auto applicable_strategy = debug_agent_->GetExceptionStrategy(exception->type);
   if (strategy.value() == debug_ipc::ExceptionStrategy::kFirstChance &&
       applicable_strategy == debug_ipc::ExceptionStrategy::kSecondChance) {
-    if (auto status = exception_handle_->SetStrategy(applicable_strategy); status != ZX_OK) {
-      FX_LOGS(WARNING) << "Failed to apply default exception strategy: "
-                       << zx_status_get_string(status);
+    if (auto status = exception_handle_->SetStrategy(applicable_strategy); status.has_error()) {
+      FX_LOGS(WARNING) << "Failed to apply default exception strategy: " << status.message();
       return;
     }
     applied = applicable_strategy;
@@ -377,19 +376,17 @@ void DebuggedThread::InternalResumeException() {
 
   if (run_mode_ == debug_ipc::ResumeRequest::How::kForwardAndContinue) {
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming from exception (second chance).";
-    if (zx_status_t status =
-            exception_handle_->SetStrategy(debug_ipc::ExceptionStrategy::kSecondChance);
-        status != ZX_OK) {
-      DEBUG_LOG(Thread) << ThreadPreamble(this) << "Failed to set exception as second-chance: "
-                        << zx_status_get_string(status);
+    if (auto status = exception_handle_->SetStrategy(debug_ipc::ExceptionStrategy::kSecondChance);
+        status.has_error()) {
+      DEBUG_LOG(Thread) << ThreadPreamble(this)
+                        << "Failed to set exception as second-chance: " << status.message();
     }
   } else {
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming from exception (handled).";
-    if (zx_status_t status =
-            exception_handle_->SetResolution(ExceptionHandle::Resolution::kHandled);
-        status != ZX_OK) {
+    if (auto status = exception_handle_->SetResolution(ExceptionHandle::Resolution::kHandled);
+        status.has_error()) {
       DEBUG_LOG(Thread) << ThreadPreamble(this)
-                        << "Failed to set exception as handled: " << zx_status_get_string(status);
+                        << "Failed to set exception as handled: " << status.message();
     }
   }
   exception_handle_ = nullptr;

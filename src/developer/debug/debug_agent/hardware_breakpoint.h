@@ -17,7 +17,7 @@ class HardwareBreakpoint : public ProcessBreakpoint {
   explicit HardwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process, uint64_t address);
   virtual ~HardwareBreakpoint();
 
-  zx_status_t Update() override;
+  debug::Status Update() override;
 
   debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kHardware; }
   bool Installed(zx_koid_t thread_koid) const override;
@@ -31,10 +31,10 @@ class HardwareBreakpoint : public ProcessBreakpoint {
   void StepOverCleanup(DebuggedThread* thread) override {}
 
  private:
-  zx_status_t Install(DebuggedThread* thread);
+  debug::Status Install(DebuggedThread* thread);
 
-  zx_status_t Uninstall(DebuggedThread* thread) override;
-  zx_status_t Uninstall() override;
+  debug::Status Uninstall(DebuggedThread* thread) override;
+  debug::Status Uninstall() override;
 
   std::set<zx_koid_t> installed_threads_;
   std::set<zx_koid_t> current_stepping_over_threads_;

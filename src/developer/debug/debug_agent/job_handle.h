@@ -5,12 +5,14 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_JOB_HANDLE_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_JOB_HANDLE_H_
 
+#include <lib/fit/function.h>
+#include <zircon/types.h>
+
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <lib/fit/function.h>
-#include <zircon/types.h>
+#include "src/developer/debug/shared/status.h"
 
 namespace debug_agent {
 
@@ -32,7 +34,7 @@ class JobHandle {
 
   // Registers for job exceptions. On success, the given callback will be issued for all process
   // launches in this job. Can be called with an empty function to unregister.
-  virtual zx_status_t WatchJobExceptions(
+  virtual debug::Status WatchJobExceptions(
       fit::function<void(std::unique_ptr<ProcessHandle>)> cb) = 0;
 
   // Recursively searches the job tree from this job/process and returns a handle to it. Returns a

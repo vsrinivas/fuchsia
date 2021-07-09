@@ -47,13 +47,13 @@ class SoftwareBreakpoint : public ProcessBreakpoint {
 
  private:
   // ProcessBreakpoint overrides.
-  zx_status_t Update() override;
+  debug::Status Update() override;
 
   // A software breakpoint gets uninstalled for all the threads.
-  zx_status_t Uninstall(DebuggedThread* thread) override { return Uninstall(); }
-  zx_status_t Uninstall() override;
+  debug::Status Uninstall(DebuggedThread* thread) override { return Uninstall(); }
+  debug::Status Uninstall() override;
 
-  zx_status_t Install();
+  debug::Status Install();
 
   // As stepping over are queued, only one thread should be left running at a time. This makes the
   // breakpoint get a suspend token for each other thread within the system.

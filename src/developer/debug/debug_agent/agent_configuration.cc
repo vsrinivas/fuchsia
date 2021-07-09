@@ -28,20 +28,20 @@ std::optional<bool> StringToBool(const std::string& value) {
   }
 }
 
-debug_ipc::zx_status_t HandleQuitOnExit(const std::string& str, AgentConfiguration* config) {
+debug::Status HandleQuitOnExit(const std::string& str, AgentConfiguration* config) {
   auto value = StringToBool(str);
   if (!value)
-    return ZX_ERR_INVALID_ARGS;
+    return debug::Status("Invalid value for quit on exit.");
   config->quit_on_exit = *value;
-  return ZX_OK;
+  return debug::Status();
 }
 
 }  // namespace
 
-std::vector<debug_ipc::zx_status_t> HandleActions(
-    const std::vector<debug_ipc::ConfigAction>& actions, AgentConfiguration* config) {
+std::vector<debug::Status> HandleActions(const std::vector<debug_ipc::ConfigAction>& actions,
+                                         AgentConfiguration* config) {
   // Iterate over all the actions and always return an answer for each one.
-  std::vector<debug_ipc::zx_status_t> results;
+  std::vector<debug::Status> results;
   for (const auto& action : actions) {
     switch (action.type) {
       case debug_ipc::ConfigAction::Type::kQuitOnExit:
@@ -60,8 +60,7 @@ std::vector<debug_ipc::zx_status_t> HandleActions(
   if (debug_ipc::IsDebugModeActive()) {
     for (size_t i = 0; i < actions.size(); i++) {
       DEBUG_LOG(Agent) << "Action " << debug_ipc::ConfigAction::TypeToString(actions[i].type)
-                       << " (" << actions[i].value
-                       << "): " << debug_ipc::ZxStatusToString(results[i]);
+                       << " (" << actions[i].value << "): " << results[i].message();
     }
   }
 

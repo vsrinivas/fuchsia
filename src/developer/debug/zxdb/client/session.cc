@@ -976,15 +976,15 @@ void Session::SendAgentConfiguration() {
       return;
 
     for (size_t i = 0; i < reply.results.size(); i++) {
-      debug_ipc::zx_status_t status = reply.results[i];
-      if (status == debug_ipc::kZxOk)
+      const auto& status = reply.results[i];
+      if (status.ok())
         continue;
 
       auto& action = request.actions[i];
       session->SendSessionNotification(SessionObserver::NotificationType::kWarning,
                                        "Agent configuration for %s failed with result: %s",
                                        debug_ipc::ConfigAction::TypeToString(action.type),
-                                       debug_ipc::ZxStatusToString(status));
+                                       status.message().c_str());
     }
   });
 }

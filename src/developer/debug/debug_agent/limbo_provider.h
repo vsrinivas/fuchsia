@@ -13,6 +13,7 @@
 #include "src/developer/debug/debug_agent/exception_handle.h"
 #include "src/developer/debug/debug_agent/process_handle.h"
 #include "src/developer/debug/debug_agent/thread_handle.h"
+#include "src/developer/debug/shared/status.h"
 
 namespace debug_agent {
 
@@ -59,10 +60,10 @@ class LimboProvider {
   virtual const RecordMap& GetLimboRecords() const = 0;
 
   // Consumes the process in limbo.
-  virtual fitx::result<zx_status_t, RetrievedException> RetrieveException(
+  virtual fitx::result<debug::Status, RetrievedException> RetrieveException(
       zx_koid_t process_koid) = 0;
 
-  virtual zx_status_t ReleaseProcess(zx_koid_t process_koid) = 0;
+  virtual debug::Status ReleaseProcess(zx_koid_t process_koid) = 0;
 
  protected:
   // Callback to be triggered whenever a new process enters the the limbo. Provides the list of

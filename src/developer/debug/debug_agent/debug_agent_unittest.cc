@@ -170,7 +170,7 @@ TEST_F(DebugAgentTests, OnProcessStatus) {
 
   debug_ipc::ProcessStatusReply reply = {};
   remote_api->OnProcessStatus(request, &reply);
-  EXPECT_EQ(reply.status, (uint32_t)ZX_ERR_NOT_FOUND) << zx_status_get_string(reply.status);
+  EXPECT_TRUE(reply.status.has_error());
 
   debug_ipc::NotifyModules modules_to_send = {};
   modules_to_send.process_koid = kProcessKoid2;
@@ -181,7 +181,7 @@ TEST_F(DebugAgentTests, OnProcessStatus) {
   // Asking for an existent one should send the process and modules notification.
   request.process_koid = kProcessKoid2;
   remote_api->OnProcessStatus(request, &reply);
-  EXPECT_EQ(reply.status, (uint32_t)ZX_OK) << zx_status_get_string(reply.status);
+  EXPECT_TRUE(reply.status.ok());
 
   loop().RunUntilNoTasks();
 
@@ -221,7 +221,7 @@ TEST_F(DebugAgentTests, OnAttachNotFound) {
     // Should've gotten an attach reply.
     auto& attach_replies = harness.stream_backend()->attach_replies();
     ASSERT_EQ(attach_replies.size(), 1u);
-    EXPECT_ZX_EQ(attach_replies[0].status, ZX_ERR_NOT_FOUND);
+    EXPECT_TRUE(attach_replies[0].status.has_error());
   }
 
   constexpr zx_koid_t kProcKoid1 = 100;
@@ -237,7 +237,7 @@ TEST_F(DebugAgentTests, OnAttachNotFound) {
     // Should've gotten an attach reply.
     auto& attach_replies = harness.stream_backend()->attach_replies();
     ASSERT_EQ(attach_replies.size(), 2u);
-    EXPECT_ZX_EQ(attach_replies[1].status, ZX_ERR_NOT_FOUND);
+    EXPECT_TRUE(attach_replies[1].status.has_error());
   }
 }
 
@@ -261,7 +261,7 @@ TEST_F(DebugAgentTests, OnAttach) {
   auto& attach_replies = harness.stream_backend()->attach_replies();
   auto reply = attach_replies.back();
   ASSERT_EQ(attach_replies.size(), 1u);
-  EXPECT_ZX_EQ(reply.status, ZX_OK);
+  EXPECT_TRUE(reply.status.ok());
   EXPECT_EQ(reply.koid, kProcess1Koid);
   EXPECT_EQ(reply.name, "job1-p2");
 
@@ -272,7 +272,7 @@ TEST_F(DebugAgentTests, OnAttach) {
   // We should've gotten an error reply.
   ASSERT_EQ(attach_replies.size(), 2u);
   reply = attach_replies.back();
-  EXPECT_ZX_EQ(reply.status, ZX_ERR_NOT_FOUND);
+  EXPECT_TRUE(reply.status.has_error());
 
   // Attaching to a third process should work.
   attach_request.koid = 21u;
@@ -280,7 +280,7 @@ TEST_F(DebugAgentTests, OnAttach) {
 
   ASSERT_EQ(attach_replies.size(), 3u);
   reply = attach_replies.back();
-  EXPECT_ZX_EQ(reply.status, ZX_OK);
+  EXPECT_TRUE(reply.status.ok());
   EXPECT_EQ(reply.koid, 21u);
   EXPECT_EQ(reply.name, "job121-p2");
 
@@ -289,7 +289,7 @@ TEST_F(DebugAgentTests, OnAttach) {
 
   ASSERT_EQ(attach_replies.size(), 4u);
   reply = attach_replies.back();
-  EXPECT_ZX_EQ(reply.status, ZX_ERR_ALREADY_BOUND);
+  EXPECT_TRUE(reply.status.has_error());
 }
 
 TEST_F(DebugAgentTests, AttachToLimbo) {
@@ -321,7 +321,7 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
   auto& attach_replies = harness.stream_backend()->attach_replies();
   ASSERT_EQ(attach_replies.size(), 1u);
   auto reply = attach_replies.back();
-  EXPECT_ZX_EQ(reply.status, ZX_OK);
+  EXPECT_TRUE(reply.status.ok());
   EXPECT_EQ(reply.koid, kProcKoid);
   EXPECT_EQ(reply.name, "proc");
 
@@ -385,7 +385,7 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
     debug_ipc::DetachReply reply = {};
     remote_api->OnDetach(request, &reply);
 
-    ASSERT_ZX_EQ(reply.status, ZX_ERR_NOT_FOUND);
+    ASSERT_TRUE(reply.status.has_error());
     ASSERT_EQ(harness.system_interface()->mock_limbo_provider().release_calls().size(), 0u);
   }
 
@@ -403,7 +403,7 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
     debug_ipc::DetachReply reply = {};
     remote_api->OnDetach(request, &reply);
 
-    ASSERT_ZX_EQ(reply.status, ZX_OK);
+    ASSERT_TRUE(reply.status.ok());
     ASSERT_EQ(harness.system_interface()->mock_limbo_provider().release_calls().size(), 1u);
     EXPECT_EQ(harness.system_interface()->mock_limbo_provider().release_calls()[0], kProcKoid1);
   }
@@ -417,7 +417,7 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
     debug_ipc::DetachReply reply = {};
     remote_api->OnDetach(request, &reply);
 
-    ASSERT_ZX_EQ(reply.status, ZX_ERR_NOT_FOUND);
+    ASSERT_TRUE(reply.status.has_error());
     ASSERT_EQ(harness.system_interface()->mock_limbo_provider().release_calls().size(), 1u);
     EXPECT_EQ(harness.system_interface()->mock_limbo_provider().release_calls()[0], kProcKoid1);
   }
@@ -438,7 +438,7 @@ TEST_F(DebugAgentTests, Kill) {
 
     debug_ipc::KillReply kill_reply = {};
     remote_api->OnKill(kill_request, &kill_reply);
-    ASSERT_ZX_EQ(kill_reply.status, ZX_ERR_NOT_FOUND);
+    ASSERT_TRUE(kill_reply.status.has_error());
   }
 
   // Attach to a process so that the debugger knows about it.
@@ -467,7 +467,7 @@ TEST_F(DebugAgentTests, Kill) {
 
     // Killing again should fail.
     remote_api->OnKill(kill_request, &kill_reply);
-    ASSERT_ZX_EQ(kill_reply.status, ZX_ERR_NOT_FOUND);
+    ASSERT_TRUE(kill_reply.status.has_error());
   }
 
   // Add the process to the limbo.
@@ -475,7 +475,7 @@ TEST_F(DebugAgentTests, Kill) {
   constexpr zx_koid_t kLimboThreadKoid = 101;
   MockProcessHandle mock_process(kLimboProcKoid, "proc");
   // This is a limbo process so we can not kill it.
-  mock_process.set_kill_status(debug::ZxStatus(ZX_ERR_ACCESS_DENIED));
+  mock_process.set_kill_status(debug::Status("Access denied"));
   MockThreadHandle mock_thread(kLimboThreadKoid, "thread");
   MockExceptionHandle mock_exception(kLimboThreadKoid);
   mock_process.set_threads({mock_thread});
@@ -492,14 +492,14 @@ TEST_F(DebugAgentTests, Kill) {
 
     debug_ipc::KillReply kill_reply = {};
     remote_api->OnKill(kill_request, &kill_reply);
-    ASSERT_ZX_EQ(kill_reply.status, ZX_OK);
+    ASSERT_TRUE(kill_reply.status.ok());
 
     ASSERT_EQ(harness.system_interface()->mock_limbo_provider().release_calls().size(), 1u);
     EXPECT_EQ(harness.system_interface()->mock_limbo_provider().release_calls()[0], kLimboProcKoid);
 
     // Killing again should not find it.
     remote_api->OnKill(kill_request, &kill_reply);
-    ASSERT_ZX_EQ(kill_reply.status, ZX_ERR_NOT_FOUND);
+    ASSERT_TRUE(kill_reply.status.has_error());
   }
 
   harness.system_interface()->mock_limbo_provider().AppendException(mock_process, mock_thread,
@@ -524,7 +524,7 @@ TEST_F(DebugAgentTests, Kill) {
 
     debug_ipc::KillReply kill_reply = {};
     remote_api->OnKill(kill_request, &kill_reply);
-    ASSERT_ZX_EQ(kill_reply.status, ZX_OK);
+    ASSERT_TRUE(kill_reply.status.ok());
 
     ASSERT_EQ(harness.debug_agent()->procs_.size(), 0u);
 
@@ -576,7 +576,7 @@ TEST_F(DebugAgentTests, OnUpdateGlobalSettings) {
     };
     debug_ipc::UpdateGlobalSettingsReply reply;
     remote_api->OnUpdateGlobalSettings(request, &reply);
-    EXPECT_EQ(ZX_OK, reply.status);
+    EXPECT_TRUE(reply.status.ok());
   }
 
   EXPECT_EQ(debug_ipc::ExceptionStrategy::kSecondChance,
@@ -596,7 +596,7 @@ TEST_F(DebugAgentTests, OnUpdateGlobalSettings) {
     };
     debug_ipc::UpdateGlobalSettingsReply reply;
     remote_api->OnUpdateGlobalSettings(request, &reply);
-    EXPECT_EQ(ZX_OK, reply.status);
+    EXPECT_TRUE(reply.status.ok());
   }
 
   EXPECT_EQ(debug_ipc::ExceptionStrategy::kFirstChance,

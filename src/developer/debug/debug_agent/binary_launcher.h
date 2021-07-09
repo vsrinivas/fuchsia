@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "src/developer/debug/debug_agent/stdio_handles.h"
+#include "src/developer/debug/shared/status.h"
 
 namespace debug_agent {
 
@@ -24,7 +25,7 @@ class BinaryLauncher {
   virtual ~BinaryLauncher() = default;
 
   // Setup will create the process object but not launch the process yet.
-  virtual zx_status_t Setup(const std::vector<std::string>& argv) = 0;
+  virtual debug::Status Setup(const std::vector<std::string>& argv) = 0;
 
   // It is possibly that Setup fails to obtain valid sockets from the process being launched. If
   // that is the case, both sockets will be in the initial state (ie. is_valid() == false).
@@ -34,7 +35,7 @@ class BinaryLauncher {
   virtual std::unique_ptr<ProcessHandle> GetProcess() const = 0;
 
   // Completes process launching.
-  virtual zx_status_t Start() = 0;
+  virtual debug::Status Start() = 0;
 };
 
 }  // namespace debug_agent

@@ -6,10 +6,11 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ELF_UTILS_H_
 
 #include <stdint.h>
-#include <zircon/status.h>
 
 #include <functional>
 #include <vector>
+
+#include "src/developer/debug/shared/status.h"
 
 namespace debug_ipc {
 struct Module;
@@ -21,8 +22,8 @@ class ProcessHandle;
 
 // Iterates through all modules in the given process, calling the callback for each. The callback
 // should return true to keep iterating, false to stop now.
-zx_status_t WalkElfModules(const ProcessHandle& process, uint64_t dl_debug_addr,
-                           std::function<bool(uint64_t base_addr, uint64_t lmap)> cb);
+debug::Status WalkElfModules(const ProcessHandle& process, uint64_t dl_debug_addr,
+                             std::function<bool(uint64_t base_addr, uint64_t lmap)> cb);
 
 // Computes the modules for the given process.
 std::vector<debug_ipc::Module> GetElfModulesForProcess(const ProcessHandle& process,

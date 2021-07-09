@@ -125,7 +125,7 @@ TEST(DebuggedThread, OnException) {
   };
   debug_ipc::UpdateGlobalSettingsReply reply;
   remote_api->OnUpdateGlobalSettings(request, &reply);
-  EXPECT_EQ(ZX_OK, reply.status);
+  EXPECT_TRUE(reply.status.ok());
 
   // Policy: general exceptions initially handled as second-chance.
   // Exception: general, first-chance.

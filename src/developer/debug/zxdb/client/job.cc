@@ -37,12 +37,13 @@ fxl::WeakPtr<Job> Job::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 void Job::ImplicitlyDetach() {
   if (state_ == State::kAttached)
-    OnDetachReply(Err(), 0, [](fxl::WeakPtr<Job>, const Err&) {});
+    OnDetachReply(Err(), debug::Status(), [](fxl::WeakPtr<Job>, const Err&) {});
 }
 
 // static
 void Job::OnAttachReplyThunk(fxl::WeakPtr<Job> job, Callback callback, const Err& err,
-                             uint64_t koid, uint32_t status, const std::string& job_name) {
+                             uint64_t koid, const debug::Status& status,
+                             const std::string& job_name) {
   if (job) {
     job->OnAttachReply(std::move(callback), err, koid, status, job_name);
     if (!job->filters_.empty()) {
@@ -59,8 +60,8 @@ void Job::OnAttachReplyThunk(fxl::WeakPtr<Job> job, Callback callback, const Err
   }
 }
 
-void Job::OnAttachReply(Callback callback, const Err& err, uint64_t koid, uint32_t status,
-                        const std::string& job_name) {
+void Job::OnAttachReply(Callback callback, const Err& err, uint64_t koid,
+                        const debug::Status& status, const std::string& job_name) {
   FX_DCHECK(state_ == State::kAttaching);
 
   Err issue_err;  // Error to send in callback.
@@ -68,10 +69,10 @@ void Job::OnAttachReply(Callback callback, const Err& err, uint64_t koid, uint32
     // Error from transport.
     state_ = State::kNone;
     issue_err = err;
-  } else if (status != 0) {
+  } else if (status.has_error()) {
     // Error from launching.
     state_ = State::kNone;
-    issue_err = Err(fxl::StringPrintf("Error attaching, status = %d.", status));
+    issue_err = Err("Error attaching: " + status.message());
   } else {
     state_ = State::kAttached;
     koid_ = koid;
@@ -174,8 +175,8 @@ void Job::SendAndUpdateFilters(std::vector<std::string> filters, bool force_send
   request.filters = filters;
   session()->remote_api()->JobFilter(request, [filters, weak_job = weak_factory_.GetWeakPtr()](
                                                   const Err& err, debug_ipc::JobFilterReply reply) {
-    if (reply.status != 0) {
-      FX_LOGS(ERROR) << "Error adding filter: " << debug_ipc::ZxStatusToString(reply.status);
+    if (reply.status.has_error()) {
+      FX_LOGS(ERROR) << "Error adding filter: " << reply.status.message();
 
       // Agent failed, mark that we had trouble setting filters and return.
       if (weak_job)
@@ -195,7 +196,7 @@ void Job::SendAndUpdateFilters(std::vector<std::string> filters, bool force_send
   });
 }
 
-void Job::OnDetachReply(const Err& err, uint32_t status, Callback callback) {
+void Job::OnDetachReply(const Err& err, const debug::Status& status, Callback callback) {
   FX_DCHECK(state_ == State::kAttached);  // Should have a job.
 
   Err issue_err;  // Error to send in callback.
@@ -203,10 +204,9 @@ void Job::OnDetachReply(const Err& err, uint32_t status, Callback callback) {
     // Error from transport.
     state_ = State::kNone;
     issue_err = err;
-  } else if (status != 0) {
+  } else if (status.has_error()) {
     // Error from detaching.
-    // TODO(donosoc): Print error using ZxStatusToString
-    issue_err = Err(fxl::StringPrintf("Error detaching, status = %d.", status));
+    issue_err = Err("Error detaching: " + status.message());
   } else {
     // Successfully detached.
     state_ = State::kNone;

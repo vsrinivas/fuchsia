@@ -41,7 +41,7 @@ TEST_F(VerbAttach, Koid) {
   ASSERT_TRUE(attach_remote_api()->last_attach);
   ASSERT_EQ(kKoid, attach_remote_api()->last_attach->request.koid);
   debug_ipc::AttachReply reply;
-  reply.status = 0;
+  reply.status = debug::Status();
   reply.koid = kKoid;
   reply.name = "some process";
   attach_remote_api()->last_attach->cb(Err(), reply);

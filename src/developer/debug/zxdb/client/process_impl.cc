@@ -217,19 +217,20 @@ void ProcessImpl::WriteMemory(uint64_t address, std::vector<uint8_t> data,
   request.process_koid = koid_;
   request.address = address;
   request.data = std::move(data);
-  session()->remote_api()->WriteMemory(request, [address, callback = std::move(callback)](
-                                                    const Err& err,
-                                                    debug_ipc::WriteMemoryReply reply) mutable {
-    if (err.has_error()) {
-      callback(err);
-    } else if (reply.status != 0) {
-      // Convert bad reply to error.
-      callback(Err("Unable to write memory to 0x%" PRIx64 ", error %d.", address, reply.status));
-    } else {
-      // Success.
-      callback(Err());
-    }
-  });
+  session()->remote_api()->WriteMemory(
+      request, [address, callback = std::move(callback)](
+                   const Err& err, debug_ipc::WriteMemoryReply reply) mutable {
+        if (err.has_error()) {
+          callback(err);
+        } else if (reply.status.has_error()) {
+          // Convert bad reply to error.
+          callback(Err("Unable to write memory to 0x%" PRIx64 ": %s", address,
+                       reply.status.message().c_str()));
+        } else {
+          // Success.
+          callback(Err());
+        }
+      });
 }
 
 void ProcessImpl::LoadInfoHandleTable(
@@ -239,8 +240,8 @@ void ProcessImpl::LoadInfoHandleTable(
   session()->remote_api()->LoadInfoHandleTable(
       request, [callback = std::move(callback)](const Err& err,
                                                 debug_ipc::LoadInfoHandleTableReply reply) mutable {
-        if (reply.status != 0) {
-          callback(Err("Can't load handles error %d.", reply.status));
+        if (reply.status.has_error()) {
+          callback(Err("Can't load handles: " + reply.status.message()));
         } else if (err.ok()) {
           callback(std::move(reply.handles));
         } else {

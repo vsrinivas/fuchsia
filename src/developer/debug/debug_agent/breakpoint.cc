@@ -42,10 +42,11 @@ bool Breakpoint::DoesExceptionApply(debug_ipc::BreakpointType exception_type,
 
 // Breakpoint::ProcessDelegate ---------------------------------------------------------------------
 
-zx_status_t Breakpoint::ProcessDelegate::RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                                            uint64_t address) {
+debug::Status Breakpoint::ProcessDelegate::RegisterBreakpoint(Breakpoint* bp,
+                                                              zx_koid_t process_koid,
+                                                              uint64_t address) {
   FX_NOTREACHED() << "Should override.";
-  return ZX_ERR_NOT_SUPPORTED;
+  return debug::Status("Expecting override.");
 }
 
 // Called When the breakpoint no longer applies to this location.
@@ -54,10 +55,10 @@ void Breakpoint::ProcessDelegate::UnregisterBreakpoint(Breakpoint* bp, zx_koid_t
   FX_NOTREACHED() << "Should override.";
 }
 
-zx_status_t Breakpoint::ProcessDelegate::RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                                            const debug_ipc::AddressRange& range) {
+debug::Status Breakpoint::ProcessDelegate::RegisterWatchpoint(
+    Breakpoint* bp, zx_koid_t process_koid, const debug_ipc::AddressRange& range) {
   FX_NOTREACHED() << "Should override.";
-  return ZX_ERR_NOT_SUPPORTED;
+  return debug::Status("Expecting override.");
 }
 
 void Breakpoint::ProcessDelegate::UnregisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
@@ -119,7 +120,7 @@ Breakpoint::~Breakpoint() {
   }
 }
 
-zx_status_t Breakpoint::SetSettings(const debug_ipc::BreakpointSettings& settings) {
+debug::Status Breakpoint::SetSettings(const debug_ipc::BreakpointSettings& settings) {
   FX_DCHECK(settings.type != debug_ipc::BreakpointType::kLast);
   settings_ = settings;
   LogSetSettings(FROM_HERE, this);
@@ -141,10 +142,10 @@ zx_status_t Breakpoint::SetSettings(const debug_ipc::BreakpointSettings& setting
   }
 
   FX_NOTREACHED() << "Invalid breakpoint type: " << static_cast<int>(settings_.type);
-  return ZX_ERR_INVALID_ARGS;
+  return debug::Status("Invalid breakpoint type");
 }
 
-zx_status_t Breakpoint::SetSettings(std::string name, zx_koid_t process_koid, uint64_t address) {
+debug::Status Breakpoint::SetSettings(std::string name, zx_koid_t process_koid, uint64_t address) {
   debug_ipc::BreakpointSettings settings;
   settings.id = debug_ipc::kDebugAgentInternalBreakpointId;
   settings.name = std::move(name);
@@ -156,8 +157,8 @@ zx_status_t Breakpoint::SetSettings(std::string name, zx_koid_t process_koid, ui
   return SetSettings(settings);
 }
 
-zx_status_t Breakpoint::SetBreakpointLocations(const debug_ipc::BreakpointSettings& settings) {
-  zx_status_t result = ZX_OK;
+debug::Status Breakpoint::SetBreakpointLocations(const debug_ipc::BreakpointSettings& settings) {
+  debug::Status result;
 
   // The set of new locations.
   std::set<LocationPair> new_set;
@@ -173,9 +174,9 @@ zx_status_t Breakpoint::SetBreakpointLocations(const debug_ipc::BreakpointSettin
   // Added locations.
   for (const auto& loc : new_set) {
     if (locations_.find(loc) == locations_.end()) {
-      zx_status_t process_status =
+      debug::Status process_status =
           process_delegate_->RegisterBreakpoint(this, loc.first, loc.second);
-      if (process_status != ZX_OK)
+      if (process_status.has_error())
         result = process_status;
     }
   }
@@ -184,8 +185,8 @@ zx_status_t Breakpoint::SetBreakpointLocations(const debug_ipc::BreakpointSettin
   return result;
 }
 
-zx_status_t Breakpoint::SetWatchpointLocations(const debug_ipc::BreakpointSettings& settings) {
-  zx_status_t result = ZX_OK;
+debug::Status Breakpoint::SetWatchpointLocations(const debug_ipc::BreakpointSettings& settings) {
+  debug::Status result;
 
   // The set of new locations.
   std::set<WatchpointLocationPair, WatchpointLocationPairCompare> new_set;
@@ -201,9 +202,9 @@ zx_status_t Breakpoint::SetWatchpointLocations(const debug_ipc::BreakpointSettin
   // Added locations.
   for (const auto& loc : new_set) {
     if (watchpoint_locations_.find(loc) == watchpoint_locations_.end()) {
-      zx_status_t process_status =
+      debug::Status process_status =
           process_delegate_->RegisterWatchpoint(this, loc.first, loc.second);
-      if (process_status != ZX_OK)
+      if (process_status.has_error())
         result = process_status;
     }
   }

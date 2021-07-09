@@ -48,10 +48,10 @@ class MockDebugAgentHarness {
   MockProcess* AddProcess(zx_koid_t process_koid);
 
   // Convenience wrappers around IPC requests.
-  zx_status_t AddOrChangeBreakpoint(
+  debug::Status AddOrChangeBreakpoint(
       uint32_t breakpoint_id, zx_koid_t process_koid, uint64_t address,
       debug_ipc::BreakpointType type = debug_ipc::BreakpointType::kSoftware);
-  zx_status_t AddOrChangeBreakpoint(
+  debug::Status AddOrChangeBreakpoint(
       uint32_t breakpoint_id, zx_koid_t process_koid, zx_koid_t thread_koid,
       const debug_ipc::AddressRange& range,
       debug_ipc::BreakpointType type = debug_ipc::BreakpointType::kSoftware);

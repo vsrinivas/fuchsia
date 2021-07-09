@@ -24,7 +24,7 @@ class TestRemoteAPI : public MockRemoteAPI {
     detaches_.push_back(request);
 
     debug_ipc::DetachReply reply;
-    reply.status = debug_ipc::kZxOk;
+    reply.status = debug::Status();
 
     cb(Err(), reply);
   }

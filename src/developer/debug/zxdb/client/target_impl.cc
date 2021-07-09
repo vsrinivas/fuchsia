@@ -10,6 +10,7 @@
 
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/status.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
@@ -70,14 +71,15 @@ void TargetImpl::CreateProcessForTesting(uint64_t koid, const std::string& proce
   state_ = State::kStarting;
   uint64_t cur_mock_timestamp = mock_timestamp_;
   mock_timestamp_ += 1000;
-  OnLaunchOrAttachReply(CallbackWithTimestamp(), Err(), koid, 0, process_name, cur_mock_timestamp);
+  OnLaunchOrAttachReply(CallbackWithTimestamp(), Err(), koid, debug::Status(), process_name,
+                        cur_mock_timestamp);
 }
 
 void TargetImpl::ImplicitlyDetach() {
   if (GetProcess()) {
     OnKillOrDetachReply(
-        ProcessObserver::DestroyReason::kDetach, Err(), 0, [](fxl::WeakPtr<Target>, const Err&) {},
-        0);
+        ProcessObserver::DestroyReason::kDetach, Err(), debug::Status(),
+        [](fxl::WeakPtr<Target>, const Err&) {}, 0);
   }
 }
 
@@ -209,7 +211,7 @@ void TargetImpl::OnProcessExiting(int return_code, uint64_t timestamp) {
 // static
 void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
                                             CallbackWithTimestamp callback, const Err& err,
-                                            uint64_t koid, debug_ipc::zx_status_t status,
+                                            uint64_t koid, const debug::Status& status,
                                             const std::string& process_name, uint64_t timestamp) {
   if (target) {
     target->OnLaunchOrAttachReply(std::move(callback), err, koid, status, process_name, timestamp);
@@ -230,7 +232,7 @@ void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
 }
 
 void TargetImpl::OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err& err,
-                                       uint64_t koid, debug_ipc::zx_status_t status,
+                                       uint64_t koid, const debug::Status& status,
                                        const std::string& process_name, uint64_t timestamp) {
   FX_DCHECK(state_ == State::kAttaching || state_ == State::kStarting);
   FX_DCHECK(!process_.get());  // Shouldn't have a process.
@@ -240,9 +242,9 @@ void TargetImpl::OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err
     // Error from transport.
     state_ = State::kNone;
     issue_err = err;
-  } else if (status != 0) {
+  } else if (status.has_error()) {
     state_ = State::kNone;
-    return HandleAttachStatus(std::move(callback), koid, status, process_name, timestamp);
+    return HandleAttachErrorStatus(std::move(callback), koid, status, process_name, timestamp);
   } else {
     Process::StartType start_type =
         state_ == State::kAttaching ? Process::StartType::kAttach : Process::StartType::kLaunch;
@@ -259,13 +261,12 @@ void TargetImpl::OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err
   }
 }
 
-void TargetImpl::HandleAttachStatus(CallbackWithTimestamp callback, uint64_t koid,
-                                    debug_ipc::zx_status_t status, const std::string& process_name,
-                                    uint64_t timestamp) {
+void TargetImpl::HandleAttachErrorStatus(CallbackWithTimestamp callback, uint64_t koid,
+                                         const debug::Status& status,
+                                         const std::string& process_name, uint64_t timestamp) {
   Err err;
-  if (status == debug_ipc::kZxErrIO) {
-    err = Err("Error launching: Binary not found [%s]", debug_ipc::ZxStatusToString(status));
-  } else if (status == debug_ipc::kZxErrAlreadyBound) {
+  if (status.has_error() && status.platform_error() &&
+      *status.platform_error() == debug_ipc::kZxErrAlreadyBound) {
     // Already bound can mean two things. In the first case, it could be a mistake where the user
     // is trying to attach to the same process twice.
     if (system_->ProcessFromKoid(koid)) {
@@ -290,9 +291,9 @@ void TargetImpl::HandleAttachStatus(CallbackWithTimestamp callback, uint64_t koi
           if (err.has_error())
             return callback(target, err, timestamp);
 
-          if (reply.status != debug_ipc::kZxOk) {
+          if (reply.status.has_error()) {
             Err error("Could not attach to process %s: %s", process_name.c_str(),
-                      debug_ipc::ZxStatusToString(reply.status));
+                      reply.status.message().c_str());
             return callback(target, err, timestamp);
           }
 
@@ -300,15 +301,15 @@ void TargetImpl::HandleAttachStatus(CallbackWithTimestamp callback, uint64_t koi
         });
     return;
   } else {
-    err = Err(
-        fxl::StringPrintf("Error launching, status = %s.", debug_ipc::ZxStatusToString(status)));
+    err = Err("Error launching: " + status.message());
   }
 
   callback(GetWeakPtr(), err, timestamp);
 }
 
 void TargetImpl::OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,
-                                     int32_t status, Callback callback, uint64_t timestamp) {
+                                     const debug::Status& status, Callback callback,
+                                     uint64_t timestamp) {
   FX_DCHECK(process_.get());  // Should have a process.
 
   Err issue_err;  // Error to send in callback.
@@ -316,12 +317,12 @@ void TargetImpl::OnKillOrDetachReply(ProcessObserver::DestroyReason reason, cons
     // Error from transport.
     state_ = State::kNone;
     issue_err = err;
-  } else if (status != 0) {
+  } else if (status.has_error()) {
     // Error from detaching.
     // TODO(davemoore): Not sure what state the target should be if we error upon detach.
-    issue_err = Err(fxl::StringPrintf("Error %sing, status = %s.",
-                                      ProcessObserver::DestroyReasonToString(reason),
-                                      debug_ipc::ZxStatusToString(status)));
+    issue_err =
+        Err(fxl::StringPrintf("Error %sing: %s", ProcessObserver::DestroyReasonToString(reason),
+                              status.message().c_str()));
   } else {
     // Successfully detached.
     state_ = State::kNone;

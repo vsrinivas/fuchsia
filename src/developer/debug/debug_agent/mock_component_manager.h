@@ -15,8 +15,8 @@ class MockComponentManager : public ComponentManager {
   ~MockComponentManager() override = default;
 
   // ComponentManager implementation.
-  zx_status_t LaunchComponent(DebuggedJob* root_job, const std::vector<std::string>& argv,
-                              uint64_t* component_id) override;
+  debug::Status LaunchComponent(DebuggedJob* root_job, const std::vector<std::string>& argv,
+                                uint64_t* component_id) override;
   uint64_t OnProcessStart(const std::string& filter, StdioHandles& out_stdio) override;
 };
 

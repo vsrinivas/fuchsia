@@ -108,9 +108,9 @@ void SendExplicitDetachMessage(ConsoleContext* context, uint64_t process_koid) {
           return;
         }
 
-        if (reply.status != debug_ipc::kZxOk) {
-          console->Output(Err("Could not detach from process %" PRIu64 ": %s", process_koid,
-                              debug_ipc::ZxStatusToString(reply.status)));
+        if (reply.status.has_error()) {
+          console->Output(Err("Could not detach from process " + std::to_string(process_koid) +
+                              ": " + reply.status.message()));
           return;
         }
 

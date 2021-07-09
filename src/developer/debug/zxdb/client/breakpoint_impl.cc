@@ -311,16 +311,17 @@ void BreakpointImpl::SendBackendRemove() {
 void BreakpointImpl::OnAddOrChangeComplete(const Err& input_err,
                                            debug_ipc::AddOrChangeBreakpointReply reply) {
   Err err = input_err;  // Could be a transport error.
-  if (err.ok() && reply.status != 0) {
+  if (err.ok() && reply.status.has_error()) {
     // Transport succeeded but the backend failed.
     std::stringstream ss;
-    ss << "System reported error " << reply.status << " ("
-       << debug_ipc::ZxStatusToString(reply.status) << ")";
-    if (reply.status == debug_ipc::kZxErrNoResources) {
+    ss << "System reported error: " << reply.status.message();
+    if (reply.status.platform_error() &&
+        *reply.status.platform_error() == debug_ipc::kZxErrNoResources) {
       ss << std::endl
          << "Is this a hardware breakpoint? Check \"sys-info\" to "
             "verify the amount available within the system.";
-    } else if (reply.status == debug_ipc::kZxErrNotSupported) {
+    } else if (reply.status.platform_error() &&
+               *reply.status.platform_error() == debug_ipc::kZxErrNotSupported) {
       ss << std::endl
          << "This kernel command-line flag \"kernel.enable-debugging-syscalls\" is\n"
             "likely not set.";

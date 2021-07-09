@@ -104,10 +104,11 @@ class Job : public ClientObject, public FilterObserver {
   void AttachInternal(debug_ipc::TaskType type, uint64_t koid, Callback callback);
 
   static void OnAttachReplyThunk(fxl::WeakPtr<Job> job, Callback callback, const Err& err,
-                                 uint64_t koid, uint32_t status, const std::string& job_name);
-  void OnAttachReply(Callback callback, const Err& err, uint64_t koid, uint32_t status,
+                                 uint64_t koid, const debug::Status& status,
+                                 const std::string& job_name);
+  void OnAttachReply(Callback callback, const Err& err, uint64_t koid, const debug::Status& status,
                      const std::string& job_name);
-  void OnDetachReply(const Err& err, uint32_t status, Callback callback);
+  void OnDetachReply(const Err& err, const debug::Status& status, Callback callback);
 
   // If job is running this will update |filters_| only after getting OK from agent else it will set
   // |filters_| and return.

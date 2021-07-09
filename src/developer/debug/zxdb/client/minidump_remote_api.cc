@@ -407,9 +407,6 @@ void MinidumpRemoteAPI::Kill(const debug_ipc::KillRequest& request,
   ErrNoLive(std::move(cb));
 }
 
-constexpr uint32_t kAttachOk = 0;
-constexpr uint32_t kAttachNotFound = 1;
-
 void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
                                fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) {
   if (!minidump_) {
@@ -421,12 +418,14 @@ void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
   reply.name = ProcessName();
 
   if (static_cast<pid_t>(request.koid) != minidump_->ProcessID()) {
-    reply.status = kAttachNotFound;
+    reply.status = debug::Status("Process " + std::to_string(request.koid) +
+                                 " is not in this minidump, there is only " +
+                                 std::to_string(minidump_->ProcessID()));
     Succeed(std::move(cb), reply);
     return;
   }
 
-  reply.status = kAttachOk;
+  reply.status = debug::Status();
   attached_ = true;
 
   std::vector<debug_ipc::NotifyThread> notifications;
@@ -497,10 +496,10 @@ void MinidumpRemoteAPI::Detach(const debug_ipc::DetachRequest& request,
   debug_ipc::DetachReply reply;
 
   if (static_cast<pid_t>(request.koid) == minidump_->ProcessID() && attached_) {
-    reply.status = kAttachOk;
+    reply.status = debug::Status();
     attached_ = false;
   } else {
-    reply.status = kAttachNotFound;
+    reply.status = debug::Status("Process not found in this minidump.");
   }
 
   Succeed(std::move(cb), reply);

@@ -477,8 +477,8 @@ void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::s
     session_->remote_api()->Launch(
         request, [this, target = target->GetWeakPtr(), on_err = std::move(on_err)](
                      const zxdb::Err& err, debug_ipc::LaunchReply reply) {
-          if (err.ok() && (reply.status != debug_ipc::kZxOk)) {
-            zxdb::Err status_err(zxdb::ErrType::kGeneral, fidl_codec::StatusName(reply.status));
+          if (err.ok() && (reply.status.has_error())) {
+            zxdb::Err status_err(zxdb::ErrType::kGeneral, reply.status.message());
             on_err(status_err);
           } else {
             on_err(err);

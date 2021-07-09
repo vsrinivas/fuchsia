@@ -25,10 +25,10 @@ class ZirconBinaryLauncher final : public BinaryLauncher {
   explicit ZirconBinaryLauncher(std::shared_ptr<sys::ServiceDirectory> env_services);
   ~ZirconBinaryLauncher() override;
 
-  zx_status_t Setup(const std::vector<std::string>& argv) override;
+  debug::Status Setup(const std::vector<std::string>& argv) override;
   StdioHandles ReleaseStdioHandles() override;
   std::unique_ptr<ProcessHandle> GetProcess() const override;
-  zx_status_t Start() override;
+  debug::Status Start() override;
 
  private:
   // Creates a socket and passes it on to the builder as a FD handle. |fd| should be a valid fd for

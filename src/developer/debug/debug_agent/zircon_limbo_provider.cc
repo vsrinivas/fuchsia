@@ -121,20 +121,20 @@ bool ZirconLimboProvider::IsProcessInLimbo(zx_koid_t process_koid) const {
   return records.find(process_koid) != records.end();
 }
 
-fitx::result<zx_status_t, ZirconLimboProvider::RetrievedException>
+fitx::result<debug::Status, ZirconLimboProvider::RetrievedException>
 ZirconLimboProvider::RetrieveException(zx_koid_t process_koid) {
   ProcessLimboSyncPtr process_limbo;
   if (zx_status_t status = services_->Connect(process_limbo.NewRequest()); status != ZX_OK)
-    return fitx::error(status);
+    return fitx::error(debug::ZxStatus(status));
 
   ProcessLimbo_RetrieveException_Result result = {};
   if (zx_status_t status = process_limbo->RetrieveException(process_koid, &result);
       status != ZX_OK) {
-    return fitx::error(status);
+    return fitx::error(debug::ZxStatus(status));
   }
 
   if (result.is_err())
-    return fitx::error(result.err());
+    return fitx::error(debug::ZxStatus(result.err()));
 
   fuchsia::exception::ProcessException exception = result.response().ResultValue_();
 
@@ -155,18 +155,18 @@ ZirconLimboProvider::RetrieveException(zx_koid_t process_koid) {
   return fitx::ok(std::move(retrieved));
 }
 
-zx_status_t ZirconLimboProvider::ReleaseProcess(zx_koid_t process_koid) {
+debug::Status ZirconLimboProvider::ReleaseProcess(zx_koid_t process_koid) {
   ProcessLimboSyncPtr process_limbo;
   if (zx_status_t status = services_->Connect(process_limbo.NewRequest()); status != ZX_OK)
-    return status;
+    return debug::ZxStatus(status);
 
   ProcessLimbo_ReleaseProcess_Result result;
   if (zx_status_t status = process_limbo->ReleaseProcess(process_koid, &result);
       status != ZX_OK || result.is_err())
-    return status;
+    return debug::ZxStatus(status);
 
   limbo_.erase(process_koid);
-  return ZX_OK;
+  return debug::Status();
 }
 
 }  // namespace debug_agent
