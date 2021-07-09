@@ -464,7 +464,7 @@ async fn test_log_packets() -> Result {
              tags: _,
              msg,
          }| {
-            let () = patterns.retain(|pattern| msg.contains(pattern));
+            let () = patterns.retain(|pattern| !msg.contains(pattern));
             futures::future::ok(if patterns.is_empty() {
                 async_utils::fold::FoldWhile::Done(())
             } else {
