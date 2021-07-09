@@ -492,6 +492,7 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
     const INVALID_PORT_STAT_NAME: &str = "InvalidPort";
     const INVALID_TRANS_PROTO_STAT_NAME: &str = "InvalidTransProto";
     const INVALID_PACKET_TYPE_STAT_NAME: &str = "InvalidPacketType";
+    const COUNTER_PROPERTY_NAME: &str = "Count";
     let path = ["Stats", "DHCP Info", &eth.id().to_string(), "NICs"];
 
     let mut invalid_ports = HashMap::<NonZeroU16, u64>::new();
@@ -511,12 +512,17 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
     let invalid_packet_type_assertion = TreeAssertion::new(INVALID_PACKET_TYPE_STAT_NAME, true);
 
     for (port, count) in invalid_ports {
-        let () = invalid_port_assertion.add_property_assertion(&port.to_string(), Box::new(count));
+        let mut port_assertion = TreeAssertion::new(&port.to_string(), true);
+        let () = port_assertion
+            .add_property_assertion(COUNTER_PROPERTY_NAME, Box::new(count.to_string()));
+        let () = invalid_port_assertion.add_child_assertion(port_assertion);
     }
 
     for (proto, count) in invalid_trans_protos {
-        let () = invalid_trans_proto_assertion
-            .add_property_assertion(&proto.to_string(), Box::new(count));
+        let mut trans_proto_assertion = TreeAssertion::new(&proto.to_string(), true);
+        let () = trans_proto_assertion
+            .add_property_assertion(COUNTER_PROPERTY_NAME, Box::new(count.to_string()));
+        let () = invalid_trans_proto_assertion.add_child_assertion(trans_proto_assertion);
     }
 
     let mut discard_stats_assertion = TreeAssertion::new(DISCARD_STATS_NAME, true);

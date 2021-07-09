@@ -46,8 +46,23 @@ const (
 	ipv6Addr = tcpip.Address("\x00\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01")
 )
 
-func checkStats(stats *statCounterInspectImpl, expectedNonZeroMetrics []inspect.Metric, expectedChildren []string, expectedChildrenData []inspect.Object) error {
+type inspectNodeExpectation struct {
+	node     inspect.Object
+	children []inspectNodeExpectation
+}
+
+func checkInspectRecurse(node inspectInner, expected inspectNodeExpectation) error {
 	var err error
+
+	nodeData := node.ReadData()
+
+	if nodeData.Name != expected.node.Name {
+		err = multierr.Append(err, fmt.Errorf("found unexpected name %s instead of %s", nodeData.Name, expected.node.Name))
+	}
+
+	if diff := cmp.Diff(expected.node.Properties, nodeData.Properties, cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{})); diff != "" {
+		err = multierr.Append(err, fmt.Errorf("Properties mismatch (-want +got):\n%s", diff))
+	}
 
 	containsMetric := func(metrics []inspect.Metric, metricToFind inspect.Metric) bool {
 		for _, metric := range metrics {
@@ -59,40 +74,43 @@ func checkStats(stats *statCounterInspectImpl, expectedNonZeroMetrics []inspect.
 		return false
 	}
 
-	metrics := stats.ReadData().Metrics
-
-	for _, metric := range metrics {
-		if metric.Value != inspect.MetricValueWithUintValue(0) && !containsMetric(expectedNonZeroMetrics, metric) {
+	for _, metric := range nodeData.Metrics {
+		if metric.Value != inspect.MetricValueWithUintValue(0) && !containsMetric(expected.node.Metrics, metric) {
 			err = multierr.Append(err, fmt.Errorf("ReadData() mismatch: found unexpected non-zero metric %#v", metric))
 		}
 	}
 
-	for _, metric := range expectedNonZeroMetrics {
-		if !containsMetric(metrics, metric) {
+	for _, metric := range expected.node.Metrics {
+		if !containsMetric(nodeData.Metrics, metric) {
 			err = multierr.Append(err, fmt.Errorf("ReadData() mismatch: missing expected non-zero metric %#v", metric))
 		}
 	}
 
-	children := stats.ListChildren()
-	if diff := cmp.Diff(expectedChildren, children); diff != "" {
+	children := node.ListChildren()
+
+	var expectedChildrenNames []string
+	for _, child := range expected.children {
+		expectedChildrenNames = append(expectedChildrenNames, child.node.Name)
+	}
+
+	if diff := cmp.Diff(expectedChildrenNames, children, cmpopts.SortSlices(func(a, b string) bool {
+		return a < b
+	})); diff != "" {
 		err = multierr.Append(err, fmt.Errorf("ListChildren() mismatch (-want +got):\n%s", diff))
 	}
 
 	childName := "not a real child"
-	if child := stats.GetChild(childName); child != nil {
+	if child := node.GetChild(childName); child != nil {
 		err = multierr.Append(err, fmt.Errorf("got GetChild(%s) = %s, want = nil", childName, child))
 	}
 
-	for i, childName := range children {
-		if child := stats.GetChild(childName); child == nil {
+	for i, childName := range expectedChildrenNames {
+		if child := node.GetChild(childName); child != nil {
+			err = multierr.Append(err, checkInspectRecurse(child, expected.children[i]))
+		} else {
 			err = multierr.Append(err, fmt.Errorf("got GetChild(%s) = nil, want non-nil", childName))
-		} else if entry, ok := child.(*integralStatCounterMapInspectImpl); ok {
-			err = multierr.Append(err, statCounterMapChecker(entry, expectedChildrenData[i].Metrics))
-		} else if _, ok := child.(*statCounterInspectImpl); !ok {
-			err = multierr.Append(err, fmt.Errorf("got GetChild(%s) = %#v, want %T", childName, child, (*statCounterInspectImpl)(nil)))
 		}
 	}
-
 	return err
 }
 
@@ -100,6 +118,7 @@ func TestStatCounterInspectImpl(t *testing.T) {
 	var invalidPortCounter tcpip.StatCounter
 	const invalidPort = 1
 	const invalidPortCount = 10
+	const initAcquireCount = 3
 	invalidPortCounter.IncrementBy(invalidPortCount)
 	s := dhcp.Stats{
 		PacketDiscardStats: dhcp.PacketDiscardStats{
@@ -109,57 +128,57 @@ func TestStatCounterInspectImpl(t *testing.T) {
 		},
 	}
 
-	s.InitAcquire.IncrementBy(3)
+	s.InitAcquire.IncrementBy(initAcquireCount)
 
 	v := statCounterInspectImpl{
 		name:  "doesn't matter",
 		value: reflect.ValueOf(&s).Elem(),
 	}
 
-	expectedChildren := []string{
-		"PacketDiscardStats",
-	}
-	expectedChildrenData := []inspect.Object{
-		{
-			Name: "PacketDiscardStats",
-		},
-	}
-
-	expectedMetrics := []inspect.Metric{
-		{Key: "InitAcquire", Value: inspect.MetricValueWithUintValue(3)},
-	}
-
-	if err := checkStats(&v, expectedMetrics, expectedChildren, expectedChildrenData); err != nil {
-		t.Error(err)
-	}
-
-	child := v.GetChild("PacketDiscardStats")
-	discardStats, ok := child.(*statCounterInspectImpl)
-	if !ok {
-		t.Fatalf("got GetChild(PacketDiscardStats) = %#v, want %T", child, (*statCounterInspectImpl)(nil))
-	}
-
-	expectedChildren = []string{
-		"InvalidPort",
-		"InvalidTransProto",
-		"InvalidPacketType",
-	}
-	expectedChildrenData = []inspect.Object{
-		{
-			Name: "InvalidPort",
+	expected := inspectNodeExpectation{
+		node: inspect.Object{
+			Name: "doesn't matter",
 			Metrics: []inspect.Metric{
-				{Key: strconv.Itoa(invalidPort), Value: inspect.MetricValueWithUintValue(invalidPortCounter.Value())},
+				{Key: "InitAcquire", Value: inspect.MetricValueWithUintValue(initAcquireCount)},
 			},
 		},
-		{
-			Name: "InvalidTransProto",
-		},
-		{
-			Name: "InvalidPacketType",
+		children: []inspectNodeExpectation{
+			{
+				node: inspect.Object{
+					Name: "PacketDiscardStats",
+				},
+				children: []inspectNodeExpectation{
+					{
+						node: inspect.Object{
+							Name: "InvalidPort",
+						},
+						children: []inspectNodeExpectation{
+							{
+								node: inspect.Object{
+									Name: "1",
+									Properties: []inspect.Property{
+										{Key: "Count", Value: inspect.PropertyValueWithStr("10")},
+									},
+								},
+							},
+						},
+					},
+					{
+						node: inspect.Object{
+							Name: "InvalidTransProto",
+						},
+					},
+					{
+						node: inspect.Object{
+							Name: "InvalidPacketType",
+						},
+					},
+				},
+			},
 		},
 	}
 
-	if err := checkStats(discardStats, nil, expectedChildren, expectedChildrenData); err != nil {
+	if err := checkInspectRecurse(&v, expected); err != nil {
 		t.Error(err)
 	}
 }
@@ -236,30 +255,10 @@ func TestCircularLogsInspectImpl(t *testing.T) {
 	}
 }
 
-func statCounterMapChecker(counterMap *integralStatCounterMapInspectImpl, expectedMetrics []inspect.Metric) error {
-	var err error
-
-	if diff := cmp.Diff(inspect.Object{
-		Name:    counterMap.name,
-		Metrics: expectedMetrics,
-	}, counterMap.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{})); diff != "" {
-		err = multierr.Append(err, fmt.Errorf("ReadData() mismatch (-want +got):\n%s", diff))
-	}
-
-	if children := counterMap.ListChildren(); children != nil {
-		err = multierr.Append(err, fmt.Errorf("got ListChildren() = %s, want = nil", children))
-	}
-
-	childName := "not a real child"
-	if child := counterMap.GetChild(childName); child != nil {
-		err = multierr.Append(err, fmt.Errorf("got GetChild(%s) = %s, want = nil", childName, child))
-	}
-
-	return err
-}
-
 func TestIntegralStatCounterMapInspectImpl(t *testing.T) {
 	keyTypes := []reflect.Type{
+		reflect.TypeOf((*tcpip.TransportProtocolNumber)(nil)).Elem(),
+		reflect.TypeOf((*tcpip.PacketType)(nil)).Elem(),
 		reflect.TypeOf((*int)(nil)).Elem(),
 		reflect.TypeOf((*int8)(nil)).Elem(),
 		reflect.TypeOf((*int16)(nil)).Elem(),
@@ -276,7 +275,6 @@ func TestIntegralStatCounterMapInspectImpl(t *testing.T) {
 		valueType := reflect.TypeOf((*tcpip.StatCounter)(nil))
 		mapType := reflect.MapOf(keyType, valueType)
 		mapValue := reflect.MakeMapWithSize(mapType, 0)
-
 		const key = 1
 		const value = 10
 		var counter tcpip.StatCounter
@@ -288,11 +286,23 @@ func TestIntegralStatCounterMapInspectImpl(t *testing.T) {
 			value: mapValue,
 		}
 
-		expectedMetrics := []inspect.Metric{
-			{Key: strconv.Itoa(key), Value: inspect.MetricValueWithUintValue(counter.Value())},
+		expected := inspectNodeExpectation{
+			node: inspect.Object{
+				Name: "doesn't matter",
+			},
+			children: []inspectNodeExpectation{
+				{
+					node: inspect.Object{
+						Name: strconv.Itoa(key),
+						Properties: []inspect.Property{
+							{Key: "Count", Value: inspect.PropertyValueWithStr("10")},
+						},
+					},
+				},
+			},
 		}
 
-		if err := statCounterMapChecker(&v, expectedMetrics); err != nil {
+		if err := checkInspectRecurse(&v, expected); err != nil {
 			t.Error(err)
 		}
 	}
@@ -516,7 +526,7 @@ func TestNicInfoInspectImpl(t *testing.T) {
 }
 
 func TestDHCPInfoInspectImpl(t *testing.T) {
-	var invalidPortCounter, invalidTransProtoCounter, invalidPacketTypeCounter tcpip.StatCounter
+	var invalidPortCounter, invalidTransProtoCounter, invalidPacketTypeCounter, invalidPacketType2Counter tcpip.StatCounter
 
 	const invalidPort = 1
 	const invalidPortCount = 10
@@ -529,6 +539,12 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 	const invalidPacketType = 3
 	const invalidPacketTypeCount = 30
 	invalidPacketTypeCounter.IncrementBy(invalidPacketTypeCount)
+
+	const invalidPacketType2 = 4
+	const invalidPacketType2Count = 40
+	invalidPacketType2Counter.IncrementBy(invalidPacketType2Count)
+
+	const counterPropertyKey = "Count"
 
 	v := dhcpInfoInspectImpl{
 		name: "doesn't matter",
@@ -545,7 +561,8 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 					invalidTransProto: &invalidTransProtoCounter,
 				},
 				InvalidPacketType: map[tcpip.PacketType]*tcpip.StatCounter{
-					invalidPacketType: &invalidPacketTypeCounter,
+					invalidPacketType:  &invalidPacketTypeCounter,
+					invalidPacketType2: &invalidPacketType2Counter,
 				},
 			},
 		},
@@ -561,57 +578,79 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 		// Validate Stats struct.
 		child := v.GetChild("Stats")
 		stats, ok := child.(*statCounterInspectImpl)
+
 		if !ok {
 			t.Fatalf("got GetChild(Stats) = %#v, want %T", child, (*statCounterInspectImpl)(nil))
 		}
 
-		expectedChildren := []string{
-			"PacketDiscardStats",
-		}
-		expectedChildrenData := []inspect.Object{
-			{
-				Name: "PacketDiscardStats",
+		expected := inspectNodeExpectation{
+			node: inspect.Object{
+				Name: "Stats",
 			},
-		}
-
-		if err := checkStats(stats, nil, expectedChildren, expectedChildrenData); err != nil {
-			t.Error(err)
-		}
-
-		// Validate PacketDiscardStats struct.
-		child = stats.GetChild("PacketDiscardStats")
-		discardStats, ok := child.(*statCounterInspectImpl)
-		if !ok {
-			t.Fatalf("got GetChild(PacketDiscardStats) = %#v, want %T", child, (*statCounterInspectImpl)(nil))
-		}
-
-		expectedChildren = []string{
-			"InvalidPort",
-			"InvalidTransProto",
-			"InvalidPacketType",
-		}
-		expectedChildrenData = []inspect.Object{
-			{
-				Name: "InvalidPort",
-				Metrics: []inspect.Metric{
-					{Key: strconv.Itoa(invalidPort), Value: inspect.MetricValueWithUintValue(invalidPortCounter.Value())},
+			children: []inspectNodeExpectation{
+				{
+					node: inspect.Object{
+						Name: "PacketDiscardStats",
+					},
+					children: []inspectNodeExpectation{
+						{
+							node: inspect.Object{
+								Name: "InvalidPort",
+							},
+							children: []inspectNodeExpectation{
+								{
+									node: inspect.Object{
+										Name: strconv.Itoa(invalidPort),
+										Properties: []inspect.Property{
+											{Key: counterPropertyKey, Value: inspect.PropertyValueWithStr(strconv.FormatUint(invalidPortCounter.Value(), 10))},
+										},
+									},
+								},
+							},
+						},
+						{
+							node: inspect.Object{
+								Name: "InvalidTransProto",
+							},
+							children: []inspectNodeExpectation{
+								{
+									node: inspect.Object{
+										Name: strconv.Itoa(invalidTransProto),
+										Properties: []inspect.Property{
+											{Key: counterPropertyKey, Value: inspect.PropertyValueWithStr(strconv.FormatUint(invalidTransProtoCounter.Value(), 10))},
+										},
+									},
+								},
+							},
+						},
+						{
+							node: inspect.Object{
+								Name: "InvalidPacketType",
+							},
+							children: []inspectNodeExpectation{
+								{
+									node: inspect.Object{
+										Name: strconv.Itoa(invalidPacketType),
+										Properties: []inspect.Property{
+											{Key: counterPropertyKey, Value: inspect.PropertyValueWithStr(strconv.FormatUint(invalidPacketTypeCounter.Value(), 10))},
+										},
+									},
+								},
+								{
+									node: inspect.Object{
+										Name: strconv.Itoa(invalidPacketType2),
+										Properties: []inspect.Property{
+											{Key: counterPropertyKey, Value: inspect.PropertyValueWithStr(strconv.FormatUint(invalidPacketType2Counter.Value(), 10))},
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			},
-			{
-				Name: "InvalidTransProto",
-				Metrics: []inspect.Metric{
-					{Key: strconv.Itoa(invalidTransProto), Value: inspect.MetricValueWithUintValue(invalidTransProtoCounter.Value())},
-				},
-			},
-			{
-				Name: "InvalidPacketType",
-				Metrics: []inspect.Metric{
-					{Key: strconv.Itoa(invalidPacketType), Value: inspect.MetricValueWithUintValue(invalidPacketTypeCounter.Value())},
-				},
-			},
 		}
-
-		if err := checkStats(discardStats, nil, expectedChildren, expectedChildrenData); err != nil {
+		if err := checkInspectRecurse(stats, expected); err != nil {
 			t.Error(err)
 		}
 	}

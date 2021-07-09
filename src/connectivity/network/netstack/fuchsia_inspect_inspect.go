@@ -309,13 +309,12 @@ type integralStatCounterMapInspectImpl struct {
 
 func (impl *integralStatCounterMapInspectImpl) ReadData() inspect.Object {
 	return inspect.Object{
-		Name:    impl.name,
-		Metrics: impl.asMetrics(),
+		Name: impl.name,
 	}
 }
 
-func (impl *integralStatCounterMapInspectImpl) asMetrics() []inspect.Metric {
-	var metrics []inspect.Metric
+func (impl *integralStatCounterMapInspectImpl) ListChildren() []string {
+	var children []string
 	iter := impl.value.MapRange()
 	for iter.Next() {
 		var fmtKey string
@@ -327,21 +326,80 @@ func (impl *integralStatCounterMapInspectImpl) asMetrics() []inspect.Metric {
 		default:
 			panic(fmt.Sprintf("stat counter map contained key with non-integral kind: %s", key.Kind()))
 		}
-
-		counter := iter.Value().Interface().(*tcpip.StatCounter)
-		metrics = append(metrics, inspect.Metric{
-			Key:   fmtKey,
-			Value: inspect.MetricValueWithUintValue(counter.Value()),
-		})
+		children = append(children, fmtKey)
 	}
-	return metrics
+	return children
 }
 
-func (*integralStatCounterMapInspectImpl) ListChildren() []string {
+func (impl *integralStatCounterMapInspectImpl) GetChild(childName string) inspectInner {
+	if key, err := func() (reflect.Value, error) {
+		keyType := impl.value.Type().Key()
+		keyKind := keyType.Kind()
+		bitSize := func() int {
+			switch keyKind {
+			case reflect.Int8, reflect.Uint8:
+				return 8
+			case reflect.Int16, reflect.Uint16:
+				return 16
+			case reflect.Int32, reflect.Uint32:
+				return 32
+			case reflect.Int64, reflect.Uint64:
+				return 64
+			case reflect.Int, reflect.Uint:
+				return strconv.IntSize
+			default:
+				panic(fmt.Sprintf("stat counter map contained key with non-integral kind: %s", keyKind))
+			}
+		}()
+
+		keyValue := reflect.New(keyType)
+		switch keyKind {
+		case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
+			key, err := strconv.ParseInt(childName, 10, bitSize)
+			keyValue.Elem().SetInt(key)
+			return keyValue.Elem(), err
+		case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
+			key, err := strconv.ParseUint(childName, 10, bitSize)
+			keyValue.Elem().SetUint(key)
+			return keyValue.Elem(), err
+		default:
+			panic(fmt.Sprintf("stat counter map contained key with non-integral kind: %s", keyType.Kind()))
+		}
+	}(); err == nil {
+		if counter := impl.value.MapIndex(key); counter.IsValid() {
+			if typedCounter, ok := counter.Interface().(*tcpip.StatCounter); ok {
+				return &singleStatCounterInspectImpl{
+					name:  childName,
+					value: typedCounter,
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
-func (*integralStatCounterMapInspectImpl) GetChild(childName string) inspectInner {
+var _ inspectInner = (*singleStatCounterInspectImpl)(nil)
+
+type singleStatCounterInspectImpl struct {
+	name  string
+	value *tcpip.StatCounter
+}
+
+func (impl *singleStatCounterInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: impl.name,
+		Properties: []inspect.Property{
+			{Key: "Count", Value: inspect.PropertyValueWithStr(strconv.FormatUint(impl.value.Value(), 10))},
+		},
+	}
+}
+
+func (*singleStatCounterInspectImpl) ListChildren() []string {
+	return nil
+}
+
+func (*singleStatCounterInspectImpl) GetChild(childName string) inspectInner {
 	return nil
 }
 
