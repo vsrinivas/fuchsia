@@ -34,6 +34,7 @@
 #ifndef __ASSEMBLER__
 
 #include <zircon/types.h>
+#include <bits.h>
 
 // Holds the register state used to restore a host.
 struct HostState {
@@ -67,6 +68,25 @@ struct GuestState {
 
   // Extended control registers.
   uint64_t xcr0;
+
+  // Convenience getters for accessing low 32-bits of common registers.
+  uint32_t eax() const { return static_cast<uint32_t>(rax); }
+  uint32_t ecx() const { return static_cast<uint32_t>(rcx); }
+  uint32_t edx() const { return static_cast<uint32_t>(rdx); }
+  uint32_t ebx() const { return static_cast<uint32_t>(rbx); }
+
+  // Convenience getter/setter for fetching the 64-bit value edx:eax, used by
+  // several x86_64 instructions, such as `rdmsr` and `wrmsr`.
+  //
+  // For reads, the top bits of rax and rdx are ignored (c.f. Volume 2C,
+  // WRMSR). For writes, the top bits of rax and rdx are set to zero, matching
+  // the behaviour of x86_64 instructions such as `rdmsr` (c.f. Volume 2C,
+  // RDMSR).
+  uint64_t EdxEax() const { return static_cast<uint64_t>(edx()) << 32 | eax(); }
+  void SetEdxEax(uint64_t value) {
+    rax = BITS_SHIFT(value, 31, 0);
+    rdx = BITS_SHIFT(value, 63, 32);
+  }
 };
 
 struct VmxState {

@@ -210,8 +210,8 @@ static zx_status_t compute_xsave_size(uint64_t guest_xcr0, uint32_t* xsave_size)
 
 static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                 GuestState* guest_state) {
-  const uint32_t leaf = static_cast<uint32_t>(guest_state->rax);
-  const uint32_t subleaf = static_cast<uint32_t>(guest_state->rcx);
+  const uint32_t leaf = guest_state->eax();
+  const uint32_t subleaf = guest_state->ecx();
 
   next_rip(exit_info, vmcs);
   switch (leaf) {
@@ -548,7 +548,7 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
 
 static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                      GuestState* guest_state, LocalApicState* local_apic_state) {
-  switch (static_cast<X2ApicMsr>(guest_state->rcx)) {
+  switch (static_cast<X2ApicMsr>(guest_state->ecx())) {
     case X2ApicMsr::ID:
       next_rip(exit_info, vmcs);
       guest_state->rax = vmcs->Read(VmcsField16::VPID) - 1;
@@ -602,21 +602,21 @@ static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
 
 static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
                                 LocalApicState* local_apic_state) {
-  // On execution of rdmsr, rcx specifies the MSR and the value is loaded into edx:eax.
-  switch (static_cast<uint32_t>(guest_state->rcx)) {
-    case X86_MSR_IA32_APIC_BASE:
+  // On execution of rdmsr, ecx specifies the MSR and the result is stored in edx:eax.
+  switch (guest_state->ecx()) {
+    case X86_MSR_IA32_APIC_BASE: {
       next_rip(exit_info, vmcs);
-      guest_state->rax = kLocalApicPhysBase;
+      uint64_t result = kLocalApicPhysBase;
       if (vmcs->Read(VmcsField16::VPID) == 1) {
-        guest_state->rax |= IA32_APIC_BASE_BSP;
+        result |= IA32_APIC_BASE_BSP;
       }
-      guest_state->rdx = 0;
+      guest_state->SetEdxEax(result);
       return ZX_OK;
+    }
     // From Volume 4, Section 2.1, Table 2-2: For now, only enable fast strings.
     case X86_MSR_IA32_MISC_ENABLE:
       next_rip(exit_info, vmcs);
-      guest_state->rax = read_msr(X86_MSR_IA32_MISC_ENABLE) & kMiscEnableFastStrings;
-      guest_state->rdx = 0;
+      guest_state->SetEdxEax(read_msr(X86_MSR_IA32_MISC_ENABLE) & kMiscEnableFastStrings);
       return ZX_OK;
     case X86_MSR_DRAM_ENERGY_STATUS:
     case X86_MSR_DRAM_POWER_LIMIT:
@@ -652,8 +652,7 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
     // We report 0 interrupts.
     case X86_MSR_SMI_COUNT:
       next_rip(exit_info, vmcs);
-      guest_state->rax = 0;
-      guest_state->rdx = 0;
+      guest_state->SetEdxEax(0);
       return ZX_OK;
     case kX2ApicMsrBase ... kX2ApicMsrMax:
       return handle_apic_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
@@ -714,11 +713,7 @@ static uint64_t ipi_target_mask(const InterruptCommandRegister& icr, uint16_t se
 
 static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs,
                               const GuestState& guest_state, zx_port_packet* packet) {
-  if (guest_state.rax > UINT32_MAX || guest_state.rdx > UINT32_MAX) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  InterruptCommandRegister icr(static_cast<uint32_t>(guest_state.rdx),
-                               static_cast<uint32_t>(guest_state.rax));
+  InterruptCommandRegister icr(guest_state.edx(), guest_state.eax());
   if (icr.destination_mode == InterruptDestinationMode::LOGICAL) {
     dprintf(INFO, "Logical IPI destination mode is not supported\n");
     return ZX_ERR_NOT_SUPPORTED;
@@ -755,15 +750,26 @@ static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs,
 static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                      const GuestState& guest_state,
                                      LocalApicState* local_apic_state, zx_port_packet* packet) {
-  switch (static_cast<X2ApicMsr>(guest_state.rcx)) {
+  // Check for writes to reserved bits.
+  //
+  // From Volume 3, Section 10.12.1.2: "The upper 32-bits of all x2APIC MSRs
+  // (except for the ICR) are reserved."
+  X2ApicMsr reg = static_cast<X2ApicMsr>(guest_state.ecx());
+  if (unlikely(guest_state.edx() != 0 && reg != X2ApicMsr::ICR)) {
+    local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+    return ZX_OK;
+  }
+
+  switch (reg) {
     case X2ApicMsr::EOI:
     case X2ApicMsr::ESR:
-      if (guest_state.rax != 0) {
-        // Non-zero writes to EOI and ESR cause GP fault. See Volume 3 Section 10.12.1.2.
+      // From Volume 3, Section 10.12.1.2: "WRMSR of a non-zero value causes #GP(0)."
+      if (guest_state.eax() != 0) {
         local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
         return ZX_OK;
       }
-      __FALLTHROUGH;
+      next_rip(exit_info, vmcs);
+      return ZX_OK;
     case X2ApicMsr::TPR:
     case X2ApicMsr::SVR:
     case X2ApicMsr::LVT_MONITOR:
@@ -772,39 +778,29 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X2ApicMsr::LVT_LINT1:
     case X2ApicMsr::LVT_THERMAL_SENSOR:
     case X2ApicMsr::LVT_CMCI:
-      if (guest_state.rdx != 0 || guest_state.rax > UINT32_MAX) {
-        return ZX_ERR_INVALID_ARGS;
-      }
       next_rip(exit_info, vmcs);
       return ZX_OK;
     case X2ApicMsr::LVT_TIMER:
-      if (guest_state.rax > UINT32_MAX ||
-          (guest_state.rax & LVT_TIMER_MODE_MASK) == LVT_TIMER_MODE_RESERVED) {
+      if ((guest_state.eax() & LVT_TIMER_MODE_MASK) == LVT_TIMER_MODE_RESERVED) {
         return ZX_ERR_INVALID_ARGS;
       }
       next_rip(exit_info, vmcs);
-      local_apic_state->lvt_timer = static_cast<uint32_t>(guest_state.rax);
+      local_apic_state->lvt_timer = guest_state.eax();
       update_timer(local_apic_state, lvt_deadline(local_apic_state));
       return ZX_OK;
     case X2ApicMsr::INITIAL_COUNT:
-      if (guest_state.rax > UINT32_MAX) {
-        return ZX_ERR_INVALID_ARGS;
-      }
       next_rip(exit_info, vmcs);
-      local_apic_state->lvt_initial_count = static_cast<uint32_t>(guest_state.rax);
+      local_apic_state->lvt_initial_count = guest_state.eax();
       update_timer(local_apic_state, lvt_deadline(local_apic_state));
       return ZX_OK;
     case X2ApicMsr::DCR:
-      if (guest_state.rax > UINT32_MAX) {
-        return ZX_ERR_INVALID_ARGS;
-      }
       next_rip(exit_info, vmcs);
-      local_apic_state->lvt_divide_config = static_cast<uint32_t>(guest_state.rax);
+      local_apic_state->lvt_divide_config = guest_state.eax();
       update_timer(local_apic_state, lvt_deadline(local_apic_state));
       return ZX_OK;
     case X2ApicMsr::SELF_IPI: {
       next_rip(exit_info, vmcs);
-      uint32_t vector = static_cast<uint32_t>(guest_state.rax) & UINT8_MAX;
+      uint32_t vector = guest_state.eax() & UINT8_MAX;
       local_apic_state->interrupt_tracker.VirtualInterrupt(vector);
       return ZX_OK;
     }
@@ -813,7 +809,7 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     default:
       // Issue a general protection fault for read only and unimplemented
       // registers.
-      dprintf(INFO, "Unhandled x2APIC wrmsr %#lx\n", guest_state.rcx);
+      dprintf(INFO, "Unhandled x2APIC write to MSR %#" PRIx32 "\n", guest_state.ecx());
       local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
@@ -823,10 +819,10 @@ static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                     const GuestState& guest_state, LocalApicState* local_apic_state,
                                     PvClockState* pv_clock,
                                     hypervisor::GuestPhysicalAddressSpace* gpas) {
-  zx_paddr_t guest_paddr = BITS(guest_state.rax, 31, 0) | (BITS(guest_state.rdx, 31, 0) << 32);
+  zx_paddr_t guest_paddr = guest_state.EdxEax();
 
   next_rip(exit_info, vmcs);
-  switch (static_cast<uint32_t>(guest_state.rcx)) {
+  switch (guest_state.ecx()) {
     case kKvmSystemTimeMsrOld:
     case kKvmSystemTimeMsr:
       vmcs->Invalidate();
@@ -851,9 +847,9 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                 PvClockState* pv_clock, hypervisor::GuestPhysicalAddressSpace* gpas,
                                 zx_port_packet* packet) {
   // On execution of wrmsr, rcx specifies the MSR and edx:eax contains the value to be written.
-  switch (static_cast<uint32_t>(guest_state.rcx)) {
+  switch (guest_state.ecx()) {
     case X86_MSR_IA32_APIC_BASE:
-      if (guest_state.rdx != 0 || (guest_state.rax & ~IA32_APIC_BASE_BSP) != kLocalApicPhysBase) {
+      if ((guest_state.EdxEax() & ~IA32_APIC_BASE_BSP) != kLocalApicPhysBase) {
         return ZX_ERR_INVALID_ARGS;
       }
       next_rip(exit_info, vmcs);
@@ -884,8 +880,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         return ZX_ERR_INVALID_ARGS;
       }
       next_rip(exit_info, vmcs);
-      int64_t tsc_deadline =
-          static_cast<int64_t>((guest_state.rdx << 32) | (guest_state.rax & UINT32_MAX));
+      int64_t tsc_deadline = static_cast<int64_t>(guest_state.EdxEax());
       update_timer(local_apic_state, rdtsc_to_nanos().Scale(tsc_deadline));
       return ZX_OK;
     }
@@ -1086,8 +1081,8 @@ static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
   }
 
   // Check that XCR0 is valid.
-  uint64_t xcr0_bitmap = ((uint64_t)leaf.d << 32) | leaf.a;
-  uint64_t xcr0 = (guest_state->rdx << 32) | (guest_state->rax & UINT32_MAX);
+  uint64_t xcr0_bitmap = (static_cast<uint64_t>(leaf.d) << 32) | leaf.a;
+  uint64_t xcr0 = guest_state->EdxEax();
   if (~xcr0_bitmap & xcr0 ||
       // x87 state must be enabled.
       (xcr0 & X86_XSAVE_STATE_BIT_X87) != X86_XSAVE_STATE_BIT_X87 ||
