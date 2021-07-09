@@ -37,7 +37,7 @@
             to: "#test_driver",
         },
         {
-            storage: "temp",
+            storage: "tmp",
             from: "parent",
             to: "#test_driver",
         },

@@ -37,8 +37,6 @@ use {
         StreamExt,
     },
     io_util,
-    lazy_static::lazy_static,
-    maplit::hashmap,
     regex::Regex,
     routing::rights::READ_RIGHTS,
     std::{
@@ -60,12 +58,6 @@ const ARCHIVIST_REALM_PATH: &'static str = "test_wrapper/archivist";
 const ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/test_manager#meta/archivist-for-embedding.cm";
 const TESTS_COLLECTION: &'static str = "tests";
-
-lazy_static! {
-    static ref STORAGE_SPECIAL_PATHS: HashMap<String, &'static str> = hashmap! {
-        "temp".to_string() => "/tmp",
-    };
-}
 
 struct TestMapValue {
     test_url: String,
@@ -1320,15 +1312,8 @@ impl AboveRootCapabilitiesForTest {
                     target_name: Some(target_name),
                     ..
                 }) if name == TESTS_COLLECTION => {
-                    match STORAGE_SPECIAL_PATHS.get(&name) {
-                        Some(path) => {
-                            capabilities.push(Capability::storage(target_name, *path));
-                        }
-                        None => {
-                            let use_path = format!("/{}", target_name);
-                            capabilities.push(Capability::storage(target_name, use_path));
-                        }
-                    };
+                    let use_path = format!("/{}", target_name);
+                    capabilities.push(Capability::storage(target_name, use_path));
                 }
                 fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                     target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),

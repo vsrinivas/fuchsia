@@ -10,7 +10,7 @@
     use: [
         { protocol: "fuchsia.stash.SecureStore" },
         {
-            storage: "temp",
+            storage: "tmp",
             path: "/tmp",
         },
     ],

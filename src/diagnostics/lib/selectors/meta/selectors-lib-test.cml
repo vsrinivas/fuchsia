@@ -1,14 +1,14 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/selectors_lib_test",
     },
     use: [
         {
-            storage: "temp",
+            storage: "tmp",
             path: "/tmp",
         },
     ],

@@ -38,7 +38,7 @@
             to: "#pkg_cache_integration_test",
         },
         {
-            storage: "temp",
+            storage: "tmp",
             from: "parent",
             to: "#pkg_cache_integration_test",
         },

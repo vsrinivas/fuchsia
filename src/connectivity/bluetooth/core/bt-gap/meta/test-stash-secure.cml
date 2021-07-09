@@ -17,7 +17,7 @@
     ],
     use: [
         {
-            storage: "temp",
+            storage: "tmp",
             path: "/data",
         },
     ],

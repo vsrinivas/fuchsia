@@ -16,7 +16,7 @@
             to: "#test-driver",
         },
         {
-            storage: "temp",
+            storage: "tmp",
             from: "parent",
             to: [
                 "#secure-stash",

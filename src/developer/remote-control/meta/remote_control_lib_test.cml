@@ -11,7 +11,7 @@
     ],
     offer: [
         {
-            storage: "temp",
+            storage: "tmp",
             from: "parent",
             to: "#test-driver",
         },

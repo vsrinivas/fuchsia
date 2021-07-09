@@ -1,7 +1,7 @@
 {
     use: [
         {
-            storage: "temp",
+            storage: "tmp",
             path: "/tmp",
         },
     ],

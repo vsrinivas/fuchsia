@@ -64,9 +64,9 @@
             storage_id: "static_instance_id_or_moniker",
         },
         {
-            storage: "temp",
+            storage: "tmp",
             from: "#test_tmpfs",
-            subdir: "temp",
+            subdir: "tmp",
             backing_dir: "memfs",
             storage_id: "static_instance_id_or_moniker",
         },
@@ -217,7 +217,7 @@
             to: "#tests",
         },
         {
-            storage: "temp",
+            storage: "tmp",
             from: "self",
             to: "#tests",
         },

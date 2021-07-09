@@ -16,7 +16,7 @@
             path: "/data",
         },
         {
-            storage: "temp",
+            storage: "tmp",
             path: "/tmp",
         },
         {
