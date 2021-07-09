@@ -225,9 +225,15 @@ impl<'a> TestRealm<'a> {
     where
         S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
     {
-        let (proxy, server) = zx::Channel::create()?;
-        let () = self.realm.connect_to_service(S::SERVICE_NAME, None, server)?;
-        let proxy = fuchsia_async::Channel::from_channel(proxy)?;
+        let get_proxy = || {
+            let (proxy, server) = zx::Channel::create().context("create channel")?;
+            let () = self
+                .realm
+                .connect_to_service(S::SERVICE_NAME, None, server)
+                .context("connect to service")?;
+            fuchsia_async::Channel::from_channel(proxy).context("fuchsia_async channel creation")
+        };
+        let proxy = get_proxy().context(S::SERVICE_NAME)?;
         Ok(<S::Proxy as fidl::endpoints::Proxy>::from_channel(proxy))
     }
 

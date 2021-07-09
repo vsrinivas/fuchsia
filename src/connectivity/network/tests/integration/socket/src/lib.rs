@@ -9,8 +9,7 @@ use fuchsia_async::TimeoutExt as _;
 
 use anyhow::Context as _;
 use futures::{
-    io::AsyncReadExt as _, io::AsyncWriteExt as _, FutureExt as _, TryFutureExt as _,
-    TryStreamExt as _,
+    io::AsyncReadExt as _, io::AsyncWriteExt as _, TryFutureExt as _, TryStreamExt as _,
 };
 use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_subnet};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _};
@@ -26,7 +25,7 @@ async fn run_udp_socket_test(
     server_addr: fidl_fuchsia_net::IpAddress,
     client: &netemul::TestRealm<'_>,
     client_addr: fidl_fuchsia_net::IpAddress,
-) -> Result {
+) {
     let fidl_fuchsia_net_ext::IpAddress(client_addr) =
         fidl_fuchsia_net_ext::IpAddress::from(client_addr);
     let client_addr = std::net::SocketAddr::new(client_addr, 1234);
@@ -37,41 +36,37 @@ async fn run_udp_socket_test(
 
     let client_sock = fuchsia_async::net::UdpSocket::bind_in_realm(client, client_addr)
         .await
-        .context("failed to create client socket")?;
+        .expect("failed to create client socket");
 
     let server_sock = fuchsia_async::net::UdpSocket::bind_in_realm(server, server_addr)
         .await
-        .context("failed to create server socket")?;
+        .expect("failed to create server socket");
 
     const PAYLOAD: &'static str = "Hello World";
 
     let client_fut = async move {
-        let r =
-            client_sock.send_to(PAYLOAD.as_bytes(), server_addr).await.context("sendto failed")?;
+        let r = client_sock.send_to(PAYLOAD.as_bytes(), server_addr).await.expect("sendto failed");
         assert_eq!(r, PAYLOAD.as_bytes().len());
-        Result::Ok(())
     };
     let server_fut = async move {
         let mut buf = [0u8; 1024];
-        let (r, from) = server_sock.recv_from(&mut buf[..]).await.context("recvfrom failed")?;
+        let (r, from) = server_sock.recv_from(&mut buf[..]).await.expect("recvfrom failed");
         assert_eq!(r, PAYLOAD.as_bytes().len());
         assert_eq!(&buf[..r], PAYLOAD.as_bytes());
         assert_eq!(from, client_addr);
-        Result::Ok(())
     };
 
-    let ((), ()) = futures::future::try_join(client_fut, server_fut).await?;
-    Ok(())
+    let ((), ()) = futures::future::join(client_fut, server_fut).await;
 }
 
 #[variants_test]
-async fn test_udp_socket<E: netemul::Endpoint>(name: &str) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let net = sandbox.create_network("net").await.context("failed to create network")?;
+async fn test_udp_socket<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let net = sandbox.create_network("net").await.expect("failed to create network");
 
     let client = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
-        .context("failed to create client environment")?;
+        .expect("failed to create client environment");
 
     const CLIENT_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
     const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
@@ -79,14 +74,14 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str) -> Result {
     let _client_ep = client
         .join_network::<E, _>(&net, "client", &netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET))
         .await
-        .context("client failed to join network")?;
+        .expect("client failed to join network");
     let server = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_server", name))
-        .context("failed to create server environment")?;
+        .expect("failed to create server environment");
     let _server_ep = server
         .join_network::<E, _>(&net, "server", &netemul::InterfaceConfig::StaticIp(SERVER_SUBNET))
         .await
-        .context("server failed to join network")?;
+        .expect("server failed to join network");
 
     run_udp_socket_test(&server, SERVER_SUBNET.addr, &client, CLIENT_SUBNET.addr).await
 }
@@ -96,7 +91,7 @@ async fn run_tcp_socket_test(
     server_addr: fidl_fuchsia_net::IpAddress,
     client: &netemul::TestRealm<'_>,
     client_addr: fidl_fuchsia_net::IpAddress,
-) -> Result {
+) {
     let fidl_fuchsia_net_ext::IpAddress(client_addr) = client_addr.into();
     let client_addr = std::net::SocketAddr::new(client_addr, 1234);
 
@@ -109,73 +104,66 @@ async fn run_tcp_socket_test(
 
     let listener = fuchsia_async::net::TcpListener::listen_in_realm(server, server_addr)
         .await
-        .context("failed to create server socket")?;
+        .expect("failed to create server socket");
 
     let server_fut = async {
-        let (_, mut stream, from) = listener.accept().await.context("accept failed")?;
+        let (_, mut stream, from) = listener.accept().await.expect("accept failed");
 
         let mut buf = [0u8; 1024];
-        let read_count =
-            stream.read(&mut buf).await.context("read from tcp server stream failed")?;
+        let read_count = stream.read(&mut buf).await.expect("read from tcp server stream failed");
 
         assert_eq!(from.ip(), client_addr.ip());
         assert_eq!(read_count, PAYLOAD.as_bytes().len());
         assert_eq!(&buf[..read_count], PAYLOAD.as_bytes());
 
         let write_count =
-            stream.write(PAYLOAD.as_bytes()).await.context("write to tcp server stream failed")?;
+            stream.write(PAYLOAD.as_bytes()).await.expect("write to tcp server stream failed");
         assert_eq!(write_count, PAYLOAD.as_bytes().len());
-
-        Result::Ok(())
     };
 
     let client_fut = async {
         let mut stream = fuchsia_async::net::TcpStream::connect_in_realm(client, server_addr)
             .await
-            .context("failed to create client socket")?;
+            .expect("failed to create client socket");
 
         let write_count =
-            stream.write(PAYLOAD.as_bytes()).await.context("write to tcp client stream failed")?;
+            stream.write(PAYLOAD.as_bytes()).await.expect("write to tcp client stream failed");
 
         assert_eq!(write_count, PAYLOAD.as_bytes().len());
 
         let mut buf = [0u8; 1024];
-        let read_count =
-            stream.read(&mut buf).await.context("read from tcp client stream failed")?;
+        let read_count = stream.read(&mut buf).await.expect("read from tcp client stream failed");
 
         assert_eq!(read_count, PAYLOAD.as_bytes().len());
         assert_eq!(&buf[..read_count], PAYLOAD.as_bytes());
-
-        Result::Ok(())
     };
 
-    let ((), ()) = futures::future::try_join(client_fut, server_fut).await?;
-    Ok(())
+    let ((), ()) = futures::future::join(client_fut, server_fut).await;
 }
 
 #[variants_test]
-async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) -> Result {
+async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) {
     const CLIENT_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
     const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
 
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let net = sandbox.create_network("net").await.context("failed to create network")?;
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let net = sandbox.create_network("net").await.expect("failed to create network");
 
     let client = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
-        .context("failed to create client environment")?;
+        .expect("failed to create client environment");
     let _client_ep = client
         .join_network::<E, _>(&net, "client", &netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET))
         .await
-        .context("client failed to join network")?;
+        .expect("client failed to join network");
 
     let server = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
-        .context("failed to create server environment")?;
+        .expect("failed to create server environment");
     let _server_ep = server
         .join_network::<E, _>(&net, "server", &netemul::InterfaceConfig::StaticIp(SERVER_SUBNET))
         .await
-        .context("server failed to join network")?;
+        .expect("server failed to join network");
 
     run_tcp_socket_test(&server, SERVER_SUBNET.addr, &client, CLIENT_SUBNET.addr).await
 }
@@ -185,9 +173,10 @@ async fn install_ip_device(
     env: &netemul::TestRealm<'_>,
     device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_network::DeviceMarker>,
     addrs: &mut [fidl_fuchsia_net::Subnet],
-) -> Result<u64> {
-    let stack = env.connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()?;
-    let interface_state = env.connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()?;
+) -> u64 {
+    let stack = env.connect_to_service::<fidl_fuchsia_net_stack::StackMarker>().unwrap();
+    let interface_state =
+        env.connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>().unwrap();
     let id = stack
         .add_interface(
             fidl_fuchsia_net_stack::InterfaceConfig {
@@ -200,20 +189,20 @@ async fn install_ip_device(
         )
         .await
         .squash_result()
-        .context("failed to add to stack")?;
-    let () =
-        stack.enable_interface(id).await.squash_result().context("failed to enable interface")?;
+        .expect("failed to add to stack");
+    let () = stack.enable_interface(id).await.squash_result().expect("failed to enable interface");
     for addr in addrs.iter_mut() {
         let () = stack
             .add_interface_address(id, addr)
             .await
             .squash_result()
-            .with_context(|| format!("failed to add interface address {:?}", addr))?;
+            .unwrap_or_else(|e| panic!("failed to add interface address {:?}: {:?}", addr, e));
     }
     // Wait for addresses to be assigned. Necessary for IPv6 addresses
     // since DAD must be performed.
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+            .expect("failed to create event stream"),
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
         |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
             // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
@@ -230,8 +219,8 @@ async fn install_ip_device(
         },
     )
     .await
-    .context("failed to observe addresses")?;
-    Ok(id)
+    .expect("failed to observe addresses");
+    id
 }
 
 /// Creates default base config for an IP tun device.
@@ -261,21 +250,21 @@ fn base_ip_device_config() -> fidl_fuchsia_net_tun::BaseConfig {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_ip_endpoints_socket() -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+async fn test_ip_endpoints_socket() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let client = sandbox
         .create_netstack_realm::<Netstack2, _>("test_ip_endpoints_socket_client")
-        .context("failed to create client environment")?;
+        .expect("failed to create client environment");
     let server = sandbox
         .create_netstack_realm::<Netstack2, _>("test_ip_endpoints_socket_server")
-        .context("failed to create server environment")?;
+        .expect("failed to create server environment");
 
     let tun =
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
-            .context("failed to connect to tun service")?;
+            .expect("failed to connect to tun service");
 
-    let (tun_pair, req) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DevicePairMarker>()?;
+    let (tun_pair, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DevicePairMarker>()
+        .expect("failed to create endpoints");
     let () = tun
         .create_pair(
             fidl_fuchsia_net_tun::DevicePairConfig {
@@ -288,12 +277,14 @@ async fn test_ip_endpoints_socket() -> Result {
             },
             req,
         )
-        .context("failed to create tun pair")?;
+        .expect("failed to create tun pair");
 
     let (client_device, client_req) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()?;
+        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
+            .expect("failed to create endpoints");
     let (server_device, server_req) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()?;
+        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
+            .expect("failed to create endpoints");
     let () = tun_pair
         .connect_protocols(fidl_fuchsia_net_tun::DevicePairEnds {
             left: Some(fidl_fuchsia_net_tun::Protocols {
@@ -308,7 +299,7 @@ async fn test_ip_endpoints_socket() -> Result {
             }),
             ..fidl_fuchsia_net_tun::DevicePairEnds::EMPTY
         })
-        .context("connect protocols failed")?;
+        .expect("connect protocols failed");
 
     // Addresses must be in the same subnet.
     const SERVER_ADDR_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
@@ -320,38 +311,30 @@ async fn test_ip_endpoints_socket() -> Result {
     // its link signal set to up once both sides have sessions attached. This
     // way both devices will be configured "at the same time" and DAD will be
     // able to complete for IPv6 addresses.
-    let (_client_id, _server_id) = futures::future::try_join(
-        install_ip_device(&client, client_device, &mut [CLIENT_ADDR_V4, CLIENT_ADDR_V6])
-            .map(|r| r.context("client setup failed")),
-        install_ip_device(&server, server_device, &mut [SERVER_ADDR_V4, SERVER_ADDR_V6])
-            .map(|r| r.context("server setup failed")),
+    let (_client_id, _server_id) = futures::future::join(
+        install_ip_device(&client, client_device, &mut [CLIENT_ADDR_V4, CLIENT_ADDR_V6]),
+        install_ip_device(&server, server_device, &mut [SERVER_ADDR_V4, SERVER_ADDR_V6]),
     )
-    .await
-    .context("setup failed")?;
+    .await;
 
     // Run socket test for both IPv4 and IPv6.
-    let () = run_udp_socket_test(&server, SERVER_ADDR_V4.addr, &client, CLIENT_ADDR_V4.addr)
-        .await
-        .context("v4 socket test failed")?;
-    let () = run_udp_socket_test(&server, SERVER_ADDR_V6.addr, &client, CLIENT_ADDR_V6.addr)
-        .await
-        .context("v6 socket test failed")?;
-
-    Ok(())
+    let () = run_udp_socket_test(&server, SERVER_ADDR_V4.addr, &client, CLIENT_ADDR_V4.addr).await;
+    let () = run_udp_socket_test(&server, SERVER_ADDR_V6.addr, &client, CLIENT_ADDR_V6.addr).await;
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_ip_endpoint_packets() -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+async fn test_ip_endpoint_packets() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let env = sandbox
         .create_netstack_realm::<Netstack2, _>("test_ip_endpoint_packets")
-        .context("failed to create client environment")?;
+        .expect("failed to create client environment");
 
     let tun =
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
-            .context("failed to connect to tun service")?;
+            .expect("failed to connect to tun service");
 
-    let (tun_dev, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()?;
+    let (tun_dev, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
+        .expect("failed to create endpoints");
     let () = tun
         .create_device(
             fidl_fuchsia_net_tun::DeviceConfig {
@@ -363,17 +346,18 @@ async fn test_ip_endpoint_packets() -> Result {
             },
             req,
         )
-        .context("failed to create tun pair")?;
+        .expect("failed to create tun pair");
 
     let (device, device_req) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()?;
+        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
+            .expect("failed to create endpoints");
     let () = tun_dev
         .connect_protocols(fidl_fuchsia_net_tun::Protocols {
             network_device: Some(device_req),
             mac_addressing: None,
             ..fidl_fuchsia_net_tun::Protocols::EMPTY
         })
-        .context("connect protocols failed")?;
+        .expect("connect protocols failed");
 
     // Declare addresses in the same subnet. Alice is Netstack, and Bob is our
     // end of the tun device that we'll use to inject frames.
@@ -398,8 +382,7 @@ async fn test_ip_endpoint_packets() -> Result {
             },
         ],
     )
-    .await
-    .context("setup failed")?;
+    .await;
 
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::ParsablePacket;
@@ -528,19 +511,19 @@ async fn test_ip_endpoint_packets() -> Result {
             ..fidl_fuchsia_net_tun::Frame::EMPTY
         })
         .await
-        .context("write_frame failed")?
+        .expect("write_frame failed")
         .map_err(fuchsia_zircon::Status::from_raw)
-        .context("write_frame returned error")?;
+        .expect("write_frame returned error");
 
     // Read ping response.
     let (frame_type, data) = read_frame
         .try_next()
         .await
-        .context("failed to read ping response")?
-        .context("frame stream ended unexpectedly")?;
+        .expect("failed to read ping response")
+        .expect("frame stream ended unexpectedly");
     assert_eq!(frame_type, fidl_fuchsia_hardware_network::FrameType::Ipv4);
     let mut bv = &data[..];
-    let ipv4_packet = Ipv4Packet::parse(&mut bv, ()).context("failed to parse IPv4 packet")?;
+    let ipv4_packet = Ipv4Packet::parse(&mut bv, ()).expect("failed to parse IPv4 packet");
     assert_eq!(ipv4_packet.src_ip(), dst_ip);
     assert_eq!(ipv4_packet.dst_ip(), src_ip);
     assert_eq!(ipv4_packet.proto(), packet_formats::ip::Ipv4Proto::Icmp);
@@ -548,9 +531,9 @@ async fn test_ip_endpoint_packets() -> Result {
     let parse_args =
         packet_formats::icmp::IcmpParseArgs::new(ipv4_packet.src_ip(), ipv4_packet.dst_ip());
     let icmp_packet =
-        match Icmpv4Packet::parse(&mut bv, parse_args).context("failed to parse ICMP packet")? {
+        match Icmpv4Packet::parse(&mut bv, parse_args).expect("failed to parse ICMP packet") {
             Icmpv4Packet::EchoReply(reply) => reply,
-            p => return Err(anyhow::anyhow!("got ICMP packet {:?}, want EchoReply", p)),
+            p => panic!("got ICMP packet {:?}, want EchoReply", p),
         };
     assert_eq!(icmp_packet.message().id(), ICMP_ID);
     assert_eq!(icmp_packet.message().seq(), SEQ_NUM);
@@ -558,7 +541,7 @@ async fn test_ip_endpoint_packets() -> Result {
 
     // Send the same data again, but with an IPv6 frame type, expect that it'll
     // fail parsing and no response will be generated.
-    assert_eq!(
+    matches::assert_matches!(
         write_frame_and_read_with_timeout(
             &tun_dev,
             fidl_fuchsia_net_tun::Frame {
@@ -569,9 +552,8 @@ async fn test_ip_endpoint_packets() -> Result {
             },
             &mut read_frame,
         )
-        .await
-        .context("IPv4 frame with IPv6 frame type failure")?,
-        None
+        .await,
+        Ok(None)
     );
 
     // Manually build a V6 ping frame and see it come back out of the stack.
@@ -604,19 +586,19 @@ async fn test_ip_endpoint_packets() -> Result {
             ..fidl_fuchsia_net_tun::Frame::EMPTY
         })
         .await
-        .context("write_frame failed")?
+        .expect("write_frame failed")
         .map_err(fuchsia_zircon::Status::from_raw)
-        .context("write_frame returned error")?;
+        .expect("write_frame returned error");
 
     // Read ping response.
     let (frame_type, data) = read_frame
         .try_next()
         .await
-        .context("failed to read ping response")?
-        .context("frame stream ended unexpectedly")?;
+        .expect("failed to read ping response")
+        .expect("frame stream ended unexpectedly");
     assert_eq!(frame_type, fidl_fuchsia_hardware_network::FrameType::Ipv6);
     let mut bv = &data[..];
-    let ipv6_packet = Ipv6Packet::parse(&mut bv, ()).context("failed to parse IPv6 packet")?;
+    let ipv6_packet = Ipv6Packet::parse(&mut bv, ()).expect("failed to parse IPv6 packet");
     assert_eq!(ipv6_packet.src_ip(), dst_ip);
     assert_eq!(ipv6_packet.dst_ip(), src_ip);
     assert_eq!(ipv6_packet.proto(), packet_formats::ip::Ipv6Proto::Icmpv6);
@@ -624,9 +606,9 @@ async fn test_ip_endpoint_packets() -> Result {
     let parse_args =
         packet_formats::icmp::IcmpParseArgs::new(ipv6_packet.src_ip(), ipv6_packet.dst_ip());
     let icmp_packet =
-        match Icmpv6Packet::parse(&mut bv, parse_args).context("failed to parse ICMPv6 packet")? {
+        match Icmpv6Packet::parse(&mut bv, parse_args).expect("failed to parse ICMPv6 packet") {
             Icmpv6Packet::EchoReply(reply) => reply,
-            p => return Err(anyhow::anyhow!("got ICMPv6 packet {:?}, want EchoReply", p)),
+            p => panic!("got ICMPv6 packet {:?}, want EchoReply", p),
         };
     assert_eq!(icmp_packet.message().id(), ICMP_ID);
     assert_eq!(icmp_packet.message().seq(), SEQ_NUM);
@@ -634,7 +616,7 @@ async fn test_ip_endpoint_packets() -> Result {
 
     // Send the same data again, but with an IPv4 frame type, expect that it'll
     // fail parsing and no response will be generated.
-    assert_eq!(
+    matches::assert_matches!(
         write_frame_and_read_with_timeout(
             &tun_dev,
             fidl_fuchsia_net_tun::Frame {
@@ -645,9 +627,7 @@ async fn test_ip_endpoint_packets() -> Result {
             },
             &mut read_frame,
         )
-        .await
-        .context("IPv6 frame with IPv4 frame type failure")?,
-        None
+        .await,
+        Ok(None)
     );
-    Ok(())
 }
