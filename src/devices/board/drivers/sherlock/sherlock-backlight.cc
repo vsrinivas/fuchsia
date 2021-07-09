@@ -5,10 +5,9 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/compiler.h>
-
-#include <lib/ddk/metadata.h>
 
 #include "sherlock.h"
 #include "src/ui/backlight/drivers/ti-lp8556/ti-lp8556Metadata.h"
@@ -21,7 +20,6 @@ constexpr pbus_mmio_t backlight_mmios[] = {
         .length = T931_GPIO_AO_LENGTH,
     },
 };
-
 
 constexpr zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
@@ -89,7 +87,7 @@ constexpr pbus_dev_t backlight_dev = []() {
 
 zx_status_t Sherlock::BacklightInit() {
   auto status = pbus_.CompositeDeviceAdd(&backlight_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), 1);
+                                         countof(fragments), "i2c");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FUNCTION__, status);
   }

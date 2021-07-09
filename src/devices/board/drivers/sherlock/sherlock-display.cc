@@ -5,11 +5,11 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/display-panel.h>
 #include <zircon/errors.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <soc/aml-t931/t931-gpio.h>
 
@@ -164,10 +164,10 @@ zx_status_t Sherlock::DisplayInit() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // TODO(payamm): Change from 1 to UINT32_MAX to separate DSI and Display into two different
+  // TODO(payamm): Change from "dsi" to nullptr to separate DSI and Display into two different
   // driver hosts once support has landed for it
   auto status = pbus_.CompositeDeviceAdd(&display_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), 1);
+                                         countof(fragments), "dsi");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __FUNCTION__, status);
     return status;

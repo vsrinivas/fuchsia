@@ -51,7 +51,7 @@ constexpr device_fragment_t fragments[] = {
 
 zx_status_t Astro::SecureMemInit() {
   zx_status_t status = pbus_.CompositeDeviceAdd(
-      &secure_mem_dev, reinterpret_cast<uint64_t>(fragments), countof(fragments), UINT32_MAX);
+      &secure_mem_dev, reinterpret_cast<uint64_t>(fragments), countof(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

@@ -83,7 +83,6 @@ static pbus_dev_t nna_dev = []() {
   return dev;
 }();
 
-
 static const zx_bind_inst_t reset_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
     BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_NNA_RESET_LEVEL2),
@@ -99,7 +98,7 @@ static const device_fragment_t fragments[] = {
 
 zx_status_t Vim3::NnaInit() {
   zx_status_t status = pbus_.CompositeDeviceAdd(&nna_dev, reinterpret_cast<uint64_t>(fragments),
-                                                countof(fragments), UINT32_MAX);
+                                                countof(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Vim3::NnaInit: pbus_device_add() failed for nna: %d", status);
     return status;

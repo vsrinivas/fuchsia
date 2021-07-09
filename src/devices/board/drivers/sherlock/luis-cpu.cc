@@ -29,7 +29,6 @@ constexpr pbus_mmio_t cpu_mmios[]{
     },
 };
 
-
 constexpr zx_bind_inst_t big_power_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
     BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, static_cast<uint32_t>(T931PowerDomains::kArmCoreBig)),
@@ -182,7 +181,7 @@ namespace sherlock {
 
 zx_status_t Sherlock::LuisCpuInit() {
   zx_status_t result = pbus_.CompositeDeviceAdd(&cpu_dev, reinterpret_cast<uint64_t>(fragments),
-                                                countof(fragments), 1);
+                                                countof(fragments), "power-01");
 
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d\n", __func__, result);

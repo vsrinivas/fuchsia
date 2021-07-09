@@ -91,7 +91,7 @@ zx_status_t Sherlock::MaliInit() {
   mali_dev.metadata_list = mali_metadata_list;
   mali_dev.metadata_count = countof(mali_metadata_list);
   zx_status_t status = pbus_.CompositeDeviceAdd(
-      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), UINT32_MAX);
+      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Sherlock::MaliInit: CompositeDeviceAdd failed: %d", status);
     return status;

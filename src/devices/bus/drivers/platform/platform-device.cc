@@ -9,6 +9,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/align.h>
 #include <stdio.h>
@@ -16,7 +17,6 @@
 #include <string.h>
 #include <zircon/syscalls/resource.h>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/function.h>
 
 #include "src/devices/bus/drivers/platform/platform-bus.h"
@@ -77,8 +77,7 @@ zx_status_t PlatformDevice::Init(const pbus_dev_t* pdev) {
     };
     pbus_ops_.composite_device_add =
         [](void* ctx, const pbus_dev_t* dev, /* const device_fragment_t* */ uint64_t fragments_list,
-           size_t fragments_count,
-           uint32_t t_coresident_device_index) { return ZX_ERR_NOT_SUPPORTED; };
+           size_t fragments_count, const char* primary_fragment) { return ZX_ERR_NOT_SUPPORTED; };
   }
 
   return ZX_OK;

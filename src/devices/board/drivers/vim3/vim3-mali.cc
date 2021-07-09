@@ -4,8 +4,8 @@
 
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <soc/aml-a311d/a311d-hw.h>
 #include <soc/aml-common/aml-registers.h>
@@ -74,7 +74,7 @@ static const device_fragment_t mali_fragments[] = {
 
 zx_status_t Vim3::MaliInit() {
   zx_status_t status = pbus_.CompositeDeviceAdd(
-      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), UINT32_MAX);
+      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Sherlock::MaliInit: CompositeDeviceAdd failed: %d", status);
     return status;

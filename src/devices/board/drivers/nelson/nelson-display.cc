@@ -171,7 +171,7 @@ zx_status_t Nelson::DisplayInit() {
   display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);
 
   auto status = pbus_.CompositeDeviceAdd(&display_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), 1);
+                                         countof(fragments), "dsi");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd display failed: %d", __func__, status);
     return status;

@@ -245,7 +245,7 @@ zx_status_t Sherlock::SdioInit() {
   }
 
   status = pbus_.CompositeDeviceAdd(&sdio_dev, reinterpret_cast<uint64_t>(sdio_fragments),
-                                    std::size(sdio_fragments), UINT32_MAX);
+                                    std::size(sdio_fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd() error: %d", __func__, status);
     return status;

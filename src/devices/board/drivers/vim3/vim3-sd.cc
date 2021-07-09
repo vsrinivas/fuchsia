@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>
 #include <soc/aml-common/aml-sdmmc.h>
@@ -77,7 +77,7 @@ zx_status_t Vim3::SdInit() {
   gpio_impl_.SetAltFunction(A311D_GPIOC(4), A311D_GPIOC_4_SDCARD_CLK_FN);
   gpio_impl_.SetAltFunction(A311D_GPIOC(5), A311D_GPIOC_5_SDCARD_CMD_FN);
 
-  if ((status = pbus_.CompositeDeviceAdd(&sd_dev, /* nullptr */ 0, 0, UINT32_MAX)) != ZX_OK) {
+  if ((status = pbus_.CompositeDeviceAdd(&sd_dev, /* nullptr */ 0, 0, nullptr)) != ZX_OK) {
     zxlogf(ERROR, "SdInit could not add sd_dev: %d", status);
     return status;
   }

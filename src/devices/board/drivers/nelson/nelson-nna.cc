@@ -5,8 +5,8 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
@@ -66,7 +66,6 @@ static pbus_dev_t nna_dev = []() {
   return dev;
 }();
 
-
 static const zx_bind_inst_t reset_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
     BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_NNA_RESET_LEVEL2),
@@ -82,7 +81,7 @@ static const device_fragment_t fragments[] = {
 
 zx_status_t Nelson::NnaInit() {
   zx_status_t status = pbus_.CompositeDeviceAdd(&nna_dev, reinterpret_cast<uint64_t>(fragments),
-                                                countof(fragments), UINT32_MAX);
+                                                countof(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Nelson::NnaInit: pbus_device_add() failed for nna: %d", status);
     return status;

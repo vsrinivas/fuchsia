@@ -7,10 +7,10 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
-
 #include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
+
 #include <ddk/metadata/camera.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-meson/g12b-clk.h>
@@ -341,7 +341,7 @@ zx_status_t Sherlock::SherlockThermalInit() {
 
   // The PLL sensor is controlled by a legacy thermal device, which performs DVFS.
   status = pbus_.CompositeDeviceAdd(&thermal_dev_pll, reinterpret_cast<uint64_t>(fragments),
-                                    countof(fragments), UINT32_MAX);
+                                    countof(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

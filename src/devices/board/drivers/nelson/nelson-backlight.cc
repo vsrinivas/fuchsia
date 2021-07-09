@@ -5,10 +5,10 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/compiler.h>
 
-#include <lib/ddk/metadata.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "nelson.h"
@@ -22,7 +22,6 @@ constexpr pbus_mmio_t backlight_mmios[] = {
         .length = S905D2_GPIO_AO_LENGTH,
     },
 };
-
 
 constexpr zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
@@ -72,7 +71,7 @@ zx_status_t Nelson::BacklightInit() {
   };
 
   auto status = pbus_.CompositeDeviceAdd(&backlight_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), 1);
+                                         countof(fragments), "i2c");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FUNCTION__, status);
   }

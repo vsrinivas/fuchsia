@@ -259,7 +259,7 @@ zx_status_t Nelson::AudioInit() {
     }
     status = pbus_.CompositeDeviceAdd(&controller_out,
                                       reinterpret_cast<uint64_t>(ref_controller_fragments),
-                                      countof(ref_controller_fragments), UINT32_MAX);
+                                      countof(ref_controller_fragments), nullptr);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
       return status;
@@ -324,7 +324,7 @@ zx_status_t Nelson::AudioInit() {
     }
     status = pbus_.CompositeDeviceAdd(&controller_out,
                                       reinterpret_cast<uint64_t>(p2_controller_fragments),
-                                      countof(p2_controller_fragments), UINT32_MAX);
+                                      countof(p2_controller_fragments), nullptr);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
       return status;

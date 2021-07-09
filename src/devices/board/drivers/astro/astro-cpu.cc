@@ -29,7 +29,6 @@ constexpr pbus_mmio_t cpu_mmios[]{
     },
 };
 
-
 constexpr zx_bind_inst_t power_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
     BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, static_cast<uint32_t>(S905d2PowerDomains::kArmCore)),
@@ -138,7 +137,7 @@ zx_status_t Astro::CpuInit() {
   }
 
   result = pbus_.CompositeDeviceAdd(&cpu_dev, reinterpret_cast<uint64_t>(fragments),
-                                    countof(fragments), 1);
+                                    countof(fragments), "power-01");
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d", __func__, result);
   }

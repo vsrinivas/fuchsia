@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>
 #include <soc/aml-common/aml-sdmmc.h>
@@ -90,7 +90,7 @@ zx_status_t Vim3::SdioInit() {
   gpio_impl_.SetAltFunction(A311D_SDIO_CMD, A311D_GPIOX_5_SDIO_CMD_FN);
 
   if ((status = pbus_.CompositeDeviceAdd(&sdio_dev, reinterpret_cast<uint64_t>(sdio_fragments),
-                                         countof(sdio_fragments), UINT32_MAX)) != ZX_OK) {
+                                         countof(sdio_fragments), nullptr)) != ZX_OK) {
     zxlogf(ERROR, "SdInit could not add sdio_dev: %d", status);
     return status;
   }

@@ -28,7 +28,7 @@ zx_status_t QemuArm64::DisplayInit() {
   display_dev.pid = PDEV_PID_GENERIC;
   display_dev.did = PDEV_DID_FAKE_DISPLAY;
   auto status = pbus_.CompositeDeviceAdd(&display_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), UINT32_MAX);
+                                         countof(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

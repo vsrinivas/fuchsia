@@ -4,8 +4,8 @@
 
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-s912/s912-hw.h>
@@ -75,7 +75,7 @@ zx_status_t Vim::MaliInit() {
   mali_btis[0].bti_id = BTI_MALI;
 
   zx_status_t status = pbus_.CompositeDeviceAdd(
-      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), UINT32_MAX);
+      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "CompositeDeviceAdd failed: %d", status);
     return status;

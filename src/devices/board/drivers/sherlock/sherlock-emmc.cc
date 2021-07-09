@@ -6,12 +6,12 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/handle.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/emmc.h>
 #include <ddk/metadata/gpt.h>
 #include <soc/aml-common/aml-sdmmc.h>
@@ -164,7 +164,7 @@ zx_status_t Sherlock::EmmcInit() {
   }
 
   zx_status_t status = pbus_.CompositeDeviceAdd(&emmc_dev, reinterpret_cast<uint64_t>(fragments),
-                                                countof(fragments), UINT32_MAX);
+                                                countof(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
     return status;

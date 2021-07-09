@@ -6,12 +6,12 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/ot-radio/ot-radio.h>
 #include <limits.h>
 #include <unistd.h>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
@@ -75,7 +75,7 @@ zx_status_t Sherlock::OtRadioInit() {
   dev.metadata_count = std::size(nrf52840_radio_metadata);
 
   zx_status_t status = pbus_.CompositeDeviceAdd(&dev, reinterpret_cast<uint64_t>(ot_fragments),
-                                                std::size(ot_fragments), UINT32_MAX);
+                                                std::size(ot_fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s(nrf52840): DeviceAdd failed: %d", __func__, status);
   } else {

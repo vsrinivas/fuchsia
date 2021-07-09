@@ -4,6 +4,7 @@
 
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/align.h>
@@ -13,7 +14,6 @@
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/usb-peripheral-config.h>
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -235,15 +235,15 @@ static const device_fragment_t dwc2_fragments[] = {
 zx_status_t Astro::UsbInit() {
   zx_status_t status =
       pbus_.CompositeDeviceAdd(&usb_phy_dev, reinterpret_cast<uint64_t>(usb_phy_fragments),
-                               countof(usb_phy_fragments), UINT32_MAX);
+                               countof(usb_phy_fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd(usb_phy) failed %d", __func__, status);
     return status;
   }
 
-  // Add XHCI and DWC2 to the same devhost as the aml-usb-phy.
+  // Add XHCI and DWC2 to the same driver host as the aml-usb-phy.
   status = pbus_.CompositeDeviceAdd(&xhci_dev, reinterpret_cast<uint64_t>(xhci_fragments),
-                                    countof(xhci_fragments), 1);
+                                    countof(xhci_fragments), "xhci-phy");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd(xhci) failed %d", __func__, status);
     return status;
@@ -271,7 +271,7 @@ zx_status_t Astro::UsbInit() {
   usb_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(config);
 
   status = pbus_.CompositeDeviceAdd(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_fragments),
-                                    countof(dwc2_fragments), 1);
+                                    countof(dwc2_fragments), "dwc2-phy");
   free(config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d", __func__, status);

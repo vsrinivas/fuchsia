@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.hardware.platform.bus;
 
 using fuchsia.hardware.platform.device;
@@ -119,12 +118,12 @@ protocol PBus {
     RegisterSysSuspendCallback(PbusSysSuspend suspend_cb) -> (zx.status s);
     /// Adds a composite platform device to the bus. The platform device specified by |dev|
     /// is the zeroth fragment and the |fragments| array specifies fragments 1 through n.
-    /// The composite device is started in a the devhost of the fragment with index
-    /// |coresident_device_index|, or a new devhost if |coresident_device_index| is UINT32_MAX.
-    /// |coresident_device_index| is not allowed to be zero, since we don't want platform device
-    /// drivers running in the platform bus's devhost.
+    /// The composite device is started in a the driver host of the
+    /// |primary_fragment| if it is specified, or a new driver host if it is is
+    /// NULL. It is not possible to set the primary fragment to "pdev" as that
+    /// would cause the driver to spawn in the platform bus's driver host.
     // Note: fragments is of type device_fragment_t*.
     // TODO(fxb/69023): restore type.
     CompositeDeviceAdd(PbusDev dev, uint64 fragments, uint64 fragments_count,
-                       uint32 coresident_device_index) -> (zx.status s);
+                       string:MAX primary_fragment) -> (zx.status s);
 };

@@ -150,7 +150,7 @@ zx_status_t Astro::LightInit() {
   }
 
   status = pbus_.CompositeDeviceAdd(&light_dev, reinterpret_cast<uint64_t>(light_fragments),
-                                    countof(light_fragments), UINT32_MAX);
+                                    countof(light_fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

@@ -113,7 +113,7 @@ zx_status_t Astro::PowerInit() {
   zx_status_t st;
 
   st = pbus_.CompositeDeviceAdd(&power_dev, reinterpret_cast<uint64_t>(power_impl_fragments),
-                                countof(power_impl_fragments), UINT32_MAX);
+                                countof(power_impl_fragments), nullptr);
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd for powerimpl failed, st = %d", __FUNCTION__, st);
     return st;

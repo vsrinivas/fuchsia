@@ -6,10 +6,10 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <limits.h>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
@@ -119,7 +119,6 @@ static pbus_dev_t dwmac_dev = []() {
   return dev;
 }();
 
-
 // Composite binding rules for ethernet board driver.
 const zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
@@ -182,7 +181,7 @@ zx_status_t Vim::EthInit() {
 
   // Add a composite device for ethernet board in a new devhost.
   auto status = pbus_.CompositeDeviceAdd(&eth_board_dev, reinterpret_cast<uint64_t>(eth_fragments),
-                                         std::size(eth_fragments), UINT32_MAX);
+                                         std::size(eth_fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
@@ -190,7 +189,7 @@ zx_status_t Vim::EthInit() {
 
   // Add a composite device for dwmac driver in the ethernet board driver's devhost.
   status = pbus_.CompositeDeviceAdd(&dwmac_dev, reinterpret_cast<uint64_t>(dwmac_fragments),
-                                    std::size(dwmac_fragments), 1);
+                                    std::size(dwmac_fragments), "eth-board");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

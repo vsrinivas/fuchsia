@@ -8,12 +8,12 @@
 #include <fuchsia/hardware/serial/c/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <unistd.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/init-step.h>
 #include <soc/aml-s905d3/s905d3-gpio.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
@@ -110,7 +110,7 @@ zx_status_t Nelson::BluetoothInit() {
 
   // Bind UART for Bluetooth HCI
   status = pbus_.CompositeDeviceAdd(&bt_uart_dev, reinterpret_cast<uint64_t>(uart_fragments), 1,
-                                    UINT32_MAX);
+                                    nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;

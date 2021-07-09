@@ -75,11 +75,11 @@ The platform bus also supports adding platform devices to be used as components 
 devices. The platform bus `CompositeDeviceAdd()` call adds a composite device, with the zeroth
 component being a platform device described by the provided `PBusDev` struct.
 The binding rules for the remaining components are provided by the `components` parameter.
-The `coresident_device_index` is used to specify which driver host the composite device
-should be created in. A value of `UINT32_MAX` will result in a new driver host being created for the
-composite device, while a value of 1 through n will add the composite device to the driver host of one
-of the other components. Passing 0 is not allowed, since we do not want the composite device
-to be added to the platform bus driver's driver host.
+The `primary_fragment` is used to specify which driver host the composite device
+should be created in. Specifying `NULL` will result in a new driver host being created for the
+composite device, while a valid string equal to one of the fragment's names will add the composite
+device to the driver host of one of the other fragments. Passing "pdev" is not allowed, since we
+do not want the composite device to be added to the platform bus driver's driver host.
 
 The internals of composite platform devices are a bit different than the non-composite case.
 Instead of using the platform proxy driver, the driver manager **component** and **component proxy** drivers

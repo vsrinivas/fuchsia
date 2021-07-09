@@ -6,10 +6,10 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <limits.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/gpio.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-s905x/s905x-gpio.h>
@@ -166,7 +166,7 @@ zx_status_t Vim::GpioInit() {
   light_dev.metadata_count = std::size(light_metadata);
 
   status = pbus_.CompositeDeviceAdd(&light_dev, reinterpret_cast<uint64_t>(fragments),
-                                    std::size(fragments), UINT32_MAX);
+                                    std::size(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "GpioInit could not add gpio_light_dev: %d", status);
     return status;

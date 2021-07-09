@@ -178,7 +178,7 @@ namespace vim3 {
 
 zx_status_t Vim3::CpuInit() {
   auto result = pbus_.CompositeDeviceAdd(&cpu_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), 1);
+                                         countof(fragments), "power-01");
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d", __func__, result);
   }

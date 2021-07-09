@@ -494,16 +494,16 @@ zx_status_t Sherlock::AudioInit() {
   if (is_sherlock) {
     status =
         pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(sherlock_tdm_i2s_fragments),
-                                 countof(sherlock_tdm_i2s_fragments), UINT32_MAX);
+                                 countof(sherlock_tdm_i2s_fragments), nullptr);
   } else {
     if (is_ernie) {
       status =
           pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(ernie_tdm_i2s_fragments),
-                                   countof(ernie_tdm_i2s_fragments), UINT32_MAX);
+                                   countof(ernie_tdm_i2s_fragments), nullptr);
     } else {
       status =
           pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(luis_tdm_i2s_fragments),
-                                   countof(luis_tdm_i2s_fragments), UINT32_MAX);
+                                   countof(luis_tdm_i2s_fragments), nullptr);
     }
   }
   if (status != ZX_OK) {

@@ -121,10 +121,10 @@ zx_status_t Nelson::SpiInit() {
       .data_size = sizeof spi_config,
   });
 
-  auto spi_status =
-      fidl_metadata::spi::SpiChannelsToFidl(spi_channels);
+  auto spi_status = fidl_metadata::spi::SpiChannelsToFidl(spi_channels);
   if (spi_status.is_error()) {
-    zxlogf(ERROR, "%s: failed to encode spi channels to fidl: %d", __func__, spi_status.error_value());
+    zxlogf(ERROR, "%s: failed to encode spi channels to fidl: %d", __func__,
+           spi_status.error_value());
     return spi_status.error_value();
   }
   auto& data = spi_status.value();
@@ -161,7 +161,7 @@ zx_status_t Nelson::SpiInit() {
   }
 
   zx_status_t status = pbus_.CompositeDeviceAdd(&spi_dev, reinterpret_cast<uint64_t>(fragments),
-                                    std::size(fragments), UINT32_MAX);
+                                                std::size(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

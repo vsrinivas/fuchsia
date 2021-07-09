@@ -6,10 +6,10 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/display-panel.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -161,10 +161,10 @@ zx_status_t Astro::DisplayInit() {
   display_panel_metadata[0].data_size = sizeof(display_panel_info);
   display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);
 
-  // TODO(payamm): Change from 1 to UINT32_MAX to separate DSI and Display into two different
-  // devhosts once support for it lands.
+  // TODO(payamm): Change from "dsi" to nullptr to separate DSI and Display into two different
+  // driver hosts once support for it lands.
   auto status = pbus_.CompositeDeviceAdd(&display_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), 1);
+                                         countof(fragments), "dsi");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd display failed: %d", __func__, status);
     return status;

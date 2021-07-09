@@ -266,7 +266,7 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.irq_list = frddr_a_irqs;
     tdm_dev.irq_count = countof(frddr_a_irqs);
     status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
-                                      countof(tdm_pcm_fragments), UINT32_MAX);
+                                      countof(tdm_pcm_fragments), nullptr);
 #endif
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: Add DAI/controller driver failed: %d", __FILE__, status);
@@ -404,7 +404,7 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
     status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_i2s_fragments),
-                                      countof(tdm_i2s_fragments), UINT32_MAX);
+                                      countof(tdm_i2s_fragments), nullptr);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: I2S CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;
@@ -467,7 +467,7 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.irq_list = toddr_a_irqs;
     tdm_dev.irq_count = countof(toddr_a_irqs);
     status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
-                                      countof(tdm_pcm_fragments), UINT32_MAX);
+                                      countof(tdm_pcm_fragments), nullptr);
 #endif
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);

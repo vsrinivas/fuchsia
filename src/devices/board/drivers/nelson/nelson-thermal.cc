@@ -7,10 +7,10 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/syscalls/smc.h>
 
-#include <lib/ddk/metadata.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-meson/sm1-clk.h>
 #include <soc/aml-s905d3/s905d3-gpio.h>
@@ -290,7 +290,7 @@ zx_status_t Nelson::ThermalInit() {
   }
 
   status = pbus_.CompositeDeviceAdd(&thermal_dev, reinterpret_cast<uint64_t>(fragments),
-                                    countof(fragments), UINT32_MAX);
+                                    countof(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;

@@ -375,21 +375,21 @@ zx_status_t Sherlock::CameraInit() {
 
   status = pbus_.CompositeDeviceAdd(&sensor_dev_sherlock,
                                     reinterpret_cast<uint64_t>(imx227_sensor_fragments),
-                                    countof(imx227_sensor_fragments), 1);
+                                    countof(imx227_sensor_fragments), "mipicsi");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Camera Sensor DeviceAdd failed %d", __func__, status);
     return status;
   }
 
   status = pbus_.CompositeDeviceAdd(&gdc_dev, reinterpret_cast<uint64_t>(gdc_fragments),
-                                    countof(gdc_fragments), 1);
+                                    countof(gdc_fragments), "camera-sensor");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GDC DeviceAdd failed %d", __func__, status);
     return status;
   }
 
   status = pbus_.CompositeDeviceAdd(&ge2d_dev, reinterpret_cast<uint64_t>(ge2d_fragments),
-                                    countof(ge2d_fragments), 1);
+                                    countof(ge2d_fragments), "camera-sensor");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GE2D DeviceAdd failed %d", __func__, status);
     return status;
@@ -397,7 +397,7 @@ zx_status_t Sherlock::CameraInit() {
 
   // Add a composite device for ARM ISP
   status = pbus_.CompositeDeviceAdd(&isp_dev, reinterpret_cast<uint64_t>(isp_fragments),
-                                    countof(isp_fragments), 1);
+                                    countof(isp_fragments), "camera-sensor");
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ISP DeviceAdd failed %d", __func__, status);

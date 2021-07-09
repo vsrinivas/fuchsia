@@ -154,7 +154,7 @@ zx_status_t Vim::SdioInit() {
   gpio_impl_.SetAltFunction(S912_WIFI_SDIO_WAKE_HOST, S912_WIFI_SDIO_WAKE_HOST_FN);
 
   status = pbus_.CompositeDeviceAdd(&aml_sdmmc_dev, reinterpret_cast<uint64_t>(sdio_fragments),
-                                    std::size(sdio_fragments), UINT32_MAX);
+                                    std::size(sdio_fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "SdioInit could not add aml_sdmmc_dev: %d", status);
     return status;

@@ -137,7 +137,7 @@ constexpr pbus_dev_t video_dev = []() {
 zx_status_t Nelson::VideoInit() {
   zx_status_t status;
   if ((status = pbus_.CompositeDeviceAdd(&video_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), UINT32_MAX)) != ZX_OK) {
+                                         countof(fragments), nullptr)) != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd() failed: %d", __func__, status);
     return status;
   }

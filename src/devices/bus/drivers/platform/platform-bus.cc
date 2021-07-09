@@ -243,7 +243,7 @@ zx_status_t PlatformBus::PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t
 zx_status_t PlatformBus::PBusCompositeDeviceAdd(
     const pbus_dev_t* pdev,
     /* const device_fragment_t* */ uint64_t raw_fragments_list, size_t fragments_count,
-    uint32_t coresident_device_index) {
+    const char* primary_fragment) {
   if (!pdev || !pdev->name) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -251,11 +251,11 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(
   const device_fragment_t* fragments_list =
       reinterpret_cast<const device_fragment_t*>(raw_fragments_list);
 
-  // Do not allow adding composite devices in our devhost.
-  // The index must be greater than zero to specify one of the other fragments, or UINT32_MAX
-  // to create a new devhost.
-  if (coresident_device_index == 0) {
-    zxlogf(ERROR, "%s: coresident_device_index cannot be zero", __func__);
+  // Do not allow adding composite devices in our driver host.
+  // |primary_fragment| must be nullptr to spawn in a new driver host or equal to one of the
+  // fragments names to spawn in the same driver host as it.
+  if (primary_fragment != nullptr && strcmp(primary_fragment, "pdev") == 0) {
+    zxlogf(ERROR, "%s: coresident_device_index cannot be pdev", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -308,9 +308,8 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(
       .props_count = std::size(props),
       .fragments = fragments,
       .fragments_count = fragments_count + 1,
-      .primary_fragment =
-          coresident_device_index == UINT32_MAX ? "pdev" : fragments[coresident_device_index].name,
-      .spawn_colocated = coresident_device_index != UINT32_MAX,
+      .primary_fragment = primary_fragment == nullptr ? "pdev" : primary_fragment,
+      .spawn_colocated = primary_fragment != nullptr,
       .metadata_list = nullptr,
       .metadata_count = 0,
   };
