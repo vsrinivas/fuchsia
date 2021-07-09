@@ -469,7 +469,12 @@ Do the following:
         ],
         program: {
             binary: "bin/font_provider_test",
-        }
+        },
+        use: [
+            {
+                protocol: [ "fuchsia.pkg.FontResolver" ],
+            },
+        ],
     }
     ```
 
