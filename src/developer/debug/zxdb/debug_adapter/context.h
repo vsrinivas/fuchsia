@@ -83,8 +83,6 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
   void WillDestroyProcess(Process* process, DestroyReason reason, int exit_code,
                           uint64_t timestamp) override;
 
-  Target* GetCurrentTarget();
-  Process* GetCurrentProcess();
   Thread* GetThread(uint64_t koid);
 
   // Checks if thread is in stopped state; returns error if not stopped.

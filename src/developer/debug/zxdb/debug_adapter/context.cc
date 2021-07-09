@@ -277,32 +277,21 @@ void DebugAdapterContext::WillDestroyProcess(Process* process, DestroyReason rea
   }
 }
 
-Target* DebugAdapterContext::GetCurrentTarget() {
-  auto targets = session()->system().GetTargets();
-  if (targets.size() > 0) {
-    // Currently debug adapter supports only one target. The default target is used to attach
-    // process.
-    return targets[0];
-  }
-  return nullptr;
-}
-
-Process* DebugAdapterContext::GetCurrentProcess() {
-  auto target = GetCurrentTarget();
-  if (target) {
-    return target->GetProcess();
-  }
-  return nullptr;
-}
-
 Thread* DebugAdapterContext::GetThread(uint64_t koid) {
   Thread* match = nullptr;
-  auto process = GetCurrentProcess();
-  if (process) {
+  auto targets = session()->system().GetTargets();
+  for (auto target : targets) {
+    if (!target) {
+      continue;
+    }
+    auto process = target->GetProcess();
+    if (!process) {
+      continue;
+    }
     auto threads = process->GetThreads();
-    for (auto t : threads) {
-      if (koid == t->GetKoid()) {
-        match = t;
+    for (auto thread : threads) {
+      if (koid == thread->GetKoid()) {
+        match = thread;
         break;
       }
     }

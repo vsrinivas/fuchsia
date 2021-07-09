@@ -12,13 +12,20 @@ namespace zxdb {
 dap::ResponseOrError<dap::ThreadsResponse> OnRequestThreads(DebugAdapterContext* ctx,
                                                             const dap::ThreadsRequest& req) {
   dap::ThreadsResponse response = {};
-  auto process = ctx->GetCurrentProcess();
-  if (process) {
+  auto targets = ctx->session()->system().GetTargets();
+  for (auto target : targets) {
+    if (!target) {
+      continue;
+    }
+    auto process = target->GetProcess();
+    if (!process) {
+      continue;
+    }
     auto threads = process->GetThreads();
-    for (auto t : threads) {
+    for (auto thread : threads) {
       dap::Thread thread_info;
-      thread_info.id = t->GetKoid();
-      thread_info.name = t->GetName();
+      thread_info.id = thread->GetKoid();
+      thread_info.name = thread->GetName();
       response.threads.push_back(thread_info);
     }
   }

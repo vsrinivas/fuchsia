@@ -29,7 +29,7 @@ dap::StackTraceResponse PopulateStackTraceResponse(DebugAdapterContext* ctx, Thr
     total_frames = req.levels.value();
   }
 
-  auto file_provider = SourceFileProviderImpl(ctx->GetCurrentTarget()->settings());
+  auto file_provider = SourceFileProviderImpl(thread->GetProcess()->GetTarget()->settings());
   for (auto i = start_frame; i < (start_frame + total_frames); i++) {
     dap::StackFrame frame;
     auto location = stack[i]->GetLocation();

@@ -9,7 +9,9 @@
 #include <dap/session.h>
 
 #include "lib/syslog/cpp/macros.h"
+#include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/source_file_provider_impl.h"
+#include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/debug_adapter/context.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -39,7 +41,8 @@ dap::ResponseOrError<dap::ScopesResponse> OnRequestScopes(DebugAdapterContext* c
     return dap::Error("Symbols are corrupt.");
 
   dap::optional<dap::Source> source;
-  auto file_provider = SourceFileProviderImpl(ctx->GetCurrentTarget()->settings());
+  auto file_provider =
+      SourceFileProviderImpl(frame->GetThread()->GetProcess()->GetTarget()->settings());
   auto data_or =
       file_provider.GetFileData(location.file_line().file(), location.file_line().comp_dir());
   if (!data_or.has_error()) {
