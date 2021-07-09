@@ -200,6 +200,18 @@ For instance your parent may have a declaration that looks like this:
 }
 ```
 
+Note that both `for_pkg = ...` and `subdir: ...` above are coordinated in that
+they set the same value `"fonts"`.
+
+### Testing `config_data()`
+
+A component under test in a test realm can have a `"config-data"` directory
+routed to it in much the same way as a production component would.
+
+If you would like to offer a component under test different configuration data,
+simply use the appropriate value for `for_pkg` and `subdir` that would route
+your test data to your test component.
+
 ### How `config_data()` works
 
 All `config_data()` targets that are defined in your build configuration collect
