@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_pkg::{BlobIdIteratorMarker, BlobInfo, NeededBlobsMarker, RetainedPackagesProxy},
     fidl_fuchsia_pkg_ext::{serve_fidl_iterator, BlobId},
     fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
-    fuchsia_zircon::{self as zx},
+    fuchsia_zircon as zx,
     futures::TryFutureExt,
     matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,

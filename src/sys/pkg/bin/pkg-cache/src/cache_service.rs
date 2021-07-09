@@ -19,12 +19,19 @@ use {
     fuchsia_async::Task,
     fuchsia_cobalt::CobaltSender,
     fuchsia_hash::Hash,
+    fuchsia_inspect::{self as finspect, NumericProperty, Property, StringProperty},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_trace as trace,
+    fuchsia_trace as trace, fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::{lock::Mutex, prelude::*, select_biased, stream::FuturesUnordered},
     pkgfs::install::BlobKind,
-    std::{collections::HashSet, sync::Arc},
+    std::{
+        collections::HashSet,
+        sync::{
+            atomic::{AtomicU32, Ordering},
+            Arc,
+        },
+    },
     system_image::StaticPackages,
 };
 
@@ -38,6 +45,8 @@ pub async fn serve(
     static_packages: Arc<StaticPackages>,
     stream: PackageCacheRequestStream,
     cobalt_sender: CobaltSender,
+    serve_id: Arc<AtomicU32>,
+    get_node: Arc<finspect::Node>,
 ) -> Result<(), Error> {
     stream
         .map_err(anyhow::Error::new)
@@ -51,7 +60,9 @@ pub async fn serve(
                     dir,
                     responder,
                 } => {
+                    let id = serve_id.fetch_add(1, Ordering::SeqCst);
                     let meta_far_blob: BlobInfo = meta_far_blob.into();
+                    let node = get_node.create_child(id.to_string());
                     trace::duration_begin!("app", "cache_get",
                         "meta_far_blob_id" => meta_far_blob.blob_id.to_string().as_str()
                     );
@@ -66,11 +77,13 @@ pub async fn serve(
                         needed_blobs,
                         dir,
                         cobalt_sender,
+                        &node,
                     )
                     .await;
                     trace::duration_end!("app", "cache_get",
                         "status" => Status::from(response).to_string().as_str()
                     );
+                    drop(node);
                     responder.send(&mut response.map_err(|status| status.into_raw()))?;
                 }
                 PackageCacheRequest::Open { meta_far_blob_id, selectors, dir, responder } => {
@@ -115,7 +128,12 @@ async fn get<'a>(
     needed_blobs: ServerEnd<NeededBlobsMarker>,
     dir_request: Option<ServerEnd<DirectoryMarker>>,
     mut cobalt_sender: CobaltSender,
+    node: &finspect::Node,
 ) -> Result<(), Status> {
+    let _time_prop = node.create_int("started-time", zx::Time::get_monotonic().into_nanos());
+    let _id_prop = node.create_string("meta-far-id", meta_far_blob.blob_id.to_string());
+    let _length_prop = node.create_uint("meta-far-length", meta_far_blob.length);
+
     if !selectors.is_empty() {
         fx_log_warn!("Get() does not support selectors yet");
     }
@@ -137,6 +155,7 @@ async fn get<'a>(
             pkgfs_needs,
             package_index,
             blobfs,
+            node,
         )
         .await
         .map_err(|e| {
@@ -341,18 +360,23 @@ async fn serve_needed_blobs(
     pkgfs_needs: &pkgfs::needs::Client,
     package_index: &Arc<Mutex<PackageIndex>>,
     blobfs: &blobfs::Client,
+    node: &finspect::Node,
 ) -> Result<(), ServeNeededBlobsError> {
+    let state = node.create_string("state", "need-meta-far");
     let res = async {
         // Step 1: Open and write the meta.far, or determine it is not needed.
         let content_blobs =
-            handle_open_meta_blob(&mut stream, meta_far_info, blobfs, package_index).await?;
+            handle_open_meta_blob(&mut stream, meta_far_info, blobfs, package_index, &state)
+                .await?;
 
         // Step 2: Determine which data blobs are needed and report them to the client.
         let (serve_iterator, needs) =
             handle_get_missing_blobs(&mut stream, blobfs, &content_blobs).await?;
 
+        state.set("need-content-blobs");
+
         // Step 3: Open and write all needed data blobs.
-        let () = handle_open_blobs(&mut stream, needs, blobfs).await?;
+        let () = handle_open_blobs(&mut stream, needs, blobfs, &node).await?;
 
         // Step 4: Start an install for this package through pkgfs, expecting it to discover no
         // work is needed and start serving the package's pkg dir at /pkgfs/versions/<merkle>.
@@ -387,6 +411,7 @@ async fn handle_open_meta_blob(
     meta_far_info: BlobInfo,
     blobfs: &blobfs::Client,
     package_index: &Arc<Mutex<PackageIndex>>,
+    state: &StringProperty,
 ) -> Result<HashSet<Hash>, ServeNeededBlobsError> {
     let hash = meta_far_info.blob_id.into();
     package_index.lock().await.start_install(hash);
@@ -416,6 +441,8 @@ async fn handle_open_meta_blob(
             }
         }
     }
+
+    state.set("enumerate-missing-blobs");
 
     let content_blobs = fulfill_meta_far_blob(package_index, blobfs, hash).await?;
 
@@ -470,16 +497,24 @@ async fn handle_open_blobs(
     stream: &mut NeededBlobsRequestStream,
     mut needs: HashSet<Hash>,
     blobfs: &blobfs::Client,
+    node: &finspect::Node,
 ) -> Result<(), ServeNeededBlobsError> {
-    let mut running = FuturesUnordered::new();
+    let mut writing = FuturesUnordered::new();
+
+    let remaining_counter = node.create_uint("remaining", 0);
+    let writing_counter = node.create_uint("writing", 0);
+    let written_counter = node.create_uint("written", 0);
 
     // `needs` represents needed blobs that aren't currently being written
-    // `running` represents needed blobs currently being written
+    // `writing` represents needed blobs currently being written
     // A blob write that fails with a retryable error can allow a blob to transition back from
-    // `running` to `needs`.
-    // Once both needs and running are empty, all needed blobs are now present.
+    // `writing` to `needs`.
+    // Once both needs and writing are empty, all needed blobs are now present.
 
-    while !(running.is_empty() && needs.is_empty()) {
+    while !(writing.is_empty() && needs.is_empty()) {
+        remaining_counter.set(needs.len() as u64);
+        writing_counter.set(writing.len() as u64);
+
         #[derive(Debug)]
         enum Event {
             WriteBlobDone((Hash, Result<(), OpenWriteBlobError>)),
@@ -489,8 +524,9 @@ async fn handle_open_blobs(
         // Wait for the next request/event to happen, giving priority to handling blob write
         // completion events to new incoming requests.
         let event = select_biased! {
-            res = running.select_next_some() => Event::WriteBlobDone(res),
-            req = stream.try_next() => Event::Request(req.map_err(ServeNeededBlobsError::ReceiveRequest)?),
+            res = writing.select_next_some() => Event::WriteBlobDone(res),
+            req = stream.try_next() =>
+                Event::Request(req.map_err(ServeNeededBlobsError::ReceiveRequest)?),
         };
 
         match event {
@@ -509,14 +545,14 @@ async fn handle_open_blobs(
                 // calls in a separate Future so this loop can run this Future and handle new
                 // requests concurrently.
                 let task = open_write_blob(file_stream, responder, blobfs, blob_id, BlobKind::Data);
-                running.push(async move { (blob_id, task.await) });
+                writing.push(async move { (blob_id, task.await) });
                 continue;
             }
 
             Event::Request(Some(NeededBlobsRequest::Abort { responder })) => {
                 // Finish all currently open blobs before aborting.
-                while !running.is_empty() {
-                    running.next().await;
+                while !writing.is_empty() {
+                    writing.next().await;
                 }
                 drop(responder);
                 return Err(ServeNeededBlobsError::Aborted);
@@ -531,6 +567,7 @@ async fn handle_open_blobs(
                 return Err(ServeNeededBlobsError::UnexpectedClose("handle_open_blobs"));
             }
             Event::WriteBlobDone((_, Ok(()))) => {
+                written_counter.add(1);
                 continue;
             }
             Event::WriteBlobDone((_, Err(OpenWriteBlobError::Serve(e)))) => {
@@ -941,7 +978,8 @@ mod serve_needed_blobs_tests {
                 &pkgfs_install,
                 &pkgfs_needs,
                 &package_index,
-                &blobfs
+                &blobfs,
+                &inspector.root().create_child("test-node-name")
             )
             .await,
             Err(ServeNeededBlobsError::UnexpectedClose("handle_open_meta_blob"))
@@ -977,6 +1015,7 @@ mod serve_needed_blobs_tests {
                     &pkgfs_needs,
                     &package_index,
                     &blobfs,
+                    &inspector.root().create_child("test-node-name"),
                 )
                 .await
             }),
@@ -2162,6 +2201,7 @@ mod get_handler_tests {
                     stream,
                     dir_request,
                     cobalt_sender,
+                    &inspector.root().create_child("test-node-name"),
                 )
                 .await
             }),
@@ -2202,7 +2242,8 @@ mod get_handler_tests {
                 vec![],
                 stream,
                 None,
-                cobalt_sender
+                cobalt_sender,
+                &inspector.root().create_child("get")
             )
             .await,
             Err(Status::UNAVAILABLE)

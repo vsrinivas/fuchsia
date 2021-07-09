@@ -3,17 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    crate::{get_missing_blobs, verify_fetches_succeed, write_blob, TestEnv},
+    crate::{get_missing_blobs, verify_fetches_succeed, write_blob, write_meta_far, TestEnv},
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io::{DirectoryMarker, FileMarker},
-    fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker},
+    fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker, PackageCacheMarker},
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
-    fuchsia_inspect::{assert_data_tree, testing::AnyProperty, tree_assertion},
+    fuchsia_inspect::{
+        assert_data_tree, testing::AnyProperty, tree_assertion, DiagnosticsHierarchy,
+    },
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
+    fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::prelude::*,
+    matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,
+    std::collections::HashMap,
 };
 
 async fn assert_base_blob_count(
@@ -403,4 +408,258 @@ async fn dynamic_index_package_hash_update() {
         }
     );
     env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn package_cache_get() {
+    fn contains_state_and_common_properties(hierarchy: &DiagnosticsHierarchy, state: &'static str) {
+        assert_data_tree!(
+            &hierarchy,
+            root: contains {
+                "fuchsia.pkg.PackageCache": {
+                    "get": {
+                        "0" : contains {
+                            "state": state,
+                            "started-time": AnyProperty,
+                            "meta-far-id":
+                                "18e1f8377a0416dec3bfd2dbaf5ad39dda57073f1d27ca8929eef012c0309fc9",
+                            "meta-far-length": 42u64,
+                        }
+                    }
+                }
+            }
+        );
+    }
+
+    fn contains_missing_blob_stats(
+        hierarchy: &DiagnosticsHierarchy,
+        remaining: u64,
+        writing: u64,
+        written: u64,
+    ) {
+        assert_data_tree!(
+            &hierarchy,
+            root: contains {
+                "fuchsia.pkg.PackageCache": {
+                    "get": {
+                        "0" : contains {
+                            "remaining": remaining,
+                            "writing": writing,
+                            "written": written,
+                        }
+                    }
+                }
+            }
+        );
+    }
+
+    let env = TestEnv::builder().build().await;
+    let package = PackageBuilder::new("multi-pkg-a")
+        .add_resource_at("bin/foo", "a-bin-foo".as_bytes())
+        .add_resource_at("data/content", "a-data-content".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let mut meta_blob_info =
+        BlobInfo { blob_id: BlobId::from(*package.meta_far_merkle_root()).into(), length: 42 };
+
+    let (needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let get_fut = env
+        .proxies
+        .package_cache
+        .get(
+            &mut meta_blob_info,
+            &mut std::iter::empty(),
+            needed_blobs_server_end,
+            Some(dir_server_end),
+        )
+        .map_ok(|res| res.map_err(zx::Status::from_raw));
+
+    // Request received, expect client requesting meta far.
+
+    let hierarchy = env.inspect_hierarchy().await;
+    contains_state_and_common_properties(&hierarchy, "need-meta-far");
+
+    // Expect client fulfilling meta far.
+
+    let (meta_far, contents) = package.contents();
+    write_meta_far(&needed_blobs, meta_far).await;
+
+    // Meta far done, expect client requesting missing blobs.
+
+    let hierarchy = env.inspect_hierarchy().await;
+    contains_state_and_common_properties(&hierarchy, "enumerate-missing-blobs");
+
+    let missing_blobs = get_missing_blobs(&needed_blobs).await;
+
+    // Missing blobs requested, expect client writing content blobs.
+
+    let hierarchy = env.inspect_hierarchy().await;
+    contains_state_and_common_properties(&hierarchy, "need-content-blobs");
+    contains_missing_blob_stats(&hierarchy, 2, 0, 0);
+
+    let mut contents = contents
+        .into_iter()
+        .map(|blob| (BlobId::from(blob.merkle), blob.contents))
+        .collect::<HashMap<_, Vec<u8>>>();
+
+    let mut missing_blobs_iter = missing_blobs.into_iter();
+    let mut blob = missing_blobs_iter.next().unwrap();
+
+    let buf = contents.remove(&blob.blob_id.into()).unwrap();
+    let (content_blob, content_blob_server_end) =
+        fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+    assert_eq!(
+        true,
+        needed_blobs.open_blob(&mut blob.blob_id, content_blob_server_end).await.unwrap().unwrap()
+    );
+
+    // Content blob open for writing.
+
+    let hierarchy = env.inspect_hierarchy().await;
+    contains_state_and_common_properties(&hierarchy, "need-content-blobs");
+    contains_missing_blob_stats(&hierarchy, 1, 1, 0);
+
+    let () = write_blob(&buf, content_blob).await.unwrap();
+
+    // Content blob written.
+
+    let hierarchy = env.inspect_hierarchy().await;
+    contains_state_and_common_properties(&hierarchy, "need-content-blobs");
+    contains_missing_blob_stats(&hierarchy, 1, 0, 1);
+
+    let mut blob = missing_blobs_iter.next().unwrap();
+
+    let buf = contents.remove(&blob.blob_id.into()).unwrap();
+    let (content_blob, content_blob_server_end) =
+        fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+    assert_eq!(
+        true,
+        needed_blobs.open_blob(&mut blob.blob_id, content_blob_server_end).await.unwrap().unwrap()
+    );
+
+    // Last content blob open for writing.
+
+    let hierarchy = env.inspect_hierarchy().await;
+    contains_state_and_common_properties(&hierarchy, "need-content-blobs");
+    contains_missing_blob_stats(&hierarchy, 0, 1, 1);
+
+    let () = write_blob(&buf, content_blob).await.unwrap();
+
+    // Last content blob written.
+
+    assert_eq!(contents, Default::default());
+    assert_eq!(None, missing_blobs_iter.next());
+
+    let () = get_fut.await.unwrap().unwrap();
+
+    let hierarchy = env.inspect_hierarchy().await;
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "fuchsia.pkg.PackageCache": {
+                "get": {}
+            }
+        }
+    );
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn package_cache_concurrent_gets() {
+    let package = PackageBuilder::new("a-blob").build().await.unwrap();
+    let package2 = PackageBuilder::new("b-blob").build().await.unwrap();
+    let env = TestEnv::builder().build().await;
+
+    let mut meta_blob_info =
+        BlobInfo { blob_id: BlobId::from(*package.meta_far_merkle_root()).into(), length: 42 };
+
+    let (_needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let _get_fut = env
+        .proxies
+        .package_cache
+        .get(
+            &mut meta_blob_info,
+            &mut std::iter::empty(),
+            needed_blobs_server_end,
+            Some(dir_server_end),
+        )
+        .map_ok(|res| res.map_err(zx::Status::from_raw));
+
+    // Initiate concurrent connection to `PackageCache`.
+    let package_cache_proxy2 = env
+        .apps
+        .realm_instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<PackageCacheMarker>()
+        .expect("connect to package cache");
+
+    let mut meta_blob_info2 =
+        BlobInfo { blob_id: BlobId::from(*package2.meta_far_merkle_root()).into(), length: 7 };
+    let (_needed_blobs2, needed_blobs_server_end2) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+    let (_dir, dir_server_end2) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let _get_fut = package_cache_proxy2
+        .get(
+            &mut meta_blob_info2,
+            &mut std::iter::empty(),
+            needed_blobs_server_end2,
+            Some(dir_server_end2),
+        )
+        .map_ok(|res| res.map_err(zx::Status::from_raw));
+
+    let hierarchy = env.inspect_hierarchy().await;
+    assert_data_tree!(
+        &hierarchy,
+        root: contains {
+            "fuchsia.pkg.PackageCache": {
+                "get": {
+                    "0" : {
+                        "state": "need-meta-far",
+                        "started-time": AnyProperty,
+                        "meta-far-id": AnyProperty,
+                        "meta-far-length": AnyProperty,
+                    },
+                    "1" : {
+                        "state": "need-meta-far",
+                        "started-time": AnyProperty,
+                        "meta-far-id": AnyProperty,
+                        "meta-far-length": AnyProperty,
+                    }
+                }
+            }
+        }
+    );
+
+    let values = ["0", "1"]
+        .iter()
+        .map(|i| {
+            let node =
+                hierarchy.get_child_by_path(&vec!["fuchsia.pkg.PackageCache", "get", i]).unwrap();
+            let length =
+                node.get_property("meta-far-length").and_then(|property| property.uint()).unwrap();
+            let hash =
+                node.get_property("meta-far-id").and_then(|property| property.string()).unwrap();
+            (hash, length)
+        })
+        .collect::<Vec<_>>();
+
+    assert_matches!(
+        values[..],
+        [
+            ("c236d12eece5f32d66fa0cd102e5540e76c5e894b4443ded8d443353adf571a7", 42u64),
+            ("e8fa6fdf7ebcfcf6866dfacf8254938e873cb3f26f1c14d7b88c4a5229472495", 7u64)
+        ] | [
+            ("e8fa6fdf7ebcfcf6866dfacf8254938e873cb3f26f1c14d7b88c4a5229472495", 7u64),
+            ("c236d12eece5f32d66fa0cd102e5540e76c5e894b4443ded8d443353adf571a7", 42u64)
+        ]
+    );
 }

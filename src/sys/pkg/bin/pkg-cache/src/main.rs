@@ -14,7 +14,7 @@ use {
     fuchsia_inspect as finspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     futures::{lock::Mutex, prelude::*},
-    std::sync::Arc,
+    std::sync::{atomic::AtomicU32, Arc},
     system_image::StaticPackages,
 };
 
@@ -129,6 +129,9 @@ async fn main_inner() -> Result<(), Error> {
         .add_fidl_service(IncomingService::SpaceManager);
 
     let package_index = Arc::new(Mutex::new(package_index));
+    let cache_inspect_id = Arc::new(AtomicU32::new(0));
+    let cache_inspect_node = inspector.root().create_child("fuchsia.pkg.PackageCache");
+    let cache_get_node = Arc::new(cache_inspect_node.create_child("get"));
     let system_image_blobs = Arc::new(system_image_blobs);
 
     let () = fs
@@ -145,6 +148,8 @@ async fn main_inner() -> Result<(), Error> {
                         Arc::clone(&static_packages),
                         stream,
                         cobalt_sender.clone(),
+                        Arc::clone(&cache_inspect_id),
+                        Arc::clone(&cache_get_node),
                     )
                     .map(|res| res.context("while serving fuchsia.pkg.PackageCache")),
                 ),
