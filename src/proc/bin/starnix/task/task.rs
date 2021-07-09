@@ -441,11 +441,11 @@ impl Task {
         }
     }
 
-    /// Opens an FsNode at the given path relative to the given dir_fd.
+    /// Gets an FsNode at the given path relative to the given dir_fd.
     ///
-    /// Similar to open_file_at but rather than creating a FileObject, this
-    /// function returns the underlying FsNode.
-    pub fn open_node_at(&self, dir_fd: FdNumber, path: &FsStr) -> Result<FsNodeHandle, Errno> {
+    /// Similar to open_file_at but rather than opening the node to create a
+    /// FileObject, this function returns the underlying FsNode.
+    pub fn lookup_node_at(&self, dir_fd: FdNumber, path: &FsStr) -> Result<FsNodeHandle, Errno> {
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
         Ok(self.fs.lookup_node(dir, path)?.node.clone())
     }

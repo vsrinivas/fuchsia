@@ -170,17 +170,17 @@ fn open_file_internal(
     task.open_file_at(dir_fd, path, OpenFlags::from_bits_truncate(flags))
 }
 
-/// A convenient wrapper for Task::open_node_at.
+/// A convenient wrapper for Task::lookup_node_at.
 ///
 /// Reads user_path from user memory and then calls through to Task::open_file_at.
-fn open_node_internal(
+fn lookup_node_internal(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,
 ) -> Result<FsNodeHandle, Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
-    task.open_node_at(dir_fd, path)
+    task.lookup_node_at(dir_fd, path)
 }
 
 pub fn sys_openat(
@@ -210,7 +210,7 @@ pub fn sys_faccessat(
         return Err(EINVAL);
     }
 
-    let node = open_node_internal(&ctx.task, dir_fd, user_path)?;
+    let node = lookup_node_internal(&ctx.task, dir_fd, user_path)?;
 
     if mode == F_OK {
         return Ok(SUCCESS);
@@ -278,7 +278,7 @@ pub fn sys_newfstatat(
         not_implemented!("newfstatat: flags 0x{:x}", flags);
         return Err(ENOSYS);
     }
-    let node = open_node_internal(&ctx.task, dir_fd, user_path)?;
+    let node = lookup_node_internal(&ctx.task, dir_fd, user_path)?;
     let result = node.update_stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
@@ -291,7 +291,7 @@ pub fn sys_readlinkat(
     _buffer: UserAddress,
     _buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    let _ = open_node_internal(&ctx.task, dir_fd, user_path)?;
+    let _ = lookup_node_internal(&ctx.task, dir_fd, user_path)?;
     Err(EINVAL)
 }
 
@@ -310,7 +310,7 @@ pub fn sys_truncate(
     length: off_t,
 ) -> Result<SyscallResult, Errno> {
     let length = length.try_into().map_err(|_| EINVAL)?;
-    let node = open_node_internal(&ctx.task, FdNumber::AT_FDCWD, user_path)?;
+    let node = lookup_node_internal(&ctx.task, FdNumber::AT_FDCWD, user_path)?;
     // TODO: Check for writability.
     node.truncate(length)?;
     Ok(SUCCESS)
