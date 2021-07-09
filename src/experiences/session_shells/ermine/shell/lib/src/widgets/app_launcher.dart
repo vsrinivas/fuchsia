@@ -27,7 +27,7 @@ class AppLauncher extends StatelessWidget {
               leading: Image(
                 image: AssetImage(item['icon'] ?? 'images/Default-icon-2x.png'),
                 color: _isEnabled(item)
-                    ? Theme.of(context).colorScheme.secondary
+                    ? Theme.of(context).colorScheme.onSurface
                     : Theme.of(context).disabledColor,
                 width: 32,
                 height: 32,

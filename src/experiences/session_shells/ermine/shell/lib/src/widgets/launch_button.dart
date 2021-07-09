@@ -28,7 +28,7 @@ class LaunchButton extends StatelessWidget {
           padding: EdgeInsets.all(12),
           icon: Image.asset(
             'images/Fuchsia-logo-2x.png',
-            color: Theme.of(context).colorScheme.secondary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           tooltip: 'Show App Launcher',
         ),

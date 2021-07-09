@@ -26,15 +26,20 @@ class QuickSettings extends StatelessWidget {
         ),
         child: Observer(builder: (_) {
           final state = appState.settingsState;
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              _ListSettings(appState),
-              if (state.shortcutsPageVisible.value) ShortcutSettings(state),
-              if (state.timezonesPageVisible.value)
-                TimezoneSettings(
-                    state: state, onChange: (tz) => state.updateTimezone([tz])),
-            ],
+          return ListTileTheme(
+            iconColor: Theme.of(context).colorScheme.onSurface,
+            selectedColor: Theme.of(context).colorScheme.onPrimary,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _ListSettings(appState),
+                if (state.shortcutsPageVisible.value) ShortcutSettings(state),
+                if (state.timezonesPageVisible.value)
+                  TimezoneSettings(
+                      state: state,
+                      onChange: (tz) => state.updateTimezone([tz])),
+              ],
+            ),
           );
         }),
       ),
@@ -120,10 +125,14 @@ class _ListSettings extends StatelessWidget {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     spacing: 8,
                     children: [
-                      Text(appState.settingsState.selectedTimezone.value
-                          // Remove '_' from city names.
-                          .replaceAll('_', ' ')
-                          .replaceAll('/', ' / ')),
+                      Text(
+                        appState.settingsState.selectedTimezone.value
+                            // Remove '_' from city names.
+                            .replaceAll('_', ' ')
+                            .replaceAll('/', ' / '),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.secondary),
+                      ),
                       Icon(Icons.arrow_right),
                     ],
                   ),

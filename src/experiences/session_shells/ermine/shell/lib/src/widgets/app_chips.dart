@@ -59,7 +59,7 @@ class _TopViewIndicator extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: 8,
         height: 54.0,
-        color: Theme.of(context).colorScheme.secondary,
+        color: Theme.of(context).colorScheme.onSurface,
       );
 }
 
@@ -89,7 +89,7 @@ class _AppChip extends StatelessWidget {
                   _iconPath,
                   width: 48,
                   height: 48,
-                  color: Theme.of(context).colorScheme.secondary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 SizedBox(width: 8),
                 IconButton(
@@ -98,7 +98,6 @@ class _AppChip extends StatelessWidget {
                   padding: EdgeInsets.all(0),
                   iconSize: 16,
                   splashRadius: 8,
-                  color: Theme.of(context).colorScheme.secondary,
                   onPressed: _view.close,
                 ),
               ],
