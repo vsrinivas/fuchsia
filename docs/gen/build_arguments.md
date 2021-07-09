@@ -1013,7 +1013,7 @@ From //out/not-default/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:9
+From //build/toolchain/rbe.gni:27
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1021,7 +1021,7 @@ From //out/not-default/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:9
+From //build/toolchain/rbe.gni:27
 
 ### ermine_app_entries
 Build arg that allows overriding the default set of application entries
