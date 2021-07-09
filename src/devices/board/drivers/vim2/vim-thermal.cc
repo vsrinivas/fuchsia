@@ -233,6 +233,7 @@ zx_status_t Vim::ThermalInit() {
       .props_count = countof(props),
       .fragments = fragments,
       .fragments_count = countof(fragments),
+      .primary_fragment = "scpi",
       .coresident_device_index = 0,
       .metadata_list = nullptr,
       .metadata_count = 0,

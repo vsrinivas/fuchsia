@@ -308,6 +308,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(
       .props_count = std::size(props),
       .fragments = fragments,
       .fragments_count = fragments_count + 1,
+      .primary_fragment = "fuchsia.hardware.platform.device.PDev",
       .coresident_device_index = coresident_device_index,
       .metadata_list = nullptr,
       .metadata_count = 0,

@@ -5,11 +5,11 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/compiler.h>
 
 #include <bind/fuchsia/ams/platform/cpp/fidl.h>
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/lights.h>
 #include <ddktl/metadata/light-sensor.h>
 #include <soc/aml-t931/t931-pwm.h>
@@ -63,6 +63,7 @@ zx_status_t Sherlock::LightInit() {
       .props_count = countof(props),
       .fragments = fragments,
       .fragments_count = countof(fragments),
+      .primary_fragment = "i2c",
       .coresident_device_index = UINT32_MAX,
       .metadata_list = metadata,
       .metadata_count = countof(metadata),

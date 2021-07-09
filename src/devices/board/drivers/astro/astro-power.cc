@@ -5,9 +5,9 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/power.h>
 #include <soc/aml-common/aml-power.h>
 #include <soc/aml-s905d2/s905d2-power.h>
@@ -44,7 +44,6 @@ const pbus_metadata_t power_impl_metadata[] = {
     },
 };
 
-
 constexpr zx_bind_inst_t power_impl_driver_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
 };
@@ -78,6 +77,7 @@ constexpr composite_device_desc_t power_domain_arm_core_desc = {
     .props_count = countof(power_domain_arm_core_props),
     .fragments = power_domain_arm_core_fragments,
     .fragments_count = countof(power_domain_arm_core_fragments),
+    .primary_fragment = "power-impl",
     .coresident_device_index = 0,
     .metadata_list = power_domain_arm_core_metadata,
     .metadata_count = countof(power_domain_arm_core_metadata),

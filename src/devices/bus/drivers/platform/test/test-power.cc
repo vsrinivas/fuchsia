@@ -7,9 +7,9 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/power.h>
 
 #include "test.h"
@@ -44,6 +44,7 @@ const composite_device_desc_t power_domain_1_desc = {
     .props_count = countof(props),
     .fragments = power_domain_1_fragments,
     .fragments_count = countof(power_domain_1_fragments),
+    .primary_fragment = "power-impl",
     .coresident_device_index = 0,
     .metadata_list = power_metadata_1,
     .metadata_count = countof(power_metadata_1),
@@ -76,6 +77,7 @@ const composite_device_desc_t power_domain_3_desc = {
     .props_count = countof(props),
     .fragments = power_domain_3_fragments,
     .fragments_count = countof(power_domain_3_fragments),
+    .primary_fragment = "power-impl",
     .coresident_device_index = 0,
     .metadata_list = power_metadata_3,
     .metadata_count = countof(power_metadata_3),

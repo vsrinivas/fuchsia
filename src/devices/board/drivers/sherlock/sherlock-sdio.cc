@@ -263,6 +263,7 @@ zx_status_t Sherlock::SdioInit() {
       .props_count = countof(props),
       .fragments = wifi_composite,
       .fragments_count = countof(wifi_composite),
+      .primary_fragment = "sdio-function-1",  // ???
       .coresident_device_index = 0,
       .metadata_list = nullptr,
       .metadata_count = 0,

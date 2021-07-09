@@ -292,7 +292,7 @@ zx_status_t Astro::AudioInit() {
     comp_desc.coresident_device_index = UINT32_MAX;
     comp_desc.fragments = dai_test_out_fragments;
     comp_desc.fragments_count = countof(dai_test_out_fragments);
-    comp_desc.metadata_list = test_metadata;
+    comp_desc.primary_fragment = "dai-out", comp_desc.metadata_list = test_metadata;
     comp_desc.metadata_count = countof(test_metadata);
     status = DdkAddComposite("astro-dai-test-out", &comp_desc);
     if (status != ZX_OK) {
@@ -335,6 +335,7 @@ zx_status_t Astro::AudioInit() {
     comp_desc.coresident_device_index = UINT32_MAX;
     comp_desc.fragments = codec_fragments;
     comp_desc.fragments_count = countof(codec_fragments);
+    comp_desc.primary_fragment = "i2c";
     comp_desc.metadata_list = codec_metadata;
     comp_desc.metadata_count = countof(codec_metadata);
     status = DdkAddComposite("audio-codec-tas27xx", &comp_desc);
@@ -493,6 +494,7 @@ zx_status_t Astro::AudioInit() {
   comp_desc.coresident_device_index = UINT32_MAX;
   comp_desc.fragments = dai_test_in_fragments;
   comp_desc.fragments_count = countof(dai_test_in_fragments);
+  comp_desc.primary_fragment = "dai-in";
   comp_desc.metadata_list = test_metadata;
   comp_desc.metadata_count = countof(test_metadata);
   status = DdkAddComposite("astro-dai-test-in", &comp_desc);

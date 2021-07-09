@@ -5,9 +5,9 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
@@ -121,6 +121,7 @@ zx_status_t Sherlock::ButtonsInit() {
       .props_count = countof(props),
       .fragments = fragments,
       .fragments_count = button_count,
+      .primary_fragment = "volume-up",  // ???
       .coresident_device_index = UINT32_MAX,
       .metadata_list = available_buttons_metadata,
       .metadata_count = countof(available_buttons_metadata),

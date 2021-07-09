@@ -6,12 +6,12 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/focaltech/focaltech.h>
 #include <limits.h>
 #include <unistd.h>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -99,6 +99,7 @@ zx_status_t Nelson::TouchInit() {
       .props_count = countof(props),
       .fragments = goodix_fragments,
       .fragments_count = countof(goodix_fragments),
+      .primary_fragment = "i2c",
       .coresident_device_index = UINT32_MAX,
       .metadata_list = touch_metadata,
       .metadata_count = countof(touch_metadata),
@@ -132,6 +133,7 @@ zx_status_t Nelson::TouchInitP1() {
         .props_count = countof(props),
         .fragments = goodix_fragments,
         .fragments_count = countof(goodix_fragments),
+        .primary_fragment = "i2c",
         .coresident_device_index = UINT32_MAX,
         .metadata_list = nullptr,
         .metadata_count = 0,
@@ -153,6 +155,7 @@ zx_status_t Nelson::TouchInitP1() {
         .props_count = countof(props),
         .fragments = ft_fragments,
         .fragments_count = countof(ft_fragments),
+        .primary_fragment = "i2c",
         .coresident_device_index = UINT32_MAX,
         .metadata_list = ft3x27_touch_metadata,
         .metadata_count = std::size(ft3x27_touch_metadata),

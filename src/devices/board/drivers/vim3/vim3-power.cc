@@ -135,6 +135,7 @@ constexpr composite_device_desc_t power_domain_big_core_desc = {
     .props_count = countof(power_domain_arm_core_props),
     .fragments = power_domain_arm_core_fragments,
     .fragments_count = countof(power_domain_arm_core_fragments),
+    .primary_fragment = "power-impl",
     .coresident_device_index = 0,
     .metadata_list = power_domain_big_core_metadata,
     .metadata_count = countof(power_domain_big_core_metadata),
@@ -157,6 +158,7 @@ constexpr composite_device_desc_t power_domain_little_core_desc = {
     .props_count = countof(power_domain_arm_core_props),
     .fragments = power_domain_arm_core_fragments,
     .fragments_count = countof(power_domain_arm_core_fragments),
+    .primary_fragment = "power-impl",
     .coresident_device_index = 0,
     .metadata_list = power_domain_little_core_metadata,
     .metadata_count = countof(power_domain_little_core_metadata),
@@ -187,6 +189,7 @@ constexpr composite_device_desc_t fusb302_desc = {
     .props_count = countof(fusb302_props),
     .fragments = fusb302_fragments,
     .fragments_count = countof(fusb302_fragments),
+    .primary_fragment = "i2c",
     .coresident_device_index = 0,
 };
 
@@ -254,7 +257,8 @@ zx_status_t Vim3::PowerInit() {
     dev.props_count = countof(vreg_props);
     dev.fragments = vreg_fragments;
     dev.fragments_count = countof(vreg_fragments);
-    dev.coresident_device_index = 0;
+    dev.primary_fragment = vreg_fragments[0].name,  // ???
+        dev.coresident_device_index = 0;
     dev.metadata_list = vreg_metadata;
     dev.metadata_count = countof(vreg_metadata);
     return dev;

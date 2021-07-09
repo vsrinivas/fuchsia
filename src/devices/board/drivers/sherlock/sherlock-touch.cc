@@ -6,12 +6,12 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/focaltech/focaltech.h>
 #include <limits.h>
 #include <unistd.h>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
@@ -86,6 +86,7 @@ static const composite_device_desc_t luis_comp_desc = {
     .props_count = countof(luis_touch_props),
     .fragments = luis_fragments,
     .fragments_count = countof(luis_fragments),
+    .primary_fragment = "i2c",
     .coresident_device_index = UINT32_MAX,
 };
 
@@ -108,6 +109,7 @@ zx_status_t Sherlock::TouchInit() {
         .props_count = countof(sherlock_touch_props),
         .fragments = sherlock_fragments,
         .fragments_count = countof(sherlock_fragments),
+        .primary_fragment = "i2c",
         .coresident_device_index = UINT32_MAX,
         .metadata_list = ft5726_touch_metadata,
         .metadata_count = std::size(ft5726_touch_metadata),

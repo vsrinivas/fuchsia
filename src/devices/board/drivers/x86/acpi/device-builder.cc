@@ -288,6 +288,7 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Acpi* acpi, zx_device_t* platfo
       .str_props_count = str_props.size(),
       .fragments = fragments.get(),
       .fragments_count = fragment_count,
+      .primary_fragment = "acpi",
       .coresident_device_index = 0,
   };
 

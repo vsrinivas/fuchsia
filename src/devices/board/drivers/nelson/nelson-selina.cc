@@ -12,7 +12,6 @@
 
 namespace nelson {
 
-
 static constexpr zx_bind_inst_t irq_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SELINA_IRQ),
@@ -60,6 +59,7 @@ static composite_device_desc_t composite_dev = []() {
   desc.props_count = countof(props);
   desc.fragments = fragments;
   desc.fragments_count = countof(fragments);
+  desc.primary_fragment = "spi";
   desc.coresident_device_index = UINT32_MAX;
   return desc;
 }();

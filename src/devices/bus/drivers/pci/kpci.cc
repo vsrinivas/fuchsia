@@ -114,6 +114,7 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device, 
       .props_count = countof(composite_props),
       .fragments = fragments,
       .fragments_count = uses_acpi ? countof(fragments) : countof(fragments) - 1,
+      .primary_fragment = "pci",
       .coresident_device_index = UINT32_MAX,  // create a new devhost
   };
 

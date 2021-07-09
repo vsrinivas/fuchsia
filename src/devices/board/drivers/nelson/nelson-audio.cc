@@ -251,6 +251,7 @@ zx_status_t Nelson::AudioInit() {
     codec_desc.coresident_device_index = UINT32_MAX;
     codec_desc.fragments = ref_codec_fragments;
     codec_desc.fragments_count = countof(ref_codec_fragments);
+    codec_desc.primary_fragment = "i2c";
     status = DdkAddComposite("audio-max98373", &codec_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
@@ -313,6 +314,7 @@ zx_status_t Nelson::AudioInit() {
     codec_desc.coresident_device_index = UINT32_MAX;
     codec_desc.fragments = p2_codec_fragments;
     codec_desc.fragments_count = countof(p2_codec_fragments);
+    codec_desc.primary_fragment = "i2c";
     codec_desc.metadata_list = codec_metadata;
     codec_desc.metadata_count = countof(codec_metadata);
     status = DdkAddComposite("audio-tas58xx", &codec_desc);

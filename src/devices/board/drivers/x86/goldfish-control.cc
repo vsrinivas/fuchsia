@@ -61,6 +61,7 @@ static const composite_device_desc_t comp_desc = {
     .props_count = std::size(props),
     .fragments = goldfish_control_fragments,
     .fragments_count = std::size(goldfish_control_fragments),
+    .primary_fragment = "goldfish-pipe",
     .coresident_device_index = UINT32_MAX,
 };
 

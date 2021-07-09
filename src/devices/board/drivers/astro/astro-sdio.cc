@@ -4,12 +4,12 @@
 
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/init-step.h>
 #include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
@@ -290,6 +290,7 @@ zx_status_t Astro::SdioInit() {
       .props_count = countof(props),
       .fragments = wifi_composite,
       .fragments_count = countof(wifi_composite),
+      .primary_fragment = "sdio-function-1",  // ???
       .coresident_device_index = 0,
       .metadata_list = nullptr,
       .metadata_count = 0,

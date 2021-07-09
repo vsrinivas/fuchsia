@@ -342,6 +342,7 @@ typedef struct composite_device_desc {
   size_t str_props_count;
   const device_fragment_t* fragments;
   size_t fragments_count;
+  const char* primary_fragment;
   uint32_t coresident_device_index;
   const device_metadata_t* metadata_list;
   size_t metadata_count;

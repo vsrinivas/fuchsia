@@ -303,6 +303,7 @@ zx_status_t Sherlock::AudioInit() {
     comp_desc.coresident_device_index = UINT32_MAX;
     comp_desc.fragments = woofer_fragments;
     comp_desc.fragments_count = countof(woofer_fragments);
+    comp_desc.primary_fragment = "i2c";
     comp_desc.metadata_list = codec_metadata;
     comp_desc.metadata_count = countof(codec_metadata);
     status = DdkAddComposite("audio-tas5720-woofer", &comp_desc);
@@ -369,6 +370,7 @@ zx_status_t Sherlock::AudioInit() {
       comp_desc.coresident_device_index = UINT32_MAX;
       comp_desc.fragments = ernie_woofer_fragments;
       comp_desc.fragments_count = countof(ernie_woofer_fragments);
+      comp_desc.primary_fragment = "i2c";
       comp_desc.metadata_list = codec_metadata;
       comp_desc.metadata_count = countof(codec_metadata);
       status = DdkAddComposite("audio-tas58xx-woofer", &comp_desc);
@@ -395,6 +397,7 @@ zx_status_t Sherlock::AudioInit() {
       comp_desc.coresident_device_index = UINT32_MAX;
       comp_desc.fragments = luis_codec_fragments;
       comp_desc.fragments_count = countof(luis_codec_fragments);
+      comp_desc.primary_fragment = "i2c";
       status = DdkAddComposite("audio-tas58xx", &comp_desc);
       if (status != ZX_OK) {
         zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);

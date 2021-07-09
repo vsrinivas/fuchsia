@@ -4,10 +4,10 @@
 
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
-
 #include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
+
 #include <fbl/algorithm.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <soc/aml-common/aml-sdmmc.h>
@@ -172,6 +172,7 @@ zx_status_t Vim::SdioInit() {
       .props_count = countof(props),
       .fragments = wifi_fragments,
       .fragments_count = countof(wifi_fragments),
+      .primary_fragment = "sdio-function-1",  // ???
       .coresident_device_index = 0,
       .metadata_list = nullptr,
       .metadata_count = 0,

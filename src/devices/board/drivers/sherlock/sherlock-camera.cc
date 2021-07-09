@@ -7,9 +7,9 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-t931/t931-gpio.h>
@@ -413,6 +413,7 @@ zx_status_t Sherlock::CameraInit() {
       .props_count = countof(camera_controller_props),
       .fragments = camera_controller_fragments,
       .fragments_count = countof(camera_controller_fragments),
+      .primary_fragment = "isp",
       .coresident_device_index = 0,
       .metadata_list = nullptr,
       .metadata_count = 0,

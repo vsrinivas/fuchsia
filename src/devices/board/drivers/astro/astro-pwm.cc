@@ -5,9 +5,9 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/pwm.h>
 #include <soc/aml-s905d2/s905d2-pwm.h>
 
@@ -118,6 +118,7 @@ zx_status_t Astro::PwmInit() {
       .props_count = countof(props),
       .fragments = composite,
       .fragments_count = countof(composite),
+      .primary_fragment = "pwm",
       .coresident_device_index = UINT32_MAX,
       .metadata_list = nullptr,
       .metadata_count = 0,
