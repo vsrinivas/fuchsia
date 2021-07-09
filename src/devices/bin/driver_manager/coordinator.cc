@@ -66,6 +66,7 @@ namespace {
 
 namespace fdd = fuchsia_driver_development;
 namespace fdm = fuchsia_device_manager;
+namespace fdr = fuchsia_driver_registrar;
 
 constexpr char kDriverHostPath[] = "bin/driver_host";
 constexpr char kBootFirmwarePath[] = "lib/firmware";
@@ -515,8 +516,8 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
                                    bool has_init, bool always_init, zx::vmo inspect,
                                    zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
   // If this is true, then |name_data|'s size is properly bounded.
-  static_assert(fuchsia_device_manager_DEVICE_NAME_MAX == ZX_DEVICE_NAME_MAX);
-  static_assert(fuchsia_device_manager_PROPERTIES_MAX <= UINT32_MAX);
+  static_assert(fdm::wire::kDeviceNameMax == ZX_DEVICE_NAME_MAX);
+  static_assert(fdm::wire::kPropertiesMax <= UINT32_MAX);
 
   if (InSuspend()) {
     LOGF(ERROR, "Add device '%.*s' forbidden in suspend", static_cast<int>(name.size()),
@@ -966,7 +967,7 @@ zx_status_t Coordinator::GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t ty
   }
 
   // if no metadata is found, check list of metadata added via device_publish_metadata()
-  char path[fuchsia_device_manager_DEVICE_PATH_MAX];
+  char path[fdm::wire::kDevicePathMax];
   status = GetTopologicalPath(dev, path, sizeof(path));
   if (status != ZX_OK) {
     return status;
@@ -1006,7 +1007,7 @@ zx_status_t Coordinator::AddMetadata(const fbl::RefPtr<Device>& dev, uint32_t ty
 
 zx_status_t Coordinator::PublishMetadata(const fbl::RefPtr<Device>& dev, const char* path,
                                          uint32_t type, const void* data, uint32_t length) {
-  char caller_path[fuchsia_device_manager_DEVICE_PATH_MAX];
+  char caller_path[fdm::wire::kDevicePathMax];
   zx_status_t status = GetTopologicalPath(dev, caller_path, sizeof(caller_path));
   if (status != ZX_OK) {
     return status;
@@ -1775,10 +1776,10 @@ uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
 
 zx::status<std::vector<fdd::wire::DriverInfo>> Coordinator::GetDriverInfo(
     fidl::AnyAllocator& allocator, const std::vector<const Driver*>& drivers) {
-  std::vector<fuchsia_driver_development::wire::DriverInfo> driver_info_vec;
+  std::vector<fdd::wire::DriverInfo> driver_info_vec;
   // TODO(fxbug.dev/80033): Support base drivers.
   for (const auto& driver : drivers) {
-    fuchsia_driver_development::wire::DriverInfo driver_info(allocator);
+    fdd::wire::DriverInfo driver_info(allocator);
     driver_info.set_name(allocator,
                          fidl::StringView(allocator, {driver->name.data(), driver->name.size()}));
     driver_info.set_url(
@@ -1896,7 +1897,7 @@ zx::status<std::vector<fdd::wire::DeviceInfo>> Coordinator::GetDeviceInfo(
     if (device->props().size() > fdm::wire::kPropertiesMax) {
       return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
     }
-    if (device->str_props().size() > fuchsia_device_manager_PROPERTIES_MAX) {
+    if (device->str_props().size() > fdm::wire::kPropertiesMax) {
       return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
     }
 
@@ -2017,8 +2018,8 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
 
 zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto admin = [this](zx::channel request) {
-    static_assert(fuchsia_device_manager_SUSPEND_FLAG_REBOOT == DEVICE_SUSPEND_FLAG_REBOOT);
-    static_assert(fuchsia_device_manager_SUSPEND_FLAG_POWEROFF == DEVICE_SUSPEND_FLAG_POWEROFF);
+    static_assert(fdm::wire::kSuspendFlagReboot == DEVICE_SUSPEND_FLAG_REBOOT);
+    static_assert(fdm::wire::kSuspendFlagPoweroff == DEVICE_SUSPEND_FLAG_POWEROFF);
 
     static constexpr fuchsia_device_manager_Administrator_ops_t kOps = {
         .Suspend =
@@ -2050,11 +2051,11 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
                   this, &kOps);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           fuchsia_device_manager_Administrator_Name, zx_status_get_string(status));
+           fidl::DiscoverableProtocolName<fdm::Administrator>, zx_status_get_string(status));
     }
     return status;
   };
-  zx_status_t status = svc_dir->AddEntry(fuchsia_device_manager_Administrator_Name,
+  zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdm::Administrator>,
                                          fbl::MakeRefCounted<fs::Service>(admin));
   if (status != ZX_OK) {
     return status;
@@ -2079,33 +2080,28 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   }
 
   const auto driver_dev = [this](zx::channel request) {
-    auto status = fidl::BindSingleInFlightOnly<
-        fidl::WireServer<fuchsia_driver_development::DriverDevelopment>>(dispatcher_,
-                                                                         std::move(request), this);
+    auto status = fidl::BindSingleInFlightOnly<fidl::WireServer<fdd::DriverDevelopment>>(
+        dispatcher_, std::move(request), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           fidl::DiscoverableProtocolName<fuchsia_driver_development::DriverDevelopment>,
-           zx_status_get_string(status));
+           fidl::DiscoverableProtocolName<fdd::DriverDevelopment>, zx_status_get_string(status));
     }
     return status;
   };
-  status = svc_dir->AddEntry(
-      fidl::DiscoverableProtocolName<fuchsia_driver_development::DriverDevelopment>,
-      fbl::MakeRefCounted<fs::Service>(driver_dev));
+  status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
+                             fbl::MakeRefCounted<fs::Service>(driver_dev));
   if (status != ZX_OK) {
     return status;
   }
 
   if (config_.enable_ephemeral) {
     const auto driver_registrar = [this](zx::channel request) {
-      driver_registrar_binding_ =
-          fidl::BindServer<fidl::WireServer<fuchsia_driver_registrar::DriverRegistrar>>(
-              dispatcher_, std::move(request), this);
+      driver_registrar_binding_ = fidl::BindServer<fidl::WireServer<fdr::DriverRegistrar>>(
+          dispatcher_, std::move(request), this);
       return ZX_OK;
     };
-    status =
-        svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_driver_registrar::DriverRegistrar>,
-                          fbl::MakeRefCounted<fs::Service>(driver_registrar));
+    status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdr::DriverRegistrar>,
+                               fbl::MakeRefCounted<fs::Service>(driver_registrar));
     if (status != ZX_OK) {
       return status;
     }
@@ -2142,11 +2138,11 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
                   this, &kOps);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           fuchsia_device_manager_DebugDumper_Name, zx_status_get_string(status));
+           fidl::DiscoverableProtocolName<fdm::DebugDumper>, zx_status_get_string(status));
     }
     return status;
   };
-  return svc_dir->AddEntry(fuchsia_device_manager_DebugDumper_Name,
+  return svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdm::DebugDumper>,
                            fbl::MakeRefCounted<fs::Service>(debug));
 }
 
