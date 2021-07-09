@@ -17,7 +17,7 @@ async fn main() -> Result<(), Error> {
     let mut session_manager = SessionManager::new(realm);
     // TODO(fxbug.dev/67789): Using ? here causes errors to not be logged.
     session_manager.launch_startup_session().await.expect("failed to launch session");
-    session_manager.expose_services().await.expect("failed to expose services");
+    session_manager.serve().await.expect("failed to serve protocols");
 
     Ok(())
 }

@@ -21,13 +21,17 @@ use {
         RegistryMarker, RegistryProxy, RegistryRequest, RegistryRequestStream,
     },
     fuchsia_component::server::ServiceFs,
+    fuchsia_syslog::macros::fx_log_err,
     fuchsia_zircon as zx,
-    futures::{lock::Mutex, StreamExt, TryStreamExt},
+    futures::{lock::Mutex, StreamExt, TryFutureExt, TryStreamExt},
     std::sync::Arc,
 };
 
-/// The services exposed by the session manager.
-enum ExposedServices {
+/// Maximum number of concurrent connections to the protocols served by SessionManager.  
+const MAX_CONCURRENT_CONNECTIONS: usize = 10_000;
+
+/// A request to connect to a protocol exposed by SessionManager.
+enum IncomingRequest {
     Manager(felement::ManagerRequestStream),
     ElementManager(ElementManagerRequestStream),
     Launcher(LauncherRequestStream),
@@ -84,134 +88,157 @@ impl SessionManager {
         Ok(())
     }
 
-    /// Starts serving [`ExposedServices`] from `svc`.
+    /// Starts serving [`IncomingRequest`] from `svc`.
     ///
     /// This will return once the [`ServiceFs`] stops serving requests.
     ///
     /// # Errors
     /// Returns an error if there is an issue serving the `svc` directory handle.
-    pub async fn expose_services(&mut self) -> Result<(), Error> {
+    pub async fn serve(&mut self) -> Result<(), Error> {
         let mut fs = ServiceFs::new_local();
         fs.dir("svc")
-            .add_fidl_service(ExposedServices::Manager)
-            .add_fidl_service(ExposedServices::ElementManager)
-            .add_fidl_service(ExposedServices::Launcher)
-            .add_fidl_service(ExposedServices::Restarter)
-            .add_fidl_service(ExposedServices::InputDeviceRegistry)
-            .add_fidl_service(ExposedServices::Startup)
-            .add_fidl_service(ExposedServices::AccessibilityViewRegistry);
+            .add_fidl_service(IncomingRequest::Manager)
+            .add_fidl_service(IncomingRequest::ElementManager)
+            .add_fidl_service(IncomingRequest::Launcher)
+            .add_fidl_service(IncomingRequest::Restarter)
+            .add_fidl_service(IncomingRequest::InputDeviceRegistry)
+            .add_fidl_service(IncomingRequest::Startup)
+            .add_fidl_service(IncomingRequest::AccessibilityViewRegistry);
         fs.take_and_serve_directory_handle()?;
 
-        while let Some(service_request) = fs.next().await {
-            match service_request {
-                ExposedServices::Manager(request_stream) => {
-                    // Connect to element.Manager served by the session.
-                    let (manager_proxy, server_end) =
-                        fidl::endpoints::create_proxy::<felement::ManagerMarker>()
-                            .expect("Failed to create ManagerProxy");
-                    {
-                        let state = self.state.lock().await;
-                        let session_exposed_dir_channel =
-                            state.session_exposed_dir_channel.as_ref().expect(
-                                "Failed to connect to ManagerProxy because no session was started",
-                            );
-                        fdio::service_connect_at(
-                            session_exposed_dir_channel,
-                            "fuchsia.element.Manager",
-                            server_end.into_channel(),
-                        )
-                        .expect("Failed to connect to Manager service");
-                    }
-                    SessionManager::handle_manager_request_stream(request_stream, manager_proxy)
-                        .await
-                        .expect("Manager request stream got an error.");
-                }
-                ExposedServices::ElementManager(request_stream) => {
-                    // Connect to ElementManager served by the session.
-                    let (element_manager_proxy, server_end) =
-                        fidl::endpoints::create_proxy::<ElementManagerMarker>()
-                            .expect("Failed to create ElementManagerProxy");
-                    {
-                        let state = self.state.lock().await;
-                        let session_exposed_dir_channel = state.session_exposed_dir_channel.as_ref()
-                            .expect("Failed to connect to ElementManagerProxy because no session was started");
-                        fdio::service_connect_at(
-                            session_exposed_dir_channel,
-                            "fuchsia.session.ElementManager",
-                            server_end.into_channel(),
-                        )
-                        .expect("Failed to connect to ElementManager service");
-                    }
-                    SessionManager::handle_element_manager_request_stream(
-                        request_stream,
-                        element_manager_proxy,
-                    )
+        fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, |request| {
+            let mut session_manager = self.clone();
+            async move {
+                session_manager
+                    .handle_incoming_request(request)
+                    .unwrap_or_else(|e| fx_log_err!("{:?}", e))
                     .await
-                    .expect("Element Manager request stream got an error.");
-                }
-                ExposedServices::Launcher(request_stream) => {
-                    self.handle_launcher_request_stream(request_stream)
-                        .await
-                        .expect("Session Launcher request stream got an error.");
-                }
-                ExposedServices::Restarter(request_stream) => {
-                    self.handle_restarter_request_stream(request_stream)
-                        .await
-                        .expect("Session Restarter request stream got an error.");
-                }
-                ExposedServices::InputDeviceRegistry(request_stream) => {
-                    // Connect to InputDeviceRegistry served by the session.
-                    let (input_device_registry_proxy, server_end) =
-                        fidl::endpoints::create_proxy::<InputDeviceRegistryMarker>()
-                            .expect("Failed to create InputDeviceRegistryProxy");
-                    {
-                        let state = self.state.lock().await;
-                        let session_exposed_dir_channel = state.session_exposed_dir_channel.as_ref()
-                            .expect("Failed to connect to InputDeviceRegistryProxy because no session was started");
-                        fdio::service_connect_at(
-                            session_exposed_dir_channel,
-                            "fuchsia.input.injection.InputDeviceRegistry",
-                            server_end.into_channel(),
-                        )
-                        .expect("Failed to connect to InputDeviceRegistry service");
-                    }
+            }
+        })
+        .await;
 
-                    SessionManager::handle_input_device_registry_request_stream(
-                        request_stream,
-                        input_device_registry_proxy,
-                    )
-                    .await
-                    .expect("Input device registry request stream got an error.");
-                }
-                ExposedServices::Startup(request_stream) => {
-                    self.handle_startup_request_stream(request_stream)
-                        .await
-                        .expect("Sessionmanager Startup request stream got an error.");
-                }
-                ExposedServices::AccessibilityViewRegistry(request_stream) => {
-                    // Connect to AccessibilityViewRegistry served by the session.
-                    let (accessibility_view_registry_proxy, server_end) =
-                        fidl::endpoints::create_proxy::<RegistryMarker>()
-                            .expect("Failed to create AccessibilityViewRegistryProxy");
-                    {
-                        let state = self.state.lock().await;
-                        let session_exposed_dir_channel = state.session_exposed_dir_channel.as_ref()
-                            .expect("Failed to connect to AccessibilityViewRegistryProxy because no session was started");
-                        fdio::service_connect_at(
-                            session_exposed_dir_channel,
-                            "fuchsia.ui.accessibility.view.Registry",
-                            server_end.into_channel(),
-                        )
-                        .expect("Failed to connect to AccessibilityViewRegistry service");
-                    }
+        Ok(())
+    }
 
-                    SessionManager::handle_accessibility_view_registry_request_stream(
-                        request_stream,
-                        accessibility_view_registry_proxy,
+    /// Handles an [`IncomingRequest`].
+    ///
+    /// This will return once the protocol connection has been closed.
+    ///
+    /// # Errors
+    /// Returns an error if there is an issue serving the request.
+    async fn handle_incoming_request(&mut self, request: IncomingRequest) -> Result<(), Error> {
+        match request {
+            IncomingRequest::Manager(request_stream) => {
+                // Connect to element.Manager served by the session.
+                let (manager_proxy, server_end) =
+                    fidl::endpoints::create_proxy::<felement::ManagerMarker>()
+                        .context("Failed to create ManagerProxy")?;
+                {
+                    let state = self.state.lock().await;
+                    let session_exposed_dir_channel =
+                        state.session_exposed_dir_channel.as_ref().context(
+                            "Failed to connect to ManagerProxy because no session was started",
+                        )?;
+                    fdio::service_connect_at(
+                        session_exposed_dir_channel,
+                        "fuchsia.element.Manager",
+                        server_end.into_channel(),
                     )
-                    .await
-                    .expect("Accessibility view registry request stream got an error.");
+                    .context("Failed to connect to Manager service")?;
                 }
+                SessionManager::handle_manager_request_stream(request_stream, manager_proxy)
+                    .await
+                    .context("Manager request stream got an error.")?;
+            }
+            IncomingRequest::ElementManager(request_stream) => {
+                // Connect to ElementManager served by the session.
+                let (element_manager_proxy, server_end) =
+                    fidl::endpoints::create_proxy::<ElementManagerMarker>()
+                        .context("Failed to create ElementManagerProxy")?;
+                {
+                    let state = self.state.lock().await;
+                    let session_exposed_dir_channel = state
+                        .session_exposed_dir_channel
+                        .as_ref()
+                        .context(
+                        "Failed to connect to ElementManagerProxy because no session was started",
+                    )?;
+                    fdio::service_connect_at(
+                        session_exposed_dir_channel,
+                        "fuchsia.session.ElementManager",
+                        server_end.into_channel(),
+                    )
+                    .context("Failed to connect to ElementManager service")?;
+                }
+                SessionManager::handle_element_manager_request_stream(
+                    request_stream,
+                    element_manager_proxy,
+                )
+                .await
+                .context("Element Manager request stream got an error.")?;
+            }
+            IncomingRequest::Launcher(request_stream) => {
+                self.handle_launcher_request_stream(request_stream)
+                    .await
+                    .context("Session Launcher request stream got an error.")?;
+            }
+            IncomingRequest::Restarter(request_stream) => {
+                self.handle_restarter_request_stream(request_stream)
+                    .await
+                    .context("Session Restarter request stream got an error.")?;
+            }
+            IncomingRequest::InputDeviceRegistry(request_stream) => {
+                // Connect to InputDeviceRegistry served by the session.
+                let (input_device_registry_proxy, server_end) =
+                    fidl::endpoints::create_proxy::<InputDeviceRegistryMarker>()
+                        .context("Failed to create InputDeviceRegistryProxy")?;
+                {
+                    let state = self.state.lock().await;
+                    let session_exposed_dir_channel = state.session_exposed_dir_channel.as_ref()
+                        .context("Failed to connect to InputDeviceRegistryProxy because no session was started")?;
+                    fdio::service_connect_at(
+                        session_exposed_dir_channel,
+                        "fuchsia.input.injection.InputDeviceRegistry",
+                        server_end.into_channel(),
+                    )
+                    .context("Failed to connect to InputDeviceRegistry service")?;
+                }
+
+                SessionManager::handle_input_device_registry_request_stream(
+                    request_stream,
+                    input_device_registry_proxy,
+                )
+                .await
+                .context("Input device registry request stream got an error.")?;
+            }
+            IncomingRequest::Startup(request_stream) => {
+                self.handle_startup_request_stream(request_stream)
+                    .await
+                    .context("Sessionmanager Startup request stream got an error.")?;
+            }
+            IncomingRequest::AccessibilityViewRegistry(request_stream) => {
+                // Connect to AccessibilityViewRegistry served by the session.
+                let (accessibility_view_registry_proxy, server_end) =
+                    fidl::endpoints::create_proxy::<RegistryMarker>()
+                        .context("Failed to create AccessibilityViewRegistryProxy")?;
+                {
+                    let state = self.state.lock().await;
+                    let session_exposed_dir_channel = state.session_exposed_dir_channel.as_ref()
+                        .context("Failed to connect to AccessibilityViewRegistryProxy because no session was started")?;
+                    fdio::service_connect_at(
+                        session_exposed_dir_channel,
+                        "fuchsia.ui.accessibility.view.Registry",
+                        server_end.into_channel(),
+                    )
+                    .context("Failed to connect to AccessibilityViewRegistry service")?;
+                }
+
+                SessionManager::handle_accessibility_view_registry_request_stream(
+                    request_stream,
+                    accessibility_view_registry_proxy,
+                )
+                .await
+                .context("Accessibility view registry request stream got an error.")?;
             }
         }
 
