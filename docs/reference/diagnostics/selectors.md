@@ -234,5 +234,5 @@ root/realm1/echo.cmx:a/b/c/d:*
 [datatype-fidl]: reference/fidl/fuchsia.diagnostics#DataType
 [detect]: /src/diagnostics/config/triage/detect
 [moniker]: /docs/concepts/components/v2/monikers.md
-[topology-example-png]: selectors-example.png
+[topology-example-img]: selectors-example.png
 [triage]: /src/diagnostics/config/triage
