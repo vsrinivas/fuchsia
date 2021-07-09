@@ -21,8 +21,8 @@ pub async fn debug_bind(
     service: DriverDevelopmentProxy,
     cmd: DriverDebugBindCommand,
 ) -> Result<()> {
-    let bind_rules_result = service
-        .get_bind_rules(&cmd.driver_path)
+    let driver_info = service
+        .get_driver_info(&mut [cmd.driver_path].iter().map(String::as_str))
         .await
         .map_err(|err| format_err!("FIDL call to get bind rules failed: {}", err))?
         .map_err(|err| {
@@ -32,15 +32,23 @@ pub async fn debug_bind(
             )
         })?;
 
-    let bind_rules = match bind_rules_result {
-        BindRulesBytecode::BytecodeV1(rules) => rules,
-        BindRulesBytecode::BytecodeV2(_) => {
-            return Err(format_err!("Currently the debugger only supports the old bytecode"));
-        }
-    };
+    if driver_info.len() != 1 {
+        return Err(format_err!(
+            "Unexpected number of results from get_driver_info: {:?}",
+            driver_info
+        ));
+    }
 
-    let device_properties = service
-        .get_device_properties(&cmd.device_path)
+    let bind_rules =
+        match driver_info[0].bind_rules.as_ref().ok_or(format_err!("missing bind rules"))? {
+            BindRulesBytecode::BytecodeV1(rules) => rules,
+            BindRulesBytecode::BytecodeV2(_) => {
+                return Err(format_err!("Currently the debugger only supports the old bytecode"));
+            }
+        };
+
+    let mut device_info = service
+        .get_device_info(&mut [cmd.device_path].iter().map(String::as_str))
         .await
         .map_err(|err| format_err!("FIDL call to get device properties failed: {}", err))?
         .map_err(|err| {
@@ -50,12 +58,22 @@ pub async fn debug_bind(
             )
         })?;
 
+    if device_info.len() != 1 {
+        return Err(format_err!(
+            "Unexpected number of results from get_device_info: {:?}",
+            device_info
+        ));
+    }
+
     let raw_instructions = bind_rules
         .into_iter()
         .map(|instruction| RawInstruction([instruction.op, instruction.arg, instruction.debug]))
         .collect::<Vec<RawInstruction<[u32; 3]>>>();
 
-    let device_properties = device_properties
+    let device_properties = device_info
+        .remove(0)
+        .property_list
+        .ok_or(format_err!("missing property_list"))?
         .props
         .into_iter()
         .map(DeviceProperty::from)

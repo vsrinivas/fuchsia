@@ -388,13 +388,18 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   zx_status_t MatchDeviceToDriver(const fbl::RefPtr<Device>& dev, const Driver* driver,
                                   bool autobind);
 
+  zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> GetDriverInfo(
+      fidl::AnyAllocator& allocator, const std::vector<const Driver*>& drivers);
+  zx::status<std::vector<fuchsia_driver_development::wire::DeviceInfo>> GetDeviceInfo(
+      fidl::AnyAllocator& allocator, const std::vector<fbl::RefPtr<Device>>& devices);
+
   // fuchsia.driver.development/DriverDevelopment interface
   void RestartDriverHosts(RestartDriverHostsRequestView request,
                           RestartDriverHostsCompleter::Sync& completer) override;
-  void GetBindRules(GetBindRulesRequestView request,
-                    GetBindRulesCompleter::Sync& completer) override;
-  void GetDeviceProperties(GetDevicePropertiesRequestView request,
-                           GetDevicePropertiesCompleter::Sync& completer) override;
+  void GetDriverInfo(GetDriverInfoRequestView request,
+                     GetDriverInfoCompleter::Sync& completer) override;
+  void GetDeviceInfo(GetDeviceInfoRequestView request,
+                     GetDeviceInfoCompleter::Sync& completer) override;
 
   // Driver registrar interface
   void Register(RegisterRequestView request, RegisterCompleter::Sync& completer) override;

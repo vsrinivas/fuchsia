@@ -5,6 +5,7 @@ deprecated_syntax;
 library fuchsia.driver.development;
 
 using fuchsia.device.manager;
+using fuchsia.url;
 using zx;
 
 union BindRulesBytecode {
@@ -15,27 +16,113 @@ union BindRulesBytecode {
     2: vector<uint8>:MAX bytecode_v2;
 };
 
+table DriverInfo {
+    /// Path to the driver shared library.
+    1: string:fuchsia.device.manager.DEVICE_PATH_MAX libname;
+
+    /// Name of the driver, taken from the first field of the `ZIRCON_DRIVER`
+    /// macro in the driver.
+    2: string:MAX name;
+
+    /// URL of the driver component's manifest. This will only be populated if
+    /// the driver is a component.
+    3: string:fuchsia.url.MAX_URL_LENGTH url;
+
+    /// Bind rules which declare set of constraints to evaluate in order to
+    /// determine whether the driver indexer should bind this driver to a
+    /// device.
+    4: BindRulesBytecode bind_rules;
+};
+
+bits DeviceFlags : uint32 {
+    //// This device is never destroyed
+    IMMORTAL = 0x0001;
+    /// This device requires that children are created in a
+    /// new driver_host attached to a proxy device
+    MUST_ISOLATE = 0x0002;
+
+    /// This device may be bound multiple times
+    MULTI_BIND = 0x0004;
+
+    /// This device is bound and not eligible for binding
+    /// again until unbound.  Not allowed on MULTI_BIND ctx.
+    BOUND = 0x0008;
+
+    /// Device has been remove()'d
+    DEAD = 0x0010;
+
+    /// This device is a fragment of a composite device and
+    /// can be part of multiple composite devices.
+    ALLOW_MULTI_COMPOSITE = 0x0020;
+
+    /// Device is a proxy -- its "parent" is the device it's
+    /// a proxy to.
+    PROXY = 0x0040;
+
+    /// Device is not visible in devfs or bindable.
+    /// Devices may be created in this state, but may not
+    /// return to this state once made visible.
+    INVISIBLE = 0x0080;
+
+    /// Device should not go through auto-bind process.
+    SKIP_AUTOBIND = 0x0100;
+};
+
+table DeviceInfo {
+    /// Unique ID identifying the device.
+    1: uint64 id;
+
+    /// List of ids representing parents. If more than one, this device is a
+    /// composite device node.
+    2: vector<uint64>:MAX parent_ids;
+
+    /// List of ids representing children.
+    3: vector<uint64>:MAX child_ids;
+
+    /// The process KOID of the driver host the driver resides within.
+    4: zx.koid driver_host_koid;
+
+    /// The topological path of the driver. Once drivers are components, this
+    /// will also be the collection relative moniker.
+    5: string:fuchsia.device.manager.DEVICE_PATH_MAX topological_path;
+
+    /// Path to the driver shared library.
+    6: string:fuchsia.device.manager.DEVICE_PATH_MAX bound_driver_libname;
+
+    7: string:fuchsia.url.MAX_URL_LENGTH bound_driver_url;
+
+    8: fuchsia.device.manager.DevicePropertyList property_list;
+
+    9: DeviceFlags flags;
+};
+
 /// Interface for developing and debugging drivers.
 /// This interface should only be used for development and disabled in release builds.
 [Discoverable]
 protocol DriverDevelopment {
     /// Restart all Driver Hosts containing the driver specified by `driver path`.
     /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path.
-    RestartDriverHosts(string:fuchsia.device.manager.DEVICE_PATH_MAX driver_path) -> () error zx.status;
+    RestartDriverHosts(string:fuchsia.device.manager.DEVICE_PATH_MAX driver_path)
+        -> () error zx.status;
 
-    /// Returns the bind program of the given driver.
-    /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path.
+    /// Returns a list of all drivers that are known to the system.
+    /// If a |driver_filter| is provided, the returned list will be filtered to
+    /// only include drivers specified in the filter.
+    /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path for at least
+    /// one driver in |driver_filter|.
     /// ZX_ERR_BUFFER_TOO_SMALL indicates that the driver's bind program is longer than the
     /// maximum number of instructions (BIND_PROGRAM_INSTRUCTIONS_MAX).
-    GetBindRules(string:fuchsia.device.manager.DEVICE_PATH_MAX driver_path)
-        -> (BindRulesBytecode bind_rules)
-        error zx.status;
+    GetDriverInfo(vector<string:MAX>:MAX driver_filter)
+        -> (vector<DriverInfo>:MAX drivers) error zx.status;
 
-    /// Returns the list of properties of the given device.
-    /// ZX_ERR_NOT_FOUND indicates that there is no device matching the given path.
+    /// Returns the list of devices that are running on the system.
+    /// If a |device_filter| is provided, the returned list will be filtered to
+    /// only include devices specified in the filter.
+    /// ZX_ERR_NOT_FOUND indicates that there is no device matching the given path for at least one
+    /// device in |device_filter|.
     /// ZX_ERR_BAD_PATH indicates that the given path is not valid.
     /// ZX_ERR_BUFFER_TOO_SMALL indicates either that the given path is too long,
     /// or that the device has more than the maximum number of properties (PROPERTIES_MAX).
-    GetDeviceProperties(string:fuchsia.device.manager.DEVICE_PATH_MAX device_path)
-        -> (fuchsia.device.manager.DevicePropertyList property_list) error zx.status;
+    GetDeviceInfo(vector<string:MAX>:MAX device_filter)
+        -> (vector<DeviceInfo>:MAX devices) error zx.status;
 };
