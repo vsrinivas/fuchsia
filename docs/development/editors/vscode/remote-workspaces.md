@@ -35,7 +35,7 @@ Extension in VS Code:
 1. Paste the following command in the text prompt and press enter:
 
    ```posix-terminal
-   ext install ms-vscode-remote.remote-ssh-edit
+   ext install ms-vscode-remote.remote-ssh
    ```
 
 ## Connect to remote workspace {#connect-to-remote-workspace}
