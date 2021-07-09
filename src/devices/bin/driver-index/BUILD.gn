@@ -13,6 +13,10 @@ group("driver-index") {
   deps = [ ":package" ]
 }
 
+group("bootfs") {
+  deps = [ ":component" ]
+}
+
 group("tests") {
   testonly = true
   deps = [ ":driver-index-unittests" ]
@@ -20,6 +24,14 @@ group("tests") {
 
 rustc_binary("bin") {
   output_name = "driver_index"
+  force_opt = "z"
+
+  # Driver Index must always be small (even in debug builds) since it
+  # is part of the Zircon boot image.
+  configs += [ "//build/config/lto:thinlto" ]
+  configs -= [ "//build/config/lto:thinlto" ]
+  configs += [ "//build/config/lto:thinlto" ]
+  configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 
   # Generates a GN target for unit-tests with the label `bin_test`, and
   # a binary named `driver_index_bin_test`.
@@ -42,7 +54,7 @@ rustc_binary("bin") {
     "//src/sys/lib/cm_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",  # for recording messages
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:url",

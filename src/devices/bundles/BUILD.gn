@@ -87,6 +87,7 @@ group("bootstrap-dev") {
 # products.
 group("bootstrap-bin") {
   deps = [
+    "//src/devices/bin/driver-index:bootfs",
     "//src/devices/bin/driver_host",
     "//src/devices/bin/driver_manager:bootfs",
   ]
