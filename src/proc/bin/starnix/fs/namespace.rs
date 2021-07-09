@@ -44,12 +44,12 @@ impl Namespace {
 /// At a mount, path traversal switches from one filesystem to another.
 /// The client sees a composed directory structure that glues together the
 /// directories from the underlying FsNodes from those filesystems.
-pub struct Mount {
+struct Mount {
     namespace: Weak<Namespace>,
     mountpoint: Option<(Weak<Mount>, FsNodeHandle)>,
     root: FsNodeHandle,
 }
-pub type MountHandle = Arc<Mount>;
+type MountHandle = Arc<Mount>;
 
 impl Mount {
     pub fn root(self: &MountHandle) -> NamespaceNode {
@@ -218,7 +218,7 @@ impl Hash for NamespaceNode {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::fs::tmp::new_tmpfs;
+    use crate::fs::tmpfs::new_tmpfs;
 
     #[test]
     fn test_namespace() -> anyhow::Result<()> {

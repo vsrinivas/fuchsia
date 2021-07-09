@@ -16,7 +16,6 @@ pub use remote::*;
 pub use syslog::*;
 
 /// Create a FileHandle from a zx::Handle.
-#[allow(dead_code)] // Will be used by process initialization later.
 pub fn create_file_from_handle(
     kern: &Kernel,
     handle: zx::Handle,

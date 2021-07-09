@@ -31,6 +31,7 @@ use std::mem;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
+use crate::fs::fuchsia::{create_file_from_handle, new_remote_filesystem};
 use crate::fs::*;
 use crate::signals::signal_handling::*;
 use crate::strace;

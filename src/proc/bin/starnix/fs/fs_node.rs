@@ -259,7 +259,7 @@ mod test {
     use super::*;
 
     use crate::devices::*;
-    use crate::fs::tmp::TmpfsDirectory;
+    use crate::fs::tmpfs::TmpfsDirectory;
 
     #[test]
     fn test_tmpfs() {

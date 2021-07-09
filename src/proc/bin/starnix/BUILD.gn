@@ -19,7 +19,6 @@ if (target_cpu == "x64") {
 
     source_root = "main.rs"
     deps = [
-      ":starnix_macros",
       "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
       "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
       "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -65,9 +64,12 @@ if (target_cpu == "x64") {
       "devices/device_registry.rs",
       "devices/mod.rs",
       "fs/anon_node.rs",
-      "fs/fd.rs",
       "fs/fd_events.rs",
-      "fs/file_system.rs",
+      "fs/fd_number.rs",
+      "fs/fd_table.rs",
+      "fs/file_object.rs",
+      "fs/fs_context.rs",
+      "fs/fs_node.rs",
       "fs/fuchsia/mod.rs",
       "fs/fuchsia/pipe.rs",
       "fs/fuchsia/remote.rs",
@@ -77,8 +79,7 @@ if (target_cpu == "x64") {
       "fs/observer_list.rs",
       "fs/pipe.rs",
       "fs/syscalls.rs",
-      "fs/tmp.rs",
-      "fs/tree.rs",
+      "fs/tmpfs.rs",
       "loader.rs",
       "logging.rs",
       "main.rs",
@@ -97,12 +98,18 @@ if (target_cpu == "x64") {
       "syscalls/syscall_result.rs",
       "syscalls/system.rs",
       "syscalls/table.rs",
+      "task/kernel.rs",
       "task/mod.rs",
+      "task/pid_table.rs",
+      "task/scheduler.rs",
       "task/syscalls.rs",
+      "task/task.rs",
+      "task/thread_group.rs",
       "task/waiter.rs",
       "testing.rs",
       "types/errno.rs",
       "types/mod.rs",
+      "types/open_flags.rs",
       "types/uapi.rs",
       "types/user_address.rs",
       "types/user_buffer.rs",
@@ -128,16 +135,6 @@ if (target_cpu == "x64") {
       "//src/proc/tests/hello_starnix:bin",
     ]
   }
-}
-
-rustc_macro("starnix_macros") {
-  deps = [
-    "//third_party/rust_crates:proc-macro2",
-    "//third_party/rust_crates:quote",
-    "//third_party/rust_crates:syn",
-  ]
-  source_root = "macro.rs"
-  sources = [ "macro.rs" ]
 }
 
 fuchsia_component("starnix_manager") {

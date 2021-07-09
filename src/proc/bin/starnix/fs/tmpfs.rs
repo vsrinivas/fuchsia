@@ -24,8 +24,7 @@ impl FsNodeOps for TmpfsDirectory {
         Err(ENOSYS)
     }
     fn create(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
-        let file = TmpfsFileNode::new()?;
-        Ok(Box::new(file))
+        Ok(Box::new(TmpfsFileNode::new()?))
     }
 }
 

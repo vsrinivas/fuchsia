@@ -9,6 +9,7 @@ use std::ffi::CString;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
+use crate::fs::fuchsia::new_remote_filesystem;
 use crate::fs::*;
 use crate::mm::syscalls::sys_mmap;
 use crate::syscalls::SyscallContext;

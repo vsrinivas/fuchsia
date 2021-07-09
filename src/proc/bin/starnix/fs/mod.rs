@@ -3,23 +3,26 @@
 // found in the LICENSE file.
 
 mod anon_node;
-mod fd;
 mod fd_events;
-mod file_system;
-mod fuchsia;
+mod fd_number;
+mod fd_table;
+mod file_object;
+mod fs_context;
+mod fs_node;
 mod namespace;
 mod observer_list;
-mod tree;
 
-pub use self::fuchsia::*;
 pub use anon_node::*;
-pub use fd::*;
 pub use fd_events::*;
-pub use file_system::*;
+pub use fd_number::*;
+pub use fd_table::*;
+pub use file_object::*;
+pub use fs_context::*;
+pub use fs_node::*;
 pub use namespace::*;
 pub use observer_list::*;
-pub use tree::*;
 
+pub mod fuchsia;
 pub mod pipe;
 pub mod syscalls;
-pub mod tmp;
+pub mod tmpfs;

@@ -10,9 +10,9 @@ use crate::mm::*;
 use crate::not_implemented;
 use crate::runner::*;
 use crate::signals::signal_handling::send_signal;
+use crate::signals::UncheckedSignal;
 use crate::strace;
 use crate::syscalls::*;
-use crate::task::UncheckedSignal;
 use crate::types::*;
 
 pub fn sys_clone(
