@@ -99,7 +99,7 @@ impl EventListener for EventProxy {
 }
 
 pub enum ViewMessages {
-    AddTerminalMessage(u32, Terminal<EventProxy>),
+    AddTerminalMessage(u32, Terminal<EventProxy>, bool),
     RequestTerminalUpdateMessage(u32),
 }
 
@@ -242,7 +242,9 @@ impl VirtualConsoleViewAssistant {
 
         fasync::Task::local(async move {
             for pty_fd in &pty_fds {
-                Pty::set_window_size(pty_fd, window_size).await.expect("failed to set window size");
+                if let Some(fd) = pty_fd {
+                    Pty::set_window_size(fd, window_size).await.expect("failed to set window size");
+                }
             }
         })
         .detach();
@@ -641,7 +643,7 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
     fn handle_message(&mut self, message: carnelian::Message) {
         if let Some(message) = message.downcast_ref::<ViewMessages>() {
             match message {
-                ViewMessages::AddTerminalMessage(id, terminal) => {
+                ViewMessages::AddTerminalMessage(id, terminal, make_active) => {
                     let terminal = terminal.try_clone().expect("failed to clone terminal");
                     let updated = false;
                     self.terminals.insert(*id, (terminal, updated));
@@ -651,16 +653,19 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                         self.scene_details = None;
                         self.app_context.request_render(self.view_key);
                     }
+                    if *make_active {
+                        self.set_active_terminal(*id);
+                    }
                 }
                 ViewMessages::RequestTerminalUpdateMessage(id) => {
-                    if self.animation.is_none() {
-                        if let Some((_, updated)) = self.terminals.get_mut(id) {
-                            if *id == self.active_terminal_id {
+                    if let Some((_, updated)) = self.terminals.get_mut(id) {
+                        if *id == self.active_terminal_id {
+                            if self.animation.is_none() {
                                 self.app_context.request_render(self.view_key);
-                            } else if !*updated {
-                                *updated = true;
-                                self.update_status();
                             }
+                        } else if !*updated {
+                            *updated = true;
+                            self.update_status();
                         }
                     }
                 }

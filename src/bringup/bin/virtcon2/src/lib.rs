@@ -7,6 +7,7 @@
 mod app;
 mod args;
 mod colors;
+mod log;
 mod session_manager;
 mod terminal;
 mod text_grid;

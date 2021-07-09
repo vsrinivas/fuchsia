@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{anyhow, Error},
     carnelian::{App, AppAssistantPtr},
-    fidl_fuchsia_boot::ArgumentsMarker,
+    fidl_fuchsia_boot::{ArgumentsMarker, ReadOnlyLogMarker},
     fuchsia_async::LocalExecutor,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_trace_provider,
@@ -22,7 +22,7 @@ fn main() -> Result<(), Error> {
         // Connect to boot arguments service.
         let boot_args = connect_to_protocol::<ArgumentsMarker>()?;
 
-        // Get boot argument.
+        // Get boot arguments.
         VirtualConsoleArgs::new_with_proxy(boot_args).await
     };
 
@@ -39,9 +39,29 @@ fn main() -> Result<(), Error> {
 
     println!("vc: started with args {:?}", args);
 
+    let get_read_only_debuglog = async {
+        // Connect to read only log service.
+        let read_only_log = connect_to_protocol::<ReadOnlyLogMarker>()?;
+
+        // Request debuglog object.
+        read_only_log
+            .get()
+            .await
+            .map_err(|e| anyhow!("fidl error when requesting read only log: {:?}", e))
+    };
+
+    let read_only_debuglog = {
+        let mut executor = LocalExecutor::new().expect("Failed to create executor");
+        executor.run_singlethreaded(get_read_only_debuglog)?
+    };
+
     App::run(Box::new(|app_context| {
         let f = async move {
-            let assistant = Box::new(VirtualConsoleAppAssistant::new(app_context, args)?);
+            let assistant = Box::new(VirtualConsoleAppAssistant::new(
+                app_context,
+                args,
+                Some(read_only_debuglog),
+            )?);
             Ok::<AppAssistantPtr, Error>(assistant)
         };
         Box::pin(f)

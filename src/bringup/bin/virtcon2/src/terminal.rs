@@ -8,6 +8,7 @@ use {
     carnelian::{color::Color, Size},
     std::{cell::RefCell, convert::From, fs::File, io::prelude::*, rc::Rc},
     term_model::{
+        ansi::CursorStyle,
         clipboard::Clipboard,
         config::Config,
         event::EventListener,
@@ -38,12 +39,18 @@ impl From<ColorScheme> for TerminalConfig {
 /// Wrapper around a term model instance and its associated PTY fd.
 pub struct Terminal<T> {
     term: Rc<RefCell<Term<T>>>,
-    pty_fd: File,
     title: String,
+    pty_fd: Option<File>,
 }
 
 impl<T> Terminal<T> {
-    pub fn new(event_listener: T, pty_fd: File, title: String, color_scheme: ColorScheme) -> Self {
+    pub fn new(
+        event_listener: T,
+        title: String,
+        show_cursor: bool,
+        color_scheme: ColorScheme,
+        pty_fd: Option<File>,
+    ) -> Self {
         // Initial size info used before we know what the real size is.
         let cell_size = Size::new(8.0, 16.0);
         let size_info = SizeInfo {
@@ -55,24 +62,27 @@ impl<T> Terminal<T> {
             padding_y: 0.0,
             dpr: 1.0,
         };
-        let config = color_scheme.into();
+        let mut config: TerminalConfig = color_scheme.into();
+        if !show_cursor {
+            config.cursor.style = CursorStyle::Hidden;
+        }
         let term =
             Rc::new(RefCell::new(Term::new(&config, &size_info, Clipboard::new(), event_listener)));
 
-        Self { term: Rc::clone(&term), pty_fd, title }
+        Self { term: Rc::clone(&term), title, pty_fd }
     }
 
     #[cfg(test)]
     fn new_for_test(event_listener: T, pty_fd: File) -> Self {
-        Self::new(event_listener, pty_fd, String::new(), ColorScheme::default())
+        Self::new(event_listener, String::new(), false, ColorScheme::default(), Some(pty_fd))
     }
 
     pub fn clone_term(&self) -> Rc<RefCell<Term<T>>> {
         Rc::clone(&self.term)
     }
 
-    pub fn try_clone_pty_fd(&self) -> Result<File, Error> {
-        let fd = self.pty_fd.try_clone()?;
+    pub fn try_clone_pty_fd(&self) -> Result<Option<File>, Error> {
+        let fd = if let Some(fd) = &self.pty_fd { Some(fd.try_clone()?) } else { None };
         Ok(fd)
     }
 
@@ -80,7 +90,7 @@ impl<T> Terminal<T> {
         let pty_fd = self.try_clone_pty_fd()?;
         let term = self.clone_term();
         let title = self.title.clone();
-        Ok(Self { term, pty_fd, title })
+        Ok(Self { term, title, pty_fd })
     }
 
     pub fn resize(&mut self, size_info: &SizeInfo) {
@@ -103,11 +113,19 @@ impl<T> Terminal<T> {
 
 impl<T> Write for Terminal<T> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, std::io::Error> {
-        self.pty_fd.write(buf)
+        if let Some(fd) = &mut self.pty_fd {
+            fd.write(buf)
+        } else {
+            Ok(buf.len())
+        }
     }
 
     fn flush(&mut self) -> Result<(), std::io::Error> {
-        self.pty_fd.flush()
+        if let Some(fd) = &mut self.pty_fd {
+            fd.flush()
+        } else {
+            Ok(())
+        }
     }
 }
 

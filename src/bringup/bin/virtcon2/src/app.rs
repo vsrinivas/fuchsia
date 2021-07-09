@@ -5,6 +5,7 @@
 use {
     crate::args::VirtualConsoleArgs,
     crate::colors::ColorScheme,
+    crate::log::{Log, LogClient},
     crate::session_manager::{SessionManager, SessionManagerClient},
     crate::terminal::Terminal,
     crate::view::{EventProxy, ViewMessages, VirtualConsoleViewAssistant},
@@ -14,34 +15,35 @@ use {
     },
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_virtualconsole::SessionManagerMarker,
-    fuchsia_async as fasync,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     std::fs::File,
 };
 
-const FIRST_SESSION_ID: u32 = 0;
+const DEBUGLOG_ID: u32 = 0;
+const FIRST_SESSION_ID: u32 = 1;
 
 #[derive(Clone)]
-struct VirtualConsoleSessionManagerClient {
+struct VirtualConsoleClient {
     app_context: AppContext,
     view_key: ViewKey,
     color_scheme: ColorScheme,
 }
 
-impl SessionManagerClient for VirtualConsoleSessionManagerClient {
-    type Listener = EventProxy;
-
+impl VirtualConsoleClient {
     fn create_terminal(
         &self,
         id: u32,
-        pty_fd: File,
         title: String,
-    ) -> Result<Terminal<Self::Listener>, Error> {
+        show_cursor: bool,
+        make_active: bool,
+        pty_fd: Option<File>,
+    ) -> Result<Terminal<EventProxy>, Error> {
         let event_proxy = EventProxy::new(&self.app_context, self.view_key, id);
-        let terminal = Terminal::new(event_proxy, pty_fd, title, self.color_scheme);
+        let terminal = Terminal::new(event_proxy, title, show_cursor, self.color_scheme, pty_fd);
         let terminal_clone = terminal.try_clone()?;
         self.app_context.queue_message(
             self.view_key,
-            make_message(ViewMessages::AddTerminalMessage(id, terminal_clone)),
+            make_message(ViewMessages::AddTerminalMessage(id, terminal_clone, make_active)),
         );
         Ok(terminal)
     }
@@ -54,10 +56,54 @@ impl SessionManagerClient for VirtualConsoleSessionManagerClient {
     }
 }
 
+impl LogClient for VirtualConsoleClient {
+    type Listener = EventProxy;
+
+    fn create_terminal(
+        &self,
+        id: u32,
+        title: String,
+        show_cursor: bool,
+    ) -> Result<Terminal<Self::Listener>, Error> {
+        VirtualConsoleClient::create_terminal(self, id, title, show_cursor, false, None)
+    }
+
+    fn request_update(&self, id: u32) {
+        VirtualConsoleClient::request_update(self, id)
+    }
+}
+
+impl SessionManagerClient for VirtualConsoleClient {
+    type Listener = EventProxy;
+
+    fn create_terminal(
+        &self,
+        id: u32,
+        title: String,
+        show_cursor: bool,
+        make_active: bool,
+        pty_fd: File,
+    ) -> Result<Terminal<Self::Listener>, Error> {
+        VirtualConsoleClient::create_terminal(
+            self,
+            id,
+            title,
+            show_cursor,
+            make_active,
+            Some(pty_fd),
+        )
+    }
+
+    fn request_update(&self, id: u32) {
+        VirtualConsoleClient::request_update(self, id)
+    }
+}
+
 pub struct VirtualConsoleAppAssistant {
     app_context: AppContext,
     view_key: ViewKey,
     args: VirtualConsoleArgs,
+    read_only_debuglog: Option<zx::DebugLog>,
     session_manager: SessionManager,
 }
 
@@ -65,17 +111,35 @@ impl VirtualConsoleAppAssistant {
     pub fn new(
         app_context: &AppContext,
         args: VirtualConsoleArgs,
+        read_only_debuglog: Option<zx::DebugLog>,
     ) -> Result<VirtualConsoleAppAssistant, Error> {
         let app_context = app_context.clone();
-        let session_manager = SessionManager::new(FIRST_SESSION_ID);
+        let session_manager = SessionManager::new(args.keep_log_visible, FIRST_SESSION_ID);
 
-        Ok(VirtualConsoleAppAssistant { app_context, view_key: 0, args, session_manager })
+        Ok(VirtualConsoleAppAssistant {
+            app_context,
+            view_key: 0,
+            args,
+            read_only_debuglog,
+            session_manager,
+        })
+    }
+
+    fn start_log(&self, read_only_debuglog: zx::DebugLog) -> Result<(), Error> {
+        let app_context = self.app_context.clone();
+        let view_key = self.view_key;
+        if self.view_key == 0 {
+            panic!("Trying to start debuglog without a view.");
+        }
+        let color_scheme = self.args.color_scheme;
+        let client = VirtualConsoleClient { app_context, view_key, color_scheme };
+        Log::start(read_only_debuglog, &client, DEBUGLOG_ID)
     }
 
     #[cfg(test)]
     fn new_for_test() -> Result<VirtualConsoleAppAssistant, Error> {
         let app_context = AppContext::new_for_testing_purposes_only();
-        Self::new(&app_context, VirtualConsoleArgs::default())
+        Self::new(&app_context, VirtualConsoleArgs::default(), None)
     }
 }
 
@@ -95,6 +159,12 @@ impl AppAssistant for VirtualConsoleAppAssistant {
             self.args.boot_animation,
         )?;
         self.view_key = view_key;
+
+        // Start debuglog now that we have a view that it can be associated with.
+        if let Some(read_only_debuglog) = self.read_only_debuglog.take() {
+            self.start_log(read_only_debuglog).expect("failed to start debuglog");
+        }
+
         Ok(view_assistant)
     }
 
@@ -117,7 +187,7 @@ impl AppAssistant for VirtualConsoleAppAssistant {
             panic!("Trying to service session manager connection without a view.");
         }
         let color_scheme = self.args.color_scheme;
-        let client = VirtualConsoleSessionManagerClient { app_context, view_key, color_scheme };
+        let client = VirtualConsoleClient { app_context, view_key, color_scheme };
         self.session_manager.bind(&client, channel);
         Ok(())
     }
