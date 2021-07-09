@@ -113,11 +113,11 @@ rustc_test("triage_lib_test") {
 
   deps = lib_deps + [
            ":triage_app_lib",
-
-           # we need to take a dependency on our bin because our integration tests invoke it
-           ":triage_bin",
            ":test_data",
          ]
+
+  # we need to take a dependency on our bin because our integration tests invoke it
+  data_deps = [ ":triage_bin" ]
 
   sources = [
     "src/app.rs",
