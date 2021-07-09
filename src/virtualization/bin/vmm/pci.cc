@@ -582,6 +582,14 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
 }
 
 zx_status_t PciDevice::ReadConfig(uint64_t reg, IoValue* value) const {
+  // Ensure address / size are naturally aligned.
+  if (reg % value->access_size != 0) {
+    FX_LOGS(WARNING) << "Guest attempted unaligned read from PCI configuration space. Device: \""
+                     << attrs_.name << "\", config register: " << std::hex << reg
+                     << ", access size: " << static_cast<uint32_t>(value->access_size);
+    return ZX_ERR_IO;
+  }
+
   // Perform 4-byte aligned read and then shift + mask the result to get the
   // expected value.
   uint32_t word = 0;
@@ -600,6 +608,14 @@ zx_status_t PciDevice::ReadConfig(uint64_t reg, IoValue* value) const {
 }
 
 zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
+  // Ensure address / size are naturally aligned.
+  if (reg % value.access_size != 0) {
+    FX_LOGS(ERROR) << "Guest attempted unaligned write to PCI configuration space. Device: \""
+                   << attrs_.name << "\", config register: " << std::hex << reg
+                   << ", access size: " << static_cast<uint32_t>(value.access_size);
+    return ZX_ERR_IO;
+  }
+
   switch (reg) {
     case PCI_CONFIG_COMMAND: {
       if (value.access_size != 2) {

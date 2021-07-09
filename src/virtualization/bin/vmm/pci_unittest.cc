@@ -80,6 +80,21 @@ TEST(PciDeviceTest, ReadConfigRegisterBytewise) {
   }
 }
 
+// Test unaligned reads are reported as errors.
+TEST(PciDeviceTest, ReadConfigRegisterUnaligned) {
+  Guest guest;
+  PciBus bus(&guest, nullptr);
+  bus.Init(async_get_default_dispatcher());
+  PciDevice* device = bus.root_complex();
+
+  // Attempt to read 16-bits with an offset of 1.
+  IoValue value = IoValue::FromU16(0);
+  EXPECT_EQ(device->ReadConfig(/*reg=*/0x1, &value), ZX_ERR_IO);
+
+  // Attempt to write 32-bits with an offset of 2.
+  EXPECT_EQ(device->WriteConfig(/*reg=*/0x2, IoValue::FromU32(0)), ZX_ERR_IO);
+}
+
 // PCI devices BAR sizes must be a power of 2 and must not support setting any
 // bits in the BAR that are not size aligned. Software often relies on this to
 // read the bar size by writing all 1's to the register and reading back the
