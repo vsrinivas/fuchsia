@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Result},
-    cs::{io::Directory, v2::V2Component, Only, Subcommand},
+    cs::{io::Directory, list::Component, Only},
     errors::ffx_error,
     ffx_component::COMPONENT_LIST_HELP,
     ffx_component_list_args::ComponentListCommand,
@@ -31,15 +31,17 @@ async fn list_impl(
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
-    let component = V2Component::explore(hub_dir, Subcommand::List).await;
+
+    let component = Component::parse(".".to_string(), hub_dir).await;
+
     if let Some(only) = only {
         let only = Only::from_string(&only).map_err(|e| {
             ffx_error!("Invalid argument '{}' for '--only': {}\n{}", only, e, COMPONENT_LIST_HELP)
         })?;
-        component.print_tree(only, verbose);
+        component.print(&only, verbose, 0);
     } else {
         // Default option is printing all components
-        component.print_tree(Only::All, verbose);
+        component.print(&Only::All, verbose, 0);
     }
     Ok(())
 }
