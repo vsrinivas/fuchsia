@@ -23,6 +23,7 @@
 #include <lib/fidl/coding.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/job.h>
@@ -67,6 +68,7 @@ namespace {
 namespace fdd = fuchsia_driver_development;
 namespace fdm = fuchsia_device_manager;
 namespace fdr = fuchsia_driver_registrar;
+namespace fpm = fuchsia_power_manager;
 
 constexpr char kDriverHostPath[] = "bin/driver_host";
 constexpr char kBootFirmwarePath[] = "lib/firmware";
@@ -124,51 +126,43 @@ bool Coordinator::InResume() const {
   return (resume_context().flags() == ResumeContext::Flags::kResume);
 }
 
-zx_status_t Coordinator::RegisterWithPowerManager(zx::channel devfs_handle) {
-  zx::channel system_state_transition_client, system_state_transition_server;
-  zx_status_t status =
-      zx::channel::create(0, &system_state_transition_client, &system_state_transition_server);
-  if (status != ZX_OK) {
-    return status;
+zx_status_t Coordinator::RegisterWithPowerManager(fidl::ClientEnd<fio::Directory> devfs) {
+  auto system_state_endpoints = fidl::CreateEndpoints<fdm::SystemStateTransition>();
+  if (system_state_endpoints.is_error()) {
+    return system_state_endpoints.error_value();
   }
   std::unique_ptr<SystemStateManager> system_state_manager;
-  status = SystemStateManager::Create(dispatcher_, this, std::move(system_state_transition_server),
-                                      &system_state_manager);
+  auto status = SystemStateManager::Create(
+      dispatcher_, this, std::move(system_state_endpoints->server), &system_state_manager);
   if (status != ZX_OK) {
     return status;
   }
   set_system_state_manager(std::move(system_state_manager));
-  zx::channel local, remote;
-  status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
-  }
-  std::string registration_svc =
-      fidl::DiscoverableProtocolDefaultPath<fuchsia_power_manager::DriverManagerRegistration>;
-
-  status = fdio_service_connect(registration_svc.c_str(), remote.release());
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to connect to fuchsia.power.manager: %s", zx_status_get_string(status));
+  auto result = service::Connect<fpm::DriverManagerRegistration>();
+  if (result.is_error()) {
+    LOGF(ERROR, "Failed to connect to fuchsia.power.manager: %s", result.status_string());
+    return result.error_value();
   }
 
-  status = RegisterWithPowerManager(std::move(local), std::move(system_state_transition_client),
-                                    std::move(devfs_handle));
+  status = RegisterWithPowerManager(std::move(*result), std::move(system_state_endpoints->client),
+                                    std::move(devfs));
   if (status == ZX_OK) {
     set_power_manager_registered(true);
   }
   return ZX_OK;
 }
 
-zx_status_t Coordinator::RegisterWithPowerManager(zx::channel power_manager_client_channel,
-                                                  zx::channel system_state_transition_client,
-                                                  zx::channel devfs_handle) {
-  power_manager_client_.Bind(std::move(power_manager_client_channel), dispatcher_);
+zx_status_t Coordinator::RegisterWithPowerManager(
+    fidl::ClientEnd<fpm::DriverManagerRegistration> power_manager,
+    fidl::ClientEnd<fdm::SystemStateTransition> system_state_transition,
+    fidl::ClientEnd<fio::Directory> devfs) {
+  power_manager_client_.Bind(std::move(power_manager), dispatcher_);
   auto result = power_manager_client_->Register(
-      std::move(system_state_transition_client), std::move(devfs_handle),
-      [](fidl::WireResponse<power_manager_fidl::DriverManagerRegistration::Register>* response) {
+      std::move(system_state_transition), std::move(devfs),
+      [](fidl::WireResponse<fpm::DriverManagerRegistration::Register>* response) {
         if (response->result.is_err()) {
-          power_manager_fidl::wire::RegistrationError err = response->result.err();
-          if (err == power_manager_fidl::wire::RegistrationError::kInvalidHandle) {
+          fpm::wire::RegistrationError err = response->result.err();
+          if (err == fpm::wire::RegistrationError::kInvalidHandle) {
             LOGF(ERROR, "Failed to register with power_manager.Invalid handle.\n");
             return;
           }
@@ -2046,7 +2040,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   static_assert(fdm::wire::kSuspendFlagReboot == DEVICE_SUSPEND_FLAG_REBOOT);
   static_assert(fdm::wire::kSuspendFlagPoweroff == DEVICE_SUSPEND_FLAG_POWEROFF);
 
-  const auto admin = [this](zx::channel request) {
+  const auto admin = [this](fidl::ServerEnd<fdm::Administrator> request) {
     fidl::BindServer<fidl::WireServer<fdm::Administrator>>(dispatcher_, std::move(request), this);
     return ZX_OK;
   };
@@ -2056,16 +2050,17 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     return status;
   }
 
-  const auto system_state_manager_register = [this](zx::channel request) {
-    auto status = fidl::BindSingleInFlightOnly<fidl::WireServer<fdm::SystemStateTransition>>(
-        dispatcher_, std::move(request), std::make_unique<SystemStateManager>(this));
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           fidl::DiscoverableProtocolName<fdm::SystemStateTransition>,
-           zx_status_get_string(status));
-    }
-    return status;
-  };
+  const auto system_state_manager_register =
+      [this](fidl::ServerEnd<fdm::SystemStateTransition> request) {
+        auto status = fidl::BindSingleInFlightOnly<fidl::WireServer<fdm::SystemStateTransition>>(
+            dispatcher_, std::move(request), std::make_unique<SystemStateManager>(this));
+        if (status != ZX_OK) {
+          LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
+               fidl::DiscoverableProtocolName<fdm::SystemStateTransition>,
+               zx_status_get_string(status));
+        }
+        return status;
+      };
   status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdm::SystemStateTransition>,
                              fbl::MakeRefCounted<fs::Service>(system_state_manager_register));
   if (status != ZX_OK) {
@@ -2074,7 +2069,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     return status;
   }
 
-  const auto driver_dev = [this](zx::channel request) {
+  const auto driver_dev = [this](fidl::ServerEnd<fdd::DriverDevelopment> request) {
     auto status = fidl::BindSingleInFlightOnly<fidl::WireServer<fdd::DriverDevelopment>>(
         dispatcher_, std::move(request), this);
     if (status != ZX_OK) {
@@ -2090,7 +2085,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   }
 
   if (config_.enable_ephemeral) {
-    const auto driver_registrar = [this](zx::channel request) {
+    const auto driver_registrar = [this](fidl::ServerEnd<fdr::DriverRegistrar> request) {
       driver_registrar_binding_ = fidl::BindServer<fidl::WireServer<fdr::DriverRegistrar>>(
           dispatcher_, std::move(request), this);
       return ZX_OK;
@@ -2102,7 +2097,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     }
   }
 
-  const auto debug = [this](zx::channel request) {
+  const auto debug = [this](fidl::ServerEnd<fdm::DebugDumper> request) {
     fidl::BindServer<fidl::WireServer<fdm::DebugDumper>>(dispatcher_, std::move(request), this);
     return ZX_OK;
   };

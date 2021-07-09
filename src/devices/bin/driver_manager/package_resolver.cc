@@ -7,6 +7,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/pkg/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/service/llcpp/service.h>
 
 #include <fbl/string_printf.h>
 
@@ -46,7 +47,7 @@ zx::status<std::unique_ptr<Driver>> PackageResolver::FetchDriver(const std::stri
   }
 
   fbl::unique_fd package_dir_fd;
-  status = fdio_fd_create(package_dir_result.value().client_end().TakeChannel().release(),
+  status = fdio_fd_create(package_dir_result->client_end().TakeChannel().release(),
                           package_dir_fd.reset_and_get_address());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to create package_dir_fd: %sd", zx_status_get_string(status));
@@ -57,18 +58,11 @@ zx::status<std::unique_ptr<Driver>> PackageResolver::FetchDriver(const std::stri
 }
 
 zx_status_t PackageResolver::ConnectToResolverService() {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0u, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
+  auto client_end = service::Connect<fuchsia_pkg::PackageResolver>();
+  if (client_end.is_error()) {
+    return client_end.error_value();
   }
-  const auto path =
-      fbl::StringPrintf("/svc/%s", fidl::DiscoverableProtocolName<fuchsia_pkg::PackageResolver>);
-  status = fdio_service_connect(path.c_str(), remote.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-  resolver_client_ = fidl::WireSyncClient<fuchsia_pkg::PackageResolver>(std::move(local));
+  resolver_client_ = fidl::BindSyncClient(std::move(*client_end));
   return ZX_OK;
 }
 
@@ -81,10 +75,9 @@ zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
       return zx::error(status);
     }
   }
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0u, &local, &remote);
-  if (status != ZX_OK) {
-    return zx::error(status);
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
   }
   ::fidl::VectorView<::fidl::StringView> selectors;
 
@@ -92,7 +85,7 @@ zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
   // Eventually we will want to do this asynchronously.
   auto result = resolver_client_.Resolve(
       ::fidl::StringView(fidl::StringView::FromExternal(package_url.package_path())),
-      std::move(selectors), std::move(remote));
+      std::move(selectors), std::move(endpoints->server));
   if (!result.ok() || result.Unwrap()->result.is_err()) {
     LOGF(ERROR, "Failed to resolve package");
     if (!result.ok()) {
@@ -118,7 +111,7 @@ zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
       }
     }
   }
-  return zx::ok(fidl::WireSyncClient<fio::Directory>(std::move(local)));
+  return zx::ok(fidl::BindSyncClient(std::move(endpoints->client)));
 }
 
 zx::status<zx::vmo> PackageResolver::LoadDriver(
@@ -128,21 +121,20 @@ zx::status<zx::vmo> PackageResolver::LoadDriver(
   const uint32_t kDriverVmoFlags = fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec;
 
   // Open and duplicate the driver vmo.
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0u, &local, &remote);
-  if (status != ZX_OK) {
-    return zx::error(status);
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
   }
   auto file_open_result = package_dir->Open(
       kFileRights, 0u /* mode */,
       ::fidl::StringView(fidl::StringView::FromExternal(package_url.resource_path())),
-      std::move(remote));
+      fidl::ServerEnd<fuchsia_io::Node>(endpoints->server.TakeChannel()));
   if (!file_open_result.ok()) {
     LOGF(ERROR, "Failed to open driver file: %s", package_url.resource_path().c_str());
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  fidl::WireSyncClient<fio::File> file_client(std::move(local));
+  auto file_client = fidl::BindSyncClient(std::move(endpoints->client));
   auto file_res = file_client.GetBuffer(kDriverVmoFlags);
   if (!file_res.ok() || file_res.Unwrap()->s != ZX_OK) {
     LOGF(ERROR, "Failed to get driver vmo");

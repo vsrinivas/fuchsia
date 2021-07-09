@@ -174,10 +174,9 @@ InspectManager::InspectManager(async_dispatcher_t* dispatcher) {
   devfs_ = std::move(status.value());
 
   if (dispatcher) {
-    zx::channel local;
-    zx::channel::create(0, &diagnostics_client_, &local);
+    auto server_end = fidl::CreateEndpoints(&diagnostics_client_);
     diagnostics_vfs_ = std::make_unique<fs::SynchronousVfs>(dispatcher);
-    diagnostics_vfs_->ServeDirectory(diagnostics_dir_, std::move(local));
+    diagnostics_vfs_->ServeDirectory(diagnostics_dir_, std::move(*server_end));
   }
 
   devices_ = root_node().CreateChild("devices");

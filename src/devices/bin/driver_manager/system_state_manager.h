@@ -18,7 +18,7 @@ class SystemStateManager : public fidl::WireServer<device_manager_fidl::SystemSt
   explicit SystemStateManager(Coordinator* dev_coord) : dev_coord_(dev_coord) {}
 
   static zx_status_t Create(async_dispatcher_t* dispatcher, Coordinator* dev_coord,
-                            zx::channel system_state_transition_server,
+                            fidl::ServerEnd<fuchsia_device_manager::SystemStateTransition> server,
                             std::unique_ptr<SystemStateManager>* out);
 
   // SystemStateTransition interface

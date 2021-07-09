@@ -15,8 +15,8 @@
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 
-DriverHost::DriverHost(Coordinator* coordinator, zx::channel rpc, zx::channel diagnostics,
-                       zx::process proc)
+DriverHost::DriverHost(Coordinator* coordinator, zx::channel rpc,
+                       fidl::ClientEnd<fuchsia_io::Directory> diagnostics, zx::process proc)
     : coordinator_(coordinator), hrpc_(std::move(rpc)), proc_(std::move(proc)) {
   // cache the process's koid
   zx_info_handle_basic_t info;
@@ -47,10 +47,9 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
     return status;
   }
 
-  zx::channel diagnostics_client, diagnostics_server;
-  status = zx::channel::create(0, &diagnostics_client, &diagnostics_server);
-  if (status != ZX_OK) {
-    return status;
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
   }
 
   // Give driver_hosts the root resource if we have it (in tests, we may not)
@@ -73,7 +72,7 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
           .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
           .ns = {.prefix = "/svc"},
       },
-      std::move(fs_object));
+      fs_object.TakeChannel());
 
   fdio_spawn_actions.AddActionWithHandle(
       fdio_spawn_action_t{
@@ -115,7 +114,7 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
           .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
           .h = {.id = PA_DIRECTORY_REQUEST},
       },
-      std::move(diagnostics_server));
+      endpoints->server.TakeChannel());
 
   zx::process proc;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
@@ -129,7 +128,7 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
   }
 
   auto host = fbl::MakeRefCounted<DriverHost>(config.coordinator, std::move(dh_hrpc),
-                                              std::move(diagnostics_client), std::move(proc));
+                                              std::move(endpoints->client), std::move(proc));
   LOGF(INFO, "Launching driver_host '%s' (pid %zu)", config.name, host->koid());
   *out = std::move(host);
   return ZX_OK;

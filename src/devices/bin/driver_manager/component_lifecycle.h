@@ -20,7 +20,8 @@ class ComponentLifecycleServer final
       : dev_coord_(dev_coord), suspend_callback_(std::move(callback)) {}
 
   static zx_status_t Create(async_dispatcher_t* dispatcher, Coordinator* dev_coord,
-                            zx::channel chan, SuspendCallback callback);
+                            fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> request,
+                            SuspendCallback callback);
 
   void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
 

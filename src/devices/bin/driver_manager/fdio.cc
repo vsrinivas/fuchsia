@@ -134,7 +134,8 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
     switch (FSTAB[n].action) {
       case FdioAction::AddNsEntry: {
         zx_handle_t h;
-        if ((h = fs_provider_->CloneFs(FSTAB[n].name).release()) != ZX_HANDLE_INVALID) {
+        if ((h = fs_provider_->CloneFs(FSTAB[n].name).TakeChannel().release()) !=
+            ZX_HANDLE_INVALID) {
           actions.push_back((fdio_spawn_action_t){
               .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
               .ns = {.prefix = FSTAB[n].mount, .handle = h},

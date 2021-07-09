@@ -14,10 +14,11 @@ namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 
 namespace devmgr {
 
-zx_status_t ComponentLifecycleServer::Create(async_dispatcher_t* dispatcher, Coordinator* dev_coord,
-                                             zx::channel chan, SuspendCallback callback) {
+zx_status_t ComponentLifecycleServer::Create(
+    async_dispatcher_t* dispatcher, Coordinator* dev_coord,
+    fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> request, SuspendCallback callback) {
   zx_status_t status = fidl::BindSingleInFlightOnly(
-      dispatcher, std::move(chan),
+      dispatcher, std::move(request),
       std::make_unique<ComponentLifecycleServer>(dev_coord, std::move(callback)));
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to bind component lifecycle service:%s", zx_status_get_string(status));

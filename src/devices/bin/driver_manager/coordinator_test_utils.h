@@ -38,7 +38,9 @@ constexpr char kSystemDriverPath[] = "/pkg/driver/platform-bus.so";
 class DummyFsProvider : public FsProvider {
  public:
   ~DummyFsProvider() {}
-  zx::channel CloneFs(const char* path) override { return zx::channel(); }
+  fidl::ClientEnd<fuchsia_io::Directory> CloneFs(const char* path) override {
+    return fidl::ClientEnd<fuchsia_io::Directory>();
+  }
 };
 
 CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,

@@ -5,6 +5,7 @@
 #include "multiple_device_test.h"
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/service/llcpp/service.h>
 #include <zircon/errors.h>
 
 #include <string>
@@ -382,18 +383,17 @@ TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
       });
   ASSERT_OK(suspend_task_sys.Begin(devhost_loop.dispatcher()));
 
-  zx::channel component_lifecycle_client, component_lifecycle_server;
   zx::event event;
   ASSERT_OK(zx::event::create(0, &event));
-  ASSERT_OK(zx::channel::create(0, &component_lifecycle_client, &component_lifecycle_server));
+  auto lifecycle_endpoints = fidl::CreateEndpoints<fuchsia_process_lifecycle::Lifecycle>();
+  ASSERT_OK(lifecycle_endpoints.status_value());
   SuspendCallback suspend_callback = [&event](zx_status_t status) {
     event.signal(0, ZX_USER_SIGNAL_0);
   };
   ASSERT_OK(devmgr::ComponentLifecycleServer::Create(
-      coordinator_loop()->dispatcher(), &coordinator(), std::move(component_lifecycle_server),
+      coordinator_loop()->dispatcher(), &coordinator(), std::move(lifecycle_endpoints->server),
       std::move(suspend_callback)));
-  fidl::WireSyncClient<fuchsia_process_lifecycle::Lifecycle> client(
-      std::move(component_lifecycle_client));
+  auto client = fidl::BindSyncClient(std::move(lifecycle_endpoints->client));
   auto result = client.Stop();
   ASSERT_OK(result.status());
   event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);
@@ -404,16 +404,14 @@ TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
 TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
-  zx::channel system_state_transition_client, system_state_transition_server;
-  ASSERT_OK(
-      zx::channel::create(0, &system_state_transition_client, &system_state_transition_server));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_device_manager::SystemStateTransition>();
+  ASSERT_OK(endpoints.status_value());
 
   std::unique_ptr<SystemStateManager> state_mgr;
   ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), &coordinator(),
-                                       std::move(system_state_transition_server), &state_mgr));
+                                       std::move(endpoints->server), &state_mgr));
   coordinator().set_system_state_manager(std::move(state_mgr));
-  auto response = fidl::WireCall<fuchsia_device_manager::SystemStateTransition>(
-                      zx::unowned_channel(system_state_transition_client.get()))
+  auto response = fidl::WireCall(endpoints->client)
                       .SetTerminationSystemState(
                           fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kPoweroff);
 
@@ -431,22 +429,19 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
 
-  zx::channel services, services_remote;
-  ASSERT_OK(zx::channel::create(0, &services, &services_remote));
+  auto service_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_OK(service_endpoints.status_value());
 
   svc::Outgoing outgoing{coordinator_loop()->dispatcher()};
   ASSERT_OK(coordinator().InitOutgoingServices(outgoing.svc_dir()));
-  ASSERT_OK(outgoing.Serve(std::move(services_remote)));
+  ASSERT_OK(outgoing.Serve(std::move(service_endpoints->server)));
 
-  zx::channel channel, channel_remote;
-  ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
-  ASSERT_OK(fdio_service_connect_at(
-      services.get(),
-      fidl::DiscoverableProtocolDefaultPath<fuchsia_device_manager::SystemStateTransition>,
-      channel_remote.release()));
+  auto client_end = service::ConnectAt<fuchsia_device_manager::SystemStateTransition>(
+      service_endpoints->client,
+      fidl::DiscoverableProtocolDefaultPath<fuchsia_device_manager::SystemStateTransition>);
+  ASSERT_OK(client_end.status_value());
 
-  auto response = fidl::WireCall<fuchsia_device_manager::SystemStateTransition>(
-                      zx::unowned_channel(channel.get()))
+  auto response = fidl::WireCall(*client_end)
                       .SetTerminationSystemState(
                           fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kMexec);
   ASSERT_OK(response.status());
@@ -463,17 +458,15 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
 
-  zx::channel system_state_transition_client, system_state_transition_server;
-  ASSERT_OK(
-      zx::channel::create(0, &system_state_transition_client, &system_state_transition_server));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_device_manager::SystemStateTransition>();
+  ASSERT_OK(endpoints.status_value());
 
   std::unique_ptr<SystemStateManager> state_mgr;
   ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), &coordinator(),
-                                       std::move(system_state_transition_server), &state_mgr));
+                                       std::move(endpoints->server), &state_mgr));
   coordinator().set_system_state_manager(std::move(state_mgr));
 
-  auto response = fidl::WireCall<fuchsia_device_manager::SystemStateTransition>(
-                      zx::unowned_channel(system_state_transition_client.get()))
+  auto response = fidl::WireCall(endpoints->client)
                       .SetTerminationSystemState(
                           fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kFullyOn);
 
@@ -492,25 +485,26 @@ TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
 
-  zx::channel system_state_transition_client, system_state_transition_server;
-  ASSERT_OK(
-      zx::channel::create(0, &system_state_transition_client, &system_state_transition_server));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_device_manager::SystemStateTransition>();
+  ASSERT_OK(endpoints.status_value());
 
   std::unique_ptr<SystemStateManager> state_mgr;
   ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), &coordinator(),
-                                       std::move(system_state_transition_server), &state_mgr));
+                                       std::move(endpoints->server), &state_mgr));
   coordinator().set_system_state_manager(std::move(state_mgr));
 
   MockPowerManager mock_power_manager;
-  zx::channel mock_power_manager_client, mock_power_manager_server;
-  zx::channel dev_local, dev_remote;
-  ASSERT_OK(zx::channel::create(0, &dev_local, &dev_remote));
-  ASSERT_OK(zx::channel::create(0, &mock_power_manager_client, &mock_power_manager_server));
-  ASSERT_OK(fidl::BindSingleInFlightOnly(
-      coordinator_loop()->dispatcher(), std::move(mock_power_manager_server), &mock_power_manager));
-  ASSERT_OK(coordinator().RegisterWithPowerManager(std::move(mock_power_manager_client),
-                                                   std::move(system_state_transition_client),
-                                                   std::move(dev_local)));
+  auto power_endpoints = fidl::CreateEndpoints<fuchsia_power_manager::DriverManagerRegistration>();
+  ASSERT_OK(power_endpoints.status_value());
+
+  auto dev_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_OK(dev_endpoints.status_value());
+
+  ASSERT_OK(fidl::BindSingleInFlightOnly(coordinator_loop()->dispatcher(),
+                                         std::move(power_endpoints->server), &mock_power_manager));
+  ASSERT_OK(coordinator().RegisterWithPowerManager(std::move(power_endpoints->client),
+                                                   std::move(endpoints->client),
+                                                   std::move(dev_endpoints->client)));
   mock_power_manager.wait_until_register_called();
 }
 
@@ -532,25 +526,27 @@ TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
 
 TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
   zx::channel chan = devfs_root_clone();
-  fidl::Client<fuchsia_io::DirectoryAdmin> client(std::move(chan),
-                                                  coordinator_loop()->dispatcher());
+  fidl::Client<fuchsia_io::DirectoryAdmin> client(
+      fidl::ClientEnd<fuchsia_io::DirectoryAdmin>(std::move(chan)),
+      coordinator_loop()->dispatcher());
 
   {
     auto result = client->GetDevicePath([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
     ASSERT_EQ(result.status(), ZX_OK);
   }
   {
-    zx::channel s, c;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
-    auto result =
-        client->Mount(std::move(c), [](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
-    ASSERT_EQ(result.status(), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_OK(endpoints.status_value());
+    auto result = client->Mount(std::move(endpoints->client),
+                                [](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    ASSERT_OK(result.status());
   }
   {
-    zx::channel s, c;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
-    auto result = client->MountAndCreate(
-        std::move(c), "", 0, [](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_OK(endpoints.status_value());
+    auto result = client->MountAndCreate(std::move(endpoints->client), "", 0, [](auto* ret) {
+      ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED);
+    });
     ASSERT_EQ(result.status(), ZX_OK);
   }
   {

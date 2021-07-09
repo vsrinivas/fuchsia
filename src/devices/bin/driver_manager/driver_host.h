@@ -51,7 +51,8 @@ class DriverHost : public fbl::RefCounted<DriverHost>,
   // |rpc| is a client channel speaking fuchsia.device.manager/DriverHostController
   // |diagnostics| is a client to driver host diagnostics directory
   // |proc| is a handle to the driver_host process this DriverHost tracks.
-  DriverHost(Coordinator* coordinator, zx::channel rpc, zx::channel diagnostics, zx::process proc);
+  DriverHost(Coordinator* coordinator, zx::channel rpc,
+             fidl::ClientEnd<fuchsia_io::Directory> diagnostics, zx::process proc);
   ~DriverHost();
 
   // |coordinator| must outlive this DriverHost object. If |loader_conector| is nullptr, the

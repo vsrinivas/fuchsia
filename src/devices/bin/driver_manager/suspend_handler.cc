@@ -15,20 +15,13 @@
 
 namespace {
 
-constexpr char kFshostAdminPath[] = "/svc/fuchsia.fshost.Admin";
-
 fidl::Client<fuchsia_fshost::Admin> ConnectToFshostAdminServer(async_dispatcher_t* dispatcher) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
+  auto result = service::Connect<fuchsia_fshost::Admin>();
+  if (result.is_error()) {
+    LOGF(ERROR, "Failed to connect to fuchsia.fshost.Admin: %s", result.status_string());
     return fidl::Client<fuchsia_fshost::Admin>();
   }
-  status = fdio_service_connect(kFshostAdminPath, remote.release());
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to connect to fuchsia.fshost.Admin: %s", zx_status_get_string(status));
-    return fidl::Client<fuchsia_fshost::Admin>();
-  }
-  return fidl::Client<fuchsia_fshost::Admin>(std::move(local), dispatcher);
+  return fidl::Client(std::move(*result), dispatcher);
 }
 
 void SuspendFallback(const zx::resource& root_resource, uint32_t flags) {

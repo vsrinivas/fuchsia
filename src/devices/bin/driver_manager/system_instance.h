@@ -23,7 +23,7 @@ class DirectoryFilter {
 
   zx_status_t Initialize(zx::channel forwarding_dir, fbl::Span<const char*> allow_filter);
 
-  zx_status_t Serve(zx::channel request) {
+  zx_status_t Serve(fidl::ServerEnd<fuchsia_io::Directory> request) {
     return vfs_.ServeDirectory(root_dir_, std::move(request));
   }
 
@@ -36,7 +36,7 @@ class DirectoryFilter {
 class SystemInstance : public FsProvider {
  public:
   // Implementation required to implement FsProvider
-  zx::channel CloneFs(const char* path) override;
+  fidl::ClientEnd<fuchsia_io::Directory> CloneFs(const char* path) override;
 
   zx_status_t CreateDriverHostJob(const zx::job& root_job, zx::job* driver_host_job_out);
   void InstallDevFsIntoNamespace();

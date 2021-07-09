@@ -56,7 +56,6 @@
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 using statecontrol_fidl::wire::SystemPowerState;
-namespace power_manager_fidl = fuchsia_power_manager;
 namespace fdf = fuchsia_driver_framework;
 
 class DriverHostLoaderService;
@@ -331,10 +330,11 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   // Returns path to driver that should be bound to fragments of composite devices.
   std::string GetFragmentDriverPath() const;
 
-  zx_status_t RegisterWithPowerManager(zx::channel devfs_handle);
-  zx_status_t RegisterWithPowerManager(zx::channel power_manager_client,
-                                       zx::channel system_state_transition_client,
-                                       zx::channel devfs_handle);
+  zx_status_t RegisterWithPowerManager(fidl::ClientEnd<fuchsia_io::Directory> devfs);
+  zx_status_t RegisterWithPowerManager(
+      fidl::ClientEnd<fuchsia_power_manager::DriverManagerRegistration> power_manager,
+      fidl::ClientEnd<fuchsia_device_manager::SystemStateTransition> system_state_transition,
+      fidl::ClientEnd<fuchsia_io::Directory> devfs);
   void ScheduleBaseDriverLoading();
 
  private:
@@ -344,7 +344,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   bool launched_first_driver_host_ = false;
   bool power_manager_registered_ = false;
   LoaderServiceConnector loader_service_connector_;
-  fidl::Client<power_manager_fidl::DriverManagerRegistration> power_manager_client_;
+  fidl::Client<fuchsia_power_manager::DriverManagerRegistration> power_manager_client_;
   DriverLoader driver_loader_;
 
   // All Drivers

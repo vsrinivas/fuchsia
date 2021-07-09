@@ -69,7 +69,9 @@ class InspectManager {
 
   InspectManager() = delete;
 
-  zx::unowned_channel diagnostics_channel() { return zx::unowned_channel(diagnostics_client_); }
+  fidl::UnownedClientEnd<fuchsia_io::Directory> diagnostics_client() {
+    return diagnostics_client_.borrow();
+  }
 
   fs::PseudoDir& diagnostics_dir() { return *diagnostics_dir_; }
 
@@ -92,7 +94,7 @@ class InspectManager {
   fbl::RefPtr<fs::PseudoDir> diagnostics_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
   fbl::RefPtr<fs::PseudoDir> driver_host_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 
-  zx::channel diagnostics_client_;
+  fidl::ClientEnd<fuchsia_io::Directory> diagnostics_client_;
 
   inspect::UintProperty device_count_;
   inspect::Node devices_;

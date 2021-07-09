@@ -9,9 +9,10 @@
 
 #include "src/devices/lib/log/log.h"
 
-zx_status_t SystemStateManager::Create(async_dispatcher_t* dispatcher, Coordinator* dev_coord,
-                                       zx::channel system_state_transition_server,
-                                       std::unique_ptr<SystemStateManager>* state_mgr) {
+zx_status_t SystemStateManager::Create(
+    async_dispatcher_t* dispatcher, Coordinator* dev_coord,
+    fidl::ServerEnd<fuchsia_device_manager::SystemStateTransition> server,
+    std::unique_ptr<SystemStateManager>* state_mgr) {
   // Invoked when the channel is closed or on any binding-related error.
   // When power manager exists, but closes this channel, it means power manager
   // existed but crashed, and we will not have a way to reboot the system.
@@ -30,8 +31,7 @@ zx_status_t SystemStateManager::Create(async_dispatcher_t* dispatcher, Coordinat
         dev_coord->set_power_manager_registered(false);
       });
   auto mgr = std::make_unique<SystemStateManager>(dev_coord);
-  fidl::BindServer(dispatcher, std::move(system_state_transition_server), mgr.get(),
-                   std::move(unbound_fn));
+  fidl::BindServer(dispatcher, std::move(server), mgr.get(), std::move(unbound_fn));
   *state_mgr = std::move(mgr);
   return ZX_OK;
 }

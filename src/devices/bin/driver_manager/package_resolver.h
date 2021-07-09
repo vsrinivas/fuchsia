@@ -7,7 +7,6 @@
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/pkg/llcpp/fidl.h>
-#include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>

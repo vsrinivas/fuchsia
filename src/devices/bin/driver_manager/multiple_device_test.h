@@ -21,20 +21,19 @@ class MockFshostAdminServer final : public fidl::WireServer<fuchsia_fshost::Admi
   MockFshostAdminServer() : has_been_shutdown_(false) {}
 
   fidl::Client<fuchsia_fshost::Admin> CreateClient(async_dispatcher* dispatcher) {
-    zx::channel client, server;
-    zx_status_t status = zx::channel::create(0, &client, &server);
-    if (status != ZX_OK) {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_fshost::Admin>();
+    if (endpoints.is_error()) {
       return fidl::Client<fuchsia_fshost::Admin>();
     }
 
-    status = fidl::BindSingleInFlightOnly(dispatcher, std::move(server), this);
+    auto status = fidl::BindSingleInFlightOnly(dispatcher, std::move(endpoints->server), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to create client for mock fshost admin, failed to bind: %s",
            zx_status_get_string(status));
       return fidl::Client<fuchsia_fshost::Admin>();
     }
 
-    return fidl::Client<fuchsia_fshost::Admin>(std::move(client), dispatcher);
+    return fidl::Client(std::move(endpoints->client), dispatcher);
   }
 
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override {
@@ -175,7 +174,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
   bool coordinator_loop_thread_running_ = false;
 
   mock_boot_arguments::Server boot_args_{{}};
-  fidl::WireSyncClient<fuchsia_boot::Arguments> args_client_{zx::channel()};
+  fidl::WireSyncClient<fuchsia_boot::Arguments> args_client_{};
 
   // The admin/bootargs servers need their own loop/thread, because if we schedule them
   // on coordinator_loop then coordinator will deadlock waiting

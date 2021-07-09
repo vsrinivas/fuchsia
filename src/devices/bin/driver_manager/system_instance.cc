@@ -76,7 +76,7 @@ void SystemInstance::InstallDevFsIntoNamespace() {
   zx_status_t r;
   r = fdio_ns_get_installed(&ns);
   ZX_ASSERT_MSG(r == ZX_OK, "driver_manager: cannot get namespace: %s\n", zx_status_get_string(r));
-  r = fdio_ns_bind(ns, "/dev", CloneFs("dev").release());
+  r = fdio_ns_bind(ns, "/dev", CloneFs("dev").TakeChannel().release());
   ZX_ASSERT_MSG(r == ZX_OK, "driver_manager: cannot bind /dev to namespace: %s\n",
                 zx_status_get_string(r));
 }
@@ -100,32 +100,33 @@ zx_status_t SystemInstance::clone_fshost_ldsvc(zx::channel* loader) {
   return fdio_service_connect("/svc/fuchsia.fshost.Loader", remote.release());
 }
 
-zx::channel SystemInstance::CloneFs(const char* path) {
+fidl::ClientEnd<fuchsia_io::Directory> SystemInstance::CloneFs(const char* path) {
   if (!strcmp(path, "dev")) {
-    return devfs_root_clone();
+    return fidl::ClientEnd<fuchsia_io::Directory>(devfs_root_clone());
   }
-  zx::channel h0, h1;
-  if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
-    return zx::channel();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return fidl::ClientEnd<fuchsia_io::Directory>();
   }
   zx_status_t status = ZX_OK;
   if (!strcmp(path, "svc")) {
-    status = fdio_service_connect("/svc", h1.release());
+    status = fdio_service_connect("/svc", endpoints->server.TakeChannel().release());
   } else if (!strcmp(path, "driver_host_svc")) {
     status = InitializeDriverHostSvcDir();
     if (status == ZX_OK) {
-      status = driver_host_svc_->Serve(std::move(h1));
+      status = driver_host_svc_->Serve(std::move(endpoints->server));
     }
   } else if (!strncmp(path, "dev/", 4)) {
     zx::unowned_channel fs = devfs_root_borrow();
     path += 4;
-    status = fdio_open_at(fs->get(), path, FS_READ_WRITE_DIR_FLAGS, h1.release());
+    status = fdio_open_at(fs->get(), path, FS_READ_WRITE_DIR_FLAGS,
+                          endpoints->server.TakeChannel().release());
   }
   if (status != ZX_OK) {
     LOGF(ERROR, "CloneFs failed for '%s': %s", path, zx_status_get_string(status));
-    return zx::channel();
+    return fidl::ClientEnd<fuchsia_io::Directory>();
   }
-  return h0;
+  return std::move(endpoints->client);
 }
 
 zx_status_t SystemInstance::InitializeDriverHostSvcDir() {

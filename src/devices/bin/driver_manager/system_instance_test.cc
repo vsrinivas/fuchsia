@@ -26,18 +26,12 @@ namespace {
 
 // Get the root job from the root job service.
 zx_status_t get_root_job(zx::job* root_job) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
+  auto client_end = service::Connect<fkernel::RootJob>();
+  if (client_end.is_error()) {
+    return client_end.error_value();
   }
 
-  status = fdio_service_connect("/svc/fuchsia.kernel.RootJob", remote.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  fidl::WireSyncClient<fkernel::RootJob> client{std::move(local)};
+  auto client = fidl::BindSyncClient(std::move(*client_end));
   auto result = client.Get();
   if (!result.ok()) {
     return result.status();
@@ -92,11 +86,12 @@ class SystemInstanceTest : public zxtest::Test {
   SystemInstanceTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     ASSERT_OK(loop_.StartThread());
 
-    zx::channel client, server;
-    ASSERT_OK(zx::channel::create(0, &client, &server));
+    auto endpoints = fidl::CreateEndpoints<fboot::Arguments>();
+    ASSERT_OK(endpoints.status_value());
     boot_args_server_.reset(new FakeBootArgsServer());
-    fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server), boot_args_server_.get());
-    boot_args_client_ = fidl::WireSyncClient<fboot::Arguments>(std::move(client));
+    fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(endpoints->server),
+                                 boot_args_server_.get());
+    boot_args_client_ = fidl::BindSyncClient(std::move(endpoints->client));
 
     under_test_.reset(new SystemInstanceForTest());
   }

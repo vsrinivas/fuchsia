@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_FDIO_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_FDIO_H_
 
+#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 
@@ -53,7 +55,7 @@ class FsProvider {
   // their corresponding root connection, where the request is forwarded.
   //
   // This function is implemented by both devmgr and fshost.
-  virtual zx::channel CloneFs(const char* path) = 0;
+  virtual fidl::ClientEnd<fuchsia_io::Directory> CloneFs(const char* path) = 0;
 };
 
 class DevmgrLauncher {

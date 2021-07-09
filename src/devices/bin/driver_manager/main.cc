@@ -228,19 +228,13 @@ int main(int argc, char** argv) {
     LOGF(INFO, "Failed to redirect stdout to debuglog, assuming test environment and continuing");
   }
 
-  zx::channel local, remote;
-  status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
-  }
-  auto path = fbl::StringPrintf("/svc/%s", fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>);
-  status = fdio_service_connect(path.data(), remote.release());
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to get boot arguments service handle: %s", zx_status_get_string(status));
-    return status;
+  auto args_result = service::Connect<fuchsia_boot::Arguments>();
+  if (args_result.is_error()) {
+    LOGF(ERROR, "Failed to get boot arguments service handle: %s", args_result.status_string());
+    return args_result.error_value();
   }
 
-  auto boot_args = fidl::WireSyncClient<fuchsia_boot::Arguments>{std::move(local)};
+  auto boot_args = fidl::WireSyncClient<fuchsia_boot::Arguments>{std::move(*args_result)};
   auto driver_manager_params = GetDriverManagerParams(boot_args);
   auto driver_manager_args = ParseDriverManagerArgs(argc, argv);
 
@@ -368,8 +362,8 @@ int main(int argc, char** argv) {
   // Check if whatever launched devcoordinator gave a channel to be connected to the
   // outgoing services directory. This is for use in tests to let the test environment see
   // outgoing services.
-  zx::channel outgoing_svc_dir_client(
-      zx_take_startup_handle(DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND));
+  fidl::ServerEnd<fuchsia_io::Directory> outgoing_svc_dir_client(
+      zx::channel(zx_take_startup_handle(DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND)));
   if (outgoing_svc_dir_client.is_valid()) {
     status = outgoing.Serve(std::move(outgoing_svc_dir_client));
     if (status != ZX_OK) {
@@ -388,8 +382,7 @@ int main(int argc, char** argv) {
   devfs_publish(coordinator.root_device(), coordinator.misc_device());
   devfs_publish(coordinator.root_device(), coordinator.sys_device());
   devfs_publish(coordinator.root_device(), coordinator.test_device());
-  devfs_connect_diagnostics(fidl::UnownedClientEnd<fuchsia_io::Directory>(
-      coordinator.inspect_manager().diagnostics_channel()));
+  devfs_connect_diagnostics(coordinator.inspect_manager().diagnostics_client());
 
   // Check if whatever launched devmgr gave a channel to be connected to /dev.
   // This is for use in tests to let the test environment see devfs.
@@ -399,7 +392,8 @@ int main(int argc, char** argv) {
   }
 
   // Check if whatever launched devmgr gave a channel for component lifecycle events
-  zx::channel component_lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
+  fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> component_lifecycle_request(
+      zx::channel(zx_take_startup_handle(PA_LIFECYCLE)));
   if (component_lifecycle_request.is_valid()) {
     status = devmgr::ComponentLifecycleServer::Create(loop.dispatcher(), &coordinator,
                                                       std::move(component_lifecycle_request),
