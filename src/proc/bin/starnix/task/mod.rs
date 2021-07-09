@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use bitflags::bitflags;
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Task as zxTask};
 use log::warn;
 use parking_lot::{Condvar, Mutex, RwLock};
@@ -27,6 +28,12 @@ use crate::mm::MemoryManager;
 use crate::not_implemented;
 use crate::signals::types::*;
 use crate::types::*;
+
+bitflags! {
+    pub struct OpenFlags: u32 {
+      const CREATE = O_CREAT;
+    }
+}
 
 pub struct Kernel {
     /// The Zircon job object that holds the processes running in this kernel.
@@ -645,10 +652,15 @@ impl Task {
     }
 
     pub fn open_file(&self, path: &FsStr) -> Result<FileHandle, Errno> {
-        self.open_file_at(FdNumber::AT_FDCWD, path)
+        self.open_file_at(FdNumber::AT_FDCWD, path, OpenFlags::empty())
     }
 
-    pub fn open_file_at(&self, dir_fd: FdNumber, mut path: &FsStr) -> Result<FileHandle, Errno> {
+    pub fn open_file_at(
+        &self,
+        dir_fd: FdNumber,
+        mut path: &FsStr,
+        flags: OpenFlags,
+    ) -> Result<FileHandle, Errno> {
         let dir = if path[0] == b'/' {
             path = &path[1..];
             self.fs.root.clone()
@@ -658,7 +670,25 @@ impl Task {
             let file = self.files.get(dir_fd)?;
             file.name().clone()
         };
-        self.fs.lookup_node(dir, path)?.open()
+
+        if flags.contains(OpenFlags::CREATE) {
+            // TODO put path manipulations into a library
+            let mut parent_path: Vec<u8> = Vec::new();
+            let mut path_elts = path.split(|c| *c == b'/');
+            let mut file_name = path_elts.next().ok_or(ENOENT)?;
+            for elt in path_elts {
+                parent_path.push(b'/');
+                for b in file_name {
+                    parent_path.push(*b);
+                }
+                file_name = elt;
+            }
+
+            let parent_dir = self.fs.lookup_node(dir, parent_path.as_slice())?;
+            parent_dir.create(file_name)?.open()
+        } else {
+            self.fs.lookup_node(dir, path)?.open()
+        }
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {

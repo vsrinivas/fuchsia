@@ -98,6 +98,11 @@ impl NamespaceNode {
         Ok(FileObject::new(self.node.open()?, self.clone()))
     }
 
+    /// Create a file
+    pub fn create(&self, name: &FsStr) -> Result<NamespaceNode, Errno> {
+        Ok(self.with_new_node(self.node.create(name)?))
+    }
+
     /// Traverse down a parent-to-child link in the namespace.
     ///
     /// This traversal matches the parent-to-child link in the underlying

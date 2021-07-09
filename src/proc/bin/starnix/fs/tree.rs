@@ -6,8 +6,11 @@ use parking_lot::{RwLock, RwLockUpgradableReadGuard, RwLockWriteGuard};
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
+use fuchsia_zircon::Time;
+
 use super::{FileOps, ObserverList};
 use crate::devices::DeviceHandle;
+use crate::syscalls::system::time_to_timespec;
 use crate::types::*;
 
 pub type FsString = Vec<u8>;
@@ -20,15 +23,25 @@ pub struct FsNode {
     device: DeviceHandle,
     parent: Option<FsNodeHandle>,
     name: FsString,
-    stat: RwLock<stat_t>,
     state: RwLock<FsNodeState>,
 }
 
 pub type FsNodeHandle = Arc<FsNode>;
 
 #[derive(Default)]
-struct FsNodeState {
+pub struct FsNodeState {
     children: HashMap<FsString, Weak<FsNode>>,
+    pub node_id: u64,
+    pub device_id: u64,
+    pub content_size: usize,
+    pub storage_size: usize,
+    pub no_blocks: usize,
+    pub block_size: usize,
+    pub mode: u32,
+    pub link_count: u64,
+    pub time_create: Time,
+    pub time_access: Time,
+    pub time_modify: Time,
 }
 
 pub trait FsNodeOps: Send + Sync {
@@ -44,6 +57,10 @@ pub trait FsNodeOps: Send + Sync {
     /// Change the length of the file.
     fn truncate(&self, _node: &FsNode, _length: u64) -> Result<(), Errno> {
         Err(EINVAL)
+    }
+
+    fn create(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+        Err(ENOSYS)
     }
 
     /// Update node.stat if needed.
@@ -64,19 +81,23 @@ impl FsNode {
         let ops: Box<dyn FsNodeOps> = Box::new(ops);
         let inode_number = device.allocate_inode_number();
         let device_id = device.get_device_id();
+        let now = fuchsia_runtime::utc_time();
+        let node_state = FsNodeState {
+            node_id: inode_number,
+            device_id: device_id,
+            mode: mode,
+            time_create: now,
+            time_access: now,
+            time_modify: now,
+            ..Default::default()
+        };
         Arc::new(Self {
             ops: OnceCell::from(ops),
             observers: ObserverList::default(),
             device,
             parent: None,
             name: FsString::new(),
-            stat: RwLock::new(stat_t {
-                st_ino: inode_number,
-                st_dev: device_id,
-                st_mode: mode,
-                ..Default::default()
-            }),
-            state: Default::default(),
+            state: RwLock::new(node_state),
         })
     }
 
@@ -100,6 +121,19 @@ impl FsNode {
 
     pub fn open(self: &FsNodeHandle) -> Result<Box<dyn FileOps>, Errno> {
         self.ops().open(&self)
+    }
+
+    pub fn create(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+        let node = self.get_or_create_empty_child(name.to_vec());
+        let exists = node.initialize(|name| self.ops().create(&node, name))?;
+        if exists {
+            return Err(EEXIST);
+        }
+        let now = fuchsia_runtime::utc_time();
+        let mut st = self.state.write();
+        st.time_access = now;
+        st.time_modify = now;
+        Ok(node)
     }
 
     pub fn component_lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
@@ -126,31 +160,57 @@ impl FsNode {
         self.ops().update_stat(self)?;
         Ok(self.stat())
     }
+
     pub fn stat(&self) -> stat_t {
-        self.stat.read().clone()
-    }
-    pub fn stat_mut(&self) -> RwLockWriteGuard<'_, stat_t> {
-        self.stat.write()
+        let state = self.state.read();
+        /// st_blksize is measured in units of 512 bytes.
+        const BYTES_PER_BLOCK: i64 = 512;
+        stat_t {
+            st_ino: state.node_id,
+            st_mode: state.mode,
+            st_size: state.content_size as off_t,
+            st_blocks: state.storage_size as i64 / BYTES_PER_BLOCK,
+            st_nlink: state.link_count,
+            st_uid: 0,
+            st_gid: 0,
+            st_ctim: time_to_timespec(&state.time_create),
+            st_mtim: time_to_timespec(&state.time_modify),
+            st_atim: time_to_timespec(&state.time_access),
+            st_dev: state.device_id,
+            st_rdev: 0,
+            st_blksize: BYTES_PER_BLOCK,
+            ..Default::default()
+        }
     }
 
-    fn get_or_create_empty_child(self: &FsNodeHandle, name: FsString) -> FsNodeHandle {
+    pub fn state_mut(&self) -> RwLockWriteGuard<'_, FsNodeState> {
+        self.state.write()
+    }
+
+    pub fn get_or_create_empty_child(self: &FsNodeHandle, name: FsString) -> FsNodeHandle {
         let state = self.state.upgradable_read();
         let child = state.children.get(&name).and_then(|child| child.upgrade());
         if let Some(child) = child {
             return child;
         }
         let mut state = RwLockUpgradableReadGuard::upgrade(state);
+        let now = fuchsia_runtime::utc_time();
+        let node_state = FsNodeState {
+            node_id: self.device.allocate_inode_number(),
+            device_id: self.device.get_device_id(),
+            time_create: now,
+            time_access: now,
+            time_modify: now,
+            ..Default::default()
+        };
         let child = Arc::new(Self {
             ops: OnceCell::new(),
             observers: ObserverList::default(),
             device: Arc::clone(&self.device),
             parent: Some(Arc::clone(self)),
             name: name.clone(),
-            stat: RwLock::new(stat_t {
-                st_ino: self.device.allocate_inode_number(),
-                ..Default::default()
-            }),
-            state: Default::default(),
+
+            state: RwLock::new(node_state),
         });
         state.children.insert(name, Arc::downgrade(&child));
         child

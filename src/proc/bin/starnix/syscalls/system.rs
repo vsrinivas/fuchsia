@@ -52,6 +52,11 @@ pub fn sys_getrandom(
 
 const NANOS_PER_SECOND: i64 = 1000 * 1000 * 1000;
 
+pub fn time_to_timespec(time: &zx::Time) -> timespec {
+    let nanos = time.into_nanos();
+    timespec { tv_sec: nanos / NANOS_PER_SECOND, tv_nsec: nanos % NANOS_PER_SECOND }
+}
+
 pub fn sys_clock_gettime(
     ctx: &SyscallContext<'_>,
     which_clock: u32,

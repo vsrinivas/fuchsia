@@ -29,10 +29,18 @@ pub fn create_test_file_system() -> Arc<FsContext> {
     )));
 }
 
-/// Creates a `Kernel` and `Task` for testing purposes.
+/// Creates a `Kernel` and `Task` with the package file system for testing purposes.
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
 pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
+    let fs_context = create_test_file_system();
+    create_kernel_and_task_with_fs(fs_context)
+}
+
+/// Creates a `Kernel` and `Task` for testing purposes.
+///
+/// The `Task` is backed by a real process, and can be used to test syscalls.
+pub fn create_kernel_and_task_with_fs(fs_context: Arc<FsContext>) -> (Arc<Kernel>, TaskOwner) {
     let kernel =
         Kernel::new(&CString::new("test-kernel").unwrap()).expect("failed to create kernel");
 
@@ -41,7 +49,7 @@ pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
         &CString::new("test-task").unwrap(),
         0,
         FdTable::new(),
-        create_test_file_system(),
+        fs_context,
         Credentials::default(),
         None,
     )

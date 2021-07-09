@@ -169,13 +169,15 @@ fn open_internal(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,
-    _fio_flags: u32,
+    fio_flags: u32,
     _mode: mode_t,
 ) -> Result<FileHandle, Errno> {
     // TODO(tbodt): handle the flags properly
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
-    task.open_file_at(dir_fd, path)
+
+    let open_flags = if fio_flags & O_CREAT != 0 { OpenFlags::CREATE } else { OpenFlags::empty() };
+    task.open_file_at(dir_fd, path, open_flags)
 }
 
 pub fn sys_openat(
