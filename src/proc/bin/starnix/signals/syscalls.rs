@@ -168,8 +168,8 @@ pub fn sys_rt_sigsuspend(
     // associated mutex.
     waiter.wait(&mut current_signal_mask);
 
-    // Restore the signal mask to its pre-suspend value.
-    *current_signal_mask = old_mask;
+    // Save the old mask, so that the task can restore it after the signal handler executes.
+    *ctx.task.saved_signal_mask.lock() = Some(old_mask);
 
     // sigsuspend always returns an error.
     Err(EINTR)
@@ -921,5 +921,57 @@ mod tests {
 
         let scheduler = kernel.scheduler.read();
         assert!(!scheduler.is_task_suspended(first_task_id));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_signal_mask_restored() {
+        let (kernel, task_owner) = create_kernel_and_task();
+        let first_task_id = task_owner.task.id;
+
+        // The original and suspended masks exclude STOP and KILL explicitly, since they aren't
+        // blockable. This makes the asserts in the test cleaner, since otherwise we would need
+        // to remove STOP and KILL before comparing masks.
+        let original_signal_mask =
+            !(Signal::SIGCHLD.mask() | Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
+        let suspended_signal_mask =
+            !(Signal::SIGCONT.mask() | Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
+        *task_owner.task.signal_mask.lock() = original_signal_mask;
+
+        // Clone the task so that the signal mask can be checked during sigsuspend.
+        let first_task_clone = &task_owner.task.clone();
+        let thread = std::thread::spawn(move || {
+            let ctx = SyscallContext::new(&task_owner.task);
+            let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+            let user_ref = UserRef::<sigset_t>::new(addr);
+
+            let sigset: sigset_t = suspended_signal_mask.clone();
+            ctx.task.mm.write_object(user_ref, &sigset).expect("failed to set action");
+
+            assert_eq!(
+                sys_rt_sigsuspend(&ctx, user_ref, std::mem::size_of::<sigset_t>()),
+                Err(EINTR)
+            );
+        });
+
+        let second_task_owner = create_task(&kernel, "test-task-2");
+        let ctx = SyscallContext::new(&second_task_owner.task);
+
+        // Wait for the first task to be suspended.
+        let mut suspended = false;
+        while !suspended {
+            let scheduler = kernel.scheduler.read();
+            suspended = scheduler.is_task_suspended(first_task_id);
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+
+        let _ = sys_kill(&ctx, first_task_id, UncheckedSignal::from(SIGCONT));
+        let _ = thread.join();
+
+        // Make sure that the signal masks are correct after the suspend returns. The signal has
+        // yet to be handled at this point, so the signal mask should be the mask passed to
+        // sigsuspend, and the saved mask should be the signal mask that was in place prior to
+        // sigsuspend.
+        assert_eq!(*first_task_clone.signal_mask.lock(), suspended_signal_mask);
+        assert_eq!(*first_task_clone.saved_signal_mask.lock(), Some(original_signal_mask));
     }
 }

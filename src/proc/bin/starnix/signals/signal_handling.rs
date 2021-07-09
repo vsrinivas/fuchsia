@@ -102,6 +102,12 @@ pub fn restore_from_signal_handler(ctx: &mut SyscallContext<'_>) {
     let signal_stack_frame = SignalStackFrame::from_bytes(signal_stack_bytes);
     // Restore the register state from before executing the signal handler.
     ctx.registers = signal_stack_frame.registers;
+
+    // Restore the task's signal mask.
+    if let Some(saved_signal_mask) = *ctx.task.saved_signal_mask.lock() {
+        *ctx.task.signal_mask.lock() = saved_signal_mask;
+    }
+    *ctx.task.saved_signal_mask.lock() = None;
 }
 
 pub fn send_signal(
@@ -153,7 +159,7 @@ pub fn dequeue_signal(ctx: &mut SyscallContext<'_>) {
             SignalAction::Core => {
                 not_implemented!("Haven't implemented signal action Core");
             }
-            SignalAction::Ignore => (),
+            SignalAction::Ignore => {}
             SignalAction::Stop => {
                 not_implemented!("Haven't implemented signal action Stop");
             }

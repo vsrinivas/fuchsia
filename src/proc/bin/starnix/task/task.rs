@@ -77,6 +77,10 @@ pub struct Task {
     // See https://man7.org/linux/man-pages/man2/rt_sigprocmask.2.html
     pub signal_mask: Mutex<sigset_t>,
 
+    /// The saved signal mask of the task. This mask is set when a task wakes in `sys_rt_sigsuspend`
+    /// so that the signal mask can be restored properly after the signal handler has executed.
+    pub saved_signal_mask: Mutex<Option<sigset_t>>,
+
     /// The object this task sleeps upon.
     pub waiter: Arc<Waiter>,
 
@@ -127,6 +131,7 @@ impl Task {
                 clear_child_tid: Mutex::new(UserRef::default()),
                 signal_stack: Mutex::new(None),
                 signal_mask: Mutex::new(sigset_t::default()),
+                saved_signal_mask: Mutex::new(None),
                 waiter: Waiter::new(),
                 exit_signal,
                 exit_code: Mutex::new(None),
