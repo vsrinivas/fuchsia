@@ -16,10 +16,6 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/connectivity/lowpan/lib/lowpan_driver_common",
-    "//src/lib/async-utils",
-    "//src/lib/diagnostics/inspect/contrib/rust",
-    "//src/lib/diagnostics/inspect/runtime/rust",
-    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -38,7 +34,6 @@ rustc_binary("bin") {
   ]
 
   sources = [
-    "src/inspect.rs",
     "src/main.rs",
     "src/service.rs",
   ]
@@ -55,10 +50,7 @@ group("service") {
 
 fuchsia_unittest_package("lowpanservice-test") {
   manifest = "meta/lowpanservice-test.cmx"
-  deps = [
-    ":bin_test",
-    "//src/connectivity/lowpan/drivers/lowpan-dummy-driver",
-  ]
+  deps = [ ":bin_test" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

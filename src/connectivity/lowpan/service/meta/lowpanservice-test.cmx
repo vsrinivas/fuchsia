@@ -1,27 +1,8 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.factory.lowpan.FactoryLookup": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
-                "fuchsia.factory.lowpan.FactoryRegister": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
-                "fuchsia.lowpan.device.Lookup": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
-                "fuchsia.lowpan.device.Register": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx"
-            }
-        }
-    },
     "include": [
         "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/lowpanservice_bin_test"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.factory.lowpan.FactoryLookup",
-            "fuchsia.factory.lowpan.FactoryRegister",
-            "fuchsia.lowpan.device.Lookup",
-            "fuchsia.lowpan.device.Register",
-            "fuchsia.sys.Launcher"
-        ]
     }
 }

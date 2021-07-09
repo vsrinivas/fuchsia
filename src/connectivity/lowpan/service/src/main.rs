@@ -4,7 +4,6 @@
 
 //! LoWPAN Service for Fuchsia
 
-pub mod inspect;
 pub mod service;
 
 use anyhow::{format_err, Context as _, Error};
@@ -12,14 +11,12 @@ use fidl_fuchsia_factory_lowpan::{FactoryLookupRequestStream, FactoryRegisterReq
 use fidl_fuchsia_lowpan_device::{LookupRequestStream, RegisterRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_inspect::Inspector;
 use fuchsia_syslog::macros::*;
 use futures::prelude::*;
 use futures::task::{FutureObj, Spawn, SpawnError};
 use lowpan_driver_common::ServeTo;
 use service::*;
 use std::default::Default;
-use std::sync::Arc;
 
 enum IncomingService {
     Lookup(LookupRequestStream),
@@ -51,15 +48,6 @@ async fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new_local();
 
-    // Creates a new inspector object. This will create the "root" node in the
-    // inspect tree to which further children objects can be added.
-    let inspector = fuchsia_inspect::Inspector::new();
-    inspect_runtime::serve(&inspector, &mut fs)?;
-    let inspect_tree = Arc::new(inspect::LowpanServiceTree::new(inspector));
-    let inspect_fut = inspect::start_inspect_process(inspect_tree).map(|ret| {
-        fx_log_err!("Inspect process terminated: {:?}", ret);
-    });
-
     fs.dir("svc")
         .add_fidl_service(IncomingService::Lookup)
         .add_fidl_service(IncomingService::Register);
@@ -81,7 +69,7 @@ async fn main() -> Result<(), Error> {
         }
     });
 
-    futures::future::select(fut.boxed_local(), inspect_fut.boxed_local()).await;
+    fut.await;
 
     fx_log_info!("LoWPAN Service shut down");
 
