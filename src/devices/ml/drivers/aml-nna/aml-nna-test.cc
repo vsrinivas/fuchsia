@@ -5,13 +5,14 @@
 #include "aml-nna.h"
 
 #include <fuchsia/hardware/registers/cpp/banjo-mock.h>
-#include <lib/fake_ddk/fake_ddk.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/mmio/mmio.h>
 
 #include <mock-mmio-reg/mock-mmio-reg.h>
 
 #include "s905d3-nna-regs.h"
 #include "src/devices/registers/testing/mock-registers/mock-registers.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 #include "t931-nna-regs.h"
 
 namespace {
@@ -46,7 +47,7 @@ class MockRegisters {
 
     ddk::PDev pdev;
     auto device = std::make_unique<AmlNnaDevice>(
-        fake_ddk::kFakeParent, hiu_mock_.GetMmioBuffer(), power_mock_.GetMmioBuffer(),
+        fake_parent_.get(), hiu_mock_.GetMmioBuffer(), power_mock_.GetMmioBuffer(),
         memory_pd_mock_.GetMmioBuffer(), std::move(client_end), std::move(pdev), nna_block);
     ASSERT_NOT_NULL(device);
     EXPECT_OK(device->Init());
@@ -69,6 +70,7 @@ class MockRegisters {
   ddk_mock::MockMmioRegRegion power_mock_;
   ddk_mock::MockMmioRegRegion memory_pd_mock_;
 
+  std::shared_ptr<MockDevice> fake_parent_ = MockDevice::FakeRootParent();
   async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
   std::unique_ptr<mock_registers::MockRegistersDevice> reset_mock_;
 };
