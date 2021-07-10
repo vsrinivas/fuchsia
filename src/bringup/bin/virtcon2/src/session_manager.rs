@@ -24,7 +24,6 @@ pub trait SessionManagerClient: 'static + Clone {
         &self,
         id: u32,
         title: String,
-        show_cursor: bool,
         make_active: bool,
         pty_fd: File,
     ) -> Result<Terminal<Self::Listener>, Error>;
@@ -105,9 +104,8 @@ impl SessionManager {
         let client = client.clone();
         let pty = Pty::with_server_end(session).await.expect("failed to create PTY");
         let fd = pty.try_clone_fd().expect("unable to clone PTY fd");
-        let show_cursor = true;
         let terminal = client
-            .create_terminal(id, String::new(), show_cursor, make_active, fd)
+            .create_terminal(id, String::new(), make_active, fd)
             .expect("failed to create terminal");
         let term = terminal.clone_term();
         let read_fd = pty.try_clone_fd().expect("unable to clone PTY write fd");
@@ -177,17 +175,10 @@ mod tests {
             &self,
             _id: u32,
             title: String,
-            show_cursor: bool,
             _make_active: bool,
             pty_fd: File,
         ) -> Result<Terminal<Self::Listener>, Error> {
-            Ok(Terminal::new(
-                TestListener::default(),
-                title,
-                show_cursor,
-                ColorScheme::default(),
-                Some(pty_fd),
-            ))
+            Ok(Terminal::new(TestListener::default(), title, ColorScheme::default(), Some(pty_fd)))
         }
         fn request_update(&self, _id: u32) {}
     }

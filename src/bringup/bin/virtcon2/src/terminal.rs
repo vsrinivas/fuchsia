@@ -8,7 +8,6 @@ use {
     carnelian::{color::Color, Size},
     std::{cell::RefCell, convert::From, fs::File, io::prelude::*, rc::Rc},
     term_model::{
-        ansi::CursorStyle,
         clipboard::Clipboard,
         config::Config,
         event::EventListener,
@@ -47,7 +46,6 @@ impl<T> Terminal<T> {
     pub fn new(
         event_listener: T,
         title: String,
-        show_cursor: bool,
         color_scheme: ColorScheme,
         pty_fd: Option<File>,
     ) -> Self {
@@ -62,10 +60,7 @@ impl<T> Terminal<T> {
             padding_y: 0.0,
             dpr: 1.0,
         };
-        let mut config: TerminalConfig = color_scheme.into();
-        if !show_cursor {
-            config.cursor.style = CursorStyle::Hidden;
-        }
+        let config: TerminalConfig = color_scheme.into();
         let term =
             Rc::new(RefCell::new(Term::new(&config, &size_info, Clipboard::new(), event_listener)));
 
@@ -74,7 +69,7 @@ impl<T> Terminal<T> {
 
     #[cfg(test)]
     fn new_for_test(event_listener: T, pty_fd: File) -> Self {
-        Self::new(event_listener, String::new(), false, ColorScheme::default(), Some(pty_fd))
+        Self::new(event_listener, String::new(), ColorScheme::default(), Some(pty_fd))
     }
 
     pub fn clone_term(&self) -> Rc<RefCell<Term<T>>> {

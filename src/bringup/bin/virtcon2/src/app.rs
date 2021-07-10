@@ -34,12 +34,11 @@ impl VirtualConsoleClient {
         &self,
         id: u32,
         title: String,
-        show_cursor: bool,
         make_active: bool,
         pty_fd: Option<File>,
     ) -> Result<Terminal<EventProxy>, Error> {
         let event_proxy = EventProxy::new(&self.app_context, self.view_key, id);
-        let terminal = Terminal::new(event_proxy, title, show_cursor, self.color_scheme, pty_fd);
+        let terminal = Terminal::new(event_proxy, title, self.color_scheme, pty_fd);
         let terminal_clone = terminal.try_clone()?;
         self.app_context.queue_message(
             self.view_key,
@@ -59,13 +58,8 @@ impl VirtualConsoleClient {
 impl LogClient for VirtualConsoleClient {
     type Listener = EventProxy;
 
-    fn create_terminal(
-        &self,
-        id: u32,
-        title: String,
-        show_cursor: bool,
-    ) -> Result<Terminal<Self::Listener>, Error> {
-        VirtualConsoleClient::create_terminal(self, id, title, show_cursor, false, None)
+    fn create_terminal(&self, id: u32, title: String) -> Result<Terminal<Self::Listener>, Error> {
+        VirtualConsoleClient::create_terminal(self, id, title, false, None)
     }
 
     fn request_update(&self, id: u32) {
@@ -80,18 +74,10 @@ impl SessionManagerClient for VirtualConsoleClient {
         &self,
         id: u32,
         title: String,
-        show_cursor: bool,
         make_active: bool,
         pty_fd: File,
     ) -> Result<Terminal<Self::Listener>, Error> {
-        VirtualConsoleClient::create_terminal(
-            self,
-            id,
-            title,
-            show_cursor,
-            make_active,
-            Some(pty_fd),
-        )
+        VirtualConsoleClient::create_terminal(self, id, title, make_active, Some(pty_fd))
     }
 
     fn request_update(&self, id: u32) {
