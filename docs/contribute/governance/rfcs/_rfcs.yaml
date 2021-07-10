@@ -1371,7 +1371,7 @@
   title: 'Component manifest includes in the Fuchsia SDK'
   short_description: 'Create a component manifest include shards sysroot in the SDK and distribute it to out-of-tree integrators.'
   authors: ['shayba@google.com', 'jayzhuang@google.com']
-  file: 'NNNN_manifest_includes_in_sdk.md'
+  file: '0106_manifest_includes_in_sdk.md'
   area: ['Component Framework']
   issue: ['76601']
   gerrit_change_id: ['529382']
