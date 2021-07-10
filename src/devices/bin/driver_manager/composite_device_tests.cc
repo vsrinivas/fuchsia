@@ -16,53 +16,95 @@
 
 namespace fio = fuchsia_io;
 
+namespace {
+
+class FidlTransaction : public fidl::Transaction {
+ public:
+  FidlTransaction(FidlTransaction&&) = default;
+  explicit FidlTransaction(zx_txid_t transaction_id, zx::unowned_channel channel)
+      : txid_(transaction_id), channel_(channel) {}
+
+  std::unique_ptr<fidl::Transaction> TakeOwnership() override {
+    return std::make_unique<FidlTransaction>(std::move(*this));
+  }
+
+  zx_status_t Reply(fidl::OutgoingMessage* message) override {
+    ZX_ASSERT(txid_ != 0);
+    message->set_txid(txid_);
+    txid_ = 0;
+    message->Write(channel_);
+    return message->status();
+  }
+
+  void Close(zx_status_t epitaph) override { ZX_ASSERT(false); }
+
+  ~FidlTransaction() override = default;
+
+ private:
+  zx_txid_t txid_;
+  zx::unowned_channel channel_;
+};
+
+class FakeDevhost : public fidl::WireServer<fuchsia_device_manager::DevhostController> {
+ public:
+  FakeDevhost(const char* expected_name, size_t expected_fragments_count,
+              fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
+              fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server)
+      : expected_name_(expected_name),
+        expected_fragments_count_(expected_fragments_count),
+        device_coordinator_client_(device_coordinator_client),
+        device_controller_server_(device_controller_server) {}
+
+  void CreateDevice(CreateDeviceRequestView request,
+                    CreateDeviceCompleter::Sync& completer) override {}
+
+  void CreateCompositeDevice(CreateCompositeDeviceRequestView request,
+                             CreateCompositeDeviceCompleter::Sync& completer) override {
+    if (strncmp(expected_name_, request->name.data(), request->name.size()) == 0 &&
+        request->fragments.count() == expected_fragments_count_) {
+      *device_coordinator_client_ = std::move(request->coordinator_rpc);
+      *device_controller_server_ = std::move(request->device_controller_rpc);
+      completer.Reply(ZX_OK);
+      return;
+    }
+    completer.Reply(ZX_ERR_INTERNAL);
+  }
+  void CreateDeviceStub(CreateDeviceStubRequestView request,
+                        CreateDeviceStubCompleter::Sync& completer) override {}
+  void Restart(RestartRequestView request, RestartCompleter::Sync& completer) override {}
+
+ private:
+  const char* expected_name_;
+  size_t expected_fragments_count_;
+  fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client_;
+  fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server_;
+};
+
+}  // namespace
+
 // Reads a CreateCompositeDevice from remote, checks expectations, and sends
 // a ZX_OK response.
-void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* expected_name,
-                                        size_t expected_fragments_count,
-                                        zx::channel* composite_remote_controller_coordinator,
-                                        zx::channel* composite_remote_controller_controller) {
-  // Read the CreateCompositeDevice request.
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
-                                   &actual_bytes, &actual_handles);
-  ASSERT_OK(status);
-  ASSERT_LT(0, actual_bytes);
-  ASSERT_EQ(2, actual_handles);
-  composite_remote_controller_coordinator->reset(handles[0]);
-  composite_remote_controller_controller->reset(handles[1]);
+void CheckCreateCompositeDeviceReceived(const fidl::ServerEnd<fdm::DevhostController>& controller,
+                                        const char* expected_name, size_t expected_fragments_count,
+                                        DeviceState* composite) {
+  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl::IncomingMessage msg =
+      fidl::ChannelReadEtc(controller.channel().get(), 0, fidl::BufferSpan(bytes, std::size(bytes)),
+                           cpp20::span(handles));
+  ASSERT_TRUE(msg.ok());
 
-  // Validate the CreateCompositeDevice request.
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  ASSERT_EQ(fuchsia_device_manager_DevhostControllerCreateCompositeDeviceOrdinal, hdr->ordinal);
-  status = fidl_decode(&fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable,
-                       bytes, actual_bytes, handles, actual_handles, nullptr);
-  ASSERT_OK(status);
-  auto req =
-      reinterpret_cast<fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequest*>(
-          bytes);
-  ASSERT_EQ(req->name.size, strlen(expected_name));
-  ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected_name),
-                  reinterpret_cast<const uint8_t*>(req->name.data), req->name.size, "");
-  ASSERT_EQ(expected_fragments_count, req->fragments.count);
+  auto* header = msg.header();
+  FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
 
-  // Write the CreateCompositeDevice response.
-  memset(bytes, 0, sizeof(bytes));
-  auto resp =
-      reinterpret_cast<fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponse*>(
-          bytes);
-  fidl_init_txn_header(&resp->hdr, 0,
-                       fuchsia_device_manager_DevhostControllerCreateCompositeDeviceOrdinal);
-  resp->status = ZX_OK;
-  status = fidl_encode(&fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponseTable,
-                       bytes, sizeof(*resp), handles, std::size(handles), &actual_handles, nullptr);
-  ASSERT_OK(status);
-  ASSERT_EQ(0, actual_handles);
-  status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
-  ASSERT_OK(status);
+  FakeDevhost fake(expected_name, expected_fragments_count, &composite->coordinator_client,
+                   &composite->controller_server);
+  ASSERT_EQ(fidl::WireDispatch(
+                static_cast<fidl::WireServer<fuchsia_device_manager::DevhostController>*>(&fake),
+                std::move(msg), &txn),
+            fidl::DispatchResult::kFound);
+  ASSERT_TRUE(composite->coordinator_client.is_valid());
+  ASSERT_TRUE(composite->controller_server.is_valid());
 }
 
 // Helper for BindComposite for issuing an AddComposite for a composite with the
@@ -134,8 +176,7 @@ class CompositeTestCase : public MultipleDeviceTestCase {
 
   void CheckCompositeCreation(const char* composite_name, const size_t* device_indexes,
                               size_t device_indexes_count, size_t* fragment_indexes_out,
-                              zx::channel* composite_remote_out1,
-                              zx::channel* composite_remote_out2);
+                              DeviceState* composite_state);
 
   fbl::RefPtr<Device> GetCompositeDeviceFromFragment(const char* composite_name,
                                                      size_t fragment_index);
@@ -164,14 +205,12 @@ void CompositeTestCase::CheckCompositeCreation(const char* composite_name,
                                                const size_t* device_indexes,
                                                size_t device_indexes_count,
                                                size_t* fragment_indexes_out,
-                                               zx::channel* composite_remote_coordinator_out,
-                                               zx::channel* composite_remote_controller_out) {
+                                               DeviceState* composite) {
   for (size_t i = 0; i < device_indexes_count; ++i) {
     auto device_state = device(device_indexes[i]);
     // Check that the fragments got bound
     fbl::String driver = coordinator().fragment_driver()->libname;
-    ASSERT_NO_FATAL_FAILURES(
-        CheckBindDriverReceived(device_state->controller_remote, driver.data()));
+    ASSERT_NO_FATAL_FAILURES(device_state->CheckBindDriverReceivedAndReply(driver.data()));
     coordinator_loop()->RunUntilIdle();
 
     // Synthesize the AddDevice request the fragment driver would send
@@ -181,9 +220,8 @@ void CompositeTestCase::CheckCompositeCreation(const char* composite_name,
         AddDevice(device_state->device, name, 0, driver, &fragment_indexes_out[i]));
   }
   // Make sure the composite comes up
-  ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(
-      driver_host_remote(), composite_name, device_indexes_count, composite_remote_coordinator_out,
-      composite_remote_controller_out));
+  ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(driver_host_server(), composite_name,
+                                                              device_indexes_count, composite));
 }
 
 class CompositeAddOrderTestCase : public CompositeTestCase {
@@ -221,8 +259,9 @@ void CompositeAddOrderSharedFragmentTestCase::ExecuteSharedFragmentTest(AddLocat
   const char* kCompositeDev1Name = "composite-dev1";
   const char* kCompositeDev2Name = "composite-dev2";
   auto do_add = [&](const char* devname) {
-    ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
-        platform_bus(), protocol_id, std::size(protocol_id), nullptr /* props */, 0, devname));
+    ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
+                                                          std::size(protocol_id),
+                                                          nullptr /* props */, 0, devname));
   };
 
   if (dev1_add == AddLocation::BEFORE) {
@@ -237,7 +276,7 @@ void CompositeAddOrderSharedFragmentTestCase::ExecuteSharedFragmentTest(AddLocat
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
-        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+        AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
     if (i == 0 && dev1_add == AddLocation::MIDDLE) {
       ASSERT_NO_FATAL_FAILURES(do_add(kCompositeDev1Name));
     }
@@ -250,21 +289,18 @@ void CompositeAddOrderSharedFragmentTestCase::ExecuteSharedFragmentTest(AddLocat
     ASSERT_NO_FATAL_FAILURES(do_add(kCompositeDev1Name));
   }
 
-  zx::channel composite_remote_controller1;
-  zx::channel composite_remote_controller2;
-  zx::channel composite_remote_coordinator1;
-  zx::channel composite_remote_coordinator2;
+  DeviceState composite1, composite2;
   size_t fragment_device1_indexes[std::size(device_indexes)];
   size_t fragment_device2_indexes[std::size(device_indexes)];
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDev1Name, device_indexes, std::size(device_indexes), fragment_device1_indexes,
-      &composite_remote_coordinator1, &composite_remote_controller1));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDev1Name, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device1_indexes, &composite1));
   if (dev2_add == AddLocation::AFTER) {
     ASSERT_NO_FATAL_FAILURES(do_add(kCompositeDev2Name));
   }
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDev2Name, device_indexes, std::size(device_indexes), fragment_device2_indexes,
-      &composite_remote_coordinator2, &composite_remote_controller2));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDev2Name, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device2_indexes, &composite2));
 }
 
 void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
@@ -279,7 +315,7 @@ void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
   const char* kCompositeDevName = "composite-dev";
   auto do_add = [&]() {
     ASSERT_NO_FATAL_FAILURES(
-        BindCompositeDefineComposite(platform_bus(), protocol_id, std::size(protocol_id),
+        BindCompositeDefineComposite(platform_bus()->device, protocol_id, std::size(protocol_id),
                                      nullptr /* props */, 0, kCompositeDevName));
   };
 
@@ -292,7 +328,7 @@ void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
-        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+        AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
     if (i == 0 && add == AddLocation::MIDDLE) {
       ASSERT_NO_FATAL_FAILURES(do_add());
     }
@@ -302,12 +338,11 @@ void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
     ASSERT_NO_FATAL_FAILURES(do_add());
   }
 
-  zx::channel composite_remote_coordinator;
-  zx::channel composite_remote_controller;
+  DeviceState composite;
   size_t fragment_device_indexes[std::size(device_indexes)];
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
-      &composite_remote_coordinator, &composite_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device_indexes, &composite));
 }
 TEST_F(CompositeAddOrderTestCase, DefineBeforeDevices) {
   ASSERT_NO_FATAL_FAILURES(ExecuteTest(AddLocation::BEFORE));
@@ -354,27 +389,25 @@ TEST_F(CompositeTestCase, AddMultipleSharedFragmentCompositeDevices) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
-        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+        AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
   }
 
   for (size_t i = 1; i <= 5; i++) {
     char composite_dev_name[32];
     snprintf(composite_dev_name, sizeof(composite_dev_name), "composite-dev-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
-        BindCompositeDefineComposite(platform_bus(), protocol_id, std::size(protocol_id),
+        BindCompositeDefineComposite(platform_bus()->device, protocol_id, std::size(protocol_id),
                                      nullptr /* props */, 0, composite_dev_name));
   }
 
-  zx::channel composite_remote_coordinator[5];
-  zx::channel composite_remote_controller[5];
+  DeviceState composite[5];
   size_t fragment_device_indexes[5][std::size(device_indexes)];
   for (size_t i = 1; i <= 5; i++) {
     char composite_dev_name[32];
     snprintf(composite_dev_name, sizeof(composite_dev_name), "composite-dev-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
         CheckCompositeCreation(composite_dev_name, device_indexes, std::size(device_indexes),
-                               fragment_device_indexes[i - 1], &composite_remote_coordinator[i - 1],
-                               &composite_remote_controller[i - 1]));
+                               fragment_device_indexes[i - 1], &composite[i - 1]));
   }
   auto device1 = device(device_indexes[1])->device;
   size_t count = 0;
@@ -400,11 +433,11 @@ TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
 
   const char* kCompositeDev1Name = "composite-dev-1";
   const char* kCompositeDev2Name = "composite-dev-2";
-  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus(), protocol_id,
+  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
                                                         std::size(protocol_id), nullptr /* props */,
                                                         0, kCompositeDev1Name));
 
-  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus(), protocol_id,
+  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
                                                         std::size(protocol_id), nullptr /* props */,
                                                         0, kCompositeDev2Name));
 
@@ -413,20 +446,18 @@ TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
-        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+        AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
   }
-  zx::channel composite1_remote_controller;
-  zx::channel composite2_remote_controller;
-  zx::channel composite1_remote_coordinator;
-  zx::channel composite2_remote_coordinator;
+
+  DeviceState composite1, composite2;
   size_t fragment_device1_indexes[std::size(device_indexes)];
   size_t fragment_device2_indexes[std::size(device_indexes)];
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDev1Name, device_indexes, std::size(device_indexes), fragment_device1_indexes,
-      &composite1_remote_coordinator, &composite1_remote_controller));
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDev2Name, device_indexes, std::size(device_indexes), fragment_device2_indexes,
-      &composite2_remote_coordinator, &composite2_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDev1Name, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device1_indexes, &composite1));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDev2Name, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device2_indexes, &composite2));
   coordinator_loop()->RunUntilIdle();
   {
     auto device1 = device(device_indexes[1])->device;
@@ -450,58 +481,55 @@ TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
   ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(device(device_indexes[0])->device));
   coordinator_loop()->RunUntilIdle();
 
-  zx::channel& device_remote = device(device_indexes[0])->controller_remote;
-  zx::channel& fragment1_remote = device(fragment_device1_indexes[0])->controller_remote;
-  zx::channel& fragment2_remote = device(fragment_device2_indexes[0])->controller_remote;
+  auto device_zero = device(device_indexes[0]);
+  auto fragment1 = device(fragment_device1_indexes[0]);
+  auto fragment2 = device(fragment_device2_indexes[0]);
 
-  zx_txid_t txid1;
-  zx_txid_t txid2;
   // Check the fragments have received their unbind requests.
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(fragment1_remote, &txid1));
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(fragment2_remote, &txid2));
+  ASSERT_NO_FATAL_FAILURES(fragment1->CheckUnbindReceived());
+  ASSERT_NO_FATAL_FAILURES(fragment2->CheckUnbindReceived());
 
   // The device and composites should not have received any requests yet.
-  ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
-  ASSERT_FALSE(DeviceHasPendingMessages(composite1_remote_controller));
-  ASSERT_FALSE(DeviceHasPendingMessages(composite2_remote_controller));
+  ASSERT_FALSE(device_zero->HasPendingMessages());
+  ASSERT_FALSE(composite1.HasPendingMessages());
+  ASSERT_FALSE(composite2.HasPendingMessages());
 
-  ASSERT_NO_FATAL_FAILURES(SendUnbindReply(fragment1_remote, txid1));
-  ASSERT_NO_FATAL_FAILURES(SendUnbindReply(fragment2_remote, txid2));
+  ASSERT_NO_FATAL_FAILURES(fragment1->SendUnbindReply());
+  ASSERT_NO_FATAL_FAILURES(fragment2->SendUnbindReply());
   coordinator_loop()->RunUntilIdle();
 
   // The composites should start unbinding since the fragments finished unbinding.
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(composite1_remote_controller));
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(composite2_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(composite1.CheckUnbindReceivedAndReply());
+  ASSERT_NO_FATAL_FAILURES(composite2.CheckUnbindReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 
   // We are still waiting for the composites to be removed.
-  ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
-  ASSERT_FALSE(DeviceHasPendingMessages(fragment1_remote));
-  ASSERT_FALSE(DeviceHasPendingMessages(fragment2_remote));
+  ASSERT_FALSE(device_zero->HasPendingMessages());
+  ASSERT_FALSE(fragment1->HasPendingMessages());
+  ASSERT_FALSE(fragment2->HasPendingMessages());
 
   // Finish removing the composites.
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(composite1_remote_controller));
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(composite2_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(composite1.CheckRemoveReceivedAndReply());
+  ASSERT_NO_FATAL_FAILURES(composite2.CheckRemoveReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
+  ASSERT_FALSE(device_zero->HasPendingMessages());
 
   // Finish removing the fragments.
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(fragment1_remote));
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(fragment2_remote));
+  ASSERT_NO_FATAL_FAILURES(fragment1->CheckRemoveReceivedAndReply());
+  ASSERT_NO_FATAL_FAILURES(fragment2->CheckRemoveReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device_remote));
+  ASSERT_NO_FATAL_FAILURES(device_zero->CheckRemoveReceivedAndReply());
 
   // Add the device back and verify the composite gets created again
   ASSERT_NO_FATAL_FAILURES(
-      AddDevice(platform_bus(), "device-0", protocol_id[0], "", &device_indexes[0]));
+      AddDevice(platform_bus()->device, "device-0", protocol_id[0], "", &device_indexes[0]));
   {
     auto device_state = device(device_indexes[0]);
     // Wait for the fragments to get bound
     fbl::String driver = coordinator().fragment_driver()->libname;
-    ASSERT_NO_FATAL_FAILURES(
-        CheckBindDriverReceived(device_state->controller_remote, driver.data()));
+    ASSERT_NO_FATAL_FAILURES(device_state->CheckBindDriverReceivedAndReply(driver.data()));
     coordinator_loop()->RunUntilIdle();
 
     // Synthesize the AddDevice request the fragment driver would send
@@ -512,8 +540,7 @@ TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
     auto device_state = device(device_indexes[0]);
     // Wait for the fragments to get bound
     fbl::String driver = coordinator().fragment_driver()->libname;
-    ASSERT_NO_FATAL_FAILURES(
-        CheckBindDriverReceived(device_state->controller_remote, driver.data()));
+    ASSERT_NO_FATAL_FAILURES(device_state->CheckBindDriverReceivedAndReply(driver.data()));
     coordinator_loop()->RunUntilIdle();
 
     // Synthesize the AddDevice request the fragment driver would send
@@ -521,11 +548,9 @@ TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
                                        driver, &fragment_device2_indexes[0]));
   }
   ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(
-      driver_host_remote(), kCompositeDev1Name, std::size(device_indexes),
-      &composite1_remote_coordinator, &composite1_remote_controller));
+      driver_host_server(), kCompositeDev1Name, std::size(device_indexes), &composite1));
   ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(
-      driver_host_remote(), kCompositeDev2Name, std::size(device_indexes),
-      &composite1_remote_coordinator, &composite2_remote_controller));
+      driver_host_server(), kCompositeDev2Name, std::size(device_indexes), &composite2));
 }
 
 TEST_F(CompositeTestCase, FragmentUnbinds) {
@@ -537,7 +562,7 @@ TEST_F(CompositeTestCase, FragmentUnbinds) {
   static_assert(std::size(protocol_id) == std::size(device_indexes));
 
   const char* kCompositeDevName = "composite-dev";
-  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus(), protocol_id,
+  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
                                                         std::size(protocol_id), nullptr /* props */,
                                                         0, kCompositeDevName));
 
@@ -546,14 +571,13 @@ TEST_F(CompositeTestCase, FragmentUnbinds) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
-        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+        AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
   }
-  zx::channel composite_remote_coordinator;
-  zx::channel composite_remote_controller;
+  DeviceState composite;
   size_t fragment_device_indexes[std::size(device_indexes)];
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
-      &composite_remote_coordinator, &composite_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device_indexes, &composite));
   coordinator_loop()->RunUntilIdle();
 
   {
@@ -566,48 +590,47 @@ TEST_F(CompositeTestCase, FragmentUnbinds) {
   ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(device(device_indexes[0])->device));
   coordinator_loop()->RunUntilIdle();
 
-  zx::channel& device_remote = device(device_indexes[0])->controller_remote;
-  zx::channel& fragment_remote = device(fragment_device_indexes[0])->controller_remote;
+  auto device_zero = device(device_indexes[0]);
+  auto fragment = device(fragment_device_indexes[0]);
 
   // The device and composite should not have received an unbind request yet.
-  ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
-  ASSERT_FALSE(DeviceHasPendingMessages(composite_remote_controller));
+  ASSERT_FALSE(device_zero->HasPendingMessages());
+  ASSERT_FALSE(composite.HasPendingMessages());
 
   // Check the fragment and composite are unbound.
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(fragment_remote));
+  ASSERT_NO_FATAL_FAILURES(fragment->CheckUnbindReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
-  ASSERT_FALSE(DeviceHasPendingMessages(fragment_remote));
+  ASSERT_FALSE(device_zero->HasPendingMessages());
+  ASSERT_FALSE(fragment->HasPendingMessages());
 
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(composite_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(composite.CheckUnbindReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
   // Still waiting for the composite to be removed.
-  ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
-  ASSERT_FALSE(DeviceHasPendingMessages(fragment_remote));
+  ASSERT_FALSE(device_zero->HasPendingMessages());
+  ASSERT_FALSE(fragment->HasPendingMessages());
 
   // Finish removing the composite.
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(composite_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(composite.CheckRemoveReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
+  ASSERT_FALSE(device_zero->HasPendingMessages());
 
   // Finish removing the fragment.
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(fragment_remote));
+  ASSERT_NO_FATAL_FAILURES(fragment->CheckRemoveReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device_remote));
+  ASSERT_NO_FATAL_FAILURES(device_zero->CheckRemoveReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 
   // Add the device back and verify the composite gets created again
   ASSERT_NO_FATAL_FAILURES(
-      AddDevice(platform_bus(), "device-0", protocol_id[0], "", &device_indexes[0]));
+      AddDevice(platform_bus()->device, "device-0", protocol_id[0], "", &device_indexes[0]));
   {
     auto device_state = device(device_indexes[0]);
     // Wait for the fragments to get bound
     fbl::String driver = coordinator().fragment_driver()->libname;
-    ASSERT_NO_FATAL_FAILURES(
-        CheckBindDriverReceived(device_state->controller_remote, driver.data()));
+    ASSERT_NO_FATAL_FAILURES(device_state->CheckBindDriverReceivedAndReply(driver.data()));
     coordinator_loop()->RunUntilIdle();
 
     // Synthesize the AddDevice request the fragment driver would send
@@ -615,8 +638,7 @@ TEST_F(CompositeTestCase, FragmentUnbinds) {
                                        &fragment_device_indexes[0]));
   }
   ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(
-      driver_host_remote(), kCompositeDevName, std::size(device_indexes),
-      &composite_remote_coordinator, &composite_remote_controller));
+      driver_host_server(), kCompositeDevName, std::size(device_indexes), &composite));
 }
 
 TEST_F(CompositeTestCase, SuspendOrder) {
@@ -628,7 +650,7 @@ TEST_F(CompositeTestCase, SuspendOrder) {
   static_assert(std::size(protocol_id) == std::size(device_indexes));
 
   const char* kCompositeDevName = "composite-dev";
-  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus(), protocol_id,
+  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
                                                         std::size(protocol_id), nullptr /* props */,
                                                         0, kCompositeDevName));
   // Add the devices to construct the composite out of.
@@ -636,55 +658,50 @@ TEST_F(CompositeTestCase, SuspendOrder) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
-        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+        AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
   }
 
-  zx::channel composite_remote_coordinator;
-  zx::channel composite_remote_controller;
+  DeviceState composite;
   size_t fragment_device_indexes[std::size(device_indexes)];
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
-      &composite_remote_coordinator, &composite_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device_indexes, &composite));
 
   const uint32_t suspend_flags = DEVICE_SUSPEND_FLAG_POWEROFF;
   ASSERT_NO_FATAL_FAILURES(DoSuspend(suspend_flags));
 
   // Make sure none of the fragments have received their suspend requests
-  ASSERT_FALSE(DeviceHasPendingMessages(platform_bus_controller_remote()));
+  ASSERT_FALSE(platform_bus()->HasPendingMessages());
   for (auto idx : device_indexes) {
-    ASSERT_FALSE(DeviceHasPendingMessages(idx));
+    ASSERT_FALSE(device(idx)->HasPendingMessages());
   }
   for (auto idx : fragment_device_indexes) {
-    ASSERT_FALSE(DeviceHasPendingMessages(idx));
+    ASSERT_FALSE(device(idx)->HasPendingMessages());
   }
   // The composite should have been the first to get one
-  ASSERT_NO_FATAL_FAILURES(
-      CheckSuspendReceivedAndReply(composite_remote_controller, suspend_flags, ZX_OK));
+  ASSERT_NO_FATAL_FAILURES(composite.CheckSuspendReceivedAndReply(suspend_flags, ZX_OK));
   coordinator_loop()->RunUntilIdle();
 
   // Next, all of the internal fragment devices should have them, but none of the devices
   // themselves
-  ASSERT_FALSE(DeviceHasPendingMessages(platform_bus_controller_remote()));
+  ASSERT_FALSE(platform_bus()->HasPendingMessages());
   for (auto idx : device_indexes) {
-    ASSERT_FALSE(DeviceHasPendingMessages(idx));
+    ASSERT_FALSE(device(idx)->HasPendingMessages());
   }
   for (auto idx : fragment_device_indexes) {
-    ASSERT_NO_FATAL_FAILURES(
-        CheckSuspendReceivedAndReply(device(idx)->controller_remote, suspend_flags, ZX_OK));
+    ASSERT_NO_FATAL_FAILURES(device(idx)->CheckSuspendReceivedAndReply(suspend_flags, ZX_OK));
   }
   coordinator_loop()->RunUntilIdle();
 
   // Next, the devices should get them
-  ASSERT_FALSE(DeviceHasPendingMessages(platform_bus_controller_remote()));
+  ASSERT_FALSE(platform_bus()->HasPendingMessages());
   for (auto idx : device_indexes) {
-    ASSERT_NO_FATAL_FAILURES(
-        CheckSuspendReceivedAndReply(device(idx)->controller_remote, suspend_flags, ZX_OK));
+    ASSERT_NO_FATAL_FAILURES(device(idx)->CheckSuspendReceivedAndReply(suspend_flags, ZX_OK));
   }
   coordinator_loop()->RunUntilIdle();
 
   // Finally, the platform bus driver, which is the parent of all of the devices
-  ASSERT_NO_FATAL_FAILURES(
-      CheckSuspendReceivedAndReply(platform_bus_controller_remote(), suspend_flags, ZX_OK));
+  ASSERT_NO_FATAL_FAILURES(platform_bus()->CheckSuspendReceivedAndReply(suspend_flags, ZX_OK));
   coordinator_loop()->RunUntilIdle();
 }
 
@@ -697,7 +714,7 @@ TEST_F(CompositeTestCase, ResumeOrder) {
   static_assert(std::size(protocol_id) == std::size(device_indexes));
 
   const char* kCompositeDevName = "composite-dev";
-  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus(), protocol_id,
+  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
                                                         std::size(protocol_id), nullptr /* props */,
                                                         0, kCompositeDevName));
   // Add the devices to construct the composite out of.
@@ -705,15 +722,14 @@ TEST_F(CompositeTestCase, ResumeOrder) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
-        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+        AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
   }
 
   size_t fragment_device_indexes[std::size(device_indexes)];
-  zx::channel composite_remote_coordinator;
-  zx::channel composite_remote_controller;
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
-      &composite_remote_coordinator, &composite_remote_controller));
+  DeviceState composite;
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device_indexes, &composite));
   fbl::RefPtr<Device> comp_device =
       GetCompositeDeviceFromFragment(kCompositeDevName, device_indexes[1]);
   ASSERT_NOT_NULL(comp_device);
@@ -721,7 +737,7 @@ TEST_F(CompositeTestCase, ResumeOrder) {
   // Put all the devices in suspended state
   coordinator().sys_device()->set_state(Device::State::kSuspended);
   coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
-  platform_bus()->set_state(Device::State::kSuspended);
+  platform_bus()->device->set_state(Device::State::kSuspended);
   for (auto idx : device_indexes) {
     device(idx)->device->set_state(Device::State::kSuspended);
   }
@@ -736,27 +752,27 @@ TEST_F(CompositeTestCase, ResumeOrder) {
 
   // First, the sys proxy driver, which is the parent of all of the devices
   ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::kFullyOn, ZX_OK));
+      sys_proxy()->CheckResumeReceivedAndReply(SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
 
   // Then platform devices
-  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(platform_bus_controller_remote(), state, ZX_OK));
+  ASSERT_NO_FATAL_FAILURES(platform_bus()->CheckResumeReceivedAndReply(state, ZX_OK));
   coordinator_loop()->RunUntilIdle();
 
   // Next the devices
   for (auto idx : device_indexes) {
-    ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(device(idx)->controller_remote, state, ZX_OK));
+    ASSERT_NO_FATAL_FAILURES(device(idx)->CheckResumeReceivedAndReply(state, ZX_OK));
   }
   coordinator_loop()->RunUntilIdle();
 
   // Then the fragments
   for (auto idx : fragment_device_indexes) {
-    ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(device(idx)->controller_remote, state, ZX_OK));
+    ASSERT_NO_FATAL_FAILURES(device(idx)->CheckResumeReceivedAndReply(state, ZX_OK));
   }
   coordinator_loop()->RunUntilIdle();
 
   // Then finally the composite device itself
-  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(composite_remote_controller, state, ZX_OK));
+  ASSERT_NO_FATAL_FAILURES(composite.CheckResumeReceivedAndReply(state, ZX_OK));
   coordinator_loop()->RunUntilIdle();
 }
 
@@ -778,7 +794,7 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
   static_assert(std::size(protocol_id) == std::size(device_indexes));
 
   const char* kCompositeDevName = "composite-dev";
-  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus(), protocol_id,
+  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
                                                         std::size(protocol_id), nullptr /* props */,
                                                         0, kCompositeDevName));
   // Add the devices to construct the composite out of.
@@ -786,15 +802,14 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
-        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+        AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
   }
 
-  zx::channel composite_remote_coordinator;
-  zx::channel composite_remote_controller;
+  DeviceState composite;
   size_t fragment_device_indexes[std::size(device_indexes)];
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
-      &composite_remote_coordinator, &composite_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device_indexes, &composite));
 
   uint8_t msg[fio::wire::kMaxFilename + 2];
   uint32_t msg_len = 0;
@@ -815,7 +830,7 @@ TEST_F(CompositeTestCase, Topology) {
   static_assert(std::size(protocol_id) == std::size(device_indexes));
 
   const char* kCompositeDevName = "composite-dev";
-  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus(), protocol_id,
+  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
                                                         std::size(protocol_id), nullptr /* props */,
                                                         0, kCompositeDevName));
   // Add the devices to construct the composite out of.
@@ -823,15 +838,14 @@ TEST_F(CompositeTestCase, Topology) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
-        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+        AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
   }
 
-  zx::channel composite_remote_coordinator;
-  zx::channel composite_remote_controller;
+  DeviceState composite;
   size_t fragment_device_indexes[std::size(device_indexes)];
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
-      &composite_remote_coordinator, &composite_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device_indexes, &composite));
 
   Devnode* dn = coordinator().root_device()->self;
   fbl::RefPtr<Device> composite_dev;
@@ -865,8 +879,7 @@ class CompositeMetadataTestCase : public CompositeTestCase {
   fbl::RefPtr<Device> composite_device;
 
   // Hold reference to remote channels so that they do not close
-  zx::channel composite_remote_coordinator;
-  zx::channel composite_remote_controller;
+  DeviceState composite;
 };
 
 void CompositeMetadataTestCase::AddCompositeDevice(AddLocation add) {
@@ -889,7 +902,7 @@ void CompositeMetadataTestCase::AddCompositeDevice(AddLocation add) {
   const char* kCompositeDevName = "composite-dev";
   auto do_add = [&]() {
     ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
-        platform_bus(), protocol_id, std::size(protocol_id), nullptr /* props */, 0,
+        platform_bus()->device, protocol_id, std::size(protocol_id), nullptr /* props */, 0,
         kCompositeDevName, ZX_OK, metadata, countof(metadata)));
   };
 
@@ -902,7 +915,7 @@ void CompositeMetadataTestCase::AddCompositeDevice(AddLocation add) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
-        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+        AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
     if (i == 0 && add == AddLocation::MIDDLE) {
       ASSERT_NO_FATAL_FAILURES(do_add());
     }
@@ -913,9 +926,9 @@ void CompositeMetadataTestCase::AddCompositeDevice(AddLocation add) {
   }
 
   size_t fragment_device_indexes[std::size(device_indexes)];
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
-      &composite_remote_coordinator, &composite_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device_indexes, &composite));
   composite_device = GetCompositeDeviceFromFragment(kCompositeDevName, device_indexes[0]);
   ASSERT_NOT_NULL(composite_device);
 }
@@ -924,16 +937,16 @@ TEST_F(CompositeMetadataTestCase, AddAndGetMetadata) {
   char buf[32] = "";
   size_t len = 0;
   ASSERT_NO_FATAL_FAILURES(AddCompositeDevice());
-  ASSERT_OK(
-      platform_bus()->coordinator->GetMetadata(composite_device, kMetadataKey, buf, 32, &len));
+  ASSERT_OK(platform_bus()->device->coordinator->GetMetadata(composite_device, kMetadataKey, buf,
+                                                             32, &len));
   VerifyMetadata(buf, len);
 }
 
 TEST_F(CompositeMetadataTestCase, FailGetMetadata) {
   size_t len = 0;
   ASSERT_NO_FATAL_FAILURES(AddCompositeDevice());
-  ASSERT_EQ(platform_bus()->coordinator->GetMetadata(composite_device, kMetadataKey + 1, nullptr, 0,
-                                                     &len),
+  ASSERT_EQ(platform_bus()->device->coordinator->GetMetadata(composite_device, kMetadataKey + 1,
+                                                             nullptr, 0, &len),
             ZX_ERR_NOT_FOUND);
 }
 
@@ -942,16 +955,17 @@ TEST_F(CompositeMetadataTestCase, FailGetMetadataFromParent) {
   ASSERT_NO_FATAL_FAILURES(AddCompositeDevice());
   fbl::RefPtr<Device> parent =
       composite_device->composite()->bound_fragments().front().bound_device();
-  ASSERT_EQ(platform_bus()->coordinator->GetMetadata(parent, kMetadataKey, nullptr, 0, &len),
-            ZX_ERR_NOT_FOUND);
+  ASSERT_EQ(
+      platform_bus()->device->coordinator->GetMetadata(parent, kMetadataKey, nullptr, 0, &len),
+      ZX_ERR_NOT_FOUND);
 }
 
 TEST_F(CompositeMetadataTestCase, DefineAfterDevices) {
   char buf[32] = "";
   size_t len = 0;
   ASSERT_NO_FATAL_FAILURES(AddCompositeDevice(AddLocation::AFTER));
-  ASSERT_OK(
-      platform_bus()->coordinator->GetMetadata(composite_device, kMetadataKey, buf, 32, &len));
+  ASSERT_OK(platform_bus()->device->coordinator->GetMetadata(composite_device, kMetadataKey, buf,
+                                                             32, &len));
   VerifyMetadata(buf, len);
 }
 
@@ -959,8 +973,8 @@ TEST_F(CompositeMetadataTestCase, DefineInBetweenDevices) {
   char buf[32] = "";
   size_t len = 0;
   ASSERT_NO_FATAL_FAILURES(AddCompositeDevice(AddLocation::MIDDLE));
-  ASSERT_OK(
-      platform_bus()->coordinator->GetMetadata(composite_device, kMetadataKey, buf, 32, &len));
+  ASSERT_OK(platform_bus()->device->coordinator->GetMetadata(composite_device, kMetadataKey, buf,
+                                                             32, &len));
   VerifyMetadata(buf, len);
 }
 
@@ -968,22 +982,22 @@ TEST_F(CompositeMetadataTestCase, PublishToSelf) {
   char path[256] = "";
   size_t len = 0;
   ASSERT_NO_FATAL_FAILURES(AddCompositeDevice());
-  ASSERT_OK(platform_bus()->coordinator->GetTopologicalPath(composite_device, path, 256));
-  ASSERT_EQ(platform_bus()->coordinator->GetMetadata(composite_device, kMetadataKey + 1, nullptr, 0,
-                                                     &len),
+  ASSERT_OK(platform_bus()->device->coordinator->GetTopologicalPath(composite_device, path, 256));
+  ASSERT_EQ(platform_bus()->device->coordinator->GetMetadata(composite_device, kMetadataKey + 1,
+                                                             nullptr, 0, &len),
             ZX_ERR_NOT_FOUND);
-  ASSERT_OK(platform_bus()->coordinator->PublishMetadata(composite_device, path, kMetadataKey + 1,
-                                                         nullptr, 0));
+  ASSERT_OK(platform_bus()->device->coordinator->PublishMetadata(composite_device, path,
+                                                                 kMetadataKey + 1, nullptr, 0));
 
-  ASSERT_OK(platform_bus()->coordinator->GetMetadata(composite_device, kMetadataKey + 1, nullptr, 0,
-                                                     &len));
+  ASSERT_OK(platform_bus()->device->coordinator->GetMetadata(composite_device, kMetadataKey + 1,
+                                                             nullptr, 0, &len));
 }
 
 TEST_F(CompositeMetadataTestCase, FailPublishToRestricted) {
   char path[256] = "/sys/";
   ASSERT_NO_FATAL_FAILURES(AddCompositeDevice());
-  ASSERT_NOT_OK(platform_bus()->coordinator->PublishMetadata(composite_device, path,
-                                                             kMetadataKey + 1, nullptr, 0));
+  ASSERT_NOT_OK(platform_bus()->device->coordinator->PublishMetadata(composite_device, path,
+                                                                     kMetadataKey + 1, nullptr, 0));
 }
 
 TEST_F(CompositeMetadataTestCase, GetMetadataFromChild) {
@@ -994,7 +1008,7 @@ TEST_F(CompositeMetadataTestCase, GetMetadataFromChild) {
   ASSERT_NO_FATAL_FAILURES(
       AddDevice(composite_device, "child", ZX_PROTOCOL_AUDIO, "", &child_index));
   fbl::RefPtr<Device> child = device(child_index)->device;
-  ASSERT_OK(platform_bus()->coordinator->GetMetadata(child, kMetadataKey, buf, 32, &len));
+  ASSERT_OK(platform_bus()->device->coordinator->GetMetadata(child, kMetadataKey, buf, 32, &len));
   VerifyMetadata(buf, len);
 }
 
@@ -1022,7 +1036,7 @@ TEST_F(CompositeMetadataTestCase, GetMetadataAfterCompositeReassemble) {
 
   const char* kCompositeDevName = "composite-dev";
   ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
-      platform_bus(), protocol_id, std::size(protocol_id), nullptr /* props */, 0,
+      platform_bus()->device, protocol_id, std::size(protocol_id), nullptr /* props */, 0,
       kCompositeDevName, ZX_OK, metadata, countof(metadata)));
 
   // Add the devices to construct the composite out of.
@@ -1030,68 +1044,67 @@ TEST_F(CompositeMetadataTestCase, GetMetadataAfterCompositeReassemble) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
     ASSERT_NO_FATAL_FAILURES(
-        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+        AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
   }
 
   size_t fragment_device_indexes[std::size(device_indexes)];
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
-      &composite_remote_coordinator, &composite_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device_indexes, &composite));
   composite_device = GetCompositeDeviceFromFragment(kCompositeDevName, device_indexes[0]);
   ASSERT_NOT_NULL(composite_device);
 
   // Get and verify metadata
-  ASSERT_OK(
-      platform_bus()->coordinator->GetMetadata(composite_device, kMetadataKey, buf, 32, &len));
+  ASSERT_OK(platform_bus()->device->coordinator->GetMetadata(composite_device, kMetadataKey, buf,
+                                                             32, &len));
   VerifyMetadata(buf, len);
 
   // Remove device 0 and its children (fragment and composite devices).
   ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(device(device_indexes[0])->device));
   coordinator_loop()->RunUntilIdle();
 
-  zx::channel& device_remote = device(device_indexes[0])->controller_remote;
-  zx::channel& fragment_remote = device(fragment_device_indexes[0])->controller_remote;
+  auto device_zero = device(device_indexes[0]);
+  auto fragment = device(fragment_device_indexes[0]);
 
   // The device and composite should not have received an unbind request yet.
-  ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
-  ASSERT_FALSE(DeviceHasPendingMessages(composite_remote_controller));
+  ASSERT_FALSE(device_zero->HasPendingMessages());
+  ASSERT_FALSE(composite.HasPendingMessages());
 
   // Check the fragment and composite are unbound.
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(fragment_remote));
+  ASSERT_NO_FATAL_FAILURES(fragment->CheckUnbindReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
-  ASSERT_FALSE(DeviceHasPendingMessages(fragment_remote));
+  ASSERT_FALSE(device_zero->HasPendingMessages());
+  ASSERT_FALSE(fragment->HasPendingMessages());
 
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(composite_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(composite.CheckUnbindReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 
   // Still waiting for the composite to be removed.
-  ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
-  ASSERT_FALSE(DeviceHasPendingMessages(fragment_remote));
+  ASSERT_FALSE(device_zero->HasPendingMessages());
+  ASSERT_FALSE(fragment->HasPendingMessages());
 
   // Finish removing the composite.
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(composite_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(composite.CheckRemoveReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_FALSE(DeviceHasPendingMessages(device_remote));
+  ASSERT_FALSE(device_zero->HasPendingMessages());
 
   // Finish removing the fragment.
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(fragment_remote));
+  ASSERT_NO_FATAL_FAILURES(fragment->CheckRemoveReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device_remote));
+  ASSERT_NO_FATAL_FAILURES(device_zero->CheckRemoveReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 
   // Add the device back and verify the composite gets created again
   ASSERT_NO_FATAL_FAILURES(
-      AddDevice(platform_bus(), "device-0", protocol_id[0], "", &device_indexes[0]));
+      AddDevice(platform_bus()->device, "device-0", protocol_id[0], "", &device_indexes[0]));
   {
     auto device_state = device(device_indexes[0]);
     // Wait for the fragments to get bound
     fbl::String driver = coordinator().fragment_driver()->libname;
-    ASSERT_NO_FATAL_FAILURES(
-        CheckBindDriverReceived(device_state->controller_remote, driver.data()));
+    ASSERT_NO_FATAL_FAILURES(device_state->CheckBindDriverReceivedAndReply(driver.data()));
     coordinator_loop()->RunUntilIdle();
 
     // Synthesize the AddDevice request the fragment driver would send
@@ -1099,15 +1112,14 @@ TEST_F(CompositeMetadataTestCase, GetMetadataAfterCompositeReassemble) {
                                        &fragment_device_indexes[0]));
   }
   ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(
-      driver_host_remote(), kCompositeDevName, std::size(device_indexes),
-      &composite_remote_coordinator, &composite_remote_controller));
+      driver_host_server(), kCompositeDevName, std::size(device_indexes), &composite));
 
   composite_device = GetCompositeDeviceFromFragment(kCompositeDevName, device_indexes[0]);
   ASSERT_NOT_NULL(composite_device);
 
   // Get and verify metadata again
-  ASSERT_OK(
-      platform_bus()->coordinator->GetMetadata(composite_device, kMetadataKey, buf, 32, &len));
+  ASSERT_OK(platform_bus()->device->coordinator->GetMetadata(composite_device, kMetadataKey, buf,
+                                                             32, &len));
   VerifyMetadata(buf, len);
 }
 
@@ -1121,22 +1133,21 @@ TEST_F(CompositeTestCase, FragmentDeviceInit) {
   static_assert(std::size(protocol_id) == std::size(device_indexes));
 
   const char* kCompositeDevName = "composite-dev";
-  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus(), protocol_id,
+  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
                                                         std::size(protocol_id), nullptr /* props */,
                                                         0, kCompositeDevName));
 
   // Add the devices to construct the composite out of.
-  zx_txid_t txns[std::size(device_indexes)] = {};
   for (size_t i = 0; i < std::size(device_indexes); ++i) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
-    ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), name, protocol_id[i], "",
+    ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus()->device, name, protocol_id[i], "",
                                        false /* invisible */, true /* has_init */,
                                        false /* reply_to_init */, true /* always_init */,
                                        zx::vmo() /* inspect */, &device_indexes[i]));
     auto index = device_indexes[i];
     ASSERT_FALSE(device(index)->device->is_visible());
-    ASSERT_NO_FATAL_FAILURES(CheckInitReceived(device(index)->controller_remote, &txns[i]));
+    ASSERT_NO_FATAL_FAILURES(device(index)->CheckInitReceived());
     ASSERT_EQ(Device::State::kInitializing, device(index)->device->state());
     coordinator_loop()->RunUntilIdle();
   }
@@ -1144,21 +1155,20 @@ TEST_F(CompositeTestCase, FragmentDeviceInit) {
   for (size_t i = 0; i < std::size(device_indexes); ++i) {
     auto index = device_indexes[i];
     // Check that the fragment isn't being bound yet.
-    ASSERT_FALSE(DeviceHasPendingMessages(device(index)->controller_remote));
+    ASSERT_FALSE(device(index)->HasPendingMessages());
 
-    ASSERT_NO_FATAL_FAILURES(SendInitReply(device(index)->controller_remote, txns[i]));
+    ASSERT_NO_FATAL_FAILURES(device(index)->SendInitReply());
     coordinator_loop()->RunUntilIdle();
 
     ASSERT_TRUE(device(index)->device->is_visible());
     ASSERT_EQ(Device::State::kActive, device(index)->device->state());
   }
 
-  zx::channel composite_remote_coordinator;
-  zx::channel composite_remote_controller;
+  DeviceState composite;
   size_t fragment_device_indexes[std::size(device_indexes)];
-  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-      kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
-      &composite_remote_coordinator, &composite_remote_controller));
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(kCompositeDevName, device_indexes,
+                                                  std::size(device_indexes),
+                                                  fragment_device_indexes, &composite));
   coordinator_loop()->RunUntilIdle();
 
   {
@@ -1172,18 +1182,16 @@ TEST_F(CompositeTestCase, FragmentDeviceInit) {
 TEST_F(CompositeTestCase, DeviceIteratorCompositeChild) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
-      AddDevice(platform_bus(), "parent-device", 1 /* protocol id */, "", &parent_index));
+      AddDevice(platform_bus()->device, "parent-device", 1 /* protocol id */, "", &parent_index));
 
   uint32_t protocol_id = 1;
-  ASSERT_NO_FATAL_FAILURES(
-      BindCompositeDefineComposite(platform_bus(), &protocol_id, 1, nullptr, 0, "composite"));
+  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus()->device, &protocol_id, 1,
+                                                        nullptr, 0, "composite"));
 
-  zx::channel composite_remote_coordinator;
-  zx::channel composite_remote_controller;
+  DeviceState composite;
   size_t fragment_device_indexes;
   ASSERT_NO_FATAL_FAILURES(
-      CheckCompositeCreation("composite", &parent_index, 1, &fragment_device_indexes,
-                             &composite_remote_coordinator, &composite_remote_controller));
+      CheckCompositeCreation("composite", &parent_index, 1, &fragment_device_indexes, &composite));
 
   for (auto& d : device(parent_index)->device->children()) {
     ASSERT_EQ(d.name(), "composite-comp-device-0");
@@ -1193,17 +1201,15 @@ TEST_F(CompositeTestCase, DeviceIteratorCompositeChild) {
 TEST_F(CompositeTestCase, DeviceIteratorCompositeSibling) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
-      AddDevice(platform_bus(), "parent-device", 1 /* protocol id */, "", &parent_index));
+      AddDevice(platform_bus()->device, "parent-device", 1 /* protocol id */, "", &parent_index));
 
   uint32_t protocol_id = 1;
-  ASSERT_NO_FATAL_FAILURES(
-      BindCompositeDefineComposite(platform_bus(), &protocol_id, 1, nullptr, 0, "composite"));
-  zx::channel composite_remote_coordinator;
-  zx::channel composite_remote_controller;
+  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus()->device, &protocol_id, 1,
+                                                        nullptr, 0, "composite"));
+  DeviceState composite;
   size_t fragment_device_indexes;
   ASSERT_NO_FATAL_FAILURES(
-      CheckCompositeCreation("composite", &parent_index, 1, &fragment_device_indexes,
-                             &composite_remote_coordinator, &composite_remote_controller));
+      CheckCompositeCreation("composite", &parent_index, 1, &fragment_device_indexes, &composite));
 
   size_t child_index;
   ASSERT_NO_FATAL_FAILURES(

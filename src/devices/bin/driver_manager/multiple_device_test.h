@@ -16,6 +16,8 @@
 #include "coordinator_test_utils.h"
 #include "src/devices/lib/log/log.h"
 
+namespace fdm = fuchsia_device_manager;
+
 class MockFshostAdminServer final : public fidl::WireServer<fuchsia_fshost::Admin> {
  public:
   MockFshostAdminServer() : has_been_shutdown_(false) {}
@@ -57,17 +59,18 @@ class CoordinatorForTest {
   Coordinator coordinator_;
 };
 
-struct DeviceState {
+class DeviceState : public fidl::WireServer<fdm::DeviceController> {
+ public:
   DeviceState() = default;
   DeviceState(DeviceState&& other)
       : device(std::move(other.device)),
-        coordinator_remote(std::move(other.coordinator_remote)),
-        controller_remote(std::move(other.controller_remote)) {}
+        coordinator_client(std::move(other.coordinator_client)),
+        controller_server(std::move(other.controller_server)) {}
 
   DeviceState& operator=(DeviceState&& other) {
     device = std::move(other.device);
-    coordinator_remote = std::move(other.coordinator_remote);
-    controller_remote = std::move(other.controller_remote);
+    coordinator_client = std::move(other.coordinator_client);
+    controller_server = std::move(other.controller_server);
     return *this;
   }
 
@@ -76,12 +79,78 @@ struct DeviceState {
       device->coordinator->RemoveDevice(device, false);
     }
   }
+
+  bool HasPendingMessages();
+
+  void CheckBindDriverReceivedAndReply(std::string_view expected_driver_name);
+
+  void CheckInitReceived();
+  void SendInitReply(zx_status_t return_status = ZX_OK);
+  void CheckInitReceivedAndReply(zx_status_t return_status = ZX_OK);
+
+  void CheckUnbindReceived();
+  void SendUnbindReply();
+  void CheckUnbindReceivedAndReply();
+
+  void CheckRemoveReceived();
+  void SendRemoveReply();
+  void CheckRemoveReceivedAndReply();
+
+  void CheckSuspendReceived(uint32_t expected_flags);
+  void SendSuspendReply(zx_status_t return_status);
+  void CheckSuspendReceivedAndReply(uint32_t expected_flags, zx_status_t return_status);
+
+  void CheckResumeReceived(SystemPowerState target_state);
+  void SendResumeReply(zx_status_t return_status);
+  void CheckResumeReceivedAndReply(SystemPowerState target_state, zx_status_t return_status);
+
   // The representation in the coordinator of the device
   fbl::RefPtr<Device> device;
   // The remote end of the channel that the coordinator is talking to
-  zx::channel coordinator_remote;
+  fidl::ClientEnd<fdm::Coordinator> coordinator_client;
   // The remote end of the channel that the controller is talking to
-  zx::channel controller_remote;
+  fidl::ServerEnd<fdm::DeviceController> controller_server;
+
+ private:
+  void Dispatch();
+
+  void BindDriver(BindDriverRequestView request, BindDriverCompleter::Sync& completer) override {
+    bind_driver_path_ = std::string(request->driver_path.get());
+    bind_completer_ = completer.ToAsync();
+  }
+  void ConnectProxy(ConnectProxyRequestView request,
+                    ConnectProxyCompleter::Sync& _completer) override {}
+  void Init(InitRequestView request, InitCompleter::Sync& completer) override {
+    init_completer_ = completer.ToAsync();
+  }
+  void Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) override {
+    suspend_flags_ = request->flags;
+    suspend_completer_ = completer.ToAsync();
+  }
+  void Resume(ResumeRequestView request, ResumeCompleter::Sync& completer) override {
+    resume_target_state_ = request->target_system_state;
+    resume_completer_ = completer.ToAsync();
+  }
+  void Unbind(UnbindRequestView request, UnbindCompleter::Sync& completer) override {
+    unbind_completer_ = completer.ToAsync();
+  }
+  void CompleteRemoval(CompleteRemovalRequestView request,
+                       CompleteRemovalCompleter::Sync& completer) override {
+    remove_completer_ = completer.ToAsync();
+  }
+  void CompleteCompatibilityTests(CompleteCompatibilityTestsRequestView request,
+                                  CompleteCompatibilityTestsCompleter::Sync& _completer) override {}
+  void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override {}
+
+  std::optional<BindDriverCompleter::Async> bind_completer_;
+  std::string bind_driver_path_;
+  std::optional<InitCompleter::Async> init_completer_;
+  uint32_t suspend_flags_;
+  std::optional<SuspendCompleter::Async> suspend_completer_;
+  uint32_t resume_target_state_;
+  std::optional<ResumeCompleter::Async> resume_completer_;
+  std::optional<UnbindCompleter::Async> unbind_completer_;
+  std::optional<CompleteRemovalCompleter::Async> remove_completer_;
 };
 
 class MultipleDeviceTestCase : public zxtest::Test {
@@ -109,15 +178,12 @@ class MultipleDeviceTestCase : public zxtest::Test {
   MockFshostAdminServer& admin_server() { return admin_server_; }
 
   const fbl::RefPtr<DriverHost>& driver_host() { return driver_host_; }
-  const zx::channel& driver_host_remote() { return driver_host_remote_; }
+  const fidl::ServerEnd<fdm::DevhostController>& driver_host_server() {
+    return driver_host_server_;
+  }
 
-  const fbl::RefPtr<Device>& platform_bus() const { return platform_bus_.device; }
-  const zx::channel& platform_bus_coordinator_remote() const {
-    return platform_bus_.coordinator_remote;
-  }
-  const zx::channel& platform_bus_controller_remote() const {
-    return platform_bus_.controller_remote;
-  }
+  DeviceState* sys_proxy() { return &sys_proxy_; }
+  DeviceState* platform_bus() { return &platform_bus_; }
   DeviceState* device(size_t index) const { return &devices_[index]; }
 
   void AddDevice(const fbl::RefPtr<Device>& parent, const char* name, uint32_t protocol_id,
@@ -129,9 +195,6 @@ class MultipleDeviceTestCase : public zxtest::Test {
                  fbl::String driver, size_t* device_index);
   void RemoveDevice(size_t device_index);
 
-  bool DeviceHasPendingMessages(size_t device_index);
-  bool DeviceHasPendingMessages(const zx::channel& remote);
-
   void DoSuspend(uint32_t flags);
   void DoSuspend(uint32_t flags, fit::function<void(uint32_t)> suspend_cb);
   void DoSuspendWithCallback(uint32_t flags, fit::function<void(zx_status_t)> suspend_complete_cb);
@@ -140,29 +203,10 @@ class MultipleDeviceTestCase : public zxtest::Test {
       SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
   void DoResume(SystemPowerState target_state, fit::function<void(SystemPowerState)> resume_cb);
 
-  void CheckInitReceived(const zx::channel& remote, zx_txid_t* txid);
-  void SendInitReply(const zx::channel& remote, zx_txid_t txid, zx_status_t return_status = ZX_OK);
-  void CheckInitReceivedAndReply(const zx::channel& remote, zx_status_t return_status = ZX_OK);
-
-  void CheckUnbindReceived(const zx::channel& remote, zx_txid_t* txid);
-  void SendUnbindReply(const zx::channel& remote, zx_txid_t txid);
-  void CheckUnbindReceivedAndReply(const zx::channel& remote);
-  void CheckRemoveReceived(const zx::channel& remote, zx_txid_t* zxid);
-  void SendRemoveReply(const zx::channel& remote, zx_txid_t txid);
-  void CheckRemoveReceivedAndReply(const zx::channel& remote);
-
-  void CheckSuspendReceived(const zx::channel& remote, uint32_t expected_flags, zx_txid_t* txid);
-  void SendSuspendReply(const zx::channel& remote, zx_status_t return_status, zx_txid_t txid);
-  void CheckSuspendReceivedAndReply(const zx::channel& remote, uint32_t expected_flags,
-                                    zx_status_t return_status);
-  void CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_driver,
-                                 zx::channel* device_coordinator_remote,
-                                 zx::channel* device_controller_remote);
-  void CheckResumeReceived(const zx::channel& remote, SystemPowerState target_state,
-                           zx_txid_t* txid);
-  void SendResumeReply(const zx::channel& remote, zx_status_t return_status, zx_txid_t txid);
-  void CheckResumeReceived(const zx::channel& remote, SystemPowerState target_state,
-                           zx_status_t return_status);
+  void CheckCreateDeviceReceived(const fidl::ServerEnd<fdm::DevhostController>& server,
+                                 const char* expected_driver,
+                                 fidl::ClientEnd<fdm::Coordinator>* device_coordinator_client,
+                                 fidl::ServerEnd<fdm::DeviceController>* device_controller_server);
 
  protected:
   void SetUp() override;
@@ -189,12 +233,11 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
   // The remote end of the channel that the coordinator uses to talk to the
   // driver_host
-  zx::channel driver_host_remote_;
+  fidl::ServerEnd<fdm::DevhostController> driver_host_server_;
 
   // The remote end of the channel that the coordinator uses to talk to the
   // sys device proxy
-  zx::channel sys_proxy_coordinator_remote_;
-  zx::channel sys_proxy_controller_remote_;
+  DeviceState sys_proxy_;
 
   // The device object representing the platform bus driver (child of the
   // sys proxy)

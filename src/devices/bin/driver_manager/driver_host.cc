@@ -15,9 +15,13 @@
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 
-DriverHost::DriverHost(Coordinator* coordinator, zx::channel rpc,
+DriverHost::DriverHost(Coordinator* coordinator,
+                       fidl::ClientEnd<fuchsia_device_manager::DevhostController> controller,
                        fidl::ClientEnd<fuchsia_io::Directory> diagnostics, zx::process proc)
-    : coordinator_(coordinator), hrpc_(std::move(rpc)), proc_(std::move(proc)) {
+    : coordinator_(coordinator), proc_(std::move(proc)) {
+  if (controller.is_valid()) {
+    controller_.Bind(std::move(controller), coordinator_->dispatcher());
+  }
   // cache the process's koid
   zx_info_handle_basic_t info;
   if (proc_.is_valid() &&
@@ -41,10 +45,9 @@ DriverHost::~DriverHost() {
 }
 
 zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<DriverHost>* out) {
-  zx::channel hrpc, dh_hrpc;
-  zx_status_t status = zx::channel::create(0, &hrpc, &dh_hrpc);
-  if (status != ZX_OK) {
-    return status;
+  auto dh_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DevhostController>();
+  if (dh_endpoints.is_error()) {
+    return dh_endpoints.error_value();
   }
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
@@ -79,7 +82,7 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
           .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
           .h = {.id = PA_HND(PA_USER0, 0)},
       },
-      std::move(hrpc));
+      dh_endpoints->server.TakeChannel());
 
   if (resource.is_valid()) {
     fdio_spawn_actions.AddActionWithHandle(
@@ -95,7 +98,7 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
     flags |= FDIO_SPAWN_DEFAULT_LDSVC;
   } else {
     zx::channel loader_service_client;
-    status = (*config.loader_service_connector)(&loader_service_client);
+    zx_status_t status = (*config.loader_service_connector)(&loader_service_client);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed connect to loader service: %s", zx_status_get_string(status));
       return status;
@@ -120,14 +123,15 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   const char* const argv[] = {config.binary, nullptr};
   std::vector<fdio_spawn_action_t> actions = fdio_spawn_actions.GetActions();
-  status = fdio_spawn_etc(config.job->get(), flags, argv[0], argv, config.env, actions.size(),
-                          actions.data(), proc.reset_and_get_address(), err_msg);
+  zx_status_t status =
+      fdio_spawn_etc(config.job->get(), flags, argv[0], argv, config.env, actions.size(),
+                     actions.data(), proc.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to launch driver_host '%s': %s", config.name, err_msg);
     return status;
   }
 
-  auto host = fbl::MakeRefCounted<DriverHost>(config.coordinator, std::move(dh_hrpc),
+  auto host = fbl::MakeRefCounted<DriverHost>(config.coordinator, std::move(dh_endpoints->client),
                                               std::move(endpoints->client), std::move(proc));
   LOGF(INFO, "Launching driver_host '%s' (pid %zu)", config.name, host->koid());
   *out = std::move(host);

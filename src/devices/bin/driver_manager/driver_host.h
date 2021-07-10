@@ -51,7 +51,8 @@ class DriverHost : public fbl::RefCounted<DriverHost>,
   // |rpc| is a client channel speaking fuchsia.device.manager/DriverHostController
   // |diagnostics| is a client to driver host diagnostics directory
   // |proc| is a handle to the driver_host process this DriverHost tracks.
-  DriverHost(Coordinator* coordinator, zx::channel rpc,
+  DriverHost(Coordinator* coordinator,
+             fidl::ClientEnd<fuchsia_device_manager::DevhostController> controller,
              fidl::ClientEnd<fuchsia_io::Directory> diagnostics, zx::process proc);
   ~DriverHost();
 
@@ -59,7 +60,9 @@ class DriverHost : public fbl::RefCounted<DriverHost>,
   // default loader service is used, which is useful in test environments.
   static zx_status_t Launch(const DriverHostConfig& config, fbl::RefPtr<DriverHost>* out);
 
-  const zx::channel& hrpc() const { return hrpc_; }
+  fidl::WireClient<fuchsia_device_manager::DevhostController>& controller() {
+    return controller_;
+  }
   zx::unowned_process proc() const { return zx::unowned_process(proc_); }
   zx_koid_t koid() const { return koid_; }
   // Note: this is a non-const reference to make |= etc. ergonomic.
@@ -72,7 +75,7 @@ class DriverHost : public fbl::RefCounted<DriverHost>,
  private:
   Coordinator* coordinator_;
 
-  zx::channel hrpc_;
+  fidl::WireClient<fuchsia_device_manager::DevhostController> controller_;
   zx::process proc_;
   zx_koid_t koid_ = 0;
   uint32_t flags_ = 0;

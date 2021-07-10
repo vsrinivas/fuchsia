@@ -301,7 +301,7 @@ void describe_error(zx::channel h, zx_status_t status) {
 // its device has no rpc handle
 bool devnode_is_dir(const Devnode* dn) {
   if (dn->children.is_empty()) {
-    return (dn->device == nullptr) || (!dn->device->device_controller().channel().is_valid()) ||
+    return (dn->device == nullptr) || (!dn->device->device_controller().is_valid()) ||
            (!dn->device->channel()->is_valid());
   }
   return true;
@@ -313,7 +313,7 @@ bool devnode_is_local(Devnode* dn) {
   if (dn->device == nullptr) {
     return true;
   }
-  if (!dn->device->device_controller().channel().get()) {
+  if (!dn->device->device_controller().is_valid()) {
     return true;
   }
   if (dn->device->flags & DEV_CTX_MUST_ISOLATE) {
@@ -596,9 +596,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
   }
 
   // Otherwise we will pass the request on to the remote.
-  fidl::WireCall(
-      fidl::UnownedClientEnd<fio::Directory>(dn->device->device_controller().channel().get()))
-      .Open(flags, 0, ".", fidl::ServerEnd<fio::Node>(std::move(ipc)));
+  dn->device->device_controller()->Open(flags, 0, ".", fidl::ServerEnd<fio::Node>(std::move(ipc)));
 }
 
 void devfs_remove(Devnode* dn) {
@@ -784,8 +782,7 @@ zx_status_t devfs_connect(const Device* dev, fidl::ServerEnd<fio::Node> client_r
   if (!client_remote.is_valid()) {
     return ZX_ERR_BAD_HANDLE;
   }
-  fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(dev->device_controller().channel().get()))
-      .Open(0, 0, ".", std::move(client_remote));
+  dev->device_controller()->Open(0, 0, ".", std::move(client_remote));
   return ZX_OK;
 }
 

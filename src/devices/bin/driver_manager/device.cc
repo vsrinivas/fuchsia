@@ -4,7 +4,6 @@
 
 #include "device.h"
 
-#include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/driver/test/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
@@ -19,7 +18,6 @@
 
 #include "coordinator.h"
 #include "devfs.h"
-#include "fidl.h"
 #include "fidl_txn.h"
 #include "init_task.h"
 #include "resume_task.h"
@@ -81,13 +79,14 @@ Device::~Device() {
   VLOGF(1, "Destroyed device %p '%s'", this, name_.data());
 }
 
-zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
-                           fbl::String name, fbl::String driver_path, fbl::String args,
-                           uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
-                           fbl::Array<StrProperty> str_props, zx::channel coordinator_rpc,
-                           zx::channel device_controller_rpc, bool wait_make_visible,
-                           bool want_init_task, bool skip_autobind, zx::vmo inspect,
-                           zx::channel client_remote, fbl::RefPtr<Device>* device) {
+zx_status_t Device::Create(
+    Coordinator* coordinator, const fbl::RefPtr<Device>& parent, fbl::String name,
+    fbl::String driver_path, fbl::String args, uint32_t protocol_id,
+    fbl::Array<zx_device_prop_t> props, fbl::Array<StrProperty> str_props,
+    fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
+    fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
+    bool wait_make_visible, bool want_init_task, bool skip_autobind, zx::vmo inspect,
+    zx::channel client_remote, fbl::RefPtr<Device>* device) {
   fbl::RefPtr<Device> real_parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
   // *its* parent which is the device that it is proxying.
@@ -123,8 +122,8 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
     return status;
   }
 
-  dev->device_controller_.Bind(std::move(device_controller_rpc), coordinator->dispatcher());
-  dev->set_channel(std::move(coordinator_rpc));
+  dev->device_controller_.Bind(std::move(device_controller), coordinator->dispatcher());
+  dev->set_channel(coordinator_request.TakeChannel());
 
   // If we have bus device args we are, by definition, a bus device.
   if (dev->args_.size() > 0) {
@@ -164,10 +163,11 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
   return ZX_OK;
 }
 
-zx_status_t Device::CreateComposite(Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
-                                    const CompositeDevice& composite, zx::channel coordinator_rpc,
-                                    zx::channel device_controller_rpc,
-                                    fbl::RefPtr<Device>* device) {
+zx_status_t Device::CreateComposite(
+    Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host, const CompositeDevice& composite,
+    fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
+    fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
+    fbl::RefPtr<Device>* device) {
   const auto& composite_props = composite.properties();
   fbl::Array<zx_device_prop_t> props(new zx_device_prop_t[composite_props.size()],
                                      composite_props.size());
@@ -201,8 +201,8 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, fbl::RefPtr<Driver
     return status;
   }
 
-  dev->device_controller_.Bind(std::move(device_controller_rpc), coordinator->dispatcher());
-  dev->set_channel(std::move(coordinator_rpc));
+  dev->device_controller_.Bind(std::move(device_controller), coordinator->dispatcher());
+  dev->set_channel(coordinator_request.TakeChannel());
   // We exist within our parent's device host
   dev->set_host(std::move(driver_host));
 
@@ -260,8 +260,9 @@ void Device::InitializeInspectValues() {
   inspect().set_flags(flags);
   inspect().set_properties(props());
 
-  char path[fuchsia_device_manager_DEVICE_PATH_MAX] = {};
-  coordinator->GetTopologicalPath(fbl::RefPtr(this), path, fuchsia_device_manager_DEVICE_PATH_MAX);
+  char path[fuchsia_device_manager::wire::kDevicePathMax] = {};
+  coordinator->GetTopologicalPath(fbl::RefPtr(this), path,
+                                  fuchsia_device_manager::wire::kDevicePathMax);
   inspect().set_topological_path(path);
 
   std::string type("Device");
@@ -309,9 +310,13 @@ zx_status_t Device::SendInit(InitCompletion completion) {
   ZX_ASSERT(!init_completion_);
 
   VLOGF(1, "Initializing device %p '%s'", this, name_.data());
-  zx_status_t status = dh_send_init(this);
-  if (status != ZX_OK) {
-    return status;
+  auto result = device_controller()->Init([dev = fbl::RefPtr(this)](auto* response) {
+    LOGF(INFO, "Initialized device %p '%s': %s", dev.get(), dev->name().data(),
+         zx_status_get_string(response->status));
+    dev->CompleteInit(response->status);
+  });
+  if (!result.ok()) {
+    return result.status();
   }
   init_completion_ = std::move(completion);
   return ZX_OK;
@@ -346,9 +351,17 @@ zx_status_t Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
     return ZX_ERR_UNAVAILABLE;
   }
   VLOGF(1, "Suspending device %p '%s'", this, name_.data());
-  zx_status_t status = dh_send_suspend(this, flags);
-  if (status != ZX_OK) {
-    return status;
+  auto result = device_controller()->Suspend(flags, [dev = fbl::RefPtr(this)](auto* response) {
+    if (response->status == ZX_OK) {
+      LOGF(DEBUG, "Suspended device %p '%s'successfully", dev.get(), dev->name().data());
+    } else {
+      LOGF(ERROR, "Failed to suspended device %p '%s': %s", dev.get(), dev->name().data(),
+           zx_status_get_string(response->status));
+    }
+    dev->CompleteSuspend(response->status);
+  });
+  if (!result.ok()) {
+    return result.status();
   }
   set_state(Device::State::kSuspending);
   suspend_completion_ = std::move(completion);
@@ -361,9 +374,15 @@ zx_status_t Device::SendResume(uint32_t target_system_state, ResumeCompletion co
     return ZX_ERR_UNAVAILABLE;
   }
   VLOGF(1, "Resuming device %p '%s'", this, name_.data());
-  zx_status_t status = dh_send_resume(this, target_system_state);
-  if (status != ZX_OK) {
-    return status;
+
+  auto result =
+      device_controller()->Resume(target_system_state, [dev = fbl::RefPtr(this)](auto* response) {
+        LOGF(INFO, "Resumed device %p '%s': %s", dev.get(), dev->name().data(),
+             zx_status_get_string(response->status));
+        dev->CompleteResume(response->status);
+      });
+  if (!result.ok()) {
+    return result.status();
   }
   set_state(Device::State::kResuming);
   resume_completion_ = std::move(completion);
@@ -448,14 +467,18 @@ zx_status_t Device::SendUnbind(UnbindCompletion completion) {
   VLOGF(1, "Unbinding device %p '%s'", this, name_.data());
   set_state(Device::State::kUnbinding);
   unbind_completion_ = std::move(completion);
-  zx_status_t status = dh_send_unbind(this);
-  if (status != ZX_OK) {
-    return status;
+  auto result = device_controller()->Unbind([dev = fbl::RefPtr(this)](auto* response) {
+    LOGF(INFO, "Unbound device %p '%s': %s", dev.get(), dev->name().data(),
+         zx_status_get_string(response->result.is_err() ? response->result.err() : ZX_OK));
+    dev->CompleteUnbind();
+  });
+  if (!result.ok()) {
+    return result.status();
   }
   return ZX_OK;
 }
 
-zx_status_t Device::SendCompleteRemoval(RemoveCompletion completion) {
+zx_status_t Device::SendCompleteRemove(RemoveCompletion completion) {
   if (remove_completion_) {
     // We already have a pending remove.
     return ZX_ERR_UNAVAILABLE;
@@ -463,10 +486,13 @@ zx_status_t Device::SendCompleteRemoval(RemoveCompletion completion) {
   VLOGF(1, "Completing removal of device %p '%s'", this, name_.data());
   set_state(Device::State::kUnbinding);
   remove_completion_ = std::move(completion);
-  zx_status_t status = dh_send_complete_removal(
-      this, [dev = fbl::RefPtr(this)]() mutable { dev->CompleteRemove(); });
-  if (status != ZX_OK) {
-    return status;
+  auto result = device_controller()->CompleteRemoval([dev = fbl::RefPtr(this)](auto* response) {
+    LOGF(INFO, "Removed device %p '%s': %s", dev.get(), dev->name().data(),
+         zx_status_get_string(response->result.is_err() ? response->result.err() : ZX_OK));
+    dev->CompleteRemove();
+  });
+  if (!result.ok()) {
+    return result.status();
   }
   return ZX_OK;
 }
@@ -741,8 +767,8 @@ zx_status_t Device::DriverCompatibilityTest() {
     LOGF(ERROR, "Failed to create thread for driver compatibility test '%s': %d",
          GetTestDriverName(), ret);
     if (test_reply_required_) {
-      dh_send_complete_compatibility_tests(
-          this, fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL);
+      device_controller()->CompleteCompatibilityTests(
+          fuchsia_device_manager::wire::CompatibilityTestStatus::kErrInternal);
     }
     return ZX_ERR_NO_RESOURCES;
   }
@@ -757,7 +783,7 @@ int Device::RunCompatibilityTests() {
   TEST_LOGF(INFO, "Running test '%s'", test_driver_name);
   auto cleanup = fit::defer([this]() {
     if (test_reply_required_) {
-      dh_send_complete_compatibility_tests(this, test_status_);
+      device_controller()->CompleteCompatibilityTests(test_status_);
     }
     test_event().reset();
     set_test_state(Device::TestStateMachine::kTestDone);
@@ -766,14 +792,14 @@ int Device::RunCompatibilityTests() {
   // Device should be bound for test to work
   if (!(flags & DEV_CTX_BOUND) || children().is_empty()) {
     TEST_LOGF(ERROR, "[  FAILED  ] %s: Parent device not bound", test_driver_name);
-    test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_NO_DDKADD;
+    test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrBindNoDdkadd;
     return ZX_ERR_BAD_STATE;
   }
   zx_status_t status = zx::event::create(0, &test_event());
   if (status != ZX_OK) {
     TEST_LOGF(ERROR, "[  FAILED  ] %s: Event creation failed, %s", test_driver_name,
               zx_status_get_string(status));
-    test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL;
+    test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrInternal;
     return ZX_ERR_INTERNAL;
   }
 
@@ -797,11 +823,11 @@ int Device::RunCompatibilityTests() {
                 "[  FAILED  ] %s: Timed out waiting for device to be removed, check if"
                 " device_remove() was called in the unbind routine of the driver: %s",
                 test_driver_name, zx_status_get_string(status));
-      test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_UNBIND_TIMEOUT;
+      test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrUnbindTimeout;
     } else {
       TEST_LOGF(ERROR, "[  FAILED  ] %s: Error waiting for device to be removed: %s",
                 test_driver_name, zx_status_get_string(status));
-      test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL;
+      test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrInternal;
     }
     return ZX_ERR_INTERNAL;
   }
@@ -816,11 +842,11 @@ int Device::RunCompatibilityTests() {
                 "[  FAILED  ] %s: Timed out waiting for driver to be bound, check if there"
                 " is blocking IO in the driver's bind(): %s",
                 test_driver_name, zx_status_get_string(status));
-      test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_TIMEOUT;
+      test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrBindTimeout;
     } else {
       TEST_LOGF(ERROR, "[  FAILED  ] %s: Error waiting for driver to be bound: %s",
                 test_driver_name, zx_status_get_string(status));
-      test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL;
+      test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrInternal;
     }
     return ZX_ERR_INTERNAL;
   }
@@ -830,12 +856,12 @@ int Device::RunCompatibilityTests() {
         ERROR,
         "[  FAILED  ] %s: Driver did not add a child device in bind(), check if it called DdkAdd()",
         test_driver_name);
-    test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_NO_DDKADD;
+    test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrBindNoDdkadd;
     return -1;
   }
   TEST_LOGF(INFO, "[  PASSED  ] %s", test_driver_name);
   // TODO(ravoorir): Test Suspend and Resume hooks
-  test_status_ = fuchsia_device_manager_CompatibilityTestStatus_OK;
+  test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kOk;
   return ZX_OK;
 }
 
@@ -855,7 +881,7 @@ void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& c
 
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->AddDevice(
-      parent, request->device_controller.TakeChannel(), request->coordinator.TakeChannel(),
+      parent, std::move(request->device_controller), std::move(request->coordinator),
       request->property_list.props.data(), request->property_list.props.count(),
       request->property_list.str_props.data(), request->property_list.str_props.count(), name,
       request->protocol_id, driver_path, args, invisible, skip_autobind, request->has_init,
@@ -875,8 +901,8 @@ void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& c
 void Device::PublishMetadata(PublishMetadataRequestView request,
                              PublishMetadataCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
-  char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
-  ZX_ASSERT(request->device_path.size() <= fuchsia_device_manager_DEVICE_PATH_MAX);
+  char path[fuchsia_device_manager::wire::kDevicePathMax + 1];
+  ZX_ASSERT(request->device_path.size() <= fuchsia_device_manager::wire::kDevicePathMax);
   memcpy(path, request->device_path.data(), request->device_path.size());
   path[request->device_path.size()] = 0;
   zx_status_t status = dev->coordinator->PublishMetadata(
@@ -955,11 +981,11 @@ void Device::GetTopologicalPath(GetTopologicalPathRequestView request,
 void Device::LoadFirmware(LoadFirmwareRequestView request, LoadFirmwareCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
 
-  char driver_path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
+  char driver_path[fuchsia_device_manager::wire::kDevicePathMax + 1];
   memcpy(driver_path, request->driver_path.data(), request->driver_path.size());
   driver_path[request->driver_path.size()] = 0;
 
-  char fw_path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
+  char fw_path[fuchsia_device_manager::wire::kDevicePathMax + 1];
   memcpy(fw_path, request->fw_path.data(), request->fw_path.size());
   fw_path[request->fw_path.size()] = 0;
 

@@ -48,6 +48,4 @@ CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
                                 fidl::WireSyncClient<fuchsia_boot::Arguments>* client);
 void InitializeCoordinator(Coordinator* coordinator);
 
-void CheckBindDriverReceived(const zx::channel& remote, const char* expected_driver);
-
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_TEST_UTILS_H_

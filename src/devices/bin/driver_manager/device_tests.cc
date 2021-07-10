@@ -17,7 +17,7 @@ class DeviceChildIteratorTest : public MultipleDeviceTestCase {};
 TEST_F(DeviceChildIteratorTest, Empty) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
-      AddDevice(platform_bus(), "parent-device", 0 /* protocol id */, "", &parent_index));
+      AddDevice(platform_bus()->device, "parent-device", 0 /* protocol id */, "", &parent_index));
   coordinator_loop()->RunUntilIdle();
   ASSERT_TRUE(device(parent_index)->device->children().is_empty());
 }
@@ -25,7 +25,7 @@ TEST_F(DeviceChildIteratorTest, Empty) {
 TEST_F(DeviceChildIteratorTest, OneChild) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
-      AddDevice(platform_bus(), "parent-device", 0 /* protocol id */, "", &parent_index));
+      AddDevice(platform_bus()->device, "parent-device", 0 /* protocol id */, "", &parent_index));
   size_t child_index;
   ASSERT_NO_FATAL_FAILURES(
       AddDevice(device(parent_index)->device, "child-device", 0, "", &child_index));
@@ -40,7 +40,7 @@ TEST_F(DeviceChildIteratorTest, OneChild) {
 TEST_F(DeviceChildIteratorTest, MultipleChildren) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
-      AddDevice(platform_bus(), "parent-device", 0 /* protocol id */, "", &parent_index));
+      AddDevice(platform_bus()->device, "parent-device", 0 /* protocol id */, "", &parent_index));
 
   constexpr size_t kChildren = 10;
   size_t children_index[kChildren] = {0};

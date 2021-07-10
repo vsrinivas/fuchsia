@@ -11,8 +11,9 @@
 
 #include "binding_internal.h"
 #include "coordinator.h"
-#include "fidl.h"
 #include "src/devices/lib/log/log.h"
+
+namespace fdm = fuchsia_device_manager;
 
 // CompositeDevice methods
 
@@ -31,9 +32,9 @@ CompositeDevice::CompositeDevice(fbl::String name, fbl::Array<const zx_device_pr
 
 CompositeDevice::~CompositeDevice() = default;
 
-zx_status_t CompositeDevice::Create(
-    std::string_view name, fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
-    std::unique_ptr<CompositeDevice>* out) {
+zx_status_t CompositeDevice::Create(std::string_view name,
+                                    fdm::wire::CompositeDeviceDescriptor comp_desc,
+                                    std::unique_ptr<CompositeDevice>* out) {
   fbl::String name_obj(name);
   fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[comp_desc.props.count() + 1],
                                           comp_desc.props.count() + 1);
@@ -168,7 +169,9 @@ zx_status_t CompositeDevice::TryAssemble() {
   }
 
   Coordinator* coordinator = nullptr;
-  std::pair<std::string_view, uint64_t> fragments[fuchsia_device_manager_FRAGMENTS_MAX] = {};
+
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<fdm::wire::Fragment> fragments(allocator, bound_.size_slow());
 
   // Create all of the proxies for the fragment devices, in the same process
   for (auto& fragment : bound_) {
@@ -185,8 +188,8 @@ zx_status_t CompositeDevice::TryAssemble() {
     // Check if we need to use the proxy.  If not, share a reference to
     // the instance of the fragment device.
     if (bound_dev->host() == driver_host) {
-      fragments[fragment.index()].first = fragment.name();
-      fragments[fragment.index()].second = fragment_dev->local_id();
+      fragments[fragment.index()].name = fidl::StringView::FromExternal(fragment.name());
+      fragments[fragment.index()].id = fragment_dev->local_id();
       continue;
     }
 
@@ -208,38 +211,42 @@ zx_status_t CompositeDevice::TryAssemble() {
       ZX_ASSERT(driver_host != nullptr);
     }
     // Stash the local ID after the proxy has been created
-    fragments[fragment.index()].first = fragment.name();
-    fragments[fragment.index()].second = fragment_dev->proxy()->local_id();
+    fragments[fragment.index()].name = fidl::StringView::FromExternal(fragment.name());
+    fragments[fragment.index()].id = fragment_dev->proxy()->local_id();
   }
 
-  zx::channel coordinator_rpc_local, coordinator_rpc_remote;
-  zx_status_t status = zx::channel::create(0, &coordinator_rpc_local, &coordinator_rpc_remote);
-  if (status != ZX_OK) {
-    return status;
+  auto coordinator_endpoints = fidl::CreateEndpoints<fdm::Coordinator>();
+  if (coordinator_endpoints.is_error()) {
+    return coordinator_endpoints.error_value();
   }
 
-  zx::channel device_controller_rpc_local, device_controller_rpc_remote;
-  status = zx::channel::create(0, &device_controller_rpc_local, &device_controller_rpc_remote);
-  if (status != ZX_OK) {
-    return status;
+  auto device_controller_endpoints = fidl::CreateEndpoints<fdm::DeviceController>();
+  if (device_controller_endpoints.is_error()) {
+    return device_controller_endpoints.error_value();
   }
 
   fbl::RefPtr<Device> new_device;
-  status =
-      Device::CreateComposite(coordinator, driver_host, *this, std::move(coordinator_rpc_local),
-                              std::move(device_controller_rpc_remote), &new_device);
+  auto status = Device::CreateComposite(
+      coordinator, driver_host, *this, std::move(coordinator_endpoints->server),
+      std::move(device_controller_endpoints->client), &new_device);
   if (status != ZX_OK) {
     return status;
   }
   coordinator->devices().push_back(new_device);
 
   // Create the composite device in the driver_host
-  status = dh_send_create_composite_device(driver_host, new_device.get(), *this, fragments,
-                                           std::move(coordinator_rpc_remote),
-                                           std::move(device_controller_rpc_local));
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to create composite device: %s", zx_status_get_string(status));
-    return status;
+  auto result = driver_host->controller()->CreateCompositeDevice(
+      std::move(coordinator_endpoints->client), std::move(device_controller_endpoints->server),
+      fragments, fidl::StringView::FromExternal(name()), new_device->local_id(),
+      [](auto* response) {
+        if (response->status != ZX_OK) {
+          LOGF(ERROR, "Failed to create composite device: %s",
+               zx_status_get_string(response->status));
+        }
+      });
+  if (!result.ok()) {
+    LOGF(ERROR, "Failed to create composite device: %s", zx_status_get_string(result.status()));
+    return result.status();
   }
 
   device_ = std::move(new_device);

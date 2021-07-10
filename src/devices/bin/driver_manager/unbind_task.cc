@@ -214,7 +214,7 @@ void RemoveTask::Run() {
 
   zx_status_t status = ZX_OK;
   if (device_->host() != nullptr) {
-    status = device_->SendCompleteRemoval(std::move(completion));
+    status = device_->SendCompleteRemove(std::move(completion));
     if (status == ZX_OK) {
       // Sent the remove request, the driver_host will call our completion when ready.
       return;

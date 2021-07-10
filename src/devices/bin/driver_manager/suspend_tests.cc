@@ -44,7 +44,7 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
   for (auto& desc : devices) {
     fbl::RefPtr<Device> parent;
     if (desc.parent_desc_index == UINT32_MAX) {
-      parent = platform_bus();
+      parent = platform_bus()->device;
     } else {
       size_t index = devices[desc.parent_desc_index].index;
       parent = device(index)->device;
@@ -57,7 +57,7 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
   size_t num_to_suspend = std::size(devices);
   while (num_to_suspend > 0) {
     // Check that platform bus is not suspended yet.
-    ASSERT_FALSE(DeviceHasPendingMessages(platform_bus_controller_remote()));
+    ASSERT_FALSE(platform_bus()->HasPendingMessages());
 
     bool made_progress = false;
     // Since the table of devices above is topologically sorted (i.e.
@@ -69,12 +69,11 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
         continue;
       }
 
-      if (!DeviceHasPendingMessages(desc.index)) {
+      if (!device(desc.index)->HasPendingMessages()) {
         continue;
       }
 
-      ASSERT_NO_FATAL_FAILURES(
-          CheckSuspendReceivedAndReply(device(desc.index)->controller_remote, flags, ZX_OK));
+      ASSERT_NO_FATAL_FAILURES(device(desc.index)->CheckSuspendReceivedAndReply(flags, ZX_OK));
 
       // Make sure all descendants of this device are already suspended.
       // We just need to check immediate children since this will
@@ -95,8 +94,7 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
     coordinator_loop()->RunUntilIdle();
   }
 
-  ASSERT_NO_FATAL_FAILURES(
-      CheckSuspendReceivedAndReply(platform_bus_controller_remote(), flags, ZX_OK));
+  ASSERT_NO_FATAL_FAILURES(platform_bus()->CheckSuspendReceivedAndReply(flags, ZX_OK));
 }
 
 TEST_F(SuspendTestCase, SuspendSuccess) {
@@ -110,19 +108,18 @@ TEST_F(SuspendTestCase, SuspendFail) {
 // Verify the device transitions in and out of the suspending state.
 void SuspendTestCase::StateTest(zx_status_t suspend_status, Device::State want_device_state) {
   size_t index;
-  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "", &index));
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus()->device, "device", 0 /* protocol id */, "", &index));
 
   const uint32_t flags = DEVICE_SUSPEND_FLAG_POWEROFF;
   ASSERT_NO_FATAL_FAILURES(DoSuspend(flags));
 
-  zx_txid_t txid;
   // Check for the suspend message without replying.
-  ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(index)->controller_remote, flags, &txid));
+  ASSERT_NO_FATAL_FAILURES(device(index)->CheckSuspendReceived(flags));
 
   ASSERT_EQ(device(index)->device->state(), Device::State::kSuspending);
 
-  ASSERT_NO_FATAL_FAILURES(
-      SendSuspendReply(device(index)->controller_remote, suspend_status, txid));
+  ASSERT_NO_FATAL_FAILURES(device(index)->SendSuspendReply(suspend_status));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_EQ(device(index)->device->state(), want_device_state);

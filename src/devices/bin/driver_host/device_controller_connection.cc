@@ -262,6 +262,7 @@ zx_status_t DeviceControllerConnection::Create(
 
 // Handler for when a io.fidl open() is called on a device
 void DeviceControllerConnection::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
+  VLOGD(1, *dev(), "Opening device %p", dev().get());
   if (request->path.size() > 1 && request->path.data()[0] != '.') {
     LOGD(ERROR, *dev(), "Attempt to open path '%.*s'", static_cast<int>(request->path.size()),
          request->path.data());
@@ -341,22 +342,6 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   }
 
   auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
-  uint64_t ordinal = hdr->ordinal;
-  // llcpp (intentionally!) does not expose the fidl ordinal, so this is a hacky way to get it
-  // anyway for backwards compatibility for porting code from the old C bindings.
-  static fidl::WireRequest<fuchsia_io::Directory::Open> for_ordinal(zx_txid_t(0));
-  if (ordinal == for_ordinal._hdr.ordinal) {
-    VLOGD(1, *dev(), "Opening device %p", dev().get());
-    zx::unowned_channel conn = channel();
-    DevmgrFidlTxn txn(std::move(conn), hdr->txid);
-    fidl::WireDispatch<fuchsia_io::Directory>(
-        this, fidl::IncomingMessage::FromEncodedCMessage(&fidl_msg), &txn);
-    if (status != ZX_OK) {
-      return txn.Status();
-    }
-    return txn.Status();
-  }
-
   DevmgrFidlTxn txn(std::move(conn), hdr->txid);
   fidl::WireDispatch<fuchsia_device_manager::DeviceController>(
       this, fidl::IncomingMessage::FromEncodedCMessage(&fidl_msg), &txn);

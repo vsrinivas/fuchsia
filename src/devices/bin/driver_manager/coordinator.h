@@ -208,8 +208,9 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   // Used to implement fuchsia::device::manager::Coordinator.
   // TODO(fxbug.dev/43370): remove |always_init| once init tasks can be enabled for all devices.
-  zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
-                        zx::channel coordinator,
+  zx_status_t AddDevice(const fbl::RefPtr<Device>& parent,
+                        fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
+                        fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator,
                         const fuchsia_device_manager::wire::DeviceProperty* props_data,
                         size_t props_count,
                         const fuchsia_device_manager::wire::DeviceStrProperty* str_props_data,

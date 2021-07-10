@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_COMPOSITE_DEVICE_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_COMPOSITE_DEVICE_H_
 
-#include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/ddk/binding.h>
 

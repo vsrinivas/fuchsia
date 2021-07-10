@@ -4,112 +4,208 @@
 
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/txn_header.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/fidl.h>
 #include <zircon/types.h>
 
 #include "multiple_device_test.h"
 
+namespace {
+
+class FidlTransaction : public fidl::Transaction {
+ public:
+  FidlTransaction(FidlTransaction&&) = default;
+  explicit FidlTransaction(zx_txid_t transaction_id, zx::unowned_channel channel)
+      : txid_(transaction_id), channel_(channel) {}
+
+  std::unique_ptr<fidl::Transaction> TakeOwnership() override {
+    return std::make_unique<FidlTransaction>(std::move(*this));
+  }
+
+  zx_status_t Reply(fidl::OutgoingMessage* message) override {
+    ZX_ASSERT(txid_ != 0);
+    message->set_txid(txid_);
+    txid_ = 0;
+    message->Write(channel_);
+    return message->status();
+  }
+
+  void Close(zx_status_t epitaph) override {}
+
+  ~FidlTransaction() override = default;
+
+ private:
+  zx_txid_t txid_;
+  zx::unowned_channel channel_;
+};
+
+class FakeDevhost : public fidl::WireServer<fdm::DevhostController> {
+ public:
+  FakeDevhost(const char* expected_driver,
+              fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
+              fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server)
+      : expected_driver_(expected_driver),
+        device_coordinator_client_(device_coordinator_client),
+        device_controller_server_(device_controller_server) {}
+
+  void CreateDevice(CreateDeviceRequestView request,
+                    CreateDeviceCompleter::Sync& completer) override {
+    if (strncmp(expected_driver_, request->driver_path.data(), request->driver_path.size()) == 0) {
+      *device_coordinator_client_ = std::move(request->coordinator_rpc);
+      *device_controller_server_ = std::move(request->device_controller_rpc);
+    }
+  }
+
+  void CreateCompositeDevice(CreateCompositeDeviceRequestView request,
+                             CreateCompositeDeviceCompleter::Sync& completer) override {}
+  void CreateDeviceStub(CreateDeviceStubRequestView request,
+                        CreateDeviceStubCompleter::Sync& completer) override {}
+  void Restart(RestartRequestView request, RestartCompleter::Sync& completer) override {}
+
+ private:
+  const char* expected_driver_;
+  fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client_;
+  fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server_;
+};
+
+}  // namespace
+
 // Reads a CreateDevice from remote, checks expectations, and sends a ZX_OK
 // response.
-void MultipleDeviceTestCase::CheckCreateDeviceReceived(const zx::channel& remote,
-                                                       const char* expected_driver,
-                                                       zx::channel* device_coordinator_remote,
-                                                       zx::channel* device_controller_remote) {
-  // Read the CreateDevice request.
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
-                                   &actual_bytes, &actual_handles);
-  ASSERT_OK(status);
-  ASSERT_LT(0, actual_bytes);
-  ASSERT_EQ(4, actual_handles);
-  *device_coordinator_remote = zx::channel(handles[0]);
-  *device_controller_remote = zx::channel(handles[1]);
-  status = zx_handle_close(handles[2]);
-  ASSERT_OK(status);
+void MultipleDeviceTestCase::CheckCreateDeviceReceived(
+    const fidl::ServerEnd<fdm::DevhostController>& devhost_controller, const char* expected_driver,
+    fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
+    fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server) {
+  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl::IncomingMessage msg =
+      fidl::ChannelReadEtc(devhost_controller.channel().get(), 0,
+                           fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
+  ASSERT_TRUE(msg.ok());
 
-  // Validate the CreateDevice request.
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  ASSERT_EQ(fuchsia_device_manager_DevhostControllerCreateDeviceOrdinal, hdr->ordinal);
-  status = fidl_decode(&fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable, bytes,
-                       actual_bytes, handles, actual_handles, nullptr);
-  ASSERT_OK(status);
-  auto req = reinterpret_cast<fuchsia_device_manager_DevhostControllerCreateDeviceRequest*>(bytes);
-  ASSERT_EQ(req->driver_path.size, strlen(expected_driver));
-  ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected_driver),
-                  reinterpret_cast<const uint8_t*>(req->driver_path.data), req->driver_path.size,
-                  "");
+  auto* header = msg.header();
+  FidlTransaction txn(header->txid, zx::unowned(devhost_controller.channel()));
+
+  FakeDevhost fake(expected_driver, device_coordinator_client, device_controller_server);
+  ASSERT_EQ(fidl::WireDispatch(&fake, std::move(msg), &txn), fidl::DispatchResult::kFound);
+  ASSERT_TRUE(device_coordinator_client->is_valid());
+  ASSERT_TRUE(device_controller_server->is_valid());
 }
 
-// Reads a Suspend request from remote and checks that it is for the expected
-// flags, without sending a response. |SendSuspendReply| can be used to send the desired response.
-void MultipleDeviceTestCase::CheckSuspendReceived(const zx::channel& remote,
-                                                  uint32_t expected_flags, zx_txid_t* txid) {
-  // Read the Suspend request.
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
-                                   &actual_bytes, &actual_handles);
-  ASSERT_OK(status);
-  ASSERT_LT(0, actual_bytes);
-  ASSERT_EQ(0, actual_handles);
-
-  // Validate the Suspend request.
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  *txid = hdr->txid;
-  ASSERT_EQ(fuchsia_device_manager_DeviceControllerSuspendOrdinal, hdr->ordinal);
-  status = fidl_decode(&fuchsia_device_manager_DeviceControllerSuspendRequestTable, bytes,
-                       actual_bytes, handles, actual_handles, nullptr);
-  ASSERT_OK(status);
-  auto req = reinterpret_cast<fuchsia_device_manager_DeviceControllerSuspendRequest*>(bytes);
-  ASSERT_EQ(req->flags, expected_flags);
+bool DeviceState::HasPendingMessages() {
+  return controller_server.channel().wait_one(ZX_CHANNEL_READABLE, zx::time(0), nullptr) == ZX_OK;
 }
 
-// Sends a response with the given return_status. This can be used to reply to a
-// request received by |CheckSuspendReceived|.
-void MultipleDeviceTestCase::SendSuspendReply(const zx::channel& remote, zx_status_t return_status,
-                                              zx_txid_t txid) {
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_handles;
+void DeviceState::Dispatch() {
+  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl::IncomingMessage msg =
+      fidl::ChannelReadEtc(controller_server.channel().get(), 0,
+                           fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
+  ASSERT_TRUE(msg.ok());
 
-  // Write the Suspend response.
-  memset(bytes, 0, sizeof(bytes));
-  auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerSuspendResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerSuspendOrdinal);
-  resp->status = return_status;
-  zx_status_t status =
-      fidl_encode(&fuchsia_device_manager_DeviceControllerSuspendResponseTable, bytes,
-                  sizeof(*resp), handles, std::size(handles), &actual_handles, nullptr);
-  ASSERT_OK(status);
-  ASSERT_EQ(0, actual_handles);
-  status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
-  ASSERT_OK(status);
+  auto* header = msg.header();
+  FidlTransaction txn(header->txid, zx::unowned(controller_server.channel()));
+
+  ASSERT_EQ(fidl::WireDispatch<fdm::DeviceController>(this, std::move(msg), &txn),
+            fidl::DispatchResult::kFound);
 }
 
-// Reads a Suspend request from remote, checks that it is for the expected
-// flags, and then sends the given response.
-void MultipleDeviceTestCase::CheckSuspendReceivedAndReply(const zx::channel& remote,
-                                                          uint32_t expected_flags,
-                                                          zx_status_t return_status) {
-  zx_txid_t txid;
-  CheckSuspendReceived(remote, expected_flags, &txid);
-  SendSuspendReply(remote, return_status, txid);
+void DeviceState::CheckBindDriverReceivedAndReply(std::string_view expected_driver_name) {
+  Dispatch();
+  ASSERT_TRUE(bind_completer_.has_value());
+  ASSERT_EQ(expected_driver_name, bind_driver_path_);
+  bind_completer_->Reply(ZX_OK, zx::channel{});
+  bind_completer_.reset();
+}
+
+void DeviceState::CheckInitReceived() {
+  Dispatch();
+  ASSERT_TRUE(init_completer_.has_value());
+}
+
+void DeviceState::SendInitReply(zx_status_t return_status) {
+  init_completer_->Reply(return_status);
+  init_completer_.reset();
+}
+
+void DeviceState::CheckInitReceivedAndReply(zx_status_t return_status) {
+  CheckInitReceived();
+  SendInitReply(return_status);
+}
+
+void DeviceState::CheckUnbindReceived() {
+  Dispatch();
+  ASSERT_TRUE(unbind_completer_.has_value());
+}
+
+void DeviceState::SendUnbindReply() {
+  unbind_completer_->ReplySuccess();
+  unbind_completer_.reset();
+}
+
+void DeviceState::CheckUnbindReceivedAndReply() {
+  CheckUnbindReceived();
+  SendUnbindReply();
+}
+
+void DeviceState::CheckRemoveReceived() {
+  Dispatch();
+  ASSERT_TRUE(remove_completer_.has_value());
+}
+
+void DeviceState::SendRemoveReply() {
+  remove_completer_->ReplySuccess();
+  remove_completer_.reset();
+}
+
+void DeviceState::CheckRemoveReceivedAndReply() {
+  CheckRemoveReceived();
+  SendRemoveReply();
+}
+
+void DeviceState::CheckSuspendReceived(uint32_t expected_flags) {
+  Dispatch();
+  ASSERT_TRUE(suspend_completer_.has_value());
+  ASSERT_EQ(suspend_flags_, expected_flags);
+}
+
+void DeviceState::SendSuspendReply(zx_status_t return_status) {
+  suspend_completer_->Reply(return_status);
+  suspend_completer_.reset();
+}
+
+void DeviceState::CheckSuspendReceivedAndReply(uint32_t expected_flags, zx_status_t return_status) {
+  CheckSuspendReceived(expected_flags);
+  SendSuspendReply(return_status);
+}
+
+void DeviceState::CheckResumeReceived(SystemPowerState target_state) {
+  Dispatch();
+  ASSERT_TRUE(resume_completer_.has_value());
+  ASSERT_EQ(SystemPowerState(resume_target_state_), target_state);
+}
+
+void DeviceState::SendResumeReply(zx_status_t return_status) {
+  resume_completer_->Reply(return_status);
+  resume_completer_.reset();
+}
+
+void DeviceState::CheckResumeReceivedAndReply(SystemPowerState target_state,
+                                              zx_status_t return_status) {
+  CheckResumeReceived(target_state);
+  SendResumeReply(return_status);
 }
 
 void MultipleDeviceTestCase::SetUp() {
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator()));
 
   {
-    zx::channel local;
-    zx_status_t status = zx::channel::create(0, &local, &driver_host_remote_);
-    ASSERT_OK(status);
-    driver_host_ = fbl::MakeRefCounted<DriverHost>(
-        &coordinator(), std::move(local), fidl::ClientEnd<fuchsia_io::Directory>(), zx::process{});
+    auto client_end = fidl::CreateEndpoints(&driver_host_server_);
+    ASSERT_OK(client_end.status_value());
+    driver_host_ =
+        fbl::MakeRefCounted<DriverHost>(&coordinator(), std::move(*client_end),
+                                        fidl::ClientEnd<fuchsia_io::Directory>(), zx::process{});
   }
 
   // Start the mock server thread.
@@ -118,23 +214,22 @@ void MultipleDeviceTestCase::SetUp() {
   // Set up the sys device proxy, inside of the driver_host
   ASSERT_OK(coordinator().PrepareProxy(coordinator().sys_device(), driver_host_));
   coordinator_loop_.RunUntilIdle();
-  ASSERT_NO_FATAL_FAILURES(CheckCreateDeviceReceived(driver_host_remote_, kSystemDriverPath,
-                                                     &sys_proxy_coordinator_remote_,
-                                                     &sys_proxy_controller_remote_));
+  ASSERT_NO_FATAL_FAILURES(CheckCreateDeviceReceived(driver_host_server_, kSystemDriverPath,
+                                                     &sys_proxy()->coordinator_client,
+                                                     &sys_proxy()->controller_server));
   coordinator_loop_.RunUntilIdle();
 
   // Create a child of the sys_device (an equivalent of the platform bus)
   {
-    zx::channel local;
-    zx_status_t status = zx::channel::create(0, &local, &platform_bus_.controller_remote);
-    ASSERT_OK(status);
+    auto device_controller = fidl::CreateEndpoints(&platform_bus_.controller_server);
+    ASSERT_OK(device_controller.status_value());
 
-    zx::channel local2;
-    status = zx::channel::create(0, &local2, &platform_bus_.coordinator_remote);
-    ASSERT_OK(status);
+    auto coordinator_request = fidl::CreateEndpoints(&platform_bus_.coordinator_client);
+    ASSERT_OK(coordinator_request.status_value());
 
-    status = coordinator().AddDevice(
-        coordinator().sys_device()->proxy(), std::move(local), std::move(local2),
+    auto status = coordinator().AddDevice(
+        coordinator().sys_device()->proxy(), std::move(*device_controller),
+        std::move(*coordinator_request),
         /* props_data */ nullptr, /* props_count */ 0, /* str_props_data */ nullptr,
         /* str_props_count */ 0, "platform-bus", 0,
         /* driver_path */ {},
@@ -144,7 +239,7 @@ void MultipleDeviceTestCase::SetUp() {
     ASSERT_OK(status);
     coordinator_loop_.RunUntilIdle();
 
-    ASSERT_NO_FATAL_FAILURES(CheckInitReceivedAndReply(platform_bus_.controller_remote));
+    ASSERT_NO_FATAL_FAILURES(platform_bus()->CheckInitReceivedAndReply());
     coordinator_loop()->RunUntilIdle();
   }
 
@@ -192,15 +287,15 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
                                        zx::vmo inspect, size_t* index) {
   DeviceState state;
 
-  zx::channel local, local2;
-  zx_status_t status = zx::channel::create(0, &local, &state.controller_remote);
-  ASSERT_OK(status);
+  auto coordinator_server = fidl::CreateEndpoints(&state.coordinator_client);
+  ASSERT_OK(coordinator_server.status_value());
 
-  status = zx::channel::create(0, &local2, &state.coordinator_remote);
-  ASSERT_OK(status);
+  auto controller_client = fidl::CreateEndpoints(&state.controller_server);
+  ASSERT_OK(controller_client.status_value());
 
-  status =
-      coordinator().AddDevice(parent, std::move(local), std::move(local2), /* props_data */ nullptr,
+  auto status =
+      coordinator().AddDevice(parent, std::move(*controller_client), std::move(*coordinator_server),
+                              /* props_data */ nullptr,
                               /* props_count */ 0, /* str_props_data */ nullptr,
                               /* str_props_count */ 0, name, /* driver_path */ protocol_id,
                               driver.data(), /* args */ {}, invisible,
@@ -214,7 +309,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
   *index = devices_.size() - 1;
 
   if (reply_to_init) {
-    ASSERT_NO_FATAL_FAILURES(CheckInitReceivedAndReply(device(*index)->controller_remote));
+    ASSERT_NO_FATAL_FAILURES(device(*index)->CheckInitReceivedAndReply());
     coordinator_loop()->RunUntilIdle();
   }
 }
@@ -230,15 +325,15 @@ void MultipleDeviceTestCase::AddDeviceSkipAutobind(const fbl::RefPtr<Device>& pa
                                                    size_t* index) {
   DeviceState state;
 
-  zx::channel local, local2;
-  zx_status_t status = zx::channel::create(0, &local, &state.controller_remote);
-  ASSERT_OK(status);
+  auto coordinator_server = fidl::CreateEndpoints(&state.coordinator_client);
+  ASSERT_OK(coordinator_server.status_value());
 
-  status = zx::channel::create(0, &local2, &state.coordinator_remote);
-  ASSERT_OK(status);
+  auto controller_client = fidl::CreateEndpoints(&state.controller_server);
+  ASSERT_OK(controller_client.status_value());
 
-  status = coordinator().AddDevice(
-      parent, std::move(local), std::move(local2), /* props_data */ nullptr, /* props_count */ 0,
+  auto status = coordinator().AddDevice(
+      parent, std::move(*controller_client), std::move(*coordinator_server),
+      /* props_data */ nullptr, /* props_count */ 0,
       /* str_props_data */ nullptr,
       /* str_props_count */ 0, name, /* driver_path */ protocol_id, /* driver */ "", /* args */ {},
       /* invisible */ false,
@@ -251,7 +346,7 @@ void MultipleDeviceTestCase::AddDeviceSkipAutobind(const fbl::RefPtr<Device>& pa
   devices_.push_back(std::move(state));
   *index = devices_.size() - 1;
 
-  ASSERT_NO_FATAL_FAILURES(CheckInitReceivedAndReply(device(*index)->controller_remote));
+  ASSERT_NO_FATAL_FAILURES(device(*index)->CheckInitReceivedAndReply());
   coordinator_loop()->RunUntilIdle();
 }
 
@@ -259,16 +354,9 @@ void MultipleDeviceTestCase::RemoveDevice(size_t device_index) {
   auto& state = devices_[device_index];
   ASSERT_OK(coordinator().RemoveDevice(state.device, false));
   state.device.reset();
-  state.controller_remote.reset();
-  state.coordinator_remote.reset();
+  state.controller_server.reset();
+  state.coordinator_client.reset();
   coordinator_loop_.RunUntilIdle();
-}
-
-bool MultipleDeviceTestCase::DeviceHasPendingMessages(const zx::channel& remote) {
-  return remote.wait_one(ZX_CHANNEL_READABLE, zx::time(0), nullptr) == ZX_OK;
-}
-bool MultipleDeviceTestCase::DeviceHasPendingMessages(size_t device_index) {
-  return DeviceHasPendingMessages(devices_[device_index].controller_remote);
 }
 
 void MultipleDeviceTestCase::DoSuspend(uint32_t flags,
@@ -292,157 +380,6 @@ void MultipleDeviceTestCase::DoSuspendWithCallback(
   });
 }
 
-// Reads the request from |remote| and verifies whether it matches the expected Unbind request.
-// |SendUnbindReply| can be used to send the desired response.
-void MultipleDeviceTestCase::CheckUnbindReceived(const zx::channel& remote, zx_txid_t* txid) {
-  // Read the unbind request.
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
-                                   &actual_bytes, &actual_handles);
-  ASSERT_OK(status);
-  ASSERT_LT(0, actual_bytes);
-  ASSERT_EQ(0, actual_handles);
-
-  // Validate the unbind request.
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  *txid = hdr->txid;
-  ASSERT_EQ(fuchsia_device_manager_DeviceControllerUnbindOrdinal, hdr->ordinal);
-  status = fidl_decode(&fuchsia_device_manager_DeviceControllerUnbindRequestTable, bytes,
-                       actual_bytes, handles, actual_handles, nullptr);
-  ASSERT_OK(status);
-}
-
-// Sends a response with the given return_status. This can be used to reply to a
-// request received by |CheckUnbindReceived|.
-void MultipleDeviceTestCase::SendUnbindReply(const zx::channel& remote, zx_txid_t txid) {
-  namespace fdm = fuchsia_device_manager;
-  fdm::wire::DeviceControllerUnbindResponse result_resp;
-  auto result = fdm::wire::DeviceControllerUnbindResult::WithResponse(
-      fidl::ObjectView<fdm::wire::DeviceControllerUnbindResponse>::FromExternal(&result_resp));
-  fidl::WireResponse<fdm::DeviceController::Unbind> resp(result);
-  resp._hdr.txid = txid;
-  fidl::OwnedEncodedMessage<fidl::WireResponse<fdm::DeviceController::Unbind>> encoded(&resp);
-  ASSERT_TRUE(encoded.ok());
-  encoded.Write(remote.get());
-  ASSERT_TRUE(encoded.ok());
-}
-
-void MultipleDeviceTestCase::CheckUnbindReceivedAndReply(const zx::channel& remote) {
-  zx_txid_t txid;
-  CheckUnbindReceived(remote, &txid);
-  SendUnbindReply(remote, txid);
-}
-
-// Reads the request from |remote| and verifies whether it matches the expected
-// Unbind request.
-// |SendRemoveReply| can be used to send the desired response.
-void MultipleDeviceTestCase::CheckRemoveReceived(const zx::channel& remote, zx_txid_t* txid) {
-  // Read the remove request.
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
-                                   &actual_bytes, &actual_handles);
-  ASSERT_OK(status);
-  ASSERT_LT(0, actual_bytes);
-  ASSERT_EQ(0, actual_handles);
-
-  // Validate the remove request.
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  ASSERT_EQ(fuchsia_device_manager_DeviceControllerCompleteRemovalOrdinal, hdr->ordinal);
-  status = fidl_decode(&fuchsia_device_manager_DeviceControllerCompleteRemovalRequestTable, bytes,
-                       actual_bytes, handles, actual_handles, nullptr);
-  *txid = hdr->txid;
-  ASSERT_OK(status);
-}
-
-// Sends a response with the given return_status. This can be used to reply to a
-// request received by |CheckRemoveReceived|.
-void MultipleDeviceTestCase::SendRemoveReply(const zx::channel& remote, zx_txid_t txid) {
-  namespace fdm = fuchsia_device_manager;
-  fdm::wire::DeviceControllerCompleteRemovalResponse result_resp;
-  auto result = fdm::wire::DeviceControllerCompleteRemovalResult::WithResponse(
-      fidl::ObjectView<fdm::wire::DeviceControllerCompleteRemovalResponse>::FromExternal(
-          &result_resp));
-  fidl::WireResponse<fdm::DeviceController::CompleteRemoval> resp(result);
-  resp._hdr.txid = txid;
-  fidl::OwnedEncodedMessage<fidl::WireResponse<fdm::DeviceController::CompleteRemoval>> encoded(
-      &resp);
-  ASSERT_TRUE(encoded.ok());
-  encoded.Write(remote.get());
-  ASSERT_TRUE(encoded.ok());
-}
-
-void MultipleDeviceTestCase::CheckRemoveReceivedAndReply(const zx::channel& remote) {
-  zx_txid_t txid;
-  CheckRemoveReceived(remote, &txid);
-  SendRemoveReply(remote, txid);
-}
-
-// Reads a Resume request from remote and checks that it is for the expected
-// target state, without sending a response. |SendResumeReply| can be used to send the desired
-// response.
-
-void MultipleDeviceTestCase::CheckResumeReceived(const zx::channel& remote,
-                                                 SystemPowerState target_state, zx_txid_t* txid) {
-  // Read the Resume request.
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
-                                   &actual_bytes, &actual_handles);
-  ASSERT_OK(status);
-  ASSERT_LT(0, actual_bytes);
-  ASSERT_EQ(0, actual_handles);
-
-  // Validate the Resume request.
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  *txid = hdr->txid;
-  ASSERT_EQ(fuchsia_device_manager_DeviceControllerResumeOrdinal, hdr->ordinal);
-  status = fidl_decode(&fuchsia_device_manager_DeviceControllerResumeRequestTable, bytes,
-                       actual_bytes, handles, actual_handles, nullptr);
-  ASSERT_OK(status);
-  auto req = reinterpret_cast<fuchsia_device_manager_DeviceControllerResumeRequest*>(bytes);
-  ASSERT_EQ(static_cast<SystemPowerState>(req->target_system_state), target_state);
-}
-
-// Sends a response with the given return_status. This can be used to reply to a
-// request received by |CheckResumeReceived|.
-void MultipleDeviceTestCase::SendResumeReply(const zx::channel& remote, zx_status_t return_status,
-                                             zx_txid_t txid) {
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_handles;
-
-  // Write the Resume response.
-  memset(bytes, 0, sizeof(bytes));
-  auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerResumeResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerResumeOrdinal);
-  resp->status = return_status;
-  zx_status_t status =
-      fidl_encode(&fuchsia_device_manager_DeviceControllerResumeResponseTable, bytes, sizeof(*resp),
-                  handles, std::size(handles), &actual_handles, nullptr);
-  ASSERT_OK(status);
-  ASSERT_EQ(0, actual_handles);
-  status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
-  ASSERT_OK(status);
-}
-
-// Reads a Resume request from remote, checks that it is for the expected
-// target state, and then sends the given response.
-void MultipleDeviceTestCase::CheckResumeReceived(const zx::channel& remote,
-                                                 SystemPowerState target_state,
-                                                 zx_status_t return_status) {
-  zx_txid_t txid;
-  CheckResumeReceived(remote, target_state, &txid);
-  SendResumeReply(remote, return_status, txid);
-}
-
 void MultipleDeviceTestCase::DoResume(
     SystemPowerState target_state, fit::function<void(SystemPowerState target_state)> resume_cb) {
   resume_cb(target_state);
@@ -455,55 +392,4 @@ void MultipleDeviceTestCase::DoResume(SystemPowerState target_state, ResumeCallb
   DoResume(target_state, [this, callback = std::move(callback)](SystemPowerState target_state) {
     coordinator().Resume(target_state, callback);
   });
-}
-// Reads the request from |remote| and verifies whether it matches the expected Init request.
-// |SendInitReply| can be used to send the desired response.
-void MultipleDeviceTestCase::CheckInitReceived(const zx::channel& remote, zx_txid_t* txid) {
-  // Read the init request.
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_bytes;
-  uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
-                                   &actual_bytes, &actual_handles);
-  ASSERT_OK(status);
-  ASSERT_LT(0, actual_bytes);
-  ASSERT_EQ(0, actual_handles);
-
-  // Validate the init request.
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  *txid = hdr->txid;
-  ASSERT_EQ(fuchsia_device_manager_DeviceControllerInitOrdinal, hdr->ordinal);
-  status = fidl_decode(&fuchsia_device_manager_DeviceControllerInitRequestTable, bytes,
-                       actual_bytes, handles, actual_handles, nullptr);
-  ASSERT_OK(status);
-}
-
-// Sends a response with the given return_status. This can be used to reply to a
-// request received by |CheckInitializingReceived|.
-void MultipleDeviceTestCase::SendInitReply(const zx::channel& remote, zx_txid_t txid,
-                                           zx_status_t return_status) {
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_handles;
-
-  // Write the Resume response.
-  memset(bytes, 0, sizeof(bytes));
-  auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerInitResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerInitOrdinal);
-  resp->status = return_status;
-  zx_status_t status =
-      fidl_encode(&fuchsia_device_manager_DeviceControllerInitResponseTable, bytes, sizeof(*resp),
-                  handles, std::size(handles), &actual_handles, nullptr);
-  ASSERT_OK(status);
-  ASSERT_EQ(0, actual_handles);
-  status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
-  ASSERT_OK(status);
-}
-
-void MultipleDeviceTestCase::CheckInitReceivedAndReply(const zx::channel& remote,
-                                                       zx_status_t return_status) {
-  zx_txid_t txid;
-  CheckInitReceived(remote, &txid);
-  SendInitReply(remote, txid, return_status);
 }

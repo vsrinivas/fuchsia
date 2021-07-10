@@ -19,8 +19,7 @@ struct zx_device;
 
 class DeviceControllerConnection
     : public AsyncLoopOwnedRpcHandler<DeviceControllerConnection>,
-      public fidl::WireServer<fuchsia_device_manager::DeviceController>,
-      public fidl::WireServer<fuchsia_io::Directory> {
+      public fidl::WireServer<fuchsia_device_manager::DeviceController> {
  public:
   // |ctx| must outlive this connection
   DeviceControllerConnection(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
@@ -59,29 +58,7 @@ class DeviceControllerConnection
                        CompleteRemovalCompleter::Sync& _completer) override;
   void CompleteCompatibilityTests(CompleteCompatibilityTestsRequestView request,
                                   CompleteCompatibilityTestsCompleter::Sync& _completer) override;
-
-  // Io.fidl methods
   void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override;
-
-  // All methods below are intentionally unimplemented.
-  void AddInotifyFilter(AddInotifyFilterRequestView request,
-                        AddInotifyFilterCompleter::Sync& _completer) override {}
-
-  void Clone(CloneRequestView request, CloneCompleter::Sync& _completer) override {}
-  void Close(CloseRequestView request, CloseCompleter::Sync& _completer) override {}
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& _completer) override {}
-  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& _completer) override {}
-  void Rewind(RewindRequestView request, RewindCompleter::Sync& _completer) override {}
-  void ReadDirents(ReadDirentsRequestView request,
-                   ReadDirentsCompleter::Sync& _completer) override {}
-  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& _completer) override {}
-  void Unlink2(Unlink2RequestView request, Unlink2Completer::Sync& _completer) override {}
-  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& _completer) override {}
-  void Sync(SyncRequestView request, SyncCompleter::Sync& _completer) override {}
-  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& _completer) override {}
-  void Rename2(Rename2RequestView request, Rename2Completer::Sync& _completer) override {}
-  void Link(LinkRequestView request, LinkCompleter::Sync& _completer) override {}
-  void Watch(WatchRequestView request, WatchCompleter::Sync& _completer) override {}
 };
 
 struct DevhostRpcReadContext {

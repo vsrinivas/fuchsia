@@ -5,8 +5,6 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_H_
 
-#include <fuchsia/device/manager/c/fidl.h>
-#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
@@ -276,17 +274,20 @@ class Device
   // relationship with its parent and driver_host and adds its RPC channel to the
   // coordinator's async loop.  This does not add the device to the
   // coordinator's devices_ list, or trigger publishing
-  static zx_status_t Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
-                            fbl::String name, fbl::String driver_path, fbl::String args,
-                            uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
-                            fbl::Array<StrProperty> str_props, zx::channel coordinator_rpc,
-                            zx::channel device_controller_rpc, bool wait_make_visible,
-                            bool want_init_task, bool skip_autobind, zx::vmo inspect,
-                            zx::channel client_remote, fbl::RefPtr<Device>* device);
-  static zx_status_t CreateComposite(Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
-                                     const CompositeDevice& composite, zx::channel coordinator_rpc,
-                                     zx::channel device_controller_rpc,
-                                     fbl::RefPtr<Device>* device);
+  static zx_status_t Create(
+      Coordinator* coordinator, const fbl::RefPtr<Device>& parent, fbl::String name,
+      fbl::String driver_path, fbl::String args, uint32_t protocol_id,
+      fbl::Array<zx_device_prop_t> props, fbl::Array<StrProperty> str_props,
+      fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
+      fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
+      bool wait_make_visible, bool want_init_task, bool skip_autobind, zx::vmo inspect,
+      zx::channel client_remote, fbl::RefPtr<Device>* device);
+  static zx_status_t CreateComposite(
+      Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
+      const CompositeDevice& composite,
+      fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
+      fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
+      fbl::RefPtr<Device>* device);
   zx_status_t CreateProxy();
 
   static void HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher,
@@ -333,9 +334,9 @@ class Device
   // Issue an Unbind request to this device, which will run the unbind hook.
   // When the response comes in, the given completion will be invoked.
   zx_status_t SendUnbind(UnbindCompletion completion);
-  // Issue a CompleteRemoval request to this device.
+  // Issue a CompleteRemove request to this device.
   // When the response comes in, the given completion will be invoked.
-  zx_status_t SendCompleteRemoval(RemoveCompletion completion);
+  zx_status_t SendCompleteRemove(RemoveCompletion completion);
 
   // Break the relationship between this device object and its parent
   void DetachFromParent();
@@ -396,6 +397,7 @@ class Device
 
   void set_host(fbl::RefPtr<DriverHost> host);
   const fbl::RefPtr<DriverHost>& host() const { return host_; }
+  fbl::RefPtr<DriverHost>& host() { return host_; }
 
   void set_local_id(uint64_t local_id) {
     local_id_ = local_id;
@@ -442,7 +444,7 @@ class Device
   // Unbind tasks are used to facilitate |Unbind| requests.
   fbl::RefPtr<UnbindTask> GetActiveUnbind() { return active_unbind_; }
   // Returns the in-progress remove task if it exists, nullptr otherwise.
-  // Remove tasks are used to facilitate |CompleteRemoval| requests.
+  // Remove tasks are used to facilitate |CompleteRemove| requests.
   fbl::RefPtr<RemoveTask> GetActiveRemove() { return active_remove_; }
 
   // Run the completion for the outstanding unbind, if any.
@@ -559,13 +561,15 @@ class Device
     return test_wait_.Begin(dispatcher);
   }
 
-  const fidl::InterfacePtr<fuchsia::device::manager::DeviceController>& device_controller() const {
+  const fidl::Client<fuchsia_device_manager::DeviceController>& device_controller() const {
     return device_controller_;
   }
 
-  const fidl::InterfaceRequest<fuchsia::device::manager::DeviceController> ConnectDeviceController(
+  const fidl::ServerEnd<fuchsia_device_manager::DeviceController> ConnectDeviceController(
       async_dispatcher_t* dispatcher) {
-    return device_controller_.NewRequest(dispatcher);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
+    device_controller_.Bind(std::move(endpoints->client), dispatcher);
+    return std::move(endpoints->server);
   }
 
   bool DriverLivesInSystemStorage() const;
@@ -582,7 +586,7 @@ class Device
   // entire test is finished to avoid interleaving output from multiple drivers.
   async::WaitMethod<Device, &Device::HandleTestOutput> test_wait_{this};
 
-  fidl::InterfacePtr<fuchsia::device::manager::DeviceController> device_controller_;
+  fidl::Client<fuchsia_device_manager::DeviceController> device_controller_;
 
   zx_status_t HandleRead();
   int RunCompatibilityTests();
@@ -683,7 +687,7 @@ class Device
   TestStateMachine test_state_ __TA_GUARDED(test_state_lock_) = TestStateMachine::kTestNotStarted;
   zx::event test_event_;
   zx::duration test_time_;
-  fuchsia_device_manager_CompatibilityTestStatus test_status_;
+  fuchsia_device_manager::wire::CompatibilityTestStatus test_status_;
   bool test_reply_required_ = false;
 
   // This lets us check for unexpected removals and is for testing use only.

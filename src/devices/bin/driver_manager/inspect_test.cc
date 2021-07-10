@@ -63,7 +63,7 @@ class DeviceInspectTestCase : public MultipleDeviceTestCase, public InspectTestH
 TEST_F(DeviceInspectTestCase, DeviceProperties) {
   size_t test_index;
   ASSERT_NO_FATAL_FAILURES(
-      AddDevice(platform_bus(), "test-device", 99 /* protocol id */, "", &test_index));
+      AddDevice(platform_bus()->device, "test-device", 99 /* protocol id */, "", &test_index));
 
   ReadInspect(coordinator().inspect_manager().inspector());
 
@@ -106,7 +106,7 @@ TEST_F(DeviceInspectTestCase, AddRemoveDevice) {
   // Add test-device
   size_t test_index;
   ASSERT_NO_FATAL_FAILURES(
-      AddDevice(platform_bus(), "test-device", 99 /* protocol id */, "", &test_index));
+      AddDevice(platform_bus()->device, "test-device", 99 /* protocol id */, "", &test_index));
 
   // Check count incremented and device is listed
   ReadInspect(coordinator().inspect_manager().inspector());
@@ -133,7 +133,7 @@ TEST_F(DeviceInspectTestCase, AddRemoveDevice) {
 
 TEST_F(DeviceInspectTestCase, PropertyChange) {
   size_t test_index;
-  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "test-device", 0, "", &test_index));
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus()->device, "test-device", 0, "", &test_index));
 
   // Check that change in state gets reflected in inspect
   ReadInspect(coordinator().inspect_manager().inspector());
@@ -163,7 +163,7 @@ TEST_F(InspectDevfsTestCase, DevfsEntries) {
                                   &inspect_vmo_duplicate));
 
   ASSERT_NO_FATAL_FAILURES(AddDevice(
-      platform_bus(), "test-device", test_device_protocol /* protocol id */, "",
+      platform_bus()->device, "test-device", test_device_protocol /* protocol id */, "",
       false /* invisible */, false /* has_init */, false /* reply_to_init */,
       false /* always_init */, std::move(inspect_vmo_duplicate) /* inspect */, &test_index));
 
@@ -206,7 +206,7 @@ TEST_F(InspectDevfsTestCase, NoPubProtocolVisibleInClassDirectory) {
                                   &inspect_vmo_duplicate));
 
   ASSERT_NO_FATAL_FAILURES(AddDevice(
-      platform_bus(), "test-device", test_device_protocol /* protocol id */, "",
+      platform_bus()->device, "test-device", test_device_protocol /* protocol id */, "",
       false /* invisible */, false /* has_init */, false /* reply_to_init */,
       false /* always_init */, std::move(inspect_vmo_duplicate) /* inspect */, &test_index));
 

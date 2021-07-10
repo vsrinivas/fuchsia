@@ -13,29 +13,28 @@ class ResumeTestCase : public MultipleDeviceTestCase {
 // Verify the device transitions in and out of the resuming state.
 void ResumeTestCase::StateTest(zx_status_t resume_status, Device::State want_device_state) {
   size_t index;
-  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "", &index));
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus()->device, "device", 0 /* protocol id */, "", &index));
 
   // Mark all devices suspended.
   coordinator().sys_device()->set_state(Device::State::kSuspended);
   coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
-  platform_bus()->set_state(Device::State::kSuspended);
+  platform_bus()->device->set_state(Device::State::kSuspended);
   device(index)->device->set_state(Device::State::kSuspended);
   ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::kFullyOn));
 
-  zx_txid_t txid;
   ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(sys_proxy_controller_remote_, SystemPowerState::kFullyOn, ZX_OK));
+      sys_proxy()->CheckResumeReceivedAndReply(SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(platform_bus_controller_remote(), SystemPowerState::kFullyOn, ZX_OK));
+      platform_bus()->CheckResumeReceivedAndReply(SystemPowerState::kFullyOn, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   // Check for the resume message without replying.
-  ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(device(index)->controller_remote, SystemPowerState::kFullyOn, &txid));
+  ASSERT_NO_FATAL_FAILURES(device(index)->CheckResumeReceived(SystemPowerState::kFullyOn));
 
   ASSERT_EQ(device(index)->device->state(), Device::State::kResuming);
 
-  ASSERT_NO_FATAL_FAILURES(SendResumeReply(device(index)->controller_remote, resume_status, txid));
+  ASSERT_NO_FATAL_FAILURES(device(index)->SendResumeReply(resume_status));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_EQ(device(index)->device->state(), want_device_state);
@@ -59,7 +58,7 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
   for (auto& desc : devices) {
     fbl::RefPtr<Device> parent;
     if (desc.parent_desc_index == UINT32_MAX) {
-      parent = platform_bus();
+      parent = platform_bus()->device;
     } else {
       size_t index = devices[desc.parent_desc_index].index;
       parent = device(index)->device;
@@ -70,7 +69,7 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
   // Mark all devices suspended. Otherwise resume will fail
   coordinator().sys_device()->set_state(Device::State::kSuspended);
   coordinator().sys_device()->proxy()->set_state(Device::State::kSuspended);
-  platform_bus()->set_state(Device::State::kSuspended);
+  platform_bus()->device->set_state(Device::State::kSuspended);
   for (auto& desc : devices) {
     fbl::RefPtr<Device> dev;
     size_t index = desc.index;
@@ -86,16 +85,15 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
   ASSERT_NO_FATAL_FAILURES(DoResume(target_state));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_TRUE(DeviceHasPendingMessages(sys_proxy_controller_remote_));
-  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(sys_proxy_controller_remote_, target_state, ZX_OK));
+  ASSERT_TRUE(sys_proxy()->HasPendingMessages());
+  ASSERT_NO_FATAL_FAILURES(sys_proxy()->CheckResumeReceivedAndReply(target_state, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   ASSERT_EQ(coordinator().sys_device()->state(), Device::State::kActive);
 
-  ASSERT_TRUE(DeviceHasPendingMessages(platform_bus_controller_remote()));
-  ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(platform_bus_controller_remote(), target_state, ZX_OK));
+  ASSERT_TRUE(platform_bus()->HasPendingMessages());
+  ASSERT_NO_FATAL_FAILURES(platform_bus()->CheckResumeReceivedAndReply(target_state, ZX_OK));
   coordinator_loop()->RunUntilIdle();
-  ASSERT_EQ(platform_bus()->state(), Device::State::kActive);
+  ASSERT_EQ(platform_bus()->device->state(), Device::State::kActive);
 
   size_t num_to_resume = std::size(devices);
   while (num_to_resume > 0) {
@@ -106,11 +104,11 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
         continue;
       }
 
-      if (!DeviceHasPendingMessages(desc.index)) {
+      if (!device(desc.index)->HasPendingMessages()) {
         continue;
       }
       ASSERT_NO_FATAL_FAILURES(
-          CheckResumeReceived(device(desc.index)->controller_remote, target_state, ZX_OK));
+          device(desc.index)->CheckResumeReceivedAndReply(target_state, ZX_OK));
       coordinator_loop()->RunUntilIdle();
 
       size_t parent_index = devices[i].parent_desc_index;
@@ -120,7 +118,7 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
       for (auto& other_desc : devices) {
         if (parent_index == UINT32_MAX) {
           // Make sure platform bus is resumed.
-          ASSERT_EQ(platform_bus()->state(), Device::State::kActive);
+          ASSERT_EQ(platform_bus()->device->state(), Device::State::kActive);
         } else if (other_desc.index == parent_index) {
           // Make sure parent is resumed.
           ASSERT_EQ(device(desc.index)->device->state(), Device::State::kActive);
