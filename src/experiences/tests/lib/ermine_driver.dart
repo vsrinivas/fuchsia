@@ -75,6 +75,9 @@ class ErmineDriver {
     if (_driver == null) {
       fail('unable to connect to ermine.');
     }
+
+    // Wait for the shell to be visible.
+    await waitForOverlays();
   }
 
   /// Closes [FlutterDriverConnector] and performs cleanup.
@@ -116,6 +119,14 @@ class ErmineDriver {
           .where((e) => e.contains(componentUrl))
           .isEmpty;
     }, timeout: timeout);
+  }
+
+  /// Waits until the overlays are visible, timesout otherwise.
+  Future<bool> waitForOverlays() {
+    return waitFor(() async {
+      final data = await snapshot;
+      return data.overlaysVisible;
+    });
   }
 
   /// Got to the Overview screen.

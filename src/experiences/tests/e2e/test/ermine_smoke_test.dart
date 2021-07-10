@@ -33,9 +33,7 @@ void main() {
   });
 
   test('Screen should not be black', () async {
-    await ermine.driver.waitUntilNoTransientCallbacks();
-
-    // Now take a screen shot and make sure it is not all black.
+    // Take a screen shot and make sure it is not all black.
     final scenic = Scenic(sl4f);
     final image = await scenic.takeScreenshot();
     bool isAllBlack = image.data.every((pixel) => pixel & 0x00ffffff == 0);
