@@ -68,7 +68,7 @@ pub async fn test(
             run_test_suite_lib::TestParams {
                 test_url: cmd.test_url,
                 timeout: cmd.timeout.and_then(std::num::NonZeroU32::new),
-                test_filter: cmd.test_filter,
+                test_filters: if cmd.test_filter.len() == 0 { None } else { Some(cmd.test_filter) },
                 also_run_disabled_tests: cmd.run_disabled,
                 parallel: cmd.parallel,
                 test_args: vec![],

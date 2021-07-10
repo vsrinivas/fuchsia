@@ -158,9 +158,11 @@ Note: The old `-s` abbreviation now applies to `--simple`.''')
 executing. This is dangerous outside of the local development
 cycle, as "unsupported" tests are likely a problem with this
 command and not the tests.''')
-  ..addOption('test-filter',
-      defaultsTo: null, help: '''Runs specific test cases in v2 suite. Run
-'fx shell run-test-suite --help' for more info about this flag.''')
+  ..addMultiOption('test-filter',
+      help: '''Runs specific test cases in v2 suite. Can be specified multiple
+      times to pass in multiple patterns. Run 'fx shell run-test-suite --help'
+      for more info about this flag.''',
+      splitCommas: false)
   ..addOption('count',
       defaultsTo: null, help: '''Number of times to run the test. Run
 'fx shell run-test-suite --help' for more info about this flag.''')

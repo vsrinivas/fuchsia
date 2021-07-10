@@ -20,9 +20,10 @@ struct Args {
     #[argh(positional)]
     test_url: String,
 
-    /// test filter. A glob pattern for matching tests.
+    /// test filter. Glob pattern for matching tests. Can be specified multiple
+    /// times to pass in multiple patterns. example: --test-filter glob1 --test-filter glob2.
     #[argh(option)]
-    test_filter: Option<String>,
+    test_filter: Vec<String>,
 
     /// whether to also run tests that have been marked disabled/ignored by the test author.
     #[argh(switch)]
@@ -103,11 +104,13 @@ async fn main() {
         println!("Note: Filtering out ANSI escape sequences.");
     }
 
+    let test_filters = if test_filter.len() == 0 { None } else { Some(test_filter) };
+
     match run_test_suite_lib::run_tests_and_get_outcome(
         run_test_suite_lib::TestParams {
             test_url,
             timeout: timeout.and_then(std::num::NonZeroU32::new),
-            test_filter,
+            test_filters,
             also_run_disabled_tests,
             parallel,
             test_args: test_args,

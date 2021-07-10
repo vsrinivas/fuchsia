@@ -25,9 +25,10 @@ pub struct TestCommand {
     #[argh(positional)]
     pub test_url: String,
 
-    /// a glob pattern for matching tests
+    /// glob pattern for matching tests. Can be specified multiple times to pass in multiple
+    /// patterns. example: --test-filter glob1 --test-filter glob2.
     #[argh(option)]
-    pub test_filter: Option<String>,
+    pub test_filter: Vec<String>,
 
     #[argh(switch)]
     /// list tests in the suite

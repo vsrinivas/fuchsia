@@ -5,7 +5,7 @@
  to this file.
 
  -->
- 
+
 # ffx
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
@@ -46,7 +46,7 @@ __Commands:__
   overnet           Interact with the Overnet mesh
   package           Create and publish Fuchsia packages
   platform          Manage platform build prerequisites
-  repository        
+  repository
   scrutiny          Audit the security of Fuchsia
   sdk               Modify or query the installed SDKs
   self-test         Execute the ffx self-test (e2e) suite
@@ -246,14 +246,14 @@ __Options:__
 
 Examples:
   To bind to the v2 component designated by the moniker:
-  
+
       $ ffx component bind core/brightness_manager
 
 Notes:
   Binds to the v2 component designated by the provided relative moniker
       relative to the v2 component to which the protocol is scoped.
       This will resolve the v2 component if it's not already resolved, and will start the v2 component
-      if it isn't already running. 
+      if it isn't already running.
 
 Error codes:
   1 Failed to bind to the v2 component with moniker <moniker>.
@@ -278,18 +278,18 @@ __Options:__
 
 Examples:
   To connect to a service:
-  
+
       $ ffx component knock 'core/appmgr:out:fuchsia.hwinfo.Product'
 
 Notes:
   Knock verifies the existence of a service exposed by a component by
   attempting to connect to it. The command expects a <selector> with the
   following format:
-  
+
   `<component moniker>:(in|out|exposed)[:<service name>].`
-  
+
   Note that wildcards can be used but must match exactly one service.
-  
+
   The `component select` command can be used to explore the component
   topology to compose the correct selector for use in `component knock`.
 
@@ -320,30 +320,30 @@ __Options:__
 
 Examples:
   To list all components in the topology:
-  
+
       $ ffx component list
-  
+
       To list all cmx components in the topology:
-  
+
       $ ffx component list --only cmx
-  
+
       To list all cml components in the topology:
-  
+
       $ ffx comopnent list --only cml
-  
+
       To list all running components in the topology:
-  
+
       $ ffx component list --only running
-  
+
       To list all stopped components in the topology:
-  
+
       $ ffx component list --only stopped
 
 Notes:
   Lists all the components on the running target. If no <only> is entered,
   the default option outputs a tree of all components on the system. If a valid <only>
   is entered, the command outputs a tree of only cmx/cml/running/stopped components in the system.
-  
+
   If the command fails or times out, ensure RCS is running on the target.
   This can be verified by running `ffx target list` and seeing the status
   on the RCS column.
@@ -371,13 +371,13 @@ __Options:__
 
 Examples:
   To run the 'hello_world_rust' component:
-  
+
       $ ffx component run \
       fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cm
 
 Notes:
   The <url> must follow the format:
-  
+
   `fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cm`
 
 ```
@@ -401,19 +401,19 @@ __Options:__
 
 Examples:
   To run the 'hello_world_rust' component:
-  
+
       $ ffx component run-legacy \
       fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx
-  
+
   To run the Remote Control Service:
-  
+
       $ ffx component run-legacy \
       fuchsia-pkg://fuchsia.com/remote-control#meta/remote-control-runner.cmx
 
 Notes:
   Runs a specified v1 component on the target. The <url> must follow the
   format:
-  
+
   `fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cmx`.
 
 ```
@@ -445,28 +445,28 @@ __Commands:__
 
 Examples:
   To show services exposed by remote-control:
-  
+
       $ ffx component select moniker remote-control:expose:*'
-  
+
   Or to show all services offered by v1 components:
-  
+
       $ ffx component select moniker core/appmgr:out:*
-      
+
   Or to show all components that expose a capability:
-  
+
       $ ffx component select capability fuchsia.sys.Loader
 
 Notes:
-  Component select allows for 
+  Component select allows for
   1). looking up various services exposed by the
   component. The command expects a <selector> with the following format:
-  
+
   `<component moniker>:(in|out|exposed)[:<service name>]`
-  
+
   Wildcards may be used anywhere in the selector.
-  
-  2). looking up components that expose a capability. The command takes in 
-  a capability name consists of a string containing the characters a to z, 
+
+  2). looking up components that expose a capability. The command takes in
+  a capability name consists of a string containing the characters a to z,
   A to Z, 0 to 9, underscore (_), hyphen (-), or the full stop character (.).
 
 Error codes:
@@ -528,15 +528,15 @@ __Options:__
 
 Examples:
   To show information about a component with full url:
-  
+
       $ ffx component show fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm
-  
+
       To show information about a component with partial url:
-  
+
       $ ffx component show appmgr.cm
-  
+
       To show information about a component with name:
-  
+
       $ ffx component show appmgr
 
 Notes:
@@ -565,7 +565,8 @@ __Options:__
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
   -t, --timeout     test timeout
-  --test-filter     a glob pattern for matching tests
+  --test-filter     a glob pattern for matching tests. Can be specified multiple
+                    times to pass in multiple patterns.
   --list            list tests in the suite
   --run-disabled    run tests that have been marked disabled/ignored
   --filter-ansi     filter ANSI escape sequences from output
@@ -583,7 +584,7 @@ __Options:__
 
 Notes:
   Runs a test or suite implementing the `fuchsia.test.Suite` protocol.
-  
+
   Note that if running multiple iterations of a test and an iteration times
   out, no further iterations will be executed.
 
@@ -1253,23 +1254,23 @@ __Options:__
 
 Examples:
   To run diagnostics:
-  
+
       $ ffx doctor
-  
+
   To capture the output and additional logs:
-  
+
       $ ffx doctor --record
-  
+
   By default, this outputs the zip in the current directory.
-  
+
   To override output dir:
-  
+
       $ ffx doctor --record --output-dir /tmp/ffx
 
 Notes:
   The `doctor` subcommand automatically attempts to repair common target
   interaction issues and provides useful diagnostic information to the user.
-  
+
   By default, running `ffx doctor` attempts to establish a connection with
   the daemon, and restarts the daemon if there is no connection. The default
   `retry_count` is '3' and the default 'retry_delay` is '2000' milliseconds.
@@ -2711,10 +2712,10 @@ __Commands:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  add               
+  add
   list              List all repositories
-  remove            
-  serve             
+  remove
+  serve
   target            ....
 
 ```
@@ -2817,7 +2818,7 @@ __Commands:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  register          
+  register
 
 ```
 
@@ -2917,7 +2918,7 @@ __Options:__
 
 Examples:
   To extract a Blobfs block file:
-  
+
           $ffx scrutiny extract blobfs blob.blk /tmp/blobs
 
 Notes:
@@ -2943,7 +2944,7 @@ __Options:__
 
 Examples:
   To extract a FVM file:
-  
+
           $ffx scrutiny extract fvm fvm.blk /tmp/fvm
 
 Notes:
@@ -2969,7 +2970,7 @@ __Options:__
 
 Examples:
   To extract a Fuchsia package from a url:
-  
+
           $ffx scrutiny extract package fuchsia-pkg://fuchsia.com/foo /tmp/foo
 
 Notes:
@@ -2995,7 +2996,7 @@ __Options:__
 
 Examples:
   To extract a Zircon Boot Image:
-  
+
           $ffx scrutiny extract zbi foo.zbi /tmp/foo
 
 Notes:
@@ -3047,7 +3048,7 @@ __Options:__
 
 Examples:
   To list all the files in a package:
-  
+
           $ffx scrutiny list package fuchsia-pkg://fuchsia.com/foo
 
 Notes:
@@ -3079,20 +3080,20 @@ __Options:__
 
 Examples:
   To start an interactive shell session:
-  
+
       $ ffx scrutiny shell
-  
+
   To run commands directly:
-  
+
       $ ffx scrutiny shell components
       $ ffx scrutiny shell "search.packages --files fdio"
-      
+
 
 Notes:
   Launches an interactive scrutiny shell where scrutiny specific
   commands can be run. This will also launch a server on port 127.0.0.1:8080
   by default that provides visual auditing tools.
-  
+
   Inside the shell run help for a full list of available commands. If you wish to
   integrate Scrutiny as part of a wider script check out the --script option.
 
@@ -3142,7 +3143,7 @@ __Options:__
 
 Examples:
   To verify the routes on your current build:
-  
+
           $ffx scrutiny verify routes
 
 Notes:
@@ -3426,7 +3427,7 @@ __Options:__
 
 Examples:
   To start a shell inside starnix:
-  
+
       $ ffx starnix shell
 
 ```
@@ -3449,7 +3450,7 @@ __Options:__
 
 Examples:
   To start a component inside starnix:
-  
+
       $ ffx starnix start <url>
 
 ```
@@ -3492,11 +3493,11 @@ __Commands:__
 Notes:
   The `target` subcommand contains various commands for target management
   and interaction.
-  
+
   Typically, this is the entry workflow for users, allowing for target
   discovery and provisioning before moving on to `component` or `session`
   workflows once the system is up and running on the target.
-  
+
   Most of the commands depend on the RCS (Remote Control Service) on the
   target.
 
@@ -3520,17 +3521,17 @@ __Options:__
 
 Examples:
   To add a remote target forwarded via ssh:
-  
+
       $ ffx target add 127.0.0.1:8022
-  
+
   Or to add a target using its IPV6:
-  
+
       $ ffx target add fe80::32fd:38ff:fea8:a00a
 
 Notes:
   Manually add a target based on its IP address. The command accepts IPV4
   or IPV6 addresses, including a port number: `<addr> = <ip addr:port>`.
-  
+
   Typically, the daemon automatically discovers targets as they come online.
   However, manually adding a target allows for specifying a port number or
   address, often used for remote workflows.
@@ -3565,11 +3566,11 @@ __Commands:__
 
 Examples:
   For one-off overrides for the default use `--target` option:
-  
+
       $ ffx --target <target name> <subcommand>
-  
+
   Or use the `--config` option:
-  
+
       $ ffx --config target.default=<target name> <subcommand>
 
 Notes:
@@ -3621,22 +3622,22 @@ __Options:__
 
 Examples:
   To set the default target:
-  
+
      $ ffx target default set <target name>
-  
+
   To set the 'target.default` key at the global configuration:
-  
+
      $ ffx target default set -l global <target name>
-  
+
   To specify a default target for a specific build directory:
-  
+
      $ ffx target default set -l build -b ~/fuchsia/out <target name>
 
 Notes:
   Sets the `target.default` configuration key. By default sets the key in
   the 'User Configuration'. Can be used in conjuction with `ffx target list`
   to list the names of the discovered targets.
-  
+
   After setting the default target, `ffx target list` will mark the default
   with a `*` in the output list.
 
@@ -3662,15 +3663,15 @@ __Options:__
 
 Examples:
   To clear the default target:
-  
+
       $ ffx target default unset
-  
+
   To clear the `target.default` key from global configuration:
-  
+
       $ ffx target default unset -l global
-  
+
   To specify a specific build directory:
-  
+
       $ ffx target default unset -l build -b ~/fuchsia/out
 
 Notes:
@@ -3703,11 +3704,11 @@ __Options:__
 
 Examples:
   To flash a specific image:
-  
+
       $ ffx target flash ~/fuchsia/out/flash.json fuchsia
-  
+
   To include SSH keys as well:
-  
+
       $ ffx target flash
       --ssh-key ~/fuchsia/.ssh/authorized_keys
       ~/fuchsia/out/default/flash.json
@@ -3716,18 +3717,18 @@ Examples:
 Notes:
   Flashes an image to a target device using the fastboot protocol.
   Requires a specific <manifest> file and <product> name as an input.
-  
+
   This is only applicable to a physical device and not an emulator target.
   The target device is typically connected via a micro-USB connection to
   the host system.
-  
+
   The <manifest> format is a JSON file generated when building a fuchsia
   <product> and can be found in the build output directory.
-  
+
   The `--oem-stage` option can be supplied multiple times for several OEM
   files. The format expects a single OEM command to execute after staging
   the given file.
-  
+
   The format for the `--oem-stage` parameter is a comma separated pair:
   '<OEM_COMMAND>,<FILE_TO_STAGE>'
 
@@ -3753,7 +3754,7 @@ __Options:__
 Notes:
   Return the SSH address of the default target defined in the
   `target.default` key. By default this comes from the 'User Configuration'.
-  
+
   The command takes a <timeout> value in seconds with a default of `1.0`
   and overrides the value in the `target.interaction.timeout` key.
 
@@ -3781,12 +3782,12 @@ __Options:__
 
 Examples:
   To list targets in short form:
-  
+
       $ ffx target list --format s
       fe80::4415:3606:fb52:e2bc%zx-f80ff974f283 pecan-guru-clerk-rhyme
-  
+
   To list targets with only their addresses:
-  
+
       $ ffx target list --format a
       fe80::4415:3606:fb52:e2bc%zx-f80ff974f283
 
@@ -3795,21 +3796,21 @@ Notes:
   manually added targets. The daemon also proactively discovers targets as
   they come online. Use `ffx target list` to always get the latest list
   of targets.
-  
+
   The default target is marked with a '*' next to the node name. The table
   has the following columns:
-  
+
       NAME = The name of the target.
       TYPE = The product type of the target, currently always 'Unknown'.
       STATE = The high-level state of the target, currently always 'Unknown'.
       AGE = Shows the last time the daemon was able to discover the target.
       ADDRS/IP = The discovered and known addresses of the target.
       RCS = Indicates if the Remote Control Service is running on the target.
-  
+
   The NAME column shows the target's advertised name. When the target is
   in early boot state such as fastboot, shows 'FastbootDevice' with the
   `product` and `serial` attributes instead.
-  
+
   By default, the `list` command outputs in a tabular format. To override
   the format, pass `--format` and can take the following options: 'simple'
   , 'tabular|table|tab', 'addresses|addrs|addr', 'json|JSON' or in short form 's', 't',
@@ -3858,31 +3859,31 @@ __Commands:__
 Examples:
   Dump the most recent logs and stream new ones as they happen:
     $ ffx target log watch
-  
+
   Stream new logs without dumping recent ones, filtering for severity of at least "WARN":
     $ ffx target log --min-severity warn watch --dump false
-  
+
   Dump all logs from components with a moniker, url, or message containing "remote-control":
     $ ffx target log --filter remote-control dump
-  
+
   Stream logs from components with moniker, url or message that do not include "sys":
     $ ffx target log --exclude sys watch
-  
+
   Dump ERROR logs with moniker, url or message containing either "klog" or "remote-control.cm",
   but which do not contain "sys":
     $ ffx target log --min-severity error --filter klog --filter remote-control.cm --exclude sys dump
-  
+
   Dump logs with monikers matching component selectors, instead of text matches:
     $ ffx target log --moniker "core/remote-*" --exclude-moniker "sys/*" dump
 
 Notes:
   Filters must be provided to the top-level `target log` command,
   *not* to the sub-command (see examples above)
-  
+
   The `--moniker` argument expects a component selector. See this page for
   documentation:
   https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ComponentSelector.
-  
+
   You may find the `component select` command useful for exploring the topology
   and identifying the selector that matches the component(s) of interest.
 
@@ -3950,7 +3951,7 @@ __Options:__
 Notes:
   Power off a target. Uses the 'fuchsia.hardware.power.statecontrol.Admin'
   FIDL API to send the power off command.
-  
+
   The 'fuchsia.hardware.power.statecontrol.Admin' is exposed via the 'appmgr'
   component. To verify that the target exposes this service, `ffx component
   select` or `ffx component knock` can be used.
@@ -3981,11 +3982,11 @@ __Options:__
 Notes:
   Reboot a target. Uses the 'fuchsia.hardware.power.statecontrol.Admin'
   FIDL API to send the reboot command.
-  
-  By default, target boots fully. This behavior can be overrided by passing
+
+  By default, target boots fully. This behavior can be overridden by passing
   in either `--bootloader` or `--recovery` to boot into the bootloader or
   recovery, respectively.
-  
+
   The 'fuchsia.hardware.power.statecontrol.Admin' is exposed via the 'appmgr'
   component. To verify that the target exposes this service, `ffx component
   select` or `ffx component knock` can be used.
@@ -4013,11 +4014,11 @@ __Options:__
 
 Examples:
   To remove a target by its target name:
-  
+
       $ ffx target remove correct-horse-battery-staple
-  
+
   Or to remove a target using its IP address:
-  
+
       $ ffx target remove fe80::32fd:38ff:fea8:a00a
 
 Notes:
@@ -4048,11 +4049,11 @@ __Options:__
 
 Notes:
   Displays a detailed iformation about the target.
-  
+
   The default output is intended for a human reader. This output can be
   decorated with machine readable labels (--label) and descriptions of
   each field (--desc).
-  
+
   The 'label' fields in the machine readable output (--json) will remain
   stable across software updates and is not localized (compare to 'title'
   which may change or be localized). The 'value' field will be one of:
@@ -4082,7 +4083,7 @@ __Options:__
 
 Examples:
   Store the target's snapshot in the current directory:
-  
+
       $ ffx target snapshot -d .
       Exported ./snapshot.zip
 
@@ -4090,7 +4091,7 @@ Notes:
   This command connects to a running target to acquire its snapshot, which contains
   useful debugging information about the target. The `--dir` can be supplied to override the default
   snapshot directory `/tmp/snapshots/YYYYMMDD_HHMMSS/`.
-  
+
   Snapshot contents:
   - Build information and annotations
   - Kernel and system logs
@@ -4231,7 +4232,7 @@ __Options:__
 
 Notes:
   This lists all the known next or target update channels on the system.
-  
+
   Returns an empty list if no other update channels are configured.
 
 Error codes:
@@ -4257,11 +4258,11 @@ __Options:__
 
 Examples:
   To list all the known update channels:
-  
+
       $ ffx target update channel list
-  
+
   Then, use a valid channel from the list:
-  
+
       $ ffx target update channel set <channel>
 
 Notes:
@@ -4269,7 +4270,7 @@ Notes:
   `ffx target update check-now`, ensures the update is check against the
   next or target channel. When the update is successful, next or target
   channel becomes the current channel.
-  
+
   Use `ffx target update channel list` to list known system update
   channels.
 
@@ -4300,17 +4301,17 @@ __Options:__
 
 Examples:
   To check for update and monitor progress:
-  
+
       $ ffx target update check-now --monitor
 
 Notes:
   Triggers an update check operation and performs the update if available.
   Interfaces using the 'fuchsia.update Manager' protocol with the system
   update service on the target.
-  
+
   The command takes in an optional `--monitor` switch to watch the progress
   of the update. The output is displayed in `stdout`.
-  
+
   The command also takes an optional `--service-initiated` switch to indicate
   a separate service has initiated a check for update.
 
@@ -4335,11 +4336,11 @@ __Options:__
 
 Examples:
   With a known update package URL, trigger an update:
-  
+
       $ ffx target update force-install fuchsia-pkg://fuchsia.com/update
-  
+
   Also trigger a reboot after update:
-  
+
       $ ffx target update force-install
       fuchsia-pkg://fuchsia.com/update
       --reboot
@@ -4347,12 +4348,12 @@ Examples:
 Notes:
   Directly invoke the system updater to install the provided update,
   bypassing any update checks.
-  
+
   Interfaces using the 'fuchsia.update.installer' protocol to update the
   system. Requires an <update_pkg_url> in the following format:
-  
+
   `fuchsia-pkg://fuchsia.com/update`
-  
+
   Takes an optional `--reboot <true|false>` to trigger a system reboot
   after update has been successfully applied.
 
@@ -4447,7 +4448,8 @@ __Options:__
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
   -t, --timeout     test timeout
-  --test-filter     a glob pattern for matching tests
+  --test-filter     a glob pattern for matching tests. Can be specified multiple
+                    times to pass in multiple patterns.
   --run-disabled    run tests that have been marked disabled/ignored
   --filter-ansi     filter ANSI escape sequences from output
   --parallel        run tests in parallel
@@ -4466,7 +4468,7 @@ __Options:__
 
 Notes:
   Runs a test or suite implementing the `fuchsia.test.Suite` protocol.
-  
+
   Note that if running multiple iterations of a test and an iteration times
   out, no further iterations will be executed.
 

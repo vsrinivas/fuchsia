@@ -50,7 +50,7 @@ class Flags {
   final int timeout;
 
   // flags for v2 tests
-  final String testFilter;
+  final List<String> testFilter;
   final String count;
   final bool runDisabledTests;
 
@@ -224,9 +224,11 @@ class TestsConfig {
     }
 
     var v2runnerTokens = <String>[];
-    if (flags.testFilter != null) {
-      v2runnerTokens..add('--test-filter')..add(flags.testFilter);
+
+    for (var filter in flags.testFilter) {
+      v2runnerTokens..add('--test-filter')..add(filter);
     }
+
     if (flags.count != null) {
       v2runnerTokens..add('--count')..add(flags.count);
     }

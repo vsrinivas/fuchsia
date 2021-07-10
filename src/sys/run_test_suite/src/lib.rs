@@ -95,8 +95,8 @@ pub struct TestParams {
     /// |timeout|: Test timeout.should be more than zero.
     pub timeout: Option<std::num::NonZeroU32>,
 
-    /// Filter tests based on this glob pattern.
-    pub test_filter: Option<String>,
+    /// Filter tests based on glob pattern(s).
+    pub test_filters: Option<Vec<String>>,
 
     // Run disabled tests.
     pub also_run_disabled_tests: bool,
@@ -552,7 +552,7 @@ pub async fn run_test<'a, Out: Write>(
         arguments: Some(test_params.test_args.clone()),
         run_disabled_tests: Some(test_params.also_run_disabled_tests),
         timeout: timeout,
-        test_filters: test_params.test_filter.map(|s| vec![s]),
+        test_filters: test_params.test_filters,
         log_iterator: Some(diagnostics::get_type()),
     };
 

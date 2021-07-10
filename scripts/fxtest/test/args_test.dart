@@ -447,13 +447,34 @@ void main() {
         rawArgs: ['--test-filter=mytest'],
         fxEnv: FakeFxEnv.shared,
       );
-      expect(testsConfig.flags.testFilter, 'mytest');
+      expect(testsConfig.flags.testFilter, ['mytest']);
       expect(testsConfig.flags.count, null);
       expect(testsConfig.flags.runDisabledTests, false);
 
       expect(
           testsConfig.runnerTokens[TestType.suite], contains('--test-filter'));
       expect(testsConfig.runnerTokens[TestType.suite], contains('mytest'));
+      expect(
+          testsConfig.runnerTokens[TestType.suite], isNot(contains('--count')));
+      expect(testsConfig.runnerTokens[TestType.suite],
+          isNot(contains('--also-run-disabled-tests')));
+    });
+
+    test('with multiple --test-filter', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--test-filter=mypattern1', '--test-filter=mypattern2'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      expect(testsConfig.flags.testFilter, ['mypattern1', 'mypattern2']);
+      expect(testsConfig.flags.count, null);
+      expect(testsConfig.flags.runDisabledTests, false);
+
+      expect(
+          testsConfig.runnerTokens[TestType.suite]
+              ?.where((e) => e == '--test-filter'),
+          ['--test-filter', '--test-filter']);
+      expect(testsConfig.runnerTokens[TestType.suite], contains('mypattern1'));
+      expect(testsConfig.runnerTokens[TestType.suite], contains('mypattern2'));
       expect(
           testsConfig.runnerTokens[TestType.suite], isNot(contains('--count')));
       expect(testsConfig.runnerTokens[TestType.suite],

@@ -206,8 +206,11 @@ fuchsia.test.Suite provides equivalent functionality that replaces them.
 - **--gtest_filter** - Instead use:
 
 ```posix-terminal
- fx test --test-filter=<my_filter> <test_url>
+ fx test --test-filter=<glob_pattern> <test_url>
 ```
+
+`--test-filter` may be specified multiple times. Tests that match any of the
+given glob patterns will be executed.
 
 - **--gtest_also_run_disabled_tests** - Instead use:
 
@@ -240,8 +243,11 @@ fuchsia.test.Suite provides equivalent functionality that replaces them
 - **-test.run** - Instead use:
 
 ```posix-terminal
- fx test --test-filter=<my_filter> <test_url>
+ fx test --test-filter=<glob_pattern> <test_url>
 ```
+
+`--test-filter` may be specified multiple times. Tests that match any of the
+given glob patterns will be executed.
 
 - **-test.count** - See [Running test multiple times](#running_test_multiple_times).
 - **-test.v** - Output is printed by default.

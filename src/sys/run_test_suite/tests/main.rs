@@ -73,7 +73,7 @@ fn new_test_params(test_url: &str) -> TestParams {
         test_url: test_url.to_string(),
         builder_connector: RunBuilderConnector::new(),
         timeout: None,
-        test_filter: None,
+        test_filters: None,
         also_run_disabled_tests: false,
         test_args: vec![],
         parallel: None,
@@ -348,7 +348,7 @@ async fn launch_and_test_with_filter() {
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
     );
 
-    test_params.test_filter = Some("*Test3".to_string());
+    test_params.test_filters = Some(vec!["*Test3".to_string()]);
     let run_result =
         run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
             .await
@@ -366,6 +366,41 @@ log3 for Example.Test3
     assert_eq!(run_result.executed, run_result.passed);
 
     let expected = vec!["Example.Test3"];
+
+    assert_eq!(run_result.executed, expected);
+    assert!(run_result.successful_completion);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_with_multiple_filter() {
+    let mut output: Vec<u8> = vec![];
+    let mut test_params = new_test_params(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+    );
+
+    test_params.test_filters = Some(vec!["*Test3".to_string(), "*Test1".to_string()]);
+    let run_result =
+        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
+            .await
+            .expect("Running test should not fail");
+
+    let expected_output = "[RUNNING]	Example.Test1
+log1 for Example.Test1
+log2 for Example.Test1
+log3 for Example.Test1
+[PASSED]	Example.Test1
+[RUNNING]	Example.Test3
+log1 for Example.Test3
+log2 for Example.Test3
+log3 for Example.Test3
+[PASSED]	Example.Test3
+";
+    assert_output!(output, expected_output);
+
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert_eq!(run_result.executed, run_result.passed);
+
+    let expected = vec!["Example.Test1", "Example.Test3"];
 
     assert_eq!(run_result.executed, expected);
     assert!(run_result.successful_completion);
