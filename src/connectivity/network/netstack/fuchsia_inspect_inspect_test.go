@@ -802,36 +802,126 @@ func TestEthInfoInspectImpl(t *testing.T) {
 }
 
 func TestFifoStatsInfoInspectImpl(t *testing.T) {
-	var zeroCounter, nonZeroCounter tcpip.StatCounter
-	nonZeroCounter.IncrementBy(5)
+	tests := []struct {
+		name     string
+		impl     func() fifoStatsInspectImpl
+		wantData func() inspect.Object
+	}{
+		{
+			name: "size 2",
+			impl: func() fifoStatsInspectImpl {
+				var zeroCounter, nonZeroCounter tcpip.StatCounter
+				nonZeroCounter.IncrementBy(5)
+				return fifoStatsInspectImpl{
+					name: "size 2",
+					value: func(batch uint32) *tcpip.StatCounter {
+						if batch%2 == 0 {
+							return &zeroCounter
+						}
+						return &nonZeroCounter
+					},
+					size: 2,
+				}
+			},
+			wantData: func() inspect.Object {
+				return inspect.Object{
+					Name: "size 2",
+					Metrics: []inspect.Metric{
+						{Key: "1", Value: inspect.MetricValueWithUintValue(5)},
+					},
+				}
+			},
+		},
+		{
+			name: "size 2001",
+			impl: func() fifoStatsInspectImpl {
+				var zeroCounter, nonZeroCounter tcpip.StatCounter
+				nonZeroCounter.IncrementBy(5)
+				return fifoStatsInspectImpl{
+					name: "size 2001",
+					value: func(batch uint32) *tcpip.StatCounter {
+						if batch == 1 || batch == 2000 || batch == 2001 {
+							return &nonZeroCounter
+						}
+						return &zeroCounter
+					},
+					size: 2001,
+				}
+			},
+			wantData: func() inspect.Object {
+				return inspect.Object{
+					Name: "size 2001",
+					Metrics: []inspect.Metric{
+						{
+							Key:   "1-2",
+							Value: inspect.MetricValueWithUintValue(5),
+						},
+						{
+							Key:   "1999-2000",
+							Value: inspect.MetricValueWithUintValue(5),
+						},
+						{
+							Key:   "2001",
+							Value: inspect.MetricValueWithUintValue(5),
+						},
+					},
+				}
+			},
+		},
+		{
+			name: "size 2048",
+			impl: func() fifoStatsInspectImpl {
+				var nonZeroCounter tcpip.StatCounter
+				nonZeroCounter.IncrementBy(5)
+				return fifoStatsInspectImpl{
+					name: "size 2048",
+					value: func(_ uint32) *tcpip.StatCounter {
+						return &nonZeroCounter
+					},
+					size: 2048,
+				}
+			},
+			wantData: func() inspect.Object {
+				metrics := []inspect.Metric{}
+				for i := 0; i < 2048; i = i + 2 {
+					metrics = append(metrics, inspect.Metric{
+						Key:   fmt.Sprintf("%d-%d", i+1, i+2),
+						Value: inspect.MetricValueWithUintValue(10),
+					})
 
-	v := fifoStatsInspectImpl{
-		name: "doesn't matter",
-		value: func(depth uint32) *tcpip.StatCounter {
-			if depth%2 == 0 {
-				return &zeroCounter
+				}
+				return inspect.Object{
+					Name:    "size 2048",
+					Metrics: metrics,
+				}
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			v := test.impl()
+
+			// ListChildren always returns nil.
+			children := v.ListChildren()
+			if diff := cmp.Diff(children, []string(nil)); diff != "" {
+				t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 			}
-			return &nonZeroCounter
-		},
-		size: 2,
-	}
-	children := v.ListChildren()
-	if diff := cmp.Diff(children, []string(nil)); diff != "" {
-		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
-	}
 
-	childName := "not a real child"
-	if child := v.GetChild(childName); child != nil {
-		t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
-	}
+			// GetChild always returns nil.
+			childName := "not a real child"
+			if child := v.GetChild(childName); child != nil {
+				t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
+			}
 
-	if diff := cmp.Diff(inspect.Object{
-		Name: v.name,
-		Metrics: []inspect.Metric{
-			{Key: "1", Value: inspect.MetricValueWithUintValue(5)},
-		},
-	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
-		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+			data := v.ReadData()
+			if l := len(data.Metrics); l > maxMetricsForFifoStats {
+				t.Errorf("the length of Metrics (%d) exceeds maxMetricsForFifoStats(%d)", l, maxMetricsForFifoStats)
+			}
+			if diff := cmp.Diff(test.wantData(), data, cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
+				t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 

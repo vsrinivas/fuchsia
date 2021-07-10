@@ -804,13 +804,34 @@ type fifoStatsInspectImpl struct {
 	size  uint32
 }
 
+// We cap the number of Metrics in a response so that the FIDL
+// response would fit in a single channel message.
+const maxMetricsForFifoStats = 1024
+
 func (impl *fifoStatsInspectImpl) ReadData() inspect.Object {
 	var metrics []inspect.Metric
-	for i := uint32(0); i < impl.size; i++ {
-		batchSize := i + 1
-		if v := impl.value(batchSize).Value(); v != 0 {
+	batchesPerMetrics := ((impl.size - 1) / maxMetricsForFifoStats) + 1
+	batch := uint32(1)
+	for batch <= impl.size {
+		startBatch := batch
+		v := uint64(0)
+		for i := uint32(0); i < batchesPerMetrics; i++ {
+			v += impl.value(batch).Value()
+			batch++
+			if batch > impl.size {
+				break
+			}
+		}
+		endBatch := batch - 1
+		if v != 0 {
+			var key string
+			if startBatch == endBatch {
+				key = fmt.Sprintf("%d", startBatch)
+			} else {
+				key = fmt.Sprintf("%d-%d", startBatch, endBatch)
+			}
 			metrics = append(metrics, inspect.Metric{
-				Key:   strconv.FormatUint(uint64(batchSize), 10),
+				Key:   key,
 				Value: inspect.MetricValueWithUintValue(v),
 			})
 		}
