@@ -477,7 +477,7 @@ void RegisterContextForApi(DriverHostContext* context) {
 DriverHostContext* ContextForApi() { return kContextForApi; }
 
 void DriverHostControllerConnection::CreateDevice(CreateDeviceRequestView request,
-                                               CreateDeviceCompleter::Sync& completer) {
+                                                  CreateDeviceCompleter::Sync& completer) {
   std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
   // This does not operate under the driver_host api lock,
   // since the newly created device is not visible to
@@ -630,7 +630,7 @@ void DriverHostControllerConnection::CreateCompositeDevice(
 }
 
 void DriverHostControllerConnection::CreateDeviceStub(CreateDeviceStubRequestView request,
-                                                   CreateDeviceStubCompleter::Sync& completer) {
+                                                      CreateDeviceStubCompleter::Sync& completer) {
   // This method is used for creating driverless proxies in case of misc, root, test devices.
   // Since there are no proxy drivers backing the device, a dummy proxy driver will be used for
   // device creation.
@@ -672,7 +672,7 @@ void DriverHostControllerConnection::CreateDeviceStub(CreateDeviceStubRequestVie
 
 // TODO(fxbug.dev/68309): Implement Restart.
 void DriverHostControllerConnection::Restart(RestartRequestView request,
-                                          RestartCompleter::Sync& completer) {
+                                             RestartCompleter::Sync& completer) {
   completer.Reply(ZX_OK);
 }
 
@@ -709,8 +709,9 @@ zx_status_t DriverHostControllerConnection::HandleRead() {
 // handles devcoordinator rpc
 
 void DriverHostControllerConnection::HandleRpc(std::unique_ptr<DriverHostControllerConnection> conn,
-                                            async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                            zx_status_t status, const zx_packet_signal_t* signal) {
+                                               async_dispatcher_t* dispatcher,
+                                               async::WaitBase* wait, zx_status_t status,
+                                               const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to wait on %p from driver_manager: %s", conn.get(),
          zx_status_get_string(status));
@@ -950,23 +951,23 @@ zx_status_t DriverHostContext::DeviceBind(const fbl::RefPtr<zx_device_t>& dev,
 }
 
 zx_status_t DriverHostContext::DeviceRunCompatibilityTests(const fbl::RefPtr<zx_device_t>& dev,
-                                                           int64_t hook_wait_time) {
+                                                           int64_t hook_wait_time,
+                                                           fit::callback<void(zx_status_t)> cb) {
   const auto& client = dev->coordinator_client;
   if (!client) {
     return ZX_ERR_IO_REFUSED;
   }
   VLOGD(1, *dev, "run-compatibility-test");
-  auto response = client->RunCompatibilityTests_Sync(hook_wait_time);
-  zx_status_t status = response.status();
-  zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK && response.Unwrap()->result.is_err()) {
-    call_status = response.Unwrap()->result.err();
-  }
-  log_rpc_result(dev, "run-compatibility-test", status, call_status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return call_status;
+  auto result =
+      client->RunCompatibilityTests(hook_wait_time, [cb = std::move(cb)](auto* response) mutable {
+        if (response->result.is_err()) {
+          cb(response->result.err());
+        } else {
+          cb(static_cast<zx_status_t>(response->result.response().status));
+        }
+      });
+  log_rpc_result(dev, "run-compatibility-test", result.status());
+  return result.status();
 }
 
 zx_status_t DriverHostContext::LoadFirmware(const zx_driver_t* drv,

@@ -52,14 +52,6 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
 
 }  // namespace
 
-void DeviceControllerConnection::CompleteCompatibilityTests(
-    CompleteCompatibilityTestsRequestView request,
-    CompleteCompatibilityTestsCompleter::Sync& _completer) {
-  if (auto compat_conn = dev()->PopTestCompatibilityConn(); compat_conn) {
-    compat_conn(static_cast<zx_status_t>(request->status));
-  }
-}
-
 void DeviceControllerConnection::Init(InitRequestView request, InitCompleter::Sync& completer) {
   ZX_ASSERT(this->dev()->init_cb == nullptr);
 

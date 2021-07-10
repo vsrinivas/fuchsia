@@ -84,8 +84,6 @@ class FakeDevice : public fidl::WireServer<fuchsia_device_manager::DeviceControl
   void Unbind(UnbindRequestView request, UnbindCompleter::Sync& completer) override {}
   void CompleteRemoval(CompleteRemovalRequestView request,
                        CompleteRemovalCompleter::Sync& completer) override {}
-  void CompleteCompatibilityTests(CompleteCompatibilityTestsRequestView request,
-                                  CompleteCompatibilityTestsCompleter::Sync& _completer) override {}
   void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override {}
 
   bool bind_called() { return bind_called_; }

@@ -1072,8 +1072,7 @@ zx_status_t BindDriver(const fbl::RefPtr<Device>& dev, const char* libname) {
                   std::string{test_wait_time->value.data(), test_wait_time->value.size()};
               test_time = zx::msec(atoi(test_timeout.data()));
             }
-            real_parent->set_test_time(test_time);
-            real_parent->DriverCompatibilityTest();
+            real_parent->DriverCompatibilityTest(test_time, std::nullopt);
             break;
           } else if (real_parent->test_state() == Device::TestStateMachine::kTestBindSent) {
             real_parent->test_event().signal(0, TEST_BIND_DONE_SIGNAL);

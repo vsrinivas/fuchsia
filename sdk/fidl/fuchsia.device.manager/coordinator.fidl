@@ -165,13 +165,6 @@ protocol DeviceController {
     /// 'target_system_state'.
     Resume(uint32 target_system_state) -> (zx.status status);
 
-    /// Inform devhost about the compatibility test status when compatibility tests
-    /// fail or complete successfully.
-    // TODO(ravoorir) : This should be an asynchronous call from devhost to
-    // devcoordinator as a reply to RunCompatibilityTests, when llcpp can support
-    // making an asynchronous fidl call.
-    CompleteCompatibilityTests(CompatibilityTestStatus status);
-
     /// See fuchsia.io.Directory/Open for information.
     Open(uint32 flags, uint32 mode, string:fuchsia.io.MAX_PATH path,
          request<fuchsia.io.Node> object);
@@ -305,5 +298,5 @@ protocol Coordinator {
     /// each device hook in nanoseconds.
     /// Returns whether the compatibility tests started, and does not convey
     /// anything about the status of the test.
-    RunCompatibilityTests(int64 hook_wait_time) -> () error zx.status;
+    RunCompatibilityTests(int64 hook_wait_time) -> (CompatibilityTestStatus status) error zx.status;
 };

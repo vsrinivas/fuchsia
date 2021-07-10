@@ -73,18 +73,6 @@ fit::callback<void(zx_status_t)> zx_device::take_unbind_children_conn() {
   return conn;
 }
 
-void zx_device::PushTestCompatibilityConn(fit::callback<void(zx_status_t)> conn) {
-  fbl::AutoLock<fbl::Mutex> lock(&test_compatibility_conn_lock_);
-  test_compatibility_conn_.push_back(std::move(conn));
-}
-
-fit::callback<void(zx_status_t)> zx_device::PopTestCompatibilityConn() {
-  fbl::AutoLock<fbl::Mutex> lock(&test_compatibility_conn_lock_);
-  auto conn = std::move(test_compatibility_conn_[0]);
-  test_compatibility_conn_.erase(0);
-  return conn;
-}
-
 void zx_device::set_rebind_drv_name(const char* drv_name) {
   rebind_drv_name_ = std::string(drv_name);
 }

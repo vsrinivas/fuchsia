@@ -753,10 +753,18 @@ const char* Device::GetTestDriverName() {
   return nullptr;
 }
 
-zx_status_t Device::DriverCompatibilityTest() {
+void Device::DriverCompatibilityTest(
+    zx::duration test_time, std::optional<RunCompatibilityTestsCompleter::Async> completer) {
   thrd_t t;
   if (test_state() != TestStateMachine::kTestNotStarted) {
-    return ZX_ERR_ALREADY_EXISTS;
+    if (completer) {
+      completer->ReplySuccess(fuchsia_device_manager::wire::CompatibilityTestStatus::kErrInternal);
+    }
+    return;
+  }
+  set_test_time(test_time);
+  if (completer) {
+    compatibility_test_completer_ = *std::move(completer);
   }
   auto cb = [](void* arg) -> int {
     auto dev = fbl::RefPtr(reinterpret_cast<Device*>(arg));
@@ -766,14 +774,14 @@ zx_status_t Device::DriverCompatibilityTest() {
   if (ret != thrd_success) {
     LOGF(ERROR, "Failed to create thread for driver compatibility test '%s': %d",
          GetTestDriverName(), ret);
-    if (test_reply_required_) {
-      device_controller()->CompleteCompatibilityTests(
+    if (compatibility_test_completer_) {
+      compatibility_test_completer_->ReplySuccess(
           fuchsia_device_manager::wire::CompatibilityTestStatus::kErrInternal);
+      compatibility_test_completer_.reset();
     }
-    return ZX_ERR_NO_RESOURCES;
+    return;
   }
   thrd_detach(t);
-  return ZX_OK;
 }
 
 #define TEST_LOGF(severity, message...) FX_LOGF(severity, "compatibility", message)
@@ -782,12 +790,12 @@ int Device::RunCompatibilityTests() {
   const char* test_driver_name = GetTestDriverName();
   TEST_LOGF(INFO, "Running test '%s'", test_driver_name);
   auto cleanup = fit::defer([this]() {
-    if (test_reply_required_) {
-      device_controller()->CompleteCompatibilityTests(test_status_);
+    if (compatibility_test_completer_) {
+      compatibility_test_completer_->ReplySuccess(test_status_);
     }
     test_event().reset();
     set_test_state(Device::TestStateMachine::kTestDone);
-    set_test_reply_required(false);
+    compatibility_test_completer_.reset();
   });
   // Device should be bound for test to work
   if (!(flags & DEV_CTX_BOUND) || children().is_empty()) {
@@ -1040,19 +1048,11 @@ void Device::RunCompatibilityTests(RunCompatibilityTestsRequestView request,
                                    RunCompatibilityTestsCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   fbl::RefPtr<Device>& real_parent = dev;
-  zx_status_t status = ZX_OK;
   if (dev->flags & DEV_CTX_PROXY) {
     real_parent = dev->parent();
   }
   zx::duration test_time = zx::nsec(request->hook_wait_time);
-  real_parent->set_test_time(test_time);
-  real_parent->set_test_reply_required(true);
-  status = real_parent->DriverCompatibilityTest();
-  if (status != ZX_OK) {
-    completer.ReplyError(status);
-  } else {
-    completer.ReplySuccess();
-  }
+  real_parent->DriverCompatibilityTest(test_time, completer.ToAsync());
 }
 
 void Device::AddCompositeDevice(AddCompositeDeviceRequestView request,

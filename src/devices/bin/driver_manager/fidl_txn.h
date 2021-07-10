@@ -23,8 +23,8 @@ class DevmgrFidlTxn : public fidl::Transaction {
   DevmgrFidlTxn& operator=(const DevmgrFidlTxn&) = delete;
   DevmgrFidlTxn(const DevmgrFidlTxn&) = delete;
 
-  DevmgrFidlTxn& operator=(DevmgrFidlTxn&&) = delete;
-  DevmgrFidlTxn(DevmgrFidlTxn&&) = delete;
+  DevmgrFidlTxn& operator=(DevmgrFidlTxn&&) = default;
+  DevmgrFidlTxn(DevmgrFidlTxn&&) = default;
 
   ~DevmgrFidlTxn() {
     ZX_ASSERT_MSG(status_called_,
@@ -44,7 +44,7 @@ class DevmgrFidlTxn : public fidl::Transaction {
   }
 
   std::unique_ptr<Transaction> TakeOwnership() final {
-    ZX_ASSERT_MSG(false, "DevmgrFidlTxn cannot take ownership of the transaction.\n");
+    return std::make_unique<DevmgrFidlTxn>(std::move(*this));
   }
 
   zx_status_t Status() __WARN_UNUSED_RESULT {
@@ -54,10 +54,10 @@ class DevmgrFidlTxn : public fidl::Transaction {
 
  private:
   // Reply channel
-  const zx::unowned_channel channel_;
+  zx::unowned_channel channel_;
 
   // Transaction id of the message we're replying to
-  const uint32_t txid_;
+  uint32_t txid_;
 
   // Has the Status method been called?
   bool status_called_;

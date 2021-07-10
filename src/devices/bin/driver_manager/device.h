@@ -458,7 +458,8 @@ class Device
   void DropUnbindTask() { active_unbind_ = nullptr; }
   void DropRemoveTask() { active_remove_ = nullptr; }
 
-  zx_status_t DriverCompatibilityTest();
+  void DriverCompatibilityTest(zx::duration test_time,
+                               std::optional<RunCompatibilityTestsCompleter::Async> completer);
 
   zx::channel take_client_remote() { return std::move(client_remote_); }
 
@@ -546,7 +547,6 @@ class Device
 
   void clear_active_resume() { active_resume_ = nullptr; }
   void set_test_time(zx::duration& test_time) { test_time_ = test_time; }
-  void set_test_reply_required(bool required) { test_reply_required_ = required; }
   zx::duration& test_time() { return test_time_; }
   const char* GetTestDriverName();
   zx::event& test_event() { return test_event_; }
@@ -688,7 +688,7 @@ class Device
   zx::event test_event_;
   zx::duration test_time_;
   fuchsia_device_manager::wire::CompatibilityTestStatus test_status_;
-  bool test_reply_required_ = false;
+  std::optional<RunCompatibilityTestsCompleter::Async> compatibility_test_completer_;
 
   // This lets us check for unexpected removals and is for testing use only.
   size_t num_removal_attempts_ = 0;

@@ -138,8 +138,6 @@ class DeviceState : public fidl::WireServer<fdm::DeviceController> {
                        CompleteRemovalCompleter::Sync& completer) override {
     remove_completer_ = completer.ToAsync();
   }
-  void CompleteCompatibilityTests(CompleteCompatibilityTestsRequestView request,
-                                  CompleteCompatibilityTestsCompleter::Sync& _completer) override {}
   void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override {}
 
   std::optional<BindDriverCompleter::Async> bind_completer_;

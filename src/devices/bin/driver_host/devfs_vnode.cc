@@ -267,12 +267,13 @@ void DevfsVnode::SetDriverLogFlags(SetDriverLogFlagsRequestView request,
 
 void DevfsVnode::RunCompatibilityTests(RunCompatibilityTestsRequestView request,
                                        RunCompatibilityTestsCompleter::Sync& completer) {
-  zx_status_t status = device_run_compatibility_tests(dev_, request->hook_wait_time);
-  if (status == ZX_OK) {
-    dev_->PushTestCompatibilityConn(
-        [completer = completer.ToAsync()](zx_status_t status) mutable { completer.Reply(status); });
-  } else {
-    completer.Reply(status);
+  auto shared_completer =
+      std::make_shared<RunCompatibilityTestsCompleter::Async>(completer.ToAsync());
+  zx_status_t status = device_run_compatibility_tests(
+      dev_, request->hook_wait_time,
+      [shared_completer](zx_status_t status) mutable { shared_completer->Reply(status); });
+  if (status != ZX_OK) {
+    shared_completer->Reply(status);
   }
 };
 

@@ -222,9 +222,6 @@ struct zx_device
   void set_unbind_children_conn(fit::callback<void(zx_status_t)>);
   fit::callback<void(zx_status_t)> take_unbind_children_conn();
 
-  void PushTestCompatibilityConn(fit::callback<void(zx_status_t)>);
-  fit::callback<void(zx_status_t)> PopTestCompatibilityConn();
-
   // Check if this driver_host has a device with the given ID, and if so returns a
   // reference to it.
   static fbl::RefPtr<zx_device> GetDeviceFromLocalId(uint64_t local_id);
@@ -447,12 +444,6 @@ struct zx_device
 
   std::optional<std::string> rebind_drv_name_ = std::nullopt;
 
-  // The connection associated with fuchsia.device.Controller/RunCompatibilityTests
-  fbl::Mutex test_compatibility_conn_lock_;
-
-  fbl::Vector<fit::callback<void(zx_status_t)>> test_compatibility_conn_
-      TA_GUARDED(test_compatibility_conn_lock_);
-
   PerformanceStates performance_states_;
   DevicePowerStates power_states_;
   SystemPowerStateMapping system_power_states_mapping_;
@@ -492,7 +483,8 @@ zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev);
 zx_status_t device_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev);
 zx_status_t device_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self);
 zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
-                                           int64_t hook_wait_time);
+                                           int64_t hook_wait_time,
+                                           fit::callback<void(zx_status_t)> cb);
 zx_status_t device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
                         uint32_t flags);
 // Note that device_close() is intended to consume a reference (logically, the

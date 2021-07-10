@@ -76,7 +76,8 @@ class DriverHostContext {
   void DeviceResumeReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
                          uint8_t out_power_state, uint32_t out_perf_state) TA_REQ(api_lock_);
   zx_status_t DeviceRunCompatibilityTests(const fbl::RefPtr<zx_device_t>& dev,
-                                          int64_t hook_wait_time) TA_REQ(api_lock_);
+                                          int64_t hook_wait_time,
+                                          fit::callback<void(zx_status_t)> cb) TA_REQ(api_lock_);
   zx_status_t DeviceCreate(zx_driver_t* drv, const char* name, void* ctx,
                            const zx_protocol_device_t* ops, fbl::RefPtr<zx_device_t>* out)
       TA_REQ(api_lock_);
