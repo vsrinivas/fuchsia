@@ -75,6 +75,7 @@
             "fuchsia.power.BatteryManager",
             "fuchsia.power.test.BatterySimulator",
             "fuchsia.recovery.FactoryReset",
+            "fuchsia.session.Launcher",
             "fuchsia.settings.Audio",
             "fuchsia.settings.Display",
             "fuchsia.settings.Intl",

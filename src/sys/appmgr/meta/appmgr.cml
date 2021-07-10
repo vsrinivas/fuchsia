@@ -499,6 +499,10 @@
             protocol: "fuchsia.input.injection.InputDeviceRegistry",
             path: "/svc_for_sys/fuchsia.input.injection.InputDeviceRegistry",
         },
+        {
+            protocol: "fuchsia.session.Launcher",
+            path: "/svc_for_sys/fuchsia.session.Launcher",
+        },
 
         // From session_manager
         {
