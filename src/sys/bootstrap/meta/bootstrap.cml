@@ -390,6 +390,14 @@
             ],
         },
         {
+            protocol: [ "fuchsia.device.fs.Exporter" ],
+            from: "#driver_manager",
+            to: [
+                "#boot-drivers",
+                "#pkg-drivers",
+            ],
+        },
+        {
             protocol: [ "fuchsia.scheduler.ProfileProvider" ],
             from: "#svchost",
             to: "#driver_manager",

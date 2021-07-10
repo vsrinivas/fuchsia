@@ -40,6 +40,7 @@
 #include "driver_runner.h"
 #include "fdio.h"
 #include "fuchsia/io/llcpp/fidl.h"
+#include "src/devices/bin/driver_manager/devfs_exporter.h"
 #include "src/devices/bin/driver_manager/device_watcher.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
@@ -383,6 +384,15 @@ int main(int argc, char** argv) {
   devfs_publish(coordinator.root_device(), coordinator.sys_device());
   devfs_publish(coordinator.root_device(), coordinator.test_device());
   devfs_connect_diagnostics(coordinator.inspect_manager().diagnostics_client());
+
+  std::optional<driver_manager::DevfsExporter> devfs_exporter;
+  if (driver_manager_args.driver_runner_root_driver_url.size() != 0) {
+    devfs_exporter.emplace(coordinator.sys_device()->devnode(), loop.dispatcher());
+    auto publish = devfs_exporter->PublishExporter(outgoing.svc_dir());
+    if (publish.is_error()) {
+      return publish.error_value();
+    }
+  }
 
   // Check if whatever launched devmgr gave a channel to be connected to /dev.
   // This is for use in tests to let the test environment see devfs.

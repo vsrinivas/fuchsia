@@ -24,8 +24,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <fbl/intrusive_double_list.h>
-#include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
@@ -41,11 +39,9 @@ namespace fio = fuchsia_io;
 async_dispatcher_t* g_dispatcher = nullptr;
 uint64_t next_ino = 2;
 
-std::unique_ptr<Devnode> root_devnode;
-
 std::unique_ptr<Devnode> class_devnode;
 
-std::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const fbl::String& name);
+std::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, std::string_view name);
 
 // Dummy node to represent dev/diagnostics directory.
 std::unique_ptr<Devnode> diagnostics_devnode;
@@ -224,40 +220,6 @@ class DevfsFidlServer : public fidl::WireServer<fio::DirectoryAdmin> {
   async_dispatcher_t* current_dispatcher_ = nullptr;
 };
 
-struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
-  explicit Devnode(fbl::String name);
-  ~Devnode();
-
-  Devnode(const Devnode&) = delete;
-  Devnode& operator=(const Devnode&) = delete;
-
-  Devnode(Devnode&&) = delete;
-  Devnode& operator=(Devnode&&) = delete;
-
-  fbl::String name;
-  uint64_t ino = 0;
-
-  // nullptr if we are a pure directory node,
-  // otherwise the device we are referencing
-  Device* device = nullptr;
-
-  fbl::DoublyLinkedList<std::unique_ptr<Watcher>> watchers;
-
-  // list of our child devnodes
-  fbl::DoublyLinkedList<Devnode*> children;
-
-  // Pointer to our parent, for removing ourselves from its list of
-  // children. Our parent must outlive us.
-  Devnode* parent = nullptr;
-
-  // list of attached iostates
-  fbl::DoublyLinkedList<DcIostate*> iostate;
-
-  // used to assign unique small device numbers
-  // for class device links
-  uint32_t seqcount = 0;
-};
-
 namespace {
 
 struct ProtocolInfo {
@@ -271,24 +233,6 @@ ProtocolInfo proto_infos[] = {
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) {name, nullptr, val, flags},
 #include <lib/ddk/protodefs.h>
 };
-
-Devnode* proto_dir(uint32_t id) {
-  for (const auto& info : proto_infos) {
-    if (info.id == id) {
-      return info.devnode.get();
-    }
-  }
-  return nullptr;
-}
-
-void prepopulate_protocol_dirs() {
-  class_devnode = devfs_mkdir(root_devnode.get(), "class");
-  for (auto& info : proto_infos) {
-    if (!(info.flags & PF_NOPUB)) {
-      info.devnode = devfs_mkdir(class_devnode.get(), info.name);
-    }
-  }
-}
 
 void describe_error(zx::channel h, zx_status_t status) {
   fio::wire::NodeInfo invalid_node_info;
@@ -310,6 +254,9 @@ bool devnode_is_dir(const Devnode* dn) {
 // Local devnodes are ones that we should not hand off OPEN
 // RPCs to the underlying driver_host
 bool devnode_is_local(Devnode* dn) {
+  if (dn->service_node) {
+    return false;
+  }
   if (dn->device == nullptr) {
     return true;
   }
@@ -351,7 +298,7 @@ void devfs_notify_single(std::unique_ptr<Watcher>* watcher, const fbl::String& n
   }
 }
 
-void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
+void devfs_notify(Devnode* dn, std::string_view name, unsigned op) {
   if (dn->watchers.is_empty()) {
     return;
   }
@@ -365,7 +312,7 @@ void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
   const uint32_t msg_len = static_cast<uint32_t>(len + 2);
   msg[0] = static_cast<uint8_t>(op);
   msg[1] = static_cast<uint8_t>(len);
-  memcpy(msg + 2, name.c_str(), len);
+  memcpy(msg + 2, name.data(), len);
 
   // convert to mask
   op = (1u << op);
@@ -388,6 +335,23 @@ void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
 }
 
 }  // namespace
+
+void devfs_prepopulate_class(Devnode* dn) {
+  for (auto& info : proto_infos) {
+    if (!(info.flags & PF_NOPUB)) {
+      info.devnode = devfs_mkdir(dn, info.name);
+    }
+  }
+}
+
+Devnode* devfs_proto_node(uint32_t protocol_id) {
+  for (const auto& info : proto_infos) {
+    if (info.id == protocol_id) {
+      return info.devnode.get();
+    }
+  }
+  return nullptr;
+}
 
 zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
   auto watcher = std::make_unique<Watcher>(dn, std::move(h), mask);
@@ -425,7 +389,7 @@ bool devfs_has_watchers(Devnode* dn) { return !dn->watchers.is_empty(); }
 
 namespace {
 
-std::unique_ptr<Devnode> devfs_mknode(const fbl::RefPtr<Device>& dev, const fbl::String& name) {
+std::unique_ptr<Devnode> devfs_mknode(const fbl::RefPtr<Device>& dev, std::string_view name) {
   auto dn = std::make_unique<Devnode>(name);
   if (!dn) {
     return nullptr;
@@ -436,7 +400,7 @@ std::unique_ptr<Devnode> devfs_mknode(const fbl::RefPtr<Device>& dev, const fbl:
   return dn;
 }
 
-std::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const fbl::String& name) {
+std::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, std::string_view name) {
   std::unique_ptr<Devnode> dn = devfs_mknode(nullptr, name);
   if (dn == nullptr) {
     return nullptr;
@@ -446,9 +410,9 @@ std::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const fbl::String& name) {
   return dn;
 }
 
-Devnode* devfs_lookup(Devnode* parent, const fbl::String& name) {
+Devnode* devfs_lookup(Devnode* parent, std::string_view name) {
   for (auto& child : parent->children) {
-    if (name == child.name) {
+    if (name == static_cast<std::string_view>(child.name)) {
       return &child;
     }
   }
@@ -482,8 +446,11 @@ zx_status_t devfs_readdir(Devnode* dn, uint64_t* ino_inout, void* data, size_t l
       // "pure" directories (like /dev/class/$NAME) do not show up
       // if they have no children, to avoid clutter and confusion.
       // They remain openable, so they can be watched.
-      // An exception being /dev/diagnostics which is served by different VFS and
-      // should be listed even though it has no DevNode childrens.
+      //
+      // An exception being /dev/diagnostics which is served by different VFS
+      // and should be listed even though it has no devnode children.
+      //
+      // Another exception is when the devnode is for a remote service.
       if (child.children.is_empty() && child.ino != diagnostics_devnode->ino) {
         continue;
       }
@@ -593,6 +560,10 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
       response.Write(unowned_ipc->get());
     }
     return;
+  } else if (dn->service_node) {
+    fidl::ServerEnd<fio::Node> server_end(std::move(ipc));
+    fidl::WireCall(dn->service_node).Clone(flags, std::move(server_end));
+    return;
   }
 
   // Otherwise we will pass the request on to the remote.
@@ -628,7 +599,7 @@ void devfs_remove(Devnode* dn) {
       dn->device->link = nullptr;
 
       if (!(dn->device->flags & DEV_CTX_INVISIBLE)) {
-        Devnode* dir = proto_dir(dn->device->protocol_id());
+        Devnode* dir = devfs_proto_node(dn->device->protocol_id());
         devfs_notify(dir, dn->name, fio::wire::kWatchEventRemoved);
       }
     }
@@ -682,7 +653,7 @@ zx_status_t DcIostate::Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::c
 
 void devfs_advertise(const fbl::RefPtr<Device>& dev) {
   if (dev->link) {
-    Devnode* dir = proto_dir(dev->protocol_id());
+    Devnode* dir = devfs_proto_node(dev->protocol_id());
     devfs_notify(dir, dev->link->name, fio::wire::kWatchEventAdded);
   }
   if (dev->self->parent) {
@@ -693,7 +664,7 @@ void devfs_advertise(const fbl::RefPtr<Device>& dev) {
 // TODO: generate a MODIFIED event rather than back to back REMOVED and ADDED
 void devfs_advertise_modified(const fbl::RefPtr<Device>& dev) {
   if (dev->link) {
-    Devnode* dir = proto_dir(dev->protocol_id());
+    Devnode* dir = devfs_proto_node(dev->protocol_id());
     devfs_notify(dir, dev->link->name, fio::wire::kWatchEventRemoved);
     devfs_notify(dir, dev->link->name, fio::wire::kWatchEventAdded);
   }
@@ -701,6 +672,16 @@ void devfs_advertise_modified(const fbl::RefPtr<Device>& dev) {
     devfs_notify(dev->self->parent, dev->self->name, fio::wire::kWatchEventRemoved);
     devfs_notify(dev->self->parent, dev->self->name, fio::wire::kWatchEventAdded);
   }
+}
+
+zx_status_t devfs_seq_name(Devnode* dir, char* data, size_t size) {
+  for (unsigned n = 0; n < 1000; n++) {
+    snprintf(data, size, "%03u", (dir->seqcount++) % 1000);
+    if (devfs_lookup(dir, data) == nullptr) {
+      return ZX_OK;
+    }
+  }
+  return ZX_ERR_ALREADY_EXISTS;
 }
 
 zx_status_t devfs_publish(const fbl::RefPtr<Device>& parent, const fbl::RefPtr<Device>& dev) {
@@ -724,24 +705,18 @@ zx_status_t devfs_publish(const fbl::RefPtr<Device>& parent, const fbl::RefPtr<D
   }
 
   // Create link in /dev/class/... if this id has a published class
-  Devnode* dir;
-  dir = proto_dir(dev->protocol_id());
-  if (dir != nullptr) {
-    char tmp[32];
-    const char* name = dev->name().data();
+  if (auto dir = devfs_proto_node(dev->protocol_id()); dir != nullptr) {
+    char buf[4] = {};
+    auto name = dev->name();
 
     if (dev->protocol_id() != ZX_PROTOCOL_CONSOLE) {
-      for (unsigned n = 0; n < 1000; n++) {
-        snprintf(tmp, sizeof(tmp), "%03u", (dir->seqcount++) % 1000);
-        if (devfs_lookup(dir, tmp) == nullptr) {
-          name = tmp;
-          goto got_name;
-        }
+      zx_status_t status = devfs_seq_name(dir, buf, sizeof(buf));
+      if (status != ZX_OK) {
+        return status;
       }
-      return ZX_ERR_ALREADY_EXISTS;
+      name = buf;
     }
 
-  got_name:
     std::unique_ptr<Devnode> dnlink = devfs_mknode(dev, name);
     if (dnlink == nullptr) {
       return ZX_ERR_NO_MEMORY;
@@ -924,13 +899,17 @@ zx::channel devfs_root_clone() { return zx::channel(fdio_service_clone(g_devfs_r
 
 void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatcher) {
   g_dispatcher = dispatcher;
-  root_devnode = std::make_unique<Devnode>("");
+  auto root_devnode = std::make_unique<Devnode>("");
   if (!root_devnode) {
     return;
   }
   root_devnode->ino = 1;
 
-  prepopulate_protocol_dirs();
+  class_devnode = devfs_mkdir(root_devnode.get(), "class");
+  if (!class_devnode) {
+    return;
+  }
+  devfs_prepopulate_class(class_devnode.get());
 
   // Create dummy diagnostics devnode, so that the directory is listed.
   diagnostics_devnode = devfs_mkdir(root_devnode.get(), "diagnostics");
@@ -965,5 +944,85 @@ zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* dev) 
     return status;
   }
   *dev = fbl::RefPtr(inout->device);
+  return ZX_OK;
+}
+
+zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Node> service_node,
+                         std::string_view devfs_path, uint32_t protocol_id,
+                         std::vector<std::unique_ptr<Devnode>>& out) {
+  // Check if the `devfs_path` provided is valid.
+  if (devfs_path.empty() || devfs_path.front() == '/' || devfs_path.back() == '/') {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Walk the `devfs_path` and call `process` on each part of the path.
+  //
+  // e.g. If devfs_path is "platform/acpi/acpi-pwrbtn", then process will be
+  // called with "platform", then "acpi", then "acpi-pwrbtn".
+  std::string_view::size_type begin = 0, end = 0;
+  const auto walk = [&devfs_path, &begin, &end](auto process) {
+    do {
+      // Consume excess separators.
+      while (devfs_path[begin] == '/') {
+        ++begin;
+      }
+      end = devfs_path.find('/', begin);
+      auto size = end == std::string_view::npos ? end : end - begin;
+      if (!process(devfs_path.substr(begin, size))) {
+        break;
+      }
+      begin = end + 1;
+    } while (end != std::string_view::npos);
+  };
+
+  // Walk `devfs_path` and find the last Devnode that exists, so we can create
+  // the rest of the path underneath it.
+  Devnode* prev_dn = nullptr;
+  walk([&dn, &prev_dn](std::string_view name) {
+    prev_dn = dn;
+    dn = devfs_lookup(dn, name);
+    return dn != nullptr;
+  });
+
+  // The full path described by `devfs_path` already exists.
+  if (dn != nullptr) {
+    return ZX_ERR_ALREADY_EXISTS;
+  }
+
+  // Create Devnodes for the remainder of the path, and attach `service_node` to
+  // the leaf Devnode.
+  dn = prev_dn;
+  walk([&out, &dn](std::string_view name) {
+    out.push_back(devfs_mkdir(dn, name));
+    devfs_notify(dn, name, fio::wire::kWatchEventAdded);
+    dn = out.back().get();
+    return true;
+  });
+  dn->service_node = std::move(service_node);
+
+  // If a protocol directory exists for `protocol_id`, then create a Devnode
+  // under the protocol directory too.
+  if (auto dir = devfs_proto_node(protocol_id); dir != nullptr) {
+    char name[4] = {};
+    zx_status_t status = devfs_seq_name(dir, name, sizeof(name));
+    if (status != ZX_OK) {
+      return status;
+    }
+    out.push_back(devfs_mkdir(dir, name));
+    devfs_notify(dir, name, fio::wire::kWatchEventAdded);
+
+    // Clone the service node for the entry in the protocol directory.
+    auto endpoints = fidl::CreateEndpoints<fio::Node>();
+    if (endpoints.is_error()) {
+      return endpoints.status_value();
+    }
+    out.back()->service_node = std::move(endpoints->client);
+    auto result = fidl::WireCall(dn->service_node)
+                      .Clone(ZX_FS_FLAG_CLONE_SAME_RIGHTS, std::move(endpoints->server));
+    if (!result.ok()) {
+      return result.status();
+    }
+  }
+
   return ZX_OK;
 }
