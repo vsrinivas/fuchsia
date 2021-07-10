@@ -179,7 +179,6 @@ protocol DeviceController {
 
 const uint32 FRAGMENT_NAME_MAX = 32;
 
-[ForDeprecatedCBindings]
 struct Fragment {
     string:FRAGMENT_NAME_MAX name;
     LocalDeviceId id;

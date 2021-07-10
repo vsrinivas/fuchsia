@@ -44,18 +44,6 @@ constexpr const char* kIndent = "    ";
 const std::map<std::string, std::set<std::string>> allowed_decls({
     {"fuchsia.tracing.provider", {"Provider", "ProviderConfig", "StartOptions"}},
     {"fuchsia.logger", {"Log", "LogSink", "LogMessage", "LogListenerSafe", "LogFilterOptions"}},
-    {"fuchsia.device.manager",
-     {
-         "BindInstruction",
-         "CompositeDeviceDescriptor",
-         "Coordinator",
-         "DevhostController",
-         "DeviceController",
-         "DeviceFragment",
-         "DeviceFragmentPart",
-         "DeviceMetadata",
-         "DeviceProperty",
-     }},
     {"fuchsia.hardware.power.statecontrol", {"Admin"}},
     {"fidl.test.llcpp.dirent", {"DirEntTestInterface"}},
 });
