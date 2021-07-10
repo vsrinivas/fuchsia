@@ -178,7 +178,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
   MockFshostAdminServer& admin_server() { return admin_server_; }
 
   const fbl::RefPtr<DriverHost>& driver_host() { return driver_host_; }
-  const fidl::ServerEnd<fdm::DevhostController>& driver_host_server() {
+  const fidl::ServerEnd<fdm::DriverHostController>& driver_host_server() {
     return driver_host_server_;
   }
 
@@ -203,7 +203,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
       SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
   void DoResume(SystemPowerState target_state, fit::function<void(SystemPowerState)> resume_cb);
 
-  void CheckCreateDeviceReceived(const fidl::ServerEnd<fdm::DevhostController>& server,
+  void CheckCreateDeviceReceived(const fidl::ServerEnd<fdm::DriverHostController>& server,
                                  const char* expected_driver,
                                  fidl::ClientEnd<fdm::Coordinator>* device_coordinator_client,
                                  fidl::ServerEnd<fdm::DeviceController>* device_controller_server);
@@ -233,7 +233,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
   // The remote end of the channel that the coordinator uses to talk to the
   // driver_host
-  fidl::ServerEnd<fdm::DevhostController> driver_host_server_;
+  fidl::ServerEnd<fdm::DriverHostController> driver_host_server_;
 
   // The remote end of the channel that the coordinator uses to talk to the
   // sys device proxy

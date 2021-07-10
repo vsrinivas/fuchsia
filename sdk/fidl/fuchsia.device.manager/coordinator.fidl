@@ -184,8 +184,8 @@ struct Fragment {
     LocalDeviceId id;
 };
 
-/// Protocol for controlling a devhost process from the devcoordinator
-protocol DevhostController {
+/// Protocol for controlling a driver host process from the driver manager
+protocol DriverHostController {
     /// Create a device in the devhost that only implements the device protocol
     /// and claims to support the given `protocol_id`.  This device will communicate
     /// with the devcoordinator via `coordinator`. Implements DeviceController on device_controller_rpc
@@ -228,7 +228,8 @@ protocol DevhostController {
     Restart() -> (zx.status status);
 };
 
-/// Interface for the devices in devhosts to coordinate with the devcoordinator.
+/// Interface for drivers in driver host to coordinate with the driver
+/// manager.
 protocol Coordinator {
     /// Record the addition of a new device that can be communicated with via `rpc`.
     /// For binding purposes, it is has properties `props`. `name` and `driver_path`

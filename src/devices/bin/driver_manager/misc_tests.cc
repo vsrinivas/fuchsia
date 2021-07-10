@@ -451,7 +451,7 @@ TEST(MiscTestCase, BindDevices) {
   // Bind the device to a fake driver_host.
   fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.devices().front());
   auto host = fbl::MakeRefCounted<DriverHost>(
-      &coordinator, fidl::ClientEnd<fuchsia_device_manager::DevhostController>(),
+      &coordinator, fidl::ClientEnd<fuchsia_device_manager::DriverHostController>(),
       fidl::ClientEnd<fuchsia_io::Directory>(), zx::process{});
   dev->set_host(std::move(host));
   status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
@@ -510,7 +510,7 @@ TEST(MiscTestCase, TestOutput) {
   // Bind the device to a fake driver_host.
   fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.devices().front());
   auto host = fbl::MakeRefCounted<DriverHost>(
-      &coordinator, fidl::ClientEnd<fuchsia_device_manager::DevhostController>(),
+      &coordinator, fidl::ClientEnd<fuchsia_device_manager::DriverHostController>(),
       fidl::ClientEnd<fuchsia_io::Directory>(), zx::process{});
   dev->set_host(std::move(host));
   status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);

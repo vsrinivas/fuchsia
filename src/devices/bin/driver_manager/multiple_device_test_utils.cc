@@ -39,7 +39,7 @@ class FidlTransaction : public fidl::Transaction {
   zx::unowned_channel channel_;
 };
 
-class FakeDevhost : public fidl::WireServer<fdm::DevhostController> {
+class FakeDevhost : public fidl::WireServer<fdm::DriverHostController> {
  public:
   FakeDevhost(const char* expected_driver,
               fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
@@ -73,7 +73,7 @@ class FakeDevhost : public fidl::WireServer<fdm::DevhostController> {
 // Reads a CreateDevice from remote, checks expectations, and sends a ZX_OK
 // response.
 void MultipleDeviceTestCase::CheckCreateDeviceReceived(
-    const fidl::ServerEnd<fdm::DevhostController>& devhost_controller, const char* expected_driver,
+    const fidl::ServerEnd<fdm::DriverHostController>& devhost_controller, const char* expected_driver,
     fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
     fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];

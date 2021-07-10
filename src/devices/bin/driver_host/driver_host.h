@@ -46,14 +46,14 @@ namespace internal {
 DriverHostContext* ContextForApi();
 void RegisterContextForApi(DriverHostContext* context);
 
-class DevhostControllerConnection
-    : public AsyncLoopOwnedRpcHandler<DevhostControllerConnection>,
-      public fidl::WireServer<fuchsia_device_manager::DevhostController> {
+class DriverHostControllerConnection
+    : public AsyncLoopOwnedRpcHandler<DriverHostControllerConnection>,
+      public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
  public:
   // |ctx| must outlive this connection
-  explicit DevhostControllerConnection(DriverHostContext* ctx) : driver_host_context_(ctx) {}
+  explicit DriverHostControllerConnection(DriverHostContext* ctx) : driver_host_context_(ctx) {}
 
-  static void HandleRpc(std::unique_ptr<DevhostControllerConnection> conn,
+  static void HandleRpc(std::unique_ptr<DriverHostControllerConnection> conn,
                         async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
   zx_status_t HandleRead();

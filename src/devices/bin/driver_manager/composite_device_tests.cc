@@ -45,7 +45,7 @@ class FidlTransaction : public fidl::Transaction {
   zx::unowned_channel channel_;
 };
 
-class FakeDevhost : public fidl::WireServer<fuchsia_device_manager::DevhostController> {
+class FakeDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
  public:
   FakeDevhost(const char* expected_name, size_t expected_fragments_count,
               fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
@@ -84,7 +84,7 @@ class FakeDevhost : public fidl::WireServer<fuchsia_device_manager::DevhostContr
 
 // Reads a CreateCompositeDevice from remote, checks expectations, and sends
 // a ZX_OK response.
-void CheckCreateCompositeDeviceReceived(const fidl::ServerEnd<fdm::DevhostController>& controller,
+void CheckCreateCompositeDeviceReceived(const fidl::ServerEnd<fdm::DriverHostController>& controller,
                                         const char* expected_name, size_t expected_fragments_count,
                                         DeviceState* composite) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
@@ -100,7 +100,7 @@ void CheckCreateCompositeDeviceReceived(const fidl::ServerEnd<fdm::DevhostContro
   FakeDevhost fake(expected_name, expected_fragments_count, &composite->coordinator_client,
                    &composite->controller_server);
   ASSERT_EQ(fidl::WireDispatch(
-                static_cast<fidl::WireServer<fuchsia_device_manager::DevhostController>*>(&fake),
+                static_cast<fidl::WireServer<fuchsia_device_manager::DriverHostController>*>(&fake),
                 std::move(msg), &txn),
             fidl::DispatchResult::kFound);
   ASSERT_TRUE(composite->coordinator_client.is_valid());

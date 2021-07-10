@@ -207,13 +207,13 @@ zx_driver::zx_driver(fx_logger_t* logger, std::string_view libname, InspectNodeC
 zx_driver::~zx_driver() { fx_logger_destroy(logger_); }
 
 zx_status_t DriverHostContext::SetupRootDevcoordinatorConnection(zx::channel ch) {
-  auto conn = std::make_unique<internal::DevhostControllerConnection>(this);
+  auto conn = std::make_unique<internal::DriverHostControllerConnection>(this);
   if (conn == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
 
   conn->set_channel(std::move(ch));
-  return internal::DevhostControllerConnection::BeginWait(std::move(conn), loop_.dispatcher());
+  return internal::DriverHostControllerConnection::BeginWait(std::move(conn), loop_.dispatcher());
 }
 
 // Send message to driver_manager asking to add child device to
@@ -476,7 +476,7 @@ void RegisterContextForApi(DriverHostContext* context) {
 }
 DriverHostContext* ContextForApi() { return kContextForApi; }
 
-void DevhostControllerConnection::CreateDevice(CreateDeviceRequestView request,
+void DriverHostControllerConnection::CreateDevice(CreateDeviceRequestView request,
                                                CreateDeviceCompleter::Sync& completer) {
   std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
   // This does not operate under the driver_host api lock,
@@ -562,7 +562,7 @@ void DevhostControllerConnection::CreateDevice(CreateDeviceRequestView request,
   }
 }
 
-void DevhostControllerConnection::CreateCompositeDevice(
+void DriverHostControllerConnection::CreateCompositeDevice(
     CreateCompositeDeviceRequestView request, CreateCompositeDeviceCompleter::Sync& completer) {
   // Convert the fragment IDs into zx_device references
   CompositeFragments fragments_list(new CompositeFragment[request->fragments.count()],
@@ -629,7 +629,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
   completer.Reply(ZX_OK);
 }
 
-void DevhostControllerConnection::CreateDeviceStub(CreateDeviceStubRequestView request,
+void DriverHostControllerConnection::CreateDeviceStub(CreateDeviceStubRequestView request,
                                                    CreateDeviceStubCompleter::Sync& completer) {
   // This method is used for creating driverless proxies in case of misc, root, test devices.
   // Since there are no proxy drivers backing the device, a dummy proxy driver will be used for
@@ -671,12 +671,12 @@ void DevhostControllerConnection::CreateDeviceStub(CreateDeviceStubRequestView r
 }
 
 // TODO(fxbug.dev/68309): Implement Restart.
-void DevhostControllerConnection::Restart(RestartRequestView request,
+void DriverHostControllerConnection::Restart(RestartRequestView request,
                                           RestartCompleter::Sync& completer) {
   completer.Reply(ZX_OK);
 }
 
-zx_status_t DevhostControllerConnection::HandleRead() {
+zx_status_t DriverHostControllerConnection::HandleRead() {
   zx::unowned_channel conn = channel();
   uint8_t msg[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -701,14 +701,14 @@ zx_status_t DevhostControllerConnection::HandleRead() {
 
   auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
   DevmgrFidlTxn txn(std::move(conn), hdr->txid);
-  fidl::WireDispatch<fuchsia_device_manager::DevhostController>(
+  fidl::WireDispatch<fuchsia_device_manager::DriverHostController>(
       this, fidl::IncomingMessage::FromEncodedCMessage(&fidl_msg), &txn);
   return txn.Status();
 }
 
 // handles devcoordinator rpc
 
-void DevhostControllerConnection::HandleRpc(std::unique_ptr<DevhostControllerConnection> conn,
+void DriverHostControllerConnection::HandleRpc(std::unique_ptr<DriverHostControllerConnection> conn,
                                             async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                             zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {

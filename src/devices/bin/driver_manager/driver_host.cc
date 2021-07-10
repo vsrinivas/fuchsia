@@ -16,7 +16,7 @@
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 
 DriverHost::DriverHost(Coordinator* coordinator,
-                       fidl::ClientEnd<fuchsia_device_manager::DevhostController> controller,
+                       fidl::ClientEnd<fuchsia_device_manager::DriverHostController> controller,
                        fidl::ClientEnd<fuchsia_io::Directory> diagnostics, zx::process proc)
     : coordinator_(coordinator), proc_(std::move(proc)) {
   if (controller.is_valid()) {
@@ -45,7 +45,7 @@ DriverHost::~DriverHost() {
 }
 
 zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<DriverHost>* out) {
-  auto dh_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DevhostController>();
+  auto dh_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DriverHostController>();
   if (dh_endpoints.is_error()) {
     return dh_endpoints.error_value();
   }
