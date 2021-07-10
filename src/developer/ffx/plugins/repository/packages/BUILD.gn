@@ -11,6 +11,7 @@ ffx_plugin("ffx_repository_packages") {
   deps = [
     "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/developer/ffx/lib/fidl-fuchsia-developer-bridge-ext",
     "//src/developer/ffx/lib/pkg",
     "//src/developer/ffx/lib/timeout:lib",
     "//src/lib/fidl/rust/fidl",

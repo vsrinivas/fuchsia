@@ -4,10 +4,12 @@
 
 use {
     anyhow::Result,
+    errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_repository_packages_args::PackagesCommand,
     fidl,
     fidl_fuchsia_developer_bridge::{RepositoryPackagesIteratorMarker, RepositoryRegistryProxy},
+    fidl_fuchsia_developer_bridge_ext::RepositoryError,
     humansize::{file_size_opts, FileSize},
     prettytable::{cell, format::TableFormat, row, Row, Table},
     std::io::{stdout, Write},
@@ -27,7 +29,17 @@ async fn packages_impl<W: Write>(
     mut writer: W,
 ) -> Result<()> {
     let (client, server) = fidl::endpoints::create_endpoints::<RepositoryPackagesIteratorMarker>()?;
-    repos_proxy.list_packages(&cmd.name, server).await?.unwrap();
+
+    match repos_proxy.list_packages(&cmd.name, server).await? {
+        Ok(()) => {}
+        Err(err) => match RepositoryError::from(err) {
+            RepositoryError::NoMatchingRepository => {
+                ffx_bail!("repository {:?} does not exist", cmd.name)
+            }
+            err => ffx_bail!("error listing packages: {}", err),
+        },
+    }
+
     let client = client.into_proxy()?;
 
     let mut table = Table::new();
