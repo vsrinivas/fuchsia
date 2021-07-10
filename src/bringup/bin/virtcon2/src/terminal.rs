@@ -104,6 +104,16 @@ impl<T> Terminal<T> {
         let mut term = self.term.borrow_mut();
         term.scroll_display(scroll);
     }
+
+    pub fn history_size(&self) -> usize {
+        let term = self.term.borrow();
+        term.grid().history_size()
+    }
+
+    pub fn display_offset(&self) -> usize {
+        let term = self.term.borrow();
+        term.grid().display_offset()
+    }
 }
 
 impl<T> Write for Terminal<T> {

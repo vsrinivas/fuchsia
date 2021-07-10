@@ -30,6 +30,7 @@ use {
     std::{
         collections::{BTreeMap, BTreeSet},
         io::Write,
+        mem,
         path::PathBuf,
     },
     term_model::{
@@ -123,6 +124,13 @@ struct SceneDetails {
     textgrid: Option<FacetId>,
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+struct TerminalStatus {
+    pub has_output: bool,
+    pub at_top: bool,
+    pub at_bottom: bool,
+}
+
 pub struct VirtualConsoleViewAssistant {
     app_context: AppContext,
     view_key: ViewKey,
@@ -131,7 +139,7 @@ pub struct VirtualConsoleViewAssistant {
     font_size: f32,
     dpi: BTreeSet<u32>,
     scene_details: Option<SceneDetails>,
-    terminals: BTreeMap<u32, (Terminal<EventProxy>, bool)>,
+    terminals: BTreeMap<u32, (Terminal<EventProxy>, TerminalStatus)>,
     font: FontFace,
     animation: Option<Animation>,
     active_terminal_id: u32,
@@ -255,15 +263,19 @@ impl VirtualConsoleViewAssistant {
     fn get_status(&self) -> Vec<(String, Color)> {
         self.terminals
             .iter()
-            .map(|(id, (t, updated))| {
+            .map(|(id, (t, status))| {
                 let color = if *id == self.active_terminal_id {
                     STATUS_COLOR_ACTIVE
-                } else if *updated {
+                } else if status.has_output {
                     STATUS_COLOR_UPDATED
                 } else {
                     STATUS_COLOR_DEFAULT
                 };
-                (format!("[{}] {}", *id, t.title()), color)
+
+                let left = if status.at_top { '[' } else { '<' };
+                let right = if status.at_bottom { ']' } else { '>' };
+
+                (format!("{}{}{} {}", left, *id, right, t.title()), color)
             })
             .collect()
     }
@@ -288,9 +300,9 @@ impl VirtualConsoleViewAssistant {
     }
 
     fn set_active_terminal(&mut self, id: u32) {
-        if let Some((terminal, updated)) = self.terminals.get_mut(&id) {
+        if let Some((terminal, status)) = self.terminals.get_mut(&id) {
             self.active_terminal_id = id;
-            *updated = false;
+            status.has_output = false;
             let terminal = terminal.clone_term();
             let new_status = self.get_status();
             if let Some(scene_details) = &mut self.scene_details {
@@ -645,8 +657,12 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
             match message {
                 ViewMessages::AddTerminalMessage(id, terminal, make_active) => {
                     let terminal = terminal.try_clone().expect("failed to clone terminal");
-                    let updated = false;
-                    self.terminals.insert(*id, (terminal, updated));
+                    let has_output = true;
+                    let display_offset = terminal.display_offset();
+                    let at_top = display_offset == terminal.history_size();
+                    let at_bottom = display_offset == 0;
+                    self.terminals
+                        .insert(*id, (terminal, TerminalStatus { has_output, at_top, at_bottom }));
                     // Rebuild the scene after a terminal is added. This should
                     // be fine as it is rare that a terminal is added.
                     if self.animation.is_none() {
@@ -658,13 +674,19 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                     }
                 }
                 ViewMessages::RequestTerminalUpdateMessage(id) => {
-                    if let Some((_, updated)) = self.terminals.get_mut(id) {
-                        if *id == self.active_terminal_id {
-                            if self.animation.is_none() {
-                                self.app_context.request_render(self.view_key);
-                            }
-                        } else if !*updated {
-                            *updated = true;
+                    if let Some((terminal, status)) = self.terminals.get_mut(id) {
+                        let has_output = if *id == self.active_terminal_id {
+                            self.app_context.request_render(self.view_key);
+                            false
+                        } else {
+                            true
+                        };
+                        let display_offset = terminal.display_offset();
+                        let at_top = display_offset == terminal.history_size();
+                        let at_bottom = display_offset == 0;
+                        let new_status = TerminalStatus { has_output, at_top, at_bottom };
+                        let old_status = mem::replace(status, new_status);
+                        if new_status != old_status {
                             self.update_status();
                         }
                     }
