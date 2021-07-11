@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef __CORE_TEST_OBJECT_INFO_HELPER_H__
-#define __CORE_TEST_OBJECT_INFO_HELPER_H__
+#ifndef ZIRCON_SYSTEM_UTEST_CORE_OBJECT_INFO_HELPER_H_
+#define ZIRCON_SYSTEM_UTEST_CORE_OBJECT_INFO_HELPER_H_
 
 #include <lib/fit/defer.h>
 #include <lib/zx/process.h>
@@ -48,7 +48,7 @@ void CheckInvalidHandleFails(zx_object_info_topic_t topic, uint32_t entry_count,
   EntryType entries[entry_count];
   size_t actual;
   size_t avail;
-  typename std::remove_reference<typename std::result_of<HandleProvider()>::type>::type handle;
+  std::decay_t<decltype(provider())> handle;
 
   ASSERT_EQ(handle.get_info(topic, entries, sizeof(EntryType) * entry_count, &actual, &avail),
             ZX_ERR_BAD_HANDLE);
@@ -95,8 +95,7 @@ void CheckMissingRightsFail(zx_object_info_topic_t topic, uint32_t entry_count,
             handle_info.rights);
 
   // Create a handle without the important rights.
-  typename std::remove_cv<typename std::remove_reference<decltype(handle)>::type>::type
-      unpriviledged_handle;
+  std::decay_t<decltype(handle)> unpriviledged_handle;
   ASSERT_OK(handle.duplicate(handle_info.rights & ~missing_rights, &unpriviledged_handle));
 
   // Call should fail without these rights.
@@ -271,4 +270,4 @@ void BadAvailIsInvalidArgs(zx_object_info_topic_t topic, size_t entry_count,
 }
 }  // namespace object_info_test
 
-#endif
+#endif  // ZIRCON_SYSTEM_UTEST_CORE_OBJECT_INFO_HELPER_H_
