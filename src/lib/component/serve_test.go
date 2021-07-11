@@ -37,6 +37,18 @@ func (*test1Impl) EmptyResponse(fidl.Context) error {
 	return nil
 }
 
+func (*test1Impl) TooManyBytesInResponse(fidl.Context) ([]uint8, error) {
+	return make([]uint8, zx.ChannelMaxMessageBytes+1), nil
+}
+
+func (*test1Impl) TooManyHandlesInResponse(fidl.Context) ([]zx.Handle, error) {
+	out := make([]zx.Handle, zx.ChannelMaxMessageHandles+1)
+	for i := range out {
+		out[i] = 1 // to avoid zx.HandleInvalid(0).
+	}
+	return out, nil
+}
+
 func (*test1Impl) EchoHandleRights(_ fidl.Context, h zx.Port) (uint32, error) {
 	infoHandleBasic, err := h.Handle().GetInfoHandleBasic()
 	if err != nil {
@@ -251,6 +263,71 @@ func TestEcho(t *testing.T) {
 			t.Fatalf("got EchoHandleRights(reducedRights) = %v, want %q", err, zx.ErrInvalidArgs)
 		}
 	})
+}
+
+func TestRespondErrors(t *testing.T) {
+	tests := []struct {
+		name              string
+		call              func(*bindingstest.Test1WithCtxInterface) error
+		expectErr         zx.Status
+		expectErrOnServer error
+	}{
+		{
+			name: "TooManyBytes",
+			call: func(client *bindingstest.Test1WithCtxInterface) error {
+				_, err := client.TooManyBytesInResponse(context.Background())
+				return err
+			},
+			expectErr:         zx.ErrPeerClosed,
+			expectErrOnServer: component.ErrTooManyBytesInResponse,
+		},
+		{
+			name: "TooManyHandles",
+			call: func(client *bindingstest.Test1WithCtxInterface) error {
+				_, err := client.TooManyHandlesInResponse(context.Background())
+				return err
+			},
+			expectErr:         zx.ErrPeerClosed,
+			expectErrOnServer: component.ErrTooManyHandlesInResponse,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+			defer wg.Wait()
+
+			ch, sh, err := zx.NewChannel(0)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			errChan := make(chan error, 1)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				component.ServeExclusive(context.Background(), &bindingstest.Test1WithCtxStub{
+					Impl: &test1Impl{},
+				}, sh, func(err error) {
+					errChan <- err
+				})
+			}()
+
+			err = test.call(&bindingstest.Test1WithCtxInterface{Channel: ch})
+			if err, ok := err.(*zx.Error); !ok || err.Status != test.expectErr {
+				t.Errorf("got err = %q", err)
+			}
+
+			select {
+			case err := <-errChan:
+				if !errors.Is(err, test.expectErrOnServer) {
+					t.Errorf("got err = %s, want %q", err, test.expectErrOnServer)
+				}
+			default:
+				t.Error("got no error on server")
+			}
+		})
+	}
 }
 
 func TestServeExclusive_MagicNumberCheck(t *testing.T) {

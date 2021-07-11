@@ -11,6 +11,8 @@ protocol Test1 {
     Echo(string? in) -> (string? out);
     NoResponse();
     EmptyResponse() -> ();
+    TooManyBytesInResponse() -> (vector<uint8>:MAX out);
+    TooManyHandlesInResponse() -> (vector<zx.handle>:MAX out);
     -> Surprise(string foo);
     EchoHandleRights(zx.handle:<PORT, zx.rights.READ | zx.rights.TRANSFER | zx.rights.DUPLICATE> h) -> (uint32 rights);
 };

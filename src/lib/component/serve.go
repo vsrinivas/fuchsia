@@ -8,6 +8,7 @@ package component
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"syscall/zx"
@@ -15,6 +16,13 @@ import (
 	"syscall/zx/zxwait"
 
 	"golang.org/x/sync/errgroup"
+)
+
+var (
+	// ErrTooManyBytesInResponse indicates too many bytes in a response message.
+	ErrTooManyBytesInResponse = errors.New("too many bytes in a response")
+	// ErrTooManyHandlesInResponse indicates too many handles in a response message.
+	ErrTooManyHandlesInResponse = errors.New("too many handles in a response")
 )
 
 // ServeExclusive assumes ownership of req and serially serves requests on it
@@ -151,7 +159,13 @@ func serveOne(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req zx.Cha
 			if err != nil {
 				return err
 			}
+			if cnb > cap(b) {
+				return fmt.Errorf("slice bounds out of range [:%d] with capacity %d (%w)", cnb, cap(b), ErrTooManyBytesInResponse)
+			}
 			b = b[:cnb]
+			if cnh > cap(hd) {
+				return fmt.Errorf("slice bounds out of range [:%d] with capacity %d (%w)", cnh, cap(hd), ErrTooManyHandlesInResponse)
+			}
 			hd = hd[:cnh]
 			if err := req.WriteEtc(b, hd, 0); err != nil {
 				return err
