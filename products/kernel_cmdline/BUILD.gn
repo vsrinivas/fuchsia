@@ -99,6 +99,10 @@ kernel_cmdline("virtcon.display-rotation--90") {
   args = [ "virtcon.display_rotation=90" ]
 }
 
+kernel_cmdline("virtcon.display-rotation--270") {
+  args = [ "virtcon.display_rotation=270" ]
+}
+
 kernel_cmdline("virtcon.boot-animation--true") {
   args = [ "virtcon.boot_animation=true" ]
 }
