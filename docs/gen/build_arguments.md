@@ -3861,7 +3861,7 @@ If true, vboot() image builds print out the exact "futility" command line.
 
 **Current value (from the default):** `false`
 
-From //build/images/vboot/vboot.gni:10
+From //build/images/vboot/vboot.gni:11
 
 ### vendor_linting
 Whether libraries under //vendor should be linted.
