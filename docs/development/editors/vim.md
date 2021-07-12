@@ -103,3 +103,6 @@ augroup autoformat_gn
   autocmd FileType gn AutoFormatBuffer gn
 augroup END
 ```
+
+For highlighting Rust, see its [language-specific
+guide](/docs/development/languages/rust/editors.md#vim).

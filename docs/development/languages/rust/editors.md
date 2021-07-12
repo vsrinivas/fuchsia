@@ -26,12 +26,37 @@ To setup `rust-analyzer` on VS Code, see the VS Code guide [Installing extension
 
 ## Vim
 
-For basic support, instructions on [`rust-lang/rust.vim`](https://github.com/rust-lang/rust.vim).
+Install [`rust-lang/rust.vim`](https://github.com/rust-lang/rust.vim), which also integrates with:
 
-For IDE support, see the vim section of the [rust-analyzer manual](https://rust-analyzer.github.io/manual.html#vimneovim).
+*   [Tagbar](https://github.com/preservim/tagbar): universal-ctags is strongly recommended, but
+    other ctags implementations are also supported.
 
-If you use Tagbar, see [this post](https://users.rust-lang.org/t/taglist-like-vim-plugin-for-rust/21924/13)
-for instructions on making it work better with Rust.
+*   [Syntastic](https://github.com/vim-syntastic/syntastic): `rust.vim` automatically registers
+    `cargo` as a syntax checker for Rust. Yet it will fail unless you [set up cargo][cargo-setup].
+    If you want to disable the integration (or use `rust-analyzer` to check the code, e.g. via
+    YouCompleteMe), add the following to your `~/.vimrc`:
+
+    ```
+    let g:syntastic_rust_checkers = []
+    ```
+
+*   Auto formatting: to run `rustfmt` on save (disabled by default), add the following to `~./vimrc`:
+
+    ```
+    let g:rustfmt_command = '{{ "<var>" }}FUCHSIA_DIR{{ "</var>" }}/prebuilt/third_party/rust_tools/{{ "<var>" }}HOST_OS{{ "</var>" }}/bin/rustfmt'
+    let g:rustfmt_autosave = 1
+    ```
+
+For IDE support, see the vim section of the [rust-analyzer
+manual](https://rust-analyzer.github.io/manual.html#vimneovim). For YouCompleteMe, add
+`--rust-completer` (or `--all`) if you are installing from source, and it should work out of the
+box. You can also specify the path to a standalone `rust-analyzer` in your `~/.vimrc` (this is not
+guaranteed to work due to version compatibility); here is an example assuming it is installed to
+`~/.local/bin/rust-analyzer` (note the intentional absence of `/bin` in the path):
+
+```
+let g:ycm_rust_toolchain_root = $HOME . '/.local'
+```
 
 ## emacs
 
@@ -76,8 +101,8 @@ using are Fuchsia versions of those.  From your fuchsia root, type:
 rustup toolchain link fuchsia $PWD/prebuilt/third_party/rust/linux-x64 && rustup default fuchsia
 ```
 
-Finally, follow the steps at the top of this page to generate a `Cargo.toml` for the GN target
-that you want to work on.
+Finally, follow the steps to [generate a `Cargo.toml`][cargo-toml-gen] for the GN target that you
+want to work on.
 
 You can [read about](http://www.flycheck.org/en/latest/user/error-reports.html)
 adjusting flycheck to display your errors as you like.  Type `C-h v
@@ -107,8 +132,7 @@ problematic file.
 
 ### Using Rust-Enhanced for syntax checking
 
-Follow the steps above to [generate a `Cargo.toml` file][cargo-toml-gen] and also
-the steps to [generate a `cargo/config` file][cargo-config-gen], which will also
+Follow the [instructions][cargo-setup] to generate `Cargo.toml` and `.cargo/config`, which will also
 setup `cargo` to use the Fuchsia Rust toolchain.
 
 Then, install the [Rust Enhanced](https://packagecontrol.io/packages/Rust%20Enhanced) plugin.
@@ -149,5 +173,5 @@ Note that cargo-based workflows are more likely to break than rust-analyzer base
 [vscode-disable-telemetry]: https://code.visualstudio.com/docs/getstarted/telemetry#_disable-telemetry-reporting
 [vscode-rust-analyzer]: https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer
 [vscode-downgrade]: https://code.visualstudio.com/updates/v1_30#_install-previous-versions
+[cargo-setup]: /docs/development/languages/rust/cargo.md
 [cargo-toml-gen]: /docs/development/languages/rust/cargo.md#cargo-toml-gen
-[cargo-config-gen]: /docs/development/languages/rust/cargo.md#cargo-config-gen
