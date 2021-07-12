@@ -79,11 +79,11 @@ using DeviceChildEntry = std::variant<PciTopo, fuchsia_hardware_spi::wire::SpiCh
 // Represents a device that's been discovered inside the ACPI tree.
 class DeviceBuilder {
  public:
-  DeviceBuilder(std::string name, ACPI_HANDLE handle, DeviceBuilder* parent)
-      : name_(std::move(name)), handle_(handle), parent_(parent) {}
+  DeviceBuilder(std::string name, ACPI_HANDLE handle, DeviceBuilder* parent, uint64_t state)
+      : name_(std::move(name)), handle_(handle), parent_(parent), state_(state) {}
 
   static DeviceBuilder MakeRootDevice(ACPI_HANDLE handle, zx_device_t* acpi_root) {
-    DeviceBuilder builder("acpi-root", handle, nullptr);
+    DeviceBuilder builder("acpi-root", handle, nullptr, false);
     builder.zx_device_ = acpi_root;
     return builder;
   }
@@ -182,6 +182,9 @@ class DeviceBuilder {
   // True if we have an address on our bus.
   // Used to determine whether or not a composite should be published.
   bool has_address_ = false;
+
+  // ACPI_STA_* flags for this device.
+  uint64_t state_;
 };
 
 }  // namespace acpi

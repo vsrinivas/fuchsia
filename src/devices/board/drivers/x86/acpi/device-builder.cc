@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/spi/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 
 #include <fbl/string_printf.h>
 
@@ -34,6 +35,12 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator
                                             acpi::Manager* manager, InferBusTypeCallback callback) {
   if (!handle_ || !parent_) {
     // Skip the root device.
+    return acpi::ok();
+  }
+
+  // Don't decode resources if the ENABLED bit is not set.
+  // See ACPI v6.4 section 6.3.7
+  if (!(state_ & ACPI_STA_DEVICE_ENABLED)) {
     return acpi::ok();
   }
 
@@ -174,12 +181,21 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Acpi* acpi, zx_device_t* pla
   for (auto& str_prop : str_props_) {
     str_props_for_ddkadd.emplace_back(str_prop);
   }
+
+  uint32_t add_flags = 0;
+  if ((state_ & (ACPI_STA_DEVICE_FUNCTIONING | ACPI_STA_DEVICE_PRESENT)) ==
+      ACPI_STA_DEVICE_FUNCTIONING) {
+    // Don't bind drivers to this device if it is functioning but not present.
+    // See ACPI 6.4 section 6.3.7.
+    add_flags |= DEVICE_ADD_NON_BINDABLE;
+  }
   device_add_args_t args = {
       .name = name_.data(),
       .props = dev_props_.data(),
       .prop_count = static_cast<uint32_t>(dev_props_.size()),
       .str_props = str_props_for_ddkadd.data(),
       .str_prop_count = static_cast<uint32_t>(str_props_for_ddkadd.size()),
+      .flags = add_flags,
   };
 
   zx_status_t result = device->DdkAdd(name_.data(), args);

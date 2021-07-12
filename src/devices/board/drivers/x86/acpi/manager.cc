@@ -28,15 +28,33 @@ acpi::status<> Manager::DiscoverDevices() {
   }
 
   devices_.emplace(root.value(), DeviceBuilder::MakeRootDevice(root.value(), acpi_root_));
-  return acpi_->WalkNamespace(
-      ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, Acpi::kMaxNamespaceDepth,
-      [this](ACPI_HANDLE handle, uint32_t depth, WalkDirection dir) -> acpi::status<> {
-        if (dir == WalkDirection::Ascending) {
-          // Nothing to do when ascending the tree.
-          return acpi::ok();
-        }
-        return DiscoverDevice(handle);
-      });
+  uint32_t ignored_depth = Acpi::kMaxNamespaceDepth + 1;
+  return acpi_->WalkNamespace(ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, Acpi::kMaxNamespaceDepth,
+                              [this, &ignored_depth](ACPI_HANDLE handle, uint32_t depth,
+                                                     WalkDirection dir) -> acpi::status<> {
+                                if (depth > ignored_depth) {
+                                  // If we're ignoring this branch of the tree, do nothing.
+                                  return acpi::ok();
+                                }
+                                if (dir == WalkDirection::Ascending) {
+                                  if (depth == ignored_depth) {
+                                    // We've come back to where we set 'ignored_depth', reset it.
+                                    ignored_depth = Acpi::kMaxNamespaceDepth + 1;
+                                  }
+                                  // Nothing to do when ascending the tree.
+                                  return acpi::ok();
+                                }
+                                auto status = DiscoverDevice(handle);
+                                if (status.is_error()) {
+                                  return status.take_error();
+                                }
+                                if (status.value()) {
+                                  // This device is not present, so we should not enumerate its
+                                  // children. Mark this branch of the tree as ignored.
+                                  ignored_depth = depth;
+                                }
+                                return acpi::ok();
+                              });
 }
 
 acpi::status<> Manager::ConfigureDiscoveredDevices() {
@@ -109,7 +127,7 @@ acpi::status<> Manager::PublishDevices(zx_device_t* platform_bus) {
   return acpi::ok();
 }
 
-acpi::status<> Manager::DiscoverDevice(ACPI_HANDLE handle) {
+acpi::status<bool> Manager::DiscoverDevice(ACPI_HANDLE handle) {
   auto result = acpi_->GetObjectInfo(handle);
   if (result.is_error()) {
     zxlogf(INFO, "get object info failed");
@@ -119,6 +137,31 @@ acpi::status<> Manager::DiscoverDevice(ACPI_HANDLE handle) {
 
   std::string name("acpi-");
   name += std::string_view(reinterpret_cast<char*>(&info->Name), sizeof(info->Name));
+
+  // TODO(fxbug.dev/80491): newer versions of ACPICA return this from GetObjectInfo().
+  auto state_result = acpi_->EvaluateObject(handle, "_STA", std::nullopt);
+  bool examine_children;
+  uint32_t state;
+  if (state_result.zx_status_value() == ZX_ERR_NOT_FOUND) {
+    // No state means all bits are set.
+    state = ~0;
+    examine_children = true;
+  } else if (state_result.is_ok()) {
+    if (state_result->Type != ACPI_TYPE_INTEGER) {
+      zxlogf(ERROR, "%s returned incorrect object type for _STA", name.data());
+      return acpi::error(AE_BAD_VALUE);
+    }
+    state = state_result->Integer.Value;
+    examine_children = state & (ACPI_STA_DEVICE_PRESENT | ACPI_STA_DEVICE_FUNCTIONING);
+  } else {
+    return state_result.take_error();
+  }
+
+  // See ACPI 6.4, Table 6.66.
+  if (!examine_children) {
+    zxlogf(DEBUG, "device '%s' not present, so not enumerating.", name.data());
+    return acpi::ok(true);
+  }
 
   auto parent = acpi_->GetParent(handle);
   if (parent.is_error()) {
@@ -134,14 +177,14 @@ acpi::status<> Manager::DiscoverDevice(ACPI_HANDLE handle) {
     return acpi::error(AE_NOT_FOUND);
   }
 
-  DeviceBuilder device(std::move(name), handle, parent_ptr);
+  DeviceBuilder device(std::move(name), handle, parent_ptr, state);
   if (info->Flags & ACPI_PCI_ROOT_BRIDGE) {
     device.SetBusType(BusType::kPci);
   }
   device_publish_order_.emplace_back(handle);
   devices_.emplace(handle, std::move(device));
 
-  return acpi::ok();
+  return acpi::ok(false);
 }
 
 acpi::status<> Manager::PublishPciBus(zx_device_t* platform_bus, DeviceBuilder* device) {

@@ -25,6 +25,7 @@ class Device {
   void SetAdr(uint64_t val) { adr_ = val; }
   void SetHid(std::string hid) { hid_ = std::move(hid); }
   void SetCids(std::initializer_list<std::string> cids) { cids_ = std::vector<std::string>(cids); }
+  void SetSta(uint64_t val) { sta_ = val; }
   void AddDsd(const acpi::Uuid& uuid, ACPI_OBJECT value) {
     dsd_.emplace(uuid, std::vector<ACPI_OBJECT>{}).first->second.emplace_back(value);
   }
@@ -51,6 +52,7 @@ class Device {
   std::optional<uint64_t> adr() { return adr_; }
   const std::vector<std::string>& cids() { return cids_; }
   const std::unordered_map<acpi::Uuid, std::vector<ACPI_OBJECT>>& dsd() { return dsd_; }
+  uint64_t sta() const { return sta_.value_or(~0); }
 
   // Equivalent of AcpiEvaluateObject.
   acpi::status<acpi::UniquePtr<ACPI_OBJECT>> EvaluateObject(
@@ -89,6 +91,7 @@ class Device {
   std::optional<uint64_t> adr_;
   std::optional<std::string> hid_;
   std::vector<std::string> cids_;
+  std::optional<uint64_t> sta_;
 
   // _DSD, map of uuid to values.
   std::unordered_map<acpi::Uuid, std::vector<ACPI_OBJECT>> dsd_;

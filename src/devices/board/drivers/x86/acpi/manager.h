@@ -32,7 +32,9 @@ class Manager {
   DeviceBuilder* LookupDevice(ACPI_HANDLE handle);
 
  private:
-  acpi::status<> DiscoverDevice(ACPI_HANDLE handle);
+  // Returns true if the device is not present, and it and its children should be ignored.
+  // Returns false if the device is present and its children can be enumerated.
+  acpi::status<bool> DiscoverDevice(ACPI_HANDLE handle);
 
   // Call pci_init for the given device.
   acpi::status<> PublishPciBus(zx_device_t* platform_bus, DeviceBuilder* device);

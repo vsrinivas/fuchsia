@@ -82,6 +82,21 @@ zx_status_t Device::ReportCurrentResources() {
     return ZX_OK;
   }
 
+  // Check device state.
+  auto state = acpi_->EvaluateObject(acpi_handle_, "_STA", std::nullopt);
+  uint64_t sta;
+  if (state.is_error() || state->Type != ACPI_TYPE_INTEGER) {
+    sta = 0xf;
+  } else {
+    sta = state->Integer.Value;
+  }
+
+  if ((sta & ACPI_STA_DEVICE_ENABLED) == 0) {
+    // We're not allowed to enumerate resources if the device is not enabled.
+    // see ACPI 6.4 section 6.3.7.
+    return ZX_OK;
+  }
+
   // call _CRS to fill in resources
   ACPI_STATUS acpi_status = AcpiWalkResources(
       acpi_handle_, (char*)"_CRS",

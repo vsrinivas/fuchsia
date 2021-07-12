@@ -375,3 +375,39 @@ TEST_F(AcpiManagerTest, TestMultipleI2cDevice) {
                   },
                   {}));
 }
+
+TEST_F(AcpiManagerTest, TestDeviceNotPresentIsIgnored) {
+  auto device = std::make_unique<Device>("_SB_");
+  device->SetSta(0);
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::move(device)));
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("I2C0")));
+
+  ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
+
+  // No devices should have been published.
+  ASSERT_EQ(mock_root_->descendant_count(), 0);
+}
+
+TEST_F(AcpiManagerTest, TestDeviceNotPresentButFunctioning) {
+  auto device = std::make_unique<Device>("_SB_");
+  device->SetSta(ACPI_STA_DEVICE_FUNCTIONING);
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::move(device)));
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("I2C0")));
+
+  ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
+
+  // Both devices should have been enumerated.
+  // TODO(simonshields): check that _SB_ was added with the NON_BINDABLE flag set.
+  ASSERT_EQ(mock_root_->descendant_count(), 2);
+}
+
+TEST_F(AcpiManagerTest, TestDeviceNotEnabled) {
+  auto device = std::make_unique<Device>("_SB_");
+  device->SetSta(ACPI_STA_DEVICE_PRESENT);
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::move(device)));
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("I2C0")));
+
+  // If the Manager incorrectly tries to access the device's resources, it will trigger an assert in
+  // MockAcpi.
+  ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
+}
