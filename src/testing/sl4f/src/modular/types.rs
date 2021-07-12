@@ -44,24 +44,6 @@ pub enum KillBasemgrResult {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct StartBasemgrRequest {
-    /// A JSON object containing Modular configuration to be passed to basemgr.
-    ///
-    /// If provided, `config` overrides basemgr's default configuration.
-    /// See [Launching Modular with custom configuration][config].
-    ///
-    /// If provided with `session_url`, the session will be instructed to
-    /// launch sessionmgr via `fuchsia.modular.session.Launcher` with this config.
-    ///
-    /// [config]: https://fuchsia.dev/fuchsia-src/concepts/modular/guide/config?hl=en#launching_modular_with_custom_configuration
-    pub config: Option<serde_json::Value>,
-
-    /// `session_url` is an optional component URL for a session to launch
-    /// instead of starting basemgr as a legacy component.
-    pub session_url: Option<String>,
-}
-
-#[derive(Deserialize, Debug)]
 pub struct LaunchModRequest {
     pub mod_url: Option<String>,
     pub mod_name: Option<String>,
