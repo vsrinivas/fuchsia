@@ -64,21 +64,28 @@ pub mod volume_synchronization;
 /// Implements the Codec Connection Setup Procedure.
 pub mod codec_connection_setup;
 
-use answer::AnswerProcedure;
-
 /// Defines the implementation of the the Audio Volume Control Procedure.
 pub mod volume_control;
 
-/// defines the implementaion of several ways for the HF to initiate calls.
+/// Defines the implementaion of several ways for the HF to initiate calls.
 pub mod initiate_call;
 
+/// Defines the Codec Support Procedure.
+pub mod codec_support;
+
+/// Defines the Indicator status read Procedure.
+pub mod indicator_status;
+
+use answer::AnswerProcedure;
 use call_line_ident_notifications::CallLineIdentNotificationsProcedure;
 use call_waiting_notifications::CallWaitingNotificationsProcedure;
 use codec_connection_setup::CodecConnectionSetupProcedure;
+use codec_support::CodecSupportProcedure;
 use dtmf::DtmfProcedure;
 use extended_errors::ExtendedErrorsProcedure;
 use hang_up::HangUpProcedure;
 use hold::HoldProcedure;
+use indicator_status::IndicatorStatusProcedure;
 use indicators_activation::IndicatorsActivationProcedure;
 use initiate_call::InitiateCallProcedure;
 use nrec::NrecProcedure;
@@ -178,6 +185,10 @@ pub enum ProcedureMarker {
     InitiateCall,
     /// The Codec Connection Setup procedure as defined in HFP v1.8 Section 4.11.3.
     CodecConnectionSetup,
+    /// The Indicators Read procedure as defined in HFP v1.8 Section 4.2.1.3.
+    IndicatorStatus,
+    /// The Codec Support procedure as defined in HFP v1.8 4.2.1.2.
+    CodecSupport,
 }
 
 impl ProcedureMarker {
@@ -208,6 +219,8 @@ impl ProcedureMarker {
             Self::VolumeControl => Box::new(VolumeControlProcedure::new()),
             Self::InitiateCall => Box::new(InitiateCallProcedure::new()),
             Self::CodecConnectionSetup => Box::new(CodecConnectionSetupProcedure::new()),
+            Self::IndicatorStatus => Box::new(IndicatorStatusProcedure::new()),
+            Self::CodecSupport => Box::new(CodecSupportProcedure::new()),
         }
     }
 
@@ -218,12 +231,14 @@ impl ProcedureMarker {
     pub fn match_command(command: &at::Command, initialized: bool) -> Result<Self, ProcedureError> {
         match command {
             at::Command::Brsf { .. }
-            | at::Command::Bac { .. }
             | at::Command::CindTest { .. }
-            | at::Command::CindRead { .. }
             | at::Command::ChldTest { .. }
             | at::Command::BindTest { .. }
             | at::Command::BindRead { .. } => Ok(Self::SlcInitialization),
+            at::Command::Bac { .. } if initialized => Ok(Self::CodecSupport),
+            at::Command::Bac { .. } => Ok(Self::SlcInitialization),
+            at::Command::CindRead { .. } if initialized => Ok(Self::IndicatorStatus),
+            at::Command::CindRead { .. } => Ok(Self::SlcInitialization),
             at::Command::Cmer { .. } if initialized => Ok(Self::Indicators),
             at::Command::Cmer { .. } => Ok(Self::SlcInitialization),
             at::Command::Nrec { .. } => Ok(Self::Nrec),
