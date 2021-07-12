@@ -10,6 +10,7 @@
 import("//build/compiled_action.gni")
 import("//build/components/fuchsia_system_package.gni")
 import("//build/dist/resource.gni")
+import("//build/images/args.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
@@ -848,7 +849,11 @@ ffx_action("images") {
     dep_labels.board_config,
   ]
 
-  args = [
+  args = []
+  if (verbose_image_assembly) {
+    args += [ "-v" ]
+  }
+  args += [
     "--config",
     "assembly_enabled=true",
     "assembly",

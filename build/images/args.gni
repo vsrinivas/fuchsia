@@ -135,6 +135,11 @@ declare_args() {
   # Assets included in this way are included best-effort only and do not form
   # any kind of stable contract for users of the archive.
   board_tools = []
+
+  # Enable verbose output from `ffx assembly image`, this creates non-silent
+  # build output and therefore should never be 'true' in checked-in configs, and
+  # is meant solely for developer debugging.
+  verbose_image_assembly = false
 }
 
 assert(custom_signing_script == "" || !use_vboot,

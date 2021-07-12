@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Error, Result};
+use log::debug;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
@@ -81,6 +82,7 @@ impl ZbiBuilder {
 
         // Run the zbi tool to construct the ZBI.
         let zbi_args = self.build_zbi_args(&bootfs_manifest_path, None::<PathBuf>, output)?;
+        debug!("ZBI command args: {:?}", zbi_args);
 
         let output = Command::new("host_x64/zbi")
             .args(&zbi_args)
