@@ -7,6 +7,7 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/syscalls/types.h>
+#include <zircon/threads.h>
 
 #include <fbl/auto_lock.h>
 
@@ -42,6 +43,16 @@ zx::status<> PagerThreadPool::Init() {
     threads_.push_back(std::make_unique<std::thread>([self = this]() { self->ThreadProc(); }));
 
   return zx::ok();
+}
+
+std::vector<zx::unowned_thread> PagerThreadPool::GetPagerThreads() const {
+  std::vector<zx::unowned_thread> result;
+  result.reserve(num_threads_);
+
+  for (const std::unique_ptr<std::thread>& thread : threads_) {
+    result.emplace_back(native_thread_get_zx_handle(thread->native_handle()));
+  }
+  return result;
 }
 
 void PagerThreadPool::ThreadProc() {

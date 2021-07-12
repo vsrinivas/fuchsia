@@ -57,6 +57,10 @@ zx::status<> PagedVfs::Init() {
   return zx::ok();
 }
 
+std::vector<zx::unowned_thread> PagedVfs::GetPagerThreads() const {
+  return pager_pool_->GetPagerThreads();
+}
+
 zx::status<> PagedVfs::SupplyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
                                    const zx::vmo& aux_vmo, uint64_t aux_offset) {
   return zx::make_status(pager_.supply_pages(node_vmo, offset, length, aux_vmo, aux_offset));

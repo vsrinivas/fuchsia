@@ -96,6 +96,9 @@ constexpr PagerErrorStatus ToPagerErrorStatus(zx_status_t status) {
   }
 }
 
+// Applies the scheduling deadline profile to the given pager thread.
+void SetDeadlineProfile(const std::vector<zx::unowned_thread>& threads);
+
 // Encapsulates a user pager, its associated thread and transfer buffer.
 class UserPager {
  public:

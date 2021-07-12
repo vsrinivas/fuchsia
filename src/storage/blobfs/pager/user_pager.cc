@@ -91,9 +91,7 @@ ReadRange GetBlockAlignedExtendedRange(const UserPagerInfo& info, uint64_t offse
   return GetBlockAlignedReadRange(info, read_ahead_offset, read_ahead_length);
 }
 
-// Helper function to apply a scheduling deadline profile to the pager |thread|. Called from
-// |UserPager::Create| after starting the pager thread.
-void SetDeadlineProfile(thrd_t thread) {
+void SetDeadlineProfile(const std::vector<zx::unowned_thread>& threads) {
   zx::channel channel0, channel1;
   zx_status_t status = zx::channel::create(0u, &channel0, &channel1);
   if (status != ZX_OK) {
@@ -131,11 +129,12 @@ void SetDeadlineProfile(thrd_t thread) {
   if (status != ZX_OK || fidl_status != ZX_OK) {
     FX_LOGS(WARNING) << "Failed to get deadline profile: " << zx_status_get_string(status) << ", "
                      << zx_status_get_string(fidl_status);
-  } else {
-    auto pager_thread = zx::unowned_thread(thrd_get_zx_handle(thread));
-    // Set the deadline profile.
-    status = pager_thread->set_profile(profile, 0);
-    if (status != ZX_OK) {
+    return;
+  }
+
+  // Apply to each thread.
+  for (const auto& thread : threads) {
+    if (zx_status_t status = thread->set_profile(profile, 0); status != ZX_OK) {
       FX_LOGS(WARNING) << "Failed to set deadline profile: " << zx_status_get_string(status);
     }
   }
@@ -516,7 +515,7 @@ zx::status<std::unique_ptr<UserPager>> UserPager::Create(
   // optimization, and failure to do so is not fatal. So in the case of an error encountered
   // in any of the steps within |SetDeadlineProfile|, we log a warning, and successfully return the
   // UserPager instance.
-  SetDeadlineProfile(thread);
+  SetDeadlineProfile({zx::unowned_thread(thrd_get_zx_handle(thread))});
 
   // Initialize and start the watchdog.
   pager->watchdog_ = fs_watchdog::CreateWatchdog();

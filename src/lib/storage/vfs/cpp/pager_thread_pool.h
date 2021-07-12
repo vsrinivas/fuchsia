@@ -7,6 +7,7 @@
 
 #include <lib/zx/port.h>
 #include <lib/zx/status.h>
+#include <lib/zx/thread.h>
 
 #include <map>
 #include <memory>
@@ -37,6 +38,10 @@ class PagerThreadPool {
   const zx::port& port() const { return port_; }
 
   zx::status<> Init();
+
+  // Gets the list of pager threads. This is designed to allow callers to set up scheduling profiles
+  // on their pagers.
+  std::vector<zx::unowned_thread> GetPagerThreads() const;
 
  private:
   // This function runs each background thread.

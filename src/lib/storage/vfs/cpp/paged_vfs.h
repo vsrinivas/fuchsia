@@ -33,6 +33,10 @@ class PagedVfs : public ManagedVfs {
   zx::status<> Init() __TA_EXCLUDES(vfs_lock_);
   bool is_initialized() const { return pager_.is_valid(); }
 
+  // Gets the list of pager threads. This is designed to allow callers to set up scheduling profiles
+  // on their pagers.
+  std::vector<zx::unowned_thread> GetPagerThreads() const;
+
   // Called in response to a successful PagedVnode::VmoRead() request, this supplies paged data from
   // aux_vmo to the PagedVnode's VMO to the kernel. See zx_pager_supply_pages() documentation for
   // more.
