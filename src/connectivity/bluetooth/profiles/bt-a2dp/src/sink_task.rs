@@ -52,18 +52,16 @@ impl MediaTaskBuilder for SinkTaskBuilder {
         peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
         data_stream_inspect: DataStreamInspect,
-    ) -> BoxFuture<'static, Result<Box<dyn MediaTaskRunner>, MediaTaskError>> {
+    ) -> Result<Box<dyn MediaTaskRunner>, MediaTaskError> {
         let builder = self.clone();
         let peer_id = peer_id.clone();
         let codec_config = codec_config.clone();
-        Box::pin(async move {
-            Ok::<Box<dyn MediaTaskRunner>, _>(Box::new(ConfiguredSinkTask::new(
-                codec_config,
-                builder,
-                data_stream_inspect,
-                peer_id,
-            )))
-        })
+        Ok::<Box<dyn MediaTaskRunner>, _>(Box::new(ConfiguredSinkTask::new(
+            codec_config,
+            builder,
+            data_stream_inspect,
+            peer_id,
+        )))
     }
 }
 
@@ -373,12 +371,9 @@ mod tests {
             SinkTaskBuilder::new(send, proxy, audio_consumer_factory_proxy, "Tests".to_string());
 
         let sbc_config = MediaCodecConfig::min_sbc();
-        let configured_fut =
-            builder.configure(&PeerId(1), &sbc_config, DataStreamInspect::default());
-        pin_mut!(configured_fut);
-
-        let mut configured_task =
-            exec.run_singlethreaded(&mut configured_fut).expect("ok configure");
+        let mut runner = builder
+            .configure(&PeerId(1), &sbc_config, DataStreamInspect::default())
+            .expect("configured");
 
         // Should't start session until we start a stream.
         assert!(exec.run_until_stalled(&mut session_requests.next()).is_pending());
@@ -388,7 +383,7 @@ mod tests {
         let stream =
             MediaStream::new(Arc::new(parking_lot::Mutex::new(true)), Arc::downgrade(&local));
 
-        let mut running_task = configured_task.start(stream).expect("media task should start");
+        let mut running_task = runner.start(stream).expect("task should start");
 
         // Should try to publish the session now.
         match exec.run_until_stalled(&mut session_requests.next()) {
@@ -427,12 +422,9 @@ mod tests {
             SinkTaskBuilder::new(send, proxy, audio_consumer_factory_proxy, "Tests".to_string());
 
         let sbc_config = MediaCodecConfig::min_sbc();
-        let configured_fut =
-            builder.configure(&PeerId(1), &sbc_config, DataStreamInspect::default());
-        pin_mut!(configured_fut);
-
-        let mut configured_task =
-            exec.run_singlethreaded(&mut configured_fut).expect("ok configure");
+        let mut runner = builder
+            .configure(&PeerId(1), &sbc_config, DataStreamInspect::default())
+            .expect("configured");
 
         // Should't start session until we start a stream.
         assert!(exec.run_until_stalled(&mut session_requests.next()).is_pending());
@@ -442,7 +434,7 @@ mod tests {
         let stream =
             MediaStream::new(Arc::new(parking_lot::Mutex::new(true)), Arc::downgrade(&local));
 
-        let mut running_task = configured_task.start(stream).expect("media task should start");
+        let mut running_task = runner.start(stream).expect("media task should start");
 
         running_task.stop().expect("task to stop with okay");
         drop(running_task);

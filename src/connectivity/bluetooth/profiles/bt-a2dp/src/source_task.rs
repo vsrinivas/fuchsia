@@ -40,9 +40,9 @@ impl MediaTaskBuilder for SourceTaskBuilder {
         peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
         data_stream_inspect: DataStreamInspect,
-    ) -> BoxFuture<'static, Result<Box<dyn MediaTaskRunner>, MediaTaskError>> {
+    ) -> Result<Box<dyn MediaTaskRunner>, MediaTaskError> {
         let res = self.configure_task(peer_id, codec_config, data_stream_inspect);
-        Box::pin(async { Ok::<Box<dyn MediaTaskRunner>, _>(Box::new(res?)) })
+        Ok::<Box<dyn MediaTaskRunner>, _>(Box::new(res?))
     }
 }
 

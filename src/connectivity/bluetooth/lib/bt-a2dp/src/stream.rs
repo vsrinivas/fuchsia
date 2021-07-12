@@ -108,14 +108,14 @@ impl Stream {
         supported.supports(&config)
     }
 
-    async fn build_media_task(
+    fn build_media_task(
         &self,
         peer_id: &PeerId,
         config: &MediaCodecConfig,
     ) -> Option<Box<dyn MediaTaskRunner>> {
         let mut inspect = DataStreamInspect::default();
         let _ = inspect.iattach(&self.inspect, "media_stream");
-        match self.media_task_builder.configure(peer_id, &config, inspect).await {
+        match self.media_task_builder.configure(peer_id, &config, inspect) {
             Err(e) => {
                 warn!("Failed to build media task: {:?}", e);
                 None
@@ -131,7 +131,7 @@ impl Stream {
         MediaCodecConfig::try_from(requested_cap).ok().filter(|c| self.config_supported(c))
     }
 
-    pub async fn configure(
+    pub fn configure(
         &mut self,
         peer_id: &PeerId,
         remote_id: &StreamEndpointId,
@@ -146,7 +146,7 @@ impl Stream {
         let media_unsupported = (ServiceCategory::MediaCodec, unsupported);
         let config = self.supported_config_from_capability(codec_cap).ok_or(media_unsupported)?;
         self.media_task_runner =
-            Some(self.build_media_task(peer_id, &config).await.ok_or(media_unsupported)?);
+            Some(self.build_media_task(peer_id, &config).ok_or(media_unsupported)?);
         self.peer_id = Some(peer_id.clone());
         self.endpoint.configure(remote_id, capabilities)
     }
@@ -387,8 +387,8 @@ pub(crate) mod tests {
 
     #[test]
     fn test_rejects_unsupported_configurations() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-
+        // Needed to make fasync::Tasks.
+        let _exec = fasync::TestExecutor::new().unwrap();
         let mut builder = TestMediaTaskBuilder::new_reconfigurable();
         let mut stream =
             Stream::build(make_sbc_endpoint(1, avdtp::EndpointType::Source), builder.builder());
@@ -413,11 +413,7 @@ pub(crate) mod tests {
 
         let peer_id = PeerId(1);
         let stream_id = 1.try_into().expect("StreamEndpointId");
-        let res = {
-            let res_fut = stream.configure(&peer_id, &stream_id, unsupported_caps.clone());
-            pin_mut!(res_fut);
-            exec.run_singlethreaded(&mut res_fut)
-        };
+        let res = stream.configure(&peer_id, &stream_id, unsupported_caps.clone());
         assert!(res.is_err());
         assert_eq!(
             res.err(),
@@ -448,9 +444,7 @@ pub(crate) mod tests {
 
         let supported_caps = vec![ServiceCapability::MediaTransport, sbc_codec_cap.clone()];
 
-        let res = {
-            exec.run_singlethreaded(stream.configure(&peer_id, &stream_id, supported_caps.clone()))
-        };
+        let res = stream.configure(&peer_id, &stream_id, supported_caps.clone());
         assert!(res.is_ok());
 
         // need to be in the open state for reconfigure
@@ -483,8 +477,8 @@ pub(crate) mod tests {
 
     #[test]
     fn test_reconfigure_runner_fails() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-
+        // Needed to make fasync::Tasks.
+        let _exec = fasync::TestExecutor::new().unwrap();
         let mut builder = TestMediaTaskBuilder::new();
         let mut stream =
             Stream::build(make_sbc_endpoint(1, avdtp::EndpointType::Source), builder.builder());
@@ -508,11 +502,7 @@ pub(crate) mod tests {
 
         let supported_caps = vec![ServiceCapability::MediaTransport, orig_codec_cap.clone()];
 
-        let res = exec.run_singlethreaded(stream.configure(
-            &PeerId(1),
-            &(1.try_into().unwrap()),
-            supported_caps.clone(),
-        ));
+        let res = stream.configure(&PeerId(1), &(1.try_into().unwrap()), supported_caps.clone());
         assert!(res.is_ok());
 
         // need to be in the open state for reconfigure
@@ -577,10 +567,8 @@ pub(crate) mod tests {
         let expected_codec_config =
             MediaCodecConfig::try_from(&sbc_codec_cap).expect("codec config");
 
-        assert!(exec.run_singlethreaded(stream.configure(&PeerId(1), &remote_id, vec![])).is_err());
-        assert!(exec
-            .run_singlethreaded(stream.configure(&PeerId(1), &remote_id, vec![sbc_codec_cap]))
-            .is_ok());
+        assert!(stream.configure(&PeerId(1), &remote_id, vec![]).is_err());
+        assert!(stream.configure(&PeerId(1), &remote_id, vec![sbc_codec_cap]).is_ok());
 
         stream.endpoint_mut().establish().expect("establishment should start okay");
         let (_remote, transport) = Channel::create();
@@ -635,10 +623,8 @@ pub(crate) mod tests {
         let expected_codec_config =
             MediaCodecConfig::try_from(&sbc_codec_cap).expect("codec config");
 
-        assert!(exec.run_singlethreaded(stream.configure(&peer_id, &remote_id, vec![])).is_err());
-        assert!(exec
-            .run_singlethreaded(stream.configure(&peer_id, &remote_id, vec![sbc_codec_cap]))
-            .is_ok());
+        assert!(stream.configure(&peer_id, &remote_id, vec![]).is_err());
+        assert!(stream.configure(&peer_id, &remote_id, vec![sbc_codec_cap]).is_ok());
 
         stream.endpoint_mut().establish().expect("establishment should start okay");
         let (_remote, transport) = Channel::create();
