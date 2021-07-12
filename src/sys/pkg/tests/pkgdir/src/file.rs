@@ -4,9 +4,14 @@
 
 use {
     crate::{dirs_to_test, repeat_by_n},
-    fidl_fuchsia_io::{DirectoryProxy, SeekOrigin, MAX_BUF, OPEN_RIGHT_READABLE},
+    fidl::AsHandleRef,
+    fidl_fuchsia_io::{
+        DirectoryProxy, FileProxy, SeekOrigin, MAX_BUF, OPEN_RIGHT_READABLE, VMO_FLAG_EXACT,
+        VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
+    },
     fuchsia_zircon as zx,
     io_util::directory::open_file,
+    matches::assert_matches,
     rand::Rng as _,
     std::{cmp, convert::TryInto},
 };
@@ -223,4 +228,83 @@ async fn assert_seek_past_end_end_origin(root_dir: &DirectoryProxy, path: &str) 
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
     assert_eq!(zx::Status::ok(status), Ok(()));
     assert_eq!(bytes, &[]);
+}
+
+#[fuchsia::test]
+async fn get_buffer() {
+    for dir in dirs_to_test().await {
+        get_buffer_per_package_source(dir).await
+    }
+}
+
+// Ported over version of TestMapFileForRead, TestMapFileForReadPrivate, TestMapFileForReadExact,
+// TestMapFilePrivateAndExact, TestMapFileForWrite, and TestMapFileForExec from pkgfs_test.go.
+async fn get_buffer_per_package_source(root_dir: DirectoryProxy) {
+    // For non-meta files, GetBuffer() calls with supported flags should succeed.
+    for path in ["file", "meta/file"] {
+        let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+
+        let _ = test_get_buffer_success(&file, path, VMO_FLAG_READ).await;
+
+        let buffer0 = test_get_buffer_success(&file, path, VMO_FLAG_READ | VMO_FLAG_PRIVATE).await;
+        let buffer1 = test_get_buffer_success(&file, path, VMO_FLAG_READ | VMO_FLAG_PRIVATE).await;
+        assert_ne!(
+            buffer0.vmo.as_handle_ref().get_koid().unwrap(),
+            buffer1.vmo.as_handle_ref().get_koid().unwrap(),
+            "We should receive our own clone each time we invoke GetBuffer() with the VmoFlagPrivate field set"
+        );
+    }
+
+    // For "meta as file", GetBuffer() should be unsupported.
+    let file = open_file(&root_dir, "meta", OPEN_RIGHT_READABLE).await.unwrap();
+    let (status, _buffer) = file.get_buffer(VMO_FLAG_READ).await.unwrap();
+    assert_eq!(zx::Status::ok(status), Err(zx::Status::NOT_SUPPORTED));
+
+    // For files NOT under meta, GetBuffer() calls with unsupported flags should successfully return
+    // the FIDL call with a failure status.
+    let file = open_file(&root_dir, "file", OPEN_RIGHT_READABLE).await.unwrap();
+    let (status, _buffer) = file.get_buffer(VMO_FLAG_EXEC).await.unwrap();
+    assert_eq!(zx::Status::ok(status), Err(zx::Status::ACCESS_DENIED));
+    let (status, _buffer) = file.get_buffer(VMO_FLAG_EXACT).await.unwrap();
+    assert_eq!(zx::Status::ok(status), Err(zx::Status::NOT_SUPPORTED));
+    let (status, _buffer) = file.get_buffer(VMO_FLAG_PRIVATE | VMO_FLAG_EXACT).await.unwrap();
+    assert_eq!(zx::Status::ok(status), Err(zx::Status::INVALID_ARGS));
+    let (status, _buffer) = file.get_buffer(VMO_FLAG_WRITE).await.unwrap();
+    assert_eq!(zx::Status::ok(status), Err(zx::Status::ACCESS_DENIED));
+
+    // For files under meta, GetBuffer() calls with unsupported flags should fail the FIDL call
+    // because the file connection should terminate.
+    for flags in [VMO_FLAG_EXEC, VMO_FLAG_EXACT, VMO_FLAG_EXACT | VMO_FLAG_PRIVATE, VMO_FLAG_WRITE]
+    {
+        let file = open_file(&root_dir, "meta/file", OPEN_RIGHT_READABLE).await.unwrap();
+        assert_matches!(file.get_buffer(flags).await, Err(fidl::Error::ClientChannelClosed { .. }));
+    }
+}
+
+async fn test_get_buffer_success(
+    file: &FileProxy,
+    path: &str,
+    get_buffer_flags: u32,
+) -> Box<fidl_fuchsia_mem::Buffer> {
+    let (status, buffer) = file.get_buffer(get_buffer_flags).await.unwrap();
+    assert_eq!(zx::Status::ok(status), Ok(()));
+    let buffer = buffer.unwrap();
+
+    let vmo_size = buffer.vmo.get_size().unwrap().try_into().unwrap();
+    let mut actual_contents = vec![0u8; vmo_size];
+    assert_eq!(buffer.vmo.read(actual_contents.as_mut_slice(), 0), Ok(()));
+
+    assert!(
+        path.as_bytes()
+            .iter()
+            .copied()
+            // VMOs should be zero-padded to 4096 bytes.
+            .chain(std::iter::repeat(b'\0'))
+            .take(vmo_size)
+            .eq(actual_contents.iter().copied()),
+        "vmo content mismatch for file size {}",
+        vmo_size
+    );
+
+    buffer
 }
