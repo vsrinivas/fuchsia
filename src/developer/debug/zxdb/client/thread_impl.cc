@@ -147,6 +147,12 @@ void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
       });
 }
 
+void ThreadImpl::AddPostStopTask(PostStopTask task) {
+  // This function must only be called from a ThreadController::OnThreadStop() handler.
+  FX_DCHECK(handling_on_stop_);
+  post_stop_tasks_.push_back(std::move(task));
+}
+
 void ThreadImpl::JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) {
   // The register to set.
   debug_ipc::WriteRegistersRequest request;
@@ -228,7 +234,10 @@ void ThreadImpl::OnException(const StopInfo& info) {
     controllers_.clear();
   }
 
-  // When any controller says "stop" it takes precendence and the thread will stop no matter what
+  // Debug tracking for proper usage from OnThreadStop handlers.
+  handling_on_stop_ = true;
+
+  // When any controller says "stop" it takes precedence and the thread will stop no matter what
   // any other controllers say.
   bool should_stop = false;
 
@@ -270,6 +279,8 @@ void ThreadImpl::OnException(const StopInfo& info) {
     }
   }
 
+  handling_on_stop_ = false;
+
   if (!have_continue) {
     // No controller voted to continue (maybe all active controllers reported "unexpected") or there
     // was no controller. Such cases should stop.
@@ -298,14 +309,9 @@ void ThreadImpl::OnException(const StopInfo& info) {
   if (!debug_ipc::IsDebug(info.exception_type))
     should_stop = true;
 
-  if (should_stop) {
-    // Stay stopped and notify the observers.
-    for (auto& observer : session()->thread_observers())
-      observer.OnThreadStopped(this, external_info);
-  } else {
-    // Controllers all say to continue.
-    Continue(false);
-  }
+  // Execute the chain of post-stop tasks (may be asynchronous) and then dispatch the stop
+  // notification or continue operation.
+  RunNextPostStopTaskOrNotify(external_info, should_stop);
 }
 
 void ThreadImpl::SyncFramesForStack(fit::callback<void(const Err&)> callback) {
@@ -347,6 +353,46 @@ void ThreadImpl::ClearFrames() {
   if (stack_.ClearFrames()) {
     for (auto& observer : session()->thread_observers())
       observer.OnThreadFramesInvalidated(this);
+  }
+}
+
+void ThreadImpl::RunNextPostStopTaskOrNotify(const StopInfo& info, bool should_stop) {
+  // It's possible that the user is typing "pause" or "continue" during any asynchronous tasks so
+  // the thread state doesn't match what we thought it was. Even though we haven't sent the
+  // notifications, things still could have happened.
+  //
+  // Therefore, we don't do anything if the thread has started running from underneath us (it should
+  // always be stopped when the thread controllers are notified unless the user has done something),
+  // and cancel other pending stop tasks.
+  //
+  // The other half of the race condition is user has requested a manual stop while we were
+  // processing these post-stop tasks and we shouldn't continue it. This needs extra logic to
+  // detect.
+  //
+  // TODO(fxbug.dev/80418) don't automatically continue if the user has stopped the thread.
+  if (state_ == debug_ipc::ThreadRecord::State::kRunning) {
+    post_stop_tasks_.clear();
+    return;
+  }
+
+  if (post_stop_tasks_.empty()) {
+    // No post-stop tasks left to run, dispatch the stop notification or continue.
+    if (should_stop) {
+      // Stay stopped and notify the observers.
+      for (auto& observer : session()->thread_observers())
+        observer.OnThreadStopped(this, info);
+    } else {
+      // Controllers all say to continue.
+      Continue(false);
+    }
+  } else {
+    // Run the next post-stop task.
+    PostStopTask task = std::move(post_stop_tasks_.front());
+    post_stop_tasks_.pop_front();
+    task(fit::defer_callback([weak_this = weak_factory_.GetWeakPtr(), info, should_stop]() mutable {
+      if (weak_this)
+        weak_this->RunNextPostStopTaskOrNotify(info, should_stop);
+    }));
   }
 }
 

@@ -10,6 +10,7 @@
 
 #include <string>
 
+#include "lib/fit/defer.h"
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
@@ -77,6 +78,32 @@ class Thread : public ClientObject {
   // On failure the ThreadController will be removed and the thread will not be continued.
   virtual void ContinueWith(std::unique_ptr<ThreadController> controller,
                             fit::callback<void(const Err&)> on_continue) = 0;
+
+  // Enqueues a possibly-asynchronous task to execute after the current thread controllers have
+  // completed handling a stop notification but before the thread is resumed or the stop
+  // notification is passed to the user. If the thread is destroyed or manually resumed, any pending
+  // tasks will be deleted without being run. This function must only be called during the thread
+  // controller OnThreadStop() handlers.
+  //
+  // This is an injection point for asynchronous tasks to execute in the middle of stepping without
+  // forcing the thread controllers to run asynchronously (which would complicate the code).
+  //
+  // All post-stop tasks enqueued by the thread controllers will be executed in the order they were
+  // added. Completion of eash task is indicated by the execution of the callback argument which
+  // allows the tasks to do asynchronous work. Executing the callback will either run the next task,
+  // notify the user of the stop, or continue the program.
+  //
+  // The tasks are owned by the thread so the thread pointer is guarateed to be in-scope at the
+  // time of the callback and it is safe to capture in the initial lambda. BUT the thread might get
+  // deleted if the task does any asynchronous work so if the task enqueues any followup or
+  // asynchronous work, it should take a WeakPtr to the thread.
+  //
+  // When the post-stop task is done, it should issue the task_completion callback. The
+  // deferred_callback will automatically run when it goes out of scope, so normally the callback
+  // would move it to keep it alive as long as the post-stop task is continuing, and then let it
+  // automatically issue when the work returns.
+  using PostStopTask = fit::callback<void(fit::deferred_callback task_completion_signaler)>;
+  virtual void AddPostStopTask(PostStopTask task) = 0;
 
   // Sets the thread's IP to the given location. This requires that the thread be stopped. It will
   // not resume the thread.

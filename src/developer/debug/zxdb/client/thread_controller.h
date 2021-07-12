@@ -33,6 +33,12 @@ class Thread;
 // when there is an internal error stepping. If a controller has a callback it executes on
 // completion it should be prepared to issue the callback from its destructor in such a way to
 // indicate that the step operation failed.
+//
+// Thread controllers run synchronously. This is sometimes limiting but otherwise some logic would
+// be very difficult to follow. This means that the thread controller can't request memory and
+// do something different based on that. There is some opportunity for asynchronous work via the
+// Thread's AddPostStopTask() function. This can inject asynchronous work after the thread
+// controllers run but before the stop or continue is processed.
 class ThreadController {
  public:
   enum StopOp {

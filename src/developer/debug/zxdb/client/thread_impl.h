@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_H_
 
+#include <list>
+
 #include "gtest/gtest_prod.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -32,6 +34,7 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   void Continue(bool forward_exception) override;
   void ContinueWith(std::unique_ptr<ThreadController> controller,
                     fit::callback<void(const Err&)> on_continue) override;
+  void AddPostStopTask(PostStopTask task) override;
   void JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) override;
   void NotifyControllerDone(ThreadController* controller) override;
   void StepInstruction() override;
@@ -62,6 +65,11 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   // Invalidates the cached frames.
   void ClearFrames();
 
+  // Runs the next post-stop task and queues up a continuation of this function when it has
+  // completed. This will have the effect of sequentially running all of the post-stop tasks and
+  // then dispatching the stop notification or continuing the program (as per |should_stop|).
+  void RunNextPostStopTaskOrNotify(const StopInfo& info, bool should_stop);
+
   ProcessImpl* const process_;
   uint64_t koid_;
 
@@ -74,6 +82,10 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   // Ordered list of ThreadControllers that apply to this thread. This is a stack where back() is
   // the topmost controller that applies first.
   std::vector<std::unique_ptr<ThreadController>> controllers_;
+
+  // Tasks to run when the ThreadController::OnThreadStop functions complete.
+  bool handling_on_stop_ = false;
+  std::list<PostStopTask> post_stop_tasks_;
 
   fxl::WeakPtrFactory<ThreadImpl> weak_factory_;
 

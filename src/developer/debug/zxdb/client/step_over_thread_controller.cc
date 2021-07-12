@@ -18,8 +18,11 @@
 
 namespace zxdb {
 
-StepOverThreadController::StepOverThreadController(StepMode mode)
-    : step_mode_(mode), step_into_(std::make_unique<StepThreadController>(mode)) {
+StepOverThreadController::StepOverThreadController(StepMode mode,
+                                                   FunctionReturnCallback function_return)
+    : step_mode_(mode),
+      step_into_(std::make_unique<StepThreadController>(mode)),
+      function_return_callback_(std::move(function_return)) {
   FX_DCHECK(mode != StepMode::kAddressRange);
 }
 
@@ -147,7 +150,11 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   // Since the IPC will serialize the command, we know that successful breakpoint sets will arrive
   // before telling the thread to continue.
   Log("In a new frame, passing through to 'finish'.");
-  finish_ = std::make_unique<FinishThreadController>(stack, 0);
+  finish_ =
+      std::make_unique<FinishThreadController>(stack, 0, [this](const FunctionReturnInfo& info) {
+        if (function_return_callback_)
+          function_return_callback_(info);
+      });
   finish_->InitWithThread(thread(), [](const Err&) {});
 
   // Pass the "none" exception type here to bypass checking the exception type. The current

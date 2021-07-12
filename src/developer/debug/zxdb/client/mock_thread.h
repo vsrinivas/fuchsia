@@ -35,6 +35,7 @@ class MockThread : public Thread, public Stack::Delegate {
   void Continue(bool forward_exception) override {}
   void ContinueWith(std::unique_ptr<ThreadController> controller,
                     fit::callback<void(const Err&)> on_continue) override {}
+  void AddPostStopTask(PostStopTask task) override {}
   void JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) override {}
   void NotifyControllerDone(ThreadController* controller) override {}
   void StepInstruction() override {}

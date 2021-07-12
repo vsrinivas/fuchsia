@@ -170,10 +170,17 @@ void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on
 void JobCommandCallback(const char* verb, fxl::WeakPtr<Job> job, bool display_message_on_success,
                         const Err& err, CommandCallback callback);
 
-// Prints the return information from the function to the console, possibly asynchronously. This is
-// used as a callback for ThreadControllers. Does nothing if the return value is void or can't be
-// printed.
-void PrintReturnValue(const FunctionReturnInfo& info);
+// Schedules the function's return information to be printed from a PostStopTask on the thread
+// (the thread is in the FunctionReturnInfo).
+//
+// This must only be called from a ThreadController::OnThreadStop handler: in normal use this
+// callback will be given to a thread controller to issue when a function return happens.
+//
+// The PostStopTask that this function schedules will evaluate the return value, print it, and then
+// notify the thread that it can resume its normal behavior (either a stop or a continue).
+//
+// If this function returns void or there's an error, this does nothing.
+void ScheduleAsyncPrintReturnValue(const FunctionReturnInfo& info);
 
 }  // namespace zxdb
 

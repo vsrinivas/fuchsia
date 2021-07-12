@@ -675,7 +675,7 @@ void JobCommandCallback(const char* verb, fxl::WeakPtr<Job> job, bool display_me
   }
 }
 
-void PrintReturnValue(const FunctionReturnInfo& info) {
+void AsyncPrintReturnValue(const FunctionReturnInfo& info, fit::deferred_callback cb) {
   // This only works for symbolized functions.
   const Function* func = info.symbol.Get()->As<Function>();
   if (!func)
@@ -686,29 +686,47 @@ void PrintReturnValue(const FunctionReturnInfo& info) {
     return;  // Something is messed up.
   auto eval_context = stack[0]->GetEvalContext();
 
-  GetReturnValue(eval_context, func, [eval_context, func = RefPtrTo(func)](ErrOrValue val) {
-    if (val.has_error() || !val.value().type())
-      return;  // Error or void.
+  GetReturnValue(eval_context, func,
+                 [eval_context, func = RefPtrTo(func), cb = std::move(cb)](ErrOrValue val) mutable {
+                   if (val.has_error() || !val.value().type())
+                     return;  // Error or void.
 
-    auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
+                   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
 
-    FormatFunctionNameOptions func_name_options;
-    func_name_options.name.elide_templates = true;
-    func_name_options.name.bold_last = true;
-    func_name_options.params = FormatFunctionNameOptions::kNoParams;
-    out->Append(FormatFunctionName(func.get(), func_name_options));
-    out->Append(Syntax::kOperatorBold, " 🡲 ");
+                   FormatFunctionNameOptions func_name_options;
+                   func_name_options.name.elide_templates = true;
+                   func_name_options.name.bold_last = true;
+                   func_name_options.params = FormatFunctionNameOptions::kNoParams;
+                   out->Append(FormatFunctionName(func.get(), func_name_options));
+                   out->Append(Syntax::kOperatorBold, " 🡲 ");
 
-    ConsoleFormatOptions val_options;
-    val_options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
-    val_options.wrapping = ConsoleFormatOptions::Wrapping::kSmart;
-    val_options.max_depth = 3;
+                   ConsoleFormatOptions val_options;
+                   val_options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+                   val_options.wrapping = ConsoleFormatOptions::Wrapping::kSmart;
+                   val_options.max_depth = 3;
 
-    out->Append(FormatValueForConsole(val.value(), val_options, eval_context));
-    out->Complete();
+                   out->Append(FormatValueForConsole(val.value(), val_options, eval_context));
 
-    Console::get()->Output(std::move(out));
-  });
+                   out->Complete();
+                   if (out->is_complete()) {
+                     Console::get()->Output(out->DestructiveFlatten());
+                   } else {
+                     out->SetCompletionCallback([out = std::move(out), cb = std::move(cb)]() {
+                       Console::get()->Output(out->DestructiveFlatten());
+                     });
+                   }
+                 });
+}
+
+void ScheduleAsyncPrintReturnValue(const FunctionReturnInfo& info) {
+  info.thread->AddPostStopTask(
+      [weak_thread = info.thread->GetWeakPtr(), info](fit::deferred_callback cb) {
+        // The FunctionReturnInfo has a thread pointer in it and we need to be sure it stays in
+        // scope before continuing, even though we don't use the weak pointer directly.
+        if (!weak_thread)
+          return;
+        AsyncPrintReturnValue(info, std::move(cb));
+      });
 }
 
 }  // namespace zxdb
