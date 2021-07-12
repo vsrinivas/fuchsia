@@ -368,11 +368,12 @@ TYPED_TEST(VirtioBlockGuestTest, WriteRaw) {
                               &result),
                 ZX_OK);
 
-      // TODO(fxbug.dev/12594): The virtio-block driver on Zircon currently doesn't inform
-      // the rest of the system when the device is read only.
-      if (this->GetGuestKernel() == GuestKernel::LINUX &&
-          device.mode == fuchsia::virtualization::BlockMode::READ_ONLY) {
-        EXPECT_THAT(result, HasSubstr("PermissionDenied"));
+      if (device.mode == fuchsia::virtualization::BlockMode::READ_ONLY) {
+        if (this->GetGuestKernel() == GuestKernel::LINUX) {
+          EXPECT_THAT(result, HasSubstr("PermissionDenied"));
+        } else {
+          EXPECT_THAT(result, HasSubstr("Error: Status(IO)"));
+        }
       } else {
         EXPECT_THAT(result, HasSubstr("PASS"));
       }
@@ -487,11 +488,12 @@ TYPED_TEST(VirtioBlockGuestTest, WriteQcow) {
                               &result),
                 ZX_OK);
 
-      // TODO(fxbug.dev/12594): The virtio-block driver on Zircon currently doesn't inform
-      // the rest of the system when the device is read only.
-      if (this->GetGuestKernel() == GuestKernel::LINUX &&
-          device.mode == fuchsia::virtualization::BlockMode::READ_ONLY) {
-        EXPECT_THAT(result, HasSubstr("PermissionDenied"));
+      if (device.mode == fuchsia::virtualization::BlockMode::READ_ONLY) {
+        if (this->GetGuestKernel() == GuestKernel::LINUX) {
+          EXPECT_THAT(result, HasSubstr("PermissionDenied"));
+        } else {
+          EXPECT_THAT(result, HasSubstr("Error: Status(IO)"));
+        }
       } else {
         EXPECT_THAT(result, HasSubstr("PASS"));
       }

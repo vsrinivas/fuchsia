@@ -204,7 +204,7 @@ void BlockDevice::IrqRingUpdate() {
       }
     }
 
-    bool need_complete = false;
+    std::optional<uint8_t> status;
     block_txn_t* txn = nullptr;
     {
       fbl::AutoLock lock(&txn_lock_);
@@ -213,11 +213,10 @@ void BlockDevice::IrqRingUpdate() {
       list_for_every_entry (&pending_txn_list_, txn, block_txn_t, node) {
         if (txn->desc == head_desc) {
           LTRACEF("completes txn %p\n", txn);
+          status = blk_res_[txn->index];
+
           free_blk_req(txn->index);
           list_delete(&txn->node);
-
-          // We will do this outside of the lock.
-          need_complete = true;
 
           sync_completion_signal(&txn_signal_);
           break;
@@ -225,8 +224,18 @@ void BlockDevice::IrqRingUpdate() {
       }
     }
 
-    if (need_complete) {
-      txn_complete(txn, ZX_OK);
+    if (status) {
+      zx_status_t zx_status = ZX_ERR_IO;
+      switch (*status) {
+        case VIRTIO_BLK_S_OK:
+          zx_status = ZX_OK;
+          break;
+        case VIRTIO_BLK_S_IOERR:
+          break;
+        case VIRTIO_BLK_S_UNSUPP:
+          zx_status = ZX_ERR_NOT_SUPPORTED;
+      }
+      txn_complete(txn, zx_status);
     }
   };
 

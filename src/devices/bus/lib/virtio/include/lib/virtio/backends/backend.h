@@ -76,6 +76,9 @@ class Backend {
   virtual zx::status<uint32_t> WaitForInterrupt() = 0;
   virtual void InterruptAck(uint32_t key) = 0;
 
+  // Called when the driver is shutting down.
+  virtual void Terminate() {}
+
   DISALLOW_COPY_ASSIGN_AND_MOVE(Backend);
 
  protected:

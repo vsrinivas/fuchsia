@@ -36,6 +36,7 @@ void Device::Unbind(ddk::UnbindTxn txn) {
 }
 
 void Device::Release() {
+  backend_->Terminate();
   irq_thread_should_exit_.store(true, std::memory_order_release);
   thrd_join(irq_thread_, nullptr);
   backend_.reset();
