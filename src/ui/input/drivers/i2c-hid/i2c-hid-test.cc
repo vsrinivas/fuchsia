@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 #include <zircon/hw/i2c.h>
+#include <zircon/rights.h>
 #include <zircon/types.h>
 
 #include <vector>
@@ -230,13 +231,25 @@ class I2cHidTest : public zxtest::Test {
           ASSERT_TRUE(completer.ReplySuccess(encoded).ok());
         });
 
+    ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq_));
+    zx::interrupt interrupt;
+    ASSERT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &interrupt));
+    fake_i2c_hid_.SetInterrupt(std::move(interrupt));
+    acpi_device_.SetMapInterrupt(
+        [this](acpi::mock::Device::MapInterruptRequestView view,
+               acpi::mock::Device::MapInterruptCompleter::Sync& completer) {
+          if (!irq_.is_valid()) {
+            completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+            return;
+          }
+          zx::interrupt duplicate;
+          ASSERT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate));
+          completer.ReplySuccess(std::move(duplicate));
+        });
+
     auto client = acpi_device_.CreateClient(loop_.dispatcher());
     ASSERT_OK(client.status_value());
     device_ = new I2cHidbus(fake_ddk::kFakeParent, std::move(client.value()));
-
-    zx_handle_t interrupt;
-    ASSERT_OK(zx_interrupt_create(ZX_HANDLE_INVALID, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
-    fake_i2c_hid_.SetInterrupt(zx::interrupt(interrupt));
 
     channel_ = ddk::I2cChannel(fake_i2c_hid_.GetProto());
     // Each test is responsible for calling Bind().
@@ -260,6 +273,7 @@ class I2cHidTest : public zxtest::Test {
   FakeI2cHid fake_i2c_hid_;
   fake_hidbus_ifc::FakeHidbusIfc fake_hid_bus_;
   ddk::I2cChannel channel_;
+  zx::interrupt irq_;
 };
 
 TEST_F(I2cHidTest, HidTestBind) {
@@ -377,6 +391,7 @@ TEST_F(I2cHidTest, HidTestBadReportLen) {
 TEST_F(I2cHidTest, HidTestReadReportNoIrq) {
   // Replace the device's interrupt with an invalid one.
   fake_i2c_hid_.SetInterrupt(zx::interrupt());
+  irq_.reset();
 
   ASSERT_OK(device_->Bind(channel_));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
@@ -403,6 +418,7 @@ TEST_F(I2cHidTest, HidTestReadReportNoIrq) {
 TEST_F(I2cHidTest, HidTestDedupeReportsNoIrq) {
   // Replace the device's interrupt with an invalid one.
   fake_i2c_hid_.SetInterrupt(zx::interrupt());
+  irq_.reset();
 
   ASSERT_OK(device_->Bind(channel_));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
