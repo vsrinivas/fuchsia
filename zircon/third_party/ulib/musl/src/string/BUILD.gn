@@ -76,7 +76,8 @@ source_set("extmem") {
     "memccpy.c",
     "memmem.c",
   ]
-  if (current_cpu == "x64" && !defined(toolchain.sanitizer)) {
+  if (current_cpu == "x64" && toolchain_variant.tags + [ "asan" ] -
+                              [ "asan" ] == toolchain_variant.tags) {
     # Only use the assembly version if x86-64 and not sanitized.
     sources += [ "x86_64/mempcpy.S" ]
   } else {
