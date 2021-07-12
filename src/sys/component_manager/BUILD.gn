@@ -4,6 +4,7 @@
 
 import("//build/component/config.gni")
 import("//build/components.gni")
+import("//build/images/filesystem_limits.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/testing/environments.gni")
@@ -270,18 +271,24 @@ rustc_binary("bin") {
   edition = "2018"
   force_opt = "z"
 
-  # Component manager must always be small (even in debug builds) since it
-  # is part of the Zircon boot image.
-  #
-  # We use a Thin LTO, which provides a ~65% decrease in binary size, albeit at
-  # the cost of a ~5x increase in compile wall time (or roughly 10 seconds on
-  # a 2018-era workstation). Fat LTO provides an even smaller binary (~70%
-  # decrease from no-LTO), but is single threaded, requiring ~6x more wall time
-  # to build (or roughly 60 seconds on a 2018-era workstation).
-  configs += [ "//build/config/lto:thinlto" ]
-  configs -= [ "//build/config/lto:thinlto" ]
-  configs += [ "//build/config/lto:thinlto" ]
+  # Can't dynamically link libstd and libtest for ZBI binaries
   configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+
+  # If max ZBI size is 16 MiB
+  if (max_fuchsia_zbi_size == "16777216") {
+    # Past experience tells us that this binary is too large to fit into a ZBI
+    # that's capped at 16 MiB unless we enable Thin LTO.
+    # Thin LTO provides a ~65% decrease in binary size, at a cost of a ~5x
+    # increase in compile wall time.
+    # Regular ("fat") LTO provides a ~70% size decrease but is ~6x slower than
+    # Thin LTO.
+    # The team decided that Thin LTO is a reasonable compromise.
+    # It's not entirely clear why Thin LTO produces size improvements.
+    # See: fxbug.dev/80514
+    configs += [ "//build/config/lto:thinlto" ]
+    configs -= [ "//build/config/lto:thinlto" ]
+    configs += [ "//build/config/lto:thinlto" ]
+  }
 
   deps = [
     ":lib",

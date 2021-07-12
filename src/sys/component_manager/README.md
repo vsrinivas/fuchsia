@@ -12,17 +12,6 @@ Component manager should be included in all builds of Fuchsia, but if missing
 can be added to builds by including `--with //src/sys/component_manager` to the
 `fx set` invocation.
 
-### Faster builds
-
-Rust optimizations (and, in particular, link time optimizations) require a
-significant amount of time, causing slow builds. For faster local development,
-adding the following arguments to your `fx set` line will significantly
-reduce build times by disabling optimizations:
-
-```sh
-fx set ... --args rust_override_opt='"0"' --args rust_override_lto='"none"'
-```
-
 ## Running
 
 Component manager runs by default on all Fuchsia builds.
