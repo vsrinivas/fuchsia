@@ -8,9 +8,14 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <acpica/acpi.h>
+
+#include "src/devices/board/drivers/x86/acpi/status.h"
+#include "src/devices/board/drivers/x86/acpi/util.h"
+#include "src/devices/lib/acpi/util.h"
 namespace acpi::test {
 
 class Device {
@@ -20,6 +25,9 @@ class Device {
   void SetAdr(uint64_t val) { adr_ = val; }
   void SetHid(std::string hid) { hid_ = std::move(hid); }
   void SetCids(std::initializer_list<std::string> cids) { cids_ = std::vector<std::string>(cids); }
+  void AddDsd(const acpi::Uuid& uuid, ACPI_OBJECT value) {
+    dsd_.emplace(uuid, std::vector<ACPI_OBJECT>{}).first->second.emplace_back(value);
+  }
 
   // Add a child to this device.
   void AddChild(std::unique_ptr<Device> c) {
@@ -42,6 +50,11 @@ class Device {
   const std::optional<std::string>& hid() { return hid_; }
   std::optional<uint64_t> adr() { return adr_; }
   const std::vector<std::string>& cids() { return cids_; }
+  const std::unordered_map<acpi::Uuid, std::vector<ACPI_OBJECT>>& dsd() { return dsd_; }
+
+  // Equivalent of AcpiEvaluateObject.
+  acpi::status<acpi::UniquePtr<ACPI_OBJECT>> EvaluateObject(
+      std::string pathname, std::optional<std::vector<ACPI_OBJECT>> args);
 
   // ACPI names are all four characters long.
   // In practice this means that they're represented as uint32_t where each byte
@@ -67,6 +80,7 @@ class Device {
 
  private:
   Device* FindByPathInternal(std::string path);
+  Device* LookupChild(std::string_view name);
 
   std::vector<ACPI_RESOURCE> resources_;
   std::vector<std::unique_ptr<Device>> children_;
@@ -75,6 +89,9 @@ class Device {
   std::optional<uint64_t> adr_;
   std::optional<std::string> hid_;
   std::vector<std::string> cids_;
+
+  // _DSD, map of uuid to values.
+  std::unordered_map<acpi::Uuid, std::vector<ACPI_OBJECT>> dsd_;
 };
 
 }  // namespace acpi::test

@@ -130,11 +130,15 @@ acpi::status<ACPI_HANDLE> MockAcpi::GetHandle(ACPI_HANDLE parent, const char* pa
 
 acpi::status<acpi::UniquePtr<ACPI_OBJECT>> MockAcpi::EvaluateObject(
     ACPI_HANDLE object, const char* pathname, std::optional<std::vector<ACPI_OBJECT>> args) {
-  if (strchr(pathname, '.') || pathname[0] == '^' || pathname[0] == '\\') {
+  if (pathname[0] == '^' || pathname[0] == '\\') {
     return acpi::error(AE_NOT_IMPLEMENTED);
   }
+  if (object == nullptr) {
+    object = ACPI_ROOT_OBJECT;
+  }
+  Device* device = ToDevice(object);
 
-  return acpi::error(AE_NOT_FOUND);
+  return device->EvaluateObject(pathname, std::move(args));
 }
 
 acpi::status<std::string> MockAcpi::GetPath(ACPI_HANDLE object) {

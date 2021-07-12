@@ -14,6 +14,8 @@ source_set("mock-acpi") {
   ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
+    "//src/devices/lib/acpi",
     "//third_party/acpica",
     "//zircon/system/ulib/zxc",
   ]

@@ -144,11 +144,21 @@ class DeviceBuilder {
   std::vector<OwnedStringProp>& GetStrProps() { return str_props_; }
 
  private:
+  // Special HID/CID value for using a device tree "compatible" property. See
+  // https://www.kernel.org/doc/html/latest/firmware-guide/acpi/enumeration.html#device-tree-namespace-link-device-id
+  constexpr static const char* kDeviceTreeLinkID = "PRP0001";
   zx::status<std::vector<uint8_t>> FidlEncodeMetadata(fidl::AnyAllocator& allocator);
   zx::status<> BuildComposite(acpi::Acpi* acpi, zx_device_t* platform_bus,
                               std::vector<zx_device_str_prop_t>& str_props);
   std::vector<zx_bind_inst_t> GetFragmentBindInsnsForChild(size_t child_index);
   std::vector<zx_bind_inst_t> GetFragmentBindInsnsForSelf();
+
+  // Check for "Device Properties for _DSD" containing a "compatible" key.
+  // If found, the first value is added as the first_cid bind property.
+  // See https://uefi.org/sites/default/files/resources/_DSD-device-properties-UUID.pdf
+  // Returns true if a device tree compatible property was found.
+  bool CheckForDeviceTreeCompatible(acpi::Acpi* acpi);
+
   // Information about the device to be published.
   std::string name_;
   ACPI_HANDLE handle_;

@@ -173,6 +173,69 @@ TEST_F(AcpiManagerTest, TestDeviceWithHidCid) {
                   }));
 }
 
+static constexpr acpi::Uuid kDevicePropertiesUuid =
+    acpi::Uuid::Create(0xdaffd814, 0x6eba, 0x4d8c, 0x8a91, 0xbc9bbf4aa301);
+
+TEST_F(AcpiManagerTest, TestDeviceWithDeviceTreeHid) {
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  auto device = std::make_unique<Device>("TEST");
+  device->SetHid("PRP0001");
+  ACPI_OBJECT compatible[2] = {{
+                                   .String = {.Type = ACPI_TYPE_STRING,
+                                              .Length = sizeof("compatible") - 1,
+                                              .Pointer = const_cast<char*>("compatible")},
+                               },
+                               {
+                                   .String = {.Type = ACPI_TYPE_STRING,
+                                              .Length = sizeof("google,cr50") - 1,
+                                              .Pointer = const_cast<char*>("google,cr50")},
+                               }};
+  device->AddDsd(kDevicePropertiesUuid, ACPI_OBJECT{.Package = {.Type = ACPI_TYPE_PACKAGE,
+                                                                .Count = countof(compatible),
+                                                                .Elements = compatible}});
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::move(device)));
+  ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
+  Device* test = acpi_.GetDeviceRoot()->FindByPath("\\_SB_.TEST");
+  // Check the properties were generated as expected.
+  acpi::DeviceBuilder* builder = manager_.LookupDevice(test);
+  ASSERT_NO_FATAL_FAILURES(
+      ExpectProps(builder, {},
+                  {
+                      zx_device_str_prop_t{.key = "fuchsia.acpi.first_cid",
+                                           .property_value = str_prop_str_val("google,cr50")},
+                  }));
+}
+
+TEST_F(AcpiManagerTest, TestDeviceWithDeviceTreeCid) {
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  auto device = std::make_unique<Device>("TEST");
+  device->SetCids({"PRP0001"});
+  ACPI_OBJECT compatible[2] = {{
+                                   .String = {.Type = ACPI_TYPE_STRING,
+                                              .Length = sizeof("compatible") - 1,
+                                              .Pointer = const_cast<char*>("compatible")},
+                               },
+                               {
+                                   .String = {.Type = ACPI_TYPE_STRING,
+                                              .Length = sizeof("google,cr50") - 1,
+                                              .Pointer = const_cast<char*>("google,cr50")},
+                               }};
+  device->AddDsd(kDevicePropertiesUuid, ACPI_OBJECT{.Package = {.Type = ACPI_TYPE_PACKAGE,
+                                                                .Count = countof(compatible),
+                                                                .Elements = compatible}});
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::move(device)));
+  ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
+  Device* test = acpi_.GetDeviceRoot()->FindByPath("\\_SB_.TEST");
+  // Check the properties were generated as expected.
+  acpi::DeviceBuilder* builder = manager_.LookupDevice(test);
+  ASSERT_NO_FATAL_FAILURES(
+      ExpectProps(builder, {},
+                  {
+                      zx_device_str_prop_t{.key = "fuchsia.acpi.first_cid",
+                                           .property_value = str_prop_str_val("google,cr50")},
+                  }));
+}
+
 TEST_F(AcpiManagerTest, TestSpiDevice) {
   ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
   ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("SPI0")));

@@ -11,6 +11,7 @@
 
 #include "src/devices/board/drivers/x86/acpi/acpi.h"
 #include "src/devices/board/drivers/x86/acpi/manager.h"
+#include "src/devices/lib/acpi/util.h"
 
 namespace acpi {
 namespace {
@@ -109,15 +110,24 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator
     }
   }
 
+  bool has_devicetree_cid = false;
   // Add HID and CID properties, if present.
   if (info->Valid & ACPI_VALID_HID) {
-    str_props_.emplace_back(OwnedStringProp("fuchsia.acpi.hid", info->HardwareId.String));
+    if (!strcmp(info->HardwareId.String, kDeviceTreeLinkID)) {
+      has_devicetree_cid = CheckForDeviceTreeCompatible(acpi);
+    } else {
+      str_props_.emplace_back(OwnedStringProp("fuchsia.acpi.hid", info->HardwareId.String));
+    }
   }
 
-  if (info->Valid & ACPI_VALID_CID && info->CompatibleIdList.Count > 0) {
+  if (!has_devicetree_cid && info->Valid & ACPI_VALID_CID && info->CompatibleIdList.Count > 0) {
     auto& first = info->CompatibleIdList.Ids[0];
-    // We only expose the first CID.
-    str_props_.emplace_back(OwnedStringProp("fuchsia.acpi.first_cid", first.String));
+    if (!strcmp(first.String, kDeviceTreeLinkID)) {
+      has_devicetree_cid = CheckForDeviceTreeCompatible(acpi);
+    } else {
+      // We only expose the first CID.
+      str_props_.emplace_back(OwnedStringProp("fuchsia.acpi.first_cid", first.String));
+    }
   }
 
   // If our parent has a bus type, and we have an address on that bus, then we'll expose it in our
@@ -366,5 +376,70 @@ std::vector<zx_bind_inst_t> DeviceBuilder::GetFragmentBindInsnsForSelf() {
   ret.push_back(BI_ABORT_IF(NE, BIND_COMPOSITE, 0));
   ret.push_back(BI_MATCH());
   return ret;
+}
+
+bool DeviceBuilder::CheckForDeviceTreeCompatible(acpi::Acpi* acpi) {
+  // UUID defined in "Device Properties UUID for _DSD", Revision 2.0, Section 2.1
+  // https://uefi.org/sites/default/files/resources/_DSD-device-properties-UUID.pdf
+  static constexpr Uuid kDevicePropertiesUuid =
+      Uuid::Create(0xdaffd814, 0x6eba, 0x4d8c, 0x8a91, 0xbc9bbf4aa301);
+  auto result = acpi->EvaluateObject(handle_, "_DSD", std::nullopt);
+  if (result.is_error()) {
+    if (result.zx_status_value() != ZX_ERR_NOT_FOUND) {
+      zxlogf(WARNING, "Get _DSD for '%s' failed: %d", name(), result.error_value());
+    }
+    return false;
+  }
+
+  auto value = std::move(result.value());
+  if (value->Type != ACPI_TYPE_PACKAGE) {
+    zxlogf(WARNING, "'%s': Badly formed _DSD return value - wrong data type", name());
+    return false;
+  }
+
+  // The package is an array of pairs. The first item in each pair is a UUID, and the second is the
+  // value of that UUID.
+  ACPI_OBJECT* properties = nullptr;
+  for (size_t i = 0; (i + 1) < value->Package.Count; i += 2) {
+    ACPI_OBJECT* uuid_buffer = &value->Package.Elements[i];
+    if (uuid_buffer->Type != ACPI_TYPE_BUFFER || uuid_buffer->Buffer.Length != acpi::kUuidBytes) {
+      zxlogf(WARNING, "'%s': _DSD entry %zu has invalid UUID.", name(), i);
+      continue;
+    }
+
+    if (!memcmp(uuid_buffer->Buffer.Pointer, kDevicePropertiesUuid.bytes, acpi::kUuidBytes)) {
+      properties = &value->Package.Elements[i + 1];
+      break;
+    }
+  }
+
+  if (!properties) {
+    return false;
+  }
+
+  if (properties->Type != ACPI_TYPE_PACKAGE) {
+    zxlogf(WARNING, "'%s': Device Properties _DSD value is not a package.", name());
+    return false;
+  }
+
+  // properties should be a list of packages, which are each a key/value pair.
+  for (size_t i = 0; i < properties->Package.Count; i++) {
+    ACPI_OBJECT* pair = &properties->Package.Elements[i];
+    if (pair->Type != ACPI_TYPE_PACKAGE || pair->Package.Count != 2) {
+      continue;
+    }
+
+    ACPI_OBJECT* key = &pair->Package.Elements[0];
+    ACPI_OBJECT* value = &pair->Package.Elements[1];
+    if (key->Type != ACPI_TYPE_STRING || key->String.Length < sizeof("compatible") - 1) {
+      continue;
+    }
+
+    if (!strcmp("compatible", key->String.Pointer) && value->Type == ACPI_TYPE_STRING) {
+      str_props_.emplace_back(OwnedStringProp{"fuchsia.acpi.first_cid", value->String.Pointer});
+      return true;
+    }
+  }
+  return false;
 }
 }  // namespace acpi

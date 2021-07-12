@@ -11,6 +11,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <exception>
 #include <vector>
 
 namespace acpi {
@@ -47,8 +48,23 @@ struct Uuid {
                 static_cast<uint8_t>((group4 >> 0) & 0xFF),
             }};
   }
+
+  bool operator==(const Uuid& b) const { return memcmp(bytes, b.bytes, kUuidBytes) == 0; }
 };
 
 }  // namespace acpi
+
+namespace std {
+static_assert(sizeof(size_t) <= acpi::kUuidBytes,
+              "hash function assumes that size_t is smaller than a UUID");
+template <>
+struct hash<acpi::Uuid> {
+  size_t operator()(const acpi::Uuid& uuid) const noexcept {
+    size_t ret;
+    memcpy(&ret, uuid.bytes, sizeof(size_t));
+    return ret;
+  }
+};
+}  // namespace std
 
 #endif  // SRC_DEVICES_LIB_ACPI_UTIL_H_
