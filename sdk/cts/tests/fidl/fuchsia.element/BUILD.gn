@@ -43,6 +43,11 @@ fuchsia_package_archive("fuchsia-element-tests_archive") {
   package = ":fuchsia-element-tests"
 }
 
+cts_artifacts("prebuilts") {
+  testonly = true
+  package_archives = [ ":fuchsia-element-tests_archive" ]
+}
+
 cts_executable("reference-element-bin") {
   output_name = "reference-element"
   testonly = true
@@ -94,11 +99,6 @@ cts_session_config("reference-session-config") {
 cts_copy_to_sdk("build") {
   testonly = true
   sources = [ "BUILD.gn" ]
-}
-
-group("prebuilts") {
-  testonly = true
-  deps = [ ":fuchsia-element-tests_archive" ]
 }
 
 group("tests") {

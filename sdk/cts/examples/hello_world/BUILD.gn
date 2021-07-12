@@ -39,9 +39,9 @@ fuchsia_package_archive("my-cts-test-package_archive") {
   package = ":my-cts-test-package"
 }
 
-group("prebuilts") {
+cts_artifacts("prebuilts") {
   testonly = true
-  deps = [ ":my-cts-test-package_archive" ]
+  package_archives = [ ":my-cts-test-package_archive" ]
 }
 
 group("tests") {

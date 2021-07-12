@@ -2,7 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/build_api_module.gni")
 import("//sdk/cts/build/cts.gni")
+
+# The list of filepaths to include in the CTS archive.
+#
+# Paths should be given without a '//' prefix.
+#
+# Type: list(string)
+build_api_module("cts_artifacts") {
+  testonly = true
+  data_keys = [ "cts_artifacts" ]
+  deps = [
+    ":cts_data_files",
+    "//sdk/cts/tests:prebuilts",
+  ]
+}
+
+cts_artifacts("cts_data_files") {
+  data = [ "sdk/cts/data/test_manifest.json" ]
+}
 
 group("cts_no_e2e") {
   testonly = true

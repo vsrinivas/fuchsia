@@ -43,14 +43,14 @@ fuchsia_package_archive("fuchsia-hwinfo-tests_archive") {
   package = ":fuchsia-hwinfo-tests"
 }
 
+cts_artifacts("prebuilts") {
+  testonly = true
+  package_archives = [ ":fuchsia-hwinfo-tests_archive" ]
+}
+
 cts_copy_to_sdk("build") {
   testonly = true
   sources = [ "BUILD.gn" ]
-}
-
-group("prebuilts") {
-  testonly = true
-  deps = [ ":fuchsia-hwinfo-tests_archive" ]
 }
 
 group("tests") {

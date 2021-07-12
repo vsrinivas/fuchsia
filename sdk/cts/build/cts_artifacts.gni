@@ -1,0 +1,47 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Collects build outputs and data files for inclusion in the CTS archive.
+#
+# This is a helper template that declares metadata for the cts_artifacts
+# build api module. See //sdk/cts:cts_artifacts.
+#
+# Parameters
+#
+#  package_archives (optional)
+#    A list of targets declared earlier in the same file which generate Fuchsia
+#    package archives.
+#    Type: list(label)
+#
+#  data (optional)
+#    A list of data files to include.
+#    Type: list(string)
+#
+#  testonly
+template("cts_artifacts") {
+  group(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    metadata = {
+      cts_artifacts = []
+    }
+
+    deps = []
+    if (defined(invoker.package_archives)) {
+      foreach(a, invoker.package_archives) {
+        foreach(o, get_target_outputs(a)) {
+          metadata.cts_artifacts += [ string_replace(o, "//", "", 1) ]
+        }
+        deps += [ a ]
+      }
+    }
+
+    data = []
+    if (defined(invoker.data)) {
+      foreach(d, invoker.data) {
+        metadata.cts_artifacts += [ string_replace(d, "//", "", 1) ]
+        data += [ d ]
+      }
+    }
+  }
+}
