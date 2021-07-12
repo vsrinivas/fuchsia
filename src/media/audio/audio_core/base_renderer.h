@@ -78,7 +78,6 @@ class BaseRenderer : public AudioObject,
 
   virtual void ReportStart();
   virtual void ReportStop();
-  virtual void Shutdown();
 
   // Overridden by children that need to intercept Play/Pause. They should still call up to these.
   virtual void PlayInternal(zx::time reference_time, zx::time media_time, PlayCallback callback);

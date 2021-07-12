@@ -65,6 +65,8 @@ class AudioAdminTest : public HermeticAudioTest {
   void ExpectPacketContains(std::string label, const fuchsia::media::StreamPacket& packet,
                             const AudioBuffer<kSampleFormat>& payload,
                             int64_t expected_frames_per_packet, int16_t expected_data);
+
+  void TestCaptureMuteRender(bool set_usage_to_disable);
 };
 
 // AudioAdminTest implementation
@@ -297,9 +299,12 @@ TEST_F(AudioAdminTest, RenderMuteCapture) {
 
 // CaptureMuteRender
 //
-// Creates a single output stream and a loopback capture and verifies that the
-// Render stream is muted in the capturer.
-TEST_F(AudioAdminTest, CaptureMuteRender) {
+// Creates a single output stream and a capture stream and verifies that the
+// render stream is muted when the capturer is enabled.
+//
+// If set_usage_to_disable=true, then after starting the capturer, we immediately
+// change the capturer's usage, which should unmute the render stream.
+void AudioAdminTest::TestCaptureMuteRender(bool set_usage_to_disable) {
   // Setup a policy rule that MEDIA being active will mute a BACKGROUND capture.
   audio_core_->ResetInteractions();
   audio_core_->SetInteraction(
@@ -313,6 +318,9 @@ TEST_F(AudioAdminTest, CaptureMuteRender) {
 
   // Immediately start this capturer so that it impacts policy.
   capturer->fidl()->StartAsyncCapture(10);
+  if (set_usage_to_disable) {
+    capturer->fidl()->SetUsage(fuchsia::media::AudioCaptureUsage::BACKGROUND);
+  }
 
   auto loopback_capturer = SetUpLoopbackCapturer();
 
@@ -368,9 +376,14 @@ TEST_F(AudioAdminTest, CaptureMuteRender) {
   ExpectCallbacks();
 
   // Check that we got 10 samples as we expected.
+  auto expected_data = set_usage_to_disable ? kPlaybackData1 : 0x0;
   ExpectPacketContains("loopback_captured", loopback_captured, loopback_capturer->SnapshotPayload(),
-                       10, 0x0);
+                       10, expected_data);
 }
+
+TEST_F(AudioAdminTest, CaptureMuteRender) { TestCaptureMuteRender(false); }
+
+TEST_F(AudioAdminTest, CaptureDoesntMuteRenderAfterSetUsage) { TestCaptureMuteRender(true); }
 
 // DualRenderStreamMix
 //

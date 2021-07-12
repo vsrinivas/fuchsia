@@ -168,13 +168,14 @@ void AudioCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
     return;
   }
 
-  ReportStop();
+  context().audio_admin().UpdateCapturerState(FidlCaptureUsageFromCaptureUsage(usage_).value(),
+                                              false, this);
   usage_ = CaptureUsageFromFidlCaptureUsage(usage);
   reporter().SetUsage(usage_);
   context().volume_manager().NotifyStreamChanged(this);
   State state = capture_state();
   SetRoutingProfile(StateIsRoutable(state));
-  if (!loopback_ && (state == State::SyncOperating || state == State::AsyncOperating)) {
+  if (state == State::SyncOperating || state == State::AsyncOperating) {
     context().audio_admin().UpdateCapturerState(FidlCaptureUsageFromCaptureUsage(usage_).value(),
                                                 true, this);
   }
