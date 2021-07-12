@@ -33,7 +33,7 @@ BT_SET_UP() {
   fx="$(btf::setup_fx)"
   mkdir -p "${BT_TEMP_DIR}/tools/devshell/lib"
   cat > "${BT_TEMP_DIR}/tools/devshell/lib/updates.sh.mock_side_effects" <<EOF
-function check-for-amber-server {
+function check-for-package-server {
  return 0
 }
 EOF

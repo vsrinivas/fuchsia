@@ -79,7 +79,7 @@ function main {
   fi
 
   if $pkg_check; then
-    check-for-amber-server || return 1
+    check-for-package-server || return 1
   fi
 
   if $restart_session; then

@@ -43,7 +43,7 @@ function main {
     fi
   done
   if (( requires_update )); then
-    check-for-amber-server || return 1
+    check-for-package-server || return 1
 
     echo >&2 "Package ${target} is in 'base', performing system update..."
     fx-command-run ota

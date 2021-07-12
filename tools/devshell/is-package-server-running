@@ -20,4 +20,4 @@ if [[ $# -ne 0 ]]; then
   exit 1
 fi
 
-check-for-amber-server || exit 1
+check-for-package-server || exit 1

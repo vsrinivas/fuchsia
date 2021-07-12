@@ -59,7 +59,7 @@ function main {
     shift
   done
 
-  check-for-amber-server || return 1
+  check-for-package-server || return 1
 
   if $build; then
     fx-info "Building/refreshing ${build_targets[@]}"
