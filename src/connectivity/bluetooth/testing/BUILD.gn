@@ -11,3 +11,13 @@ group("testing") {
     "test-harness",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "hci-emulator-client:tests",
+    "mock-piconet-server:tests",
+    "test-call-manager:tests",
+    "test-harness-tests:test-harness-crate-tests",
+  ]
+}

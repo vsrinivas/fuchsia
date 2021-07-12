@@ -68,9 +68,7 @@ group("tests") {
     "profiles/bt-hfp-audio-gateway:tests",
     "profiles/bt-rfcomm:tests",
     "profiles/tests:tests",
-    "testing/hci-emulator-client:tests",
-    "testing/mock-piconet-server:tests",
-    "testing/test-harness-tests:test-harness-crate-tests",
+    "testing:tests",
     "tests",
     "tools:tests",
   ]
