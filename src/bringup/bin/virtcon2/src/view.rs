@@ -17,7 +17,7 @@ use {
             facets::{FacetId, RiveFacet},
             scene::{Scene, SceneBuilder},
         },
-        AppContext, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        AppContext, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     fidl_fuchsia_hardware_display::VirtconMode,
     fidl_fuchsia_hardware_power_statecontrol::{AdminMarker, AdminSynchronousProxy, RebootReason},
@@ -104,11 +104,17 @@ pub enum ViewMessages {
     RequestTerminalUpdateMessage(u32),
 }
 
+// Constraints on status bar tabs.
+const MIN_TAB_WIDTH: usize = 16;
+const MAX_TAB_WIDTH: usize = 32;
+
+// Status bar colors.
 const STATUS_COLOR_BACKGROUND: Color = Color { r: 0, g: 0, b: 0, a: 255 };
 const STATUS_COLOR_DEFAULT: Color = Color { r: 170, g: 170, b: 170, a: 255 };
 const STATUS_COLOR_ACTIVE: Color = Color { r: 255, g: 255, b: 85, a: 255 };
 const STATUS_COLOR_UPDATED: Color = Color { r: 85, g: 255, b: 85, a: 255 };
 
+// Padding between text and cell size.
 const CELL_PADDING_FACTOR: f32 = 2.0 / 15.0;
 
 struct Animation {
@@ -138,6 +144,8 @@ pub struct VirtualConsoleViewAssistant {
     round_scene_corners: bool,
     font_size: f32,
     dpi: BTreeSet<u32>,
+    cell_size: Size,
+    tab_width: usize,
     scene_details: Option<SceneDetails>,
     terminals: BTreeMap<u32, (Terminal<EventProxy>, TerminalStatus)>,
     font: FontFace,
@@ -146,6 +154,8 @@ pub struct VirtualConsoleViewAssistant {
     virtcon_mode: VirtconMode,
     desired_virtcon_mode: VirtconMode,
     owns_display: bool,
+    active_pointer_id: Option<input::pointer::PointerId>,
+    start_pointer_location: Point,
 }
 
 const BOOT_ANIMATION: &'static str = "/pkg/data/boot-animation.riv";
@@ -161,6 +171,8 @@ impl VirtualConsoleViewAssistant {
         dpi: BTreeSet<u32>,
         boot_animation: bool,
     ) -> Result<ViewAssistantPtr, Error> {
+        let cell_size = Size::new(8.0, 16.0);
+        let tab_width = MIN_TAB_WIDTH;
         let scene_details = None;
         let terminals = BTreeMap::new();
         let active_terminal_id = 0;
@@ -196,6 +208,8 @@ impl VirtualConsoleViewAssistant {
             (None, VirtconMode::Fallback)
         };
         let owns_display = true;
+        let active_pointer_id = None;
+        let start_pointer_location = Point::zero();
 
         Ok(Box::new(VirtualConsoleViewAssistant {
             app_context: app_context.clone(),
@@ -204,6 +218,8 @@ impl VirtualConsoleViewAssistant {
             round_scene_corners,
             font_size,
             dpi,
+            cell_size,
+            tab_width,
             scene_details,
             terminals,
             font,
@@ -212,6 +228,8 @@ impl VirtualConsoleViewAssistant {
             virtcon_mode,
             desired_virtcon_mode,
             owns_display,
+            active_pointer_id,
+            start_pointer_location,
         }))
     }
 
@@ -236,6 +254,8 @@ impl VirtualConsoleViewAssistant {
             padding_y: 0.0,
             dpr: 1.0,
         };
+
+        self.cell_size = cell_size;
 
         for (terminal, _) in self.terminals.values_mut() {
             terminal.resize(&size_info);
@@ -557,10 +577,6 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                     self.terminals.get(&self.active_terminal_id).map(|(t, _)| t.clone_term());
                 let status = self.get_status();
 
-                // Constraints on status bar tabs.
-                const MIN_TAB_WIDTH: usize = 16;
-                const MAX_TAB_WIDTH: usize = 32;
-
                 // Determine the status bar tab width based on the current number
                 // of terminals.
                 let tab_width = (status_size.width as usize / (status.len() + 1))
@@ -581,6 +597,9 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 if self.color_scheme.back != STATUS_COLOR_BACKGROUND {
                     builder.rectangle(status_size, STATUS_COLOR_BACKGROUND);
                 }
+
+                self.cell_size = cell_size;
+                self.tab_width = tab_width;
 
                 Some(textgrid)
             };
@@ -647,8 +666,62 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                     .write_all(string.as_bytes())
                     .unwrap_or_else(|e| println!("failed to write to terminal: {}", e));
             }
+
+            // Scroll to bottom on input.
+            self.scroll_active_terminal(Scroll::Bottom);
         }
 
+        Ok(())
+    }
+
+    fn handle_pointer_event(
+        &mut self,
+        _context: &mut ViewAssistantContext,
+        _event: &input::Event,
+        pointer_event: &input::pointer::Event,
+    ) -> Result<(), Error> {
+        match &pointer_event.phase {
+            input::pointer::Phase::Down(location) => {
+                self.active_pointer_id = Some(pointer_event.pointer_id.clone());
+                self.start_pointer_location = location.to_f32();
+            }
+            input::pointer::Phase::Moved(location) => {
+                if Some(pointer_event.pointer_id.clone()) == self.active_pointer_id {
+                    let location_offset = location.to_f32() - self.start_pointer_location;
+
+                    fn div_and_trunc(value: f32, divisor: f32) -> isize {
+                        (value / divisor).trunc() as isize
+                    }
+
+                    // Movement along X-axis changes active terminal.
+                    let tab_width = self.tab_width as f32 * self.cell_size.width;
+                    let mut terminal_offset = div_and_trunc(location_offset.x, tab_width);
+                    while terminal_offset > 0 {
+                        self.previous_active_terminal();
+                        self.start_pointer_location.x += tab_width;
+                        terminal_offset -= 1;
+                    }
+                    while terminal_offset < 0 {
+                        self.next_active_terminal();
+                        self.start_pointer_location.x -= tab_width;
+                        terminal_offset += 1;
+                    }
+
+                    // Movement along Y-axis scrolls active terminal.
+                    let cell_offset = div_and_trunc(location_offset.y, self.cell_size.height);
+                    if cell_offset != 0 {
+                        self.scroll_active_terminal(Scroll::Lines(cell_offset));
+                        self.start_pointer_location.y += cell_offset as f32 * self.cell_size.height;
+                    }
+                }
+            }
+            input::pointer::Phase::Up => {
+                if Some(pointer_event.pointer_id.clone()) == self.active_pointer_id {
+                    self.active_pointer_id = None;
+                }
+            }
+            _ => (),
+        }
         Ok(())
     }
 
