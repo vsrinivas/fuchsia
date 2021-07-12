@@ -3,7 +3,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-
 /// Implementation of the `FromArgs` and `argh(...)` derive attributes.
 ///
 /// For more thorough documentation, see the `argh` crate itself.
@@ -238,9 +237,36 @@ fn impl_from_args_struct(
         .collect();
 
     ensure_only_last_positional_is_optional(errors, &fields);
+
+    let impl_span = Span::call_site();
+
+    let from_args_method = impl_from_args_struct_from_args(errors, type_attrs, &fields);
+
+    let redact_arg_values_method =
+        impl_from_args_struct_redact_arg_values(errors, type_attrs, &fields);
+
     let top_or_sub_cmd_impl = top_or_sub_cmd_impl(errors, name, type_attrs);
-    let init_fields = declare_local_storage_for_fields(&fields);
-    let unwrap_fields = unwrap_fields(&fields);
+
+    let trait_impl = quote_spanned! { impl_span =>
+        impl argh::FromArgs for #name {
+            #from_args_method
+
+            #redact_arg_values_method
+        }
+
+        #top_or_sub_cmd_impl
+    };
+
+    trait_impl.into()
+}
+
+fn impl_from_args_struct_from_args<'a>(
+    errors: &Errors,
+    type_attrs: &TypeAttrs,
+    fields: &'a [StructField<'a>],
+) -> TokenStream {
+    let init_fields = declare_local_storage_for_from_args_fields(&fields);
+    let unwrap_fields = unwrap_from_args_fields(&fields);
     let positional_fields: Vec<&StructField<'_>> =
         fields.iter().filter(|field| field.kind == FieldKind::Positional).collect();
     let positional_field_idents = positional_fields.iter().map(|field| &field.field.ident);
@@ -253,8 +279,8 @@ fn impl_from_args_struct(
     let flag_output_table = fields.iter().filter_map(|field| {
         let field_name = &field.field.ident;
         match field.kind {
-            FieldKind::Option => Some(quote! { argh::CmdOption::Value(&mut #field_name) }),
-            FieldKind::Switch => Some(quote! { argh::CmdOption::Flag(&mut #field_name) }),
+            FieldKind::Option => Some(quote! { argh::ParseStructOption::Value(&mut #field_name) }),
+            FieldKind::Switch => Some(quote! { argh::ParseStructOption::Flag(&mut #field_name) }),
             FieldKind::SubCommand | FieldKind::Positional => None,
         }
     });
@@ -276,135 +302,181 @@ fn impl_from_args_struct(
     let append_missing_requirements =
         append_missing_requirements(&missing_requirements_ident, &fields);
 
-    let check_subcommands = if let Some(subcommand) = subcommand {
+    let parse_subcommands = if let Some(subcommand) = subcommand {
         let name = subcommand.name;
         let ty = subcommand.ty_without_wrapper;
         quote_spanned! { impl_span =>
-            for __subcommand in <#ty as argh::SubCommands>::COMMANDS {
-                if __subcommand.name == __next_arg {
-                    let mut __command = __cmd_name.to_owned();
-                    __command.push(__subcommand.name);
-                    let __prepended_help;
-                    let __remaining_args = if __help {
-                        __prepended_help = argh::prepend_help(__remaining_args);
-                        &__prepended_help
-                    } else {
-                        __remaining_args
-                    };
-                    #name = Some(<#ty as argh::FromArgs>::from_args(&__command, __remaining_args)?);
-                    // Unset `help`, since we handled it in the subcommand
-                    __help = false;
-                    break 'parse_args;
-                }
-            }
+            Some(argh::ParseStructSubCommand {
+                subcommands: <#ty as argh::SubCommands>::COMMANDS,
+                parse_func: &mut |__command, __remaining_args| {
+                    #name = Some(<#ty as argh::FromArgs>::from_args(__command, __remaining_args)?);
+                    Ok(())
+                },
+            })
         }
     } else {
-        TokenStream::new()
+        quote_spanned! { impl_span => None }
     };
 
     // Identifier referring to a value containing the name of the current command as an `&[&str]`.
     let cmd_name_str_array_ident = syn::Ident::new("__cmd_name", impl_span.clone());
     let help = help::help(errors, cmd_name_str_array_ident, type_attrs, &fields, subcommand);
 
-    let trait_impl = quote_spanned! { impl_span =>
-        impl argh::FromArgs for #name {
-            fn from_args(__cmd_name: &[&str], __args: &[&str])
-                -> std::result::Result<Self, argh::EarlyExit>
-            {
-                #( #init_fields )*
-                let __flag_output_table = &mut [
-                    #( #flag_output_table, )*
-                ];
+    let method_impl = quote_spanned! { impl_span =>
+        fn from_args(__cmd_name: &[&str], __args: &[&str])
+            -> std::result::Result<Self, argh::EarlyExit>
+        {
+            #( #init_fields )*
 
-                let __positional_output_table = &mut [
-                    #( (
-                        &mut #positional_field_idents as &mut argh::ParseValueSlot,
-                        #positional_field_names
-                    ), )*
-                ];
+            argh::parse_struct_args(
+                __cmd_name,
+                __args,
+                argh::ParseStructOptions {
+                    arg_to_slot: &[ #( #flag_str_to_output_table_map ,)* ],
+                    slots: &mut [ #( #flag_output_table, )* ],
+                },
+                argh::ParseStructPositionals {
+                    positionals: &mut [
+                        #(
+                            argh::ParseStructPositional {
+                                name: #positional_field_names,
+                                slot: &mut #positional_field_idents as &mut argh::ParseValueSlot,
+                            },
+                        )*
+                    ],
+                    last_is_repeating: #last_positional_is_repeating,
+                },
+                #parse_subcommands,
+                &|| #help,
+            )?;
 
-                let mut __help = false;
-                let mut __remaining_args = __args;
-                let mut __positional_index = 0;
-                let mut __options_ended = false;
-                'parse_args: while let Some(&__next_arg) = __remaining_args.get(0) {
-                    __remaining_args = &__remaining_args[1..];
-                    if __next_arg == "--help" || __next_arg == "help" {
-                        __help = true;
-                        continue;
-                    }
+            let mut #missing_requirements_ident = argh::MissingRequirements::default();
+            #(
+                #append_missing_requirements
+            )*
+            #missing_requirements_ident.err_on_any()?;
 
-                    if __next_arg.starts_with("-") && !__options_ended {
-                        if __next_arg == "--" {
-                            __options_ended = true;
-                            continue;
-                        }
-
-                        if __help {
-                            return Err(
-                                "Trailing arguments are not allowed after `help`."
-                                    .to_string()
-                                    .into()
-                            );
-                        }
-
-                        argh::parse_option(
-                            __next_arg,
-                            &mut __remaining_args,
-                            __flag_output_table,
-                            &[ #( #flag_str_to_output_table_map ,)* ],
-                        )?;
-                        continue;
-                    }
-
-                    #check_subcommands
-
-                    if __positional_index < __positional_output_table.len() {
-                        argh::parse_positional(
-                            __next_arg,
-                            &mut __positional_output_table[__positional_index],
-                        )?;
-
-                        // Don't increment position if we're at the last arg
-                        // *and* the last arg is repeating.
-                        let __skip_increment =
-                            #last_positional_is_repeating &&
-                             __positional_index == __positional_output_table.len() - 1;
-
-                        if !__skip_increment {
-                            __positional_index += 1;
-                        }
-                    } else {
-                        return std::result::Result::Err(argh::EarlyExit {
-                            output: argh::unrecognized_arg(__next_arg),
-                            status: std::result::Result::Err(()),
-                        });
-                    }
-                }
-
-                if __help {
-                    return std::result::Result::Err(argh::EarlyExit {
-                        output: #help,
-                        status: std::result::Result::Ok(()),
-                    });
-                }
-
-                let mut #missing_requirements_ident = argh::MissingRequirements::default();
-                #(
-                    #append_missing_requirements
-                )*
-                #missing_requirements_ident.err_on_any()?;
-
-                Ok(Self {
-                    #( #unwrap_fields, )*
-                })
-            }
+            Ok(Self {
+                #( #unwrap_fields, )*
+            })
         }
-
-        #top_or_sub_cmd_impl
     };
 
-    trait_impl.into()
+    method_impl.into()
+}
+
+fn impl_from_args_struct_redact_arg_values<'a>(
+    errors: &Errors,
+    type_attrs: &TypeAttrs,
+    fields: &'a [StructField<'a>],
+) -> TokenStream {
+    let init_fields = declare_local_storage_for_redacted_fields(&fields);
+    let unwrap_fields = unwrap_redacted_fields(&fields);
+
+    let positional_fields: Vec<&StructField<'_>> =
+        fields.iter().filter(|field| field.kind == FieldKind::Positional).collect();
+    let positional_field_idents = positional_fields.iter().map(|field| &field.field.ident);
+    let positional_field_names = positional_fields.iter().map(|field| field.name.to_string());
+    let last_positional_is_repeating = positional_fields
+        .last()
+        .map(|field| field.optionality == Optionality::Repeating)
+        .unwrap_or(false);
+
+    let flag_output_table = fields.iter().filter_map(|field| {
+        let field_name = &field.field.ident;
+        match field.kind {
+            FieldKind::Option => Some(quote! { argh::ParseStructOption::Value(&mut #field_name) }),
+            FieldKind::Switch => Some(quote! { argh::ParseStructOption::Flag(&mut #field_name) }),
+            FieldKind::SubCommand | FieldKind::Positional => None,
+        }
+    });
+
+    let flag_str_to_output_table_map = flag_str_to_output_table_map_entries(&fields);
+
+    let mut subcommands_iter =
+        fields.iter().filter(|field| field.kind == FieldKind::SubCommand).fuse();
+
+    let subcommand: Option<&StructField<'_>> = subcommands_iter.next();
+    while let Some(dup_subcommand) = subcommands_iter.next() {
+        errors.duplicate_attrs("subcommand", subcommand.unwrap().field, dup_subcommand.field);
+    }
+
+    let impl_span = Span::call_site();
+
+    let missing_requirements_ident = syn::Ident::new("__missing_requirements", impl_span.clone());
+
+    let append_missing_requirements =
+        append_missing_requirements(&missing_requirements_ident, &fields);
+
+    let redact_subcommands = if let Some(subcommand) = subcommand {
+        let name = subcommand.name;
+        let ty = subcommand.ty_without_wrapper;
+        quote_spanned! { impl_span =>
+            Some(argh::ParseStructSubCommand {
+                subcommands: <#ty as argh::SubCommands>::COMMANDS,
+                parse_func: &mut |__command, __remaining_args| {
+                    #name = Some(<#ty as argh::FromArgs>::redact_arg_values(__command, __remaining_args)?);
+                    Ok(())
+                },
+            })
+        }
+    } else {
+        quote_spanned! { impl_span => None }
+    };
+
+    let cmd_name = if type_attrs.is_subcommand.is_none() {
+        quote! { __cmd_name.last().expect("no command name").to_string() }
+    } else {
+        quote! { __cmd_name.last().expect("no subcommand name").to_string() }
+    };
+
+    // Identifier referring to a value containing the name of the current command as an `&[&str]`.
+    let cmd_name_str_array_ident = syn::Ident::new("__cmd_name", impl_span.clone());
+    let help = help::help(errors, cmd_name_str_array_ident, type_attrs, &fields, subcommand);
+
+    let method_impl = quote_spanned! { impl_span =>
+        fn redact_arg_values(__cmd_name: &[&str], __args: &[&str]) -> Result<Vec<String>, argh::EarlyExit> {
+            #( #init_fields )*
+
+            argh::parse_struct_args(
+                __cmd_name,
+                __args,
+                argh::ParseStructOptions {
+                    arg_to_slot: &[ #( #flag_str_to_output_table_map ,)* ],
+                    slots: &mut [ #( #flag_output_table, )* ],
+                },
+                argh::ParseStructPositionals {
+                    positionals: &mut [
+                        #(
+                            argh::ParseStructPositional {
+                                name: #positional_field_names,
+                                slot: &mut #positional_field_idents as &mut argh::ParseValueSlot,
+                            },
+                        )*
+                    ],
+                    last_is_repeating: #last_positional_is_repeating,
+                },
+                #redact_subcommands,
+                &|| #help,
+            )?;
+
+            let mut #missing_requirements_ident = argh::MissingRequirements::default();
+            #(
+                #append_missing_requirements
+            )*
+            #missing_requirements_ident.err_on_any()?;
+
+            let mut __redacted = vec![
+                #cmd_name,
+            ];
+
+            #( #unwrap_fields )*
+
+            Ok(__redacted)
+        }
+    };
+
+    method_impl.into()
 }
 
 /// Ensures that only the last positional arg is non-required.
@@ -458,7 +530,7 @@ fn top_or_sub_cmd_impl(errors: &Errors, name: &syn::Ident, type_attrs: &TypeAttr
 /// Most fields are stored in `Option<FieldType>` locals.
 /// `argh(option)` fields are stored in a `ParseValueSlotTy` along with a
 /// function that knows how to decode the appropriate value.
-fn declare_local_storage_for_fields<'a>(
+fn declare_local_storage_for_from_args_fields<'a>(
     fields: &'a [StructField<'a>],
 ) -> impl Iterator<Item = TokenStream> + 'a {
     fields.iter().map(|field| {
@@ -488,7 +560,7 @@ fn declare_local_storage_for_fields<'a>(
                     let mut #field_name: argh::ParseValueSlotTy<#field_slot_type, #field_type>
                         = argh::ParseValueSlotTy {
                             slot: std::default::Default::default(),
-                            parse_func: #from_str_fn,
+                            parse_func: |_, value| { #from_str_fn(value) },
                         };
                 }
             }
@@ -503,7 +575,9 @@ fn declare_local_storage_for_fields<'a>(
 }
 
 /// Unwrap non-optional fields and take options out of their tuple slots.
-fn unwrap_fields<'a>(fields: &'a [StructField<'a>]) -> impl Iterator<Item = TokenStream> + 'a {
+fn unwrap_from_args_fields<'a>(
+    fields: &'a [StructField<'a>],
+) -> impl Iterator<Item = TokenStream> + 'a {
     fields.iter().map(|field| {
         let field_name = field.name;
         match field.kind {
@@ -524,6 +598,91 @@ fn unwrap_fields<'a>(fields: &'a [StructField<'a>]) -> impl Iterator<Item = Toke
                 Optionality::Optional | Optionality::Repeating => field_name.into_token_stream(),
                 Optionality::Defaulted(_) => unreachable!(),
             },
+        }
+    })
+}
+
+/// Declare a local slots to store each field in during parsing.
+///
+/// Most fields are stored in `Option<FieldType>` locals.
+/// `argh(option)` fields are stored in a `ParseValueSlotTy` along with a
+/// function that knows how to decode the appropriate value.
+fn declare_local_storage_for_redacted_fields<'a>(
+    fields: &'a [StructField<'a>],
+) -> impl Iterator<Item = TokenStream> + 'a {
+    fields.iter().map(|field| {
+        let field_name = &field.field.ident;
+
+        match field.kind {
+            FieldKind::Switch => {
+                quote! {
+                    let mut #field_name = argh::RedactFlag {
+                        slot: None,
+                    };
+                }
+            }
+            FieldKind::Option => {
+                quote! {
+                    let mut #field_name: argh::ParseValueSlotTy::<Option<String>, String> =
+                        argh::ParseValueSlotTy {
+                        slot: std::default::Default::default(),
+                        parse_func: |arg, _| { Ok(arg.to_string()) },
+                    };
+                }
+            }
+            FieldKind::Positional => {
+                let field_slot_type = match field.optionality {
+                    Optionality::Repeating => {
+                        quote! { std::vec::Vec<String> }
+                    }
+                    Optionality::None | Optionality::Optional | Optionality::Defaulted(_) => {
+                        quote! { std::option::Option<String> }
+                    }
+                };
+
+                let long_name = field.name.to_string();
+                quote! {
+                    let mut #field_name: argh::ParseValueSlotTy::<#field_slot_type, String> =
+                        argh::ParseValueSlotTy {
+                        slot: std::default::Default::default(),
+                        parse_func: |_, _| { Ok(#long_name.to_string()) },
+                    };
+                }
+            }
+            FieldKind::SubCommand => {
+                quote! { let mut #field_name: std::option::Option<std::vec::Vec<String>> = None; }
+            }
+        }
+    })
+}
+
+/// Unwrap non-optional fields and take options out of their tuple slots.
+fn unwrap_redacted_fields<'a>(
+    fields: &'a [StructField<'a>],
+) -> impl Iterator<Item = TokenStream> + 'a {
+    fields.iter().map(|field| {
+        let field_name = field.name;
+
+        match field.kind {
+            FieldKind::Switch | FieldKind::Option => {
+                quote! {
+                    if let Some(__field_name) = #field_name.slot {
+                        __redacted.push(__field_name);
+                    }
+                }
+            }
+            FieldKind::Positional => {
+                quote! {
+                    __redacted.extend(#field_name.slot.into_iter());
+                }
+            }
+            FieldKind::SubCommand => {
+                quote! {
+                    if let Some(__subcommand_args) = #field_name {
+                        __redacted.extend(__subcommand_args.into_iter());
+                    }
+                }
+            }
         }
     })
 }
@@ -667,10 +826,8 @@ fn impl_from_args_enum(
         .collect();
 
     let name_repeating = std::iter::repeat(name.clone());
-    let variant_ty_1 = variants.iter().map(|x| x.ty);
-    let variant_ty_2 = variant_ty_1.clone();
-    let variant_ty_3 = variant_ty_1.clone();
-    let variant_names = variants.iter().map(|x| x.name);
+    let variant_ty = variants.iter().map(|x| x.ty).collect::<Vec<_>>();
+    let variant_names = variants.iter().map(|x| x.name).collect::<Vec<_>>();
 
     quote! {
         impl argh::FromArgs for #name {
@@ -679,10 +836,20 @@ fn impl_from_args_enum(
             {
                 let subcommand_name = *command_name.last().expect("no subcommand name");
                 #(
-                    if subcommand_name == <#variant_ty_1 as argh::SubCommand>::COMMAND.name {
+                    if subcommand_name == <#variant_ty as argh::SubCommand>::COMMAND.name {
                         return Ok(#name_repeating::#variant_names(
-                            <#variant_ty_2 as argh::FromArgs>::from_args(command_name, args)?
+                            <#variant_ty as argh::FromArgs>::from_args(command_name, args)?
                         ));
+                    }
+                )*
+                unreachable!("no subcommand matched")
+            }
+
+            fn redact_arg_values(command_name: &[&str], args: &[&str]) -> std::result::Result<Vec<String>, argh::EarlyExit> {
+                let subcommand_name = *command_name.last().expect("no subcommand name");
+                #(
+                    if subcommand_name == <#variant_ty as argh::SubCommand>::COMMAND.name {
+                        return <#variant_ty as argh::FromArgs>::redact_arg_values(command_name, args);
                     }
                 )*
                 unreachable!("no subcommand matched")
@@ -691,7 +858,7 @@ fn impl_from_args_enum(
 
         impl argh::SubCommands for #name {
             const COMMANDS: &'static [&'static argh::CommandInfo] = &[#(
-                <#variant_ty_3 as argh::SubCommand>::COMMAND,
+                <#variant_ty as argh::SubCommand>::COMMAND,
             )*];
         }
     }

@@ -13,14 +13,15 @@
 [package]
 edition = "2018"
 name = "argh"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Taylor Cramer <cramertj@google.com>", "Benjamin Brittain <bwb@google.com>", "Erick Tryzelaar <etryzelaar@google.com>"]
 description = "Derive-based argument parser optimized for code size"
+readme = "README.md"
 keywords = ["args", "arguments", "derive", "cli"]
-license = "BSD-3-Clause"
+license-file = "LICENSE"
 repository = "https://github.com/google/argh"
 [dependencies.argh_derive]
-version = "0.1.4"
+version = "0.1.5"
 
 [dependencies.argh_shared]
-version = "0.1.4"
+version = "0.1.5"

@@ -182,10 +182,260 @@ pub type CommandInfo = argh_shared::CommandInfo<'static>;
 pub trait FromArgs: Sized {
     /// Construct the type from an input set of arguments.
     ///
-    /// The first argument `command_name` is the identifier for the current
-    /// command, treating each segment as space-separated. This is to be
-    /// used in the output of `--help`, `--version`, and similar flags.
+    /// The first argument `command_name` is the identifier for the current command. In most cases,
+    /// users should only pass in a single item for the command name, which typically comes from
+    /// the first item from `std::env::args()`. Implementations however should append the
+    /// subcommand name in when recursively calling [FromArgs::from_args] for subcommands. This
+    /// allows `argh` to generate correct subcommand help strings.
+    ///
+    /// The second argument `args` is the rest of the command line arguments.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use argh::FromArgs;
+    ///
+    /// /// Command to manage a classroom.
+    /// #[derive(Debug, PartialEq, FromArgs)]
+    /// struct ClassroomCmd {
+    ///     #[argh(subcommand)]
+    ///     subcommands: Subcommands,
+    /// }
+    ///
+    /// #[derive(Debug, PartialEq, FromArgs)]
+    /// #[argh(subcommand)]
+    /// enum Subcommands {
+    ///     List(ListCmd),
+    ///     Add(AddCmd),
+    /// }
+    ///
+    /// /// list all the classes.
+    /// #[derive(Debug, PartialEq, FromArgs)]
+    /// #[argh(subcommand, name = "list")]
+    /// struct ListCmd {
+    ///     /// list classes for only this teacher.
+    ///     #[argh(option)]
+    ///     teacher_name: Option<String>,
+    /// }
+    ///
+    /// /// add students to a class.
+    /// #[derive(Debug, PartialEq, FromArgs)]
+    /// #[argh(subcommand, name = "add")]
+    /// struct AddCmd {
+    ///     /// the name of the class's teacher.
+    ///     #[argh(option)]
+    ///     teacher_name: String,
+    ///
+    ///     /// the name of the class.
+    ///     #[argh(positional)]
+    ///     class_name: String,
+    /// }
+    ///
+    /// let args = ClassroomCmd::from_args(
+    ///     &["classroom"],
+    ///     &["list", "--teacher-name", "Smith"],
+    /// ).unwrap();
+    /// assert_eq!(
+    ///    args,
+    ///     ClassroomCmd {
+    ///         subcommands: Subcommands::List(ListCmd {
+    ///             teacher_name: Some("Smith".to_string()),
+    ///         })
+    ///     },
+    /// );
+    ///
+    /// // Help returns an error, but internally returns an `Ok` status.
+    /// let early_exit = ClassroomCmd::from_args(
+    ///     &["classroom"],
+    ///     &["help"],
+    /// ).unwrap_err();
+    /// assert_eq!(
+    ///     early_exit,
+    ///     argh::EarlyExit {
+    ///        output: r#"Usage: classroom <command> [<args>]
+    ///
+    /// Command to manage a classroom.
+    ///
+    /// Options:
+    ///   --help            display usage information
+    ///
+    /// Commands:
+    ///   list              list all the classes.
+    ///   add               add students to a class.
+    /// "#.to_string(),
+    ///        status: Ok(()),
+    ///     },
+    /// );
+    ///
+    /// // Help works with subcommands.
+    /// let early_exit = ClassroomCmd::from_args(
+    ///     &["classroom"],
+    ///     &["list", "help"],
+    /// ).unwrap_err();
+    /// assert_eq!(
+    ///     early_exit,
+    ///     argh::EarlyExit {
+    ///        output: r#"Usage: classroom list [--teacher-name <teacher-name>]
+    ///
+    /// list all the classes.
+    ///
+    /// Options:
+    ///   --teacher-name    list classes for only this teacher.
+    ///   --help            display usage information
+    /// "#.to_string(),
+    ///        status: Ok(()),
+    ///     },
+    /// );
+    ///
+    /// // Incorrect arguments will error out.
+    /// let err = ClassroomCmd::from_args(
+    ///     &["classroom"],
+    ///     &["lisp"],
+    /// ).unwrap_err();
+    /// assert_eq!(
+    ///    err,
+    ///    argh::EarlyExit {
+    ///        output: "Unrecognized argument: lisp\n".to_string(),
+    ///        status: Err(()),
+    ///     },
+    /// );
+    /// ```
     fn from_args(command_name: &[&str], args: &[&str]) -> Result<Self, EarlyExit>;
+
+    /// Get a String with just the argument names, e.g., options, flags, subcommands, etc, but
+    /// without the values of the options and arguments. This can be useful as a means to capture
+    /// anonymous usage statistics without revealing the content entered by the end user.
+    ///
+    /// The first argument `command_name` is the identifier for the current command. In most cases,
+    /// users should only pass in a single item for the command name, which typically comes from
+    /// the first item from `std::env::args()`. Implementations however should append the
+    /// subcommand name in when recursively calling [FromArgs::from_args] for subcommands. This
+    /// allows `argh` to generate correct subcommand help strings.
+    ///
+    /// The second argument `args` is the rest of the command line arguments.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use argh::FromArgs;
+    ///
+    /// /// Command to manage a classroom.
+    /// #[derive(FromArgs)]
+    /// struct ClassroomCmd {
+    ///     #[argh(subcommand)]
+    ///     subcommands: Subcommands,
+    /// }
+    ///
+    /// #[derive(FromArgs)]
+    /// #[argh(subcommand)]
+    /// enum Subcommands {
+    ///     List(ListCmd),
+    ///     Add(AddCmd),
+    /// }
+    ///
+    /// /// list all the classes.
+    /// #[derive(FromArgs)]
+    /// #[argh(subcommand, name = "list")]
+    /// struct ListCmd {
+    ///     /// list classes for only this teacher.
+    ///     #[argh(option)]
+    ///     teacher_name: Option<String>,
+    /// }
+    ///
+    /// /// add students to a class.
+    /// #[derive(FromArgs)]
+    /// #[argh(subcommand, name = "add")]
+    /// struct AddCmd {
+    ///     /// the name of the class's teacher.
+    ///     #[argh(option)]
+    ///     teacher_name: String,
+    ///
+    ///     /// has the class started yet?
+    ///     #[argh(switch)]
+    ///     started: bool,
+    ///
+    ///     /// the name of the class.
+    ///     #[argh(positional)]
+    ///     class_name: String,
+    ///
+    ///     /// the student names.
+    ///     #[argh(positional)]
+    ///     students: Vec<String>,
+    /// }
+    ///
+    /// let args = ClassroomCmd::redact_arg_values(
+    ///     &["classroom"],
+    ///     &["list"],
+    /// ).unwrap();
+    /// assert_eq!(
+    ///     args,
+    ///     &[
+    ///         "classroom",
+    ///         "list",
+    ///     ],
+    /// );
+    ///
+    /// let args = ClassroomCmd::redact_arg_values(
+    ///     &["classroom"],
+    ///     &["list", "--teacher-name", "Smith"],
+    /// ).unwrap();
+    /// assert_eq!(
+    ///    args,
+    ///    &[
+    ///         "classroom",
+    ///         "list",
+    ///         "--teacher-name",
+    ///     ],
+    /// );
+    ///
+    /// let args = ClassroomCmd::redact_arg_values(
+    ///     &["classroom"],
+    ///     &["add", "--teacher-name", "Smith", "--started", "Math", "Abe", "Sung"],
+    /// ).unwrap();
+    /// assert_eq!(
+    ///     args,
+    ///     &[
+    ///         "classroom",
+    ///         "add",
+    ///         "--teacher-name",
+    ///         "--started",
+    ///         "class_name",
+    ///         "students",
+    ///         "students",
+    ///     ],
+    /// );
+    ///
+    /// // `ClassroomCmd::redact_arg_values` will error out if passed invalid arguments.
+    /// assert_eq!(
+    ///     ClassroomCmd::redact_arg_values(&["classroom"], &["add", "--teacher-name"]),
+    ///     Err(argh::EarlyExit {
+    ///         output: "No value provided for option '--teacher-name'.\n".into(),
+    ///         status: Err(()),
+    ///     }),
+    /// );
+    ///
+    /// // `ClassroomCmd::redact_arg_values` will generate help messages.
+    /// assert_eq!(
+    ///     ClassroomCmd::redact_arg_values(&["classroom"], &["help"]),
+    ///     Err(argh::EarlyExit {
+    ///         output: r#"Usage: classroom <command> [<args>]
+    ///
+    /// Command to manage a classroom.
+    ///
+    /// Options:
+    ///   --help            display usage information
+    ///
+    /// Commands:
+    ///   list              list all the classes.
+    ///   add               add students to a class.
+    /// "#.to_string(),
+    ///         status: Ok(()),
+    ///     }),
+    /// );
+    /// ```
+    fn redact_arg_values(_command_name: &[&str], _args: &[&str]) -> Result<Vec<String>, EarlyExit> {
+        Ok(vec!["<<REDACTED>>".into()])
+    }
 }
 
 /// A top-level `FromArgs` implementation that is not a subcommand.
@@ -238,16 +488,22 @@ fn cmd<'a>(default: &'a String, path: &'a String) -> &'a str {
 /// Create a `FromArgs` type from the current process's `env::args`.
 ///
 /// This function will exit early from the current process if argument parsing
-/// was unsuccessful or if information like `--help` was requested.
+/// was unsuccessful or if information like `--help` was requested. Error messages will be printed
+/// to stderr, and `--help` output to stdout.
 pub fn from_env<T: TopLevelCommand>() -> T {
     let strings: Vec<String> = std::env::args().collect();
     let cmd = cmd(&strings[0], &strings[0]);
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
     T::from_args(&[cmd], &strs[1..]).unwrap_or_else(|early_exit| {
-        println!("{}", early_exit.output);
         std::process::exit(match early_exit.status {
-            Ok(()) => 0,
-            Err(()) => 1,
+            Ok(()) => {
+                println!("{}", early_exit.output);
+                0
+            }
+            Err(()) => {
+                eprintln!("{}", early_exit.output);
+                1
+            }
         })
     })
 }
@@ -258,16 +514,22 @@ pub fn from_env<T: TopLevelCommand>() -> T {
 /// driving the build. We skip the second env variable.
 ///
 /// This function will exit early from the current process if argument parsing
-/// was unsuccessful or if information like `--help` was requested.
+/// was unsuccessful or if information like `--help` was requested. Error messages will be printed
+/// to stderr, and `--help` output to stdout.
 pub fn cargo_from_env<T: TopLevelCommand>() -> T {
     let strings: Vec<String> = std::env::args().collect();
     let cmd = cmd(&strings[1], &strings[1]);
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
     T::from_args(&[cmd], &strs[2..]).unwrap_or_else(|early_exit| {
-        println!("{}", early_exit.output);
         std::process::exit(match early_exit.status {
-            Ok(()) => 0,
-            Err(()) => 1,
+            Ok(()) => {
+                println!("{}", early_exit.output);
+                0
+            }
+            Err(()) => {
+                eprintln!("{}", early_exit.output);
+                1
+            }
         })
     })
 }
@@ -297,6 +559,28 @@ where
 // The following items are all used by the generated code, and should not be considered part
 // of this library's public API surface.
 
+#[doc(hidden)]
+pub trait ParseFlag {
+    fn set_flag(&mut self, arg: &str);
+}
+
+impl<T: Flag> ParseFlag for T {
+    fn set_flag(&mut self, _arg: &str) {
+        <T as Flag>::set_flag(self);
+    }
+}
+
+#[doc(hidden)]
+pub struct RedactFlag {
+    pub slot: Option<String>,
+}
+
+impl ParseFlag for RedactFlag {
+    fn set_flag(&mut self, arg: &str) {
+        self.slot = Some(arg.to_string());
+    }
+}
+
 // A trait for for slots that reserve space for a value and know how to parse that value
 // from a command-line `&str` argument.
 //
@@ -305,7 +589,7 @@ where
 // generic parameters.
 #[doc(hidden)]
 pub trait ParseValueSlot {
-    fn fill_slot(&mut self, value: &str) -> Result<(), String>;
+    fn fill_slot(&mut self, arg: &str, value: &str) -> Result<(), String>;
 }
 
 // The concrete type implementing the `ParseValueSlot` trait.
@@ -317,25 +601,25 @@ pub struct ParseValueSlotTy<Slot, T> {
     // The slot for a parsed value.
     pub slot: Slot,
     // The function to parse the value from a string
-    pub parse_func: fn(&str) -> Result<T, String>,
+    pub parse_func: fn(&str, &str) -> Result<T, String>,
 }
 
 // `ParseValueSlotTy<Option<T>, T>` is used as the slot for all non-repeating
 // arguments, both optional and required.
 impl<T> ParseValueSlot for ParseValueSlotTy<Option<T>, T> {
-    fn fill_slot(&mut self, value: &str) -> Result<(), String> {
+    fn fill_slot(&mut self, arg: &str, value: &str) -> Result<(), String> {
         if self.slot.is_some() {
             return Err("duplicate values provided".to_string());
         }
-        self.slot = Some((self.parse_func)(value)?);
+        self.slot = Some((self.parse_func)(arg, value)?);
         Ok(())
     }
 }
 
 // `ParseValueSlotTy<Vec<T>, T>` is used as the slot for repeating arguments.
 impl<T> ParseValueSlot for ParseValueSlotTy<Vec<T>, T> {
-    fn fill_slot(&mut self, value: &str) -> Result<(), String> {
-        self.slot.push((self.parse_func)(value)?);
+    fn fill_slot(&mut self, arg: &str, value: &str) -> Result<(), String> {
+        self.slot.push((self.parse_func)(arg, value)?);
         Ok(())
     }
 }
@@ -346,6 +630,7 @@ pub trait Flag {
     fn default() -> Self
     where
         Self: Sized;
+
     /// Sets the flag. This function is called when the flag is provided.
     fn set_flag(&mut self);
 }
@@ -376,91 +661,229 @@ macro_rules! impl_flag_for_integers {
 
 impl_flag_for_integers![u8, u16, u32, u64, u128, i8, i16, i32, i64, i128,];
 
+/// This function implements argument parsing for structs.
+///
+/// `cmd_name`: The identifier for the current command.
+/// `args`: The command line arguments.
+/// `parse_options`: Helper to parse optional arguments.
+/// `parse_positionals`: Helper to parse positional arguments.
+/// `parse_subcommand`: Helper to parse a subcommand.
+/// `help_func`: Generate a help message.
+#[doc(hidden)]
+pub fn parse_struct_args(
+    cmd_name: &[&str],
+    args: &[&str],
+    mut parse_options: ParseStructOptions<'_>,
+    mut parse_positionals: ParseStructPositionals<'_>,
+    mut parse_subcommand: Option<ParseStructSubCommand<'_>>,
+    help_func: &dyn Fn() -> String,
+) -> Result<(), EarlyExit> {
+    let mut help = false;
+    let mut remaining_args = args;
+    let mut positional_index = 0;
+    let mut options_ended = false;
+
+    'parse_args: while let Some(&next_arg) = remaining_args.get(0) {
+        remaining_args = &remaining_args[1..];
+        if (next_arg == "--help" || next_arg == "help") && !options_ended {
+            help = true;
+            continue;
+        }
+
+        if next_arg.starts_with("-") && !options_ended {
+            if next_arg == "--" {
+                options_ended = true;
+                continue;
+            }
+
+            if help {
+                return Err("Trailing arguments are not allowed after `help`.".to_string().into());
+            }
+
+            parse_options.parse(next_arg, &mut remaining_args)?;
+            continue;
+        }
+
+        if let Some(ref mut parse_subcommand) = parse_subcommand {
+            if parse_subcommand.parse(help, cmd_name, next_arg, remaining_args)? {
+                // Unset `help`, since we handled it in the subcommand
+                help = false;
+                break 'parse_args;
+            }
+        }
+
+        parse_positionals.parse(&mut positional_index, next_arg)?;
+    }
+
+    if help {
+        Err(EarlyExit { output: help_func(), status: Ok(()) })
+    } else {
+        Ok(())
+    }
+}
+
+#[doc(hidden)]
+pub struct ParseStructOptions<'a> {
+    /// A mapping from option string literals to the entry
+    /// in the output table. This may contain multiple entries mapping to
+    /// the same location in the table if both a short and long version
+    /// of the option exist (`-z` and `--zoo`).
+    pub arg_to_slot: &'static [(&'static str, usize)],
+
+    /// The storage for argument output data.
+    pub slots: &'a mut [ParseStructOption<'a>],
+}
+
+impl<'a> ParseStructOptions<'a> {
+    /// Parse a commandline option.
+    ///
+    /// `arg`: the current option argument being parsed (e.g. `--foo`).
+    /// `remaining_args`: the remaining command line arguments. This slice
+    /// will be advanced forwards if the option takes a value argument.
+    fn parse(&mut self, arg: &str, remaining_args: &mut &[&str]) -> Result<(), String> {
+        let pos = self
+            .arg_to_slot
+            .iter()
+            .find_map(|&(name, pos)| if name == arg { Some(pos) } else { None })
+            .ok_or_else(|| unrecognized_argument(arg))?;
+
+        match self.slots[pos] {
+            ParseStructOption::Flag(ref mut b) => b.set_flag(arg),
+            ParseStructOption::Value(ref mut pvs) => {
+                let value = remaining_args
+                    .get(0)
+                    .ok_or_else(|| ["No value provided for option '", arg, "'.\n"].concat())?;
+                *remaining_args = &remaining_args[1..];
+                pvs.fill_slot(arg, value).map_err(|s| {
+                    ["Error parsing option '", arg, "' with value '", value, "': ", &s, "\n"]
+                        .concat()
+                })?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+fn unrecognized_argument(x: &str) -> String {
+    ["Unrecognized argument: ", x, "\n"].concat()
+}
+
 // `--` or `-` options, including a mutable reference to their value.
 #[doc(hidden)]
-pub enum CmdOption<'a> {
+pub enum ParseStructOption<'a> {
     // A flag which is set to `true` when provided.
-    Flag(&'a mut dyn Flag),
+    Flag(&'a mut dyn ParseFlag),
     // A value which is parsed from the string following the `--` argument,
     // e.g. `--foo bar`.
     Value(&'a mut dyn ParseValueSlot),
 }
 
 #[doc(hidden)]
-pub fn unrecognized_argument(x: &str) -> String {
-    ["Unrecognized argument: ", x, "\n"].concat()
+pub struct ParseStructPositionals<'a> {
+    pub positionals: &'a mut [ParseStructPositional<'a>],
+    pub last_is_repeating: bool,
 }
 
-// A sentinel value that indicates that there is no
-// output table mapping for the given flag.
-// This is used for arguments like `--verbose` and `--quiet`
-// that must be silently accepted if the `argh` user hasn't
-// specified their behavior explicitly.
-#[doc(hidden)]
-pub const OUTPUT_TABLE_NONE: usize = std::usize::MAX;
+impl<'a> ParseStructPositionals<'a> {
+    /// Parse the next positional argument.
+    ///
+    /// `arg`: the argument supplied by the user.
+    fn parse(&mut self, index: &mut usize, arg: &str) -> Result<(), EarlyExit> {
+        if *index < self.positionals.len() {
+            self.positionals[*index].parse(arg)?;
 
-/// Parse a commandline option.
-///
-/// `arg`: the current option argument being parsed (e.g. `--foo`).
-/// `remaining_args`: the remaining command line arguments. This slice
-/// will be advanced forwards if the option takes a value argument.
-/// `output_table`: the storage for output data.
-/// `arg_to_input`: a mapping from option string literals to the entry
-/// in the output table. This may contain multiple entries mapping to
-/// the same location in the table if both a short and long version
-/// of the option exist (`-z` and `--zoo`).
-#[doc(hidden)]
-pub fn parse_option(
-    arg: &str,
-    remaining_args: &mut &[&str],
-    output_table: &mut [CmdOption<'_>],
-    arg_to_output: &[(&str, usize)],
-) -> Result<(), String> {
-    let pos = arg_to_output
-        .iter()
-        .find_map(|&(name, pos)| if name == arg { Some(pos) } else { None })
-        .ok_or_else(|| unrecognized_argument(arg))?;
+            // Don't increment position if we're at the last arg
+            // *and* the last arg is repeating.
+            let skip_increment = self.last_is_repeating && *index == self.positionals.len() - 1;
 
-    if pos == OUTPUT_TABLE_NONE {
-        return Ok(());
-    }
+            if !skip_increment {
+                *index += 1;
+            }
 
-    match &mut output_table[pos] {
-        CmdOption::Flag(b) => b.set_flag(),
-        CmdOption::Value(pvs) => {
-            let value = remaining_args
-                .get(0)
-                .ok_or_else(|| ["No value provided for option '", arg, "'.\n"].concat())?;
-            *remaining_args = &remaining_args[1..];
-            pvs.fill_slot(value).map_err(|s| {
-                ["Error parsing option '", arg, "' with value '", value, "': ", &s, "\n"].concat()
-            })?;
+            Ok(())
+        } else {
+            Err(EarlyExit { output: unrecognized_arg(arg), status: Err(()) })
         }
     }
-
-    Ok(())
 }
 
-/// Parse a positional argument.
-///
-/// arg: the argument supplied by the user
-/// positional: a tuple containing slot to parse into and the name of the argument
 #[doc(hidden)]
-pub fn parse_positional(
-    arg: &str,
-    positional: &mut (&mut dyn ParseValueSlot, &'static str),
-) -> Result<(), String> {
-    let (slot, name) = positional;
-    slot.fill_slot(arg).map_err(|s| {
-        ["Error parsing positional argument '", name, "' with value '", arg, "': ", &s, "\n"]
+pub struct ParseStructPositional<'a> {
+    // The positional's name
+    pub name: &'static str,
+
+    // The function to parse the positional.
+    pub slot: &'a mut dyn ParseValueSlot,
+}
+
+impl<'a> ParseStructPositional<'a> {
+    /// Parse a positional argument.
+    ///
+    /// `arg`: the argument supplied by the user.
+    fn parse(&mut self, arg: &str) -> Result<(), EarlyExit> {
+        self.slot.fill_slot("", arg).map_err(|s| {
+            [
+                "Error parsing positional argument '",
+                self.name,
+                "' with value '",
+                arg,
+                "': ",
+                &s,
+                "\n",
+            ]
             .concat()
-    })
+            .into()
+        })
+    }
+}
+
+// A type to simplify parsing struct subcommands.
+//
+// This indirection is necessary to allow abstracting over `FromArgs` instances with different
+// generic parameters.
+#[doc(hidden)]
+pub struct ParseStructSubCommand<'a> {
+    // The subcommand commands
+    pub subcommands: &'static [&'static CommandInfo],
+
+    // The function to parse the subcommand arguments.
+    pub parse_func: &'a mut dyn FnMut(&[&str], &[&str]) -> Result<(), EarlyExit>,
+}
+
+impl<'a> ParseStructSubCommand<'a> {
+    fn parse(
+        &mut self,
+        help: bool,
+        cmd_name: &[&str],
+        arg: &str,
+        remaining_args: &[&str],
+    ) -> Result<bool, EarlyExit> {
+        for subcommand in self.subcommands {
+            if subcommand.name == arg {
+                let mut command = cmd_name.to_owned();
+                command.push(subcommand.name);
+                let prepended_help;
+                let remaining_args = if help {
+                    prepended_help = prepend_help(remaining_args);
+                    &prepended_help
+                } else {
+                    remaining_args
+                };
+
+                (self.parse_func)(&command, remaining_args)?;
+
+                return Ok(true);
+            }
+        }
+
+        return Ok(false);
+    }
 }
 
 // Prepend `help` to a list of arguments.
 // This is used to pass the `help` argument on to subcommands.
-#[doc(hidden)]
-pub fn prepend_help<'a>(args: &[&'a str]) -> Vec<&'a str> {
+fn prepend_help<'a>(args: &[&'a str]) -> Vec<&'a str> {
     [&["help"], args].concat()
 }
 
@@ -473,13 +896,7 @@ pub fn print_subcommands(commands: &[&CommandInfo]) -> String {
     out
 }
 
-#[doc(hidden)]
-pub fn expected_subcommand(commands: &[&str]) -> String {
-    ["Expected one of the following subcommands: ", &commands.join(", "), "\n"].concat()
-}
-
-#[doc(hidden)]
-pub fn unrecognized_arg(arg: &str) -> String {
+fn unrecognized_arg(arg: &str) -> String {
     ["Unrecognized argument: ", arg, "\n"].concat()
 }
 
