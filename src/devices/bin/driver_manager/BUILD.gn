@@ -80,7 +80,6 @@ source_set("lib") {
     ":driver_runner",
     ":manifest_parser",
     "//sdk/fidl/fuchsia.boot",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_llcpp",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",

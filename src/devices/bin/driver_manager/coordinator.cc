@@ -7,7 +7,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/pkg/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -73,7 +73,7 @@ constexpr char kDriverHostPath[] = "bin/driver_host";
 constexpr char kBootFirmwarePath[] = "lib/firmware";
 constexpr char kSystemPrefix[] = "/system/";
 constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
-constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
+constexpr const char* kItemsPath = fidl::DiscoverableProtocolDefaultPath<fuchsia_boot::Items>;
 
 // The driver_host doesn't just define its own __asan_default_options()
 // function because that conflicts with the build-system feature of injecting
