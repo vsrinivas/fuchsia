@@ -20,6 +20,7 @@ pub struct VirtualConsoleArgs {
     pub rounded_corners: bool,
     pub boot_animation: bool,
     pub color_scheme: ColorScheme,
+    pub keymap: String,
     pub display_rotation: DisplayRotation,
     pub font_size: f32,
     pub dpi: Vec<u32>,
@@ -47,11 +48,13 @@ impl VirtualConsoleArgs {
 
         let string_keys = vec![
             "virtcon.colorscheme",
+            "virtcon.keymap",
             "virtcon.display_rotation",
             "virtcon.font_size",
             "virtcon.dpi",
         ];
         let mut color_scheme = ColorScheme::default();
+        let mut keymap = "US_QWERTY".to_string();
         let mut display_rotation = DisplayRotation::default();
         let mut font_size = 15.0;
         let mut dpi = vec![];
@@ -60,12 +63,20 @@ impl VirtualConsoleArgs {
                 color_scheme = ColorScheme::from_str(value)?;
             }
             if let Some(value) = values[1].as_ref() {
-                display_rotation = DisplayRotation::from_str(value)?;
+                keymap = match value.as_str() {
+                    "qwerty" => "US_QWERTY",
+                    "dvorak" => "US_DVORAK",
+                    _ => value,
+                }
+                .to_string();
             }
             if let Some(value) = values[2].as_ref() {
-                font_size = value.parse::<f32>()?.clamp(MIN_FONT_SIZE, MAX_FONT_SIZE);
+                display_rotation = DisplayRotation::from_str(value)?;
             }
             if let Some(value) = values[3].as_ref() {
+                font_size = value.parse::<f32>()?.clamp(MIN_FONT_SIZE, MAX_FONT_SIZE);
+            }
+            if let Some(value) = values[4].as_ref() {
                 let result: Result<Vec<_>, _> =
                     value.split(",").map(|x| x.parse::<u32>()).collect();
                 dpi = result?;
@@ -78,6 +89,7 @@ impl VirtualConsoleArgs {
             rounded_corners,
             boot_animation,
             color_scheme,
+            keymap,
             display_rotation,
             font_size,
             dpi,
@@ -232,6 +244,32 @@ mod tests {
         let proxy = serve_bootargs(vars)?;
         let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
         assert_eq!(args.color_scheme, ColorScheme::default());
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn check_keymap() -> Result<(), Error> {
+        let vars: HashMap<String, String> = [("virtcon.keymap", "US_DVORAK")]
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
+        let proxy = serve_bootargs(vars)?;
+        let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
+        assert_eq!(args.keymap, "US_DVORAK");
+
+        let vars: HashMap<String, String> = [("virtcon.keymap", "dvorak")]
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
+        let proxy = serve_bootargs(vars)?;
+        let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
+        assert_eq!(args.keymap, "US_DVORAK");
+
+        let vars: HashMap<String, String> = HashMap::new();
+        let proxy = serve_bootargs(vars)?;
+        let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
+        assert_eq!(args.keymap, "US_QWERTY");
 
         Ok(())
     }

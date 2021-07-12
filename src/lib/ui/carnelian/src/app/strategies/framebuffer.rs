@@ -25,17 +25,19 @@ use fidl_fuchsia_input_report as hid_input_report;
 use fidl_fuchsia_ui_scenic::ScenicProxy;
 use fuchsia_async::{self as fasync};
 use futures::{channel::mpsc::UnboundedSender, TryFutureExt};
+use keymaps::Keymap;
 use std::collections::HashMap;
 
-pub(crate) struct FrameBufferAppStrategy {
+pub(crate) struct FrameBufferAppStrategy<'a> {
     pub frame_buffer: FrameBufferPtr,
     pub display_rotation: DisplayRotation,
+    pub keymap: &'a Keymap<'a>,
     pub view_key: ViewKey,
-    pub input_report_handlers: HashMap<DeviceId, InputReportHandler>,
+    pub input_report_handlers: HashMap<DeviceId, InputReportHandler<'a>>,
 }
 
 #[async_trait(?Send)]
-impl AppStrategy for FrameBufferAppStrategy {
+impl<'a> AppStrategy for FrameBufferAppStrategy<'a> {
     async fn create_view_strategy(
         &self,
         key: ViewKey,
@@ -126,7 +128,12 @@ impl AppStrategy for FrameBufferAppStrategy {
         let frame_buffer_size = self.get_frame_buffer_size().expect("frame_buffer_size");
         self.input_report_handlers.insert(
             device_id.clone(),
-            InputReportHandler::new(frame_buffer_size, self.display_rotation, device_descriptor),
+            InputReportHandler::new(
+                frame_buffer_size,
+                self.display_rotation,
+                device_descriptor,
+                self.keymap,
+            ),
         );
     }
 }

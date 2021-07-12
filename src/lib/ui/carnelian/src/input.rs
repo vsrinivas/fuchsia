@@ -17,7 +17,7 @@ use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon::{self as zx, Duration};
 use futures::{TryFutureExt, TryStreamExt};
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
-use keymaps::usages::input3_key_to_hid_usage;
+use keymaps::{usages::input3_key_to_hid_usage, Keymap};
 use std::{
     collections::{HashMap, HashSet},
     fs,
@@ -509,11 +509,11 @@ impl TouchScale {
     }
 }
 
-#[derive(Default)]
-pub(crate) struct InputReportHandler {
+pub(crate) struct InputReportHandler<'a> {
     view_size: IntSize,
     display_rotation: DisplayRotation,
     touch_scale: Option<TouchScale>,
+    keymap: &'a Keymap<'a>,
     cursor_position: IntPoint,
     pressed_mouse_buttons: HashSet<u8>,
     pressed_keys: HashSet<fidl_fuchsia_input::Key>,
@@ -521,12 +521,13 @@ pub(crate) struct InputReportHandler {
     pressed_consumer_control_buttons: HashSet<hid_input_report::ConsumerControlButton>,
 }
 
-impl InputReportHandler {
+impl<'a> InputReportHandler<'a> {
     pub fn new(
         size: IntSize,
         display_rotation: DisplayRotation,
         device_descriptor: &hid_input_report::DeviceDescriptor,
-    ) -> InputReportHandler {
+        keymap: &'a Keymap<'a>,
+    ) -> Self {
         let touch_scale = device_descriptor
             .touch
             .as_ref()
@@ -540,21 +541,32 @@ impl InputReportHandler {
                     Some(TouchScale::new(
                         &size,
                         &contact_input_descriptor.position_x.as_ref().expect("position_x").range,
-                        &contact_input_descriptor.position_y.as_ref().expect("position_x").range,
+                        &contact_input_descriptor.position_y.as_ref().expect("position_y").range,
                     ))
                 } else {
                     None
                 }
             });
-        Self::new_with_scale(size, display_rotation, touch_scale)
+        Self::new_with_scale(size, display_rotation, touch_scale, keymap)
     }
 
     fn new_with_scale(
         size: IntSize,
         display_rotation: DisplayRotation,
         touch_scale: Option<TouchScale>,
+        keymap: &'a Keymap<'a>,
     ) -> Self {
-        Self { view_size: size, display_rotation, touch_scale, ..InputReportHandler::default() }
+        Self {
+            view_size: size,
+            display_rotation,
+            keymap,
+            touch_scale,
+            cursor_position: IntPoint::zero(),
+            pressed_mouse_buttons: HashSet::new(),
+            pressed_keys: HashSet::new(),
+            raw_contacts: HashSet::new(),
+            pressed_consumer_control_buttons: HashSet::new(),
+        }
     }
 
     fn handle_mouse_input_report(
@@ -651,9 +663,10 @@ impl InputReportHandler {
             phase: keyboard::Phase,
             key: fidl_fuchsia_input::Key,
             modifiers: &Modifiers,
+            keymap: &Keymap<'_>,
         ) -> Event {
             let hid_usage = input3_key_to_hid_usage(key);
-            let code_point = keymaps::US_QWERTY.hid_usage_to_code_point_for_mods(
+            let code_point = keymap.hid_usage_to_code_point_for_mods(
                 hid_usage,
                 modifiers.shift,
                 modifiers.caps_lock,
@@ -677,7 +690,14 @@ impl InputReportHandler {
         let modifiers = Modifiers::from_pressed_keys_3(&pressed_keys);
 
         let newly_pressed = pressed_keys.difference(&self.pressed_keys).map(|key| {
-            create_keyboard_event(event_time, device_id, keyboard::Phase::Pressed, *key, &modifiers)
+            create_keyboard_event(
+                event_time,
+                device_id,
+                keyboard::Phase::Pressed,
+                *key,
+                &modifiers,
+                self.keymap,
+            )
         });
 
         let released = self.pressed_keys.difference(&pressed_keys).map(|key| {
@@ -687,6 +707,7 @@ impl InputReportHandler {
                 keyboard::Phase::Released,
                 *key,
                 &modifiers,
+                self.keymap,
             )
         });
 
@@ -874,7 +895,7 @@ mod input_report_tests {
     use super::*;
     use itertools::assert_equal;
 
-    fn make_input_handler() -> InputReportHandler {
+    fn make_input_handler() -> InputReportHandler<'static> {
         let test_size = size2(1024, 768);
         let touch_scale = TouchScale {
             target_size: test_size,
@@ -883,7 +904,12 @@ mod input_report_tests {
             y: fidl_fuchsia_input_report::Range { min: 0, max: 4095 },
             y_span: 4095.0,
         };
-        InputReportHandler::new_with_scale(test_size, DisplayRotation::Deg0, Some(touch_scale))
+        InputReportHandler::new_with_scale(
+            test_size,
+            DisplayRotation::Deg0,
+            Some(touch_scale),
+            &keymaps::US_QWERTY,
+        )
     }
 
     #[test]

@@ -177,6 +177,10 @@ impl AppAssistant for VirtualConsoleAppAssistant {
         self.session_manager.bind(&client, channel);
         Ok(())
     }
+
+    fn get_keymap_name(&self) -> Option<String> {
+        Some(self.args.keymap.clone())
+    }
 }
 
 #[cfg(test)]

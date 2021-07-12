@@ -31,6 +31,7 @@ use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
     StreamExt, TryFutureExt,
 };
+use keymaps::select_keymap;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 // This trait exists to keep the scenic implementation and the software
@@ -150,9 +151,12 @@ pub(crate) async fn create_app_strategy(
 
         let frame_buffer_ptr = Rc::new(RefCell::new(fb));
 
+        let keymap_name = assistant.get_keymap_name();
+
         let strat = FrameBufferAppStrategy {
             frame_buffer: frame_buffer_ptr.clone(),
             display_rotation: assistant.get_display_rotation(),
+            keymap: select_keymap(&keymap_name),
             view_key: next_view_key,
             input_report_handlers: HashMap::new(),
         };

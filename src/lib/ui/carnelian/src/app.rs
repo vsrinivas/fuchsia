@@ -147,6 +147,12 @@ pub trait AppAssistant {
     fn get_display_rotation(&self) -> DisplayRotation {
         DisplayRotation::Deg0
     }
+
+    /// Application option to select keymap. If named keymap is not found
+    /// the fallback is US QWERTY.
+    fn get_keymap_name(&self) -> Option<String> {
+        None
+    }
 }
 
 /// Reference to an application assistant.
