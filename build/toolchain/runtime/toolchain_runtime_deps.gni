@@ -20,7 +20,7 @@ import("//build/toolchain/zircon/clang.gni")
 # Type: list(scope)
 #
 # * target
-#   - Required: --target tuple a la `${toolchain.target_tuple}`.
+#   - Required: --target tuple a la `${current_target_tuple}`.
 #   - Type: string
 #
 # * cflags
@@ -288,17 +288,18 @@ template("toolchain_runtime_deps") {
         config_flags = {
           forward_variables_from(config, toolchain_spec.flag_vars)
         }
-        if (config_flags == match_flags && config.target + [ clang_target ] -
-                                           [ clang_target ] != config.target) {
+        if (config_flags == match_flags &&
+            config.target + [ current_target_tuple ] -
+            [ current_target_tuple ] != config.target) {
           assert(match == false,
                  "${toolchain_spec.runtime_file} has multiple matches for" +
-                     " --target=${clang_target} + $invoker")
+                     " --target=${current_target_tuple} + $invoker")
           match = config
         }
       }
       assert(match != false,
              "${toolchain_spec.runtime_file} has no match for" +
-                 " --target=${clang_target} + $invoker")
+                 " --target=${current_target_tuple} + $invoker")
 
       metadata = {
         binaries = []

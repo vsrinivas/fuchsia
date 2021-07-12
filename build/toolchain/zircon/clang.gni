@@ -54,7 +54,7 @@ clang_version_description = ""
 # Type: list(scope)
 #
 #   target
-#     Required: --target tuple a la ${toolchain.target_tuple}.
+#     Required: --target tuple a la ${current_target_tuple}
 #     Type: string
 #
 #   cflags

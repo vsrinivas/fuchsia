@@ -76,7 +76,7 @@ config("compiler_sysroot") {
 }
 
 config("compiler_target") {
-  cflags = [ "--target=$clang_target" ]
+  cflags = [ "--target=$current_target_tuple" ]
   asmflags = cflags
   ldflags = cflags
 }

@@ -27,13 +27,13 @@ copy("clang-runtime-libs") {
     "libc++abi.so.1.0",
     "libunwind.so.1.0",
   ]
-  clang_target = "${arch}-${vendor}-${sys}"
+  current_target_tuple = "${arch}-${vendor}-${sys}"
   foreach(runtime, runtimes) {
     runtime_path = exec_script(
             "/usr/bin/env",
             [
               rebase_path("${clang_base_path}/bin/clang++", "", root_build_dir),
-              "--target=${clang_target}",
+              "--target=${current_target_tuple}",
               "-print-file-name=${runtime}",
             ],
             "trim string")

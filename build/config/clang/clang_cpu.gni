@@ -9,5 +9,5 @@ if (current_cpu == "arm64") {
 } else if (current_cpu == "wasm32") {
   clang_cpu = "wasm32"
 } else {
-  assert(false, "CPU not supported")
+  assert(false, "CPU not supported: ${current_cpu}")
 }

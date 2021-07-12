@@ -283,8 +283,7 @@ template("zircon_toolchain") {
                 [
                   exec_script(
                       "/usr/bin/env",
-                      clangxx_args +
-                          [ "-print-file-name=include/${clang_target}/c++/v1" ],
+                      clangxx_args + [ "-print-file-name=include/${current_target_tuple}/c++/v1" ],
                       "trim string",
                       clangxx_exec_inputs),
                   exec_script(
@@ -319,8 +318,7 @@ template("zircon_toolchain") {
                 [
                   exec_script(
                       "/usr/bin/env",
-                      clangxx_args +
-                          [ "-print-file-name=include/${clang_target}/c++/v1" ],
+                      clangxx_args + [ "-print-file-name=include/${current_target_tuple}/c++/v1" ],
                       "trim string",
                       clangxx_exec_inputs),
                   exec_script(

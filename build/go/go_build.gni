@@ -199,7 +199,7 @@ template("go_build") {
       "--sysroot",
       rebase_path(sysroot, root_build_dir),
       "--target",
-      clang_target,
+      current_target_tuple,
       "--golibs-dir",
       rebase_path("//third_party/golibs", root_build_dir),
     ]

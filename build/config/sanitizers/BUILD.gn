@@ -37,7 +37,7 @@ variant("asan") {
             exec_script("/usr/bin/env",
                         [
                           "${clang_prefix}/clang",
-                          "--target=${clang_target}",
+                          "--target=${current_target_tuple}",
                           "-print-file-name=libclang_rt.${asan}${extension}",
                         ],
                         "trim string"),

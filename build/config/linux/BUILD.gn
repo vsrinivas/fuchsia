@@ -62,7 +62,7 @@ config("sysroot") {
 }
 
 config("target") {
-  cflags = [ "--target=$clang_target" ]
+  cflags = [ "--target=$current_target_tuple" ]
   asmflags = cflags
   ldflags = cflags
 

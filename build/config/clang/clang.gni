@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang_cpu.gni")
+import("//build/config/current_target_tuple.gni")
 
 default_clang_prefix =
     rebase_path("//prebuilt/third_party/clang/${host_platform}/bin",
@@ -21,27 +22,13 @@ declare_args() {
   use_cxx_relative_vtables = true
 }
 
-if (is_fuchsia) {
-  clang_target = "${clang_cpu}-unknown-fuchsia"
-} else if (is_linux) {
-  clang_target = "${clang_cpu}-unknown-linux-gnu"
-} else if (is_mac) {
-  clang_target = "${clang_cpu}-apple-darwin"
-} else if (current_cpu == "wasm32" && current_os == "unknown") {
-  clang_target = "${clang_cpu}-unknown-unknown"
-} else if (current_os == "win") {
-  clang_target = "${clang_cpu}-pc-windows-msvc"
-} else {
-  assert(false, "OS not supported")
-}
-
 # TODO(phosek): this is inefficient, rather this should come from a JSON file.
 # Relative path makes command-lines remote-portable.
 clang_resource_dir =
     rebase_path(
         exec_script(rebase_path("$clang_prefix/clang", "", root_build_dir),
                     [
-                      "--target=$clang_target",
+                      "--target=$current_target_tuple",
                       "-print-resource-dir",
                     ],
                     "trim string",
@@ -54,7 +41,7 @@ if (is_fuchsia) {
   clang_libunwind =
       exec_script(rebase_path("$clang_prefix/clang++", "", root_build_dir),
                   [
-                    "--target=$clang_target",
+                    "--target=$current_target_tuple",
                     "-print-file-name=libunwind.so",
                   ],
                   "trim string",
