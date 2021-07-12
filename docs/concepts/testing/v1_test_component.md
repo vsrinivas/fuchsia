@@ -2,6 +2,9 @@
 
 <<../components/_v1_banner.md>>
 
+Note: see [Testing with Components][testing-v2] for modern (`.cml`) component
+testing.
+
 ## Introduction
 
 Test components are [components][glossary.component] that implement a test.
@@ -196,4 +199,5 @@ allowlisted as shown below:
 [executing-tests]: /docs/development/testing/run_fuchsia_tests.md
 [run-test-component]: /docs/development/testing/run_fuchsia_tests.md
 [test-packages]: /docs/development/components/build.md#test-packages
+[testing-v2]: /docs/concepts/testing/v2/README.md
 [unit-tests]: /docs/development/components/build.md#unit-tests
