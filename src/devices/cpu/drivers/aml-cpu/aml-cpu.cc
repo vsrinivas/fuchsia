@@ -183,6 +183,10 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     // fastest.
     std::sort(pd_op_points.begin(), pd_op_points.end(),
               [](const operating_point_t& a, const operating_point_t& b) {
+                // Use voltage as a secondary sorting key.
+                if (a.freq_hz == b.freq_hz) {
+                  return a.volt_uv > b.volt_uv;
+                }
                 return a.freq_hz > b.freq_hz;
               });
 
@@ -255,8 +259,9 @@ zx_status_t AmlCpu::DdkSetPerformanceState(uint32_t requested_state, uint32_t* o
   }
 
   zx_status_t st;
-  if (target_state.freq_hz > initial_state.freq_hz) {
-    // If we're increasing the frequency, we need to increase the voltage first.
+  if (target_state.volt_uv > initial_state.volt_uv) {
+    // If we're increasing the voltage we need to do it before setting the
+    // frequency.
     uint32_t actual_voltage;
     st = pwr_.RequestVoltage(target_state.volt_uv, &actual_voltage);
     if (st != ZX_OK || actual_voltage != target_state.volt_uv) {
@@ -282,10 +287,9 @@ zx_status_t AmlCpu::DdkSetPerformanceState(uint32_t requested_state, uint32_t* o
     return st;
   }
 
-  // If we're decreasing the frequency, then we set the voltage after the frequency has
-  // been reduced.
-  if (target_state.freq_hz < initial_state.freq_hz) {
-    // If we're increasing the frequency, we need to increase the voltage first.
+  // If we're decreasing the voltage, then we do it after the frequency has been
+  // reduced to avoid undervolt conditions.
+  if (target_state.volt_uv < initial_state.volt_uv) {
     uint32_t actual_voltage;
     st = pwr_.RequestVoltage(target_state.volt_uv, &actual_voltage);
     if (st != ZX_OK || actual_voltage != target_state.volt_uv) {

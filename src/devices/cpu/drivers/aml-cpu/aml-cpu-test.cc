@@ -6,6 +6,8 @@
 
 #include <fuchsia/hardware/clock/cpp/banjo-mock.h>
 #include <fuchsia/hardware/power/cpp/banjo-mock.h>
+#include <lib/device-protocol/pdev.h>
+#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fake_ddk/fidl-helper.h>
 
 #include <memory>
@@ -13,8 +15,11 @@
 
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
+#include <fake-mmio-reg/fake-mmio-reg.h>
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
+
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 
 namespace amlogic_cpu {
 
@@ -23,6 +28,26 @@ using CpuCtrlClient = fidl::WireSyncClient<fuchsia_cpuctrl::Device>;
 using inspect::InspectTestHelper;
 
 #define MHZ(x) ((x)*1000000)
+
+constexpr uint32_t kPdArmA53 = 1;
+
+constexpr amlogic_cpu::perf_domain_t kPerfDomains[] = {
+    {.id = kPdArmA53, .core_count = 4, .relative_performance = 255, .name = "S905D2 ARM A53"},
+};
+
+constexpr amlogic_cpu::operating_point_t kOperatingPointsMetadata[] = {
+    {.freq_hz = 100'000'000, .volt_uv = 731'000, .pd_id = kPdArmA53},
+    {.freq_hz = 250'000'000, .volt_uv = 731'000, .pd_id = kPdArmA53},
+    {.freq_hz = 500'000'000, .volt_uv = 731'000, .pd_id = kPdArmA53},
+    {.freq_hz = 667'000'000, .volt_uv = 731'000, .pd_id = kPdArmA53},
+    {.freq_hz = 1'000'000'000, .volt_uv = 731'000, .pd_id = kPdArmA53},
+    {.freq_hz = 1'200'000'000, .volt_uv = 731'000, .pd_id = kPdArmA53},
+    {.freq_hz = 1'398'000'000, .volt_uv = 761'000, .pd_id = kPdArmA53},
+    {.freq_hz = 1'512'000'000, .volt_uv = 791'000, .pd_id = kPdArmA53},
+    {.freq_hz = 1'608'000'000, .volt_uv = 831'000, .pd_id = kPdArmA53},
+    {.freq_hz = 1'704'000'000, .volt_uv = 861'000, .pd_id = kPdArmA53},
+    {.freq_hz = 1'896'000'000, .volt_uv = 1'022'000, .pd_id = kPdArmA53},
+};
 
 const std::vector<operating_point_t> kTestOperatingPoints = {
     {.freq_hz = MHZ(10), .volt_uv = 1500, .pd_id = 0},
@@ -38,6 +63,193 @@ const std::vector<operating_point_t> kTestOperatingPoints = {
 };
 
 const uint32_t kTestCoreCount = 1;
+
+class FakeMmio {
+ public:
+  FakeMmio() {
+    regs_ = std::make_unique<ddk_fake::FakeMmioReg[]>(kRegCount);
+    mmio_ = std::make_unique<ddk_fake::FakeMmioRegRegion>(regs_.get(), sizeof(uint32_t), kRegCount);
+    (*mmio_)[kCpuVersionOffset].SetReadCallback([]() { return kCpuVersion; });
+  }
+
+  fake_pdev::FakePDev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
+
+  ddk::MmioBuffer mmio() { return ddk::MmioBuffer(mmio_->GetMmioBuffer()); }
+
+ private:
+  static constexpr size_t kCpuVersionOffset = 0x220;
+  static constexpr size_t kRegCount = kCpuVersionOffset / sizeof(uint32_t) + 1;
+
+  constexpr static uint64_t kCpuVersion = 43;
+
+  std::unique_ptr<ddk_fake::FakeMmioReg[]> regs_;
+  std::unique_ptr<ddk_fake::FakeMmioRegRegion> mmio_;
+};
+
+class Bind : public fake_ddk::Bind {
+ public:
+  Bind() : fake_ddk::Bind() {}
+
+  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
+                        zx_device_t** out) override {
+    if (parent != fake_ddk::kFakeParent || !args || args->proto_id != ZX_PROTOCOL_CPU_CTRL ||
+        args->ctx == nullptr) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    devices_.push_back(std::unique_ptr<AmlCpu>(static_cast<AmlCpu*>(args->ctx)));
+    return ZX_OK;
+  }
+
+  const std::vector<std::unique_ptr<AmlCpu>>& get_devices() { return devices_; }
+
+  size_t num_devices_added() const { return devices_.size(); }
+
+ private:
+  std::vector<std::unique_ptr<AmlCpu>> devices_;
+};
+
+class FakePowerDevice : public ddk::PowerProtocol<FakePowerDevice, ddk::base_protocol> {
+ public:
+  FakePowerDevice() : proto_({&power_protocol_ops_, this}), voltage_(0) {}
+
+  zx_status_t PowerRegisterPowerDomain(uint32_t min_needed_voltage,
+                                       uint32_t max_supported_voltage) {
+    return ZX_OK;
+  }
+  zx_status_t PowerUnregisterPowerDomain() { return ZX_OK; }
+  zx_status_t PowerGetPowerDomainStatus(power_domain_status_t* out_status) { return ZX_OK; }
+  zx_status_t PowerGetSupportedVoltageRange(uint32_t* min_voltage, uint32_t* max_voltage) {
+    return ZX_OK;
+  }
+
+  zx_status_t PowerRequestVoltage(uint32_t voltage, uint32_t* actual_voltage) {
+    voltage_ = voltage;
+    *actual_voltage = voltage;
+    return ZX_OK;
+  }
+
+  zx_status_t PowerGetCurrentVoltage(uint32_t index, uint32_t* current_voltage) {
+    *current_voltage = voltage_;
+    return ZX_OK;
+  }
+
+  zx_status_t PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value) { return ZX_OK; }
+  zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value) { return ZX_OK; }
+
+  const power_protocol_t* proto() const { return &proto_; }
+
+ private:
+  power_protocol_t proto_;
+  uint32_t voltage_;
+};
+
+class FakeClockDevice : public ddk::ClockProtocol<FakeClockDevice, ddk::base_protocol> {
+ public:
+  FakeClockDevice() : proto_({&clock_protocol_ops_, this}) {}
+
+  zx_status_t ClockEnable() { return ZX_OK; }
+  zx_status_t ClockDisable() { return ZX_OK; }
+  zx_status_t ClockIsEnabled(bool* out_enabled) { return ZX_OK; }
+
+  zx_status_t ClockSetRate(uint64_t hz) { return ZX_OK; }
+  zx_status_t ClockQuerySupportedRate(uint64_t max_rate, uint64_t* out_max_supported_rate) {
+    return ZX_OK;
+  }
+  zx_status_t ClockGetRate(uint64_t* out_current_rate) { return ZX_OK; }
+
+  zx_status_t ClockSetInput(uint32_t idx) { return ZX_OK; }
+  zx_status_t ClockGetNumInputs(uint32_t* out) { return ZX_OK; }
+  zx_status_t ClockGetInput(uint32_t* out) { return ZX_OK; }
+
+  const clock_protocol_t* proto() const { return &proto_; }
+
+ private:
+  clock_protocol_t proto_;
+};
+
+class AmlCpuBindingTest : public zxtest::Test {
+ public:
+  AmlCpuBindingTest() {
+    pdev_.set_mmio(0, mmio_.mmio_info());
+
+    static constexpr size_t kNumBindFragments = 5;
+
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumBindFragments],
+                                                  kNumBindFragments);
+    fragments[0] = pdev_.fragment();
+
+    fragments[1].name = "power-01";
+    fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_POWER, *reinterpret_cast<const fake_ddk::Protocol*>(pwr_.proto())});
+
+    fragments[2].name = "clock-pll-div16-01";
+    fragments[2].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_CLOCK, *reinterpret_cast<const fake_ddk::Protocol*>(clk0_.proto())});
+
+    fragments[3].name = "clock-cpu-div16-01";
+    fragments[3].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_CLOCK, *reinterpret_cast<const fake_ddk::Protocol*>(clk1_.proto())});
+
+    fragments[4].name = "clock-cpu-scaler-01";
+    fragments[4].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_CLOCK, *reinterpret_cast<const fake_ddk::Protocol*>(clk2_.proto())});
+
+    ddk_.SetFragments(std::move(fragments));
+
+    ddk_.SetMetadata(DEVICE_METADATA_AML_PERF_DOMAINS, &kPerfDomains, sizeof(kPerfDomains));
+  }
+
+  zx_device_t* parent() { return fake_ddk::FakeParent(); }
+
+ protected:
+  Bind ddk_;
+  fake_pdev::FakePDev pdev_;
+  FakeMmio mmio_;
+
+  FakePowerDevice pwr_;
+  FakeClockDevice clk0_;
+  FakeClockDevice clk1_;
+  FakeClockDevice clk2_;
+};
+
+TEST_F(AmlCpuBindingTest, TrivialBinding) {
+  ddk_.SetMetadata(DEVICE_METADATA_AML_OP_POINTS, &kOperatingPointsMetadata,
+                   sizeof(kOperatingPointsMetadata));
+
+  ASSERT_OK(AmlCpu::Create(nullptr, parent()));
+  ASSERT_EQ(ddk_.num_devices_added(), 1);
+}
+
+TEST_F(AmlCpuBindingTest, UnorderedOperatingPoints) {
+  // AML CPU's bind hook expects that all operating points are strictly
+  // ordered and it should handle the situation where there are duplicate
+  // frequencies.
+  constexpr amlogic_cpu::operating_point_t kOperatingPointsMetadata[] = {
+      {.freq_hz = MHZ(1), .volt_uv = 200'000, .pd_id = kPdArmA53},
+      {.freq_hz = MHZ(1), .volt_uv = 100'000, .pd_id = kPdArmA53},
+      {.freq_hz = MHZ(1), .volt_uv = 300'000, .pd_id = kPdArmA53},
+  };
+
+  ddk_.SetMetadata(DEVICE_METADATA_AML_OP_POINTS, &kOperatingPointsMetadata,
+                   sizeof(kOperatingPointsMetadata));
+
+  ASSERT_OK(AmlCpu::Create(nullptr, parent()));
+  ASSERT_EQ(ddk_.num_devices_added(), 1);
+
+  const auto& devices = ddk_.get_devices();
+  ASSERT_EQ(devices.size(), 1);
+
+  const auto& dev = devices[0];
+
+  uint32_t out_state;
+  EXPECT_OK(dev->DdkSetPerformanceState(0, &out_state));
+  EXPECT_EQ(out_state, 0);
+
+  uint32_t voltage = 0;
+  EXPECT_OK(pwr_.PowerGetCurrentVoltage(0, &voltage));
+  EXPECT_EQ(voltage, 300'000);
+}
 
 class AmlCpuTest : public AmlCpu {
  public:
@@ -207,3 +419,11 @@ TEST_F(AmlCpuTestFixture, TestGetLogicalCoreCount) {
 }
 
 }  // namespace amlogic_cpu
+
+// Redefine PDevMakeMmioBufferWeak per the recommendation in pdev.h.
+zx_status_t ddk::PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio,
+                                        std::optional<MmioBuffer>* mmio, uint32_t cache_policy) {
+  auto* test_harness = reinterpret_cast<amlogic_cpu::FakeMmio*>(pdev_mmio.offset);
+  mmio->emplace(test_harness->mmio());
+  return ZX_OK;
+}
