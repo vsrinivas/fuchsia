@@ -5,7 +5,7 @@
 import("//build/cpp/sdk_shared_library.gni")
 import("//build/cpp/sdk_source_set.gni")
 import("//build/cpp/sdk_static_library.gni")
-import("//build/unification/global_variables.gni")
+import("//build/toolchain/toolchain_environment.gni")
 
 # Build a zircon-specific library, possibly in several ways.
 #
@@ -130,7 +130,7 @@ template("zx_library") {
 
     if (defined(invoker.shared) && invoker.shared) {
       kernel_library_target_type = "shared_library"
-    } else if (toolchain.environment == "kernel") {
+    } else if (toolchain_environment == "kernel") {
       # In the kernel proper, zx_library() is always a source_set().
       # Everything goes into the kernel and anything unused gets linker GC.
       kernel_library_target_type = "source_set"

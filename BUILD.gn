@@ -230,7 +230,7 @@ build_api_module("args") {
 #     Type: string
 #
 #   environment
-#     Required: The ${toolchain.environment} name of what specific
+#     Required: The ${toolchain_environment} name of what specific
 #     execution this was built for, e.g. "user", "host", "guest".  The
 #     tuple of ($cpu, $os, $environment) should indicate what hardware and
 #     software environment this binary is compatible with.

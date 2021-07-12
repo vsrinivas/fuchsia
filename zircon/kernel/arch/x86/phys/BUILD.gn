@@ -6,6 +6,7 @@
 
 import("//build/config/current_target_tuple.gni")
 import("//build/testing/zbi_test.gni")
+import("//build/toolchain/toolchain_environment.gni")
 import("//build/toolchain/zircon/clang.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//zircon/kernel/phys/phys_executable.gni")
@@ -37,7 +38,7 @@ if (current_toolchain == default_toolchain) {
     ]
   }
 } else {
-  if (toolchain.environment == "kernel.phys") {
+  if (toolchain_environment == "kernel.phys") {
     # All the code gets built here in the phys environment.
 
     source_set("phys") {
@@ -50,7 +51,7 @@ if (current_toolchain == default_toolchain) {
         "//zircon/kernel/phys:arch-header",
       ]
     }
-  } else if (toolchain.environment == "kernel.phys32") {
+  } else if (toolchain_environment == "kernel.phys32") {
     # ... or here in the other phys environment.
 
     config("phys32_config") {
@@ -272,7 +273,7 @@ if (current_toolchain == default_toolchain) {
       "address-space.cc",
       "address-space.h",
     ]
-    if (toolchain.environment == "kernel.phys32") {
+    if (toolchain_environment == "kernel.phys32") {
       sources += [ "paging-32.cc" ]
     } else {
       sources += [ "paging-64.cc" ]

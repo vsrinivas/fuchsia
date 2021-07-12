@@ -19,7 +19,7 @@ zbi_executable("zbi-boot-shim") {
   deps = [ ":noop-boot-shim" ]
 }
 
-if (toolchain.environment == "kernel.phys") {
+if (toolchain_environment == "kernel.phys") {
   source_set("noop-boot-shim") {
     sources = [ "zbi-boot-shim.cc" ]
     include_dirs = [ "//zircon/kernel/phys" ]

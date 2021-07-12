@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/toolchain/toolchain_environment.gni")
+import("//build/unification/zx_library.gni")
 
 zx_library("pretty") {
   sdk = "static"
@@ -19,7 +20,7 @@ zx_library("pretty") {
     "sizes.cc",
   ]
   public_deps = [ "//zircon/system/ulib/zircon-internal:headers" ]
-  if (is_kernel && toolchain.environment != "kernel") {
+  if (is_kernel && toolchain_environment != "kernel") {
     deps = [ "//zircon/kernel/lib/libc" ]
   }
 }

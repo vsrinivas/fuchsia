@@ -4,10 +4,10 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/toolchain/toolchain_environment.gni")
 
 source_set("testing") {
-  testonly = toolchain.environment != "kernel"
+  testonly = toolchain_environment != "kernel"
 
   sources = [
     "fake-cpuid.cc",

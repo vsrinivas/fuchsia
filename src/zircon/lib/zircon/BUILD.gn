@@ -4,12 +4,12 @@
 
 import("//build/sdk/sdk_noop_atom.gni")
 import("//build/toolchain/elfabi_shared_library.gni")
-import("//build/unification/global_variables.gni")
+import("//build/toolchain/toolchain_environment.gni")
 
 # The vDSO ABI is provided at link time by a stub.  The actual runtime image
 # comes from the kernel and is not part of the build or SDK for userland at
 # all.  The kernel's internal build of the vDSO verifies that the ABI matches.
-if (is_fuchsia && toolchain.base_environment != "kernel") {
+if (is_fuchsia && toolchain_base_environment != "kernel") {
   elfabi_shared_library("zircon") {
     # TODO(mcgrathr): The ABIs are identical across machines, but the .tbe file
     # insists on embedding "Arch:".  llvm-elfabi should get features to allow

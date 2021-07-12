@@ -10,7 +10,7 @@ if (current_toolchain != default_toolchain) {
   import("//zircon/kernel/phys/qemu.gni")
   import("//zircon/kernel/phys/zbi_executable.gni")
 
-  assert(toolchain.environment == "kernel.phys" || in_qemu_environment,
+  assert(toolchain_environment == "kernel.phys" || in_qemu_environment,
          "phys/test/BUILD.gn evaluated in $current_toolchain")
 
   # This provides a PhysMain function appropriate for zbi_test() targets.

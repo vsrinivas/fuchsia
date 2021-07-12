@@ -56,7 +56,7 @@ zx_library("boot-options") {
     ]
     public_deps += [ "//zircon/kernel/lib/ktl:headers" ]
 
-    if (toolchain.environment == "kernel") {
+    if (toolchain_environment == "kernel") {
       sources += [ "console.cc" ]
       deps += [ "$zx/kernel/lib/console" ]
     }

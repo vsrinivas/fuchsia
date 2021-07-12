@@ -5,12 +5,13 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/images/args.gni")
+import("//build/toolchain/toolchain_environment.gni")
+import("//build/unification/zx_library.gni")
 import("//build/zircon/c_utils.gni")
-import("//build/zircon/migrated_targets.gni")
 
 # The boot shims need to be compiled in the special environment for running
 # in physical memory with the MMU disabled.
-if (toolchain.environment == "physmem") {
+if (toolchain_environment == "physmem") {
   source_set("common") {
     visibility = [ ":*" ]
     sources = [
@@ -37,7 +38,7 @@ if (toolchain.environment == "physmem") {
 template("boot_shim") {
   board = target_name
 
-  if (toolchain.environment == "physmem") {
+  if (toolchain_environment == "physmem") {
     shim_name = "${board}-boot-shim"
 
     executable(shim_name) {

@@ -6,8 +6,8 @@
 
 import("//build/config/zircon/standard.gni")
 import("//build/testing/zbi_test_success.gni")
+import("//build/toolchain/toolchain_environment.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
-import("//build/unification/global_variables.gni")
 
 import("//build/zircon/c_utils.gni")
 
@@ -51,7 +51,7 @@ if (current_toolchain == default_toolchain) {
   }
 }
 
-if (toolchain.environment == "userboot") {
+if (toolchain_environment == "userboot") {
   # Everything in userboot gets compiled this way.
   config("userboot_config") {
     configs = [

@@ -7,8 +7,8 @@
 import("//build/zircon/c_utils.gni")
 import("//build/zircon/migrated_targets.gni")
 
-_is_phys = toolchain.environment == "kernel.phys" ||
-           toolchain.environment == "kernel.phys32"
+_is_phys = toolchain_environment == "kernel.phys" ||
+           toolchain_environment == "kernel.phys32"
 
 # These both work together and must be presented in this order (for BFD ld).
 _phys_linker_scripts = [

@@ -4,8 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/toolchain/toolchain_environment.gni")
 import("//build/toolchain/variant.gni")
-import("//build/unification/global_variables.gni")
 
 # This has to be variant() rather than config() to be used in the toolchain
 # configs list.
@@ -13,7 +13,7 @@ variant("strict-align") {
   cflags = [ "-mstrict-align" ]
 }
 
-if (toolchain.environment == "kernel.phys") {
+if (toolchain_environment == "kernel.phys") {
   source_set("address-space") {
     sources = [ "address-space.cc" ]
     include_dirs = [ "//." ]

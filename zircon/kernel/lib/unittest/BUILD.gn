@@ -14,7 +14,7 @@ zx_library("unittest") {
     # <lib/unittest/unittest.h> has #include <lib/special-sections/special-sections.h>.
     "//zircon/kernel/lib/special-sections:headers",
   ]
-  if (toolchain.environment == "kernel") {
+  if (toolchain_environment == "kernel") {
     sources += [
       "console.cc",
       "user_memory.cc",

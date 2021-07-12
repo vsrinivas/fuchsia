@@ -11,7 +11,7 @@ group("tests") {
     ":phys",
     "//zircon/kernel/lib/libc:tests",
   ]
-  if (toolchain.environment == "kernel") {
+  if (toolchain_environment == "kernel") {
     deps += [ ":kernel" ]
   } else {  # TODO(fxbug.dev/67010): testonly in kernel proper
     testonly = true
@@ -21,7 +21,7 @@ group("tests") {
 # This is the subset that's compatible with the kernel.phys environment.
 source_set("phys") {
   # TODO(fxbug.dev/67010): testonly = true
-  testonly = toolchain.environment != "kernel"
+  testonly = toolchain_environment != "kernel"
   cflags = [ "-fno-builtin" ]
   sources = [
     "popcount.cc",
@@ -39,14 +39,14 @@ source_set("phys") {
     "//zircon/system/ulib/fbl",
   ]
 
-  if (toolchain.environment == "kernel") {
+  if (toolchain_environment == "kernel") {
     deps += [ "//zircon/kernel/lib/console" ]
   }
 }
 
 source_set("zbitl") {
   # TODO(fxbug.dev/67010): testonly = true
-  testonly = toolchain.environment != "kernel"
+  testonly = toolchain_environment != "kernel"
   sources = [ "zbitl_tests.cc" ]
 
   deps = [
@@ -56,12 +56,12 @@ source_set("zbitl") {
     "//zircon/system/ulib/zbitl",
   ]
 
-  if (toolchain.environment == "kernel") {
+  if (toolchain_environment == "kernel") {
     deps += [ "//zircon/kernel/lib/console" ]
   }
 }
 
-if (toolchain.environment == "kernel") {
+if (toolchain_environment == "kernel") {
   # These are only for the kernel proper.
   source_set("kernel") {
     # TODO(fxbug.dev/67010): testonly = true

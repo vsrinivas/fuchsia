@@ -4,7 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/toolchain/toolchain_environment.gni")
+import("//build/unification/zx_library.gni")
 
 # These set the ABI contract between C++ and assembly code.
 # This is kept consistent between the kernel proper and phys
@@ -56,7 +57,7 @@ config("retpoline") {
     ]
   } else {
     cflags = [ "-mretpoline" ]
-    if (toolchain.environment == "kernel") {
+    if (toolchain_environment == "kernel") {
       # The kernel proper uses its own optimized thunks, but phys and
       # multiboot can just use the compiler's safe default thunks.
       cflags += [ "-mretpoline-external-thunk" ]

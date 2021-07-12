@@ -7,7 +7,7 @@
 import("//build/images/args.gni")
 import("//build/test.gni")
 import("//build/testing/zbi_test.gni")
-import("//build/unification/global_variables.gni")
+import("//build/toolchain/toolchain_environment.gni")
 import("//zircon/kernel/phys/phys_executable.gni")
 import("//zircon/kernel/phys/qemu.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
@@ -88,8 +88,8 @@ zbi_executable("pic-1mb-boot-shim") {
   ]
 }
 
-if (toolchain.environment == "kernel.phys" ||
-    toolchain.environment == "kernel.phys32") {
+if (toolchain_environment == "kernel.phys" ||
+    toolchain_environment == "kernel.phys32") {
   source_set("trampoline-boot") {
     visibility = [
       ":*",
@@ -139,7 +139,7 @@ zbi_test("x86-boot-shim-tests") {
   ]
 }
 
-if (toolchain.environment == "kernel.phys32") {
+if (toolchain_environment == "kernel.phys32") {
   source_set("legacy-boot-shim") {
     sources = [ "legacy-boot-shim.cc" ]
     deps = [ ":legacy-boot-shim.common" ]

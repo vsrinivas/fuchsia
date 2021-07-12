@@ -4,7 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/toolchain/toolchain_environment.gni")
+import("//build/unification/zx_library.gni")
 
 zx_library("libc") {
   kernel = true
@@ -31,7 +32,7 @@ zx_library("libc") {
     "//zircon/kernel/lib/ktl:headers",
   ]
 
-  if (toolchain.environment == "kernel") {
+  if (toolchain_environment == "kernel") {
     deps += [ "//zircon/kernel/lib/heap" ]
   }
   public_configs = [ ":limits-dummy" ]
@@ -63,7 +64,7 @@ source_set("ctype") {
 
 source_set("tests") {
   # TODO: testonly = true
-  if (toolchain.environment == "kernel") {
+  if (toolchain_environment == "kernel") {
     sources = [ "atomic_tests.cc" ]
     deps = [
       "//zircon/kernel/lib/ktl:headers",

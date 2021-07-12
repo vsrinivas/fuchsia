@@ -6,6 +6,5 @@
 # may include this file to get their definitions, as well as various
 # global variables inherited from the now-retired Zircon build.
 #
-import("//build/unification/global_variables.gni")
 import("//build/unification/zx_host_tool.gni")
 import("//build/unification/zx_library.gni")

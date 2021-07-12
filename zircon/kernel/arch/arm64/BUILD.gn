@@ -4,8 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/toolchain/toolchain_environment.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
-import("//build/unification/global_variables.gni")
 
 if (current_toolchain == default_toolchain) {
   # Define a special environment for building code that runs in physical
@@ -24,7 +24,7 @@ if (current_toolchain == default_toolchain) {
   }
 }
 
-if (toolchain.environment == "physmem") {
+if (toolchain_environment == "physmem") {
   # This is the top config for the physmem environment.
   config("physmem_config") {
     configs = [
@@ -53,9 +53,9 @@ if (toolchain.environment == "physmem") {
   }
 }
 
-if (toolchain.environment == "physmem" ||
-    toolchain.environment == "kernel.phys" ||
-    toolchain.environment == "kernel") {
+if (toolchain_environment == "physmem" ||
+    toolchain_environment == "kernel.phys" ||
+    toolchain_environment == "kernel") {
   # These set the ABI contract between C++ and assembly code.
   # This is kept consistent between the kernel proper and phys
   # so (pure PIC) code should be callable from the kernel proper.

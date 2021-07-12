@@ -7,6 +7,7 @@
 import("//build/components.gni")
 import("//build/cpp/library_headers.gni")
 import("//build/test.gni")
+import("//build/toolchain/toolchain_environment.gni")
 import("//build/zircon/migrated_targets.gni")
 import("//zircon/kernel/lib/code-patching/code-patching.gni")
 
@@ -20,7 +21,7 @@ library_headers("headers") {
 }
 
 # Only kernel code is expected to be patched.
-if (toolchain.environment == "kernel") {
+if (toolchain_environment == "kernel") {
   group("x86") {
     deps = [
       ":__unsanitized_memcpy",

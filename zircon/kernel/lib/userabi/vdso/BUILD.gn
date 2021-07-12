@@ -37,7 +37,7 @@ if (current_toolchain == default_toolchain) {
   }
 }
 
-if (toolchain.environment == "user.vdso") {
+if (toolchain_environment == "user.vdso") {
   config("user.vdso.config") {
     configs = [
       # This is mostly like other user code.
