@@ -152,7 +152,8 @@ void UnbindTask::Run() {
     // If this unbind task failed, force remove all devices from the driver_host.
     bool failed_unbind = status != ZX_OK && status != ZX_ERR_UNAVAILABLE;
     if (failed_unbind && device_->state() != Device::State::kDead) {
-      LOGF(ERROR, "Unbind task failed, force removing device %p '%s': %s", device_.get(),
+      // TODO(https://fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
+      LOGF(WARNING, "Unbind task failed, force removing device %p '%s': %s", device_.get(),
            device_->name().data(), zx_status_get_string(status));
       device_->coordinator->RemoveDevice(device_, true /* forced */);
     }
@@ -203,7 +204,8 @@ void RemoveTask::Run() {
     // If this remove task failed, force remove all devices from the driver_host.
     bool failed_remove = status != ZX_OK && status != ZX_ERR_UNAVAILABLE;
     if (failed_remove && device_->state() != Device::State::kDead) {
-      LOGF(ERROR, "Remove task failed, forcing remove of device %p '%s': %s", device_.get(),
+      // TODO(https://fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
+      LOGF(WARNING, "Remove task failed, forcing remove of device %p '%s': %s", device_.get(),
            device_->name().data(), zx_status_get_string(status));
       device_->coordinator->RemoveDevice(device_, true /* forced */);
     }
