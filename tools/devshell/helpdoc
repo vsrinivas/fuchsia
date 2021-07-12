@@ -17,6 +17,8 @@
 ##                                 same time.
 ##     --toc-prefix URL_PREFIX   use URL_PREFIX instead of "/reference/tools/fx"
 ##                                 as an URL prefix in generated _toc.yaml files.
+##     --escape-jinja            escape jinja tags in fx help text to avoid
+##                                 parsing errors in fuchsia.dev.
 ##     --no-deprecated           do not create docs for deprecated subcommands
 ##     --no-contrib              do not create docs for contrib scripts in //tools/devshell/contrib/*
 
@@ -28,6 +30,7 @@ categories=()
 function main {
   show_vendor=0
   show_contrib=1
+  escape_jinja=0
   show_deprecated=1
   toc_prefix="/reference/tools/fx"
   while [[ $# -ne 0 ]]; do
@@ -46,6 +49,9 @@ function main {
         ;;
       --no-deprecated)
         show_deprecated=0
+        ;;
+      --escape-jinja)
+        escape_jinja=1
         ;;
       --no-contrib)
         show_contrib=0
@@ -285,6 +291,15 @@ function maybe-add-category {
   echo "${norm_cat}"
 }
 
+function escape-jinja {
+  # the way fuchsia.dev processes jinja tags is complicated, so simple escaping
+  # techniques like {% verbatim %} or {{ '{' }} don't work, and since the help
+  # text for these commands are in a fenced block, regular html escaping also
+  # doesn't work. The "hack" below mixes jinja escaping with html escaping in
+  # order to avoid errors with the fuchsia.dev parser.
+  sed "s/{%/{{ '{\&ZeroWidthSpace;%' }}/g"
+}
+
 function handle-command {
   local cmd_path="$1"
   local category="$(get_metadata_camelcase "${cmd_path}" "CATEGORY")"
@@ -320,7 +335,8 @@ function handle-command {
     echo "${summary}"
     echo
     echo '```none'
-    fx-print-command-help "$cmd_path"
+    fx-print-command-help "$cmd_path" |
+      ( [[ ${escape_jinja} -eq 0 ]] && cat || escape-jinja )
     echo '```'
     if [[ -z "${vendor}" ]]; then
       echo
