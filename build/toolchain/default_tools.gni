@@ -19,9 +19,9 @@ if (host_os == "mac") {
   # `cp -af` does not correctly preserve mtime (the nanoseconds are truncated to
   # microseconds) which causes spurious ninja rebuilds. As a result, shell to a
   # helper to copy rather than calling cp -r. See https://fxbug.dev/56376#c5.
-  copy_command +=
-      "ln -f {{source}} {{output}} 2>/dev/null || (" +
-      rebase_path("//build/toolchain/copy.py") + " {{source}} {{output}})"
+  copy_command += "ln -f {{source}} {{output}} 2>/dev/null || (" +
+                  rebase_path("//build/toolchain/copy.py", root_build_dir) +
+                  " {{source}} {{output}})"
 } else {
   copy_command += "ln -f {{source}} {{output}} 2>/dev/null || (rm -f {{output}} && cp -af {{source}} {{output}})"
 }
