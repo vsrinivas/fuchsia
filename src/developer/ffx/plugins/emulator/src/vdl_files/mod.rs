@@ -507,26 +507,53 @@ impl VDLFiles {
             }
             return Ok(exit_code);
         }
-        if vdl_args.tuntap {
-            println!("{}", Yellow.paint("To support fx tools on emulator, please run \"fx set-device fuchsia-5254-0063-5e7a\""));
-        } else {
+        if !self.is_sdk {
+            let command;
+            if vdl_args.tuntap {
+                command = String::from("fx set-device fuchsia-5254-0063-5e7a");
+            } else {
+                command = format!("fx set-device 127.0.0.1:{}", ssh_port);
+            }
             println!(
                 "{}",
-                Yellow.paint(format!(
-                    "To support fx tools on emulator, please run \"fx set-device 127.0.0.1:{}\"",
-                    ssh_port
-                ))
+                Yellow
+                    .paint(format!("To support fx tools on emulator, please run \"{}\"", command))
             );
+        } else {
+            // TODO(fxbug.dev/77526) Remove this prompt when discovery is fixed for Macs
+            if !vdl_args.tuntap {
+                println!(
+                    "{}",
+                    Yellow.paint(format!(
+                        "To support device discovery, please run \"ffx target add 127.0.0.1:{}\".\n\
+                        Then run \"ffx target remove 127.0.0.1:{}\" when the emulator is done.",
+                        ssh_port, ssh_port
+                    ))
+                );
+            }
         }
         if start_command.nointeractive {
             println!(
                 "{}",
-                Yellow.paint(format!(
-                    "\nNOTE: For --noninteractive launcher artifacts need to be manually cleaned using the `kill` subcommand: \n\
-                    In Fuchsia Repo: \"fx vdl kill --launched-proto {}\"\n\
-                    In SDK: \"./fvdl --sdk kill --launched-proto {}\"", self.output_proto.display(), self.output_proto.display()
-                ))
-            );
+                Yellow.paint(
+                    "\nNOTE: For --nointeractive, launcher artifacts need to be manually cleaned using the `kill` subcommand:"));
+            if !self.is_sdk {
+                println!(
+                    "{}",
+                    Yellow.paint(format!(
+                        "    ffx emu kill --launched-proto {}",
+                        self.output_proto.display()
+                    ))
+                );
+            } else {
+                println!(
+                    "{}",
+                    Yellow.paint(format!(
+                        "    fvdl --sdk kill --launched-proto {}",
+                        self.output_proto.display()
+                    ))
+                );
+            }
         } else {
             // TODO(fxbug.dev/72190) Ensure we have a way for user to interact with emulator
             // once SSH support goes away.
