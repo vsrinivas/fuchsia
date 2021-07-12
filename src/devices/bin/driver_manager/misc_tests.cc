@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/driver/test/c/fidl.h>
+#include <fuchsia/driver/test/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/binding.h>
@@ -30,6 +30,11 @@
 constexpr char kDriverPath[] = "/pkg/driver/test/mock-device.so";
 constexpr char kLogMessage[] = "log message text";
 constexpr char kLogTestCaseName[] = "log test case";
+constexpr fuchsia_driver_test::wire::TestCaseResult kLogTestCaseResult = {
+    .passed = 1,
+    .failed = 2,
+    .skipped = 3,
+};
 
 static CoordinatorConfig NullConfig() { return DefaultConfig(nullptr, nullptr, nullptr); }
 
@@ -64,17 +69,17 @@ class FidlTransaction : public fidl::Transaction {
 
 class FakeDevice : public fidl::WireServer<fuchsia_device_manager::DeviceController> {
  public:
-  FakeDevice(zx::channel test_output, const char* expected_driver = nullptr)
+  FakeDevice(fidl::ServerEnd<fuchsia_driver_test::Logger> test_output,
+             const fidl::StringView expected_driver = {})
       : test_output_(std::move(test_output)), expected_driver_(expected_driver) {}
 
   void BindDriver(BindDriverRequestView request, BindDriverCompleter::Sync& completer) override {
-    if (expected_driver_ == nullptr ||
-        strncmp(expected_driver_, request->driver_path.data(), request->driver_path.size()) == 0) {
+    if (expected_driver_.empty() || expected_driver_.get() == request->driver_path.get()) {
       bind_called_ = true;
-      completer.Reply(ZX_OK, std::move(test_output_));
-      return;
+      completer.Reply(ZX_OK, test_output_.TakeChannel());
+    } else {
+      completer.Reply(ZX_ERR_INTERNAL, zx::channel{});
     }
-    completer.Reply(ZX_ERR_INTERNAL, zx::channel{});
   }
   void ConnectProxy(ConnectProxyRequestView request,
                     ConnectProxyCompleter::Sync& _completer) override {}
@@ -89,8 +94,8 @@ class FakeDevice : public fidl::WireServer<fuchsia_device_manager::DeviceControl
   bool bind_called() { return bind_called_; }
 
  private:
-  zx::channel test_output_;
-  const char* expected_driver_;
+  fidl::ServerEnd<fuchsia_driver_test::Logger> test_output_;
+  const fidl::StringView expected_driver_;
   bool bind_called_ = false;
 };
 
@@ -98,7 +103,7 @@ class FakeDevice : public fidl::WireServer<fuchsia_device_manager::DeviceControl
 // driver, and then sends a ZX_OK response.
 void BindDriverTestOutput(
     const fidl::ServerEnd<fuchsia_device_manager::DeviceController>& controller,
-    zx::channel test_output) {
+    fidl::ServerEnd<fuchsia_driver_test::Logger> test_output) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl::IncomingMessage msg =
@@ -117,61 +122,11 @@ void BindDriverTestOutput(
   ASSERT_TRUE(fake.bind_called());
 }
 
-void WriteTestLog(const zx::channel& output) {
-  uint32_t len =
-      sizeof(fuchsia_driver_test_LoggerLogMessageRequest) + FIDL_ALIGN(strlen(kLogMessage));
-  FIDL_ALIGNDECL uint8_t bytes[len];
-  fidl::Builder builder(bytes, len);
-
-  auto* req = builder.New<fuchsia_driver_test_LoggerLogMessageRequest>();
-  fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
-                       fuchsia_driver_test_LoggerLogMessageOrdinal);
-
-  auto* data = builder.NewArray<char>(static_cast<uint32_t>(strlen(kLogMessage)));
-  req->msg.data = data;
-  req->msg.size = strlen(kLogMessage);
-  memcpy(data, kLogMessage, strlen(kLogMessage));
-
-  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
-  const char* err = nullptr;
-  zx_status_t status = msg.Encode(&fuchsia_driver_test_LoggerLogMessageRequestTable, &err);
-  ASSERT_OK(status);
-  status = msg.Write(output.get(), 0);
-  ASSERT_OK(status);
-}
-
-void WriteTestCase(const zx::channel& output) {
-  uint32_t len =
-      sizeof(fuchsia_driver_test_LoggerLogTestCaseRequest) + FIDL_ALIGN(strlen(kLogTestCaseName));
-  FIDL_ALIGNDECL uint8_t bytes[len];
-  fidl::Builder builder(bytes, len);
-
-  auto* req = builder.New<fuchsia_driver_test_LoggerLogTestCaseRequest>();
-  fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
-                       fuchsia_driver_test_LoggerLogTestCaseOrdinal);
-
-  auto* data = builder.NewArray<char>(static_cast<uint32_t>(strlen(kLogTestCaseName)));
-  req->name.data = data;
-  req->name.size = strlen(kLogTestCaseName);
-  memcpy(data, kLogTestCaseName, strlen(kLogTestCaseName));
-
-  req->result.passed = 1;
-  req->result.failed = 2;
-  req->result.skipped = 3;
-
-  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
-  const char* err = nullptr;
-  zx_status_t status = msg.Encode(&fuchsia_driver_test_LoggerLogTestCaseRequestTable, &err);
-  ASSERT_OK(status);
-  status = msg.Write(output.get(), 0);
-  ASSERT_OK(status);
-}
-
 // Reads a BindDriver request from remote, checks that it is for the expected
 // driver, and then sends a ZX_OK response.
 void CheckBindDriverReceived(
     const fidl::ServerEnd<fuchsia_device_manager::DeviceController>& controller,
-    const char* expected_driver) {
+    const fidl::StringView expected_driver) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl::IncomingMessage msg =
@@ -182,7 +137,7 @@ void CheckBindDriverReceived(
   auto* header = msg.header();
   FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
 
-  FakeDevice fake(zx::channel{}, expected_driver);
+  FakeDevice fake(fidl::ServerEnd<fuchsia_driver_test::Logger>(), expected_driver);
   ASSERT_EQ(fidl::WireDispatch(
                 static_cast<fidl::WireServer<fuchsia_device_manager::DeviceController>*>(&fake),
                 std::move(msg), &txn),
@@ -197,28 +152,18 @@ class TestDriverTestReporter : public DriverTestReporter {
   explicit TestDriverTestReporter(const fbl::String& driver_name)
       : DriverTestReporter(driver_name) {}
 
-  void LogMessage(const char* msg, size_t size) override {
-    if (size != strlen(kLogMessage)) {
-      return;
+  void LogMessage(LogMessageRequestView request, LogMessageCompleter::Sync& completer) override {
+    if (request->msg.get() == kLogMessage) {
+      log_message_called = true;
     }
-    if (strncmp(msg, kLogMessage, size)) {
-      return;
-    }
-    log_message_called = true;
   }
 
-  void LogTestCase(const char* name, size_t name_size,
-                   const fuchsia_driver_test_TestCaseResult* result) override {
-    if (name_size != strlen(kLogTestCaseName)) {
-      return;
+  void LogTestCase(LogTestCaseRequestView request, LogTestCaseCompleter::Sync& completer) override {
+    if (request->name.get() == kLogTestCaseName &&
+        memcmp(&request->result, &kLogTestCaseResult,
+               std::min(sizeof(request->result), sizeof(kLogTestCaseResult))) == 0) {
+      log_test_case_called = true;
     }
-    if (strncmp(name, kLogTestCaseName, name_size)) {
-      return;
-    }
-    if (result->passed != 1 || result->failed != 2 || result->skipped != 3) {
-      return;
-    }
-    log_test_case_called = true;
   }
 
   void TestStart() override { start_called = true; }
@@ -456,7 +401,8 @@ TEST(MiscTestCase, BindDevices) {
   ASSERT_OK(status);
 
   // Check the BindDriver request.
-  ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(controller_endpoints->server, kDriverPath));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckBindDriverReceived(controller_endpoints->server, fidl::StringView(kDriverPath)));
   loop.RunUntilIdle();
 
   // Reset the fake driver_host connection.
@@ -515,14 +461,16 @@ TEST(MiscTestCase, TestOutput) {
   ASSERT_OK(status);
 
   // Check the BindDriver request.
-  zx::channel test_device, test_coordinator;
-  zx::channel::create(0, &test_device, &test_coordinator);
+  zx::status test_endpoints = fidl::CreateEndpoints<fuchsia_driver_test::Logger>();
+  ASSERT_OK(test_endpoints.status_value());
   ASSERT_NO_FATAL_FAILURES(
-      BindDriverTestOutput(controller_endpoints->server, std::move(test_coordinator)));
+      BindDriverTestOutput(controller_endpoints->server, std::move(test_endpoints->server)));
   loop.RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(WriteTestLog(test_device));
-  ASSERT_NO_FATAL_FAILURES(WriteTestCase(test_device));
+  ASSERT_OK(fidl::WireCall(test_endpoints->client).LogMessage(kLogMessage).status());
+  ASSERT_OK(fidl::WireCall(test_endpoints->client)
+                .LogTestCase(kLogTestCaseName, kLogTestCaseResult)
+                .status());
   loop.RunUntilIdle();
 
   // The test logging handlers should not be called until the test is finished and the channel is
@@ -532,7 +480,7 @@ TEST(MiscTestCase, TestOutput) {
   EXPECT_FALSE(test_reporter->log_test_case_called);
   EXPECT_FALSE(test_reporter->finished_called);
 
-  test_device.reset();
+  test_endpoints->client.reset();
   loop.RunUntilIdle();
   EXPECT_TRUE(test_reporter->start_called);
   EXPECT_TRUE(test_reporter->log_message_called);

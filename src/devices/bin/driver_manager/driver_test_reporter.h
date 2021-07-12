@@ -5,19 +5,18 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_TEST_REPORTER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_TEST_REPORTER_H_
 
-#include <fuchsia/driver/test/c/fidl.h>
+#include <fuchsia/driver/test/llcpp/fidl.h>
 
 #include <fbl/string.h>
 
-class DriverTestReporter {
+class DriverTestReporter : public fidl::WireServer<fuchsia_driver_test::Logger> {
  public:
   explicit DriverTestReporter(const fbl::String& driver_name) : driver_name_(driver_name) {}
   virtual ~DriverTestReporter() = default;
 
   // Implements fuchsia.driver.test.Logger.
-  virtual void LogMessage(const char* msg, size_t size);
-  virtual void LogTestCase(const char* name, size_t name_size,
-                           const fuchsia_driver_test_TestCaseResult* result);
+  void LogMessage(LogMessageRequestView request, LogMessageCompleter::Sync& completer) override;
+  void LogTestCase(LogTestCaseRequestView request, LogTestCaseCompleter::Sync& completer) override;
 
   virtual void TestStart();
   virtual void TestFinished();

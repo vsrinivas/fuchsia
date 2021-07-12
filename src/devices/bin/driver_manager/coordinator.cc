@@ -1032,10 +1032,7 @@ zx_status_t CreateDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>
     }
   }
 
-  dev->set_channel(coordinator_endpoints->server.TakeChannel());
-  if (auto status = Device::BeginWait(dev, dev->coordinator->dispatcher()); status != ZX_OK) {
-    return status;
-  }
+  Device::Bind(dev, dev->coordinator->dispatcher(), std::move(coordinator_endpoints->server));
   return ZX_OK;
 }
 

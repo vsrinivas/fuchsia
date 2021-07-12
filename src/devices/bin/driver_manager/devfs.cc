@@ -246,7 +246,7 @@ void describe_error(zx::channel h, zx_status_t status) {
 bool devnode_is_dir(const Devnode* dn) {
   if (dn->children.is_empty()) {
     return (dn->device == nullptr) || (!dn->device->device_controller().is_valid()) ||
-           (!dn->device->channel()->is_valid());
+           (!dn->device->coordinator_binding().has_value());
   }
   return true;
 }

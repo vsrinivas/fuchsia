@@ -8,27 +8,31 @@
 
 #include "src/devices/lib/log/log.h"
 
-void DriverTestReporter::LogMessage(const char* msg, size_t size) {
-  LOGF(INFO, "[----------][%s] %.*s\n", driver_name_.data(), static_cast<int>(size), msg);
+void DriverTestReporter::LogMessage(LogMessageRequestView request,
+                                    LogMessageCompleter::Sync& completer) {
+  const fidl::StringView& msg = request->msg;
+  LOGF(INFO, "[----------][%s] %.*s\n", driver_name_.data(), msg.size(), msg.data());
 }
 
-void DriverTestReporter::LogTestCase(const char* name, size_t name_size,
-                                     const fuchsia_driver_test_TestCaseResult* result) {
-  uint64_t ran = result->passed + result->failed;
-  LOGF(INFO, "[----------] %lu tests from %s.%.*s\n", ran, driver_name_.data(),
-       static_cast<int>(name_size), name);
-  LOGF(INFO, "[----------] %lu passed\n", result->passed);
-  LOGF(INFO, "[----------] %lu failed\n", result->failed);
-  LOGF(INFO, "[----------] %lu skipped\n", result->skipped);
-  if (result->failed == 0) {
-    LOGF(INFO, "[       OK ] %s.%.*s\n", driver_name_.data(), static_cast<int>(name_size), name);
+void DriverTestReporter::LogTestCase(LogTestCaseRequestView request,
+                                     LogTestCaseCompleter::Sync& completer) {
+  const fidl::StringView& name = request->name;
+  const fuchsia_driver_test::wire::TestCaseResult& result = request->result;
+  uint64_t ran = result.passed + result.failed;
+  LOGF(INFO, "[----------] %lu tests from %s.%.*s\n", ran, driver_name_.data(), name.size(),
+       name.data());
+  LOGF(INFO, "[----------] %lu passed\n", result.passed);
+  LOGF(INFO, "[----------] %lu failed\n", result.failed);
+  LOGF(INFO, "[----------] %lu skipped\n", result.skipped);
+  if (result.failed == 0) {
+    LOGF(INFO, "[       OK ] %s.%.*s\n", driver_name_.data(), name.size(), name.data());
   } else {
-    LOGF(INFO, "[     FAIL ] %s.%.*s\n", driver_name_.data(), static_cast<int>(name_size), name);
+    LOGF(INFO, "[     FAIL ] %s.%.*s\n", driver_name_.data(), name.size(), name.data());
   }
   total_cases_ += 1;
-  total_passed_ += result->passed;
-  total_failed_ += result->failed;
-  total_skipped_ += result->skipped;
+  total_passed_ += result.passed;
+  total_failed_ += result.failed;
+  total_skipped_ += result.skipped;
 }
 
 void DriverTestReporter::TestStart() {

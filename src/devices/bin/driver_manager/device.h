@@ -21,7 +21,6 @@
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
 
-#include "async_loop_ref_counted_rpc_handler.h"
 #include "composite_device.h"
 #include "driver_test_reporter.h"
 #include "inspect.h"
@@ -93,7 +92,6 @@ struct DeviceAllDevicesListTag {};
 class Device
     : public fbl::RefCounted<Device>,
       public fidl::WireServer<fuchsia_device_manager::Coordinator>,
-      public AsyncLoopRefCountedRpcHandler<Device>,
       public fbl::ContainableBaseClasses<
           fbl::TaggedDoublyLinkedListable<Device*, internal::DeviceChildListTag>,
           fbl::TaggedDoublyLinkedListable<Device*, internal::DeviceDriverHostListTag>,
@@ -290,9 +288,8 @@ class Device
       fbl::RefPtr<Device>* device);
   zx_status_t CreateProxy();
 
-  static void HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher,
-                        async::WaitBase* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal);
+  static void Bind(fbl::RefPtr<Device> dev, async_dispatcher_t*,
+                   fidl::ServerEnd<fuchsia_device_manager::Coordinator>);
 
   // We do not want to expose the list itself for mutation, even if the
   // children are allowed to be mutated.  We manage this by making the
@@ -511,6 +508,13 @@ class Device
   void set_state(Device::State state) {
     state_ = state;
     inspect().set_state(StateToString(state));
+
+    if (state == Device::State::kDead) {
+      if (std::optional binding = std::exchange(coordinator_binding_, std::nullopt);
+          binding.has_value()) {
+        binding.value().Unbind();
+      }
+    }
   }
 
   State state() const { return state_; }
@@ -565,6 +569,11 @@ class Device
     return device_controller_;
   }
 
+  const std::optional<fidl::ServerBindingRef<fuchsia_device_manager::Coordinator>>&
+  coordinator_binding() const {
+    return coordinator_binding_;
+  }
+
   const fidl::ServerEnd<fuchsia_device_manager::DeviceController> ConnectDeviceController(
       async_dispatcher_t* dispatcher) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
@@ -584,11 +593,14 @@ class Device
   // Async waiter that drives the consumption of test_output_. It is triggered when the channel is
   // closed by the driver, signalling the end of the tests. We don't print log messages until the
   // entire test is finished to avoid interleaving output from multiple drivers.
+  //
+  // TODO(https://fxbug.dev/34151): Handle the case where the channel fills up before we begin
+  // reading.
   async::WaitMethod<Device, &Device::HandleTestOutput> test_wait_{this};
 
   fidl::Client<fuchsia_device_manager::DeviceController> device_controller_;
+  std::optional<fidl::ServerBindingRef<fuchsia_device_manager::Coordinator>> coordinator_binding_;
 
-  zx_status_t HandleRead();
   int RunCompatibilityTests();
 
   const fbl::String name_;

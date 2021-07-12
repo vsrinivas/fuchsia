@@ -5,7 +5,7 @@
 #include "device.h"
 
 #include <fuchsia/device/manager/llcpp/fidl.h>
-#include <fuchsia/driver/test/c/fidl.h>
+#include <fuchsia/driver/test/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl/coding.h>
@@ -79,6 +79,36 @@ Device::~Device() {
   VLOGF(1, "Destroyed device %p '%s'", this, name_.data());
 }
 
+void Device::Bind(fbl::RefPtr<Device> dev, async_dispatcher_t* dispatcher,
+                  fidl::ServerEnd<fuchsia_device_manager::Coordinator> request) {
+  dev->coordinator_binding_ = fidl::BindServer(
+      dispatcher, std::move(request), dev.get(),
+      [dev](Device* self, fidl::UnbindInfo info,
+            fidl::ServerEnd<fuchsia_device_manager::Coordinator> server_end) {
+        switch (info.reason()) {
+          case fidl::Reason::kUnbind:
+          case fidl::Reason::kClose:
+            // These are initiated by ourself.
+            break;
+          case fidl::Reason::kPeerClosed:
+            // If the device is already dead, we are detecting an expected disconnect from the
+            // driver_host.
+            if (dev->state() != Device::State::kDead) {
+              // TODO(https://fxbug.dev/56208): Change this log back to error once isolated devmgr
+              // is fixed.
+              LOGF(WARNING, "Disconnected device %p '%s', see fxbug.dev/56208 for potential cause",
+                   dev.get(), dev->name().data());
+
+              dev->coordinator->RemoveDevice(dev, true);
+            }
+            break;
+          default:
+            LOGF(ERROR, "Failed to handle RPC for device %p '%s': %s", dev.get(),
+                 dev->name().data(), info.FormatDescription().c_str());
+        }
+      });
+}
+
 zx_status_t Device::Create(
     Coordinator* coordinator, const fbl::RefPtr<Device>& parent, fbl::String name,
     fbl::String driver_path, fbl::String args, uint32_t protocol_id,
@@ -123,7 +153,7 @@ zx_status_t Device::Create(
   }
 
   dev->device_controller_.Bind(std::move(device_controller), coordinator->dispatcher());
-  dev->set_channel(coordinator_request.TakeChannel());
+  Device::Bind(dev, coordinator->dispatcher(), std::move(coordinator_request));
 
   // If we have bus device args we are, by definition, a bus device.
   if (dev->args_.size() > 0) {
@@ -143,10 +173,6 @@ zx_status_t Device::Create(
   }
 
   if ((status = devfs_publish(real_parent, dev)) < 0) {
-    return status;
-  }
-
-  if ((status = Device::BeginWait(dev, coordinator->dispatcher())) != ZX_OK) {
     return status;
   }
 
@@ -202,7 +228,7 @@ zx_status_t Device::CreateComposite(
   }
 
   dev->device_controller_.Bind(std::move(device_controller), coordinator->dispatcher());
-  dev->set_channel(coordinator_request.TakeChannel());
+  Device::Bind(dev, coordinator->dispatcher(), std::move(coordinator_request));
   // We exist within our parent's device host
   dev->set_host(std::move(driver_host));
 
@@ -211,10 +237,6 @@ zx_status_t Device::CreateComposite(
   // TODO(teisenbe): Figure out how to manifest in devfs?  For now just hang it off of
   // the root device?
   if ((status = devfs_publish(coordinator->root_device(), dev)) < 0) {
-    return status;
-  }
-
-  if ((status = Device::BeginWait(dev, coordinator->dispatcher())) != ZX_OK) {
     return status;
   }
 
@@ -529,68 +551,6 @@ zx_status_t Device::CompleteRemove(zx_status_t status) {
   return ZX_OK;
 }
 
-// Handle inbound messages from driver_host to devices
-void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher,
-                       async::WaitBase* wait, zx_status_t status,
-                       const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to wait on RPC for device %p '%s': %s", dev.get(), dev->name().data(),
-         zx_status_get_string(status));
-    return;
-  }
-
-  if (signal->observed & ZX_CHANNEL_READABLE) {
-    zx_status_t r = dev->HandleRead();
-    if (r != ZX_OK) {
-      if (r != ZX_ERR_STOP) {
-        LOGF(ERROR, "Failed to handle RPC for device %p '%s': %s", dev.get(), dev->name().data(),
-             zx_status_get_string(r));
-      }
-      // If this device isn't already dead (removed), remove it. RemoveDevice() may
-      // have been called by the RPC handler, in particular for the RemoveDevice RPC.
-      if (dev->state() != Device::State::kDead) {
-        dev->coordinator->RemoveDevice(dev, true);
-      }
-      // Do not start waiting again on this device's channel again
-      return;
-    }
-    Device::BeginWait(std::move(dev), dispatcher);
-    return;
-  }
-  if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    // If the device is already dead, we are detecting an expected disconnect from the driver_host.
-    if (dev->state() != Device::State::kDead) {
-      // TODO(fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
-      LOGF(WARNING, "Disconnected device %p '%s', see fxbug.dev/56208 for potential cause",
-           dev.get(), dev->name().data());
-      dev->coordinator->RemoveDevice(dev, true);
-    }
-    // Do not start waiting again on this device's channel again
-    return;
-  }
-  LOGF(WARNING, "Unexpected signal state %#08x for device %p '%s'", signal->observed, dev.get(),
-       dev->name().data());
-  Device::BeginWait(std::move(dev), dispatcher);
-}
-
-static zx_status_t fidl_LogMessage(void* ctx, const char* msg, size_t size) {
-  auto dev = static_cast<Device*>(ctx);
-  dev->test_reporter->LogMessage(msg, size);
-  return ZX_OK;
-}
-
-static zx_status_t fidl_LogTestCase(void* ctx, const char* name, size_t name_size,
-                                    const fuchsia_driver_test_TestCaseResult* result) {
-  auto dev = static_cast<Device*>(ctx);
-  dev->test_reporter->LogTestCase(name, name_size, result);
-  return ZX_OK;
-}
-
-static const fuchsia_driver_test_Logger_ops_t kTestOps = {
-    .LogMessage = fidl_LogMessage,
-    .LogTestCase = fidl_LogTestCase,
-};
-
 void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                               zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -606,99 +566,19 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
 
   test_reporter->TestStart();
 
-  // Now that the driver has closed the channel, read all of the messages.
-  // TODO(fxbug.dev/34151): Handle the case where the channel fills up before we begin reading.
-  while (true) {
-    uint8_t msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-    zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-    uint32_t msize = sizeof(msg_bytes);
-    uint32_t hcount = std::size(handles);
-
-    zx_status_t r = test_output_.read_etc(0, &msg_bytes, handles, msize, hcount, &msize, &hcount);
-    if (r == ZX_ERR_PEER_CLOSED) {
-      test_reporter->TestFinished();
-      break;
-    } else if (r != ZX_OK) {
-      LOGF(ERROR, "Failed to read test output for device %p '%s': %s", this, name_.data(),
-           zx_status_get_string(r));
-      break;
-    }
-
-    fidl_incoming_msg_t fidl_msg = {
-        .bytes = msg_bytes,
-        .handles = handles,
-        .num_bytes = msize,
-        .num_handles = hcount,
-    };
-
-    if (fidl_msg.num_bytes < sizeof(fidl_message_header_t)) {
-      FidlHandleInfoCloseMany(fidl_msg.handles, fidl_msg.num_handles);
-      LOGF(ERROR, "Invalid FIDL message header for device %p '%s'", this, name_.data());
-      break;
-    }
-
-    auto header = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
-    FidlTxn txn(test_output_, header->txid);
-    r = fuchsia_driver_test_Logger_dispatch(this, txn.fidl_txn(), &fidl_msg, &kTestOps);
-    if (r != ZX_OK) {
-      LOGF(ERROR, "Failed to handle RPC for device %p '%s': %s", this, name_.data(),
-           zx_status_get_string(r));
-      break;
-    }
-  }
-}
-
-zx_status_t Device::HandleRead() {
-  uint8_t msg[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_info_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t msize = sizeof(msg);
-  uint32_t hcount = std::size(hin);
-
-  if (state_ == Device::State::kDead) {
-    LOGF(ERROR, "Attempted to RPC dead device %p '%s'", this, name_.data());
-    return ZX_ERR_INTERNAL;
-  }
-
-  zx_status_t r;
-  if ((r = channel()->read_etc(0, &msg, hin, msize, hcount, &msize, &hcount)) != ZX_OK) {
-    return r;
-  }
-
-  fidl_incoming_msg_t fidl_msg = {
-      .bytes = msg,
-      .handles = hin,
-      .num_bytes = msize,
-      .num_handles = hcount,
-  };
-
-  if (fidl_msg.num_bytes < sizeof(fidl_message_header_t)) {
-    FidlHandleInfoCloseMany(fidl_msg.handles, fidl_msg.num_handles);
-    return ZX_ERR_IO;
-  }
-
-  auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
-  // Check if we're receiving a Coordinator request
-  {
-    zx::unowned_channel conn = channel();
-    DevmgrFidlTxn txn(std::move(conn), hdr->txid);
-    ::fidl::DispatchResult dispatch_result =
-        fidl::WireDispatch<fuchsia_device_manager::Coordinator>(
-            this, fidl::IncomingMessage::FromEncodedCMessage(&fidl_msg), &txn);
-    auto status = txn.Status();
-    if (dispatch_result == ::fidl::DispatchResult::kFound) {
-      if (status == ZX_OK && state_ == Device::State::kDead) {
-        // We have removed the device. Signal that we are done with this channel.
-        return ZX_ERR_STOP;
-      }
-      return status;
-    }
-  }
-
-  LOGF(ERROR, "Unsupported FIDL protocol (ordinal %#16lx) for device %p '%s'", hdr->ordinal, this,
-       name_.data());
-  // After calling |WireDispatch|, handle ownership was already transferred over,
-  // so there is no need to close handles here.
-  return ZX_ERR_IO;
+  fidl::BindServer(
+      dispatcher, fidl::ServerEnd<fuchsia_driver_test::Logger>(std::move(test_output_)),
+      test_reporter.get(),
+      [this](DriverTestReporter* test_reporter, fidl::UnbindInfo info,
+             fidl::ServerEnd<fuchsia_driver_test::Logger> server_end) {
+        switch (info.reason()) {
+          case fidl::Reason::kPeerClosed:
+            test_reporter->TestFinished();
+            break;
+          default:
+            LOGF(ERROR, "Unexpected server error for device %p '%s': %s", this, name_.data(), info);
+        }
+      });
 }
 
 zx_status_t Device::SetProps(fbl::Array<const zx_device_prop_t> props) {
@@ -860,10 +740,10 @@ int Device::RunCompatibilityTests() {
   }
   this->set_test_state(Device::TestStateMachine::kTestBindDone);
   if (this->children().is_empty()) {
-    TEST_LOGF(
-        ERROR,
-        "[  FAILED  ] %s: Driver did not add a child device in bind(), check if it called DdkAdd()",
-        test_driver_name);
+    TEST_LOGF(ERROR,
+              "[  FAILED  ] %s: Driver did not add a child device in bind(), check if it called "
+              "DdkAdd()",
+              test_driver_name);
     test_status_ = fuchsia_device_manager::wire::CompatibilityTestStatus::kErrBindNoDdkadd;
     return -1;
   }
