@@ -1,7 +1,7 @@
 # Start the Fuchsia emulator
 
 This guide provides instructions on how to set up and launch the
-Fuchsia emulator (FEMU).
+Fuchsia emulator (FEMU) on your machine.
 
 The steps are:
 
@@ -11,18 +11,18 @@ The steps are:
 1. [Start FEMU](#start-femu).
 1. [Discover FEMU](#discover-femu).
 
-## Prerequisites
+## 1. Prerequisites {#prerequisites}
 
-Running FEMU requires that you've completed the following tasks:
+Running FEMU requires that you've completed the following guides:
 
- * [Checked out the Fuchsia source and set up the environment variables][get-fuchsia-source]
- * [Configured and built Fuchsia][build-fuchsia]
+ * [Download the Fuchsia source code][get-fuchsia-source]
+ * [Configure and built Fuchsia][build-fuchsia]
 
-## Build Fuchsia for FEMU {#build-fuchsia-for-femu}
+## 2. Build Fuchsia for FEMU {#build-fuchsia-for-femu}
 
 To run FEMU, you first need to build a Fuchsia system image that supports
-the emulator environment. The example below uses `qemu-x64` for the board
-and `workstation` for the product.
+the emulator environment. The guide uses `qemu-x64` for the board
+and `workstation` for the product as an example.
 
 To build a FEMU Fuchsia image, do the following:
 
@@ -41,9 +41,11 @@ To build a FEMU Fuchsia image, do the following:
 For more information on supported boards and products, see the
 [Fuchsia emulator (FEMU)][femu-overview] overview page.
 
-## Enable VM acceleration (Optional) {#enable-vm-acceleration}
+## 3. Enable VM acceleration (Optional) {#enable-vm-acceleration}
 
-(**Linux only**) Most Linux machines support VM acceleration through KVM.
+(**Linux only**) Most Linux machines support VM acceleration through
+KVM, which greatly improves the performance and usability of the emulator.
+
 If KVM is available on your machine, update your group permission to
 enable KVM.
 
@@ -83,7 +85,7 @@ enable KVM.
   Instead of KVM, the Fuchsia emulator on macOS uses the
   [Hypervisor framework][hypervisor-framework]{: .external}.
 
-## Start FEMU {#start-femu}
+## 4. Start FEMU {#start-femu}
 
 Start the Fuchsia emulator on your machine.
 
@@ -142,7 +144,7 @@ Start the Fuchsia emulator on your machine.
      * `SSH_PORT`: Use the value from the `fx vdl start` command's output in
      Step 1.
 
-## Discover FEMU {#discover-femu}
+## 5. Discover FEMU {#discover-femu}
 
 To discover the Fuchsia emulator as a running Fuchsia device, run the
 following command:
@@ -163,12 +165,8 @@ fuchsia-5254-0063-5e7a    <unknown>    workstation.qemu-x64    Product    [fe80:
 
 ## Next steps
 
-For the next steps, check out the following resources:
-
- *  To learn more about how FEMU works, see the
-    [Fuchsia emulator (FEMU)][femu-overview] overview page.
- *  To learn more about Fuchsia device commands and Fuchsia workflows, see
-    [Explore Fuchsia][explore-fuchsia].
+To learn more about Fuchsia device commands and Fuchsia workflows, see
+[Explore Fuchsia][explore-fuchsia].
 
 ## Appendices
 
@@ -213,7 +211,7 @@ These are the valid commands and options:
   <tr>
    <th>GPU Emulation method</th>
    <th>Explanation</th>
-   <th><code>fx vdl start</code> flag</th>
+   <th>Flag</th>
   </tr>
   <tr>
    <td>Hardware (host GPU)</td>

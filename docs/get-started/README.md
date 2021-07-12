@@ -2,8 +2,9 @@
 
 Welcome to Fuchsia!
 
-This guide provides instructions on how to download the Fuchsia source code,
-build a Fuchsia system image, and start Fuchsia on an emulator.
+This get-started section provides instructions on how to download the
+Fuchsia source code, build a Fuchsia system image, and start Fuchsia on
+an emulator.
 
 Note: If you want to run Fuchsia on a hardware device, see
 [Install Fuchsia on a device][install-fuchsia-on-a-device] after completing

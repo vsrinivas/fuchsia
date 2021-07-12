@@ -1,29 +1,27 @@
 # Download the Fuchsia source code
 
-This guide provides instructions on how to set up the Fuchsia development
-environment on your machine for building Fuchsia from source.
+This guide provides instructions on how to download the
+Fuchsia source code and set up the Fuchsia development
+environment on your machine.
 
 The steps are:
 
-1. [Prerequisites](#prerequisites).
-2. [Download the Fuchsia source code](#download-fuchsia-source).
-3. [Set up environment variables](#set-up-environment-variables).
+1. [Perform a preflight check](#perform-a-preflight-check).
+2. [Install prerequisite packages](#install-prerequisite-packages).
+3. [Download the Fuchsia source code](#download-the-fuchsia-source-code).
+4. [Set up environment variables](#set-up-environment-variables).
 
-## Prerequisites
+## 1. Perform a preflight check {#perform-a-preflight-check}
 
-Before you start, complete the following tasks:
+Fuchsia provides a preflight check tool (`ffx platform preflight`)
+that examines your machine and informs you of any issues that may
+affect building Fuchsia from source on the machine.
 
-* [Run preflight](#run-preflight).
-* [Install required packages](#install-required-packages).
+Note: The preflight tool only works for the x64 architecture at the
+moment; Fuchsia is currently not guaranteed to build successfully on other
+host architectures.
 
-### Run preflight {#run-preflight}
-
-We recommend you run `ffx platform preflight`, which examines your machine
-and informs you of issues that may affect building Fuchsia from source or
-running the Fuchsia emulator.
-
-At this time the `preflight` tool is only provided as an x64 prebuilt. Fuchsia
-is currently not guaranteed to build successfully on other host architectures.
+Run the following command:
 
 * {Linux}
 
@@ -37,11 +35,10 @@ is currently not guaranteed to build successfully on other host architectures.
   curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-macos-x64 && chmod +x ffx-macos-x64 && ./ffx-macos-x64 platform preflight
   ```
 
-### Install required packages {#install-required-packages}
+## 2. Install prerequisite packages {#install-prerequisite-packages}
 
-The Fuchsia project requires `curl`, `unzip`, and `git` to be up to date.
-
-Note: Fuchsia requires the version of Git to be 2.28 or higher.
+Fuchsia requires `curl`, `unzip`, and `git` to be up to date (the version
+of `git` needs to be 2.28 or higher).
 
 * {Linux}
 
@@ -56,21 +53,20 @@ Note: Fuchsia requires the version of Git to be 2.28 or higher.
   Install the Xcode command line tools:
 
   Note: Skip this step if `ffx platform preflight` discovers that Xcode tools
-  are installed on your machine.
+  are already installed on your machine.
 
   ```posix-terminal
   xcode-select --install
   ```
 
-## Download Fuchsia source {#download-fuchsia-source}
+## 3. Download the Fuchsia source code {#download-the-fuchsia-source-code}
 
-Fuchsia's [bootstrap script](/scripts/bootstrap) creates a `fuchsia` directory
-and downloads the content of the Fuchsia source repository to this new
-directory.
+Fuchsia provides a [bootstrap script](/scripts/bootstrap) that creates a
+`fuchsia` directory and downloads the Fuchsia source code.
 
-Note: Downloading Fuchsia source requires ~2 GiB of space on your machine. In
-addition, you will need another 80-90 GiB of space when you build Fuchsia,
-depending on your build configuration.
+Important: Downloading the Fuchsia source code requires about 2 GiB of space
+on your machine. Plus, depending on your build configuration, you need
+another 80 to 90 GiB of space later when you build Fuchsia.
 
 To download the Fuchsia source, do the following:
 
@@ -85,17 +81,18 @@ To download the Fuchsia source, do the following:
 
 1.  Run the bootstrap script:
 
+    Note: Downloading Fuchsia source can take up to 60 minutes.
+
     ```posix-terminal
     curl -s "https://fuchsia.googlesource.com/fuchsia/+/HEAD/scripts/bootstrap?format=TEXT" | base64 --decode | bash
     ```
     This script creates a `fuchsia` directory to download the source code.
-    Downloading Fuchsia source can take up to 60 minutes.
 
     If you see the `Invalid authentication credentials` error during the
     bootstrapping process, see [Authentication error](#authentication-error) for
     help.
 
-## Set up environment variables {#set-up-environment-variables}
+## 4. Set up environment variables {#set-up-environment-variables}
 
 Fuchsia recommends that you update your shell profile to include the following
 actions:
@@ -106,23 +103,25 @@ actions:
     <code>[jiri](https://fuchsia.googlesource.com/jiri){:.external}</code> and
     <code>[fx](/docs/development/build/fx.md)</code> tools are essential to
     Fuchsia workflows. Fuchsia uses the `jiri` tool to manage repositories in
-    the Fuchsia project. The `fx` tool helps configure, build, run, and debug
-    Fuchsia. The Fuchsia toolchain requires `jiri` to be available in your
-    `PATH`.
+    the Fuchsia project, and the `fx` tool helps configure, build, run, and
+    debug Fuchsia. The Fuchsia toolchain requires that `jiri` is available in
+    your `PATH`.
 
 *   Source the `scripts/fx-env.sh` file.
 
-    Although it's not required, sourcing the
+    Though it's not required, sourcing the
     <code>[fx-env.sh](/scripts/fx-env.sh)</code> script enables useful shell
     functions in your terminal. For instance, it creates a `FUCHSIA_DIR`
     environment variable and provides the `fd` command for navigating
-    directories with auto-completion (see comments in `fx-env.sh` for more
-    information).
+    directories with auto-completion. For more information, see comments in
+    `fx-env.sh`.
 
-To update your shell profile with the changes above, do the following:
+Note: If you don't wish to update your shell profile, see
+[Work on Fuchsia without updating your PATH](#work-on-fuchsia-without-updating-your-path)
+in Appendices instead.
 
-Note: If you don't wish to update your environment variables, see
-[Work on Fuchsia without updating your PATH](#work-on-fuchsia-without-updating-your-path).
+To update your shell profile to configure Fuchsia's environment variables,
+do the following:
 
 1.  Use a text editor to open your `~/.bash_profile` file, for example:
 
@@ -165,9 +164,8 @@ Note: If you don't wish to update your environment variables, see
 
 ## Next steps
 
-See
-[Configure and build Fuchsia](/docs/get-started/build_fuchsia.md)
-in the Getting started guide for the next steps.
+To build your first Fuchsia system image, see
+[Configure and build Fuchsia](/docs/get-started/build_fuchsia.md).
 
 ## Appendices
 
@@ -186,7 +184,7 @@ To resolve this error, do one of the following:
 ### Work on Fuchsia without updating your PATH {#work-on-fuchsia-without-updating-your-path}
 
 The following sections provide alternative approaches to the
-[Update your shell script](#update-your-shell-script) section:
+[Set up environment variables](#set-up-environment-variables) section:
 
 *   [Copy the tool to your binary directory](#copy-the-tool-to-your-binary-directory)
 *   [Add a symlink to your binary directory](#add-a-symlink-to-your-binary-directory)

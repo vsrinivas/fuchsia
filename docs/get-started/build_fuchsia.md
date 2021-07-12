@@ -9,27 +9,33 @@ The steps are:
 1. [Speed up the build (Optional)](#speed-up-the-build).
 1. [Build Fuchsia](#build-fuchsia).
 
-## Prerequisites
+## 1. Prerequisites {#prerequisites}
 
-Before you can set up and build Fuchsia, you need to complete the
+Before you start, complete the
 [Download the Fuchsia source code](/docs/get-started/get_fuchsia_source.md)
-guide to download Fuchsia source code and set up your environment variables.
+guide to download the Fuchsia source code and set up the Fuchsia development
+environment on your machine.
 
-## Set your build configuration {#set-your-build-configuration}
+## 2. Set your build configuration {#set-your-build-configuration}
 
-To set your build configuration for Fuchsia, run the following command:
+Fuchsia's build configuration informs the build system which product to
+build and which architecture to build for.
+
+To set your Fuchsia build configuration, run the following
+[`fx set`][fx-set-reference] command:
 
 <pre class="prettyprint">
-<code class="devsite-terminal">fx set <var>product</var>.<var>board</var></code>
+<code class="devsite-terminal">fx set <var>PRODUCT</var>.<var>BOARD</var></code>
 </pre>
 
-The `fx set` command takes <var>PRODUCT</var> and <var>BOARD</var> arguments,
-which define the
-[product and board](/docs/concepts/build_system/boards_and_products.md)
-configuration of your build. This configuration informs the build system what
-packages to build for your Fuchsia device.
+Replace the following:
 
-For a Fuchsia emulator with the core set of Fuchsia features, the build configuration is:
+* `PRODUCT`: The Fuchsia product that you want to build; for example, `core` and
+  `workstation`.
+* `BOARD`: The architecture of the product; for example, `x64` and `qemu-x64`
+
+The example command below sets a build configuration that builds the `core`
+product for the Fuchsia emulator (FEMU):
 
 ```posix-terminal
 fx set core.qemu-x64
@@ -37,104 +43,108 @@ fx set core.qemu-x64
 
 In this example:
 
-  * `core` is a product with the minimum feature set for Fuchsia, which includes
+  * `core` is a product with the minimum feature set of Fuchsia, including
      common network capabilities.
-  * `qemu-x64` is the board, which refers to the x64 architecture on the
-     Fuchsia Emulator (FEMU), which is based on the open source emulator, QEMU.
+  * `qemu-x64` is a board that refers to the x64 architecture on FEMU, which
+     is based on the open source emulator QEMU.
 
-For a Fuchsia device with the core set of Fuchsia features, the build configuration is
+Additionally, the example command below sets a build configuration that builds
+Fuchsia's `workstation` product for an `x64` architecture machine or device:
 
 ```posix-terminal
-fx set core.x64
+fx set workstation.x64
 ```
 
-See [Configure a build](/docs/development/build/fx.md#configure-a-build) for
-more product and board options.
+For more information on the build configuration,
+see [Configure a build](/docs/development/build/fx.md#configure-a-build).
 
-## Speed up the build (Optional) {#speed-up-the-build}
+## 3. Speed up the build (Optional) {#speed-up-the-build}
 
-Note: This step is optional.
+Note: This step is not required to build Fuchsia, but it's recommended
+since it can save you a lot of time when you build Fuchsia.
 
-To reduce the time it takes to build Fuchsia, you can do any of the following:
+To speed up the Fuchsia build, you can use one of the following services:
 
-*   [Speed up the build with Goma](#speed-up-the-build-with-goma)
-*   [Speed up the build with ccache](#speed-up-the-build-with-ccache)
+*   [Enable Goma](#enable-goma)
+*   [Install ccache](#install-ccache)
 
-### Speed up the build with Goma {#speed-up-the-build-with-goma}
+### Enable Goma {#enable-goma}
 
 [Goma](https://chromium.googlesource.com/infra/goma/server/){:.external} is a
 distributed compiler service for open source projects such as Chrome, Android
-and Fuchsia. If you have access to Goma, run the following command to enable a
-Goma client on your machine:
+and Fuchsia.
+
+If you have access to Goma, enable a Goma client on your machine:
 
 ```posix-terminal
 fx goma
 ```
 
-### Speed up the build with ccache {#speed-up-the-build-with-ccache}
+### Install ccache {#install-ccache}
 
 If you do not have access to Goma, but want to accelerate the Fuchsia build
 locally, use <code>[ccache](https://ccache.dev/){:.external}</code> to cache
 artifacts from previous builds.
 
-To use `ccache` on Linux, install the following package:
+* {Linux}
 
-```posix-terminal
-sudo apt-get install ccache
-```
+  To use `ccache` on Linux, install the following package:
 
-For macOS, see
-[Using CCache on Mac](https://chromium.googlesource.com/chromium/src.git/+/HEAD/docs/ccache_mac.md){:.external}
-for installation instructions.
+  ```posix-terminal
+  sudo apt-get install ccache
+  ```
+* {macOS}
+
+  For macOS, see
+  [Using CCache on Mac](https://chromium.googlesource.com/chromium/src.git/+/HEAD/docs/ccache_mac.md){:.external}
+  for installation instructions.
 
 `ccache` is enabled automatically if your `CCACHE_DIR` environment variable
 refers to an existing directory.
 
-To override the default behavior, pass the following flags to `fx set`:
+To override this default behavior, specify the following flags to `fx set`:
 
-*   Force use of ccache even if other accelerators are available:
+*   Force the use of `ccache` even when other accelerators are available:
 
-    ```posix-terminal
-    fx set core.x64 --ccache
-    ```
+    <pre class="prettyprint">
+    <code class="devsite-terminal">fx set <var>PRODUCT</var>.<var>BOARD</var> --ccache</code>
+    </pre>
 
-*   Disable use of ccache:
+*   Disable the use of `ccache`:
 
-    ```posix-terminal
-    fx set core.x64 --no-ccache
-    ```
+    <pre class="prettyprint">
+    <code class="devsite-terminal">fx set <var>PRODUCT</var>.<var>BOARD</var> --no-ccache</code>
+    </pre>
 
-## Build Fuchsia {#build-fuchsia}
+## 4. Build Fuchsia {#build-fuchsia}
 
-Note: Building Fuchsia can take up to 90 minutes.
+The [`fx build`][fx-build-reference] command executes the build to transform
+source code into packages and other build artifacts.
 
 To build Fuchsia, run the following command:
+
+Note: Building Fuchsia can take up to 90 minutes.
 
 ```posix-terminal
 fx build
 ```
 
-The `fx build` command executes the build to transform source code into packages
-and other build artifacts.
-
-If you modify source code, re-run the `fx build` command to perform an
+When you modify source code, run the `fx build` command again to perform an
 incremental build, or run the `fx -i build` command to start a watcher, which
-automatically builds whenever you update source code.
+automatically builds whenever you update the source code.
 
-See [Execute a build](/docs/development/build/fx.md#execute-a-build) for more
-information.
+For more information on building Fuchsia,
+see [Execute a build](/docs/development/build/fx.md#execute-a-build).
 
 ## Next steps
 
-Set up Fuchsia on an emulator or a device:
+To launch the Fuchsia emulator (FEMU) on your machine, see
+[Start the Fuchsia emulator](/docs/get-started/set_up_femu.md).
 
- * To set up a Fuchsia emulator and experiment with Fuchsia, follow the steps in
-   [Set up the Fuchsia emulator (FEMU)](/docs/get-started/set_up_femu.md).
- * To set up a hardware device, follow the steps in 
-   [Installing Fuchsia on a device](/docs/development/hardware/paving.md) and the
-   [build and pave quickstart](/docs/development/build/build_and_pave_quickstart.md).
+However, if you want to install Fuchsia on a hardware device, see
+[Install Fuchsia on a device](/docs/development/hardware/paving.md) instead.
 
-Once you have set up the emulator or paved a device with Fuchsia, see:
- 
- *  [Explore Fuchsia](/docs/get-started/explore_fuchsia.md) to learn more about how Fuchsia
-    is structured and common workflows.
+<!-- Reference links -->
+
+[fx-set-reference]: https://fuchsia.dev/reference/tools/fx/cmd/set
+[fx-build-reference]: https://fuchsia.dev/reference/tools/fx/cmd/build

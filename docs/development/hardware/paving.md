@@ -1,4 +1,4 @@
-# Installing Fuchsia on a device
+# Install Fuchsia on a device
 
 This guide helps you understand the device installation process for Fuchsia.
 The Fuchsia install process, called 'paving', requires two machines, the machine
