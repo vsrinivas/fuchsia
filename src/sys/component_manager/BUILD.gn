@@ -275,7 +275,7 @@ rustc_binary("bin") {
   configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 
   # If max ZBI size is 16 MiB
-  if (max_fuchsia_zbi_size == "16777216") {
+  if ("$max_fuchsia_zbi_size" == "16777216") {
     # Past experience tells us that this binary is too large to fit into a ZBI
     # that's capped at 16 MiB unless we enable Thin LTO.
     # Thin LTO provides a ~65% decrease in binary size, at a cost of a ~5x

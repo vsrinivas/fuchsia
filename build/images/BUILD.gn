@@ -1653,7 +1653,7 @@ action("filesystem_sizes.json") {
            "--fuchsia-zbi",
            rebase_path(fuchsia_target_outputs[0]),
            "--max-fuchsia-zbi-size",
-           max_fuchsia_zbi_size,
+           "$max_fuchsia_zbi_size",
            "--output",
            rebase_path(output_name),
          ]
@@ -1662,7 +1662,7 @@ action("filesystem_sizes.json") {
       "--zedboot-zbi",
       rebase_path("$root_out_dir/zedboot.zbi"),
       "--max-zedboot-zbi-size",
-      max_zedboot_zbi_size,
+      "$max_zedboot_zbi_size",
     ]
   }
 }

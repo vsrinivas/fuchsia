@@ -34,5 +34,5 @@ board_package_labels = [
   "//garnet/packages/prod:drivers-support",
 ]
 
-max_fuchsia_zbi_size = "16777216"  # 16 MiB
-max_zedboot_zbi_size = "16777216"  # 16 MiB
+max_fuchsia_zbi_size = 16777216  # 16 MiB
+max_zedboot_zbi_size = 16777216  # 16 MiB
