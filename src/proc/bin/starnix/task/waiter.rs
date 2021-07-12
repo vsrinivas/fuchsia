@@ -23,7 +23,7 @@ impl Waiter {
 
     /// Wait until the waiter is woken up.
     ///
-    /// If the wait is interrupted (seee interrupt), this function returns
+    /// If the wait is interrupted (see interrupt), this function returns
     /// EINTR.
     pub fn wait(&self) -> Result<(), Errno> {
         self.wait_util(zx::Time::INFINITE)

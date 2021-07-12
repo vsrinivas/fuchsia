@@ -491,6 +491,24 @@ impl Task {
         false
     }
 
+    /// Removes and returns any zombie task with the specified `pid`, if such a zombie exists.
+    ///
+    /// If pid == -1, an arbitrary zombie task is returned.
+    pub fn get_zombie_task(&self, pid: pid_t) -> Option<TaskOwner> {
+        let mut zombie_tasks = self.zombie_tasks.write();
+        if pid == -1 {
+            zombie_tasks.pop()
+        } else {
+            if let Some(position) =
+                zombie_tasks.iter().position(|task_owner| task_owner.task.id == pid)
+            {
+                Some(zombie_tasks.remove(position))
+            } else {
+                None
+            }
+        }
+    }
+
     fn remove_child(&self, pid: pid_t) {
         self.children.write().remove(&pid);
     }

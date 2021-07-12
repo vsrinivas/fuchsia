@@ -138,7 +138,7 @@ pub fn send_signal(
     let mut scheduler = task.thread_group.kernel.scheduler.write();
     scheduler.add_pending_signal(task.id, signal.clone());
 
-    if signal.mask() & *task.signal_mask.lock() == 0 {
+    if signal.passes_mask(*task.signal_mask.lock()) {
         // Wake the task. Note that any potential signal handler will be executed before
         // the task returns from the suspend (from the perspective of user space).
         wake(task.id, &mut scheduler);
@@ -157,7 +157,9 @@ pub fn dequeue_signal(ctx: &mut SyscallContext<'_>) {
     if let Some(unblocked_signal) = signals
         .iter()
         // Filter out signals that are blocked.
-        .filter(|(signal, _num_signals)| signal.mask() & *task.signal_mask.lock() == 0)
+        .filter(|&(signal, num_signals)| {
+            signal.passes_mask(*task.signal_mask.lock()) && *num_signals > 0
+        })
         .flat_map(
             // Filter out signals that are present in the map but have a 0 count.
             |(signal, num_signals)| if *num_signals > 0 { Some(signal.clone()) } else { None },

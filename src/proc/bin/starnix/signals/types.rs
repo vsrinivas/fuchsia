@@ -61,6 +61,11 @@ impl Signal {
         1 << (self.number - 1)
     }
 
+    /// Returns true if the signal passes the provided mask.
+    pub fn passes_mask(&self, mask: u64) -> bool {
+        self.mask() & mask == 0
+    }
+
     /// Returns true if the signal is a real-time signal.
     pub fn is_real_time(&self) -> bool {
         self.number >= SIGRTMIN

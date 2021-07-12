@@ -167,12 +167,27 @@ pub fn sys_rt_sigsuspend(
     // This block makes sure the write lock on the pids is dropped before waiting.
     let waiter = {
         let mut scheduler = ctx.task.thread_group.kernel.scheduler.write();
-        scheduler.add_suspended_task(ctx.task.id)
+        // If there is already a matching pending signal, don't suspend the task.
+        if scheduler
+            .get_pending_signals(ctx.task.id)
+            .iter()
+            .filter(|&(signal, &num_signals)| {
+                num_signals > 0 && signal.passes_mask(*current_signal_mask)
+            })
+            .next()
+            .is_some()
+        {
+            None
+        } else {
+            Some(scheduler.add_suspended_task(ctx.task.id))
+        }
     };
 
-    // Since a given task can't wait twice, it's fine to pass the current signal mask as the
-    // associated mutex.
-    waiter.wait(&mut current_signal_mask);
+    if let Some(waiter) = waiter {
+        // Since a given task can't wait twice, it's fine to pass the current signal mask as the
+        // associated mutex.
+        waiter.wait(&mut current_signal_mask);
+    }
 
     // Save the old mask, so that the task can restore it after the signal handler executes.
     *ctx.task.saved_signal_mask.lock() = Some(old_mask);
@@ -324,15 +339,30 @@ pub fn sys_wait4(
     _options: i32,
     user_rusage: UserRef<rusage>,
 ) -> Result<SyscallResult, Errno> {
-    if pid != -1 {
-        not_implemented!("Can only wait for any child process in wait4");
-        return Err(ENOSYS);
+    if pid < -1 || pid == 0 {
+        return Err(EINVAL);
     }
 
-    // TODO(fxb/76976): Implement waiting for tasks that have not already exited.
-    let (pid, exit_code) = match ctx.task.zombie_tasks.write().pop() {
+    let zombie_task = ctx.task.get_zombie_task(pid);
+
+    let (pid, exit_code) = match zombie_task {
         Some(task_owner) => (task_owner.task.id, task_owner.task.exit_code.lock().clone()),
-        None => return Err(ECHILD),
+        None => {
+            ctx.task
+                .thread_group
+                .kernel
+                .scheduler
+                .write()
+                .add_exit_waiter(pid, ctx.task.waiter.clone());
+            ctx.task.waiter.wait()?;
+            // It would be an error for more than one task to remove the zombie task,
+            // so `expect` that it is present.
+            let task_owner = ctx
+                .task
+                .get_zombie_task(pid)
+                .expect("Waited for task to exit, but it is not present in zombie tasks.");
+            (task_owner.task.id, task_owner.task.clone().exit_code.lock().clone())
+        }
     };
 
     if !user_rusage.is_null() {

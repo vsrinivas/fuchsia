@@ -130,12 +130,18 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
                 strace!(task, "-> exit_group {:#x}", error_code);
                 // TODO: Set the error_code on the Zircon process object. Currently missing a way
                 //       to do this in Zircon. Might be easier in the new execution model.
+                let task = task.clone();
                 if let Some(parent) = task.get_task(task.parent) {
                     // TODO: Clean up the resources associated with the process.
                     // TODO: This call to kill() looks redundant with the call in
                     //       ThreadGroup::remove.
                     let _ = ctx.task.thread_group.process.kill();
                     parent.zombie_tasks.write().push(task_owner);
+                }
+                let waiters =
+                    task.thread_group.kernel.scheduler.write().remove_exit_waiters(task.id);
+                for waiter in waiters {
+                    waiter.wake();
                 }
                 exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
                 return Ok(error_code);
@@ -156,7 +162,6 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
         }
 
         dequeue_signal(&mut ctx);
-
         thread.write_state_general_regs(ctx.registers)?;
         exception.set_exception_state(&ZX_EXCEPTION_STATE_HANDLED)?;
     }
