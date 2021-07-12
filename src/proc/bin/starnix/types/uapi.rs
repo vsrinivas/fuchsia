@@ -78,6 +78,15 @@ pub struct sigaltstack_t {
     pub ss_size: usize,
 }
 
+impl sigaltstack_t {
+    /// Returns true if the passed in `ptr` is considered to be on this stack.
+    pub fn contains_pointer(&self, ptr: u64) -> bool {
+        let min = self.ss_sp.ptr() as u64;
+        let max = (self.ss_sp + self.ss_size).ptr() as u64;
+        ptr >= min && ptr <= max
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct sigaction_t {

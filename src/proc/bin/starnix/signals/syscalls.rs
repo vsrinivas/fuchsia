@@ -109,25 +109,31 @@ pub fn sys_sigaltstack(
     user_ss: UserRef<sigaltstack_t>,
     user_old_ss: UserRef<sigaltstack_t>,
 ) -> Result<SyscallResult, Errno> {
+    let mut signal_stack = ctx.task.signal_stack.lock();
+    let on_signal_stack = signal_stack
+        .map(|signal_stack| signal_stack.contains_pointer(ctx.registers.rsp))
+        .unwrap_or(false);
+
     let mut ss = sigaltstack_t::default();
     if !user_ss.is_null() {
+        if on_signal_stack {
+            return Err(EPERM);
+        }
         ctx.task.mm.read_object(user_ss, &mut ss)?;
         if (ss.ss_flags & !(SS_AUTODISARM | SS_DISABLE)) != 0 {
             return Err(EINVAL);
         }
     }
 
-    let mut signal_stack = ctx.task.signal_stack.lock();
-
     if !user_old_ss.is_null() {
-        // TODO: Implement SS_ONSTACK when we actually call the signal handler.
-        ctx.task.mm.write_object(
-            user_old_ss,
-            &match *signal_stack {
-                Some(old_ss) => old_ss,
-                None => sigaltstack_t { ss_flags: SS_DISABLE, ..sigaltstack_t::default() },
-            },
-        )?;
+        let mut old_ss = match *signal_stack {
+            Some(old_ss) => old_ss,
+            None => sigaltstack_t { ss_flags: SS_DISABLE, ..sigaltstack_t::default() },
+        };
+        if on_signal_stack {
+            old_ss.ss_flags = SS_ONSTACK;
+        }
+        ctx.task.mm.write_object(user_old_ss, &old_ss)?;
     }
 
     if !user_ss.is_null() {
