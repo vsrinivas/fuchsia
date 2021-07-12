@@ -670,7 +670,7 @@ primarily for external tools that use bitcode for analysis.
 
 **Current value (from the default):** `false`
 
-From //build/config/clang/clang.gni:18
+From //build/config/clang/clang.gni:19
 
 ### clang_lib_dir
 Path to Clang lib directory.
@@ -693,7 +693,7 @@ additionally consumed by the Go toolchain.
 
 **Current value (from the default):** `"../../prebuilt/third_party/clang/linux-x64/bin"`
 
-From //build/config/clang/clang.gni:14
+From //build/config/clang/clang.gni:15
 
 ### clang_tool_dir
 Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
@@ -3694,7 +3694,7 @@ Controls if we enable relative-vtables for C++ targets.
 
 **Current value (from the default):** `true`
 
-From //build/config/clang/clang.gni:21
+From //build/config/clang/clang.gni:22
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
@@ -3861,7 +3861,7 @@ If true, vboot() image builds print out the exact "futility" command line.
 
 **Current value (from the default):** `false`
 
-From //build/images/vboot/vboot.gni:11
+From //build/images/vboot/vboot.gni:10
 
 ### vendor_linting
 Whether libraries under //vendor should be linted.
