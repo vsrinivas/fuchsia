@@ -79,14 +79,13 @@ void main() {
       {bool verify = true, Duration delay = Duration.zero}) {
     return ermine.waitFor(() async {
       await input.text(cmd);
-      await input.keyPress(kEnterKey);
-      // Wait for command to start executing.
       await Future.delayed(delay);
-      final snapshot = await ermine.inspectSnapshot('terminal.cmx');
-      if (snapshot.containsKey('grid')) {
-        return snapshot['grid'].toString().contains(cmd);
-      }
-      return false;
+      await input.keyPress(kEnterKey);
+      await Future.delayed(delay);
+
+      // Wait for buffer to contain the injected command.
+      final buffer = await waitForBuffer();
+      return buffer.contains(cmd);
     });
   }
 
