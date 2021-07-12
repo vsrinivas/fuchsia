@@ -107,10 +107,7 @@ this provider.
 ```
 
 You must specify [`rights`](#directory-capability-rights).
-You may optionally specify [`subdir`](#subdirectories)
-
-See [`//examples/components/routing`][routing-example] for a working example of
-routing a directory capability from one component to another.
+You may optionally specify [`subdir`](#subdirectories).
 
 ## Directory capability rights {#directory-capability-rights}
 
