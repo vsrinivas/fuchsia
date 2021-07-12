@@ -27,7 +27,6 @@
 #include <fbl/string_buffer.h>
 #include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
-#include "async_loop_owned_rpc_handler.h"
 #include "coordinator.h"
 #include "lib/fidl/cpp/message_part.h"
 #include "src/devices/lib/log/log.h"
@@ -87,81 +86,15 @@ void Watcher::HandleChannelClose(async_dispatcher_t* dispatcher, async::WaitBase
   }
 }
 
-class DevfsFidlServer;
-
 class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
-                  public AsyncLoopOwnedRpcHandler<DcIostate> {
+                  public fidl::WireServer<fio::DirectoryAdmin> {
  public:
-  explicit DcIostate(Devnode* dn);
+  explicit DcIostate(Devnode* dn, async_dispatcher_t* dispatcher);
   ~DcIostate();
 
+  static void Bind(std::unique_ptr<DcIostate> ios, fidl::ServerEnd<fio::Node> request);
   // Remove this DcIostate from its devnode
   void DetachFromDevnode();
-
-  // Claims ownership of |*h| on success
-  static zx_status_t Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::channel* h);
-
-  static zx_status_t DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* txn, void* cookie,
-                                      async_dispatcher_t* dispatcher);
-
-  static void HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
-                        async::WaitBase* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal);
-
- private:
-  friend class DevfsFidlServer;
-
-  uint64_t readdir_ino_ = 0;
-
-  // pointer to our devnode, nullptr if it has been removed
-  Devnode* devnode_ = nullptr;
-
-  std::unique_ptr<DevfsFidlServer> server_;
-};
-
-// This is a wrapper-adapter while the rest of the infrastructure here uses fidl_txn_t. It forwards
-// fidl::Transaction::Reply() to fidl_txn_t.reply().
-class TxnForwarder : public fidl::Transaction {
- public:
-  explicit TxnForwarder(fidl_txn_t* txn) : txn_(txn) {}
-
-  TxnForwarder& operator=(const TxnForwarder&) = delete;
-  TxnForwarder(const TxnForwarder&) = delete;
-
-  TxnForwarder& operator=(TxnForwarder&&) = delete;
-  TxnForwarder(TxnForwarder&&) = delete;
-
-  zx_status_t Reply(fidl::OutgoingMessage* message) override {
-    if (closed_) {
-      return status_;
-    }
-    return txn_->reply(txn_, message->message());
-  }
-
-  void Close(zx_status_t epitaph) override {
-    closed_ = true;
-    status_ = epitaph;
-  }
-
-  std::unique_ptr<Transaction> TakeOwnership() final {
-    ZX_ASSERT_MSG(false, "TxnForwarder cannot take ownership.");
-  }
-
-  zx_status_t GetStatus() const { return status_; }
-
- private:
-  fidl_txn_t* txn_;
-  bool closed_ = false;
-  zx_status_t status_ = ZX_OK;
-};
-
-class DevfsFidlServer : public fidl::WireServer<fio::DirectoryAdmin> {
- public:
-  explicit DevfsFidlServer(DcIostate* iostate) : owner_(iostate) {}
-
-  // Awful hacks for now to integrate with DcIostate::DevfsFidlHandler().
-  void set_current_dispatcher(async_dispatcher_t* dispatcher) { current_dispatcher_ = dispatcher; }
-  void clear_current_dispatcher() { current_dispatcher_ = nullptr; }
 
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
@@ -216,8 +149,14 @@ class DevfsFidlServer : public fidl::WireServer<fio::DirectoryAdmin> {
   }
 
  private:
-  DcIostate* owner_;
-  async_dispatcher_t* current_dispatcher_ = nullptr;
+  // pointer to our devnode, nullptr if it has been removed
+  Devnode* devnode_;
+
+  std::optional<fidl::ServerBindingRef<fio::DirectoryAdmin>> binding_;
+
+  async_dispatcher_t* dispatcher_;
+
+  uint64_t readdir_ino_ = 0;
 };
 
 namespace {
@@ -233,12 +172,6 @@ ProtocolInfo proto_infos[] = {
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) {name, nullptr, val, flags},
 #include <lib/ddk/protodefs.h>
 };
-
-void describe_error(zx::channel h, zx_status_t status) {
-  fio::wire::NodeInfo invalid_node_info;
-  fidl::WireResponse<fio::Node::OnOpen>::OwnedEncodedMessage response(status, invalid_node_info);
-  response.Write(h.get());
-}
 
 // A devnode is a directory (from stat's perspective) if
 // it has children, or if it doesn't have a device, or if
@@ -502,11 +435,8 @@ again:
   return ZX_ERR_NOT_FOUND;
 }
 
-void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, char* path,
-                uint32_t flags) {
-  zx::channel ipc(h);
-  h = ZX_HANDLE_INVALID;
-
+void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<fio::Node> ipc,
+                char* path, uint32_t flags) {
   // Filter requests for diagnostics path and pass it on to diagnostics vfs server.
   if (!strncmp(path, kDiagnosticsDirName, kDiagnosticsDirLen) &&
       (path[kDiagnosticsDirLen] == '\0' || path[kDiagnosticsDirLen] == '/')) {
@@ -518,56 +448,48 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
       dir_path = current_dir;
     }
     fidl::WireCall(*diagnostics_channel)
-        .Open(flags, 0, fidl::StringView::FromExternal(dir_path),
-              fidl::ServerEnd<fio::Node>(std::move(ipc)));
-    return;
-  }
-
-  if (!strcmp(path, ".")) {
-    path = nullptr;
-  }
-
-  Devnode* dn = dirdn;
-  zx_status_t r = devfs_walk(&dn, path);
-
-  bool describe = flags & ZX_FS_FLAG_DESCRIBE;
-  if (r != ZX_OK) {
-    if (describe) {
-      describe_error(std::move(ipc), r);
+        .Open(flags, 0, fidl::StringView::FromExternal(dir_path), std::move(ipc));
+  } else {
+    if (!strcmp(path, ".")) {
+      path = nullptr;
     }
-    return;
-  }
 
-  // If we are a local-only node, or we are asked to not go remote, or we are asked to
-  // open-as-a-directory, open locally:
-  if (devnode_is_local(dn) || flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY)) {
-    zx::unowned_channel unowned_ipc(ipc);
-    if ((r = DcIostate::Create(dn, dispatcher, &ipc)) != ZX_OK) {
-      if (describe) {
-        describe_error(std::move(ipc), r);
-      }
+    auto describe =
+        [&ipc, describe = flags & ZX_FS_FLAG_DESCRIBE](zx::status<fio::wire::NodeInfo> node_info) {
+          if (describe) {
+            fidl::WireResponse<fio::Node::OnOpen>::OwnedEncodedMessage response(
+                node_info.status_value(),
+                node_info.is_ok() ? node_info.value() : fio::wire::NodeInfo());
+            response.Write(ipc.channel());
+          }
+        };
+
+    Devnode* dn = dirdn;
+    if (zx_status_t status = devfs_walk(&dn, path); status != ZX_OK) {
+      describe(zx::error(status));
       return;
     }
-    if (describe) {
+
+    // If we are a local-only node, or we are asked to not go remote, or we are asked to
+    // open-as-a-directory, open locally:
+    if (devnode_is_local(dn) || flags & (ZX_FS_FLAG_NOREMOTE | ZX_FS_FLAG_DIRECTORY)) {
+      auto ios = std::make_unique<DcIostate>(dn, dispatcher);
+      if (ios == nullptr) {
+        describe(zx::error(ZX_ERR_NO_MEMORY));
+        return;
+      }
       fio::wire::NodeInfo node_info;
       fio::wire::DirectoryObject directory;
       node_info.set_directory(
           fidl::ObjectView<fio::wire::DirectoryObject>::FromExternal(&directory));
-      fidl::WireResponse<fio::Node::OnOpen>::OwnedEncodedMessage response(ZX_OK, node_info);
-
-      // Writing to unowned_ipc is safe because this is executing on the same
-      // thread as the DcAsyncLoop(), so the handle can't be closed underneath us.
-      response.Write(unowned_ipc->get());
+      describe(zx::ok(node_info));
+      DcIostate::Bind(std::move(ios), std::move(ipc));
+    } else if (dn->service_node) {
+      fidl::WireCall(dn->service_node).Clone(flags, std::move(ipc));
+    } else {
+      dn->device->device_controller()->Open(flags, 0, ".", std::move(ipc));
     }
-    return;
-  } else if (dn->service_node) {
-    fidl::ServerEnd<fio::Node> server_end(std::move(ipc));
-    fidl::WireCall(dn->service_node).Clone(flags, std::move(server_end));
-    return;
   }
-
-  // Otherwise we will pass the request on to the remote.
-  dn->device->device_controller()->Open(flags, 0, ".", fidl::ServerEnd<fio::Node>(std::move(ipc)));
 }
 
 void devfs_remove(Devnode* dn) {
@@ -621,34 +543,28 @@ Devnode::Devnode(fbl::String name) : name(std::move(name)) {}
 
 Devnode::~Devnode() { devfs_remove(this); }
 
-DcIostate::DcIostate(Devnode* dn) : devnode_(dn), server_(std::make_unique<DevfsFidlServer>(this)) {
+DcIostate::DcIostate(Devnode* dn, async_dispatcher_t* dispatcher)
+    : devnode_(dn), dispatcher_(dispatcher) {
   devnode_->iostate.push_back(this);
 }
 
 DcIostate::~DcIostate() { DetachFromDevnode(); }
+
+void DcIostate::Bind(std::unique_ptr<DcIostate> ios, fidl::ServerEnd<fio::Node> request) {
+  std::optional<fidl::ServerBindingRef<fio::DirectoryAdmin>>* binding = &ios->binding_;
+  *binding =
+      fidl::BindServer(ios->dispatcher_,
+                       fidl::ServerEnd<fio::DirectoryAdmin>(request.TakeChannel()), std::move(ios));
+}
 
 void DcIostate::DetachFromDevnode() {
   if (devnode_ != nullptr) {
     devnode_->iostate.erase(*this);
     devnode_ = nullptr;
   }
-  set_channel(zx::channel());
-}
-
-zx_status_t DcIostate::Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::channel* ipc) {
-  auto ios = std::make_unique<DcIostate>(dn);
-  if (ios == nullptr) {
-    return ZX_ERR_NO_MEMORY;
+  if (std::optional binding = std::exchange(binding_, std::nullopt); binding.has_value()) {
+    binding.value().Unbind();
   }
-
-  ios->set_channel(std::move(*ipc));
-  zx_status_t status = DcIostate::BeginWait(&ios, dispatcher);
-  if (status != ZX_OK) {
-    // Take the handle back from |ios| so it doesn't close it when it's
-    // destroyed
-    *ipc = ios->set_channel(zx::channel());
-  }
-  return status;
 }
 
 void devfs_advertise(const fbl::RefPtr<Device>& dev) {
@@ -765,64 +681,47 @@ void devfs_connect_diagnostics(fidl::UnownedClientEnd<fio::Directory> h) {
   diagnostics_channel = std::make_optional<fidl::UnownedClientEnd<fio::Directory>>(std::move(h));
 }
 
-zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* txn, void* cookie,
-                                        async_dispatcher_t* dispatcher) {
-  auto ios = static_cast<DcIostate*>(cookie);
-  if (!ios->devnode_) {
-    return ZX_ERR_PEER_CLOSED;
-  }
-
-  TxnForwarder transaction(txn);
-  ios->server_->set_current_dispatcher(dispatcher);
-  auto result = fidl::WireDispatch<fio::DirectoryAdmin>(
-      ios->server_.get(), fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
-  ios->server_->clear_current_dispatcher();
-
-  return result == fidl::DispatchResult::kNotFound ? ZX_ERR_NOT_SUPPORTED : transaction.GetStatus();
-}
-
-void DevfsFidlServer::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
+void DcIostate::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
   if (request->path.size() <= fio::wire::kMaxPath) {
     fbl::StringBuffer<fio::wire::kMaxPath + 1> terminated_path;
     terminated_path.Append(request->path.data(), request->path.size());
-    devfs_open(owner_->devnode_, current_dispatcher_, request->object.TakeChannel().release(),
-               terminated_path.data(), request->flags);
+    devfs_open(devnode_, dispatcher_, std::move(request->object), terminated_path.data(),
+               request->flags);
   }
 }
 
-void DevfsFidlServer::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
+void DcIostate::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
   if (request->flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) {
     request->flags |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
   }
   char path[] = ".";
-  devfs_open(owner_->devnode_, current_dispatcher_, request->object.TakeChannel().release(), path,
+  devfs_open(devnode_, dispatcher_, std::move(request->object), path,
              request->flags | ZX_FS_FLAG_NOREMOTE);
 }
 
-void DevfsFidlServer::QueryFilesystem(QueryFilesystemRequestView request,
-                                      QueryFilesystemCompleter::Sync& completer) {
+void DcIostate::QueryFilesystem(QueryFilesystemRequestView request,
+                                QueryFilesystemCompleter::Sync& completer) {
   fio::wire::FilesystemInfo info;
   strlcpy(reinterpret_cast<char*>(info.name.data()), "devfs", fio::wire::kMaxFsNameBuffer);
   completer.Reply(ZX_OK, fidl::ObjectView<fio::wire::FilesystemInfo>::FromExternal(&info));
 }
 
-void DevfsFidlServer::Watch(WatchRequestView request, WatchCompleter::Sync& completer) {
+void DcIostate::Watch(WatchRequestView request, WatchCompleter::Sync& completer) {
   zx_status_t status;
   if (request->mask & (~fio::wire::kWatchMaskAll) || request->options != 0) {
     status = ZX_ERR_INVALID_ARGS;
   } else {
-    status = devfs_watch(owner_->devnode_, std::move(request->watcher), request->mask);
+    status = devfs_watch(devnode_, std::move(request->watcher), request->mask);
   }
   completer.Reply(status);
 }
 
-void DevfsFidlServer::Rewind(RewindRequestView request, RewindCompleter::Sync& completer) {
-  owner_->readdir_ino_ = 0;
+void DcIostate::Rewind(RewindRequestView request, RewindCompleter::Sync& completer) {
+  readdir_ino_ = 0;
   completer.Reply(ZX_OK);
 }
 
-void DevfsFidlServer::ReadDirents(ReadDirentsRequestView request,
-                                  ReadDirentsCompleter::Sync& completer) {
+void DcIostate::ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) {
   if (request->max_bytes > fio::wire::kMaxBuf) {
     completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
     return;
@@ -830,8 +729,7 @@ void DevfsFidlServer::ReadDirents(ReadDirentsRequestView request,
 
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
-  zx_status_t status =
-      devfs_readdir(owner_->devnode_, &owner_->readdir_ino_, data, request->max_bytes);
+  zx_status_t status = devfs_readdir(devnode_, &readdir_ino_, data, request->max_bytes);
   if (status >= 0) {
     actual = status;
     status = ZX_OK;
@@ -839,9 +737,9 @@ void DevfsFidlServer::ReadDirents(ReadDirentsRequestView request,
   completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
 }
 
-void DevfsFidlServer::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
+void DcIostate::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
   uint32_t mode;
-  if (devnode_is_dir(owner_->devnode_)) {
+  if (devnode_is_dir(devnode_)) {
     mode = V_TYPE_DIR | V_IRUSR | V_IWUSR;
   } else {
     mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
@@ -851,46 +749,19 @@ void DevfsFidlServer::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync
   attributes.mode = mode;
   attributes.content_size = 0;
   attributes.link_count = 1;
-  attributes.id = owner_->devnode_->ino;
+  attributes.id = devnode_->ino;
   completer.Reply(ZX_OK, attributes);
 }
 
-void DevfsFidlServer::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
+void DcIostate::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
   fio::wire::NodeInfo node_info;
   fio::wire::DirectoryObject directory;
   node_info.set_directory(fidl::ObjectView<fio::wire::DirectoryObject>::FromExternal(&directory));
   completer.Reply(std::move(node_info));
 }
 
-void DevfsFidlServer::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
+void DcIostate::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
-}
-
-void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
-                          async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to wait for RPC: %s", zx_status_get_string(status));
-    return;
-  }
-
-  if (signal->observed & ZX_CHANNEL_READABLE) {
-    status = fs::ReadMessage(
-        wait->object(), [&ios, dispatcher](fidl_incoming_msg_t* msg, fs::FidlConnection* txn) {
-          return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get(), dispatcher);
-        });
-    if (status == ZX_OK) {
-      ios->BeginWait(std::move(ios), dispatcher);
-      return;
-    }
-  } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    fs::CloseMessage([&ios, dispatcher](fidl_incoming_msg_t* msg, fs::FidlConnection* txn) {
-      return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get(), dispatcher);
-    });
-  } else {
-    LOGF(FATAL, "Unexpected signal state %#08x", signal->observed);
-  }
-  // Do not start waiting again, and destroy |ios|
 }
 
 zx::unowned_channel devfs_root_borrow() { return zx::unowned_channel(g_devfs_root); }
@@ -918,14 +789,17 @@ void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatche
   root_devnode->device = device.get();
   root_devnode->device->self = root_devnode.get();
 
-  zx::channel h0, h1;
-  if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
-    return;
-  } else if (DcIostate::Create(root_devnode.get(), dispatcher, &h0) != ZX_OK) {
+  auto endpoints = fidl::CreateEndpoints<fio::Node>();
+  if (endpoints.is_error()) {
     return;
   }
+  auto ios = std::make_unique<DcIostate>(root_devnode.get(), dispatcher);
+  if (ios == nullptr) {
+    return;
+  }
+  DcIostate::Bind(std::move(ios), std::move(endpoints->server));
 
-  g_devfs_root = std::move(h1);
+  g_devfs_root = endpoints->client.TakeChannel();
   // This is actually owned by |device| and will be freed in unpublish
   __UNUSED auto ptr = root_devnode.release();
 }
