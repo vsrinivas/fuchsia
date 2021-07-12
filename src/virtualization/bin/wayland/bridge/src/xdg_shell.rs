@@ -315,14 +315,14 @@ impl XdgToplevel {
             (physical_size.width, physical_size.height, xdg_surface_ref, surface_ref)
         };
 
-        // Always set the maximized state to hint to the client it really should
+        // Always set the fullscreen state to hint to the client it really should
         // obey the geometry we're asking. From the xdg_shell spec:
         //
-        // maximized:
-        //    The surface is maximized. The window geometry specified in the
+        // fullscreen:
+        //    The surface is fullscreen. The window geometry specified in the
         //    configure event must be obeyed by the client.
         let mut states = wl::Array::new();
-        states.push(zxdg_toplevel_v6::State::Maximized)?;
+        states.push(zxdg_toplevel_v6::State::Fullscreen)?;
         if client.input_dispatcher.has_focus(surface_ref) {
             // If the window has focus, we set the activiated state. This is
             // just a hint to pass along to the client so it can draw itself
