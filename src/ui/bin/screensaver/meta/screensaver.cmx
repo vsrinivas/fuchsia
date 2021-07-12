@@ -1,0 +1,27 @@
+{
+    "include": [
+        "//src/lib/vulkan/application.shard.cmx",
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/screensaver"
+    },
+    "sandbox": {
+        "dev": [
+            "class/display-controller",
+            "class/input",
+            "class/input-report"
+        ],
+        "features": [
+            "isolated-cache-storage"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.input3.Keyboard",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}
