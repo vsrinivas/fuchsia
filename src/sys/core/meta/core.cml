@@ -852,6 +852,10 @@
             ],
             from: "#pkg-resolver",
         },
+        {
+            protocol: [ "fuchsia.ui.activity.Provider" ],
+            from: "#activity",
+        },
     ],
     environments: [
         // Components that simply need access to universe-resolver can use this environment.

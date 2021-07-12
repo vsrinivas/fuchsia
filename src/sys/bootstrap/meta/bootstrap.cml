@@ -248,11 +248,6 @@
             to: "#pkg-drivers",
         },
         {
-            protocol: [ "fuchsia.kernel.Stats" ],
-            from: "parent",
-            to: "#power_manager",
-        },
-        {
             protocol: "fuchsia.boot.RootResource",
             from: "parent",
             to: "#console",
@@ -615,7 +610,16 @@
             dependency: "weak_for_migration",
         },
         {
-            protocol: [ "fuchsia.feedback.CrashReporter" ],
+            protocol: [
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.kernel.Stats",
+
+                // These capabilities are required for the Power Manager to implement the
+                // fuchsia.power.profile.Watcher service.
+                // (see: https://fuchsia.dev/reference/fidl/fuchsia.power.profile)
+                "fuchsia.settings.Input",
+                "fuchsia.ui.activity.Provider",
+            ],
             from: "parent",
             to: "#power_manager",
         },
@@ -855,6 +859,7 @@
         {
             protocol: [
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+                "fuchsia.power.profile.Watcher",
                 "fuchsia.thermal.Controller",
             ],
             from: "#power_manager",

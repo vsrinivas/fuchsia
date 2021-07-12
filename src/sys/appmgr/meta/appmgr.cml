@@ -68,6 +68,7 @@
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Resolver",
                 "fuchsia.settings.Audio",
+                "fuchsia.settings.Input",
                 "fuchsia.stash.SecureStore",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
@@ -454,6 +455,10 @@
             path: "/svc_for_sys/fuchsia.thermal.Controller",
         },
         {
+            protocol: "fuchsia.power.profile.Watcher",
+            path: "/svc_for_sys/fuchsia.power.profile.Watcher",
+        },
+        {
             protocol: "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
             path: "/svc_for_sys/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
         },
@@ -577,6 +582,7 @@
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Resolver",
                 "fuchsia.settings.Audio",
+                "fuchsia.settings.Input",
                 "fuchsia.stash.SecureStore",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",

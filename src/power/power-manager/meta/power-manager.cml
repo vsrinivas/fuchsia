@@ -14,17 +14,24 @@
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
                 "fuchsia.power.manager.DriverManagerRegistration",
+                "fuchsia.power.profile.Watcher",
                 "fuchsia.thermal.Controller",
             ],
         },
     ],
     use: [
-        { protocol: "fuchsia.cobalt.LoggerFactory" },
-        { protocol: "fuchsia.device.manager.Administrator" },
-        { protocol: "fuchsia.feedback.CrashReporter" },
-        { protocol: "fuchsia.kernel.Stats" },
-        { protocol: "fuchsia.tracing.provider.Registry" },
-        { protocol: "fuchsia.sys2.SystemController" },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.kernel.Stats",
+                "fuchsia.settings.Input",
+                "fuchsia.sys2.SystemController",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.activity.Provider",
+            ],
+        },
     ],
     expose: [
         {
@@ -32,6 +39,7 @@
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
                 "fuchsia.power.manager.DriverManagerRegistration",
+                "fuchsia.power.profile.Watcher",
                 "fuchsia.thermal.Controller",
             ],
             from: "self",
