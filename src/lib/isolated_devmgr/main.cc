@@ -168,7 +168,7 @@ int main(int argc, const char** argv) {
     return ISO_DEV_MGR_RET_ERR;
   }
 
-  devmgr->SetExceptionCallback([]() {
+  devmgr->SetExceptionCallback([](zx_exception_info_t) {
     FX_LOGS(ERROR) << "Isolated Devmgr crashed";
     zx_process_exit(ISO_DEV_MGR_RET_ERR);
   });

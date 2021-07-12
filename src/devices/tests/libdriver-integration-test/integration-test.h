@@ -142,7 +142,7 @@ class IntegrationTest : public testing::Test {
 
  private:
   // Function that will be called whenever we see an exception from devmgr
-  static void DevmgrException();
+  static void DevmgrException(zx_exception_info_t);
 };
 
 }  // namespace libdriver_integration_test

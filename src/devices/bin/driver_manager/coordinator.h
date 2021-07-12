@@ -117,6 +117,20 @@ class ResumeContext {
 
 using ResumeCallback = std::function<void(zx_status_t)>;
 
+// The action to take when we witness a driver host crash.
+enum class DriverHostCrashPolicy {
+  // Restart the driver host, with exponential backoff, up to 3 times.
+  // This will only be triggered if the driver host which host's the driver which created the
+  // parent device being bound to doesn't also crash.
+  // TODO(fxbug.dev/66442): Handle composite devices better (they don't seem to restart with this
+  // policy set).
+  kRestartDriverHost,
+  // Reboot the system via the power manager.
+  kRebootSystem,
+  // Don't take any action, other than cleaning up some internal driver manager state.
+  kDoNothing,
+};
+
 struct CoordinatorConfig {
   // Initial root resource from the kernel.
   zx::resource root_resource;
@@ -153,6 +167,8 @@ struct CoordinatorConfig {
   // environments this might be different.
   std::string path_prefix = "/boot/";
   std::vector<fbl::String> eager_fallback_drivers;
+  // The decision to make when we encounter a driver host crash.
+  DriverHostCrashPolicy crash_policy = DriverHostCrashPolicy::kRestartDriverHost;
 };
 
 class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDevelopment>,

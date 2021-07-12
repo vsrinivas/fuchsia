@@ -83,7 +83,7 @@ IntegrationTest::~IntegrationTest() {
   IntegrationTest::loop_.ResetQuit();
 }
 
-void IntegrationTest::DevmgrException() {
+void IntegrationTest::DevmgrException(zx_exception_info_t) {
   // Log an error in the currently running test
   ADD_FAILURE() << "Crash inside devmgr job";
   IntegrationTest::loop_.Quit();

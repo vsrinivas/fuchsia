@@ -62,6 +62,7 @@ struct DriverManagerParams {
   bool suspend_timeout_fallback;
   bool verbose;
   std::vector<fbl::String> eager_fallback_drivers;
+  DriverHostCrashPolicy crash_policy;
 };
 
 DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Arguments>& client) {
@@ -92,6 +93,23 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
     }
     eager_fallback_drivers.emplace_back(std::move(list));
   }
+
+  auto crash_policy = DriverHostCrashPolicy::kRestartDriverHost;
+  auto response = client.GetString("driver-manager.driver-host-crash-policy");
+  if (response.ok() && !response->value.is_null() && !response->value.empty()) {
+    std::string crash_policy_str(response->value.get());
+    if (crash_policy_str == "reboot-system") {
+      crash_policy = DriverHostCrashPolicy::kRebootSystem;
+    } else if (crash_policy_str == "restart-driver-host") {
+      crash_policy = DriverHostCrashPolicy::kRestartDriverHost;
+    } else if (crash_policy_str == "do-nothing") {
+      crash_policy = DriverHostCrashPolicy::kDoNothing;
+    } else {
+      LOGF(ERROR, "Unexpected option for driver-manager.driver-host-crash-policy: %s",
+           crash_policy_str.c_str());
+    }
+  }
+
   return {
       .driver_host_asan = bool_resp->values[0],
       .enable_ephemeral = bool_resp->values[1],
@@ -100,6 +118,7 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
       .suspend_timeout_fallback = bool_resp->values[4],
       .verbose = bool_resp->values[5],
       .eager_fallback_drivers = std::move(eager_fallback_drivers),
+      .crash_policy = crash_policy,
   };
 }
 
@@ -324,6 +343,7 @@ int main(int argc, char** argv) {
   config.path_prefix = driver_manager_args.path_prefix;
   config.eager_fallback_drivers = std::move(driver_manager_params.eager_fallback_drivers);
   config.enable_ephemeral = driver_manager_params.enable_ephemeral;
+  config.crash_policy = driver_manager_params.crash_policy;
 
   // TODO(fxbug.dev/33958): Remove all uses of the root resource.
   status = get_root_resource(&config.root_resource);

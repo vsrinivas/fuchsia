@@ -126,7 +126,8 @@ zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_o
 __EXPORT
 zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoing_server,
                    zx::channel component_lifecycle_server, zx::job* devmgr_job,
-                   zx::channel* devfs_root, zx::channel* outgoing_services_root) {
+                   zx::process* devmgr_process, zx::channel* devfs_root,
+                   zx::channel* outgoing_services_root) {
   // Create containing job (and copies for devcoordinator and fshost)
   zx::job job, devmgr_job_copy, fshost_job_copy;
   zx_status_t status = zx::job::create(*zx::job::default_job(), 0, &job);
@@ -294,6 +295,7 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
   }
 
   *devmgr_job = std::move(job);
+  *devmgr_process = std::move(new_process);
   *devfs_root = std::move(devfs_client);
   *outgoing_services_root = std::move(outgoing_services_client);
   return ZX_OK;

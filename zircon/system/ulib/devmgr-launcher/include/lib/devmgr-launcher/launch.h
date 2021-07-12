@@ -69,7 +69,8 @@ struct Args {
 // To destroy the devmgr, issue |devmgr_job->kill()|.
 zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoing_server,
                    zx::channel component_lifecycle_server, zx::job* devmgr_job,
-                   zx::channel* devfs_root, zx::channel* outgoing_svc_root);
+                   zx::process* devmgr_process, zx::channel* devfs_root,
+                   zx::channel* outgoing_svc_root);
 
 }  // namespace devmgr_launcher
 

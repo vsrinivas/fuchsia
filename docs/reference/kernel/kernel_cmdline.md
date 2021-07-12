@@ -130,6 +130,17 @@ opposed to syslog.
 
 If this option is set, devmgr will enable verbose logging.
 
+## driver-manager.driver-host-crash-policy
+
+Sets the policy for what action to take when a driver host crash is observed by
+the driver manager.
+
+Valid options include:
+
+* `restart-driver-host` : Restarts the driver host (up to 3 times).
+* `reboot-system` : Reboots the system.
+* `do-nothing` : Take no action on observed crash.
+
 ## driver.\<name>.compatibility-tests-enable
 
 If this option is set, devmgr will run compatibility tests for the driver.

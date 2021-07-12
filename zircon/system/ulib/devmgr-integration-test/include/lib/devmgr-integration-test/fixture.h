@@ -13,6 +13,7 @@
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/zx/job.h>
 #include <lib/zx/time.h>
+#include <zircon/syscalls/exception.h>
 
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
@@ -61,7 +62,7 @@ class IsolatedDevmgr {
   zx_status_t AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir);
 
   // Notifies if driver manager job has an exception.
-  void SetExceptionCallback(fit::closure exception_callback);
+  void SetExceptionCallback(fit::function<void(zx_exception_info_t)> exception_callback);
 
   // Returns true if any process in driver manager process crashes.
   bool crashed() const;
@@ -69,6 +70,8 @@ class IsolatedDevmgr {
   // Borrow the handle to the job containing the isolated devmgr.  This may be
   // used for things like binding to an exception port.
   const zx::job& containing_job() const { return job_; }
+
+  const zx::process& driver_manager_process() const { return process_; }
 
   void reset() { *this = IsolatedDevmgr(); }
 
@@ -90,6 +93,9 @@ class IsolatedDevmgr {
 
   // Job that contains the devmgr environment
   zx::job job_;
+
+  // Process for driver manager.
+  zx::process process_;
 
   // Channel for the root of outgoing services
   fidl::ClientEnd<fuchsia_io::Directory> svc_root_dir_;

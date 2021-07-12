@@ -194,7 +194,7 @@ struct IsolatedDevmgr::ExceptionLoopState {
   }
 
   void HandleException() {
-    printf("Handling devmgr exception\n");
+    fprintf(stderr, "Handling devmgr exception\n");
     zx_exception_info_t info;
     zx::exception exception;
     zx_status_t status = exception_channel_.read(0, &info, exception.reset_and_get_address(),
@@ -214,6 +214,10 @@ struct IsolatedDevmgr::ExceptionLoopState {
     einfo.thread_koid = info.tid;
     einfo.type = static_cast<fuchsia_exception::wire::ExceptionType>(info.type);
     handler.OnException(std::move(exception), einfo);
+
+    if (exception_callback_) {
+      exception_callback_(info);
+    }
   }
 
   void DevmgrException(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
@@ -223,9 +227,7 @@ struct IsolatedDevmgr::ExceptionLoopState {
     }
     crashed_ = true;
     HandleException();
-    if (exception_callback_) {
-      exception_callback_();
-    }
+    wait->Begin(dispatcher);
   }
 
   std::optional<async::Loop> loop_;
@@ -233,7 +235,7 @@ struct IsolatedDevmgr::ExceptionLoopState {
 
   zx::channel exception_channel_;
   std::atomic<bool> crashed_ = false;
-  fit::closure exception_callback_;
+  fit::function<void(zx_exception_info_t)> exception_callback_;
   async::WaitMethod<ExceptionLoopState, &ExceptionLoopState::DevmgrException> watcher_;
 };
 
@@ -360,6 +362,7 @@ IsolatedDevmgr::~IsolatedDevmgr() { Terminate(); }
 __EXPORT
 IsolatedDevmgr::IsolatedDevmgr(IsolatedDevmgr&& other)
     : job_(std::move(other.job_)),
+      process_(std::move(other.process_)),
       svc_root_dir_(std::move(other.svc_root_dir_)),
       fshost_outgoing_dir_(std::move(other.fshost_outgoing_dir_)),
       devfs_root_(std::move(other.devfs_root_)),
@@ -371,6 +374,7 @@ __EXPORT
 IsolatedDevmgr& IsolatedDevmgr::operator=(IsolatedDevmgr&& other) {
   Terminate();
   job_ = std::move(other.job_);
+  process_ = std::move(other.process_);
   component_lifecycle_client_ = std::move(other.component_lifecycle_client_);
   devfs_root_ = std::move(other.devfs_root_);
   svc_root_dir_ = std::move(other.svc_root_dir_);
@@ -422,10 +426,10 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
   zx::channel devfs;
   fidl::ClientEnd<fuchsia_io::Directory> outgoing_svc_root;
   std::map<std::string, std::string> boot_args = std::move(args.boot_args);
-  zx_status_t status = devmgr_launcher::Launch(std::move(args), svc_client.TakeChannel(),
-                                               fshost_outgoing_server.TakeChannel(),
-                                               component_lifecycle->server.TakeChannel(),
-                                               &devmgr.job_, &devfs, &outgoing_svc_root.channel());
+  zx_status_t status = devmgr_launcher::Launch(
+      std::move(args), svc_client.TakeChannel(), fshost_outgoing_server.TakeChannel(),
+      component_lifecycle->server.TakeChannel(), &devmgr.job_, &devmgr.process_, &devfs,
+      &outgoing_svc_root.channel());
   if (status != ZX_OK) {
     return status;
   }
@@ -457,7 +461,8 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
   return ZX_OK;
 }
 
-__EXPORT void IsolatedDevmgr::SetExceptionCallback(fit::closure exception_callback) {
+__EXPORT void IsolatedDevmgr::SetExceptionCallback(
+    fit::function<void(zx_exception_info_t)> exception_callback) {
   exception_loop_state_->exception_callback_ = std::move(exception_callback);
 }
 

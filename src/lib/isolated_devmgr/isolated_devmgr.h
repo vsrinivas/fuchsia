@@ -28,7 +28,11 @@ class IsolatedDevmgr {
   void Connect(zx::channel req);
   zx_status_t WaitForFile(const char* path);
 
-  void SetExceptionCallback(fit::closure cb) { devmgr_.SetExceptionCallback(std::move(cb)); }
+  void SetExceptionCallback(fit::function<void(zx_exception_info_t)> cb) {
+    devmgr_.SetExceptionCallback(std::move(cb));
+  }
+
+  const zx::process& driver_manager_process() const { return devmgr_.driver_manager_process(); }
 
   struct ExtraArgs {
     // A list of vid/pid/did triplets to spawn in their own devhosts.

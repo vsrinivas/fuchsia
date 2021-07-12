@@ -49,7 +49,7 @@ class IsolatedDevmgr {
   };
 
   // Notifies if driver manager job has an exception.
-  void SetExceptionCallback(fit::closure callback) {
+  void SetExceptionCallback(fit::function<void(zx_exception_info_t)> callback) {
     devmgr_.SetExceptionCallback(std::move(callback));
   }
 

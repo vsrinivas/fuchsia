@@ -608,6 +608,10 @@ void Coordinator::ScheduleDriverHostRequestedUnbindChildren(const fbl::RefPtr<De
 // or process exit, which means we should remove all other
 // devices that share the driver_host at the same time
 zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced) {
+  if (forced && config_.crash_policy == DriverHostCrashPolicy::kRebootSystem) {
+    // TODO(fxbug.dev/67168): Trigger system restart more gracefully.
+    ZX_ASSERT(false);
+  }
   dev->inc_num_removal_attempts();
 
   if (dev->state() == Device::State::kDead) {
@@ -735,12 +739,14 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
         //      restart and get a new driver_host to be launched
         //      when a driver_host dies.  It should probably be
         //      more tied to driver_host teardown than it is.
-        // IF we are the last child of our parent
+        // IF the policy is set such that we take action
+        // AND we are the last child of our parent
         // AND our parent is not itself dead
         // AND our parent is a BUSDEV
         // AND our parent's driver_host is not dying
         // THEN we will want to rebind our parent
-        if ((parent->state() != Device::State::kDead) && (parent->flags & DEV_CTX_MUST_ISOLATE) &&
+        if ((config_.crash_policy == DriverHostCrashPolicy::kRestartDriverHost) &&
+            (parent->state() != Device::State::kDead) && (parent->flags & DEV_CTX_MUST_ISOLATE) &&
             ((parent->host() == nullptr) ||
              !(parent->host()->flags() & DriverHost::Flags::kDying))) {
           VLOGF(1, "Bus device %p '%s' is unbound", parent.get(), parent->name().data());

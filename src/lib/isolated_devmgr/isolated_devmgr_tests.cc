@@ -53,7 +53,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     return IsolatedDevmgr::Create(std::move(args));
   }
 
-  std::unique_ptr<IsolatedDevmgr> CreateDevmgrPlatTest() {
+  std::unique_ptr<IsolatedDevmgr> CreateDevmgrPlatTest(const char* crash_policy = "do-nothing") {
     devmgr_launcher::Args args;
     auto device_list_ptr = std::unique_ptr<fbl::Vector<board_test::DeviceEntry>>(
         new fbl::Vector<board_test::DeviceEntry>());
@@ -63,9 +63,10 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     args.driver_search_paths.push_back("/boot/driver");
     args.driver_search_paths.push_back("/boot/driver/test");
     args.disable_block_watcher = true;
+    args.boot_args = {{"driver-manager.driver-host-crash-policy", crash_policy}};
     device_list_ptr->push_back(kRtcDeviceEntry);
     device_list_ptr->push_back(kCrashDeviceEntry);
-    return IsolatedDevmgr::Create(std::move(args), std::move(device_list_ptr));
+    return IsolatedDevmgr::Create(std::move(args), std::move(device_list_ptr), dispatcher());
   }
 
   fidl::InterfaceHandle<fuchsia::hardware::ethertap::TapDevice> CreateTapDevice(
@@ -137,7 +138,7 @@ TEST_F(DevmgrTest, ExceptionCallback) {
   ASSERT_TRUE(devmgr);
 
   bool exception = false;
-  devmgr->SetExceptionCallback([&exception]() { exception = true; });
+  devmgr->SetExceptionCallback([&exception](zx_exception_info_t) { exception = true; });
 
   ASSERT_EQ(devmgr->WaitForFile("sys/platform/11:00:1f"), ZX_OK);
 
@@ -152,6 +153,128 @@ TEST_F(DevmgrTest, ExceptionCallback) {
 
     return exception;
   });
+}
+
+// Driver manager will never crash, triggering a system reboot.
+TEST_F(DevmgrTest, ExceptionCallback_SystemReboot) {
+  auto devmgr = CreateDevmgrPlatTest("reboot-system");
+  ASSERT_TRUE(devmgr);
+
+  zx_info_handle_basic_t process_info;
+  ASSERT_EQ(devmgr->driver_manager_process().get_info(ZX_INFO_HANDLE_BASIC, &process_info,
+                                                      sizeof(process_info), nullptr, nullptr),
+            ZX_OK);
+
+  std::atomic<bool> driver_manager_crashed = false;
+  devmgr->SetExceptionCallback(
+      [&driver_manager_crashed, &process_info](zx_exception_info_t exception_info) {
+        driver_manager_crashed = process_info.koid == exception_info.pid;
+      });
+
+  ASSERT_EQ(devmgr->WaitForFile("sys/platform/11:00:1f"), ZX_OK);
+
+  zx_handle_t dir;
+  ASSERT_EQ(fdio_get_service_handle(devmgr->root(), &dir), ZX_OK);
+
+  // A single crash should cause driver manager to crash, but we don't know when crash-device will
+  // be available.
+  RunLoopUntil([&driver_manager_crashed, &dir]() {
+    zx::channel a, b;
+    EXPECT_EQ(zx::channel::create(0, &a, &b), ZX_OK);
+    fdio_service_connect_at(dir, "sys/platform/11:00:1f/crash-device", b.release());
+
+    return driver_manager_crashed.load();
+  });
+}
+
+// Driver manager will never crash, and the driver host should be reloaded 3 times.
+TEST_F(DevmgrTest, ExceptionCallback_RestartDriverHost) {
+  auto devmgr = CreateDevmgrPlatTest("restart-driver-host");
+  ASSERT_TRUE(devmgr);
+
+  zx_info_handle_basic_t process_info;
+  ASSERT_EQ(devmgr->driver_manager_process().get_info(ZX_INFO_HANDLE_BASIC, &process_info,
+                                                      sizeof(process_info), nullptr, nullptr),
+            ZX_OK);
+
+  std::atomic<bool> driver_manager_crashed = false;
+  std::atomic<uint32_t> exception_count = 0;
+  devmgr->SetExceptionCallback([&driver_manager_crashed, &process_info,
+                                &exception_count](zx_exception_info_t exception_info) {
+    driver_manager_crashed = process_info.koid == exception_info.pid;
+    exception_count += 1;
+  });
+
+  ASSERT_EQ(devmgr->WaitForFile("sys/platform/11:00:1f"), ZX_OK);
+
+  zx_handle_t dir;
+  ASSERT_EQ(fdio_get_service_handle(devmgr->root(), &dir), ZX_OK);
+
+  RunLoopUntil([&driver_manager_crashed, &dir, &exception_count]() {
+    zx::channel a, b;
+    EXPECT_EQ(zx::channel::create(0, &a, &b), ZX_OK);
+    fdio_service_connect_at(dir, "sys/platform/11:00:1f/crash-device", b.release());
+
+    return driver_manager_crashed.load() || exception_count.load() == 3u;
+  });
+
+  ASSERT_FALSE(RunLoopWithTimeoutOrUntil(
+      [&driver_manager_crashed, &dir]() {
+        zx::channel a, b;
+        EXPECT_EQ(zx::channel::create(0, &a, &b), ZX_OK);
+        fdio_service_connect_at(dir, "sys/platform/11:00:1f/crash-device", b.release());
+
+        return driver_manager_crashed.load();
+      },
+      zx::sec(5)));
+
+  ASSERT_FALSE(driver_manager_crashed.load());
+  ASSERT_EQ(exception_count.load(), 3u);
+}
+
+// Driver manager will never crash, and the driver host should never be reloaded.
+TEST_F(DevmgrTest, ExceptionCallback_DoNothing) {
+  auto devmgr = CreateDevmgrPlatTest("do-nothing");
+  ASSERT_TRUE(devmgr);
+
+  zx_info_handle_basic_t process_info;
+  ASSERT_EQ(devmgr->driver_manager_process().get_info(ZX_INFO_HANDLE_BASIC, &process_info,
+                                                      sizeof(process_info), nullptr, nullptr),
+            ZX_OK);
+
+  std::atomic<bool> driver_manager_crashed = false;
+  std::atomic<uint32_t> exception_count = 0;
+  devmgr->SetExceptionCallback([&driver_manager_crashed, &process_info,
+                                &exception_count](zx_exception_info_t exception_info) {
+    driver_manager_crashed = process_info.koid == exception_info.pid;
+    exception_count += 1;
+  });
+
+  ASSERT_EQ(devmgr->WaitForFile("sys/platform/11:00:1f"), ZX_OK);
+
+  zx_handle_t dir;
+  ASSERT_EQ(fdio_get_service_handle(devmgr->root(), &dir), ZX_OK);
+
+  RunLoopUntil([&driver_manager_crashed, &dir, &exception_count]() {
+    zx::channel a, b;
+    EXPECT_EQ(zx::channel::create(0, &a, &b), ZX_OK);
+    fdio_service_connect_at(dir, "sys/platform/11:00:1f/crash-device", b.release());
+
+    return driver_manager_crashed.load() || exception_count.load() == 1u;
+  });
+
+  ASSERT_FALSE(RunLoopWithTimeoutOrUntil(
+      [&driver_manager_crashed, &dir]() {
+        zx::channel a, b;
+        EXPECT_EQ(zx::channel::create(0, &a, &b), ZX_OK);
+        fdio_service_connect_at(dir, "sys/platform/11:00:1f/crash-device", b.release());
+
+        return driver_manager_crashed.load();
+      },
+      zx::sec(5)));
+
+  ASSERT_FALSE(driver_manager_crashed.load());
+  ASSERT_EQ(exception_count.load(), 1u);
 }
 
 TEST_F(DevmgrTest, ExposedThroughComponent) {
