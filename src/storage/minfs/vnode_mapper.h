@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_MINFS_VNODE_MAPPER_H_
 #define SRC_STORAGE_MINFS_VNODE_MAPPER_H_
 
+#include <array>
+
 #include <range/range.h>
 
 #include "src/storage/minfs/buffer_view.h"

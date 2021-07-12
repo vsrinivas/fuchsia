@@ -19,6 +19,7 @@
 #define SRC_CONNECTIVITY_NETWORK_NETDUMP_FILTER_H_
 
 #include <algorithm>
+#include <array>
 #include <functional>
 #include <memory>
 #include <utility>
