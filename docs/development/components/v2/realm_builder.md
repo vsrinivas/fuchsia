@@ -77,6 +77,9 @@ This creates the following component topology:
  a        b
 ```
 
+Note: Realm builder interprets component sources defined using a relative URL
+to be contained in the same package as the test controller.
+
 ### Adding a mock component {#mock-components}
 
 Mock components allow tests to supply a local function that behaves as a
@@ -167,7 +170,7 @@ To route a capability that isn't in the realm builder shard,
 }
 ```
 
-## Creating the realm
+## Creating the realm {#create-realm}
 
 After you have added all the components and routes needed for the test case,
 use `realm.create()` to create the realm and make its components ready to
@@ -188,7 +191,7 @@ capabilities routed using `above_root` are now accessible by the test.
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="connect_to_protocol" adjust_indentation="auto" %}
 ```
 
-## Destroying the realm
+## Destroying the realm {#destroy-realm}
 
 When the test no longer needs the realm, it can be destroyed by destroying the
 realm instance returned by `create()`:
@@ -206,17 +209,31 @@ children.
 
 ### Modifying generated manifests
 
-If the `add_route()` function does not provide support for your capability
-routing needs, you can manually adjust the individual component manifests that
-realm builder creates. Use the `get_decl()` function to obtain a specific child's
-manifest and modify its attributes. See the following example:
+For cases where the capability routing features supported by `add_route()` are
+not sufficient, you can manually adjust the manifest declarations. Realm builder
+supports this for the following component types:
+
+*   Mock components created by realm builder.
+*   URL components contained in the same package as the test controller.
+
+After [constructing the realm](#construct-realm):
+
+1.  Use the `get_decl()` function of the constructed realm to obtain a specific
+    child's manifest.
+1.  Modify the appropriate manifest attributes.
+1.  Substitute the updated manifest for the component by calling the
+    `set_decl()` function.
+
+See the following example:
 
 ```rust
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fuchsia-component-test/tests/src/lib.rs" region_tag="mutate_generated_manifest_example" adjust_indentation="auto" %}
 ```
 
-Note: Manifests for components with a source of `url` can not be fetched or set.
-The contents of these components are not directly available to realm builder.
+When [adding routes](#add-routes) for modified components, add them directly to
+the **constructed realm** where you obtained the manifest instead of using the
+builder instance. This ensures the routes are properly validated against the
+modified component when the [realm is created](#create-realm).
 
 ## Troubleshooting
 
