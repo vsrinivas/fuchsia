@@ -91,6 +91,11 @@ impl MetricLogger {
     /// Processes one line of log. Logs the metric if the severity is ERROR or FATAL and the file
     /// path and line number of the location that the log originated from is known.
     pub async fn process(self: &mut Self, log: &LogsData) -> Result<(), anyhow::Error> {
+        // We can't do anything here if we don't know the component URL.
+        if log.metadata.component_url.is_none() {
+            return Ok(());
+        }
+        let url = log.metadata.component_url.as_ref().unwrap();
         self.maybe_clear_errors_and_send_ping().await?;
         if log.metadata.severity != Severity::Error && log.metadata.severity != Severity::Fatal {
             return Ok(());
@@ -99,8 +104,7 @@ impl MetricLogger {
             file_path: UNKNOWN_SOURCE_FILE_PATH.to_string(),
             line_no: EMPTY_LINE_NUMBER,
         });
-        let event_code =
-            self.component_map.get(&log.metadata.component_url).unwrap_or(&OTHER_EVENT_CODE);
+        let event_code = self.component_map.get(url).unwrap_or(&OTHER_EVENT_CODE);
         let status = self
             .proxy
             .log_string(

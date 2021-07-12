@@ -72,16 +72,23 @@ impl ToText for Vec<ListResponseItem> {
     }
 }
 
-pub fn components_from_lifecycle_data(lifecycle_data: Vec<LifecycleData>) -> Vec<MonikerWithUrl> {
+pub fn components_from_lifecycle_data(lifecycle_data: Vec<LifecycleData>) -> Vec<ListResponseItem> {
     let mut result = vec![];
     for value in lifecycle_data {
         // TODO(fxbug.dev/55118): when we can filter on metadata on a StreamDiagnostics
         // request, this manual filtering won't be necessary.
         if value.metadata.lifecycle_event_type == LifecycleType::DiagnosticsReady {
-            result.push(MonikerWithUrl {
-                moniker: value.moniker,
-                component_url: value.metadata.component_url.clone(),
-            });
+            match value.metadata.component_url {
+                Some(ref url) => {
+                    result.push(ListResponseItem::MonikerWithUrl(MonikerWithUrl {
+                        moniker: value.moniker,
+                        component_url: url.clone(),
+                    }));
+                }
+                None => {
+                    result.push(ListResponseItem::Moniker(value.moniker));
+                }
+            }
         }
     }
     result
@@ -90,19 +97,25 @@ pub fn components_from_lifecycle_data(lifecycle_data: Vec<LifecycleData>) -> Vec
 pub fn list_response_items_from_components(
     manifest: &Option<String>,
     with_url: bool,
-    components: Vec<MonikerWithUrl>,
+    components: Vec<ListResponseItem>,
 ) -> Vec<ListResponseItem> {
     components
         .into_iter()
         .filter(|result| match manifest {
             None => true,
-            Some(manifest) => result.component_url.contains(manifest),
+            Some(manifest) => match result {
+                ListResponseItem::Moniker(_) => true,
+                ListResponseItem::MonikerWithUrl(url) => url.component_url.contains(manifest),
+            },
         })
         .map(|result| {
             if with_url {
-                ListResponseItem::MonikerWithUrl(result)
+                result
             } else {
-                ListResponseItem::Moniker(result.moniker)
+                match result {
+                    ListResponseItem::Moniker(_) => result,
+                    ListResponseItem::MonikerWithUrl(val) => ListResponseItem::Moniker(val.moniker),
+                }
             }
         })
         // Collect as btreeset to sort and remove potential duplicates.

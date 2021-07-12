@@ -503,7 +503,7 @@ mod tests {
             }
             let started = &results[0];
             assert_eq!(started.metadata.lifecycle_event_type, LifecycleType::Started);
-            assert_eq!(started.metadata.component_url, TEST_COMPONENT_URL);
+            assert_eq!(started.metadata.component_url, Some(TEST_COMPONENT_URL.to_string()));
             assert_eq!(started.moniker, moniker);
             assert_eq!(started.payload, None);
             break;
@@ -542,7 +542,7 @@ mod tests {
 
         assert_eq!(response.len(), 1);
 
-        assert_eq!(response[0].metadata.component_url, TEST_COMPONENT_URL);
+        assert_eq!(response[0].metadata.component_url, Some(TEST_COMPONENT_URL.to_string()));
         assert_eq!(response[0].moniker, moniker);
 
         assert_data_tree!(response[0].payload.as_ref().unwrap(), root: {

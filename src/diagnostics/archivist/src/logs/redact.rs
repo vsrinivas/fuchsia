@@ -271,7 +271,7 @@ mod test {
         Message::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
-                component_url: TEST_IDENTITY.url.clone(),
+                component_url: Some(TEST_IDENTITY.url.clone()),
                 moniker: TEST_IDENTITY.to_string(),
                 severity: Severity::Info,
                 size_bytes: 0,
@@ -339,7 +339,7 @@ mod test {
         combined: "Combined: Email alice@website.tld, IPv4 8.8.8.8" =>
                 "Combined: Email <REDACTED-EMAIL>, IPv4 <REDACTED-IPV4: 1>",
         preserve: "service::fidl service:fidl" => "service::fidl service:fidl",
-        long_hex: "456 1234567890abcdefABCDEF0123456789 1.2.3.4" => 
+        long_hex: "456 1234567890abcdefABCDEF0123456789 1.2.3.4" =>
                   "456 <REDACTED-HEX: 2> <REDACTED-IPV4: 1>",
         canary: UNREDACTED_CANARY_MESSAGE => REDACTED_CANARY_MESSAGE,
     }
@@ -355,8 +355,10 @@ mod test {
             ("IPv6: 2001:503:eEa3:0:0:0:0:30", "IPv6: <REDACTED-IPV6: 4>"),
             ("IPv4.1: 8.9.10.42", "IPv4.1: <REDACTED-IPV4: 5>"),
             ("IPv4.2: 8.8.8.8", "IPv4.2: <REDACTED-IPV4: 1>"),
-            ("456 1234567890abcdefABCDEF0123456789 12.34.56.78",
-             "456 <REDACTED-HEX: 6> <REDACTED-IPV4: 2>"),
+            (
+                "456 1234567890abcdefABCDEF0123456789 12.34.56.78",
+                "456 <REDACTED-HEX: 6> <REDACTED-IPV4: 2>",
+            ),
         ];
 
         let inputs =

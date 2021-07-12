@@ -84,7 +84,7 @@ pub trait DiagnosticsData {
     const DATA_TYPE: DataType;
 
     /// Returns the component URL which generated this value.
-    fn component_url(metadata: &Self::Metadata) -> &str;
+    fn component_url(metadata: &Self::Metadata) -> Option<&str>;
 
     /// Returns the timestamp at which this value was recorded.
     fn timestamp(metadata: &Self::Metadata) -> Timestamp;
@@ -111,8 +111,8 @@ impl DiagnosticsData for Lifecycle {
     type Error = Error;
     const DATA_TYPE: DataType = DataType::Lifecycle;
 
-    fn component_url(metadata: &Self::Metadata) -> &str {
-        &metadata.component_url
+    fn component_url(metadata: &Self::Metadata) -> Option<&str> {
+        metadata.component_url.as_ref().map(|s| s.as_str())
     }
 
     fn timestamp(metadata: &Self::Metadata) -> Timestamp {
@@ -143,8 +143,8 @@ impl DiagnosticsData for Inspect {
     type Error = Error;
     const DATA_TYPE: DataType = DataType::Inspect;
 
-    fn component_url(metadata: &Self::Metadata) -> &str {
-        &metadata.component_url
+    fn component_url(metadata: &Self::Metadata) -> Option<&str> {
+        metadata.component_url.as_ref().map(|s| s.as_str())
     }
 
     fn timestamp(metadata: &Self::Metadata) -> Timestamp {
@@ -175,8 +175,8 @@ impl DiagnosticsData for Logs {
     type Error = LogError;
     const DATA_TYPE: DataType = DataType::Logs;
 
-    fn component_url(metadata: &Self::Metadata) -> &str {
-        &metadata.component_url
+    fn component_url(metadata: &Self::Metadata) -> Option<&str> {
+        metadata.component_url.as_ref().map(|s| s.as_str())
     }
 
     fn timestamp(metadata: &Self::Metadata) -> Timestamp {
@@ -282,7 +282,8 @@ pub struct LifecycleEventMetadata {
     pub lifecycle_event_type: LifecycleType,
 
     /// The url with which the component was launched.
-    pub component_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub component_url: Option<String>,
 
     /// Monotonic time in nanos.
     pub timestamp: Timestamp,
@@ -296,8 +297,9 @@ pub struct InspectMetadata {
     pub errors: Option<Vec<Error>>,
     /// Name of diagnostics file producing data.
     pub filename: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     /// The url with which the component was launched.
-    pub component_url: String,
+    pub component_url: Option<String>,
     /// Monotonic time in nanos.
     pub timestamp: Timestamp,
 }
@@ -311,7 +313,8 @@ pub struct LogsMetadata {
     pub errors: Option<Vec<LogError>>,
 
     /// The url with which the component was launched.
-    pub component_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub component_url: Option<String>,
 
     /// Monotonic time in nanos.
     pub timestamp: Timestamp,
@@ -492,7 +495,7 @@ impl Data<Lifecycle> {
             payload,
             metadata: LifecycleEventMetadata {
                 timestamp: timestamp.into(),
-                component_url: component_url.into(),
+                component_url: Some(component_url.into()),
                 lifecycle_event_type,
                 errors: errors_opt,
             },
@@ -519,7 +522,7 @@ impl Data<Inspect> {
             payload: inspect_hierarchy,
             metadata: InspectMetadata {
                 timestamp: timestamp_nanos.into(),
-                component_url: component_url.into(),
+                component_url: Some(component_url.into()),
                 filename: filename.into(),
                 errors: errors_opt,
             },
@@ -562,7 +565,7 @@ pub struct BuilderArgs {
     /// The timestamp of the message in nanoseconds
     pub timestamp_nanos: Timestamp,
     /// The component URL
-    pub component_url: String,
+    pub component_url: Option<String>,
     /// The message severity
     pub severity: Severity,
     /// Size of the message encoded in wire format in bytes.
@@ -738,7 +741,7 @@ impl Data<Logs> {
         moniker: impl Into<String>,
         payload: Option<LogsHierarchy>,
         timestamp_nanos: impl Into<Timestamp>,
-        component_url: impl Into<String>,
+        component_url: Option<String>,
         severity: impl Into<Severity>,
         size_bytes: usize,
         errors: Vec<LogError>,
@@ -752,7 +755,7 @@ impl Data<Logs> {
             payload,
             metadata: LogsMetadata {
                 timestamp: timestamp_nanos.into(),
-                component_url: component_url.into(),
+                component_url: component_url,
                 severity: severity.into(),
                 size_bytes,
                 errors,
@@ -1179,7 +1182,7 @@ mod tests {
     #[test]
     fn default_builder_test() {
         let builder = LogsDataBuilder::new(BuilderArgs {
-            component_url: "url".to_string(),
+            component_url: Some("url".to_string()),
             moniker: String::from("moniker"),
             severity: Severity::Info,
             size_bytes: 0,
@@ -1220,7 +1223,7 @@ mod tests {
     #[test]
     fn regular_message_test() {
         let builder = LogsDataBuilder::new(BuilderArgs {
-            component_url: "url".to_string(),
+            component_url: Some("url".to_string()),
             moniker: String::from("moniker"),
             severity: Severity::Info,
             size_bytes: 0,
@@ -1275,7 +1278,7 @@ mod tests {
     #[test]
     fn printf_test() {
         let builder = LogsDataBuilder::new(BuilderArgs {
-            component_url: "url".to_string(),
+            component_url: Some("url".to_string()),
             moniker: String::from("moniker"),
             severity: Severity::Info,
             size_bytes: 0,
@@ -1393,7 +1396,7 @@ mod tests {
     fn display_for_logs() {
         let data = LogsDataBuilder::new(BuilderArgs {
             timestamp_nanos: Timestamp::from(12345678000i64).into(),
-            component_url: String::from("fake-url"),
+            component_url: Some(String::from("fake-url")),
             moniker: String::from("moniker"),
             severity: Severity::Info,
             size_bytes: 1,
@@ -1418,7 +1421,7 @@ mod tests {
     fn display_for_logs_no_tags() {
         let data = LogsDataBuilder::new(BuilderArgs {
             timestamp_nanos: Timestamp::from(12345678000i64).into(),
-            component_url: String::from("fake-url"),
+            component_url: Some(String::from("fake-url")),
             moniker: String::from("moniker"),
             severity: Severity::Info,
             size_bytes: 1,

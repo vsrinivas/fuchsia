@@ -680,7 +680,7 @@ mod test {
     fn target_log(timestamp: i64, msg: &str) -> LogsData {
         diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
             timestamp_nanos: timestamp.into(),
-            component_url: String::default(),
+            component_url: Some(String::default()),
             moniker: String::default(),
             severity: diagnostics_data::Severity::Info,
             size_bytes: 1,

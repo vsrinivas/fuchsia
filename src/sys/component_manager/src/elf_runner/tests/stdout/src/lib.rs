@@ -189,7 +189,7 @@ async fn wait_for_stop(event_stream: &mut EventStream, component: &Component) {
 fn assert_all_have_attribution(messages: &[Data<Logs>], component: &Component) {
     let check_attribution = |msg: &Data<Logs>| {
         msg.moniker == format!("{}:{}", COLLECTION_NAME, component.moniker)
-            && msg.metadata.component_url == component.url
+            && msg.metadata.component_url == Some(component.url.to_string())
     };
 
     assert!(

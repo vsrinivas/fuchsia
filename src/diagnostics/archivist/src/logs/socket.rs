@@ -128,7 +128,7 @@ mod tests {
         let expected_p = Message::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: zx::Time::from_nanos(packet.metadata.time).into(),
-                component_url: TEST_IDENTITY.url.clone(),
+                component_url: Some(TEST_IDENTITY.url.clone()),
                 moniker: TEST_IDENTITY.to_string(),
                 severity: Severity::Info,
                 size_bytes: METADATA_SIZE + 6 /* tag */+ 6, /* msg */
@@ -170,7 +170,7 @@ mod tests {
         let expected_p = Message::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: timestamp.into(),
-                component_url: TEST_IDENTITY.url.clone(),
+                component_url: Some(TEST_IDENTITY.url.clone()),
                 moniker: TEST_IDENTITY.to_string(),
                 severity: Severity::Fatal,
                 size_bytes: encoded.len(),

@@ -116,7 +116,7 @@ mod tests {
         Message::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: fuchsia_zircon::Time::from_nanos(1).into(),
-                component_url: identity.url.clone(),
+                component_url: Some(identity.url.clone()),
                 moniker: identity.to_string(),
                 severity: Severity::Info,
                 size_bytes: 1,

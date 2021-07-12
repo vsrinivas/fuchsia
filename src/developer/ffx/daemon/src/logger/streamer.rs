@@ -977,7 +977,7 @@ mod test {
     fn make_target_log(ts: i64, msg: String) -> LogsData {
         diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
             timestamp_nanos: ts.into(),
-            component_url: String::default(),
+            component_url: Some(String::default()),
             moniker: String::default(),
             severity: diagnostics_data::Severity::Info,
             size_bytes: 1,

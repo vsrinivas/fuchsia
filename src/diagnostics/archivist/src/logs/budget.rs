@@ -189,7 +189,7 @@ mod tests {
         Message::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: timestamp.into(),
-                component_url: TEST_IDENTITY.url.clone(),
+                component_url: Some(TEST_IDENTITY.url.clone()),
                 moniker: TEST_IDENTITY.to_string(),
                 severity: Severity::Debug,
                 size_bytes: 50,

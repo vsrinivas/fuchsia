@@ -29,7 +29,10 @@ pub fn format_schema(schema: InspectData) -> String {
         result.push_str(&format!("    errors = {}\n", errors.join(", ")));
     }
     result.push_str(&format!("    filename = {}\n", schema.metadata.filename));
-    result.push_str(&format!("    component_url = {}\n", schema.metadata.component_url));
+    result.push_str(&format!(
+        "    component_url = {}\n",
+        schema.metadata.component_url.unwrap_or("null".to_string())
+    ));
     result.push_str(&format!("    timestamp = {}\n", schema.metadata.timestamp));
 
     match schema.payload {

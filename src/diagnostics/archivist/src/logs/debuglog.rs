@@ -160,7 +160,7 @@ pub fn convert_debuglog_to_log_message(record: &zx::sys::zx_log_record_t) -> Opt
     Some(Message::from(
         LogsDataBuilder::new(BuilderArgs {
             timestamp_nanos: record.timestamp.into(),
-            component_url: KERNEL_IDENTITY.url.to_string(),
+            component_url: Some(KERNEL_IDENTITY.url.to_string()),
             moniker: KERNEL_IDENTITY.to_string(),
             severity,
             size_bytes: size,
@@ -191,7 +191,7 @@ mod tests {
             Message::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: klog.record.timestamp.into(),
-                    component_url: KERNEL_IDENTITY.url.clone(),
+                    component_url: Some(KERNEL_IDENTITY.url.clone()),
                     moniker: KERNEL_IDENTITY.to_string(),
                     severity: Severity::Info,
                     size_bytes: METADATA_SIZE + 6 + "test log".len(),
@@ -225,7 +225,7 @@ mod tests {
             Message::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: klog.record.timestamp.into(),
-                    component_url: KERNEL_IDENTITY.url.clone(),
+                    component_url: Some(KERNEL_IDENTITY.url.clone()),
                     moniker: KERNEL_IDENTITY.to_string(),
                     severity: Severity::Info,
                     size_bytes: METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_DATA_MAX,
@@ -248,7 +248,7 @@ mod tests {
             Message::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: klog.record.timestamp.into(),
-                    component_url: KERNEL_IDENTITY.url.clone(),
+                    component_url: Some(KERNEL_IDENTITY.url.clone()),
                     moniker: KERNEL_IDENTITY.to_string(),
                     severity: Severity::Info,
                     size_bytes: METADATA_SIZE + 6,
@@ -279,7 +279,7 @@ mod tests {
             vec![Message::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: klog.record.timestamp.into(),
-                    component_url: KERNEL_IDENTITY.url.clone(),
+                    component_url: Some(KERNEL_IDENTITY.url.clone()),
                     moniker: KERNEL_IDENTITY.to_string(),
                     severity: Severity::Info,
                     size_bytes: METADATA_SIZE + 6 + "test log".len(),

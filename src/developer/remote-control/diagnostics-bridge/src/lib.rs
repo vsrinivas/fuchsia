@@ -499,7 +499,7 @@ mod test {
     fn make_log(timestamp: i64, msg: String) -> LogsData {
         diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
             timestamp_nanos: timestamp.into(),
-            component_url: String::from("fake-url"),
+            component_url: Some(String::from("fake-url")),
             moniker: String::from("test/moniker"),
             severity: Severity::Error,
             size_bytes: 1,

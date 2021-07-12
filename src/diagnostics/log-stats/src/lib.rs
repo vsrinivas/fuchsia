@@ -115,17 +115,19 @@ async fn maintain(
     });
 
     while let Some(log) = logs.next().await {
-        let source = if log.metadata.component_url == KERNEL_URL {
+        let source = if log.metadata.component_url == Some(KERNEL_URL.to_string()) {
             LogSource::Kernel
         } else {
             LogSource::LogSink
         };
         stats.record_log(&log, source);
-        stats.get_component_log_stats(&log.metadata.component_url).await.record_log(&log);
-        if let Some(ref mut metric_logger) = metric_logger {
-            let res = metric_logger.process(&log).await;
-            if let Err(err) = res {
-                fx_log_warn!("MetricLogger failed: {}", err);
+        if let Some(ref url) = log.metadata.component_url {
+            stats.get_component_log_stats(url.as_str()).await.record_log(&log);
+            if let Some(ref mut metric_logger) = metric_logger {
+                let res = metric_logger.process(&log).await;
+                if let Err(err) = res {
+                    fx_log_warn!("MetricLogger failed: {}", err);
+                }
             }
         }
     }

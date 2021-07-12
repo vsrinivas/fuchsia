@@ -503,7 +503,7 @@ mod test {
 
         // Check metadata and payload
         assert_eq!(msg.metadata.errors, None);
-        assert_eq!(msg.metadata.component_url, src_id.url);
+        assert_eq!(msg.metadata.component_url, Some(src_id.url.to_string()));
         assert_eq!(msg.metadata.severity, Severity::Error);
         // For some reason the socket read size does *not* match the recorded
         // metadata size

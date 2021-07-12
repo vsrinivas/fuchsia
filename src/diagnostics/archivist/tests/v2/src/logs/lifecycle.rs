@@ -196,7 +196,7 @@ async fn test_logs_lifecycle() {
 
 fn check_message(expected_moniker: &str, message: Data<Logs>) {
     assert_eq!(message.moniker, expected_moniker,);
-    assert_eq!(message.metadata.component_url, LOG_AND_EXIT_COMPONENT_URL);
+    assert_eq!(message.metadata.component_url, Some(LOG_AND_EXIT_COMPONENT_URL.to_string()));
 
     assert_data_tree!(message.payload.unwrap(), root: {
         message: {

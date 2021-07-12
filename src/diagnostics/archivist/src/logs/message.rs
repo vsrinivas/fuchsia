@@ -116,7 +116,7 @@ impl Message {
         Message::from(
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: timestamp.into(),
-                component_url: source.url.clone(),
+                component_url: Some(source.url.clone()),
                 moniker: source.to_string(),
                 severity: Severity::Warn,
                 size_bytes: 0,
@@ -199,7 +199,7 @@ impl Message {
                 let raw_nanos = time.into_nanos();
                 let mut builder = LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: diagnostics_data::Timestamp::from(raw_nanos),
-                    component_url: source.url.clone(),
+                    component_url: Some(source.url.clone()),
                     moniker: source.to_string(),
                     severity,
                     size_bytes: cursor + message_len + 1,
@@ -233,7 +233,7 @@ impl Message {
 
         let mut builder = LogsDataBuilder::new(BuilderArgs {
             timestamp_nanos: record.timestamp.into(),
-            component_url: source.url.clone(),
+            component_url: Some(source.url.clone()),
             moniker: source.to_string(),
             // NOTE: this severity is not final. Severity will be set after parsing the
             // record.arguments
@@ -842,7 +842,7 @@ mod tests {
         let expected = Message::from(
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: packet.metadata.time.into(),
-                component_url: TEST_IDENTITY.url.clone(),
+                component_url: Some(TEST_IDENTITY.url.clone()),
                 moniker: TEST_IDENTITY.to_string(),
                 severity: Severity::Debug,
                 size_bytes: METADATA_SIZE + b_end,
@@ -885,7 +885,7 @@ mod tests {
         let expected = Message::from(
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: packet.metadata.time.into(),
-                component_url: TEST_IDENTITY.url.clone(),
+                component_url: Some(TEST_IDENTITY.url.clone()),
                 moniker: TEST_IDENTITY.to_string(),
                 severity: Severity::Debug,
                 size_bytes: METADATA_SIZE + b_end,
@@ -906,7 +906,7 @@ mod tests {
         let test_message = Message::from(
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: 0i64.into(),
-                component_url: TEST_IDENTITY.url.clone(),
+                component_url: Some(TEST_IDENTITY.url.clone()),
                 moniker: TEST_IDENTITY.to_string(),
                 severity: Severity::Debug,
                 size_bytes: 0,
@@ -914,7 +914,7 @@ mod tests {
             .build(),
         );
         assert_eq!(&test_message.moniker, &TEST_IDENTITY.relative_moniker.join("/"));
-        assert_eq!(&test_message.metadata.component_url, &TEST_IDENTITY.url);
+        assert_eq!(test_message.metadata.component_url, Some(TEST_IDENTITY.url.to_string()));
     }
 
     #[test]
@@ -969,7 +969,7 @@ mod tests {
         let expected = Message::from(
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: packet.metadata.time.into(),
-                component_url: TEST_IDENTITY.url.clone(),
+                component_url: Some(TEST_IDENTITY.url.clone()),
                 moniker: TEST_IDENTITY.to_string(),
                 severity: Severity::Debug,
                 size_bytes: METADATA_SIZE + data_size,
@@ -1021,7 +1021,7 @@ mod tests {
             .collect::<Vec<_>>();
         let mut builder = LogsDataBuilder::new(BuilderArgs {
             timestamp_nanos: packet.metadata.time.into(),
-            component_url: TEST_IDENTITY.url.clone(),
+            component_url: Some(TEST_IDENTITY.url.clone()),
             moniker: TEST_IDENTITY.to_string(),
             severity: Severity::Debug,
             size_bytes: METADATA_SIZE + msg_end,
@@ -1067,7 +1067,7 @@ mod tests {
         let parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
         let mut builder = LogsDataBuilder::new(BuilderArgs {
             timestamp_nanos: packet.metadata.time.into(),
-            component_url: TEST_IDENTITY.url.clone(),
+            component_url: Some(TEST_IDENTITY.url.clone()),
             moniker: TEST_IDENTITY.to_string(),
             severity: Severity::Debug,
             size_bytes: 48,
@@ -1099,7 +1099,7 @@ mod tests {
             Message::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: zx::Time::from_nanos(3).into(),
-                    component_url: TEST_IDENTITY.url.clone(),
+                    component_url: Some(TEST_IDENTITY.url.clone()),
                     moniker: TEST_IDENTITY.to_string(),
                     severity: Severity::Debug,
                     size_bytes: METADATA_SIZE + 3,
@@ -1125,7 +1125,7 @@ mod tests {
         let mut expected_message = Message::from(
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: packet.metadata.time.into(),
-                component_url: TEST_IDENTITY.url.clone(),
+                component_url: Some(TEST_IDENTITY.url.clone()),
                 moniker: TEST_IDENTITY.to_string(),
                 severity: Severity::Info,
                 size_bytes: METADATA_SIZE + 1,
@@ -1181,7 +1181,7 @@ mod tests {
         let mut expected_message = Message::from(
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: zx::Time::from_nanos(3).into(),
-                component_url: TEST_IDENTITY.url.clone(),
+                component_url: Some(TEST_IDENTITY.url.clone()),
                 moniker: TEST_IDENTITY.to_string(),
                 severity: Severity::Debug,
                 size_bytes: METADATA_SIZE + 1,
@@ -1275,7 +1275,7 @@ mod tests {
             Message::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: zx::Time::from_nanos(72).into(),
-                    component_url: TEST_IDENTITY.url.clone(),
+                    component_url: Some(TEST_IDENTITY.url.clone()),
                     moniker: TEST_IDENTITY.to_string(),
                     severity: Severity::Error,
                     size_bytes: 224,
@@ -1324,7 +1324,7 @@ mod tests {
             Message::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: zx::Time::from_nanos(72).into(),
-                    component_url: TEST_IDENTITY.url.clone(),
+                    component_url: Some(TEST_IDENTITY.url.clone()),
                     moniker: TEST_IDENTITY.to_string(),
                     severity: Severity::Error,
                     size_bytes: encoded.len(),
@@ -1348,7 +1348,7 @@ mod tests {
             Message::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: zx::Time::from_nanos(72).into(),
-                    component_url: TEST_IDENTITY.url.clone(),
+                    component_url: Some(TEST_IDENTITY.url.clone()),
                     moniker: TEST_IDENTITY.to_string(),
                     severity: Severity::Error,
                     size_bytes: encoded.len(),
@@ -1371,7 +1371,7 @@ mod tests {
             let mut msg = Message::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: 0i64.into(),
-                    component_url: TEST_IDENTITY.url.clone(),
+                    component_url: Some(TEST_IDENTITY.url.clone()),
                     moniker: TEST_IDENTITY.to_string(),
                     severity,
                     size_bytes: 1,

@@ -41,7 +41,7 @@ async fn log_attribution() {
             log_record.moniker,
             format!("fuchsia_component_test_collection:{}/test/child", instance.root.child_name())
         );
-        assert_eq!(log_record.metadata.component_url, STUB_INSPECT_COMPONENT_URL);
+        assert_eq!(log_record.metadata.component_url, Some(STUB_INSPECT_COMPONENT_URL.to_string()));
         assert_eq!(log_record.metadata.severity, Severity::Info);
         assert_data_tree!(log_record.payload.unwrap(), root: contains {
             message: {

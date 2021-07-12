@@ -305,7 +305,9 @@ mod test {
         LogsDataBuilder::new(BuilderArgs {
             moniker: String::from("sys/netstack.cmx"),
             timestamp_nanos: Timestamp::from(403649538626725i64),
-            component_url: String::from("fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"),
+            component_url: Some(String::from(
+                "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+            )),
             severity: Severity::Info,
             size_bytes: 158,
         })
@@ -327,7 +329,9 @@ mod test {
         LogsDataBuilder::new(BuilderArgs {
             moniker: String::from("netstack.cmx"),
             timestamp_nanos: Timestamp::from(263002243373398i64),
-            component_url: String::from("fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"),
+            component_url: Some(String::from(
+                "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+            )),
             severity: Severity::Warn,
             size_bytes: 137,
         })

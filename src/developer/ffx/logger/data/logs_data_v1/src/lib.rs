@@ -69,7 +69,7 @@ pub trait DiagnosticsData {
     const DATA_TYPE: DataType;
 
     /// Returns the component URL which generated this value.
-    fn component_url(metadata: &Self::Metadata) -> &str;
+    fn component_url(metadata: &Self::Metadata) -> Option<&str>;
 
     /// Returns the timestamp at which this value was recorded.
     fn timestamp(metadata: &Self::Metadata) -> Timestamp;
@@ -96,8 +96,8 @@ impl DiagnosticsData for Logs {
     type Error = LogError;
     const DATA_TYPE: DataType = DataType::Logs;
 
-    fn component_url(metadata: &Self::Metadata) -> &str {
-        &metadata.component_url
+    fn component_url(metadata: &Self::Metadata) -> Option<&str> {
+        metadata.component_url.as_ref().map(|s| s.as_str())
     }
 
     fn timestamp(metadata: &Self::Metadata) -> Timestamp {
@@ -128,7 +128,7 @@ pub struct LogsMetadata {
     pub errors: Option<Vec<LogError>>,
 
     /// The url with which the component was launched.
-    pub component_url: String,
+    pub component_url: Option<String>,
 
     /// Monotonic time in nanos.
     pub timestamp: Timestamp,
@@ -213,7 +213,7 @@ impl Data<Logs> {
             payload,
             metadata: LogsMetadata {
                 timestamp: timestamp_nanos.into(),
-                component_url: component_url.into(),
+                component_url: Some(component_url.into()),
                 severity: severity.into(),
                 size_bytes,
                 errors,
