@@ -151,6 +151,137 @@ lazy_static! {
         Some(('.', None).into()),
     ];
 
+    /// Standard [dvorak] keymap.
+    ///
+    /// [dvorak]: https://en.wikipedia.org/wiki/Dvorak_keyboard_layout
+    pub(crate) static ref DVORAK_MAP: Vec<Option<KeyLevels>> = vec![
+        // 0x00
+        None,
+        None,
+        None,
+        None,
+        // HID_USAGE_KEY_A
+        Some(('a', Some('A'), true).into()),
+        Some(('x', Some('X'), true).into()),
+        Some(('j', Some('J'), true).into()),
+        Some(('e', Some('E'), true).into()),
+        // 0x08
+        Some(('.', Some('>'), true).into()),
+        Some(('u', Some('U'), true).into()),
+        Some(('i', Some('I'), true).into()),
+        Some(('d', Some('D'), true).into()),
+        // 0x0c
+        Some(('c', Some('C'), true).into()),
+        Some(('h', Some('H'), true).into()),
+        Some(('t', Some('T'), true).into()),
+        Some(('n', Some('N'), true).into()),
+        // 0x10
+        Some(('m', Some('M'), true).into()),
+        Some(('b', Some('B'), true).into()),
+        Some(('r', Some('R'), true).into()),
+        Some(('l', Some('L'), true).into()),
+        // 0x14
+        Some(('\'', Some('"'), true).into()),
+        Some(('p', Some('P'), true).into()),
+        Some(('o', Some('O'), true).into()),
+        Some(('y', Some('Y'), true).into()),
+        // 0x18
+        Some(('g', Some('G'), true).into()),
+        Some(('k', Some('K'), true).into()),
+        Some((',', Some('<'), true).into()),
+        Some(('q', Some('Q'), true).into()),
+        // 0x1c
+        Some(('f', Some('F'), true).into()),
+        Some((';', Some(':'), true).into()),
+        Some(('1', Some('!')).into()),
+        Some(('2', Some('@')).into()),
+        // 0x20
+        Some(('3', Some('#')).into()),
+        Some(('4', Some('$')).into()),
+        Some(('5', Some('%')).into()),
+        Some(('6', Some('^')).into()),
+        // 0x24
+        Some(('7', Some('&')).into()),
+        Some(('8', Some('*')).into()),
+        Some(('9', Some('(')).into()),
+        Some(('0', Some(')')).into()),
+        // 0x28
+        None,
+        None,
+        None,
+        None,
+        // 0x2c
+        Some((' ', Some(' ')).into()),
+        Some(('[', Some('{')).into()),
+        Some((']', Some('}')).into()),
+        Some(('/', Some('?')).into()),
+        // 0x30
+        Some(('=', Some('+')).into()),
+        Some(('\\', Some('|')).into()),
+        None,
+        Some(('s', Some('S')).into()),
+        // 0x34
+        Some(('-', Some('_')).into()),
+        Some(('`', Some('~')).into()),
+        Some(('w', Some('W')).into()),
+        Some(('v', Some('V')).into()),
+        // 0x38
+        Some(('z', Some('Z')).into()),
+        None,
+        None,
+        None,
+        // 0x3c
+        None,
+        None,
+        None,
+        None,
+        // 0x40
+        None,
+        None,
+        None,
+        None,
+        // 0x44
+        None,
+        None,
+        None,
+        None,
+        // 0x48
+        None,
+        None,
+        None,
+        None,
+        // 0x4c
+        None,
+        None,
+        None,
+        None,
+        // 0x50
+        None,
+        None,
+        None,
+        None,
+        // 0x54
+        Some(('/', None).into()),
+        Some(('*', None).into()),
+        Some(('-', None).into()),
+        Some(('+', None).into()),
+        // 0x58
+        None,
+        Some(('1', None).into()),
+        Some(('2', None).into()),
+        Some(('3', None).into()),
+        // 0x5c
+        Some(('4', None).into()),
+        Some(('5', None).into()),
+        Some(('6', None).into()),
+        Some(('7', None).into()),
+        // 0x60
+        Some(('8', None).into()),
+        Some(('9', None).into()),
+        Some(('0', None).into()),
+        Some(('.', None).into()),
+    ];
+
     /// TODO(75723): This map is incomplete, and is here only temporarily for
     /// kicks.
     pub(crate) static ref FR_AZERTY_MAP: Vec<Option<KeyLevels>> = vec![

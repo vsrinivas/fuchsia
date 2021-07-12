@@ -18,15 +18,19 @@ lazy_static! {
     /// A US QWERTY keymap.
     pub static ref US_QWERTY: Keymap<'static> = Keymap::new(&defs::QWERTY_MAP);
 
+    /// A US DVORAK keymap.
+    pub static ref US_DVORAK: Keymap<'static> = Keymap::new(&defs::DVORAK_MAP);
+
     /// A FR AZERTY keymap.
     pub static ref FR_AZERTY: Keymap<'static> = Keymap::new(&defs::FR_AZERTY_MAP);
 }
 
 /// Gets a keymap based on the supplied `keymap` selector.  If no keymap is
 /// found the fallback is always US QWERTY.
-pub fn select_keymap(keymap: &Option<String>) -> &Keymap<'_> {
+pub fn select_keymap<'a>(keymap: &Option<String>) -> &'a Keymap<'a> {
     match keymap {
         Some(ref k) if k == "FR_AZERTY" => &FR_AZERTY,
+        Some(ref k) if k == "US_DVORAK" => &US_DVORAK,
         _ => &US_QWERTY,
     }
 }
@@ -239,6 +243,8 @@ mod tests {
     use test_case::test_case;
 
     const HID_USAGE_KEY_A: u32 = 0x04;
+    const HID_USAGE_KEY_B: u32 = 0x05;
+    const HID_USAGE_KEY_L: u32 = 0x0f;
     const HID_USAGE_KEY_1: u32 = 0x1e;
 
     // The effects of Shift and CapsLock on keys are different for non-letters.
@@ -289,6 +295,53 @@ mod tests {
             US_QWERTY.hid_usage_to_code_point(
                 HID_USAGE_KEY_A,
                 &ModifierState { left_shift: true, ..Default::default() }
+            )?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn spotcheck_dvorak_keymap() -> Result<()> {
+        assert_eq!(
+            'a' as u32,
+            US_DVORAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_A,
+                &ModifierState { ..Default::default() }
+            )?
+        );
+        assert_eq!(
+            'A' as u32,
+            US_DVORAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_A,
+                &ModifierState { caps_lock: true, ..Default::default() }
+            )?
+        );
+        assert_eq!(
+            'x' as u32,
+            US_DVORAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_B,
+                &ModifierState { ..Default::default() }
+            )?
+        );
+        assert_eq!(
+            'X' as u32,
+            US_DVORAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_B,
+                &ModifierState { caps_lock: true, ..Default::default() }
+            )?
+        );
+        assert_eq!(
+            'n' as u32,
+            US_DVORAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_L,
+                &ModifierState { ..Default::default() }
+            )?
+        );
+        assert_eq!(
+            'N' as u32,
+            US_DVORAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_L,
+                &ModifierState { caps_lock: true, ..Default::default() }
             )?
         );
         Ok(())
