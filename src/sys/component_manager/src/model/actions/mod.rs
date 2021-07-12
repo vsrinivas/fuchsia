@@ -451,6 +451,23 @@ pub(crate) mod test_utils {
             && child_execution.is_shut_down()
     }
 
+    pub async fn is_stopped(component: &ComponentInstance, moniker: &ChildMoniker) -> bool {
+        match *component.lock_state().await {
+            InstanceState::Resolved(ref s) => match s.get_child(moniker) {
+                Some(child) => {
+                    let child_execution = child.lock_execution().await;
+                    println!("{}", child_execution.runtime.is_some());
+                    child_execution.runtime.is_none()
+                }
+                None => false,
+            },
+            InstanceState::Purged => false,
+            InstanceState::New | InstanceState::Discovered => {
+                panic!("not resolved")
+            }
+        }
+    }
+
     pub async fn is_purged(component: &ComponentInstance) -> bool {
         let state = component.lock_state().await;
         let execution = component.lock_execution().await;

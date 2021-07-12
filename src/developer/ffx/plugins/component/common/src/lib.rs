@@ -51,8 +51,8 @@ pub fn parse_moniker(moniker: &str) -> Result<RelativeMoniker, Error> {
     }
     for child_moniker in formatted_moniker.down_path() {
         if child_moniker.collection().is_some() {
-            ffx_bail!("monikers for instances in collections are not supported. 
-            For more information about collections: https://fuchsia.dev/fuchsia-src/concepts/components/v2/realms?hl=en#collections.")
+            ffx_bail!("monikers for instances in collections are not supported.
+For more information about collections: https://fuchsia.dev/fuchsia-src/concepts/components/v2/realms?hl=en#collections.")
         }
     }
 

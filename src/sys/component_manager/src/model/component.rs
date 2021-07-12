@@ -509,7 +509,11 @@ impl ComponentInstance {
     /// Returns whether the instance was already running.
     ///
     /// REQUIRES: All dependents have already been stopped.
-    pub async fn stop_instance(self: &Arc<Self>, shut_down: bool) -> Result<(), ModelError> {
+    pub async fn stop_instance(
+        self: &Arc<Self>,
+        shut_down: bool,
+        is_recursive: bool,
+    ) -> Result<(), ModelError> {
         let (was_running, stop_result) = {
             let mut execution = self.lock_execution().await;
             let was_running = execution.runtime.is_some();
@@ -555,6 +559,12 @@ impl ComponentInstance {
             execution.shut_down |= shut_down;
             (was_running, component_stop_result)
         };
+
+        // If is_recursive is true, stop all the child instances of the component.
+        if is_recursive {
+            self.stop_children(shut_down, is_recursive).await?;
+        }
+
         // When the component is stopped, any child instances in transient collections must be
         // destroyed.
         self.destroy_non_persistent_children().await?;
@@ -621,6 +631,28 @@ impl ComponentInstance {
             }
         }
         Ok(())
+    }
+
+    /// Registers actions to stop all the children of this instance.
+    async fn stop_children(
+        self: &Arc<Self>,
+        shut_down: bool,
+        is_recursive: bool,
+    ) -> Result<(), ModelError> {
+        let child_instances: Vec<_> = {
+            let state = self.lock_resolved_state().await?;
+            state.all_children().values().map(|m| m.clone()).collect()
+        };
+
+        let mut futures = vec![];
+        for child_instance in child_instances {
+            let nf = ActionSet::register(
+                child_instance.clone(),
+                StopAction::new(shut_down, is_recursive),
+            );
+            futures.push(nf);
+        }
+        join_all(futures).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))
     }
 
     /// Destroys this component instance.
@@ -1314,7 +1346,7 @@ impl Runtime {
                 async move {
                     epitaph_fut.await;
                     if let Ok(component) = component.upgrade() {
-                        let _ = ActionSet::register(component, StopAction::new()).await;
+                        let _ = ActionSet::register(component, StopAction::new(false, false)).await;
                     }
                 },
                 abort_server,

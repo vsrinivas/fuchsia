@@ -32,6 +32,7 @@ impl LifecycleController {
         &self,
         operation: LifecycleOperation,
         moniker: String,
+        is_recursive: bool,
     ) -> Result<(), fcomponent::Error> {
         println!("Requested lifecycle operation: {:?}, moniker: {}", operation, moniker);
         if let (Some(model), Ok(moniker)) =
@@ -55,7 +56,7 @@ impl LifecycleController {
                         LifecycleOperation::Stop => {
                             println!("Found component {} and stopping", abs_moniker);
                             component
-                                .stop_instance(false)
+                                .stop_instance(false, is_recursive)
                                 .await
                                 .map(|_| ())
                                 .map_err(|_| fcomponent::Error::Internal)
@@ -79,15 +80,18 @@ impl LifecycleController {
             match operation {
                 fsys::LifecycleControllerRequest::Resolve { moniker, responder } => {
                     let mut res =
-                        self.perform_operation(LifecycleOperation::Resolve, moniker).await;
+                        self.perform_operation(LifecycleOperation::Resolve, moniker, false).await;
                     let _ = responder.send(&mut res);
                 }
                 fsys::LifecycleControllerRequest::Bind { moniker, responder } => {
-                    let mut res = self.perform_operation(LifecycleOperation::Bind, moniker).await;
+                    let mut res =
+                        self.perform_operation(LifecycleOperation::Bind, moniker, false).await;
                     let _ = responder.send(&mut res);
                 }
-                fsys::LifecycleControllerRequest::Stop { moniker, responder, is_recursive: _ } => {
-                    let mut res = self.perform_operation(LifecycleOperation::Stop, moniker).await;
+                fsys::LifecycleControllerRequest::Stop { moniker, responder, is_recursive } => {
+                    let mut res = self
+                        .perform_operation(LifecycleOperation::Stop, moniker, is_recursive)
+                        .await;
                     let _ = responder.send(&mut res);
                 }
             }
