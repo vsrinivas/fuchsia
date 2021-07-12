@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_PHYS_LIB_MEMALLOC_ALGORITHM_H_
 
 #include <lib/fit/function.h>
+#include <lib/fitx/result.h>
 #include <lib/memalloc/range.h>
 #include <lib/stdcompat/span.h>
 #include <zircon/assert.h>
@@ -74,17 +75,26 @@ inline void FindNormalizedRamRanges(cpp20::span<MemRange> ranges, MemRangeCallba
   FindNormalizedRamRanges(MemRangeStream({&ctx, 1}), std::move(cb));
 }
 
+// The size of tne void* scratch space needed for FindNormalizedRanges() below,
+// where `n` is the size of the input MemRangeStream.
+constexpr size_t FindNormalizedRangesScratchSize(size_t n) { return 4 * n; }
+
 // A variant of the above algorithm that finds all of the normalized ranges in
 // order. It also runs in O(n*log(n)) time but with O(n) space. In particular,
-// a buffer of scratch must be provided that is at least 4*n*sizeof(void*) in
-// size in bytes.
-void FindNormalizedRanges(MemRangeStream ranges, cpp20::span<void*> scratch, MemRangeCallback cb);
+// a void* buffer of scratch of size `FindNormalizedRangesScratchSize()` must
+// be.
+//
+// Ranges may overlap only if they are of the same type or one type is
+// kFreeRam; otherwise fitx::failed is returned.
+fitx::result<fitx::failed> FindNormalizedRanges(MemRangeStream ranges, cpp20::span<void*> scratch,
+                                                MemRangeCallback cb);
 
 // Used for streamlined testing.
-inline void FindNormalizedRanges(cpp20::span<MemRange> ranges, cpp20::span<void*> scratch,
-                                 MemRangeCallback cb) {
+inline fitx::result<fitx::failed> FindNormalizedRanges(cpp20::span<MemRange> ranges,
+                                                       cpp20::span<void*> scratch,
+                                                       MemRangeCallback cb) {
   internal::MemRangeIterationContext ctx(ranges);
-  FindNormalizedRanges(MemRangeStream({&ctx, 1}), scratch, std::move(cb));
+  return FindNormalizedRanges(MemRangeStream({&ctx, 1}), scratch, std::move(cb));
 }
 
 }  // namespace memalloc

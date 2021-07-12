@@ -43,12 +43,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   std::vector<std::byte> bytes = provider.ConsumeRemainingBytes<std::byte>();
   cpp20::span<MemRange> ranges = RangesFromBytes(bytes);
 
-  // If we are only going to call FindNormalizedRamRanges(), then there are no
-  // input type restrictions; sanitize outside of that case.
-  if (action != Action::kFindRam) {
-    SanitizeTypes(ranges);
-  }
-
   // Whether we are to exercise FindNormalizedRamRanges().
   if (action == Action::kFindRam || action == Action::kFindBothAndCompare) {
     auto find_ram = [&ram](const MemRange& range) {
@@ -67,9 +61,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       all.push_back(range);
       return true;
     };
-    const size_t scratch_size = 4 * ranges.size();
+    const size_t scratch_size = memalloc::FindNormalizedRangesScratchSize(ranges.size());
     auto scratch = std::make_unique<void*[]>(scratch_size);
-    memalloc::FindNormalizedRanges(ranges, {scratch.get(), scratch_size}, find_all);
+    if (auto result =
+            memalloc::FindNormalizedRanges(ranges, {scratch.get(), scratch_size}, find_all);
+        result.is_error()) {
+      return 0;
+    }
     ZX_ASSERT_MSG(std::is_sorted(all.begin(), all.end()),
                   "output ranges are not sorted:\n%s\noriginal ranges:\n%s", ToString(all).c_str(),
                   ToString(ranges).c_str());

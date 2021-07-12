@@ -38,15 +38,24 @@ void TestFindNormalizedRamRanges(cpp20::span<memalloc::MemRange> input,
 
 void TestFindNormalizedRanges(cpp20::span<memalloc::MemRange> input,
                               cpp20::span<const memalloc::MemRange> expected) {
-  const size_t scratch_size = 4 * input.size();
+  const size_t scratch_size = memalloc::FindNormalizedRangesScratchSize(input.size());
   auto scratch = std::make_unique<void*[]>(scratch_size);
   std::vector<memalloc::MemRange> actual;
-  memalloc::FindNormalizedRanges(input, {scratch.get(), scratch_size},
-                                 [&actual](const memalloc::MemRange& range) {
-                                   actual.push_back(range);
-                                   return true;
-                                 });
+  auto result = memalloc::FindNormalizedRanges(input, {scratch.get(), scratch_size},
+                                               [&actual](const memalloc::MemRange& range) {
+                                                 actual.push_back(range);
+                                                 return true;
+                                               });
+  ASSERT_FALSE(result.is_error());
   ASSERT_NO_FATAL_FAILURE(CompareRanges(expected, {actual}));
+}
+
+void ExpectBadOverlap(cpp20::span<memalloc::MemRange> input) {
+  const size_t scratch_size = memalloc::FindNormalizedRangesScratchSize(input.size());
+  auto scratch = std::make_unique<void*[]>(scratch_size);
+  constexpr auto noop = [](const memalloc::MemRange& range) { return true; };
+  auto result = memalloc::FindNormalizedRanges(input, {scratch.get(), scratch_size}, noop);
+  ASSERT_TRUE(result.is_error());
 }
 
 void TestMemRangeStream(cpp20::span<cpp20::span<memalloc::MemRange>> inputs,
@@ -92,7 +101,7 @@ TEST(MemallocFindTests, NoRanges) {
 TEST(MemallocFindTests, OneRamRange) {
   memalloc::MemRange ranges[] = {
       //  RAM: [0, 10)
-      {.addr = 0, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 0, .size = 10, .type = Type::kFreeRam},
   };
   ASSERT_NO_FATAL_FAILURE(TestFindNormalizedRamRanges({ranges}, {ranges}));
   ASSERT_NO_FATAL_FAILURE(TestFindNormalizedRanges({ranges}, {ranges}));
@@ -136,14 +145,14 @@ TEST(MemallocFindTests, MultipleNonRamRanges) {
 TEST(MemallocFindTests, TwoIntersectingRamRanges) {
   memalloc::MemRange ranges[] = {
       // RAM: [10, 20)
-      {.addr = 10, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 10, .size = 10, .type = Type::kFreeRam},
       // RAM: [15, 30)
-      {.addr = 15, .size = 15, .type = memalloc::Type::kFreeRam},
+      {.addr = 15, .size = 15, .type = Type::kFreeRam},
   };
 
   const memalloc::MemRange normalized[] = {
       // RAM: [10, 30)
-      {.addr = 10, .size = 20, .type = memalloc::Type::kFreeRam},
+      {.addr = 10, .size = 20, .type = Type::kFreeRam},
   };
 
   Shuffle(ranges);
@@ -156,14 +165,14 @@ TEST(MemallocFindTests, TwoIntersectingRamRanges) {
 TEST(MemallocFindTests, TwoAdjacentRamRanges) {
   memalloc::MemRange ranges[] = {
       // RAM: [10, 15)
-      {.addr = 10, .size = 5, .type = memalloc::Type::kFreeRam},
+      {.addr = 10, .size = 5, .type = Type::kFreeRam},
       // RAM: [15, 30)
-      {.addr = 15, .size = 15, .type = memalloc::Type::kFreeRam},
+      {.addr = 15, .size = 15, .type = Type::kFreeRam},
   };
 
   const memalloc::MemRange normalized[] = {
       // [10, 30)
-      {.addr = 10, .size = 20, .type = memalloc::Type::kFreeRam},
+      {.addr = 10, .size = 20, .type = Type::kFreeRam},
   };
 
   Shuffle(ranges);
@@ -176,16 +185,16 @@ TEST(MemallocFindTests, TwoAdjacentRamRanges) {
 TEST(MemallocFindTests, TwoFullyDisjointRamRanges) {
   memalloc::MemRange ranges[] = {
       // RAM: [0, 10)
-      {.addr = 0, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 0, .size = 10, .type = Type::kFreeRam},
       // RAM: [15, 30)
-      {.addr = 15, .size = 15, .type = memalloc::Type::kFreeRam},
+      {.addr = 15, .size = 15, .type = Type::kFreeRam},
   };
 
   const memalloc::MemRange normalized[] = {
       // [0, 10)
-      {.addr = 0, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 0, .size = 10, .type = Type::kFreeRam},
       // [15, 30)
-      {.addr = 15, .size = 15, .type = memalloc::Type::kFreeRam},
+      {.addr = 15, .size = 15, .type = Type::kFreeRam},
   };
 
   Shuffle(ranges);
@@ -198,26 +207,26 @@ TEST(MemallocFindTests, TwoFullyDisjointRamRanges) {
 TEST(MemallocFindTests, MixedFullyDisjointRanges) {
   memalloc::MemRange ranges[] = {
       // RAM: [0, 5)
-      {.addr = 0, .size = 5, .type = memalloc::Type::kFreeRam},
+      {.addr = 0, .size = 5, .type = Type::kFreeRam},
       // reserved: [10, 15)
       {.addr = 10, .size = 5, .type = Type::kReserved},
       // RAM: [20, 30)
-      {.addr = 20, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 20, .size = 10, .type = Type::kFreeRam},
       // peripheral: [40, 45)
       {.addr = 40, .size = 5, .type = Type::kPeripheral},
       // reserved: [50, 55)
       {.addr = 50, .size = 5, .type = Type::kReserved},
       // RAM: [60, UINT64_MAX)
-      {.addr = 60, .size = kMax - 60, .type = memalloc::Type::kFreeRam},
+      {.addr = 60, .size = kMax - 60, .type = Type::kFreeRam},
   };
 
   const memalloc::MemRange normalized_ram[] = {
       // [0, 5)
-      {.addr = 0, .size = 5, .type = memalloc::Type::kFreeRam},
+      {.addr = 0, .size = 5, .type = Type::kFreeRam},
       // [20, 30)
-      {.addr = 20, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 20, .size = 10, .type = Type::kFreeRam},
       // [60, UINT64_MAX)
-      {.addr = 60, .size = kMax - 60, .type = memalloc::Type::kFreeRam},
+      {.addr = 60, .size = kMax - 60, .type = Type::kFreeRam},
   };
 
   const memalloc::MemRange normalized[] = {
@@ -245,44 +254,44 @@ TEST(MemallocFindTests, MixedFullyDisjointRanges) {
 TEST(MemallocFindTests, HighlyIntersectingLikeRanges) {
   memalloc::MemRange ranges[] = {
       // RAM: [0, 5)
-      {.addr = 0, .size = 5, .type = memalloc::Type::kFreeRam},
+      {.addr = 0, .size = 5, .type = Type::kFreeRam},
       // RAM: [0, 10)
-      {.addr = 0, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 0, .size = 10, .type = Type::kFreeRam},
       // RAM: [1, 6)
-      {.addr = 1, .size = 5, .type = memalloc::Type::kFreeRam},
+      {.addr = 1, .size = 5, .type = Type::kFreeRam},
       // RAM: [1, 10)
-      {.addr = 1, .size = 9, .type = memalloc::Type::kFreeRam},
+      {.addr = 1, .size = 9, .type = Type::kFreeRam},
       // RAM: [2, 7)
-      {.addr = 2, .size = 5, .type = memalloc::Type::kFreeRam},
+      {.addr = 2, .size = 5, .type = Type::kFreeRam},
       // RAM: [2, 10)
-      {.addr = 2, .size = 8, .type = memalloc::Type::kFreeRam},
+      {.addr = 2, .size = 8, .type = Type::kFreeRam},
       // RAM: [3, 8)
-      {.addr = 3, .size = 5, .type = memalloc::Type::kFreeRam},
+      {.addr = 3, .size = 5, .type = Type::kFreeRam},
       // RAM: [3, 10)
-      {.addr = 3, .size = 7, .type = memalloc::Type::kFreeRam},
+      {.addr = 3, .size = 7, .type = Type::kFreeRam},
       // RAM: [4, 9)
-      {.addr = 4, .size = 5, .type = memalloc::Type::kFreeRam},
+      {.addr = 4, .size = 5, .type = Type::kFreeRam},
       // RAM: [4, 10)
-      {.addr = 4, .size = 6, .type = memalloc::Type::kFreeRam},
+      {.addr = 4, .size = 6, .type = Type::kFreeRam},
       // RAM: [5, 5)
-      {.addr = 5, .size = 5, .type = memalloc::Type::kFreeRam},
+      {.addr = 5, .size = 5, .type = Type::kFreeRam},
       // RAM: [5, 5)
-      {.addr = 5, .size = 5, .type = memalloc::Type::kFreeRam},
+      {.addr = 5, .size = 5, .type = Type::kFreeRam},
       // RAM: [6, 10)
-      {.addr = 6, .size = 4, .type = memalloc::Type::kFreeRam},
+      {.addr = 6, .size = 4, .type = Type::kFreeRam},
       // RAM: [7, 10)
-      {.addr = 7, .size = 3, .type = memalloc::Type::kFreeRam},
+      {.addr = 7, .size = 3, .type = Type::kFreeRam},
       // RAM: [8, 10)
-      {.addr = 8, .size = 2, .type = memalloc::Type::kFreeRam},
+      {.addr = 8, .size = 2, .type = Type::kFreeRam},
       // RAM: [9, 10)
-      {.addr = 9, .size = 1, .type = memalloc::Type::kFreeRam},
+      {.addr = 9, .size = 1, .type = Type::kFreeRam},
       // RAM: [10, 10) (i.e., Ø).
-      {.addr = 10, .size = 0, .type = memalloc::Type::kFreeRam},
+      {.addr = 10, .size = 0, .type = Type::kFreeRam},
   };
 
   const memalloc::MemRange normalized[] = {
       // [0, 10)
-      {.addr = 0, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 0, .size = 10, .type = Type::kFreeRam},
   };
 
   Shuffle(ranges);
@@ -297,9 +306,9 @@ TEST(MemallocFindTests, MixedRanges1) {
       // reserved: [0, 10)
       {.addr = 0, .size = 10, .type = Type::kReserved},
       // RAM: [5, 15), though we only expect [10, 15) to be free.
-      {.addr = 5, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 5, .size = 10, .type = Type::kFreeRam},
       // RAM: [20, 60), though we only expect to [20, 30) and [40, 60) to be free.
-      {.addr = 20, .size = 40, .type = memalloc::Type::kFreeRam},
+      {.addr = 20, .size = 40, .type = Type::kFreeRam},
       // reserved: [30, 35)
       {.addr = 30, .size = 5, .type = Type::kReserved},
       // reserved: [35, 40)
@@ -310,11 +319,11 @@ TEST(MemallocFindTests, MixedRanges1) {
 
   const memalloc::MemRange normalized_ram[] = {
       // [10, 15)
-      {.addr = 10, .size = 5, .type = memalloc::Type::kFreeRam},
+      {.addr = 10, .size = 5, .type = Type::kFreeRam},
       // [20, 30)
-      {.addr = 20, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 20, .size = 10, .type = Type::kFreeRam},
       // [40, 60)
-      {.addr = 40, .size = 20, .type = memalloc::Type::kFreeRam},
+      {.addr = 40, .size = 20, .type = Type::kFreeRam},
   };
 
   const memalloc::MemRange normalized[] = {
@@ -411,57 +420,117 @@ TEST(MemallocFindTests, MixedRanges3) {
 
 TEST(MemallocFindTests, OverlapPrecedence) {
   memalloc::MemRange ranges[] = {
-      // RAM: [0, 5), dominated by the next reserved range.
-      {.addr = 0, .size = 5, .type = Type::kFreeRam},
-      // peripheral: [0, 10), dominated by the next reserved range.
-      {.addr = 0, .size = 10, .type = Type::kPeripheral},
-      // reserved: [0, 20), dominated by no other range.
-      {.addr = 0, .size = 20, .type = Type::kReserved},
+      // RAM: [0, 10), dominated by the next reserved range.
+      {.addr = 0, .size = 10, .type = Type::kFreeRam},
+      // peripheral: [0, 20), dominated by the next reserved range.
+      {.addr = 0, .size = 20, .type = Type::kPeripheral},
+      // reserved: [0, 30), dominated by no other range.
+      {.addr = 0, .size = 30, .type = Type::kReserved},
+
       // RAM: [30, 40), dominated by the next peripheral range.
       {.addr = 30, .size = 10, .type = Type::kFreeRam},
-      // peripheral: [30, 50), dominated by no other range.
+      // peripheral: [40, 50), dominated by no other range.
       {.addr = 30, .size = 20, .type = Type::kPeripheral},
+
+      // RAM: [50, 60), dominated by the next range of extended type.
+      {.addr = 50, .size = 10, .type = Type::kFreeRam},
+      // phys kernel image: [50, 70), dominated by no other range.
+      {.addr = 50, .size = 20, .type = Type::kPhysKernel},
+
+      // RAM: [70, 80), dominated by no other range.
+      {.addr = 70, .size = 10, .type = Type::kFreeRam},
+
+      // phys kernel image: [80, 90), merged into nearby like ranges.
+      {.addr = 80, .size = 10, .type = Type::kPhysKernel},
+      // phys kernel image: [80, 100).
+      {.addr = 80, .size = 20, .type = Type::kPhysKernel},
+  };
+
+  const memalloc::MemRange normalized_ram[] = {
+      // [70, 80).
+      {.addr = 70, .size = 10, .type = Type::kFreeRam},
   };
 
   const memalloc::MemRange normalized[] = {
-      // reserved: [0, 20).
-      {.addr = 0, .size = 20, .type = Type::kReserved},
-      // peripheral: [30, 50), dominated by no other range.
+      // reserved: [0, 30).
+      {.addr = 0, .size = 30, .type = Type::kReserved},
+      // peripheral: [30, 50)
       {.addr = 30, .size = 20, .type = Type::kPeripheral},
+      // phys kernel image: [50, 70), dominated by no other range.
+      {.addr = 50, .size = 20, .type = Type::kPhysKernel},
+      // RAM: [70, 80).
+      {.addr = 70, .size = 10, .type = Type::kFreeRam},
+      // phys kernel image: [80, 100).
+      {.addr = 80, .size = 20, .type = Type::kPhysKernel},
   };
 
   Shuffle(ranges);
-  ASSERT_NO_FATAL_FAILURE(TestFindNormalizedRamRanges({ranges}, {}));
+  ASSERT_NO_FATAL_FAILURE(TestFindNormalizedRamRanges({ranges}, {normalized_ram}));
 
   Shuffle(ranges);
   ASSERT_NO_FATAL_FAILURE(TestFindNormalizedRanges({ranges}, {normalized}));
 }
 
+TEST(MemallocFindTests, BadOverlaps) {
+  // Extended with extended.
+  {
+    memalloc::MemRange ranges[] = {
+        // phys kernel image: [0, 10)
+        {.addr = 0, .size = 10, .type = Type::kPhysKernel},
+        // data ZBI : [5, 10)
+        {.addr = 5, .size = 5, .type = Type::kDataZbi},
+    };
+    ASSERT_NO_FATAL_FAILURE(ExpectBadOverlap({ranges}));
+  }
+
+  // Extended with reserved.
+  {
+    memalloc::MemRange ranges[] = {
+        // phys kernel image: [0, 10)
+        {.addr = 0, .size = 10, .type = Type::kPhysKernel},
+        // reserved: [0, 20)
+        {.addr = 0, .size = 20, .type = Type::kReserved},
+    };
+    ASSERT_NO_FATAL_FAILURE(ExpectBadOverlap({ranges}));
+  }
+
+  // Extended with reserved.
+  {
+    memalloc::MemRange ranges[] = {
+        // phys kernel image: [0, 10)
+        {.addr = 0, .size = 10, .type = Type::kPhysKernel},
+        // reserved: [0, 20)
+        {.addr = 0, .size = 20, .type = Type::kPeripheral},
+    };
+    ASSERT_NO_FATAL_FAILURE(ExpectBadOverlap({ranges}));
+  }
+}
+
 TEST(MemallocFindTests, CanShortCircuit) {
   memalloc::MemRange ranges[] = {
       // RAM: [0, 10)
-      {.addr = 0, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 0, .size = 10, .type = Type::kFreeRam},
       // peripheral: [20, 30)
-      {.addr = 20, .size = 10, .type = memalloc::Type::kPeripheral},
+      {.addr = 20, .size = 10, .type = Type::kPeripheral},
       // reserved: [40, 50)
-      {.addr = 40, .size = 10, .type = memalloc::Type::kReserved},
+      {.addr = 40, .size = 10, .type = Type::kReserved},
       // RAM: [60, 70)
-      {.addr = 60, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 60, .size = 10, .type = Type::kFreeRam},
       // RAM: [80, 90)
-      {.addr = 80, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 80, .size = 10, .type = Type::kFreeRam},
   };
 
   const memalloc::MemRange normalized[] = {
       // RAM: [0, 10)
-      {.addr = 0, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 0, .size = 10, .type = Type::kFreeRam},
       // peripheral: [20, 30)
-      {.addr = 20, .size = 10, .type = memalloc::Type::kPeripheral},
+      {.addr = 20, .size = 10, .type = Type::kPeripheral},
       // reserved: [40, 50)
-      {.addr = 40, .size = 10, .type = memalloc::Type::kReserved},
+      {.addr = 40, .size = 10, .type = Type::kReserved},
       // RAM: [60, 70)
-      {.addr = 60, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 60, .size = 10, .type = Type::kFreeRam},
       // RAM: [80, 90)
-      {.addr = 80, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 80, .size = 10, .type = Type::kFreeRam},
   };
 
   const size_t scratch_size = 4 * sizeof(ranges) * sizeof(void*);
@@ -487,7 +556,8 @@ TEST(MemallocFindTests, CanShortCircuit) {
   // Only record the first range.
   Shuffle(ranges);
   outputs.clear();
-  memalloc::FindNormalizedRanges({ranges}, scratch, record_first_n(1));
+  auto result = memalloc::FindNormalizedRanges({ranges}, scratch, record_first_n(1));
+  ASSERT_FALSE(result.is_error());
   ASSERT_EQ(1u, outputs.size());
   EXPECT_EQ(normalized[0], outputs[0]);
 
@@ -502,7 +572,8 @@ TEST(MemallocFindTests, CanShortCircuit) {
   // Only record the first two ranges.
   outputs.clear();
   Shuffle(ranges);
-  memalloc::FindNormalizedRanges({ranges}, scratch, record_first_n(2));
+  result = memalloc::FindNormalizedRanges({ranges}, scratch, record_first_n(2));
+  ASSERT_FALSE(result.is_error());
   ASSERT_EQ(2u, outputs.size());
   EXPECT_EQ(normalized[0], outputs[0]);
   EXPECT_EQ(normalized[1], outputs[1]);
@@ -519,7 +590,8 @@ TEST(MemallocFindTests, CanShortCircuit) {
   // Only record the first three ranges.
   outputs.clear();
   Shuffle(ranges);
-  memalloc::FindNormalizedRanges({ranges}, scratch, record_first_n(3));
+  result = memalloc::FindNormalizedRanges({ranges}, scratch, record_first_n(3));
+  ASSERT_FALSE(result.is_error());
   ASSERT_EQ(3u, outputs.size());
   EXPECT_EQ(normalized[0], outputs[0]);
   EXPECT_EQ(normalized[1], outputs[1]);
@@ -539,9 +611,9 @@ TEST(MemallocRangeStreamTests, OutputIsSorted) {
       // reserved: [0, 10)
       {.addr = 0, .size = 10, .type = Type::kReserved},
       // RAM: [5, 15)
-      {.addr = 5, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 5, .size = 10, .type = Type::kFreeRam},
       // RAM: [20, 60)
-      {.addr = 20, .size = 40, .type = memalloc::Type::kFreeRam},
+      {.addr = 20, .size = 40, .type = Type::kFreeRam},
       // reserved: [30, 35)
       {.addr = 30, .size = 5, .type = Type::kReserved},
       // reserved: [35, 40)
@@ -565,9 +637,9 @@ TEST(MemallocRangeStreamTests, OutputIsSorted) {
       // reserved: [0, 10)
       {.addr = 0, .size = 10, .type = Type::kReserved},
       // RAM: [5, 15), though we only expect [10, 15) to be free.
-      {.addr = 5, .size = 10, .type = memalloc::Type::kFreeRam},
+      {.addr = 5, .size = 10, .type = Type::kFreeRam},
       // RAM: [20, 60), though we only expect to [20, 30) and [40, 60) to be free.
-      {.addr = 20, .size = 40, .type = memalloc::Type::kFreeRam},
+      {.addr = 20, .size = 40, .type = Type::kFreeRam},
       // reserved: [30, 35)
       {.addr = 30, .size = 5, .type = Type::kReserved},
       // reserved: [35, 40)

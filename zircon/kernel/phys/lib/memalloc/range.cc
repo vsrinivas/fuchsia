@@ -22,6 +22,14 @@ std::string_view ToString(Type type) {
       return "reserved"sv;
     case Type::kPeripheral:
       return "peripheral"sv;
+    case Type::kPoolBookkeeping:
+      return "bookkeeping"sv;
+    case Type::kPhysKernel:
+      return "phys kernel image"sv;
+    case Type::kDataZbi:
+      return "data ZBI"sv;
+    case Type::kMaxExtended:
+      return "kMaxExtended"sv;
   }
   return "unknown"sv;
 }

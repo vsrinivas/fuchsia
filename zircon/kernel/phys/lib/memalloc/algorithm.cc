@@ -6,6 +6,7 @@
 
 #include "algorithm.h"
 
+#include <lib/fitx/result.h>
 #include <lib/memalloc/range.h>
 #include <lib/stdcompat/span.h>
 #include <zircon/assert.h>
@@ -24,19 +25,6 @@ constexpr uint64_t GetLeft(const MemRange& range) { return range.addr; }
 
 constexpr uint64_t GetRight(const MemRange& range) {
   return GetLeft(range) + std::min(kMax - GetLeft(range), range.size);
-}
-
-constexpr size_t kNumTypes = 3;
-
-// Normalizes unknown types to ZBI_MEM_RANGE_RESERVED.
-constexpr Type GetType(const MemRange& range) {
-  switch (range.type) {
-    case Type::kFreeRam:
-    case Type::kPeripheral:
-    case Type::kReserved:
-      return range.type;
-  }
-  return Type::kReserved;
 }
 
 // Represents a 64-bit, unsigned integral interval, [Left(), Right()), whose
@@ -129,38 +117,62 @@ struct Endpoint {
 class ActiveRanges {
  public:
   size_t& operator[](Type type) {
-    switch (type) {
-      case Type::kFreeRam:
+    uint64_t type_val = static_cast<uint64_t>(type);
+    switch (type_val) {
+      case ZBI_MEM_RANGE_RAM:
         return values_[0];
-      case Type::kPeripheral:
+      case ZBI_MEM_RANGE_PERIPHERAL:
         return values_[1];
-      case Type::kReserved:
-        static_assert(kNumTypes - 1 == 2);
+      case ZBI_MEM_RANGE_RESERVED:
         return values_[2];
+      case kMinExtendedTypeValue ... kMaxExtendedTypeValue - 1:
+        static_assert(kNumBaseTypes == 3);
+        return values_[kNumBaseTypes + type_val - kMinExtendedTypeValue];
     }
-    ZX_PANIC("should not be reached");
+    // Normalize to kReserved if unknown.
+    return (*this)[Type::kReserved];
   }
 
-  // Gives the active range type with the highest relative precedence - or
-  // std::nullopt if there are no active ranges.
-  std::optional<Type> DominantType() {
-    if ((*this)[Type::kReserved]) {
-      return Type::kReserved;
+  // Gives the active range type with the highest relative precedence,
+  // std::nullopt if there are no active ranges, or fitx::failed if
+  // * two different extended types are active
+  // * both an extended type and one of kReserved or kPeripheral are active.
+  fitx::result<fitx::failed, std::optional<Type>> DominantType() {
+    // First look through the base types in reverse-order of precedence (so
+    // "last wins").
+    std::optional<Type> active_base;
+    for (Type type : {Type::kFreeRam, Type::kPeripheral, Type::kReserved}) {
+      if ((*this)[type] > 0) {
+        active_base = type;
+      }
     }
-    if ((*this)[Type::kPeripheral]) {
-      return Type::kPeripheral;
-    }
-    if ((*this)[Type::kFreeRam]) {
-      return Type::kFreeRam;
-    }
-    return {};
-  }
 
-  auto begin() const { return values_.begin(); }
-  auto end() const { return values_.end(); }
+    std::optional<Type> active_extended;
+    for (uint64_t i = kMinExtendedTypeValue; i < kMaxExtendedTypeValue; ++i) {
+      Type type = static_cast<Type>(i);
+      if ((*this)[type] > 0) {
+        // If there is a non-kFreeRam base type or another extended type
+        // active, that's an error.
+        if ((active_base && *active_base != Type::kFreeRam) || active_extended) {
+          return fitx::failed();
+        }
+        active_extended = type;
+      }
+    }
+
+    // Give an active extended type precedence, as we now know that it can only
+    // carve out subranges of active free RAM.
+    if (active_extended) {
+      return fitx::ok(*active_extended);
+    }
+    if (active_base) {
+      return fitx::ok(*active_base);
+    }
+    return fitx::ok(std::nullopt);
+  }
 
  private:
-  std::array<size_t, kNumTypes> values_ = {};
+  std::array<size_t, kNumBaseTypes + kNumExtendedTypes> values_ = {};
 };
 
 }  // namespace
@@ -269,9 +281,10 @@ void FindNormalizedRamRanges(MemRangeStream ranges, MemRangeCallback cb) {
   }
 }
 
-void FindNormalizedRanges(MemRangeStream ranges, cpp20::span<void*> scratch, MemRangeCallback cb) {
+fitx::result<fitx::failed> FindNormalizedRanges(MemRangeStream ranges, cpp20::span<void*> scratch,
+                                                MemRangeCallback cb) {
   if (ranges.empty()) {
-    return;
+    return fitx::ok();
   }
 
   // This algorithm relies on creating a sorted array of endpoints. For every
@@ -279,7 +292,7 @@ void FindNormalizedRanges(MemRangeStream ranges, cpp20::span<void*> scratch, Mem
   {
     static_assert(std::alignment_of_v<void*> % std::alignment_of_v<Endpoint> == 0);
     static_assert(sizeof(Endpoint) == 2 * sizeof(void*));
-    const size_t min_size_bytes = 4 * ranges.size() * sizeof(void*);
+    const size_t min_size_bytes = FindNormalizedRangesScratchSize(ranges.size()) * sizeof(void*);
     ZX_ASSERT_MSG(scratch.size_bytes() >= min_size_bytes,
                   "scratch space must be at least 4*sizeof(void*) times the number of ranges "
                   "(%zu) in bytes: expected >= %zu bytes; got %zu bytes",
@@ -343,7 +356,7 @@ void FindNormalizedRanges(MemRangeStream ranges, cpp20::span<void*> scratch, Mem
     do {
       const Endpoint& endpoint = endpoints[i];
       ZX_DEBUG_ASSERT(endpoint.range);
-      const Type type = GetType(*endpoint.range);
+      const Type type = endpoint.range->type;
       if (endpoint.IsLeft()) {
         counters[type]++;
       } else {
@@ -353,14 +366,19 @@ void FindNormalizedRanges(MemRangeStream ranges, cpp20::span<void*> scratch, Mem
       ++i;
     } while (i < endpoints.size() && endpoints[i].value() == curr_value);
 
-    if (!process_event(counters.DominantType())) {
-      return;
+    auto result = counters.DominantType();
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    if (!process_event(std::move(result).value())) {
+      return fitx::ok();
     }
   }
   // There should be no active ranges tracked now, normalized or otherwise.
   ZX_DEBUG_ASSERT(!curr_type);
-  ZX_DEBUG_ASSERT(
-      std::all_of(counters.begin(), counters.end(), [](size_t count) { return count == 0; }));
+  ZX_DEBUG_ASSERT(counters.DominantType().is_ok());
+  ZX_DEBUG_ASSERT(!counters.DominantType().value());
+  return fitx::ok();
 }
 
 }  // namespace memalloc

@@ -84,20 +84,4 @@ inline cpp20::span<memalloc::MemRange> RangesFromBytes(const std::vector<std::by
   return {};
 }
 
-// Ensures that the ranges are of valid input types - as is required by some
-// memalloc APIs, setting it to kReserved if it isn't.
-inline void SanitizeTypes(cpp20::span<memalloc::MemRange> ranges) {
-  using memalloc::Type;
-
-  for (memalloc::MemRange& range : ranges) {
-    switch (range.type) {
-      case Type::kFreeRam:
-      case Type::kPeripheral:
-      case Type::kReserved:
-        continue;
-    }
-    range.type = Type::kReserved;
-  }
-}
-
 #endif  // ZIRCON_KERNEL_PHYS_LIB_MEMALLOC_TEST_H_
