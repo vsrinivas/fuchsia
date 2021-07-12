@@ -284,8 +284,8 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
 /// network managers based on the test `fn`'s type parameters.
 ///
 /// The test `fn` may only be generic over any combination of `Endpoint`, `Netstack`
-/// and `Manager`. They may only have a single `&str` argumenent for the test variation's
-/// name.
+/// and `Manager`. It may only have a single `&str` argument, used to identify the
+/// test variation.
 ///
 /// Example:
 ///
@@ -296,7 +296,7 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
 ///
 /// Expands to:
 /// ```
-/// async fn test_foo<N: Nestack>(name: &str){/*...*/}
+/// async fn test_foo<N: Netstack>(name: &str){/*...*/}
 /// #[fuchsia_async::run_singlethreaded(test)]
 /// async fn test_foo_ns2() {
 ///     test_foo::<netstack_testing_common::environments::Netstack2>("test_foo_ns2").await
@@ -307,7 +307,7 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
 /// }
 /// ```
 ///
-/// Similarily,
+/// Similarly,
 /// ```
 /// #[variants_test]
 /// async fn test_foo<E: netemul::Endpoint>(name: &str) {/*...*/}
@@ -333,7 +333,7 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
 ///
 /// Expands to:
 /// ```
-/// async fn test_foo<N: Nestack, E: netemul::Endpoint>(name: &str){/*...*/}
+/// async fn test_foo<N: Netstack, E: netemul::Endpoint>(name: &str){/*...*/}
 /// #[fuchsia_async::run_singlethreaded(test)]
 /// async fn test_foo_ns2_eth() {
 ///     test_foo::<netstack_testing_common::environments::Netstack2, netemul::Ethernet>(
