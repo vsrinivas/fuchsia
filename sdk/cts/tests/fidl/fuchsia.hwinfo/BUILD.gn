@@ -38,9 +38,19 @@ cts_fuchsia_test_package("fuchsia-hwinfo-tests") {
   test_components = [ ":hwinfo-test" ]
 }
 
+fuchsia_package_archive("fuchsia-hwinfo-tests_archive") {
+  testonly = true
+  package = ":fuchsia-hwinfo-tests"
+}
+
 cts_copy_to_sdk("build") {
   testonly = true
   sources = [ "BUILD.gn" ]
+}
+
+group("prebuilts") {
+  testonly = true
+  deps = [ ":fuchsia-hwinfo-tests_archive" ]
 }
 
 group("tests") {

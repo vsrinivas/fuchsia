@@ -8,17 +8,42 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 
 # Builds a package archive from a fuchsia_package() target.
 #
+# This target only generates an archive for $target_toolchain because the
+# fuchsia_package() it depends on is also only built for $target_toolchain. For
+# other toolchains, the $target_toolchain archive is simply copied into the
+# output directory as a placeholder so that dependent targets can consume it.
+#
 # Parameters
 #
 #   package (required)
 #     A fuchsia_package() target defined earlier in the same file.
 #     Type: label
+#
+#   testonly
+#   visibility
 template("fuchsia_package_archive") {
   assert(defined(invoker.package), "package is required")
 
-  pm_archive(target_name) {
-    forward_variables_from(invoker, "*")
+  if (current_toolchain == target_toolchain) {
+    pm_archive(target_name) {
+      forward_variables_from(invoker, "*")
 
-    manifest = "${package}_manifest"
+      manifest = "${package}_manifest"
+    }
+  } else {
+    # Hack. See this target's documentation.
+    copy(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      sources = [ "$target_out_dir/$target_name.far" ]
+      outputs = [ "$target_out_dir/$target_name.far" ]
+      deps = [ ":${target_name}($target_toolchain)" ]
+    }
+
+    # Suppress unused variable warnings.
+    not_needed(invoker, "*")
   }
 }

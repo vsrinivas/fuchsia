@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//sdk/cts/build/cts.gni")
 
 # This is a simple example and should not be copied directly.
@@ -31,6 +32,16 @@ cts_fuchsia_component("my-cts-component") {
 
 cts_fuchsia_test_package("my-cts-test-package") {
   test_components = [ ":my-cts-component" ]
+}
+
+fuchsia_package_archive("my-cts-test-package_archive") {
+  testonly = true
+  package = ":my-cts-test-package"
+}
+
+group("prebuilts") {
+  testonly = true
+  deps = [ ":my-cts-test-package_archive" ]
 }
 
 group("tests") {

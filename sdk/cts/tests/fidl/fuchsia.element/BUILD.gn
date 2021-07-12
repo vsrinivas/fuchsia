@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//sdk/cts/build/cts.gni")
 
 cts_executable("element-manager-test-bin") {
@@ -35,6 +36,11 @@ cts_fuchsia_test_package("fuchsia-element-tests") {
     }
   }
   test_components = [ ":element-manager-test" ]
+}
+
+fuchsia_package_archive("fuchsia-element-tests_archive") {
+  testonly = true
+  package = ":fuchsia-element-tests"
 }
 
 cts_executable("reference-element-bin") {
@@ -88,6 +94,11 @@ cts_session_config("reference-session-config") {
 cts_copy_to_sdk("build") {
   testonly = true
   sources = [ "BUILD.gn" ]
+}
+
+group("prebuilts") {
+  testonly = true
+  deps = [ ":fuchsia-element-tests_archive" ]
 }
 
 group("tests") {
