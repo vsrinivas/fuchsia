@@ -7,6 +7,34 @@
       {
         "properties": {
           "type": {
+            "pattern": "ActivityHandler"
+          },
+          "name": {
+            "type": "string"
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "system_profile_handler_node": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "system_profile_handler_node"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "dependencies"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
             "pattern": "CrashReportHandler"
           },
           "name": {
@@ -141,7 +169,50 @@
       {
         "properties": {
           "type": {
+            "pattern": "InputSettingsHandler"
+          },
+          "name": {
+            "type": "string"
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "system_profile_handler_node": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "system_profile_handler_node"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "dependencies"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
             "pattern": "ShutdownWatcher"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
+            "pattern": "SystemProfileHandler"
           },
           "name": {
             "type": "string"

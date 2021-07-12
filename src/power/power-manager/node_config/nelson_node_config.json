@@ -40,5 +40,23 @@
       "poll_interval_s": 1,
       "filter_time_constant_s": 1
     }
+  },
+  {
+    "type": "SystemProfileHandler",
+    "name": "system_profile_handler"
+  },
+  {
+    "type": "ActivityHandler",
+    "name": "activity_handler",
+    "dependencies": {
+      "system_profile_handler_node": "system_profile_handler"
+    }
+  },
+  {
+    "type": "InputSettingsHandler",
+    "name": "input_settings_handler",
+    "dependencies": {
+      "system_profile_handler_node": "system_profile_handler"
+    }
   }
 ]
