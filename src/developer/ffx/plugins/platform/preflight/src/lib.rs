@@ -70,6 +70,7 @@ pub async fn preflight_cmd(cmd: PreflightCommand) -> Result<()> {
         Box::new(check::build_prereqs::BuildPrereqs::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
         Box::new(check::femu_graphics::FemuGraphics::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
         Box::new(check::emu_networking::EmuNetworking::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
+        Box::new(check::emu_acceleration::EmuAcceleration::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
     ];
 
     let results = run_preflight_checks(&checks, &config).await?;

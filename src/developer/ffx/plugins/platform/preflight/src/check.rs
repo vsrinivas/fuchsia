@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use std::fmt;
 
 pub mod build_prereqs;
+pub mod emu_acceleration;
 pub mod emu_networking;
 pub mod femu_graphics;
 
