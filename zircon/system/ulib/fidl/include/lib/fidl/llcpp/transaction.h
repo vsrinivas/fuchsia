@@ -120,8 +120,14 @@ class Transaction {
   virtual ~Transaction() = default;
 };
 
-// Manages the lifetime of a transaction and serves as the base class of FIDL method-specific
-// completers. It ensures that no transaction will be silently dropped without replying or closing.
+// Manages the lifetime of a transaction and serves as the base class of FIDL
+// method-specific completers. It ensures that no two-way calls will be silently
+// dropped without replying or closing, unless the server endpoint has been
+// unbound.
+//
+// An individual |CompleterBase| object (and by extension any method completer)
+// is thread-unsafe. Multi-threaded uses of a |CompleterBase| object requires
+// external synchronization.
 class CompleterBase {
  public:
   CompleterBase(const CompleterBase&) = delete;
@@ -129,7 +135,26 @@ class CompleterBase {
 
   // Instructs the transaction to send an epitaph and then close the underlying transport.
   // |status| may be an error status, or |ZX_OK|, which indicates normal (expected) closure.
+  //
+  // It is an error to close a completer twice.
   void Close(zx_status_t status);
+
+  // Returns if a reply is needed on the completer. A reply is needed when both:
+  //
+  // - The FIDL method is two-way.
+  // - The server method handler has yet to make a reply.
+  //
+  // unless any of the following apply:
+  //
+  // - The completer is moved or converted to an async completer (a reply may be
+  //   needed on the new completer).
+  // - The server method handler calls |Close| on the completer.
+  // - The server endpoint is unbound from the message dispatcher due to an
+  //   error or an explicit |Unbind| request from a |fidl::ServerBindingRef|.
+  //
+  // It is safe to destroy a completer without replying inside the |on_unbound|
+  // hook provided to |fidl::BindServer|.
+  bool is_reply_needed() const;
 
  protected:
   explicit CompleterBase(Transaction* transaction, bool owned, bool method_expects_reply)
@@ -183,8 +208,11 @@ class CompleterBase {
   Transaction* transaction_;
   bool owned_;
   bool needs_to_reply_;
-  // Atomic flag to ensure single-threaded access to CompleterBase.
-  std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
+
+  // An individual |CompleterBase| object is thread-unsafe. We use an atomic
+  // flag to catch any parallel access to |CompleterBase| that happens at
+  // run-time.
+  mutable std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
 };
 
 // Completers of a FIDL method call.

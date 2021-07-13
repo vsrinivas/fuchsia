@@ -41,6 +41,15 @@ class Transaction : public fidl::Transaction {
   sync_completion_t* signal_;
 };
 
+using OneWayCompleter =
+    fidl::WireServer<::fidl_test_coding_fuchsia::Example>::OneWayCompleter::Sync;
+
+TEST(LlcppTransaction, one_way_completer_reply_not_needed) {
+  Transaction txn{};
+  OneWayCompleter completer(&txn);
+  EXPECT_FALSE(completer.is_reply_needed());
+}
+
 using Completer = fidl::WireServer<::fidl_test_coding_fuchsia::Llcpp>::ActionCompleter::Sync;
 
 // A completer being destroyed without replying (but needing one) should crash
@@ -67,15 +76,20 @@ TEST(LlcppTransaction, double_reply_asserts) {
 TEST(LlcppTransaction, reply_then_close_doesnt_assert) {
   Transaction txn{};
   Completer completer(&txn);
+  EXPECT_TRUE(completer.is_reply_needed());
   completer.Reply(0);
+  EXPECT_FALSE(completer.is_reply_needed());
   completer.Close(ZX_ERR_INVALID_ARGS);
+  EXPECT_FALSE(completer.is_reply_needed());
 }
 
 // It is not allowed to close then reply
 TEST(LlcppTransaction, close_then_reply_asserts) {
   Transaction txn{};
   Completer completer(&txn);
+  EXPECT_TRUE(completer.is_reply_needed());
   completer.Close(ZX_ERR_INVALID_ARGS);
+  EXPECT_FALSE(completer.is_reply_needed());
   ASSERT_DEATH([&] { completer.Reply(1); }, "reply after close should crash");
 }
 

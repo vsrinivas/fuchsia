@@ -28,6 +28,15 @@ void CompleterBase::Close(zx_status_t status) {
   DropTransaction();
 }
 
+bool CompleterBase::is_reply_needed() const {
+  ScopedLock lock(lock_);
+  if (!needs_to_reply_)
+    return false;
+  if (!transaction_ || transaction_->IsUnbound())
+    return false;
+  return true;
+}
+
 void CompleterBase::EnableNextDispatch() {
   ScopedLock lock(lock_);
   EnsureHasTransaction(&lock);
@@ -44,9 +53,7 @@ CompleterBase::CompleterBase(CompleterBase&& other) noexcept
 }
 
 CompleterBase::~CompleterBase() {
-  ScopedLock lock(lock_);
-  ZX_ASSERT_MSG(!needs_to_reply_ || (transaction_ && transaction_->IsUnbound()),
-                "Completer expected a Reply to be sent.");
+  ZX_ASSERT_MSG(!is_reply_needed(), "Completer expected a Reply to be sent.");
   DropTransaction();
 }
 

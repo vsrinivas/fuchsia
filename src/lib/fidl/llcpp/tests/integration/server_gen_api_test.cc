@@ -50,7 +50,9 @@ TEST(BindServerTestCase, SyncReply) {
       ADD_FAILURE("Must not call close");
     }
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+      EXPECT_TRUE(completer.is_reply_needed());
       completer.Reply(request->request);
+      EXPECT_FALSE(completer.is_reply_needed());
     }
   };
 
@@ -91,8 +93,11 @@ TEST(BindServerTestCase, AsyncReply) {
       worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker_->dispatcher(),
                       [request = request->request, completer = completer.ToAsync()]() mutable {
+                        EXPECT_TRUE(completer.is_reply_needed());
                         completer.Reply(request);
+                        EXPECT_FALSE(completer.is_reply_needed());
                       });
+      EXPECT_FALSE(completer.is_reply_needed());
       ASSERT_OK(worker_->StartThread());
     }
     std::unique_ptr<async::Loop> worker_;
