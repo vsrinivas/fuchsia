@@ -103,6 +103,7 @@ dart_test_component("unittests_component") {
   manifest = "meta/zircon_unittests.cmx"
   sources = [
     "channel_test.dart",
+    "clock_test.dart",
     "eventpair_test.dart",
     "handle_disposition_test.dart",
     "handle_test.dart",
