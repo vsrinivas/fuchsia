@@ -119,13 +119,15 @@ async fn make_test_package() -> Package {
     // Each file's contents is the file's path as bytes for testing simplicity.
     let mut builder = PackageBuilder::new("test-package")
         .add_resource_at("file", "file".as_bytes())
+        .add_resource_at("meta/file", "meta/file".as_bytes())
+        // For use in testing Directory.Open calls with segmented paths.
         .add_resource_at("dir/file", "dir/file".as_bytes())
         .add_resource_at("dir/dir/file", "dir/dir/file".as_bytes())
         .add_resource_at("dir/dir/dir/file", "dir/dir/dir/file".as_bytes())
-        .add_resource_at("meta/file", "meta/file".as_bytes())
         .add_resource_at("meta/dir/file", "meta/dir/file".as_bytes())
         .add_resource_at("meta/dir/dir/file", "meta/dir/dir/file".as_bytes())
         .add_resource_at("meta/dir/dir/dir/file", "meta/dir/dir/dir/file".as_bytes())
+        // For use in testing File.Read calls where the file contents exceeds MAX_BUF.
         .add_resource_at("exceeds_max_buf", exceeds_max_buf_contents.as_bytes())
         .add_resource_at("meta/exceeds_max_buf", exceeds_max_buf_contents.as_bytes());
 

@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Tests for the fuchsia.io/File behavior of file, meta/file, and meta as file. To optimize for
+//! simplicity and speed, we don't test e.g. dir/file or meta/dir/file because there aren't any
+//! meaningful differences in File behavior.
+
 use {
     crate::{dirs_to_test, repeat_by_n},
     fidl::AsHandleRef,
@@ -24,16 +28,7 @@ async fn read() {
 }
 
 async fn read_per_package_source(root_dir: DirectoryProxy) {
-    for path in [
-        "file",
-        "dir/file",
-        "dir/dir/file",
-        "dir/dir/dir/file",
-        "meta/file",
-        "meta/dir/file",
-        "meta/dir/dir/file",
-        "meta/dir/dir/dir/file",
-    ] {
+    for path in ["file", "meta/file"] {
         assert_read_max_buffer_success(&root_dir, path).await;
         assert_read_buffer_success(&root_dir, path).await;
         assert_read_past_end(&root_dir, path).await;
