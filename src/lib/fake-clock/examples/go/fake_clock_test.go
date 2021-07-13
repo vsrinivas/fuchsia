@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 // This is an example of a Go use of FakeClock to show that the syscalls are
@@ -14,40 +15,46 @@ package fake_clock
 import (
 	"context"
 	"syscall/zx"
-	"syscall/zx/zxwait"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 
-	mock_clock "fidl/fuchsia/testing"
+	mockclock "fidl/fuchsia/testing"
 )
 
 type FakeClockTest struct {
-	control *mock_clock.FakeClockControlWithCtxInterface
+	control *mockclock.FakeClockControlWithCtxInterface
 }
 
 // Helper for setting up the test, returns a control handle for ease of
 // interacting with the fake clock. Also pauses so that the fake clock always
 // starts in the same state.
 func setup(t *testing.T) FakeClockTest {
-	service, control, _ := mock_clock.NewFakeClockControlWithCtxInterfaceRequest()
+	service, control, err := mockclock.NewFakeClockControlWithCtxInterfaceRequest()
+	if err != nil {
+		t.Fatal(err)
+	}
 	component.NewContextFromStartupInfo().ConnectToEnvService(service)
 
 	// Always pause the fake clock before the test starts.
 	if err := control.Pause(context.Background()); err != nil {
-		t.Fatalf("Error pausing: %s", err)
+		t.Fatal(err)
 	}
 
-	return FakeClockTest{control}
-}
+	t.Cleanup(func() {
+		if err := control.Close(); err != nil {
+			t.Error(err)
+		}
+	})
 
-func (f *FakeClockTest) Close() error {
-	return f.control.Close()
+	return FakeClockTest{
+		control: control,
+	}
 }
 
 // Utility for advancing the fake clock by an integer amount.
 func (f *FakeClockTest) advance(i int64) {
-	f.control.Advance(context.Background(), mock_clock.IncrementWithDetermined(i))
+	f.control.Advance(context.Background(), mockclock.IncrementWithDetermined(i))
 }
 
 // Utility for calling the syscall for time which is intercepted by the fake
@@ -59,10 +66,8 @@ func getSysTime() zx.Time {
 // Advance the time by a constant, and ensure that time only advances by that
 // constant.
 func TestTimeAdvance(t *testing.T) {
-	// TODO(fxbug.dev/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
+	t.Skip("TODO(https://fxbug.dev/75987): figure out zx_futex_wait flake")
 	control := setup(t)
-	defer control.Close()
 
 	t1 := getSysTime()
 	control.advance(1)
@@ -76,10 +81,8 @@ func TestTimeAdvance(t *testing.T) {
 // Test the deadline_after syscall, ensure that the time returned is the paused
 // time plus the duration.
 func TestDeadlineAfter(t *testing.T) {
-	// TODO(fxbug.dev/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
-	control := setup(t)
-	defer control.Close()
+	t.Skip("TODO(https://fxbug.dev/75987): figure out zx_futex_wait flake")
+	setup(t)
 
 	var dur zx.Duration = 50
 
@@ -94,22 +97,20 @@ func TestDeadlineAfter(t *testing.T) {
 // Tests that the nanosleep blocking syscall wakes up after advancing the fake
 // clock by the expected number of ns.
 func TestNanosleep(t *testing.T) {
-	// TODO(fxbug.dev/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
+	t.Skip("TODO(https://fxbug.dev/75987): figure out zx_futex_wait flake")
 	control := setup(t)
-	defer control.Close()
-	done := make(chan bool)
+	ch := make(chan struct{})
 
 	var dur zx.Duration = 500
 	deadline := zx.Sys_deadline_after(dur)
 	go func() {
 		zx.Sys_nanosleep(deadline)
-		done <- true
+		close(ch)
 	}()
 
 	control.advance(250)
 	select {
-	case <-done:
+	case <-ch:
 		t.Fatal("Nanosleep terminated before expected 500 ns.")
 	default:
 		// Expected case.
@@ -117,17 +118,15 @@ func TestNanosleep(t *testing.T) {
 
 	control.advance(250)
 	// Waits for the goroutine to finish.
-	<-done
+	<-ch
 }
 
 // Tests that timing out on a Wait works as expected and status/signals are
 // correct.
 func TestWaitOneTimeout(t *testing.T) {
-	// TODO(fxbug.dev/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
+	t.Skip("TODO(https://fxbug.dev/75987): figure out zx_futex_wait flake")
 	control := setup(t)
-	defer control.Close()
-	done := make(chan bool)
+	ch := make(chan zx.Status)
 
 	var dur zx.Duration = 500
 	deadline := zx.Sys_deadline_after(dur)
@@ -136,28 +135,21 @@ func TestWaitOneTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("zx.NewEvent failed with err = %s", err)
 	}
-	defer event.Close()
+	defer func() {
+		if err := event.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	var obs zx.Signals
-	var error error
 	go func() {
-		obs, error = zxwait.Wait(*event.Handle(), zx.SignalEventSignaled, deadline)
-		done <- true
+		ch <- zx.Sys_object_wait_one(*event.Handle(), zx.SignalEventSignaled, deadline, &obs)
 	}()
 
 	control.advance(500)
-	<-done
 
-	if error == nil {
-		t.Fatal("Got: nil, want: zx.ErrTimedOut")
-	}
-	switch error := error.(type) {
-	case *zx.Error:
-		if error.Status != zx.ErrTimedOut {
-			t.Fatalf("Got status = %s, want status = %s", error.Status, zx.ErrTimedOut)
-		}
-	default:
-		t.Fatalf("Unexpected error type: %T", error)
+	if got, want := <-ch, zx.ErrTimedOut; got != want {
+		t.Fatalf("got status = %s, want %s", got, want)
 	}
 
 	if obs != zx.SignalNone {
@@ -168,11 +160,9 @@ func TestWaitOneTimeout(t *testing.T) {
 // Tests that signaling on a Wait works as expected and status/signals are
 // correct.
 func TestWaitOneSignal(t *testing.T) {
-	// TODO(fxbug.dev/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
-	control := setup(t)
-	defer control.Close()
-	done := make(chan bool)
+	t.Skip("TODO(https://fxbug.dev/75987): figure out zx_futex_wait flake")
+	setup(t)
+	ch := make(chan zx.Status)
 
 	var dur zx.Duration = 500
 	deadline := zx.Sys_deadline_after(dur)
@@ -181,20 +171,23 @@ func TestWaitOneSignal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("zx.NewEvent failed with err = %s", err)
 	}
-	defer event.Close()
-
-	var obs zx.Signals
-	var error error
-	go func() {
-		obs, error = zxwait.Wait(*event.Handle(), zx.SignalEventSignaled, deadline)
-		done <- true
+	defer func() {
+		if err := event.Close(); err != nil {
+			t.Error(err)
+		}
 	}()
 
-	event.Handle().Signal(0, zx.SignalEventSignaled)
-	<-done
+	var obs zx.Signals
+	go func() {
+		ch <- zx.Sys_object_wait_one(*event.Handle(), zx.SignalEventSignaled, deadline, &obs)
+	}()
 
-	if error != nil {
-		t.Fatalf("Got: err = %s, want nil", error)
+	if err := event.Handle().Signal(0, zx.SignalEventSignaled); err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := <-ch, zx.ErrOk; got != want {
+		t.Fatalf("got status = %s, want %s", got, want)
 	}
 	if obs != zx.SignalEventSignaled {
 		t.Fatalf("Got signal = %#v, want signal = %#v", obs, zx.SignalEventSignaled)
@@ -203,11 +196,9 @@ func TestWaitOneSignal(t *testing.T) {
 
 // Tests that zx.WaitMany times out as expected with just 2 WaitItems.
 func TestWaitManyTimeoutSmall(t *testing.T) {
-	// TODO(fxbug.dev/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
+	t.Skip("TODO(https://fxbug.dev/75987): figure out zx_futex_wait flake")
 	control := setup(t)
-	defer control.Close()
-	done := make(chan bool)
+	ch := make(chan error)
 
 	var dur zx.Duration = 500
 	deadline := zx.Sys_deadline_after(dur)
@@ -216,37 +207,39 @@ func TestWaitManyTimeoutSmall(t *testing.T) {
 	if err != nil {
 		t.Fatalf("zx.NewEvent failed with err = %s", err)
 	}
-	defer event1.Close()
+	defer func() {
+		if err := event1.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 	event2, err := zx.NewEvent(0)
 	if err != nil {
 		t.Fatalf("zx.NewEvent failed with err = %s", err)
 	}
-	defer event2.Close()
+	defer func() {
+		if err := event2.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	items := []zx.WaitItem{
 		{*event1.Handle(), zx.SignalEventSignaled, 0},
 		{*event2.Handle(), zx.SignalEventSignaled, 0},
 	}
 
-	var error error
 	go func() {
-		error = zx.WaitMany(items, deadline)
-		done <- true
+		ch <- zx.WaitMany(items, deadline)
 	}()
 
 	control.advance(500)
-	<-done
 
-	if error == nil {
-		t.Fatal("Got: nil, want: zx.ErrTimedOut")
-	}
-	switch error := error.(type) {
+	switch err := (<-ch).(type) {
 	case *zx.Error:
-		if error.Status != zx.ErrTimedOut {
-			t.Fatalf("Got status = %s, want status = %s", error.Status, zx.ErrTimedOut)
+		if err.Status != zx.ErrTimedOut {
+			t.Fatalf("Got status = %s, want status = %s", err.Status, zx.ErrTimedOut)
 		}
 	default:
-		t.Fatalf("Unexpected error type: %T", error)
+		t.Fatalf("Unexpected error type: %T", err)
 	}
 
 	if obs := items[0].Pending; obs != zx.SignalNone {
@@ -259,11 +252,9 @@ func TestWaitManyTimeoutSmall(t *testing.T) {
 
 // Tests that zx.WaitMany signals as expected with just 2 WaitItems.
 func TestWaitManySignalSmall(t *testing.T) {
-	// TODO(fxbug.dev/45644): Disabled due to flake
-	t.Skip("Skipped: zx_futex_wait flake (fxbug.dev/45644)")
-	control := setup(t)
-	defer control.Close()
-	done := make(chan bool)
+	t.Skip("TODO(https://fxbug.dev/75987): figure out zx_futex_wait flake")
+	setup(t)
+	ch := make(chan error)
 
 	var dur zx.Duration = 500
 	deadline := zx.Sys_deadline_after(dur)
@@ -272,29 +263,36 @@ func TestWaitManySignalSmall(t *testing.T) {
 	if err != nil {
 		t.Fatalf("zx.NewEvent failed with err = %s", err)
 	}
-	defer event1.Close()
+	defer func() {
+		if err := event1.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 	event2, err := zx.NewEvent(0)
 	if err != nil {
 		t.Fatalf("zx.NewEvent failed with err = %s", err)
 	}
-	defer event2.Close()
+	defer func() {
+		if err := event2.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	items := []zx.WaitItem{
 		{*event1.Handle(), zx.SignalEventSignaled, 0},
 		{*event2.Handle(), zx.SignalEventSignaled, 0},
 	}
 
-	var error error
 	go func() {
-		error = zx.WaitMany(items, deadline)
-		done <- true
+		ch <- zx.WaitMany(items, deadline)
 	}()
 
-	event1.Handle().Signal(0, zx.SignalEventSignaled)
-	<-done
+	if err := event1.Handle().Signal(0, zx.SignalEventSignaled); err != nil {
+		t.Fatal(err)
+	}
 
-	if error != nil {
-		t.Fatalf("Got: err = %s, want nil", error)
+	if err := <-ch; err != nil {
+		t.Fatalf("Got: err = %s, want nil", err)
 	}
 	if obs := items[0].Pending; obs != zx.SignalEventSignaled {
 		t.Fatalf("Got signal = %#v, want signal = %#v", obs, zx.SignalEventSignaled)
