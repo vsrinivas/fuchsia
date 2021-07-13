@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package ramdisk
@@ -77,6 +78,7 @@ import (
 	"runtime"
 	"syscall/zx"
 	"syscall/zx/fdio"
+	"syscall/zx/zxwait"
 
 	zxio "syscall/zx/io"
 
@@ -122,7 +124,9 @@ func (r *Ramdisk) StartBlobfs() error {
 	if zx.Status(status) != zx.ErrOk {
 		return &zx.Error{Status: zx.Status(status), Text: "ramdisk_blobfs_mkfs"}
 	}
-	zx.Sys_object_wait_one(r.proc, zx.SignalTaskTerminated, zx.TimensecInfinite, nil)
+	if _, err := zxwait.Wait(r.proc, zx.SignalTaskTerminated, zx.TimensecInfinite); err != nil {
+		return err
+	}
 
 	pxy, req, err := zx.NewChannel(0)
 	if err != nil {
