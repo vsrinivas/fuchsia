@@ -74,6 +74,7 @@ package ramdisk
 import "C"
 
 import (
+	"context"
 	"os"
 	"runtime"
 	"syscall/zx"
@@ -124,7 +125,7 @@ func (r *Ramdisk) StartBlobfs() error {
 	if zx.Status(status) != zx.ErrOk {
 		return &zx.Error{Status: zx.Status(status), Text: "ramdisk_blobfs_mkfs"}
 	}
-	if _, err := zxwait.Wait(r.proc, zx.SignalTaskTerminated, zx.TimensecInfinite); err != nil {
+	if _, err := zxwait.WaitContext(context.Background(), r.proc, zx.SignalTaskTerminated); err != nil {
 		return err
 	}
 

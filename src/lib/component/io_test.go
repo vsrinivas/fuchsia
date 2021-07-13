@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package component_test
@@ -9,7 +10,6 @@ package component_test
 import (
 	"context"
 	"syscall/zx"
-	"syscall/zx/zxwait"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/lib/component"
@@ -44,7 +44,7 @@ func TestHandleClosedOnOpenFailure(t *testing.T) {
 	if err := dir.GetDirectory().Open(context.Background(), 0, 0, "non-existing node", req); err != nil {
 		t.Fatalf("dir.GetDirecory.Open(...) = %s", err)
 	}
-	if _, err := zxwait.Wait(*proxy.Channel.Handle(), zx.SignalChannelPeerClosed, 0); err != nil {
-		t.Fatalf("zxwait.Wait(_, zx.SignalChannelPeerClosed, 0) = %s", err)
+	if status := zx.Sys_object_wait_one(*proxy.Channel.Handle(), zx.SignalChannelPeerClosed, 0, nil); status != zx.ErrOk {
+		t.Fatalf("zx.Sys_object_wait_one(_, zx.SignalChannelPeerClosed, 0, _) = %s", status)
 	}
 }

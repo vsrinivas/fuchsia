@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 // Package blobfs provides some wrappers around interactions with the blobfs.
@@ -14,7 +15,6 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
-	"syscall/zx/zxwait"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/iou"
 
@@ -63,28 +63,20 @@ func (m *Manager) HasBlob(root string) bool {
 	}
 	defer f.Close()
 
-	file, ok := f.(*fdio.File)
-	if !ok {
-		// a node exists with the name, but it isn't a file.
-		return false
-	}
-
-	observed, err := zxwait.Wait(zx.Handle(file.Event), zx.SignalUser0, 0)
-
-	// The above wait should either succeed or fail with zx.ErrTimedOut.
-	// Log unexpected error conditions.
-	if err != nil {
-		e, ok := err.(*zx.Error)
-		if !ok || e.Status != zx.ErrTimedOut {
+	if file, ok := f.(*fdio.File); ok {
+		switch status := zx.Sys_object_wait_one(zx.Handle(file.Event), zx.Signals(io.FileSignalReadable), 0, nil); status {
+		case zx.ErrOk:
+			// Blobfs will allow blobs that are in the process of being written to
+			// be opened for read, and it will set zx.SignalUser0 on the blob's
+			// event when it actually becomes readable. For the purposes of pkgfs,
+			// we only have a blob if it exists and is readable.
+			return true
+		case zx.ErrTimedOut:
+		default:
 			log.Printf("blobfs: unknown error asserting blob existence: %s", err)
 		}
 	}
-
-	// Blobfs will allow blobs that are in the process of being written to
-	// be opened for read, and it will set zx.SignalUser0 on the blob's
-	// event when it actually becomes readable. For the purposes of pkgfs,
-	// we only have a blob if it exists and is readable.
-	return err == nil && (observed&zx.SignalUser0) == zx.SignalUser0
+	return false
 }
 
 func (m *Manager) Blobs() ([]string, error) {

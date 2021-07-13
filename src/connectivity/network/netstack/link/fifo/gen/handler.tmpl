@@ -7,6 +7,7 @@
 package {{ .Pkg }}
 
 import (
+    "context"
     "fmt"
     "sync"
     "syscall/zx"
@@ -57,7 +58,7 @@ func (h *{{ .Handler }}) TxReceiverLoop(wasSent func(entry *{{ .EntryType }}) bo
 			return nil
 		}
 
-		if err := zxwait.WithRetry(func() error {
+		if err := zxwait.WithRetryContext(context.Background(), func() error {
 			status, count := FifoRead(h.TxFifo, scratch)
 			if status != zx.ErrOk {
 				return &zx.Error{Status: status, Text: "FifoRead(TX)"}
@@ -159,7 +160,7 @@ func (h *{{ .Handler }}) RxLoop(process func(entry *{{ .EntryType }}) {{ if .Sig
 			if int(h.rx.InFlight()) != len(scratch) && h.rx.HaveQueued() {
 				signals |= zx.SignalFIFOWritable
 			}
-			obs, err := zxwait.Wait(h.RxFifo, signals, zx.TimensecInfinite)
+			obs, err := zxwait.WaitContext(context.Background(), h.RxFifo, signals)
 			if err != nil {
 				return err
 			}

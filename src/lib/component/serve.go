@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package component
@@ -91,7 +92,7 @@ func serveOne(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req zx.Cha
 	hi = hiRaw.([]zx.HandleInfo)[:0]
 
 	var nb, nhi uint32
-	if err := zxwait.WithRetry(func() error {
+	if err := zxwait.WithRetryContext(ctx, func() error {
 		var err error
 		nb, nhi, err = req.ReadEtc(b, hi[:cap(hi)], 0)
 		return err
@@ -195,7 +196,7 @@ func serve(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req zx.Channe
 		// pooled memory to read into. This technique avoids O(requests) memory
 		// usage, which yields substantial savings when the number of idle requests
 		// is high.
-		if _, err := zxwait.Wait(*req.Handle(), zx.SignalChannelReadable|zx.SignalChannelPeerClosed, zx.TimensecInfinite); err != nil {
+		if _, err := zxwait.WaitContext(ctx, *req.Handle(), zx.SignalChannelReadable|zx.SignalChannelPeerClosed); err != nil {
 			return err
 		}
 		if err := serveOne(g, ctx, stub, req, onError); err != nil {

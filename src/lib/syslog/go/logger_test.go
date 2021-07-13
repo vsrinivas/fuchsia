@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package syslog_test
@@ -118,7 +119,7 @@ func setup(t *testing.T, tags ...string) (*logger.LogSinkEventProxy, zx.Socket, 
 
 	// Throw away system-generated messages.
 	for i := 0; i < 1; i++ {
-		if _, err := zxwait.Wait(zx.Handle(s), zx.SignalSocketReadable, zx.TimensecInfinite); err != nil {
+		if _, err := zxwait.WaitContext(context.Background(), zx.Handle(s), zx.SignalSocketReadable); err != nil {
 			t.Fatal(err)
 		}
 		var data [logger.MaxDatagramLenBytes]byte
@@ -313,7 +314,7 @@ func TestLoggerRegisterInterest(t *testing.T) {
 		}
 		// Consume the system-generated messages.
 		for i := 0; i < 2; i++ {
-			if _, err := zxwait.Wait(zx.Handle(sin), zx.SignalSocketReadable, zx.TimensecInfinite); err != nil {
+			if _, err := zxwait.WaitContext(context.Background(), zx.Handle(sin), zx.SignalSocketReadable); err != nil {
 				t.Fatal(err)
 			}
 			var data [logger.MaxDatagramLenBytes]byte

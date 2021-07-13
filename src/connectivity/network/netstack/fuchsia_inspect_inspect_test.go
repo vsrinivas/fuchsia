@@ -14,7 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"syscall/zx"
-	"syscall/zx/zxwait"
 	"testing"
 	"time"
 
@@ -946,8 +945,8 @@ func TestInspectGetMissingChild(t *testing.T) {
 		t.Fatalf("got impl.OpenChild(...) = true, want = false")
 	}
 	// The request channel must have been closed.
-	if _, err := zxwait.Wait(*proxy.Channel.Handle(), zx.SignalChannelPeerClosed, 0); err != nil {
-		t.Fatalf("zxwait.Wait(_, zx.SignalChannelPeerClosed, 0) = %s", err)
+	if status := zx.Sys_object_wait_one(*proxy.Channel.Handle(), zx.SignalChannelPeerClosed, 0, nil); status != zx.ErrOk {
+		t.Fatalf("zx.Sys_object_wait_one(_, zx.SignalChannelPeerClosed, 0, nil) = %s", status)
 	}
 }
 

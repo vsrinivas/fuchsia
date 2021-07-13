@@ -1028,7 +1028,7 @@ func (eps *endpointWithSocket) loopPoll(ch chan<- struct{}) {
 	sigs := zx.Signals(zx.SignalSocketWriteDisabled | localSignalClosing)
 
 	for {
-		obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
+		obs, err := zxwait.WaitContext(context.Background(), zx.Handle(eps.local), sigs)
 		if err != nil {
 			panic(err)
 		}
@@ -1410,7 +1410,7 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 			case *zx.Error:
 				switch err.Status {
 				case zx.ErrShouldWait:
-					obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
+					obs, err := zxwait.WaitContext(context.Background(), zx.Handle(eps.local), sigs)
 					if err != nil {
 						panic(err)
 					}
@@ -1559,7 +1559,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 			case *zx.Error:
 				switch err.Status {
 				case zx.ErrShouldWait:
-					obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
+					obs, err := zxwait.WaitContext(context.Background(), zx.Handle(eps.local), sigs)
 					if err != nil {
 						panic(err)
 					}

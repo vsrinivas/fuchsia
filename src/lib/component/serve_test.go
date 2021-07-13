@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package component_test
@@ -94,7 +95,7 @@ func TestEmptyWriteErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := zxwait.Wait(zx.Handle(ch), zx.SignalChannelPeerClosed, zx.TimensecInfinite); err != nil {
+	if _, err := zxwait.WaitContext(context.Background(), zx.Handle(ch), zx.SignalChannelPeerClosed); err != nil {
 		t.Fatal(err)
 	}
 
@@ -377,7 +378,7 @@ func TestServeExclusive_MagicNumberCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := zxwait.Wait(zx.Handle(ch), zx.SignalChannelPeerClosed, zx.TimensecInfinite); err != nil {
+	if _, err := zxwait.WaitContext(context.Background(), zx.Handle(ch), zx.SignalChannelPeerClosed); err != nil {
 		t.Fatal(err)
 	}
 

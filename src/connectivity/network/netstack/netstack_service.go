@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"syscall/zx"
 	"syscall/zx/fidl"
-	"syscall/zx/zxwait"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
@@ -92,7 +91,10 @@ func (ni *netstackImpl) StartRouteTableTransaction(_ fidl.Context, req netstack.
 
 		if ni.ns.mu.transactionRequest != nil {
 			oldChannel := ni.ns.mu.transactionRequest.Channel
-			observed, _ := zxwait.Wait(zx.Handle(oldChannel), 0, 0)
+			var observed zx.Signals
+			if status := zx.Sys_object_wait_one(zx.Handle(oldChannel), zx.SignalChannelReadable|zx.SignalChannelWritable, 0, &observed); status != zx.ErrOk {
+				_ = syslog.WarnTf("fuchsia.netstack.Netstack/StartRouteTableTransaction", "zx.Sys_object_wait_one(_, zx.SignalChannelReadable|zx.SignalChannelWritable, _, _): %s", status)
+			}
 			// If the channel is neither readable nor writable, there is no
 			// data left to be processed (not readable) and we can't return
 			// any more results (not writable).  It's not enough to only

@@ -8,6 +8,8 @@
 package eth_test
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"math/bits"
 	"runtime"
@@ -82,7 +84,7 @@ func uint64Sum(stats []uint64) uint64 {
 func cycleTX(txFifo zx.Handle, size uint32, iob eth.IOBuffer, fn func([]byte)) error {
 	b := make([]eth_gen.FifoEntry, size)
 	for toRead := size; toRead != 0; {
-		if _, err := zxwait.Wait(txFifo, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
+		if _, err := zxwait.WaitContext(context.Background(), txFifo, zx.SignalFIFOReadable); err != nil {
 			return err
 		}
 		status, read := eth_gen.FifoRead(txFifo, b)
@@ -107,11 +109,12 @@ func cycleTX(txFifo zx.Handle, size uint32, iob eth.IOBuffer, fn func([]byte)) e
 }
 
 func checkTXDone(txFifo zx.Handle) error {
-	_, err := zxwait.Wait(txFifo, zx.SignalFIFOReadable, zx.Sys_deadline_after(zx.Duration(10*time.Millisecond.Nanoseconds())))
-	if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrTimedOut {
-		return nil
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	if _, err := zxwait.WaitContext(ctx, txFifo, zx.SignalFIFOReadable); !errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("got zxwait.WaitContext(txFifo, ...) = %v, want %s", err, zx.ErrTimedOut)
 	}
-	return fmt.Errorf("got zxwait.Wait(txFifo, ...) = %v, want %s", err, zx.ErrTimedOut)
+	return nil
 }
 
 func TestClient(t *testing.T) {
@@ -162,7 +165,7 @@ func TestClient(t *testing.T) {
 			// Attaching a dispatcher to the client should cause it to fill the device's RX buffer pool.
 			{
 				b := make([]eth_gen.FifoEntry, depth+1)
-				if _, err := zxwait.Wait(deviceFifos.Rx, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
+				if _, err := zxwait.WaitContext(context.Background(), deviceFifos.Rx, zx.SignalFIFOReadable); err != nil {
 					t.Fatal(err)
 				}
 				status, count := eth_gen.FifoRead(deviceFifos.Rx, b)
@@ -216,7 +219,7 @@ func TestClient(t *testing.T) {
 							for i := range b {
 								b[i].SetLength(0)
 							}
-							if _, err := zxwait.Wait(deviceFifos.Rx, zx.SignalFIFOWritable, zx.TimensecInfinite); err != nil {
+							if _, err := zxwait.WaitContext(context.Background(), deviceFifos.Rx, zx.SignalFIFOWritable); err != nil {
 								t.Fatal(err)
 							}
 							status, count := eth_gen.FifoWrite(deviceFifos.Rx, b)
@@ -245,7 +248,7 @@ func TestClient(t *testing.T) {
 								}
 							}
 							for len(b) != 0 {
-								if _, err := zxwait.Wait(deviceFifos.Rx, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
+								if _, err := zxwait.WaitContext(context.Background(), deviceFifos.Rx, zx.SignalFIFOReadable); err != nil {
 									t.Fatal(err)
 								}
 								status, count := eth_gen.FifoRead(deviceFifos.Rx, b)
@@ -396,7 +399,7 @@ func TestClient(t *testing.T) {
 							t.Fatalf("got zx_fifo_write(...) = %d want = %d", count, 1)
 						}
 					}
-					if _, err := zxwait.Wait(deviceFifos.Rx, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
+					if _, err := zxwait.WaitContext(context.Background(), deviceFifos.Rx, zx.SignalFIFOReadable); err != nil {
 						t.Fatal(err)
 					}
 					// Assert that we read back only one entry (when depth is greater than 1).

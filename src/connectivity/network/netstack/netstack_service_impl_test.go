@@ -11,7 +11,6 @@ import (
 	"context"
 	"net"
 	"syscall/zx"
-	"syscall/zx/zxwait"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
@@ -185,8 +184,8 @@ func TestGetDhcpClient(t *testing.T) {
 		if got, want := zx.Status(result.Err), zx.ErrNotFound; got != want {
 			t.Fatalf("got result.Err = %s, want = %s", got, want)
 		}
-		if _, err := zxwait.Wait(*proxy.Channel.Handle(), zx.SignalChannelPeerClosed, 0); err != nil {
-			t.Fatalf("zxwait.Wait(_, zx.SignalChannelPeerClosed, 0) = %s", err)
+		if status := zx.Sys_object_wait_one(*proxy.Channel.Handle(), zx.SignalChannelPeerClosed, 0, nil); status != zx.ErrOk {
+			t.Fatalf("zx.Sys_object_wait_one(_, zx.SignalChannelPeerClosed, 0, _) = %s", status)
 		}
 	})
 }
