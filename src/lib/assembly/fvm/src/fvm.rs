@@ -61,7 +61,11 @@ impl FvmBuilder {
         let output = std::process::Command::new("host_x64/fvm").args(&args).output();
         let output = output.context("Failed to run the fvm tool")?;
         if !output.status.success() {
-            anyhow::bail!(format!("Failed to generate fvm with output: {:?}", output));
+            anyhow::bail!(format!(
+                "Failed to generate fvm with status: {}\n{}",
+                output.status,
+                String::from_utf8_lossy(output.stdout.as_slice())
+            ));
         }
 
         Ok(())
