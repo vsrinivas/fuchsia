@@ -4,6 +4,8 @@
 
 #include "src/storage/minfs/buffer_view.h"
 
+#include <array>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
