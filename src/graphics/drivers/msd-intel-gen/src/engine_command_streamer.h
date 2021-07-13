@@ -49,7 +49,7 @@ class EngineCommandStreamer {
 
   virtual void SubmitBatch(std::unique_ptr<MappedBatch> batch) = 0;
 
-  virtual bool WaitIdle() = 0;
+  virtual bool IsIdle() = 0;
 
   virtual bool Reset();
 
@@ -107,7 +107,7 @@ class RenderEngineCommandStreamer : public EngineCommandStreamer {
   void ResetCurrentContext();
   void ContextSwitched();
 
-  bool WaitIdle() override;
+  bool IsIdle() override { return inflight_command_sequences_.empty(); }
 
   // This does not return ownership of the mapped batches so it is not safe
   // to safe the result and this method must be called from the device thread

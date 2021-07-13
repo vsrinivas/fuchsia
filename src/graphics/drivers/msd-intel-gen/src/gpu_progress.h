@@ -18,7 +18,9 @@ class GpuProgress {
   std::chrono::steady_clock::duration GetHangcheckTimeout(
       uint64_t max_completion_time_ms, std::chrono::steady_clock::time_point now);
 
-  uint32_t last_submitted_sequence_number() { return last_submitted_sequence_number_; }
+  uint32_t last_submitted_sequence_number() const { return last_submitted_sequence_number_; }
+
+  uint32_t last_completed_sequence_number() const { return last_completed_sequence_number_; }
 
  private:
   uint32_t last_submitted_sequence_number_ = Sequencer::kInvalidSequenceNumber;

@@ -151,7 +151,7 @@ class MsdIntelDevice : public msd_device_t,
 
   void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
 
-  bool WaitIdle();
+  bool WaitIdleForTest(uint32_t timeout_ms = 100);
 
   uint32_t GetCurrentFrequency();
   void RequestMaxFreq();

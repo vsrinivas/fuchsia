@@ -570,9 +570,31 @@ magma::Status MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContex
   return MAGMA_STATUS_OK;
 }
 
-bool MsdIntelDevice::WaitIdle() {
+bool MsdIntelDevice::WaitIdleForTest(uint32_t timeout_ms) {
   CHECK_THREAD_IS_CURRENT(device_thread_id_);
-  return render_engine_cs_->WaitIdle();
+
+  uint32_t sequence_number = Sequencer::kInvalidSequenceNumber;
+
+  auto start = std::chrono::high_resolution_clock::now();
+
+  while (!render_engine_cs()->IsIdle()) {
+    ProcessCompletedCommandBuffers();
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = end - start;
+
+    if (progress_->last_completed_sequence_number() != sequence_number) {
+      sequence_number = progress_->last_completed_sequence_number();
+      start = end;
+    } else {
+      if (elapsed.count() > timeout_ms)
+        return DRETF(false, "WaitIdle timeout (%u ms)", timeout_ms);
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+  }
+
+  return true;
 }
 
 void MsdIntelDevice::RequestMaxFreq() {

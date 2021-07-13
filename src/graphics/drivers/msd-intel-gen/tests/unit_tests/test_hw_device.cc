@@ -35,7 +35,7 @@ class TestMsdIntelDevice {
           MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false);
       EXPECT_NE(device, nullptr);
 
-      EXPECT_TRUE(device->WaitIdle());
+      EXPECT_TRUE(device->WaitIdleForTest());
 
       // check that the render init batch succeeded.
       EXPECT_EQ(device->global_context()
@@ -76,7 +76,7 @@ class TestMsdIntelDevice {
         MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false);
     EXPECT_NE(device, nullptr);
 
-    EXPECT_TRUE(device->WaitIdle());
+    EXPECT_TRUE(device->WaitIdleForTest());
 
     MsdIntelDevice::DumpState dump_state;
     device->Dump(&dump_state);
@@ -173,7 +173,7 @@ class TestMsdIntelDevice {
         MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false));
     ASSERT_NE(device, nullptr);
 
-    EXPECT_TRUE(device->WaitIdle());
+    EXPECT_TRUE(device->WaitIdleForTest());
 
     bool ringbuffer_wrapped = false;
 
@@ -231,7 +231,7 @@ class TestMsdIntelDevice {
           device->render_engine_cs(), std::unique_ptr<SimpleMappedBatch>(new SimpleMappedBatch(
                                           device->global_context(), std::move(batch_mapping)))));
 
-      EXPECT_TRUE(device->WaitIdle());
+      EXPECT_TRUE(device->WaitIdleForTest());
 
       EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
 

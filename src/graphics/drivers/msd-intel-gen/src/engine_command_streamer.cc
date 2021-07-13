@@ -615,32 +615,6 @@ void RenderEngineCommandStreamer::SubmitBatch(std::unique_ptr<MappedBatch> batch
     ScheduleContext();
 }
 
-bool RenderEngineCommandStreamer::WaitIdle() {
-  constexpr uint32_t kTimeOutMs = 100;
-  uint32_t sequence_number = Sequencer::kInvalidSequenceNumber;
-
-  auto start = std::chrono::high_resolution_clock::now();
-
-  while (!inflight_command_sequences_.empty()) {
-    uint32_t last_completed_sequence_number =
-        hardware_status_page(RENDER_COMMAND_STREAMER)->read_sequence_number();
-    ProcessCompletedCommandBuffers(last_completed_sequence_number);
-
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> elapsed = end - start;
-
-    if (last_completed_sequence_number != sequence_number) {
-      sequence_number = last_completed_sequence_number;
-      start = end;
-    } else if (elapsed.count() > kTimeOutMs) {
-      return DRETF(false, "WaitIdle timeout");
-    }
-
-    std::this_thread::yield();
-  }
-  return true;
-}
-
 void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(uint32_t last_completed_sequence) {
   // pop all completed command buffers
   while (!inflight_command_sequences_.empty() &&
