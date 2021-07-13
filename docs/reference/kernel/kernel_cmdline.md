@@ -396,9 +396,8 @@ this way, `/boot/config/devmgr` contains a fixed manifest of files used to
 start the process.
 
 The new process receives a `PA_USER0` channel handle at startup that will be
-used as the client filesystem handle mounted at `/pkgfs`.  The command is
-expected to start serving on this channel and then signal its process handle
-with `ZX_USER_SIGNAL_0`.  Then `/pkgfs/system` will be mounted as `/system`.
+used as the client filesystem handle mounted at `/pkgfs`. `/pkgfs/system` will
+also be mounted as `/system`.
 
 ## zircon.system.pkgfs.file.*path*=\<blobid>
 

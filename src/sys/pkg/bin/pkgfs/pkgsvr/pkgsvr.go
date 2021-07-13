@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package pkgsvr
@@ -53,19 +54,10 @@ func Main() {
 	}
 
 	if sysPkg != "" {
-		var err error
-
-		if err = fs.SetSystemRoot(sysPkg); err != nil {
+		if err := fs.SetSystemRoot(sysPkg); err != nil {
 			log.Printf("system: failed to set system root from blob %q: %s", sysPkg, err)
 		}
 		log.Printf("system: will be served from %s", sysPkg)
-
-		// In the case of an error, we don't signal fshost for fuchsia_start, as system won't be readable.
-		if err == nil {
-			if err := zx.ProcHandle.Signal(zx.SignalNone, zx.SignalUser0); err != nil {
-				log.Printf("system: failed to SignalUser0 on ProcHandle, fuchsia may not start: %s", err)
-			}
-		}
 	} else {
 		log.Printf("system: no system package blob supplied")
 	}

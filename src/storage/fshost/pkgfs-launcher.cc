@@ -24,22 +24,6 @@ namespace fshost {
 
 namespace {
 
-zx::status<> WaitForPkgfsLaunchCompletion(zx::process proc) {
-  auto deadline = zx::deadline_after(zx::sec(100));
-  zx_signals_t observed;
-  auto status =
-      zx::make_status(proc.wait_one(ZX_USER_SIGNAL_0 | ZX_PROCESS_TERMINATED, deadline, &observed));
-  if (status.is_error()) {
-    FX_LOGS(ERROR) << "pkgfs did not signal completion: " << status.status_string();
-    return status;
-  }
-  if (!(observed & ZX_USER_SIGNAL_0)) {
-    FX_LOGS(ERROR) << "pkgfs terminated prematurely";
-    return zx::error(ZX_ERR_BAD_STATE);
-  }
-  return zx::ok();
-}
-
 zx::status<> FinishPkgfsLaunch(FilesystemMounter* filesystems, zx::channel pkgfs_root) {
   // re-export /pkgfs/system as /system
   zx::channel system_channel, system_req;
@@ -150,10 +134,6 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
     return status;
   }
 
-  status = WaitForPkgfsLaunchCompletion(std::move(proc));
-  if (status.is_error()) {
-    return status;
-  }
   return FinishPkgfsLaunch(filesystems, std::move(h0));
 }
 
