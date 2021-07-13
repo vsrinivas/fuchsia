@@ -108,7 +108,6 @@ class Device
                           AddCompositeDeviceCompleter::Sync& _completer) override;
   void PublishMetadata(PublishMetadataRequestView request,
                        PublishMetadataCompleter::Sync& _completer) override;
-  void MakeVisible(MakeVisibleRequestView request, MakeVisibleCompleter::Sync& _completer) override;
   void BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& _completer) override;
   void GetTopologicalPath(GetTopologicalPathRequestView request,
                           GetTopologicalPathCompleter::Sync& _completer) override;
@@ -265,7 +264,7 @@ class Device
 
   Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
          fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect,
-         zx::channel client_remote, bool wait_make_visible = false);
+         zx::channel client_remote);
   ~Device();
 
   // Create a new device with the given parameters.  This sets up its
@@ -278,7 +277,7 @@ class Device
       fbl::Array<zx_device_prop_t> props, fbl::Array<StrProperty> str_props,
       fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
       fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
-      bool wait_make_visible, bool want_init_task, bool skip_autobind, zx::vmo inspect,
+      bool want_init_task, bool skip_autobind, zx::vmo inspect,
       zx::channel client_remote, fbl::RefPtr<Device>* device);
   static zx_status_t CreateComposite(
       Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
@@ -519,9 +518,6 @@ class Device
 
   State state() const { return state_; }
 
-  void clear_wait_make_visible() { wait_make_visible_ = false; }
-  bool wait_make_visible() const { return wait_make_visible_; }
-
   void inc_num_removal_attempts() { num_removal_attempts_++; }
   size_t num_removal_attempts() const { return num_removal_attempts_; }
 
@@ -689,10 +685,6 @@ class Device
   // For attaching as an open connection to the proxy device,
   // or once the device becomes visible.
   zx::channel client_remote_;
-
-  // If true, we should only make the device visible after DdkMakeVisible is called
-  // (and after the init task has completed).
-  bool wait_make_visible_ = false;
 
   // For compatibility tests.
   fbl::Mutex test_state_lock_;

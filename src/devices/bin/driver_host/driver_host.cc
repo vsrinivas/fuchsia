@@ -225,15 +225,11 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
                                                 const zx_device_str_prop_t* str_props,
                                                 uint32_t str_prop_count, zx::vmo inspect,
                                                 zx::channel client_remote) {
-  bool add_invisible = child->flags() & DEV_FLAG_INVISIBLE;
   using fuchsia_device_manager::wire::AddDeviceConfig;
   AddDeviceConfig add_device_config;
 
   if (child->flags() & DEV_FLAG_ALLOW_MULTI_COMPOSITE) {
     add_device_config |= AddDeviceConfig::kAllowMultiComposite;
-  }
-  if (add_invisible) {
-    add_device_config |= AddDeviceConfig::kInvisible;
   }
   if (child->flags() & DEV_FLAG_UNBINDABLE) {
     add_device_config |= AddDeviceConfig::kSkipAutobind;
@@ -300,7 +296,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
   if (status == ZX_OK) {
     if (response.Unwrap()->result.is_response()) {
       device_id = response.Unwrap()->result.response().local_device_id;
-      if (add_invisible) {
+      if (child->ops()->init) {
         // Mark child as invisible until the init function is replied.
         child->set_flag(DEV_FLAG_INVISIBLE);
       }
@@ -806,56 +802,6 @@ int main(int argc, char** argv) {
 }
 
 }  // namespace internal
-
-void DriverHostContext::MakeVisible(const fbl::RefPtr<zx_device_t>& dev,
-                                    const device_make_visible_args_t* args) {
-  ZX_ASSERT_MSG(!dev->ops()->init,
-                "Cannot call device_make_visible if init hook is implemented."
-                "The device will automatically be made visible once the init hook is replied to.");
-  const auto& client = dev->coordinator_client;
-  if (!client) {
-    return;
-  }
-
-  if (args && args->power_states && args->power_state_count != 0) {
-    dev->SetPowerStates(args->power_states, args->power_state_count);
-  }
-  if (args && args->performance_states && (args->performance_state_count != 0)) {
-    dev->SetPerformanceStates(args->performance_states, args->performance_state_count);
-  }
-
-  // TODO(teisenbe): Handle failures here...
-  VLOGD(1, *dev, "make-visible");
-  auto response = client->MakeVisible_Sync();
-  zx_status_t status = response.status();
-  zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK) {
-    if (response.Unwrap()->result.is_err()) {
-      call_status = response.Unwrap()->result.err();
-    }
-  }
-  log_rpc_result(dev, "make-visible", status, call_status);
-  dev->unset_flag(DEV_FLAG_INVISIBLE);
-
-  // Reply to any pending bind/rebind requests, if all
-  // the children are initialized.
-  bool reply_bind_rebind = true;
-  for (auto& child : dev->parent()->children()) {
-    if (child.flags() & DEV_FLAG_INVISIBLE) {
-      reply_bind_rebind = false;
-    }
-  }
-  if (!reply_bind_rebind || !dev->parent()->complete_bind_rebind_after_init()) {
-    return;
-  }
-  status = (status == ZX_OK) ? call_status : status;
-  if (auto bind_conn = dev->parent()->take_bind_conn(); bind_conn) {
-    bind_conn(status);
-  }
-  if (auto rebind_conn = dev->parent()->take_rebind_conn(); rebind_conn) {
-    rebind_conn(status);
-  }
-}
 
 zx_status_t DriverHostContext::ScheduleRemove(const fbl::RefPtr<zx_device_t>& dev,
                                               bool unbind_self) {

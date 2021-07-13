@@ -74,7 +74,6 @@ struct ProtocolEntry {
 // Fidl messages
 // Any automatic responses from the DDK
 // The following libdriver calls:
-//   device_make_visible
 //   device_open_protocol_session_multibindable
 //   device_get_size
 //   device_state_clr_set

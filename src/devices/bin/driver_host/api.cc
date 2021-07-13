@@ -29,7 +29,7 @@
 
 #define ALLOWED_FLAGS                                                        \
   (DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | DEVICE_ADD_MUST_ISOLATE | \
-   DEVICE_ADD_INVISIBLE | DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
+   DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
 
 namespace internal {
 
@@ -84,7 +84,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     return ZX_ERR_INVALID_ARGS;
   }
   if ((args->flags & DEVICE_ADD_INSTANCE) &&
-      (args->flags & (DEVICE_ADD_MUST_ISOLATE | DEVICE_ADD_INVISIBLE))) {
+      (args->flags & (DEVICE_ADD_MUST_ISOLATE))) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -108,9 +108,6 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     }
     if (args->flags & DEVICE_ADD_NON_BINDABLE) {
       dev->set_flag(DEV_FLAG_UNBINDABLE);
-    }
-    if (args->flags & DEVICE_ADD_INVISIBLE) {
-      dev->set_flag(DEV_FLAG_INVISIBLE);
     }
     if (args->flags & DEVICE_ADD_ALLOW_MULTI_COMPOSITE) {
       dev->set_flag(DEV_FLAG_ALLOW_MULTI_COMPOSITE);
@@ -162,10 +159,9 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
       r = api_ctx->DeviceAdd(dev, parent_ref, nullptr, 0, nullptr, 0, nullptr, zx::vmo(),
                              zx::channel() /* client_remote */);
     } else {
-      bool pass_client_remote = args->flags & DEVICE_ADD_INVISIBLE;
       r = api_ctx->DeviceAdd(dev, parent_ref, args->props, args->prop_count, args->str_props,
                              args->str_prop_count, nullptr, std::move(inspect),
-                             pass_client_remote ? std::move(client_remote) : zx::channel());
+                             zx::channel() /* client_remote */);
     }
     if (r != ZX_OK) {
       if (out) {
@@ -205,12 +201,6 @@ __EXPORT zx_status_t device_rebind(zx_device_t* dev) {
   fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
   fbl::RefPtr<zx_device_t> dev_ref(dev);
   return internal::ContextForApi()->DeviceRebind(dev_ref);
-}
-
-__EXPORT void device_make_visible(zx_device_t* dev, const device_make_visible_args_t* args) {
-  fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
-  fbl::RefPtr<zx_device_t> dev_ref(dev);
-  internal::ContextForApi()->MakeVisible(dev_ref, args);
 }
 
 __EXPORT void device_async_remove(zx_device_t* dev) {

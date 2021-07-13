@@ -48,12 +48,6 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
   }
-  void MakeVisible(MakeVisibleRequestView request, MakeVisibleCompleter::Sync& completer) override {
-    fuchsia_device_manager::wire::CoordinatorMakeVisibleResult response;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
-    completer.Reply(std::move(response));
-  }
   void BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& completer) override {
     bind_count_++;
     fuchsia_device_manager::wire::CoordinatorBindDeviceResult response;

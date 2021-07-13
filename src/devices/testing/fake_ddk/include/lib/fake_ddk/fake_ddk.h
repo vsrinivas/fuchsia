@@ -146,7 +146,6 @@ class Bind {
   virtual zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* data, size_t length,
                                         size_t* actual);
   virtual zx_status_t DeviceGetMetadataSize(zx_device_t* dev, uint32_t type, size_t* out_size);
-  virtual void DeviceMakeVisible(zx_device_t* dev);
   virtual void DeviceSuspendComplete(zx_device_t* device, zx_status_t status, uint8_t out_state);
   virtual void DeviceResumeComplete(zx_device_t* device, zx_status_t status,
                                     uint8_t out_power_state, uint32_t out_perf_state);
@@ -180,7 +179,6 @@ class Bind {
                                      uint32_t out_perf_state);
   friend zx_status_t(::device_add_metadata)(zx_device_t* device, uint32_t type, const void* data,
                                             size_t length);
-  friend void(::device_make_visible)(zx_device_t* device, const device_make_visible_args_t* args);
   friend zx_status_t(::device_get_protocol)(const zx_device_t* device, uint32_t proto_id,
                                             void* protocol);
   friend zx_status_t(::device_open_protocol_session_multibindable)(const zx_device_t* dev,
@@ -213,7 +211,6 @@ class Bind {
   bool remove_called_ = false;
   bool rebind_called_ = false;
   sync_completion_t remove_called_sync_;
-  bool make_visible_called_ = false;
   sync_completion_t suspend_called_sync_;
   bool resume_complete_called_ = false;
   bool device_open_protocol_session_multibindable_ = false;

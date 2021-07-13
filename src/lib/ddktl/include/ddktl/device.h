@@ -463,29 +463,6 @@ class DeviceAddArgs {
   device_add_args_t args_ = {};
 };
 
-class DeviceMakeVisibleArgs {
- public:
-  DeviceMakeVisibleArgs() {}
-
-  DeviceMakeVisibleArgs& set_power_states(
-      cpp20::span<const device_power_state_info_t> power_states) {
-    args_.power_states = power_states.data();
-    args_.power_state_count = static_cast<uint8_t>(power_states.size());
-    return *this;
-  }
-  DeviceMakeVisibleArgs& set_performance_states(
-      cpp20::span<const device_performance_state_info_t> performance_states) {
-    args_.performance_states = performance_states.data();
-    args_.performance_state_count = static_cast<uint8_t>(performance_states.size());
-    return *this;
-  }
-
-  const device_make_visible_args_t& get() const { return args_; }
-
- private:
-  device_make_visible_args_t args_ = {};
-};
-
 // Device is templated on the list of mixins that define which DDK device
 // methods are implemented. Note that internal::base_device *must* be the
 // left-most base class in order to ensure that its constructor runs before the
@@ -518,15 +495,6 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 
   zx_status_t DdkAddComposite(const char* name, const composite_device_desc_t* comp_desc) {
     return device_add_composite(this->parent_, name, comp_desc);
-  }
-
-  void DdkMakeVisible(const DeviceMakeVisibleArgs& args) {
-    device_make_visible(zxdev(), &args.get());
-  }
-
-  void DdkMakeVisible() {
-    device_make_visible_args_t args = {};
-    device_make_visible(zxdev(), &args);
   }
 
   // Schedules the removal of the device and its descendents.

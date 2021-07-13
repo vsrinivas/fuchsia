@@ -45,9 +45,7 @@ void InitTask::Run() {
       device_->set_state(Device::State::kActive);
     }
     if (status == ZX_OK) {
-      if (!device_->wait_make_visible()) {
-        status = device_->coordinator->MakeVisible(device_);
-      }
+      status = device_->coordinator->MakeVisible(device_);
     } else if (device_->state() != Device::State::kDead) {
       LOGF(ERROR, "Init task failed, scheduling removal of device %p '%s': %s", device_.get(),
            device_->name().data(), zx_status_get_string(status));

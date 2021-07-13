@@ -84,9 +84,9 @@ class FakeDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostCo
 
 // Reads a CreateCompositeDevice from remote, checks expectations, and sends
 // a ZX_OK response.
-void CheckCreateCompositeDeviceReceived(const fidl::ServerEnd<fdm::DriverHostController>& controller,
-                                        const char* expected_name, size_t expected_fragments_count,
-                                        DeviceState* composite) {
+void CheckCreateCompositeDeviceReceived(
+    const fidl::ServerEnd<fdm::DriverHostController>& controller, const char* expected_name,
+    size_t expected_fragments_count, DeviceState* composite) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl::IncomingMessage msg =
@@ -1142,9 +1142,9 @@ TEST_F(CompositeTestCase, FragmentDeviceInit) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
     ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus()->device, name, protocol_id[i], "",
-                                       false /* invisible */, true /* has_init */,
-                                       false /* reply_to_init */, true /* always_init */,
-                                       zx::vmo() /* inspect */, &device_indexes[i]));
+                                       true /* has_init */, false /* reply_to_init */,
+                                       true /* always_init */, zx::vmo() /* inspect */,
+                                       &device_indexes[i]));
     auto index = device_indexes[i];
     ASSERT_FALSE(device(index)->device->is_visible());
     ASSERT_NO_FATAL_FAILURES(device(index)->CheckInitReceived());

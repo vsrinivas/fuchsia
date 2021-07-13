@@ -46,9 +46,6 @@ zx_status_t device_add_metadata(zx_device_t* device, uint32_t type, const void* 
 }
 
 __EXPORT
-void device_make_visible(zx_device_t* device, const device_make_visible_args_t* args) {}
-
-__EXPORT
 zx_status_t device_get_protocol(const zx_device_t* device, uint32_t proto_id, void* protocol) {
   return ZX_ERR_NOT_SUPPORTED;
 }

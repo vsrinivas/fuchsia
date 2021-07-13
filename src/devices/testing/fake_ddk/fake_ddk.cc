@@ -275,14 +275,6 @@ zx_status_t Bind::DeviceGetMetadataSize(zx_device_t* dev, uint32_t type, size_t*
   return ZX_OK;
 }
 
-void Bind::DeviceMakeVisible(zx_device_t* device) {
-  if (device != kFakeDevice) {
-    bad_device_ = true;
-  }
-  make_visible_called_ = true;
-  return;
-}
-
 void Bind::DeviceSuspendComplete(zx_device_t* device, zx_status_t status, uint8_t out_state) {
   if (device != kFakeDevice) {
     bad_device_ = true;
@@ -456,14 +448,6 @@ zx_status_t device_add_metadata(zx_device_t* device, uint32_t type, const void* 
     return ZX_OK;
   }
   return fake_ddk::Bind::Instance()->DeviceAddMetadata(device, type, data, length);
-}
-
-__EXPORT
-void device_make_visible(zx_device_t* device, const device_make_visible_args_t* args) {
-  if (fake_ddk::Bind::Instance()) {
-    fake_ddk::Bind::Instance()->DeviceMakeVisible(device);
-  }
-  return;
 }
 
 __EXPORT

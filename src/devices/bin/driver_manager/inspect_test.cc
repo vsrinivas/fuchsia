@@ -162,10 +162,10 @@ TEST_F(InspectDevfsTestCase, DevfsEntries) {
   ASSERT_OK(inspect_vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
                                   &inspect_vmo_duplicate));
 
-  ASSERT_NO_FATAL_FAILURES(AddDevice(
-      platform_bus()->device, "test-device", test_device_protocol /* protocol id */, "",
-      false /* invisible */, false /* has_init */, false /* reply_to_init */,
-      false /* always_init */, std::move(inspect_vmo_duplicate) /* inspect */, &test_index));
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus()->device, "test-device", test_device_protocol /* protocol id */, "",
+                false /* has_init */, false /* reply_to_init */, false /* always_init */,
+                std::move(inspect_vmo_duplicate) /* inspect */, &test_index));
 
   // Check that device vmo is listed in devfs
   uint8_t buffer[4096];
@@ -207,7 +207,7 @@ TEST_F(InspectDevfsTestCase, NoPubProtocolVisibleInClassDirectory) {
 
   ASSERT_NO_FATAL_FAILURES(AddDevice(
       platform_bus()->device, "test-device", test_device_protocol /* protocol id */, "",
-      false /* invisible */, false /* has_init */, false /* reply_to_init */,
+      false /* has_init */, false /* reply_to_init */,
       false /* always_init */, std::move(inspect_vmo_duplicate) /* inspect */, &test_index));
 
   // Check that device vmo is listed in devfs

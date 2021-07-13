@@ -88,8 +88,6 @@ const uint32 BIND_RULES_INSTRUCTIONS_MAX = 256;
 bits AddDeviceConfig : uint32 {
     /// Device can be a fragment in multiple composite devices
     ALLOW_MULTI_COMPOSITE = 0x00000001;
-    /// Device should be marked invisible initially (used for deprecated DEVICE_ADD_INVISIBLE)
-    INVISIBLE = 0x00000002;
     /// Device should not trigger the auto-bind mechanism
     SKIP_AUTOBIND = 0x00000004;
 };
@@ -247,9 +245,6 @@ protocol Coordinator {
 
     /// Requests the devcoordinator schedule the unbinding of this device's children.
     ScheduleUnbindChildren();
-
-    /// Mark this device as visible.
-    MakeVisible() -> () error zx.status;
 
     /// Attempt to bind a driver against this device.  If `driver_path` is null,
     /// this will initiate the driver matching algorithm.

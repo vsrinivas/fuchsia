@@ -155,9 +155,6 @@ zx_status_t device_get_fragment_metadata(zx_device_t* device, const char* name, 
 
 // Unsupported calls:
 __EXPORT
-void device_make_visible(zx_device_t* device, const device_make_visible_args_t* args) {}
-
-__EXPORT
 zx_status_t device_open_protocol_session_multibindable(const zx_device_t* dev, uint32_t proto_id,
                                                        void* protocol) {
   return ZX_ERR_NOT_SUPPORTED;

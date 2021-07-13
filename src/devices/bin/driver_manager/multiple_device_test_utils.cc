@@ -73,7 +73,8 @@ class FakeDevhost : public fidl::WireServer<fdm::DriverHostController> {
 // Reads a CreateDevice from remote, checks expectations, and sends a ZX_OK
 // response.
 void MultipleDeviceTestCase::CheckCreateDeviceReceived(
-    const fidl::ServerEnd<fdm::DriverHostController>& devhost_controller, const char* expected_driver,
+    const fidl::ServerEnd<fdm::DriverHostController>& devhost_controller,
+    const char* expected_driver,
     fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
     fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
@@ -233,7 +234,7 @@ void MultipleDeviceTestCase::SetUp() {
         /* props_data */ nullptr, /* props_count */ 0, /* str_props_data */ nullptr,
         /* str_props_count */ 0, "platform-bus", 0,
         /* driver_path */ {},
-        /* args */ {}, /* invisible */ false, /* skip_autobind */ false, /* has_init */ false,
+        /* args */ {}, /* skip_autobind */ false, /* has_init */ false,
         /* always_init */ true,
         /*inspect*/ zx::vmo(), /* client_remote */ zx::channel(), &platform_bus_.device);
     ASSERT_OK(status);
@@ -282,9 +283,9 @@ void MultipleDeviceTestCase::TearDown() {
 }
 
 void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const char* name,
-                                       uint32_t protocol_id, fbl::String driver, bool invisible,
-                                       bool has_init, bool reply_to_init, bool always_init,
-                                       zx::vmo inspect, size_t* index) {
+                                       uint32_t protocol_id, fbl::String driver, bool has_init,
+                                       bool reply_to_init, bool always_init, zx::vmo inspect,
+                                       size_t* index) {
   DeviceState state;
 
   auto coordinator_server = fidl::CreateEndpoints(&state.coordinator_client);
@@ -293,14 +294,13 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
   auto controller_client = fidl::CreateEndpoints(&state.controller_server);
   ASSERT_OK(controller_client.status_value());
 
-  auto status =
-      coordinator().AddDevice(parent, std::move(*controller_client), std::move(*coordinator_server),
-                              /* props_data */ nullptr,
-                              /* props_count */ 0, /* str_props_data */ nullptr,
-                              /* str_props_count */ 0, name, /* driver_path */ protocol_id,
-                              driver.data(), /* args */ {}, invisible,
-                              /* skip_autobind */ false, has_init, always_init, std::move(inspect),
-                              /* client_remote */ zx::channel(), &state.device);
+  auto status = coordinator().AddDevice(
+      parent, std::move(*controller_client), std::move(*coordinator_server),
+      /* props_data */ nullptr,
+      /* props_count */ 0, /* str_props_data */ nullptr,
+      /* str_props_count */ 0, name, /* driver_path */ protocol_id, driver.data(), /* args */ {},
+      /* skip_autobind */ false, has_init, always_init, std::move(inspect),
+      /* client_remote */ zx::channel(), &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_OK(status);
   coordinator_loop_.RunUntilIdle();
@@ -316,7 +316,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
 
 void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const char* name,
                                        uint32_t protocol_id, fbl::String driver, size_t* index) {
-  AddDevice(parent, name, protocol_id, driver, /* invisible */ false, /* has_init */ false,
+  AddDevice(parent, name, protocol_id, driver, /* has_init */ false,
             /* reply_to_init */ true, /* always_init */ true, /* inspect */ zx::vmo(), index);
 }
 
@@ -336,7 +336,6 @@ void MultipleDeviceTestCase::AddDeviceSkipAutobind(const fbl::RefPtr<Device>& pa
       /* props_data */ nullptr, /* props_count */ 0,
       /* str_props_data */ nullptr,
       /* str_props_count */ 0, name, /* driver_path */ protocol_id, /* driver */ "", /* args */ {},
-      /* invisible */ false,
       /* skip_autobind */ true, /* has_init */ false, /* always_init */ true,
       /* inspect */ zx::vmo(),
       /* client_remote */ zx::channel(), &state.device);

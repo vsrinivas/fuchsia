@@ -39,7 +39,7 @@ class DriverHostContext {
 
   // routines driver_host uses to talk to driver_manager
   // |client_remote| will only be a valid handle if the device was added with
-  // DEVICE_ADD_INVISIBLE or DEVICE_ADD_MUST_ISOLATE.
+  // DEVICE_ADD_MUST_ISOLATE.
   zx_status_t DriverManagerAdd(const fbl::RefPtr<zx_device_t>& dev,
                                const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
                                const zx_device_prop_t* props, uint32_t prop_count,
@@ -50,7 +50,7 @@ class DriverHostContext {
   zx_status_t DriverManagerRemove(fbl::RefPtr<zx_device_t> dev) TA_REQ(api_lock_);
 
   // |client_remote| will only be a valid handle if the device was added with
-  // DEVICE_ADD_INVISIBLE or DEVICE_ADD_MUST_ISOLATE.
+  // DEVICE_ADD_MUST_ISOLATE.
   zx_status_t DeviceAdd(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& parent,
                         const zx_device_prop_t* props, uint32_t prop_count,
                         const zx_device_str_prop_t* str_props, uint32_t str_prop_count,
@@ -97,7 +97,6 @@ class DriverHostContext {
   zx_status_t ScheduleRemove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self)
       TA_REQ(api_lock_);
   zx_status_t ScheduleUnbindChildren(const fbl::RefPtr<zx_device_t>& dev) TA_REQ(api_lock_);
-  void MakeVisible(const fbl::RefPtr<zx_device_t>& dev, const device_make_visible_args_t* args);
 
   zx_status_t LoadFirmware(const zx_driver_t* drv, const fbl::RefPtr<zx_device_t>& dev,
                            const char* path, zx_handle_t* vmo_handle, size_t* size);

@@ -457,8 +457,8 @@ zx_status_t Coordinator::AddDevice(
     const fdm::wire::DeviceProperty* props_data, size_t props_count,
     const fdm::wire::DeviceStrProperty* str_props_data, size_t str_props_count,
     std::string_view name, uint32_t protocol_id, std::string_view driver_path,
-    std::string_view args, bool invisible, bool skip_autobind, bool has_init, bool always_init,
-    zx::vmo inspect, zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
+    std::string_view args, bool skip_autobind, bool has_init, bool always_init, zx::vmo inspect,
+    zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
   // If this is true, then |name_data|'s size is properly bounded.
   static_assert(fdm::wire::kDeviceNameMax == ZX_DEVICE_NAME_MAX);
   static_assert(fdm::wire::kPropertiesMax <= UINT32_MAX);
@@ -514,16 +514,12 @@ zx_status_t Coordinator::AddDevice(
 
   // TODO(fxbug.dev/43370): remove this check once init tasks can be enabled for all devices.
   bool want_init_task = has_init || always_init;
-  // We use the legacy invisible / device_make_visible behavior if the device is added
-  // as invisible and the device has not implemented the init hook.
-  // TODO(fxbug.dev/43261): remove |has_init| once device_make_visible() is deprecated.
-  bool init_wait_make_visible = invisible && !has_init;
   fbl::RefPtr<Device> dev;
-  zx_status_t status = Device::Create(
-      this, parent, std::move(name_str), std::move(driver_path_str), std::move(args_str),
-      protocol_id, std::move(props), std::move(str_props), std::move(coordinator),
-      std::move(device_controller), init_wait_make_visible, want_init_task, skip_autobind,
-      std::move(inspect), std::move(client_remote), &dev);
+  zx_status_t status =
+      Device::Create(this, parent, std::move(name_str), std::move(driver_path_str),
+                     std::move(args_str), protocol_id, std::move(props), std::move(str_props),
+                     std::move(coordinator), std::move(device_controller), want_init_task,
+                     skip_autobind, std::move(inspect), std::move(client_remote), &dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -552,7 +548,7 @@ zx_status_t Coordinator::AddDevice(
 
   VLOGF(1, "Added device %p '%s'", dev.get(), dev->name().data());
   // TODO(fxbug.dev/43370): remove this once init tasks can be enabled for all devices.
-  if (!invisible && !want_init_task) {
+  if (!want_init_task) {
     status = dev->SignalReadyForBind();
     if (status != ZX_OK) {
       return status;
@@ -569,10 +565,9 @@ zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
   if (dev->state() == Device::State::kDead) {
     return ZX_ERR_BAD_STATE;
   }
-  // We will make the device visible once the init hook completes.
   if (dev->state() == Device::State::kInitializing) {
-    dev->clear_wait_make_visible();
-    return ZX_ERR_SHOULD_WAIT;
+    // This should only be called in response to the init hook completing.
+    return ZX_ERR_BAD_STATE;
   }
   if (dev->flags & DEV_CTX_INVISIBLE) {
     dev->flags &= ~DEV_CTX_INVISIBLE;

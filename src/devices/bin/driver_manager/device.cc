@@ -30,7 +30,7 @@ static constexpr bool kEnableAlwaysInit = false;
 
 Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
                fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect_vmo,
-               zx::channel client_remote, bool wait_make_visible)
+               zx::channel client_remote)
     : coordinator(coord),
       name_(std::move(name)),
       libname_(std::move(libname)),
@@ -38,8 +38,7 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       parent_(std::move(parent)),
       protocol_id_(protocol_id),
       publish_task_([this] { coordinator->HandleNewDevice(fbl::RefPtr(this)); }),
-      client_remote_(std::move(client_remote)),
-      wait_make_visible_(wait_make_visible) {
+      client_remote_(std::move(client_remote)) {
   test_reporter = std::make_unique<DriverTestReporter>(name_);
   inspect_.emplace(coord->inspect_manager().devices(), coord->inspect_manager().device_count(),
                    name_.c_str(), std::move(inspect_vmo));
@@ -115,7 +114,7 @@ zx_status_t Device::Create(
     fbl::Array<zx_device_prop_t> props, fbl::Array<StrProperty> str_props,
     fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
     fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
-    bool wait_make_visible, bool want_init_task, bool skip_autobind, zx::vmo inspect,
+    bool want_init_task, bool skip_autobind, zx::vmo inspect,
     zx::channel client_remote, fbl::RefPtr<Device>* device) {
   fbl::RefPtr<Device> real_parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
@@ -128,7 +127,7 @@ zx_status_t Device::Create(
 
   auto dev = fbl::MakeRefCounted<Device>(
       coordinator, std::move(name), std::move(driver_path), std::move(args), real_parent,
-      protocol_id, std::move(inspect), std::move(client_remote), wait_make_visible);
+      protocol_id, std::move(inspect), std::move(client_remote));
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -166,9 +165,7 @@ zx_status_t Device::Create(
   // We must mark the device as invisible before publishing so
   // that we don't send "device added" notifications.
   // The init task must complete before marking the device visible.
-  // If |wait_make_visible| is true, we also wait for a device_make_visible call.
-  // TODO(fxbug.dev/43370): this check should be removed once init tasks apply to all devices.
-  if (wait_make_visible || want_init_task) {
+  if (want_init_task) {
     dev->flags |= DEV_CTX_INVISIBLE;
   }
 
@@ -762,8 +759,6 @@ void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& c
   std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
   std::string_view args(request->args.data(), request->args.size());
 
-  bool invisible = static_cast<bool>(request->device_add_config &
-                                     fuchsia_device_manager::wire::AddDeviceConfig::kInvisible);
   bool skip_autobind = static_cast<bool>(
       request->device_add_config & fuchsia_device_manager::wire::AddDeviceConfig::kSkipAutobind);
 
@@ -772,7 +767,7 @@ void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& c
       parent, std::move(request->device_controller), std::move(request->coordinator),
       request->property_list.props.data(), request->property_list.props.count(),
       request->property_list.str_props.data(), request->property_list.str_props.count(), name,
-      request->protocol_id, driver_path, args, invisible, skip_autobind, request->has_init,
+      request->protocol_id, driver_path, args, skip_autobind, request->has_init,
       kEnableAlwaysInit, std::move(request->inspect), std::move(request->client_remote), &device);
   if (device != nullptr && (request->device_add_config &
                             fuchsia_device_manager::wire::AddDeviceConfig::kAllowMultiComposite)) {
@@ -818,20 +813,6 @@ void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenRequestView request,
   VLOGF(1, "Scheduling unbind of children for device %p '%s'", dev.get(), dev->name().data());
 
   dev->coordinator->ScheduleDriverHostRequestedUnbindChildren(dev);
-}
-
-void Device::MakeVisible(MakeVisibleRequestView request, MakeVisibleCompleter::Sync& completer) {
-  auto dev = fbl::RefPtr(this);
-  if (dev->coordinator->InSuspend()) {
-    LOGF(ERROR, "'make-visible' is forbidden in suspend");
-    completer.ReplyError(ZX_ERR_BAD_STATE);
-    return;
-  }
-  VLOGF(1, "'make-visible' device %p '%s'", dev.get(), dev->name().data());
-  // TODO(teisenbe): MakeVisible can return errors.  We should probably
-  // act on it, but the existing code being migrated does not.
-  dev->coordinator->MakeVisible(dev);
-  completer.ReplySuccess();
 }
 
 void Device::BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& completer) {

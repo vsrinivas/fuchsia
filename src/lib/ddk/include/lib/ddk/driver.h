@@ -76,10 +76,6 @@ enum {
   // behind a proxy of this device
   DEVICE_ADD_MUST_ISOLATE = (1 << 2),
 
-  // This device will not be visible in devfs or available for binding
-  // until device_make_visible() is called on it.
-  DEVICE_ADD_INVISIBLE = (1 << 3),
-
   // This device is allowed to be bindable in multiple composite devices
   DEVICE_ADD_ALLOW_MULTI_COMPOSITE = (1 << 4),
 };
@@ -168,15 +164,13 @@ typedef struct device_add_args {
 
   // Optional channel passed to the |dev| that serves as an open connection for the client.
   // If DEVICE_ADD_MUST_ISOLATE is set, the client will be connected to the proxy instead.
-  // If DEVICE_ADD_INVISIBLE is set, the client will not be connected until
-  // device_make_visible is called.
   zx_handle_t client_remote;
 
   // Optional VMO representing that will get used in devfs inspect tree.
   zx_handle_t inspect_vmo;
 } device_add_args_t;
 
-typedef struct device_make_visible_args {
+typedef struct device_init_reply_args {
   // List of power_states that the device supports.
   // List cannot be more than MAX_DEVICE_POWER_STATES size.
   const device_power_state_info_t* power_states;
@@ -190,9 +184,7 @@ typedef struct device_make_visible_args {
 
   // Number of performant power states in the list
   uint8_t performance_state_count;
-} device_make_visible_args_t;
-
-typedef device_make_visible_args_t device_init_reply_args_t;
+} device_init_reply_args_t;
 
 struct zx_driver_rec {
   const zx_driver_ops_t* ops;
@@ -233,7 +225,6 @@ void device_init_reply(zx_device_t* device, zx_status_t status,
                        const device_init_reply_args_t* args);
 
 zx_status_t device_rebind(zx_device_t* device);
-void device_make_visible(zx_device_t* device, const device_make_visible_args_t* args);
 
 // Schedules the removal of the given device and all its descendents. When a device is
 // being removed, its |unbind| hook will be invoked.
