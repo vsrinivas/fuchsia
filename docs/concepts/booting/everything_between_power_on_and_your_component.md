@@ -134,8 +134,8 @@ usable. Once fvm and zxcrypt are loaded, fshost will find the appropriate block
 devices and start the [minfs][minfs] and [blobfs][blobfs] filesystems, which are
 needed for a fully functioning system.
 
-Currently fshost runs a [memfs][memfs] for its outgoing directory, and
-[mounts][fs-mount] handles into this memfs as filesystems come online. This
+Currently fshost runs a [memfs][memfs] for its [outgoing directory][glossary.outgoing-directory],
+and [mounts][fs-mount] handles into this memfs as filesystems come online. This
 means that attempting to access a fshost-provided directory too early will
 result in components seeing an empty directory. The requests are not pipelined
 in such a way that they are ignored until the given filesystem is available.
@@ -221,6 +221,7 @@ components on the system can be run.
 [glossary.fvm]: /docs/glossary#README.md#fuchsia-volume-manager
 [glossary.appmgr]: /docs/glossary#README.md#appmgr
 [glossary.realm]: /docs/glossary#README.md#realm
+[glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [appmgr-exposes]: https://fuchsia.googlesource.com/fuchsia/+/7cf46e0c7a8e5e4c78dba846f867ab96bcce5c5b/src/sys/appmgr/meta/appmgr.cml#168
 [appmgr-is-eager]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/root/meta/root.cml#14
 [appmgr-pkg]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/appmgr/BUILD.gn#159

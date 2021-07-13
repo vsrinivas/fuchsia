@@ -216,10 +216,10 @@ With the provider found the client component is now bound to the provider. This
 will cause the component to start running if it is currently stopped.
 
 Every component upon being started receives a server handle to an
-[_outgoing directory_][abi-system] in its handle table. When a component is
-bound to, component manager forwards the server end of the protocol channel to
-the providing component's outgoing directory, under the source path in the
-providing component's `offer` or `expose` declaration
+[outgoing directory][glossary.outgoing-directory] in its handle table.
+When a component is bound, component manager forwards the server end of the
+protocol channel to the providing component's outgoing directory, under the
+source path in the providing component's `offer` or `expose` declaration.
 
 In the above example component manager will send an `Open` request over the
 outgoing directory handle for component `A` to the `/svc/fuchsia.example.Foo`
@@ -267,7 +267,6 @@ To prevent dependency cycles from occurring in component namespaces, a parent
 component cannot declare a static dependency on the protocols of its children
 with `use` declarations; it must use `BindChild()`.
 
-[abi-system]: /docs/concepts/system/abi/system.md
 [binding]: #binding-to-a-component-and-sending-a-protocol-channel
 [cap-routing]: #the-open-triggers-capability-routing
 [channel]: /docs/reference/kernel_objects/channel.md
@@ -275,6 +274,7 @@ with `use` declarations; it must use `BindChild()`.
 [fuchsia.io]: /sdk/fidl/fuchsia.io/io.fidl
 [glossary.components-v1]: /docs/glossary/README.md#components-v1
 [glossary.components-v2]: /docs/glossary/README.md#components-v2
+[glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [handle]: /docs/concepts/kernel/handles.md
 [namespaces]: /docs/concepts/process/namespaces.md
 [ns-construction]: #constructing-a-components-namespace

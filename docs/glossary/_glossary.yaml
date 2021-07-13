@@ -504,6 +504,18 @@
   related_guides: [""]
   area: ["System", "Components"]
 
+- term: "Exposed directory"
+  short_description: "A file system directory that contains the set of
+  <a href=\"/docs/glossary#expose\">exposed</a> capabilities for a
+  <a href=\"/docs/glossary#component\">component</a>."
+  full_description: "A file system directory provided by <a href=\"/docs/glossary#component-manager\">component manager</a>
+  that contains the set of capabilities <a href=\"/docs/glossary#expose\">exposed</a>
+  by a <a href=\"/docs/glossary#component\">component</a> to its parent."
+  see_also: ["<a href=\"/docs/glossary#capability\">Capability</a>",
+             "<a href=\"/docs/glossary#outgoing-directory\">Outgoing directory</a>"]
+  related_guides: [""]
+  area: ["Components"]
+
 - term: "FAR"
   short_description: "The Fuchsia Archive Format is a container for files to be used by Zircon and
   Fuchsia."
@@ -872,8 +884,8 @@ environment to form a full SDK."
 
 - term: "Namespace"
   short_description: "A namespace is the composite hierarchy of files, directories, sockets,
-  <a href=\"/docs/glossary#service\">service</a>s, and other named objects offered to
-  components by their <a href=\"/docs/glossary#environment\">environment</a>."
+  <a href=\"/docs/glossary#service\">services</a>, and other named objects offered to
+  <a href=\"/docs/glossary#component\">components</a> by their <a href=\"/docs/glossary#environment\">environment</a>."
   full_description: ""
   see_also: ["<a href=\"/docs/concepts/process/namespaces.md\">Fuchsia Namespaces</a>"]
   related_guides: [""]
@@ -925,9 +937,14 @@ environment to form a full SDK."
 
 - term: "Outgoing directory"
   short_description: "A file system directory where a <a href=\"/docs/glossary#component\">component</a>
-  may <a href=\"/docs/glossary#expose\">expose</a>capabilities for others to use."
-  full_description: ""
-  see_also: [""]
+  serves protocol <a href=\"/docs/glossary#handle\">handles</a> to capabilities it has
+  <a href=\"/docs/glossary#expose\">exposed</a>."
+  full_description: "A file system directory where a <a href=\"/docs/glossary#component\">component</a>
+  serves protocol <a href=\"/docs/glossary#handle\">handles</a> to capabilities it has
+  <a href=\"/docs/glossary#expose\">exposed</a>.
+  Other components connect to these exposed capabilities using the handles in this directory."
+  see_also: ["<a href=\"/docs/glossary#capability\">Capability</a>",
+             "<a href=\"/docs/glossary#exposed-directory\">Exposed directory</a>"]
   related_guides: [""]
   area: ["Components"]
 

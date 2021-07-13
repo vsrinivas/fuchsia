@@ -125,8 +125,8 @@ language of capability routing consists of the following three keywords:
     exposes.
 
 When you use these keywords together, they express how a capability is routed
-from a component instance's [outgoing directory][doc-outgoing-directory] to
-another component instance's namespace:
+from a component instance's [outgoing directory][glossary.outgoing-directory] to
+another component instance's [namespace][glossary.namespace]:
 
 -   `use` describes the capabilities that populate a component instance's
     namespace.
@@ -732,6 +732,8 @@ This section may be omitted.
 [glossary.component manifest]: /docs/glossary/README.md#component-manifest
 [glossary.component manifest source]: /docs/glossary/README.md#component-manifest-source
 [glossary.hub]: /docs/glossary/README.md#hub
+[glossary.namespace]: /docs/glossary/README.md#namespace
+[glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [glossary.package]: /docs/glossary/README.md#package
 [doc-children]: realms.md#child-component-instances
 [doc-collections]: realms.md#collections
@@ -743,7 +745,6 @@ This section may be omitted.
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
 [doc-module-facets]: /docs/concepts/modular/module_facet.md
-[doc-outgoing-directory]: /docs/concepts/system/abi/system.md#outgoing_directory
 [doc-package-url]: /docs/concepts/packages/package_url.md
 [doc-packages]: /docs/concepts/packages/package.md
 [doc-realm-definitions]: realms.md#definitions

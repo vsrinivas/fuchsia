@@ -224,7 +224,7 @@ configuration file.
     URL. Agents and the session shell are both valid components to specify
     here.  Service names must be unique: only one component can provide any
     given service. These services are provided to modules, the session shell,
-    and agents, in their incoming namespace (i.e. at the path
+    and agents, in their namespace (i.e. at the path
     "/svc/fully.qualified.ServiceName").
     - `service_name`: The name of a service offered by `agent_url`.
     - `agent_url`: A fuchsia component url that specifies which agent/shell will

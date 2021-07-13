@@ -256,7 +256,7 @@ groups are declared in
 _Defined in [fonts.gni](/src/fonts/build/fonts.gni)_
 
 A local font bundle is a set of font assets that are placed directly into the
-Font Provider's incoming namespace using
+Font Provider's namespace using
 [build-time configuration data](/docs/development/components/data.md)
 (`config_data()`).
 

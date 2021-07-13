@@ -9,8 +9,8 @@ over a [channel][glossary.channel].
 ## Instances
 
 Multiple named instances of a service can be hosted by a single component.
-These are presented in the incoming namespace of the consuming component
-as subdirectories of the service.
+These are presented in the [namespace][glossary.namespace] of the consuming
+component as subdirectories of the service.
 
 For example, a component hosting different implementations of
 `fuchsia.sys.Launcher` might expose a `privileged` and `sandboxed` instance.
@@ -79,9 +79,10 @@ Services are routed to other Components through
 [service capabilities][service-capability].
 
 [collection]: /docs/concepts/components/v2/realms.md#collections
-[glossary.fidl]: /docs/glossary/README.md#fidl
-[glossary.protocol]: /docs/glossary/README.md#protocol
 [glossary.channel]: /docs/glossary/README.md#channel
+[glossary.fidl]: /docs/glossary/README.md#fidl
+[glossary.namespace]: /docs/glossary/README.md#namespace
+[glossary.protocol]: /docs/glossary/README.md#protocol
 [realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
 [service-capability]: /docs/concepts/components/v2/capabilities/service.md
 [services-from-collections]: /docs/concepts/components/v2/capabilities/service.md#routing-service-capability-collection

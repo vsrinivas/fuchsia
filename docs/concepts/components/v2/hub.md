@@ -20,8 +20,8 @@ instances at runtime. The hub provides information such as:
 
 The hub’s structure is mostly read-only. It is not possible to create, rename,
 delete, or otherwise modify directories and files that form the structure of
-the hub itself. However, the [outgoing](/docs/concepts/system/abi/system.md)
-directory of an instance may include mutable directories, files, and services
+the hub itself. However, the [outgoing directory][glossary.outgoing-directory]
+of an instance may include mutable directories, files, and services
 which can be accessed through the hub.
 
 ### Scoping
@@ -218,19 +218,20 @@ Files:
 
 ### `/hub/exec/exposed` {#hub-exec-exposed}
 
-The instance's exposed services as listed in its manifest file. A component can
-connect directly to these services from the hub by opening the provided path.
+The instance's [exposed services][glossary.exposed-directory] as listed in its
+manifest file. A component can connect directly to these services from the hub
+by opening the provided path.
 
 ### `/hub/exec/in` {#hub-exec-in}
 
-The instance's incoming namespace, as supplied by the component manager. This
-contains a listing of services and directories accessible to the given component
-instance. A component can open the provided path to connect directly to these
-services from the Hub.
+The instance's [namespace][glossary.namespace] supplied by the component manager.
+This contains a listing of services and directories accessible to the given
+component instance. A component can open the provided path to connect directly
+to these services from the Hub.
 
 ### `/hub/exec/out/` {#hub-exec-out}
 
-The instance's outgoing namespace, served by the instance itself. A component
+The instance's [outgoing directory][glossary.outgoing-directory]. A component
 can connect directly to these services from the hub by opening the provided
 path.
 
@@ -324,7 +325,7 @@ In `hub_client.cml`:
 
 In this example, `hub_client_sibling` exposes its view of the hub to its parent.
 The realm, in turn, offers that view of the hub as `/sibling_hub` to
-`hub_client`. `hub_client` maps that view of the hub to its incoming namespace.
+`hub_client`. `hub_client` maps that view of the hub to its namespace.
 
 In `hub_client_sibling.cml`:
 
@@ -820,3 +821,7 @@ changes several times.
     ├── id => "0"
     └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
     ```
+
+[glossary.namespace]: /docs/glossary/README.md#namespace
+[glossary.exposed-directory]: /docs/glossary/README.md#exposed-directory
+[glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory

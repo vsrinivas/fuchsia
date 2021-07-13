@@ -13,7 +13,7 @@ modules, shells, and other agents).
 ## Environment
 
 An agent is given access to two services provided by the modular framework in
-its incoming namespace:
+its namespace:
 
 *   `fuchsia.modular.ComponentContext`, which gives the agent access to
     functionality that is shared across components run under the modular
@@ -22,7 +22,7 @@ its incoming namespace:
     functionality.
 
 An agent is expected to provide the following services to the modular framework in its
-outgoing namespace:
+outgoing directory:
 
 *   `fuchsia.modular.Lifecycle` allows the framework to signal the agent
     to terminate gracefully.

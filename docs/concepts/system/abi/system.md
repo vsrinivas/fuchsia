@@ -74,26 +74,29 @@ in prose in comments in the FIDL definitions.
 
 ### Namespace conventions
 
-When run, components are given an *incoming namespace* and serve an *outgoing
-directory*. The names in the incoming namespace and outgoing directory follow
-certain conventions, which are are part of the system ABI.
+When run, components are given a [namespace][glossary.namespace] and serve an
+[outgoing directory][glossary.outgoing-directory].
+The names in the namespace and outgoing directory follow certain conventions,
+which are are part of the system ABI.
 
-#### Incoming namespace
+#### Namespace
 
-A component's incoming namespace is provided to a component during startup and
-lets the component interact with the rest of the system. The names in the
-namespace follow certain conventions. Many of the namespace entries provide
-access to well-known protocols, most of which are defined by FIDL. For example,
-the component can access services through the `svc` entry in this namespace,
-which conventionally contains services listed by their fully qualified discovery
-name. Similarly, by convention, the `pkg` entry in this namespace is mapped to
+A component's [namespace][glossary.namespace] is provided to a component during
+startup and lets the component interact with the rest of the system. The names
+in the namespace follow certain conventions. Many of the namespace entries
+provide access to well-known protocols, most of which are defined by FIDL.
+For example, the component can access services through the `svc` entry in this
+namespace, which conventionally contains services listed by their fully
+qualified discovery name.
+Similarly, by convention, the `pkg` entry in this namespace is mapped to
 the package from which the component was run.
 
 #### Outgoing directory {#outgoing_directory}
 
-A component can serve an outgoing directory that lets the system and other
-components interact with the component. For example, the component exposes
-services for other components using the `svc` entry in this namespace.
+A component can serve an [outgoing directory][glossary.outgoing-directory]
+that lets the system and other components interact with the component.
+For example, the component exposes services for other components using the
+`svc` entry in this namespace.
 Similarly, the component exposes debugging interfaces through the `debug` entry
 in this namespace.
 
@@ -153,7 +156,7 @@ relocates the library, and maps the library into the newly created process.
 
 As part of starting a process, the creator of the process supplies the process
 with a message that contains, for example, the command line arguments, the
-`environ`, the initial handles, and the incoming namespace for the process.
+`environ`, the initial handles, and the namespace for the process.
 (The outgoing directory is included in the set of initial handles for the
 process.)
 
@@ -230,3 +233,6 @@ Fuchsia Terminal Protocol, which is a text-based protocol similar to `vt100`.
 This protocol is also exposed over the network through `ssh`, both by clients
 that expect incoming `ssh` connections to support this protocol and by servers
 that expect outgoing `ssh` connections to support this protocol.
+
+[glossary.namespace]: /docs/glossary/README.md#namespace
+[glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
