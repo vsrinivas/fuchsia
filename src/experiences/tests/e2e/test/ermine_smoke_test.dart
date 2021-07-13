@@ -35,7 +35,7 @@ void main() {
   test('Screen should not be black', () async {
     // Take a screen shot and make sure it is not all black.
     final scenic = Scenic(sl4f);
-    final image = await scenic.takeScreenshot();
+    final image = await scenic.takeScreenshot(dumpName: 'screen_not_black');
     bool isAllBlack = image.data.every((pixel) => pixel & 0x00ffffff == 0);
     expect(isAllBlack, false);
   });

@@ -351,7 +351,7 @@ class ErmineDriver {
   /// Take a screenshot of a View given its screen co-ordinates.
   Future<Image> screenshot(Rectangle rect) async {
     final scenic = Scenic(sl4f);
-    final image = await scenic.takeScreenshot();
+    final image = await scenic.takeScreenshot(dumpName: 'ermine');
     return copyCrop(
       image,
       rect.left.toInt(),
