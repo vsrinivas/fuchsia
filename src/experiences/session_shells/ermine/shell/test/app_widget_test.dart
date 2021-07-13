@@ -43,8 +43,7 @@ void main() async {
     final controller = StreamController<Locale>();
     final stream = controller.stream.asObservable();
     when(state.localeStream).thenAnswer((_) => stream);
-    when(state.viewsVisible).thenAnswer((_) => false.asObservable());
-    when(state.isIdle).thenAnswer((_) => false.asObservable());
+    when(state.views).thenAnswer((_) => <ViewState>[].asObservable());
     when(state.overlaysVisible).thenAnswer((_) => false.asObservable());
 
     await tester.pumpWidget(app);
@@ -74,11 +73,9 @@ void main() async {
     when(state.localeStream).thenAnswer((_) => stream);
 
     // Create one view.
-    when(state.viewsVisible).thenAnswer((_) => true.asObservable());
     when(state.views).thenAnswer((_) => [MockViewState()].asObservable());
     // Show overlays.
     when(state.overlaysVisible).thenAnswer((_) => true.asObservable());
-    when(state.isIdle).thenAnswer((_) => false.asObservable());
 
     await tester.pumpWidget(app);
     await tester.pumpAndSettle();

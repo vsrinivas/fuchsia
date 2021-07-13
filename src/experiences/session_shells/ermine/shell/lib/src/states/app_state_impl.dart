@@ -41,6 +41,8 @@ class AppStateImpl with Disposable implements AppState {
       'fuchsia-pkg://fuchsia.com/feedback_settings#meta/feedback_settings.cmx';
   static const kLicenseUrl =
       'fuchsia-pkg://fuchsia.com/license_settings#meta/license_settings.cmx';
+  static const kScreenSaverUrl =
+      'fuchsia-pkg://fuchsia.com/screensaver#meta/screensaver.cmx';
 
   AppStateImpl({
     required this.startupService,
@@ -97,6 +99,12 @@ class AppStateImpl with Disposable implements AppState {
           Isolate.current.kill();
         }
         oobeFinished();
+      }))
+      ..add(reaction<bool>((_) => isIdle.value, (idle) async {
+        if (idle) {
+          // Start screenSaver.
+          await launchService.launch('Screen Saver', kScreenSaverUrl);
+        }
       }));
   }
 
@@ -150,6 +158,7 @@ class AppStateImpl with Disposable implements AppState {
   @override
   late final overlaysVisible = (() {
     return !oobeVisible.value &&
+        !isIdle.value &&
         shellHasFocus.value &&
         (appBarVisible.value || sideBarVisible.value);
   }).asComputed();
@@ -310,6 +319,10 @@ class AppStateImpl with Disposable implements AppState {
     preferencesService.launchOobe.value = false;
   }.asAction();
 
+  late final showScreenSaver = () {
+    _onIdle(idle: true);
+  }.asAction();
+
   // Map key shortcuts to corresponding actions.
   Map<String, VoidCallback> get _actions => {
         'launcher': showOverlay,
@@ -318,6 +331,8 @@ class AppStateImpl with Disposable implements AppState {
         'cancel': cancel,
         'close': closeView,
         'settings': showOverlay,
+        'shortcuts': showOverlay,
+        'screenSaver': showScreenSaver,
       };
 
   late final Observable<ViewHandle> _focusedView;
@@ -357,6 +372,10 @@ class AppStateImpl with Disposable implements AppState {
       views.add(view);
       topView.value = view;
 
+      // If the child view is the screen saver, make it non-focusable in order
+      // for keyboard input to get routed to the shell and dismiss it.
+      viewState.focusable.value = viewState.url != kScreenSaverUrl;
+
       // If any, remove previously cached launch errors for the app.
       if (viewState.url != null) {
         _clearError(viewState.url!, 'ViewControllerEpitaph');
@@ -365,7 +384,7 @@ class AppStateImpl with Disposable implements AppState {
 
     // Focus on view when it is ready.
     view.reactions.add(reaction<bool>((_) => view.ready.value, (ready) {
-      if (ready && view == topView.value) {
+      if (ready && view == topView.value && view.focusable.value) {
         setFocus(view.view);
       }
     }));
@@ -455,12 +474,17 @@ class AppStateImpl with Disposable implements AppState {
 
   void _onIdle({required bool idle}) => runInAction(() {
         if (idle) {
-          // Before going to idle mode (screen saver), switch focus to the shell
-          // view in-order to get keyboard events that will help dismiss the
-          // screen saver.
-          showOverlay();
+          isIdle.value = idle;
+        } else {
+          // Wait for the screen saver to be visible and running before closing
+          // it.
+          if (views.isNotEmpty &&
+              topView.value.url == kScreenSaverUrl &&
+              topView.value.ready.value) {
+            closeView();
+            isIdle.value = false;
+          }
         }
-        isIdle.value = idle;
       });
 
   // Adds inspect data when requested by [Inspect].

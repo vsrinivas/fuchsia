@@ -168,7 +168,8 @@ class Shortcut extends ui_shortcut.Shortcut {
         .map((keysRequired) => Shortcut(
               key3: Key.$valueOf(object['char']),
               keysRequired: keysRequired.isEmpty ? null : keysRequired,
-              trigger: object['char'] == null && object['modifier'] != null
+              trigger: object['char'] == null && object['modifier'] != null ||
+                      object['trigger'] == 'pressAndRelease'
                   ? ui_shortcut.Trigger.keyPressedAndReleased
                   : null,
               usePriority: object['exclusive'] == true,

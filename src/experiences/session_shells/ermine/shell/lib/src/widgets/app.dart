@@ -56,16 +56,12 @@ class App extends StatelessWidget {
                 fit: StackFit.expand,
                 children: <Widget>[
                   // Show fullscreen top view.
-                  if (app.viewsVisible.value)
+                  if (app.views.isNotEmpty)
                     WidgetFactory.create(() => AppView(app)),
 
                   // Show scrim and overlay layers if an overlay is visible.
                   if (app.overlaysVisible.value)
                     WidgetFactory.create(() => Overlays(app)),
-
-                  // Show blank screen saver when idle.
-                  if (app.isIdle.value)
-                    WidgetFactory.create(() => Container(color: Colors.black)),
                 ],
               );
             }),

@@ -173,6 +173,8 @@ class StartupService extends activity.Listener {
         eventTime,
       );
     }
+    // Also exit from idle state.
+    onIdle(idle: false);
     // Since we have user activity, cancel the timer that disables startup idle.
     _disableIdleAtStartupTimer?.cancel();
   }

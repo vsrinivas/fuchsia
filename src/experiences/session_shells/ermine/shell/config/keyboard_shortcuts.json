@@ -54,6 +54,16 @@
             "modifier": "control + alt"
         }
     ],
+    "screenSaver": [
+        {
+            "char": "q",
+            "chord": "Ctrl + Alt + q",
+            "description": "Start screen saver",
+            "exclusive": true,
+            "trigger": "pressAndRelease",
+            "modifier": "control + alt"
+        }
+    ],
     "switchNext": [
         {
             "char": "tab",
