@@ -14,50 +14,28 @@ use {
 };
 
 pub async fn serve(
+    package_index: Arc<Mutex<PackageIndex>>,
+    blobfs: blobfs::Client,
     stream: RetainedPackagesRequestStream,
-    blobfs: blobfs::Client,
-    package_index: Arc<Mutex<PackageIndex>>,
 ) -> Result<(), Error> {
-    RetainedPackagesServer::builder()
-        .blobfs(blobfs.clone())
-        .package_index(Arc::clone(&package_index))
-        .build()
-        .serve(stream)
+    stream
+        .map_err(anyhow::Error::new)
+        .try_for_each_concurrent(None, |event| async {
+            match event {
+                RetainedPackagesRequest::Replace { iterator, responder } => {
+                    set_retained_index(&package_index, &blobfs, &collect_blob_ids(iterator).await?)
+                        .await;
+
+                    responder.send()?;
+                }
+                RetainedPackagesRequest::Clear { responder } => {
+                    set_retained_index(&package_index, &blobfs, &[]).await;
+                    responder.send()?;
+                }
+            };
+            Ok(())
+        })
         .await
-}
-
-#[derive(Default)]
-struct RetainedPackagesServerBuilder {
-    package_index: Option<Arc<Mutex<PackageIndex>>>,
-    blobfs: Option<blobfs::Client>,
-}
-
-impl RetainedPackagesServerBuilder {
-    fn new() -> Self {
-        Self::default()
-    }
-
-    fn blobfs(mut self, blobfs: blobfs::Client) -> Self {
-        self.blobfs = Some(blobfs);
-        self
-    }
-
-    fn package_index(mut self, package_index: Arc<Mutex<PackageIndex>>) -> Self {
-        self.package_index = Some(package_index);
-        self
-    }
-
-    fn build(self) -> RetainedPackagesServer {
-        RetainedPackagesServer {
-            blobfs: self.blobfs.unwrap(),
-            package_index: self.package_index.unwrap(),
-        }
-    }
-}
-
-struct RetainedPackagesServer {
-    package_index: Arc<Mutex<PackageIndex>>,
-    blobfs: blobfs::Client,
 }
 
 async fn collect_blob_ids(
@@ -78,37 +56,6 @@ async fn collect_blob_ids(
         .map(fidl_fuchsia_pkg_ext::BlobId::from)
         .map(fuchsia_hash::Hash::from)
         .collect::<Vec<fuchsia_hash::Hash>>())
-}
-
-impl RetainedPackagesServer {
-    fn builder() -> RetainedPackagesServerBuilder {
-        RetainedPackagesServerBuilder::new()
-    }
-
-    async fn serve(self, stream: RetainedPackagesRequestStream) -> Result<(), Error> {
-        stream
-            .map_err(anyhow::Error::new)
-            .try_for_each_concurrent(None, |event| async {
-                match event {
-                    RetainedPackagesRequest::Replace { iterator, responder } => {
-                        set_retained_index(
-                            &self.package_index,
-                            &self.blobfs,
-                            &collect_blob_ids(iterator).await?,
-                        )
-                        .await;
-
-                        responder.send()?;
-                    }
-                    RetainedPackagesRequest::Clear { responder } => {
-                        set_retained_index(&self.package_index, &self.blobfs, &[]).await;
-                        responder.send()?;
-                    }
-                };
-                Ok(())
-            })
-            .await
-    }
 }
 
 #[cfg(test)]

@@ -155,9 +155,9 @@ async fn main_inner() -> Result<(), Error> {
                 ),
                 IncomingService::RetainedPackages(stream) => Task::spawn(
                     retained_packages_service::serve(
-                        stream,
-                        blobfs.clone(),
                         Arc::clone(&package_index),
+                        blobfs.clone(),
+                        stream,
                     )
                     .map(|res| res.context("while serving fuchsia.pkg.RetainedPackages")),
                 ),
