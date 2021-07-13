@@ -116,7 +116,7 @@ the backing directory, one for each component instance using the storage
 capability.
 
 For example, the following manifest describes a new storage capability named
-`temp` backed by the `memfs` directory capability exposed by the child named
+`tmp` backed by the `memfs` directory capability exposed by the child named
 `memfs`. From this storage declaration a storage capability is offered to the
 child named `storage-user`.
 
@@ -124,14 +124,14 @@ child named `storage-user`.
 {
     capabilities: [
         {
-            storage: "temp",
+            storage: "tmp",
             from: "#memfs",
             backing_dir: "memfs",
         },
     ],
     offer: [
         {
-            storage: "temp",
+            storage: "tmp",
             from: "self",
             to: [ "#storage-user" ],
         },
