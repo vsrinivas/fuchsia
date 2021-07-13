@@ -216,6 +216,16 @@ pub async fn wait_for_interface_up_and_address(
 /// managed test realms.
 const NETEMUL_SANDBOX_MONIKER: &str = "sandbox";
 
+/// Gets the moniker of a component in a test realm, relative to the root of the
+/// dynamic collection in which it is running.
+pub async fn get_component_moniker<'a>(
+    realm: &netemul::TestRealm<'a>,
+    component: &str,
+) -> Result<String> {
+    let realm_moniker = realm.get_moniker().await.context("calling get moniker")?;
+    Ok([NETEMUL_SANDBOX_MONIKER, &realm_moniker, component].join("/"))
+}
+
 /// Gets inspect data in realm.
 ///
 /// Returns the resulting inspect data for `component`, filtered by

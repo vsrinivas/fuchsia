@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/connectivity/network/testing/netemul-v2/service/meta/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/netstack_fidl_integration_test",
     },
     use: [
         {
-            protocol: "fuchsia.logger.Log",
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
             from: "parent",
         },
     ],

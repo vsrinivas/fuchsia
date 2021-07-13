@@ -7,19 +7,21 @@
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto as _;
 
-use fidl_fuchsia_logger;
 use fidl_fuchsia_net_ext::{IntoExt as _, NetTypesIpAddressExt};
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
+use fidl_fuchsia_netemul as fnetemul;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 
 use anyhow::Context as _;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip, std_ip_v4, std_ip_v6, std_socket_addr};
 use netemul::RealmUdpSocket as _;
-use netstack_testing_common::realms::{Netstack, Netstack2, TestSandboxExt as _};
+use netstack_testing_common::realms::{
+    constants, KnownServiceProvider, Netstack, Netstack2, TestSandboxExt as _,
+};
 use netstack_testing_common::{
-    wait_for_interface_up_and_address, EthertapName as _, Result,
+    get_component_moniker, wait_for_interface_up_and_address, EthertapName as _, Result,
     ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
@@ -400,86 +402,70 @@ async fn set_remove_interface_address_errors() -> Result {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_log_packets() -> Result {
+async fn test_log_packets() {
     let name = "test_log_packets";
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (realm, stack_log) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::LogMarker, _>(name)
-        .context("failed to create realm")?;
-    let log = fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_logger::LogMarker>()
-        .context("failed to connect to log")?;
-    let (client_end, stream) =
-        fidl::endpoints::create_request_stream::<fidl_fuchsia_logger::LogListenerSafeMarker>()
-            .context("failed to create log listener endpoints")?;
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    // Modify debug netstack args so that it does not log packets.
+    let (realm, stack_log) = {
+        let mut netstack =
+            fnetemul::ChildDef::from(&KnownServiceProvider::Netstack(Netstack2::VERSION));
+        let fnetemul::ChildDef { program_args, .. } = &mut netstack;
+        assert_eq!(
+            std::mem::replace(program_args, Some(vec!["--verbosity=debug".to_string()])),
+            None,
+        );
+        let realm = sandbox.create_realm(name, [netstack]).expect("failed to create realm");
 
-    let () = stack_log.set_log_packets(true).await.context("failed to enable packet logging")?;
+        let netstack_proxy = realm
+            .connect_to_service::<net_stack::LogMarker>()
+            .expect("failed to connect to netstack");
+        (realm, netstack_proxy)
+    };
+    let () = stack_log.set_log_packets(true).await.expect("failed to enable packet logging");
 
     let sock =
         fuchsia_async::net::UdpSocket::bind_in_realm(&realm, std_socket_addr!("127.0.0.1:0"))
             .await
-            .context("failed to create socket")?;
-
-    let addr = sock.local_addr().context("failed to get bound socket address")?;
-
+            .expect("failed to create socket");
+    let addr = sock.local_addr().expect("failed to get bound socket address");
     const PAYLOAD: [u8; 4] = [1u8, 2, 3, 4];
-    let sent = sock.send_to(&PAYLOAD[..], addr).await.context("send_to failed")?;
+    let sent = sock.send_to(&PAYLOAD[..], addr).await.expect("send_to failed");
     assert_eq!(sent, PAYLOAD.len());
-    let () = log.listen_safe(client_end, None).context("failed to call listen_safe")?;
 
     let patterns = ["send", "recv"]
         .iter()
         .map(|t| format!("{} udp {} -> {} len:{}", t, addr, addr, PAYLOAD.len()))
         .collect::<Vec<_>>();
 
-    let stream = stream
-        .map(|request| {
-            let request = request.context("stream error")?;
-            let stream = match request {
-                fidl_fuchsia_logger::LogListenerSafeRequest::LogMany { log, responder } => {
-                    let () = responder.send().context("failed to acknowledge log request")?;
-                    futures::stream::iter(log).left_stream()
-                }
-                fidl_fuchsia_logger::LogListenerSafeRequest::Log { log, responder } => {
-                    let () = responder.send().context("failed to acknowledge log request")?;
-                    futures::stream::iter(Some(log)).right_stream()
-                }
-                fidl_fuchsia_logger::LogListenerSafeRequest::Done { control_handle: _ } => {
-                    // Not stream::empty because {left,right}_stream only gives us two variants.
-                    futures::stream::iter(None).right_stream()
-                }
-            };
-            Result::Ok(stream.map(Result::Ok))
-        })
-        .try_flatten();
-    let () = async_utils::fold::try_fold_while(
-        stream,
-        patterns,
-        |mut patterns,
-         fidl_fuchsia_logger::LogMessage {
-             pid: _,
-             tid: _,
-             time: _,
-             severity: _,
-             dropped_logs: _,
-             tags: _,
-             msg,
-         }| {
-            let () = patterns.retain(|pattern| !msg.contains(pattern));
-            futures::future::ok(if patterns.is_empty() {
-                async_utils::fold::FoldWhile::Done(())
-            } else {
-                async_utils::fold::FoldWhile::Continue(patterns)
-            })
-        },
-    )
-    .await
-    .context("failed to observe expected patterns")?
-    .short_circuited()
-    .map_err(|patterns| {
-        anyhow::anyhow!("log stream ended while still waiting for patterns {:?}", patterns)
-    })?;
+    // TODO(https://fxbug.dev/80510): use log selectors when they are implemented, rather than
+    // reading all logs and filtering afterwards.
+    let subscription =
+        diagnostics_reader::ArchiveReader::new().snapshot_then_subscribe().expect("subscribed");
+    let netstack_moniker = get_component_moniker(&realm, constants::netstack::COMPONENT_NAME)
+        .await
+        .expect("failed to get netstack moniker");
 
-    Ok(())
+    let stream = subscription.try_filter_map(|data| {
+        futures::future::ok(if data.moniker == netstack_moniker {
+            data.msg().map(ToOwned::to_owned)
+        } else {
+            None
+        })
+    });
+    let () = async_utils::fold::try_fold_while(stream, patterns, |mut patterns, msg| {
+        let () = patterns.retain(|pattern| !msg.contains(pattern));
+        futures::future::ok(if patterns.is_empty() {
+            async_utils::fold::FoldWhile::Done(())
+        } else {
+            async_utils::fold::FoldWhile::Continue(patterns)
+        })
+    })
+    .await
+    .expect("failed to observe expected patterns")
+    .short_circuited()
+    .unwrap_or_else(|patterns| {
+        panic!("log stream ended while still waiting for patterns {:?}", patterns)
+    });
 }
 
 // TODO(https://fxbug.dev/75554): Remove when {list_interfaces,get_interface_info} are removed.

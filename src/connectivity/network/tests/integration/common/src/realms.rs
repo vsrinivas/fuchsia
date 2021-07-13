@@ -67,10 +67,14 @@ pub enum KnownServiceProvider {
     LookupAdmin,
 }
 
+/// Constant properties of components used in networking integration tests, such
+/// as monikers and URLs.
+//
 // TODO(https://fxbug.dev/77202): when migrating netstack integration tests to
 // netemul-v2, include these components in the test package as necessary, and
 // update their URLs here to their v2 versions.
-mod constants {
+#[allow(missing_docs)]
+pub mod constants {
     pub mod netstack {
         pub const COMPONENT_NAME: &str = "netstack";
     }

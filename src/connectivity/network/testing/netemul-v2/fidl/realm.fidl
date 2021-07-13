@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.netemul;
 
 using fuchsia.component;
@@ -73,6 +72,10 @@ table ChildDef {
     /// Services that this child uses. Defaults to
     /// [`fuchsia.netemul/ChildUses.all`].
     4: ChildUses uses;
+    /// Arguments to be passed to the child at runtime. If specified, overrides
+    /// any arguments specified in the manifest. If left unspecified, the
+    /// original arguments from the manifest are used.
+    5: vector<string:MAX>:MAX program_args;
 };
 
 /// Options used to create a [`ManagedRealm`].

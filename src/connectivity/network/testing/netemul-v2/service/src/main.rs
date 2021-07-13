@@ -5,8 +5,8 @@
 use {
     anyhow::Context as _,
     fidl::endpoints::{DiscoverableService, ServerEnd},
-    fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2, fidl_fuchsia_logger as flogger,
-    fidl_fuchsia_net_tun as fnet_tun,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_logger as flogger, fidl_fuchsia_net_tun as fnet_tun,
     fidl_fuchsia_netemul::{
         self as fnetemul, ChildDef, ChildUses, ManagedRealmMarker, ManagedRealmRequest,
         RealmOptions, SandboxRequest, SandboxRequestStream,
@@ -56,6 +56,8 @@ enum CreateRealmError {
     CapabilityNameNotProvided,
     #[error("duplicate capability '{0}' used by component '{1}'")]
     DuplicateCapabilityUse(Cow<'static, str>, String),
+    #[error("cannot modify program arguments of component without a program: '{0}'")]
+    ModifiedNonexistentProgram(String),
     #[error("realm builder error: {0:?}")]
     RealmBuilderError(#[from] fcomponent::error::Error),
 }
@@ -68,6 +70,7 @@ impl Into<zx::Status> for CreateRealmError {
             | CreateRealmError::CapabilitySourceNotProvided
             | CreateRealmError::CapabilityNameNotProvided
             | CreateRealmError::DuplicateCapabilityUse(_, _)
+            | CreateRealmError::ModifiedNonexistentProgram(_)
             | CreateRealmError::RealmBuilderError(fcomponent::error::Error::FailedToRoute(
                 frealmbuilder::RealmBuilderError::MissingRouteSource,
             )) => zx::Status::INVALID_ARGS,
@@ -92,6 +95,9 @@ async fn create_realm_instance(
     // the components haven't both been created yet, so we wait until all components have been
     // created to add routes between them.
     let mut child_dep_routes = Vec::new();
+    // Keep track of all components with modified program arguments, so that once the realm is built
+    // those components can be extracted and modified.
+    let mut modified_program_args = HashMap::new();
     let mut builder = RealmBuilder::new().await?;
     let _: &mut RealmBuilder = builder
         .add_component(
@@ -107,11 +113,16 @@ async fn create_realm_instance(
             )),
         )
         .await?;
-    for ChildDef { url, name, exposes, uses, .. } in children.unwrap_or_default() {
+    for ChildDef { url, name, exposes, uses, program_args, .. } in children.unwrap_or_default() {
         let url = url.ok_or(CreateRealmError::UrlNotProvided)?;
         let name = name.ok_or(CreateRealmError::NameNotProvided)?;
         let _: &mut RealmBuilder =
             builder.add_component(name.as_ref(), ComponentSource::url(&url)).await?;
+        if let Some(program_args) = program_args {
+            // This assertion should always pass because `RealmBuilder::add_component` will have
+            // failed already if a component with the same moniker already exists in the realm.
+            assert_eq!(modified_program_args.insert(name.clone(), program_args), None);
+        }
         if let Some(exposes) = exposes {
             for exposed in exposes {
                 // TODO(https://fxbug.dev/72043): allow duplicate services.
@@ -227,6 +238,39 @@ async fn create_realm_instance(
         let _: &mut RealmBuilder = builder.add_route(route)?;
     }
     let mut realm = builder.build();
+    // Override the program args section of the component declaration for components that specified
+    // args.
+    for (component, program_args) in modified_program_args {
+        let moniker = fcomponent::Moniker::from(component.as_ref());
+        let mut decl = realm.get_decl(&moniker).await?;
+        let cm_rust::ComponentDecl { program, .. } = &mut decl;
+        // Create `program` if it is None.
+        let cm_rust::ProgramDecl { runner: _, info } =
+            program.as_mut().ok_or(CreateRealmError::ModifiedNonexistentProgram(component))?;
+        let fdata::Dictionary { ref mut entries, .. } = info;
+        // Create `entries` if it is None.
+        let entries = entries.get_or_insert_with(|| Vec::default());
+        // Create an "args" entry if there is none and replace whatever is currently in the "args"
+        // entry with the program arguments passed in.
+        const ARGS_KEY: &str = "args";
+        let args_value = Some(Box::new(fdata::DictionaryValue::StrVec(program_args)));
+        match entries.iter_mut().find_map(
+            |fdata::DictionaryEntry { key, value }| {
+                if key == ARGS_KEY {
+                    Some(value)
+                } else {
+                    None
+                }
+            },
+        ) {
+            Some(args) => *args = args_value,
+            None => {
+                let () = entries
+                    .push(fdata::DictionaryEntry { key: ARGS_KEY.to_string(), value: args_value });
+            }
+        };
+        let () = realm.set_component(&moniker, decl).await?;
+    }
     // Mark all dependencies between components in the test realm as weak, to allow for dependency
     // cycles.
     //
