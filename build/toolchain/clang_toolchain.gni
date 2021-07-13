@@ -332,11 +332,23 @@ template("clang_toolchain") {
       forward_variables_from(_rust_concurrent_jobs, "*")
       depfile = "{{output}}.d"
 
+      outname = "{{target_output_name}}{{output_extension}}"
+      outfile = "{{output_dir}}/$outname"
+      depfile = "$outfile.d"
+      command = ""
+      if (use_strip) {
+        unstripped_outfile = "{{output_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
+
+        # TODO: see the comment below
+        command += "mkdir -p {{output_dir}}/lib.unstripped && "
+      } else {
+        unstripped_outfile = outfile
+      }
       ld_location_env = ""
       if (invoker.toolchain_os != "mac") {
         if (invoker.toolchain_os == "fuchsia") {
           # On Fuchsia, lld is directly used to perform linking
-          link_map_args = "-C link-args=--Map=\"{{output}}.map\""
+          link_map_args = "-C link-args=--Map=\"$unstripped_outfile.map\""
         } else if (invoker.toolchain_cpu == "wasm32" && host_os == "linux") {
           # TODO(fxbug.dev/56076): Remove need for ld location.
           # On WASM builds, rust-lld has trouble finding libLLVM.
@@ -345,17 +357,17 @@ template("clang_toolchain") {
           # Disable link map args, which also seems to have problems with WASM.
           link_map_args = ""
           shared_lib_dir = rebase_path("$rustc_prefix/../lib", root_build_dir)
-          ld_location_env = "LD_LIBRARY_PATH=\"$shared_lib_dir\""
+          ld_location_env = " LD_LIBRARY_PATH=\"$shared_lib_dir\""
         } else if (invoker.toolchain_cpu == "wasm32" && host_os == "mac") {
           # See previous section comment.
           # We use the fallback dynamic library path on Mac to ensure we first
           # search default locations.
           link_map_args = ""
           shared_lib_dir = rebase_path("$rustc_prefix/../lib", root_build_dir)
-          ld_location_env = "DYLD_FALLBACK_LIBRARY_PATH=\"$shared_lib_dir\""
+          ld_location_env = " DYLD_FALLBACK_LIBRARY_PATH=\"$shared_lib_dir\""
         } else {
           # On host, clang seems to be used to perform linking
-          link_map_args = "-C link-args=-Wl,--Map=\"{{output}}.map\""
+          link_map_args = "-C link-args=-Wl,--Map=\"$unstripped_outfile.map\""
         }
       } else {
         # MacOS does not support `--Map` in linker flags
@@ -365,10 +377,10 @@ template("clang_toolchain") {
       command = _rust_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
-      command += "{{rustenv}} $ld_location_env RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      command += "{{rustenv}}$ld_location_env RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+      command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
       description = "RUST {{output}}"
-      outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{target_out_dir}}"
       if (invoker.toolchain_os == "mac") {
         default_output_extension = ".dylib"
@@ -378,6 +390,32 @@ template("clang_toolchain") {
         default_output_extension = ".so"
       }
       output_prefix = "lib"
+      outputs = [ outfile ]
+      if (outfile != unstripped_outfile) {
+        outputs += [ unstripped_outfile ]
+      }
+      if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
+        command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
+        outputs += [ "$outfile.sym" ]
+      }
+      if (output_gsym && invoker.toolchain_os == "fuchsia") {
+        outputs += [ "$outfile.gsym" ]
+        command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$outfile.gsym\""
+      }
+      if (use_strip) {
+        if (invoker.toolchain_os == "mac") {
+          command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
+        } else {
+          command +=
+              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
+        }
+        if (invoker.toolchain_os != "mac" && invoker.toolchain_os != "win") {
+          command +=
+              " && $buildidtool -build-id-dir .build-id" +
+              " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
+              " -entry \".debug=$unstripped_outfile\""
+        }
+      }
       rust_sysroot = "$rust_sysroot"
     }
 
