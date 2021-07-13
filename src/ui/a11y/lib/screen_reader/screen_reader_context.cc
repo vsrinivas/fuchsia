@@ -53,6 +53,24 @@ Speaker* ScreenReaderContext::speaker() {
   return speaker_.get();
 }
 
+bool ScreenReaderContext::IsTextFieldFocused() const {
+  const auto a11y_focus = a11y_focus_manager_->GetA11yFocus();
+  if (!a11y_focus) {
+    return false;
+  }
+  const auto* node =
+      semantics_source_->GetSemanticNode(a11y_focus->view_ref_koid, a11y_focus->node_id);
+  if (!node) {
+    return false;
+  }
+
+  if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::TEXT_FIELD) {
+    return true;
+  }
+
+  return false;
+}
+
 bool ScreenReaderContext::IsVirtualKeyboardFocused() const {
   const auto a11y_focus = a11y_focus_manager_->GetA11yFocus();
   if (!a11y_focus) {

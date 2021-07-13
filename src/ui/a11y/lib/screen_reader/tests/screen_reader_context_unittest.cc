@@ -75,5 +75,15 @@ TEST_F(ScreenReaderContextTest, IsVirtualKeyboardFocused) {
   EXPECT_TRUE(screen_reader_context_->IsVirtualKeyboardFocused());
 }
 
+TEST_F(ScreenReaderContextTest, IsTextFieldFocused) {
+  a11y_focus_manager_ptr_->SetA11yFocus(1u, 0u, [](auto...) {});
+  fuchsia::accessibility::semantics::Node node;
+  node.set_node_id(0u);
+  node.set_role(fuchsia::accessibility::semantics::Role::TEXT_FIELD);
+  mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+
+  EXPECT_TRUE(screen_reader_context_->IsTextFieldFocused());
+}
+
 }  // namespace
 }  // namespace accessibility_test

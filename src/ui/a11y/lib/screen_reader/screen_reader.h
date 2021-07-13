@@ -75,6 +75,11 @@ class ScreenReader : public SemanticsEventListener {
   void SpeakMessage(fuchsia::intl::l10n::MessageIds message_id);
   void SpeakMessage(const std::string& message);
 
+  // The Screen Reader can simulate a touch screen tap down, an optional sequence of injected moves,
+  // followed by a tap up event to directly interact with runtimes.
+  void SimulateTapDown(GestureContext context);
+  void SimulateTapUp(GestureContext context);
+
   // Stores information about the Screen Reader state.
   std::unique_ptr<ScreenReaderContext> context_;
 

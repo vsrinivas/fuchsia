@@ -198,31 +198,28 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   FX_DCHECK(gesture_bind_status);
 
   // Add OneFingerDoubleTap recognizer.
-  gesture_bind_status = gesture_handler->BindOneFingerDoubleTapAction(
-      [this](GestureContext context) { ExecuteAction(kDefaultActionLabel, std::move(context)); });
+  gesture_bind_status =
+      gesture_handler->BindOneFingerDoubleTapAction([this](GestureContext context) {
+        // This simulated tap down / up event is necessary because some of the supported runtimes at
+        // the moment do not have an accessibility action to bring up a keyboard when interacting
+        // with a text field.
+        if (context_->IsTextFieldFocused()) {
+          SimulateTapDown(context);
+          SimulateTapUp(context);
+        }
+        // TODO(fxbug.dev/80277): Default action should not be needed after a simulated tap down /
+        // up.
+        ExecuteAction(kDefaultActionLabel, std::move(context));
+      });
   FX_DCHECK(gesture_bind_status);
 
   // Add MFingerNTapDragRecognizer (1 finger, 2 taps), recognizer.
   gesture_bind_status = gesture_handler->BindMFingerNTapDragAction(
+      [this](GestureContext context) { SimulateTapDown(std::move(context)); }, /*on_start*/
       [this](GestureContext context) {
-        // Enable injector for the view that is receiving pointer events.
-        action_context_->injector_manager->MarkViewReadyForInjection(context.view_ref_koid, true);
-        // When the gesture detects, events are already under way. We need to inject an (ADD ->
-        // DOWN) event here to simulate the beginning of the stream that will be injected.
-        context.last_event_phase = fuchsia::ui::input::PointerEventPhase::ADD;
-        ExecuteAction(kInjectPointerEventActionLabel, context);
-      }, /*on_start*/
-      [this](GestureContext context) {
-        ExecuteAction(kInjectPointerEventActionLabel, context);
+        ExecuteAction(kInjectPointerEventActionLabel, std::move(context));
       }, /*on_update*/
-      [this](GestureContext context) {
-        // Simulate the end of the stream.
-        context.last_event_phase = fuchsia::ui::input::PointerEventPhase::REMOVE;
-        ExecuteAction(kInjectPointerEventActionLabel, context);
-
-        // End injection for the view.
-        action_context_->injector_manager->MarkViewReadyForInjection(context.view_ref_koid, false);
-      } /*on_complete*/,
+      [this](GestureContext context) { SimulateTapUp(std::move(context)); } /*on_complete*/,
       1u /*num_fingers*/, 2u /*num_taps*/);
   FX_DCHECK(gesture_bind_status);
 
@@ -379,6 +376,25 @@ void ScreenReader::OnEvent(SemanticsEventInfo event_info) {
       SpeakMessage(announce.message());
     }
   }
+}
+
+void ScreenReader::SimulateTapDown(GestureContext context) {
+  // Enable injector for the view that is receiving pointer events.
+  action_context_->injector_manager->MarkViewReadyForInjection(context.view_ref_koid, true);
+  // When the gesture detects, events are already under way. We need to inject an (ADD) event here
+  // to simulate the beginning of the stream that will be injected after this tap down.
+  context.last_event_phase = fuchsia::ui::input::PointerEventPhase::ADD;
+  ExecuteAction(kInjectPointerEventActionLabel, context);
+  context.last_event_phase = fuchsia::ui::input::PointerEventPhase::MOVE;
+  ExecuteAction(kInjectPointerEventActionLabel, context);
+}
+
+void ScreenReader::SimulateTapUp(GestureContext context) {
+  context.last_event_phase = fuchsia::ui::input::PointerEventPhase::REMOVE;
+  ExecuteAction(kInjectPointerEventActionLabel, context);
+
+  // End injection for the view.
+  action_context_->injector_manager->MarkViewReadyForInjection(context.view_ref_koid, false);
 }
 
 }  // namespace a11y

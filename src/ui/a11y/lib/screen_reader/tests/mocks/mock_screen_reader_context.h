@@ -91,6 +91,9 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
   a11y::Speaker* speaker() override { return speaker_.get(); }
 
   // |ScreenReaderContext|
+  bool IsTextFieldFocused() const override { return false; }
+
+  // |ScreenReaderContext|
   bool IsVirtualKeyboardFocused() const override { return virtual_keyboard_focused_; }
 
   void set_virtual_keyboard_focused(bool value) { virtual_keyboard_focused_ = value; }

@@ -83,6 +83,9 @@ class ScreenReaderContext {
   void set_locale_id(const std::string& locale_id) { locale_id_ = locale_id; }
   const std::string& locale_id() const { return locale_id_; }
 
+  // Returns true if the node currently focused by the screen reader is a text field.
+  virtual bool IsTextFieldFocused() const;
+
   // Returns true if the node currently focused by the screen reader is part of a virtual keyboard.
   virtual bool IsVirtualKeyboardFocused() const;
 
