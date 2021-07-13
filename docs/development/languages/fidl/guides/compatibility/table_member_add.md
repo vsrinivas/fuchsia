@@ -79,7 +79,7 @@ void use_table(const fidl_test::Profile& profile) {
 ### LLCPP {#llcpp-init}
 
 ```cpp
-void use_table(const fidl_test::Profile& profile) {
+void use_table(const fidl_test::wire::Profile& profile) {
   if (profile.has_timezone()) {
     printf("timezone: %s", profile.timezone().data());
   }
@@ -194,7 +194,7 @@ fn use_table(profile: &fidl_lib::Profile) {
 - You can now use the new member
 
 ```diff
-  void use_table(const fidl_test::Profile& profile) {
+  void use_table(const fidl_test::wire::Profile& profile) {
     if (profile.has_timezone()) {
       printf("timezone: %s", profile.timezone().data());
     }

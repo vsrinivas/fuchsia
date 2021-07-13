@@ -120,25 +120,25 @@ std::string reader(fidl_test::Color color) {
 ### LLCPP {#llcpp-init}
 
 ```cpp
-fidl_test::Color writer(std::string s) {
+fidl_test::wire::Color writer(std::string s) {
   if (s == "red") {
-    return fidl_test::Color::RED;
+    return fidl_test::wire::Color::kRed;
   } else if (s == "blue") {
-    return fidl_test::Color::BLUE;
+    return fidl_test::wire::Color::kBlue;
   } else if (s == "yellow") {
-    return fidl_test::Color::YELLOW;
+    return fidl_test::wire::Color::kYellow;
   } else {
-    return fidl_test::Color::Unknown();
+    return fidl_test::wire::Color::Unknown();
   }
 }
 
-std::string reader(fidl_test::Color color) {
+std::string reader(fidl_test::wire::Color color) {
   switch (color) {
-    case fidl_test::Color::RED:
+    case fidl_test::wire::Color::kRed:
       return "red";
-    case fidl_test::Color::BLUE:
+    case fidl_test::wire::Color::kBlue:
       return "blue";
-    case fidl_test::Color::YELLOW:
+    case fidl_test::wire::Color::kYellow:
       return "yellow";
     default:
       return "<unknown>";
@@ -273,25 +273,25 @@ fn reader(color: fidl_lib::Color) -> &'static str {
 - Remove all references to the soon-to-be-removed member.
 
 ```diff
-  fidl_test::Color writer(std::string s) {
+  fidl_test::wire::Color writer(std::string s) {
     if (s == "red") {
-      return fidl_test::Color::RED;
+      return fidl_test::wire::Color::kRed;
     } else if (s == "blue") {
-      return fidl_test::Color::BLUE;
+      return fidl_test::wire::Color::kBlue;
 -   } else if (s == "yellow") {
--     return fidl_test::Color::YELLOW;
+-     return fidl_test::wire::Color::kYellow;
     } else {
-      return fidl_test::Color::Unknown();
+      return fidl_test::wire::Color::Unknown();
     }
   }
   
-  std::string reader(fidl_test::Color color) {
+  std::string reader(fidl_test::wire::Color color) {
     switch (color) {
-      case fidl_test::Color::RED:
+      case fidl_test::wire::Color::kRed:
         return "red";
-      case fidl_test::Color::BLUE:
+      case fidl_test::wire::Color::kBlue:
         return "blue";
--     case fidl_test::Color::YELLOW:
+-     case fidl_test::wire::Color::kYellow:
 -       return "yellow";
       default:
         return "<unknown>";

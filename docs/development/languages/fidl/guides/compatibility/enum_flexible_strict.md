@@ -86,15 +86,15 @@ fidl_test::Color complement(fidl_test::Color color) {
 ### LLCPP {#llcpp-init}
 
 ```cpp
-fidl_test::Color complement(fidl_test::Color color) {
+fidl_test::wire::Color complement(fidl_test::wire::Color color) {
   if (color.IsUnknown()) {
     return color;
   }
   switch (color) {
-    case fidl_test::Color::RED:
-      return fidl_test::Color::BLUE;
-    case fidl_test::Color::BLUE:
-      return fidl_test::Color::RED;
+    case fidl_test::wire::Color::kRed:
+      return fidl_test::wire::Color::kBlue;
+    case fidl_test::wire::Color::kBlue:
+      return fidl_test::wire::Color::kRed;
     default:
       return color;
   }
@@ -186,15 +186,15 @@ fn complement(color: &fidl_lib::Color) -> Option<fidl_lib::Color> {
 - Remove usages of any flexible specific APIs
 
 ```diff
-  fidl_test::Color complement(fidl_test::Color color) {
+  fidl_test::wire::Color complement(fidl_test::wire::Color color) {
 -   if (color.IsUnknown()) {
 -     return color;
 -   }
     switch (color) {
-      case fidl_test::Color::RED:
-        return fidl_test::Color::BLUE;
-      case fidl_test::Color::BLUE:
-        return fidl_test::Color::RED;
+      case fidl_test::wire::Color::kRed:
+        return fidl_test::wire::Color::kBlue;
+      case fidl_test::wire::Color::kBlue:
+        return fidl_test::wire::Color::kRed;
       default:
         return color;
     }

@@ -88,10 +88,11 @@ void client(fidl_test::ExamplePtr client) {
 ### LLCPP {#llcpp-init}
 
 ```cpp
-class Server final : public fidl_test::Example::Interface {
+class Server final : public fidl::WireServer<fidl_test::Example> {
  public:
-  void ExistingMethod(ExistingMethodCompleter::Sync& completer) final {}
-  void OldMethod(OldMethodCompleter::Sync& completer) final {}
+  void ExistingMethod(ExistingMethodRequestView request,
+                      ExistingMethodCompleter::Sync& completer) final {}
+  void OldMethod(OldMethodRequestView request, OldMethodCompleter::Sync& completer) final {}
 };
 
 void client(fidl::Client<fidl_test::Example> client) {
@@ -219,10 +220,11 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
 - Remove references to the method in client code and server code.
 
 ```diff
-  class Server final : public fidl_test::Example::Interface {
+  class Server final : public fidl::WireServer<fidl_test::Example> {
    public:
-    void ExistingMethod(ExistingMethodCompleter::Sync& completer) final {}
--   void OldMethod(OldMethodCompleter::Sync& completer) final {}
+    void ExistingMethod(ExistingMethodRequestView request,
+                        ExistingMethodCompleter::Sync& completer) final {}
+-   void OldMethod(OldMethodRequestView request, OldMethodCompleter::Sync& completer) final {}
   };
   
 - void client(fidl::Client<fidl_test::Example> client) {
