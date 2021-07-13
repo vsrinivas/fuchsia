@@ -32,14 +32,26 @@ driver_module("msd_intel_test") {
 
 driver_bind_rules("msd_intel_bind") {
   rules = "msd_intel.bind"
-  header_output = "msd_intel_bind.h"
+  header_output = "bind.h"
   tests = "tests/bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.intel.gpucore" ]
+}
+
+driver_bind_rules("msd_intel_test_bind") {
+  rules = "msd_intel.bind"
+  header_output = "test_bind.h"
+  disable_autobind = true
   deps = [ "//src/devices/bind/fuchsia.intel.gpucore" ]
 }
 
 source_set("msd_intel_entry") {
   public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
   sources = [ "src/driver_entry.cc" ]
+
+  # Add the target gen directory as an include path so that `#include "bind.h"` will find the
+  # correct generated bind header. This allows us to use the same binding.cc file with multiple
+  # different bind rules.
+  include_dirs = [ "${target_gen_dir}" ]
 
   deps = [
     ":msd_intel_bind",
@@ -65,8 +77,12 @@ source_set("msd_intel_test_entry") {
   sources = [ "src/driver_entry.cc" ]
   defines = [ "MAGMA_TEST_DRIVER=1" ]
 
+  # Add the target gen directory as an include path so that `#include "bind.h"` will find the
+  # correct generated bind header.
+  include_dirs = [ "${target_gen_dir}" ]
+
   deps = [
-    ":msd_intel_bind",
+    ":msd_intel_test_bind",
     "src",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//src/devices/lib/driver",

@@ -54,10 +54,10 @@ source_set("hardware_tests") {
   testonly = true
 
   sources = [
-    "test_command_buffer.cc",
-    "test_device.cc",
-    "test_exec.cc",
-    "test_forcewake.cc",
+    "test_hw_command_buffer.cc",
+    "test_hw_device.cc",
+    "test_hw_exec.cc",
+    "test_hw_forcewake.cc",
   ]
 
   deps = [ ":test_deps" ]

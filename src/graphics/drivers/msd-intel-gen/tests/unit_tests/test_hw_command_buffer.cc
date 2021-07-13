@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test_command_buffer.h"
-
 #include <gtest/gtest.h>
 #include <helper/command_buffer_helper.h>
 #include <helper/platform_device_helper.h>
@@ -14,6 +12,7 @@
 #include "msd_intel_context.h"
 #include "msd_intel_device.h"
 #include "ppgtt.h"
+#include "test_command_buffer.h"
 
 using AllocatingAddressSpace = FakeAllocatingAddressSpace<GpuMapping, AddressSpace>;
 

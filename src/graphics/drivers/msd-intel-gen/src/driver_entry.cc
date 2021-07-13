@@ -26,15 +26,18 @@
 #include "platform_trace.h"
 #include "platform_trace_provider.h"
 #include "platform_trace_provider_with_fdio.h"
-#include "src/graphics/drivers/msd-intel-gen/msd_intel_bind.h"
 #include "src/graphics/lib/magma/src/magma_util/platform/zircon/magma_performance_counter_device.h"
 #include "sys_driver/magma_driver.h"
 
 #if MAGMA_TEST_DRIVER
-void magma_indriver_test(magma::PlatformPciDevice* platform_device);
+#include "test_bind.h"  //nogncheck
+#else
+#include "bind.h"  //nogncheck
 #endif
 
-struct sysdrv_device_t;
+#if MAGMA_TEST_DRIVER
+zx_status_t magma_indriver_test(magma::PlatformPciDevice* platform_device);
+#endif
 
 using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
@@ -161,12 +164,8 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
     std::lock_guard lock(magma_mutex);
     if (!CheckSystemDevice(_completer))
       return;
-    zx_status_t status = MagmaStop();
-    if (status != ZX_OK) {
-      DLOG("magma_stop failed: %d", status);
-      return;
-    }
-    status = MagmaStart();
+    MagmaStop();
+    zx_status_t status = MagmaStart();
     if (status != ZX_OK) {
       DLOG("magma_start failed: %d", status);
     }
@@ -175,8 +174,13 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
 
   void GetUnitTestStatus(GetUnitTestStatusRequestView request,
                          GetUnitTestStatusCompleter::Sync& _completer) override {
+#if MAGMA_TEST_DRIVER
     DLOG("sysdrv_device_t::GetUnitTestStatus");
-    _completer.Reply(ZX_ERR_NOT_SUPPORTED);
+    std::lock_guard<std::mutex> lock(magma_mutex);
+    if (!CheckSystemDevice(_completer))
+      return;
+    _completer.Reply(this->unit_test_status);
+#endif
   }
 
   int MagmaStart() MAGMA_REQUIRES(magma_mutex) {
@@ -192,16 +196,18 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
     return ZX_OK;
   }
 
-#if MAGMA_TEST_DRIVER
-  int MagmaStop() MAGMA_REQUIRES(magma_mutex) {
+  void MagmaStop() MAGMA_REQUIRES(magma_mutex) {
     DLOG("magma_stop");
 
     this->magma_system_device->Shutdown();
     this->magma_system_device.reset();
-
-    return ZX_OK;
   }
-#endif
+
+  void Unbind() {
+    std::lock_guard lock(magma_mutex);
+    MagmaStop();
+    device_unbind_reply(zx_device_gpu);
+  }
 
   zx_device_t* parent_device;
   zx_device_t* zx_device_gpu;
@@ -212,6 +218,9 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
   std::shared_ptr<MagmaSystemDevice> magma_system_device MAGMA_GUARDED(magma_mutex);
   std::mutex magma_mutex;
   zx_koid_t perf_count_access_token_id = 0;
+#if MAGMA_TEST_DRIVER
+  zx_status_t unit_test_status = ZX_ERR_NOT_SUPPORTED;
+#endif
 };
 
 sysdrv_device_t* get_device(void* context) { return static_cast<sysdrv_device_t*>(context); }
@@ -238,15 +247,20 @@ static zx_status_t sysdrv_gpu_message(void* context, fidl_incoming_msg_t* messag
   return ddk_transaction.Status();
 }
 
-static void sysdrv_gpu_release(void* ctx) {
-  // TODO(fxbug.dev/31113) - when testable:
-  // Free context if sysdrv_display_release has already been called
-  DASSERT(false);
+static void sysdrv_gpu_unbind(void* context) {
+  sysdrv_device_t* device = get_device(context);
+  device->Unbind();
+}
+
+static void sysdrv_gpu_release(void* context) {
+  sysdrv_device_t* device = get_device(context);
+  delete device;
 }
 
 static zx_protocol_device_t sysdrv_gpu_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .init = sysdrv_gpu_init,
+    .unbind = sysdrv_gpu_unbind,
     .release = sysdrv_gpu_release,
     .message = sysdrv_gpu_message,
 };
@@ -276,7 +290,7 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device) {
   DLOG("running magma indriver test");
   {
     auto platform_device = MsdIntelPciDevice::CreateShim(&device->gpu_core_protocol);
-    magma_indriver_test(platform_device.get());
+    device->unit_test_status = magma_indriver_test(platform_device.get());
   }
 #endif
 

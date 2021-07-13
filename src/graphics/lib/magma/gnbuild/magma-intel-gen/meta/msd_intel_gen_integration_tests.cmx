@@ -6,6 +6,9 @@
         "binary": "bin/msd_intel_gen_integration_tests"
     },
     "sandbox": {
+        "dev": [
+            "pci-00:02.0/intel_i915/intel-gpu-core"
+        ],
         "features": [
             "isolated-temp",
             "vulkan"

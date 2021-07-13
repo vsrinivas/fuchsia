@@ -4,6 +4,10 @@
 
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
+declare_args() {
+  msd_intel_gen_enable_hardware_unit_tests = false
+}
+
 group("integration") {
   testonly = true
 
@@ -13,8 +17,12 @@ group("integration") {
 executable("msd_intel_gen_integration_tests") {
   testonly = true
 
+  defines =
+      [ "ENABLE_HARDWARE_UNIT_TESTS=$msd_intel_gen_enable_hardware_unit_tests" ]
+
   sources = [
     "test_hang_recovery.cc",
+    "test_hardware_unit_tests.cc",
     "test_icd_list.cc",
     "test_shutdown.cc",
     "test_workarounds.cc",
