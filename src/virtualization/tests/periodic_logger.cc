@@ -32,8 +32,8 @@ void LoggingThread(std::string message, zx::duration logging_interval,
 
   // Only print a final message if we already printed a progress message.
   if (message_printed) {
-    FX_LOGS(INFO) << message << ": Finished after "
-                  << (zx::clock::get_monotonic() - start_time).to_secs() << "s.";
+    int64_t rounded_secs = (zx::clock::get_monotonic() - start_time + zx::msec(500)).to_secs();
+    FX_LOGS(INFO) << message << ": Finished after " << rounded_secs << "s.";
   }
 }
 
@@ -44,11 +44,11 @@ PeriodicLogger::PeriodicLogger(std::string message, zx::duration logging_interva
 }
 
 void PeriodicLogger::Start(std::string message, zx::duration logging_interval) {
-  // Print the message.
-  FX_LOGS(INFO) << message;
-
   // Stop any existing thread.
   Stop();
+
+  // Print the message.
+  FX_LOGS(INFO) << message;
 
   // Start a new thread.
   should_stop_ = std::promise<void>();
