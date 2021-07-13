@@ -146,6 +146,9 @@ struct BootOptions {
 #include "x86.inc"
 #endif
 #undef DEFINE_OPTION
+
+  // Describes the source of the serial option.
+  OptionSource serial_source = OptionSource::kDefault;
 };
 
 #endif  // ZIRCON_KERNEL_LIB_BOOT_OPTIONS_INCLUDE_LIB_BOOT_OPTIONS_BOOT_OPTIONS_H_
