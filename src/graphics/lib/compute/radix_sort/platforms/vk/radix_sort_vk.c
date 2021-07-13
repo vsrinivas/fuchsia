@@ -294,7 +294,9 @@ radix_sort_vk_create(VkDevice                            device,
   // Must not be NULL
   //
   if (target == NULL)
-    return NULL;
+    {
+      return NULL;
+    }
 
 #ifndef RADIX_SORT_VK_DISABLE_VERIFY
   //
@@ -329,7 +331,7 @@ radix_sort_vk_create(VkDevice                            device,
   // archives will have a static count.
   //
 #ifndef RADIX_SORT_VK_DISABLE_VERIFY
-  if (rs_target.header->magic != RS_HEADER_MAGIC)
+  if (rs_target.header->magic != RADIX_SORT_VK_HEADER_MAGIC)
     {
 #ifndef NDEBUG
       fprintf(stderr, "Error: Target is not compatible with library.");
@@ -354,7 +356,7 @@ radix_sort_vk_create(VkDevice                            device,
   uint32_t const pipeline_count = rs_pipeline_count(rs);
 
   //
-  // Pipeline-related arrays are declared with a current max length of 6.
+  // Prepare to create pipelines
   //
   VkPushConstantRange const pcr[] = {
     { .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,  //
@@ -427,22 +429,22 @@ radix_sort_vk_create(VkDevice                            device,
       smci.codeSize = ar_entries[ii + 1].size;
       smci.pCode    = ar_data + (ar_entries[ii + 1].offset >> 2);
 
-      vk(CreateShaderModule(device, &smci, NULL, sms + ii));
+      vk(CreateShaderModule(device, &smci, ac, sms + ii));
     }
 
     //
     // If necessary, set the expected subgroup size
     //
-#define RS_SUBGROUP_SIZE_CREATE_INFO_SET(name_, size_)                                             \
+#define RS_SUBGROUP_SIZE_CREATE_INFO_SET(size_)                                                    \
   {                                                                                                \
     .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT,       \
     .pNext = NULL, .requiredSubgroupSize = size_,                                                  \
   }
 
 #define RS_SUBGROUP_SIZE_CREATE_INFO_NAME(name_)                                                   \
-  RS_SUBGROUP_SIZE_CREATE_INFO_SET(name_, (1 << rs_target.header->config.name_.subgroup_size_log2))
+  RS_SUBGROUP_SIZE_CREATE_INFO_SET(1 << rs_target.header->config.name_.subgroup_size_log2)
 
-#define RS_SUBGROUP_SIZE_CREATE_INFO_ZERO(name_) RS_SUBGROUP_SIZE_CREATE_INFO_SET(name_, 0)
+#define RS_SUBGROUP_SIZE_CREATE_INFO_ZERO(name_) RS_SUBGROUP_SIZE_CREATE_INFO_SET(0)
 
   VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT const rsscis[] = {
     RS_SUBGROUP_SIZE_CREATE_INFO_ZERO(init),       // init
@@ -505,14 +507,14 @@ radix_sort_vk_create(VkDevice                            device,
   //
   // Create the compute pipelines
   //
-  vk(CreateComputePipelines(device, NULL, pipeline_count, cpcis, NULL, rs->pipelines.handles));
+  vk(CreateComputePipelines(device, pc, pipeline_count, cpcis, ac, rs->pipelines.handles));
 
   //
   // Shader modules can be destroyed now
   //
   for (uint32_t ii = 0; ii < pipeline_count; ii++)
     {
-      vkDestroyShaderModule(device, sms[ii], NULL);
+      vkDestroyShaderModule(device, sms[ii], ac);
     }
 
 #ifdef RADIX_SORT_VK_ENABLE_DEBUG_UTILS
@@ -554,13 +556,13 @@ radix_sort_vk_destroy(struct radix_sort_vk *              rs,
   // destroy pipelines
   for (uint32_t ii = 0; ii < pipeline_count; ii++)
     {
-      vkDestroyPipeline(device, rs->pipelines.handles[ii], NULL);
+      vkDestroyPipeline(device, rs->pipelines.handles[ii], ac);
     }
 
   // destroy pipeline layouts
   for (uint32_t ii = 0; ii < pipeline_count; ii++)
     {
-      vkDestroyPipelineLayout(device, rs->pipeline_layouts.handles[ii], NULL);
+      vkDestroyPipelineLayout(device, rs->pipeline_layouts.handles[ii], ac);
     }
 
   free(rs);

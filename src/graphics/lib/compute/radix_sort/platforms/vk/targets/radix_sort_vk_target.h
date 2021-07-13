@@ -17,7 +17,7 @@
 //
 //
 
-#define RS_HEADER_MAGIC 0x4B565352  // "RSVK"
+#define RADIX_SORT_VK_HEADER_MAGIC 0x4B565352  // "RSVK"
 
 //
 // This structure packages target-specific configuration parameters.

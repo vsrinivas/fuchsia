@@ -66,7 +66,7 @@ radix_sort_vk_target_get_requirements(struct radix_sort_vk_target const *       
   //
   // Verify target is compatible with the library.
   //
-  if (rs_target.header->magic != RS_HEADER_MAGIC)
+  if (rs_target.header->magic != RADIX_SORT_VK_HEADER_MAGIC)
     {
 #ifndef NDEBUG
       fprintf(stderr, "Error: Target is not compatible with library.");

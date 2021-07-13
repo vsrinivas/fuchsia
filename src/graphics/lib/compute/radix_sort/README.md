@@ -1,6 +1,6 @@
-# RadixSort/Vk
+# RadixSort/VK
 
-RadixSort/Vk is a high-performance sorting library for Vulkan 1.2.
+RadixSort/VK is a high-performance sorting library for Vulkan 1.2.
 
 Features include:
 

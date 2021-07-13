@@ -82,6 +82,8 @@ radix_sort_vk_target_get_requirements(struct radix_sort_vk_target const *       
 //
 // Keyval size is implicitly determined by the target.
 //
+// Returns NULL on failure.
+//
 
 struct radix_sort_vk *
 radix_sort_vk_create(VkDevice                            device,

@@ -397,7 +397,11 @@ rs_usage(char const * const argv[])
     "\n"
     "Usage: %s "
     "<vendorID>:<deviceID> "
+#if defined(__Fuchsia__) && !defined(RS_TARGET_ARCHIVE_LINKABLE)
+    "<target file> "
+#else
     "<target name> "
+#endif
     "<\"direct\"|\"indirect\"> "
     "[count lo "
     "[count hi "
@@ -407,8 +411,8 @@ rs_usage(char const * const argv[])
     "[validate?] ] ] ] ] ]\n\n"
 
     "  <vendorID>:<deviceID> : Execute on a specific Vulkan physical device.\n"
-#ifdef __Fuchsia__
-    "  <target name>         : Name of Radix Sort target: \"pkg/data/targets/<vendor name>_<arch name>_<u32 or u64>.ar\".\n"
+#if defined(__Fuchsia__) && !defined(RS_TARGET_ARCHIVE_LINKABLE)
+    "  <target file>         : Name of Radix Sort target file: \"pkg/data/targets/<vendor name>_<arch name>_<u32 or u64>.ar\".\n"
 #else
     "  <target name>         : Name of Radix Sort target: <vendor name>_<arch name>_<u32 or u64>.\n"
 #endif
@@ -546,7 +550,11 @@ main(int argc, char const * argv[])
   //
   if (argc < 3)
     {
+#if defined(__Fuchsia__) && !defined(RS_TARGET_ARCHIVE_LINKABLE)
       fprintf(stderr, "Error: Missing target filename\n");
+#else
+      fprintf(stderr, "Error: Missing target name\n");
+#endif
 
       rs_usage(argv);
 

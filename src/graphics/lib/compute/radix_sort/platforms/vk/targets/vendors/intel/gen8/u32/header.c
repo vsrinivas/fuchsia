@@ -15,7 +15,7 @@
 
 static struct radix_sort_vk_target_header const header __attribute__((used)) =
 {
-  .magic = RS_HEADER_MAGIC,
+  .magic = RADIX_SORT_VK_HEADER_MAGIC,
 
   .extensions.named = {
     .EXT_subgroup_size_control = 1,
