@@ -980,7 +980,7 @@ func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
 	if err != nil {
 		return err
 	}
-	defaultConfig := DeviceConfig{}
+	defaultConfig := DeviceConfig{DeviceName: newConfig.DeviceName}
 	sdk.setDeviceDefaults(&defaultConfig)
 
 	dataMap := make(map[string]string)
@@ -1010,7 +1010,7 @@ func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
 	if origConfig.PackageRepo != newConfig.PackageRepo {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = newConfig.PackageRepo
 	} else if defaultConfig.PackageRepo == newConfig.PackageRepo {
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = ""
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = defaultConfig.PackageRepo
 	}
 	if origConfig.SSHPort != newConfig.SSHPort {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, SSHPortKey})] = newConfig.SSHPort

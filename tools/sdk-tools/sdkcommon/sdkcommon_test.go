@@ -816,6 +816,33 @@ func TestSaveDeviceConfiguration(t *testing.T) {
 				"DeviceConfiguration.new-device-name.package-repo": "",
 			},
 		},
+		{
+			currentDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "1.1.1.1",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "/usr/some/new/device",
+				SSHPort:     "8022",
+			},
+			newDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				DeviceIP:    "",
+				Image:       "custom-image",
+				Bucket:      "",
+				PackagePort: "8000",
+				PackageRepo: "/usr/some/new/device",
+				SSHPort:     "8022",
+			},
+			expectedValues: map[string]string{
+				"DeviceConfiguration.new-device-name.device-name":  "new-device-name",
+				"DeviceConfiguration.new-device-name.bucket":       "",
+				"DeviceConfiguration.new-device-name.device-ip":    "",
+				"DeviceConfiguration.new-device-name.image":        "custom-image",
+				"DeviceConfiguration.new-device-name.package-repo": "/usr/some/new/device",
+			},
+		},
 	}
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("TestSaveDeviceConfiguration %v", i), func(t *testing.T) {
