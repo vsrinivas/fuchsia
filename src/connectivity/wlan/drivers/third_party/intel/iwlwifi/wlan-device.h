@@ -51,6 +51,7 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
 zx_status_t mac_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_addr,
                             size_t peer_addr_size);
 zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config);
+zx_status_t mac_init(void* ctx, struct iwl_trans* drvdata, zx_device_t* zxdev, uint16_t idx);
 void mac_unbind(void* ctx);
 void mac_release(void* ctx);
 

@@ -17,14 +17,16 @@ extern "C" {
 namespace wlan::iwlwifi {
 
 class MacDevice;
-using MacDeviceType = ddk::Device<MacDevice, ddk::Unbindable>;
+using MacDeviceType = ddk::Device<MacDevice, ddk::Initializable, ddk::Unbindable>;
 
 class MacDevice : public MacDeviceType,
                   public ::ddk::WlanmacProtocol<MacDevice, ::ddk::base_protocol> {
  public:
-  MacDevice(zx_device* parent) : MacDeviceType(parent){};
+  MacDevice(zx_device* parent, iwl_trans* drvdata, uint16_t iface_id, struct iwl_mvm_vif* mvmvif)
+      : MacDeviceType(parent), mvmvif_(mvmvif), drvdata_(drvdata), iface_id_(iface_id){};
   ~MacDevice() = default;
 
+  void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn);
 
@@ -44,10 +46,12 @@ class MacDevice : public MacDeviceType,
   zx_status_t WlanmacStartHwScan(const wlan_hw_scan_config_t* scan_config);
   zx_status_t WlanmacUpdateWmmParams(wlan_ac_t ac, const wlan_wmm_params_t* params);
 
-  void set_mvmvif(struct iwl_mvm_vif* mvmvif) { mvmvif_ = mvmvif; };
-
  protected:
   struct iwl_mvm_vif* mvmvif_;
+
+ private:
+  iwl_trans* drvdata_;
+  uint16_t iface_id_;
 };
 
 }  // namespace wlan::iwlwifi

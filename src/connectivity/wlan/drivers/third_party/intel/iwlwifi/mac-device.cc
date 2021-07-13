@@ -67,6 +67,10 @@ zx_status_t MacDevice::WlanmacUpdateWmmParams(wlan_ac_t ac, const wlan_wmm_param
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+void MacDevice::DdkInit(ddk::InitTxn txn) {
+  txn.Reply(mac_init(mvmvif_, drvdata_, zxdev(), iface_id_));
+}
+
 void MacDevice::DdkRelease() {
   IWL_DEBUG_INFO(this, "Releasing iwlwifi mac-device\n");
   mac_release(mvmvif_);

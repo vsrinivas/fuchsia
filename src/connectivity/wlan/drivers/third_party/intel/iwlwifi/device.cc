@@ -34,13 +34,6 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::AllocChecker ac;
-  auto mac_device = fbl::make_unique_checked<MacDevice>(&ac, zxdev());
-  if (!ac.check()) {
-    IWL_ERR(this, "%s() failed to allocate mac_device (%zu bytes)", __func__, sizeof(*mac_device));
-    return ZX_ERR_NO_MEMORY;
-  }
-
   zx_status_t status = phy_create_iface(drvdata(), req, out_iface_id);
   if (status != ZX_OK) {
     IWL_ERR(this, "%s() failed phy create: %s\n", __func__, zx_status_get_string(status));
@@ -49,31 +42,22 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
 
   struct iwl_mvm* mvm = iwl_trans_get_mvm(drvdata());
   struct iwl_mvm_vif* mvmvif = mvm->mvmvif[*out_iface_id];
-  mac_device->set_mvmvif(mvmvif);
 
-  if ((status = mac_device->DdkAdd("iwlwifi-wlanmac", DEVICE_ADD_INVISIBLE)) != ZX_OK) {
+  fbl::AllocChecker ac;
+  auto mac_device =
+      fbl::make_unique_checked<MacDevice>(&ac, zxdev(), drvdata(), *out_iface_id, mvmvif);
+  if (!ac.check()) {
+    IWL_ERR(this, "%s() failed to allocate mac_device (%zu bytes)", __func__, sizeof(*mac_device));
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  if ((status = mac_device->DdkAdd("iwlwifi-wlanmac")) != ZX_OK) {
     IWL_ERR(this, "%s() failed mac device add: %s\n", __func__, zx_status_get_string(status));
     phy_create_iface_undo(drvdata(), *out_iface_id);
     return status;
   }
-
-  status = phy_start_iface(drvdata(), mac_device->zxdev(), *out_iface_id);
-  if (status != ZX_OK) {
-    // Freeing of resources allocated in phy_create_iface() will happen via DdkAsynremove().
-    IWL_ERR(this, "%s() failed phy start: %s\n", __func__, zx_status_get_string(status));
-    goto fail_post_add;
-  }
-
-  mac_device->DdkMakeVisible();
   mac_device.release();
-
   return ZX_OK;
-
-fail_post_add:
-  // Lifecycle is managed by the devhost post DdkAdd.
-  // Therefore, we need to rely on async remove to free the memory.
-  mac_device.release()->DdkAsyncRemove();
-  return status;
 }
 
 zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {

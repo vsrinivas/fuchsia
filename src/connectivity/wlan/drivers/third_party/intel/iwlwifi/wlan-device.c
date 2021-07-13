@@ -556,6 +556,15 @@ zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_confi
   return iwl_mvm_mac_hw_scan(mvmvif, scan_config);
 }
 
+zx_status_t mac_init(void* ctx, struct iwl_trans* drvdata, zx_device_t* zxdev, uint16_t idx) {
+  zx_status_t status = phy_start_iface(drvdata, zxdev, idx);
+  if (status != ZX_OK) {
+    // Freeing of resources allocated in phy_create_iface() will happen in mac_release().
+    IWL_ERR(this, "%s() failed phy start: %s\n", __func__, zx_status_get_string(status));
+  }
+  return status;
+}
+
 // TODO (fxbug.dev/63618) - to be removed.
 wlanmac_protocol_ops_t wlanmac_ops = {
     .query = mac_query,

@@ -316,6 +316,7 @@ TEST_F(WlanDeviceTest, PhyCreateDestroySingleInterface) {
   ASSERT_EQ(mvmvif->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
   // Count includes phy device in addition to the newly created mac device.
   ASSERT_EQ(fake_parent_->descendant_count(), 2);
+  device_->zxdev()->GetLatestChild()->InitOp();
 
   // Remove interface
   ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_OK);
@@ -338,6 +339,7 @@ TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   ASSERT_EQ(iface_id, 0);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 2);
+  device_->zxdev()->GetLatestChild()->InitOp();
 
   // Add 2nd interface
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
@@ -345,6 +347,7 @@ TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 3);
+  device_->zxdev()->GetLatestChild()->InitOp();
 
   // Add 3rd interface
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
@@ -352,6 +355,7 @@ TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 4);
+  device_->zxdev()->GetLatestChild()->InitOp();
 
   // Remove the 2nd interface
   ASSERT_EQ(device_->WlanphyImplDestroyIface(1), ZX_OK);
@@ -365,6 +369,7 @@ TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 4);
+  device_->zxdev()->GetLatestChild()->InitOp();
 
   // Add 4th interface
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
@@ -372,6 +377,7 @@ TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
   ASSERT_EQ(fake_parent_->descendant_count(), 5);
+  device_->zxdev()->GetLatestChild()->InitOp();
 
   // Add 5th interface and it should fail
   ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_ERR_NO_RESOURCES);
