@@ -11,6 +11,7 @@ rustc_library("surpass") {
   version = "0.1.0"
   edition = "2018"
   deps = [
+    "//src/lib/trace/rust:trace",
     "//third_party/rust_crates:dashmap",
     "//third_party/rust_crates:rayon",
     "//third_party/rust_crates:rustc-hash",
