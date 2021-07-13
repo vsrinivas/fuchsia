@@ -80,7 +80,7 @@ class Server final : public fidl::WireServer<fidl_test::Example> {
                       ExistingMethodCompleter::Sync& completer) final {}
 };
 
-void client(fidl::Client<fidl_test::Example> client) { client->ExistingMethod(); }
+void client(fidl::WireClient<fidl_test::Example> client) { client->ExistingMethod(); }
 ```
 
 ### Rust {#rust-init}
@@ -266,8 +266,8 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
 +   void NewMethod(NewMethodRequestView request, NewMethodCompleter::Sync& completer) final {}
   };
   
-- void client(fidl::Client<fidl_test::Example> client) { client->ExistingMethod(); }
-+ void client(fidl::Client<fidl_test::Example> client) {
+- void client(fidl::WireClient<fidl_test::Example> client) { client->ExistingMethod(); }
++ void client(fidl::WireClient<fidl_test::Example> client) {
 +   client->ExistingMethod();
 +   client->NewMethod();
 + }

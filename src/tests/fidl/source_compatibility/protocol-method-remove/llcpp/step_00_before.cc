@@ -15,7 +15,7 @@ class Server final : public fidl::WireServer<fidl_test::Example> {
   void OldMethod(OldMethodRequestView request, OldMethodCompleter::Sync& completer) final {}
 };
 
-void client(fidl::Client<fidl_test::Example> client) {
+void client(fidl::WireClient<fidl_test::Example> client) {
   client->ExistingMethod();
   client->OldMethod();
 }

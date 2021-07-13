@@ -14,7 +14,7 @@ class Server final : public fidl::WireServer<fidl_test::Example> {
                       ExistingMethodCompleter::Sync& completer) final {}
 };
 
-void client(fidl::Client<fidl_test::Example> client) { client->ExistingMethod(); }
+void client(fidl::WireClient<fidl_test::Example> client) { client->ExistingMethod(); }
 // [END contents]
 
 int main(int argc, const char** argv) { return 0; }

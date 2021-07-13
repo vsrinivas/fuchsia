@@ -95,7 +95,7 @@ class Server final : public fidl::WireServer<fidl_test::Example> {
   void OldMethod(OldMethodRequestView request, OldMethodCompleter::Sync& completer) final {}
 };
 
-void client(fidl::Client<fidl_test::Example> client) {
+void client(fidl::WireClient<fidl_test::Example> client) {
   client->ExistingMethod();
   client->OldMethod();
 }
@@ -227,11 +227,11 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
 -   void OldMethod(OldMethodRequestView request, OldMethodCompleter::Sync& completer) final {}
   };
   
-- void client(fidl::Client<fidl_test::Example> client) {
+- void client(fidl::WireClient<fidl_test::Example> client) {
 -   client->ExistingMethod();
 -   client->OldMethod();
 - }
-+ void client(fidl::Client<fidl_test::Example> client) { client->ExistingMethod(); }
++ void client(fidl::WireClient<fidl_test::Example> client) { client->ExistingMethod(); }
 
 ```
 
