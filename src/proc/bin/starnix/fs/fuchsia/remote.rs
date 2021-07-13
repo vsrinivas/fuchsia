@@ -31,12 +31,12 @@ fn update_stat_from_result(node: &FsNode, attrs: zxio_node_attributes_t) -> Resu
     const BYTES_PER_BLOCK: usize = 512;
 
     let mut state = node.state_mut();
-    state.node_id = attrs.id;
+    state.inode_num = attrs.id;
     // TODO - store these in FsNodeState and convert on fstat
     state.mode = unsafe { zxio_get_posix_mode(attrs.protocols, attrs.abilities) };
-    state.content_size = attrs.content_size as usize;
+    state.size = attrs.content_size as usize;
     state.storage_size = attrs.storage_size as usize;
-    state.block_size = BYTES_PER_BLOCK;
+    state.blksize = BYTES_PER_BLOCK;
     state.link_count = attrs.link_count;
 
     Ok(())

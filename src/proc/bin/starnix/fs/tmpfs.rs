@@ -69,7 +69,7 @@ impl FileOps for TmpfsFileObject {
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         let mut state = file.node().state_mut();
-        let file_length = state.content_size;
+        let file_length = state.size;
         let want_read = UserBuffer::get_total_length(data);
         let to_read =
             if file_length < offset + want_read { file_length - offset } else { want_read };
@@ -92,7 +92,7 @@ impl FileOps for TmpfsFileObject {
         let want_write = UserBuffer::get_total_length(data);
         let write_end = offset + want_write;
         let mut update_content_size = false;
-        if write_end > state.content_size {
+        if write_end > state.size {
             if write_end > state.storage_size {
                 let mut new_size = write_end as u64;
                 // TODO(steveaustin) move the padding logic
@@ -112,7 +112,7 @@ impl FileOps for TmpfsFileObject {
         task.mm.read_all(data, &mut buf[..])?;
         self.vmo.write(&mut buf[..], offset as u64).map_err(|_| EIO)?;
         if update_content_size {
-            state.content_size = write_end;
+            state.size = write_end;
         }
         let now = fuchsia_runtime::utc_time();
         state.time_access = now;

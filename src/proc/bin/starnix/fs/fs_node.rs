@@ -29,13 +29,14 @@ pub type FsNodeHandle = Arc<FsNode>;
 #[derive(Default)]
 pub struct FsNodeState {
     children: HashMap<FsString, Weak<FsNode>>,
-    pub node_id: u64,
-    pub device_id: u64,
-    pub content_size: usize,
+    pub inode_num: ino_t,
+    pub device_num: dev_t,
+    pub size: usize,
     pub storage_size: usize,
-    pub no_blocks: usize,
-    pub block_size: usize,
-    pub mode: u32,
+    pub blksize: usize,
+    pub mode: mode_t,
+    pub uid: uid_t,
+    pub gid: gid_t,
     pub link_count: u64,
     pub time_create: Time,
     pub time_access: Time,
@@ -81,8 +82,8 @@ impl FsNode {
         let device_id = device.get_device_id();
         let now = fuchsia_runtime::utc_time();
         let node_state = FsNodeState {
-            node_id: inode_number,
-            device_id: device_id,
+            inode_num: inode_number,
+            device_num: device_id,
             mode: mode,
             time_create: now,
             time_access: now,
@@ -164,17 +165,17 @@ impl FsNode {
         /// st_blksize is measured in units of 512 bytes.
         const BYTES_PER_BLOCK: i64 = 512;
         stat_t {
-            st_ino: state.node_id,
+            st_ino: state.inode_num,
             st_mode: state.mode,
-            st_size: state.content_size as off_t,
+            st_size: state.size as off_t,
             st_blocks: state.storage_size as i64 / BYTES_PER_BLOCK,
             st_nlink: state.link_count,
-            st_uid: 0,
-            st_gid: 0,
+            st_uid: state.uid,
+            st_gid: state.gid,
             st_ctim: time_to_timespec(&state.time_create),
             st_mtim: time_to_timespec(&state.time_modify),
             st_atim: time_to_timespec(&state.time_access),
-            st_dev: state.device_id,
+            st_dev: state.device_num,
             st_rdev: 0,
             st_blksize: BYTES_PER_BLOCK,
             ..Default::default()
@@ -194,8 +195,8 @@ impl FsNode {
         let mut state = RwLockUpgradableReadGuard::upgrade(state);
         let now = fuchsia_runtime::utc_time();
         let node_state = FsNodeState {
-            node_id: self.device.allocate_inode_number(),
-            device_id: self.device.get_device_id(),
+            inode_num: self.device.allocate_inode_number(),
+            device_num: self.device.get_device_id(),
             time_create: now,
             time_access: now,
             time_modify: now,
