@@ -67,18 +67,18 @@ constexpr double AudioResult::kPrevFloorStereoMono;
 double AudioResult::LevelToleranceInterpolation = 0.0;
 constexpr double AudioResult::kPrevLevelToleranceInterpolation;
 
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespPointUnity = {NAN};
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespPointUnity;
 
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincUnity = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincDown0 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincDown1 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincDown2 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincMicro = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincUp1 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincUp2 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincUp3 = {NAN};
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincUnity;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincDown0;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincDown1;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincDown2;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincMicro;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincUp1;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincUp2;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincUp3;
 
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincNxN = {NAN};
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincNxN;
 
 // We test our interpolation fidelity across these six rate-conversion ratios:
 // - 1:1 (referred to in these variables and constants as Unity)
@@ -158,18 +158,18 @@ const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY      };
 // clang-format on
 
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointUnity = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointUnity;
 
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUnity = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincDown0 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincDown1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincDown2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincMicro = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUp1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUp2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUp3 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUnity;
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincDown0;
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincDown1;
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincDown2;
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincMicro;
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUp1;
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUp2;
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUp3;
 
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincNxN = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincNxN;
 
 // We test our interpolation fidelity across these six rate-conversion ratios:
 // - 1:1 (referred to in these variables and constants as Unity)
@@ -260,18 +260,18 @@ const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSin
 
 constexpr double AudioResult::kPhaseTolerance;
 
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhasePointUnity = {NAN};
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhasePointUnity;
 
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUnity = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincDown0 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincDown1 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincDown2 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincMicro = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUp1 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUp2 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUp3 = {NAN};
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUnity;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincDown0;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincDown1;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincDown2;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincMicro;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUp1;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUp2;
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUp3;
 
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincNxN = {NAN};
+std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincNxN;
 
 // clang-format off
 const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPrevPhasePointUnity = {
@@ -327,8 +327,8 @@ const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPr
      -0.00000,  -0.00000,  -0.00000,  -0.00001,  -0.00001,  -0.00001,  -0.00001,  -0.00001,  -0.00002,  -0.00002,
      -0.00003,  -0.00003,  -0.00004,  -0.00006,  -0.00007,  -0.00009,  -0.00011,  -0.00014, -INFINITY, -INFINITY,
     -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY    };
-
 // clang-format on
+
 //
 //
 // Scale

@@ -19,7 +19,7 @@ source_set("frequency_set") {
   ]
 }
 
-executable("fidelity_test_bin") {
+executable("audio_fidelity_test_bin") {
   visibility = [ ":*" ]
   testonly = true
   output_name = "audio_fidelity_tests"
@@ -39,6 +39,7 @@ executable("fidelity_test_bin") {
   deps = [
     ":frequency_set",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:test_settings",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
@@ -52,13 +53,24 @@ executable("fidelity_test_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
+fuchsia_test_component("audio_fidelity_test_comp") {
+  manifest = "meta/audio_fidelity_tests.cml"
+  deps = [ ":audio_fidelity_test_bin" ]
+}
+
 # Note: audio_core/mixer sets specific compiler flags for floating-point optimization which may make
 # audio_fidelity_tests sensitive to toolchain changes. If non-audio changes cause failures, disable
 # this test, contact Fuchsia media (tq-media-team@) and file a bug against the "Media>audio" area.
-fuchsia_unittest_package("audio_fidelity_tests") {
-  deps = [ ":fidelity_test_bin" ]
-
+fuchsia_test_package("audio_fidelity_tests") {
   test_specs = {
     environments = [ emu_env ]
+
+    log_settings = {
+      max_severity = "INFO"
+    }
+
+    parallel = 4
   }
+
+  test_components = [ ":audio_fidelity_test_comp" ]
 }

@@ -207,15 +207,6 @@ TEST(NoiseFloor, Output_Float) {
 // If UseFullFrequencySet is false, we test at only three summary frequencies.
 void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* level_db,
                                double* sinad_db, double* phase_rad) {
-  if (!std::isnan(level_db[0])) {
-    // This run already has frequency response/SINAD/phase results for this sampler and resampling
-    // ratio; don't waste time and cycles rerunning it.
-    return;
-  }
-  // Set this to a valid (worst-case) value, so that (for any outcome) another test does not later
-  // rerun this combination of sampler and resample ratio.
-  level_db[0] = -INFINITY;
-
   auto format = Format::Create<ASF::FLOAT>(1, 48000 /* unused */).take_value();
 
   auto num_dest_frames = kFreqTestBufSize;
@@ -528,265 +519,137 @@ void TestUpSampleRatio3(Resampler sampler_type, double* freq_resp_results, doubl
                             sinad_results, phase_results);
 }
 
-// Measure Freq Response for Point sampler, no rate conversion.
-TEST(FrequencyResponse, Point_Unity) {
+// Measure Freq Response, SINAD and Phase Response for Point sampler, no rate conversion.
+TEST(PointUnity, TotalResponse) {
   TestUnitySampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointUnity.data(),
                        AudioResult::SinadPointUnity.data(), AudioResult::PhasePointUnity.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespPointUnity.data(),
                           AudioResult::kPrevFreqRespPointUnity.data());
-}
-
-// Measure SINAD for Point sampler, no rate conversion.
-TEST(Sinad, Point_Unity) {
-  TestUnitySampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointUnity.data(),
-                       AudioResult::SinadPointUnity.data(), AudioResult::PhasePointUnity.data());
 
   EvaluateSinadResults(AudioResult::SinadPointUnity.data(),
                        AudioResult::kPrevSinadPointUnity.data());
-}
-
-// Measure Phase Response for Point sampler, no rate conversion.
-TEST(Phase, Point_Unity) {
-  TestUnitySampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointUnity.data(),
-                       AudioResult::SinadPointUnity.data(), AudioResult::PhasePointUnity.data());
 
   EvaluatePhaseResults(AudioResult::PhasePointUnity.data(),
                        AudioResult::kPrevPhasePointUnity.data());
 }
 
-// Measure Freq Response for Sinc sampler, no rate conversion.
-TEST(FrequencyResponse, Sinc_Unity) {
+// Measure Freq Response, SINAD and Phase Response for Sinc sampler, no rate conversion.
+TEST(SincUnity, TotalResponse) {
   TestUnitySampleRatio(Resampler::WindowedSinc, AudioResult::FreqRespSincUnity.data(),
                        AudioResult::SinadSincUnity.data(), AudioResult::PhaseSincUnity.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespSincUnity.data(),
                           AudioResult::kPrevFreqRespSincUnity.data());
-}
-
-// Measure SINAD for Sinc sampler, no rate conversion.
-TEST(Sinad, Sinc_Unity) {
-  TestUnitySampleRatio(Resampler::WindowedSinc, AudioResult::FreqRespSincUnity.data(),
-                       AudioResult::SinadSincUnity.data(), AudioResult::PhaseSincUnity.data());
 
   EvaluateSinadResults(AudioResult::SinadSincUnity.data(), AudioResult::kPrevSinadSincUnity.data());
-}
-
-// Measure Phase Response for Sinc sampler, no rate conversion.
-TEST(Phase, Sinc_Unity) {
-  TestUnitySampleRatio(Resampler::WindowedSinc, AudioResult::FreqRespSincUnity.data(),
-                       AudioResult::SinadSincUnity.data(), AudioResult::PhaseSincUnity.data());
 
   EvaluatePhaseResults(AudioResult::PhaseSincUnity.data(), AudioResult::kPrevPhaseSincUnity.data());
 }
 
-// Measure Freq Response for Sinc sampler for down-sampling ratio #0.
-TEST(FrequencyResponse, Sinc_DownSamp0) {
+// Measure Freq Response, SINAD, Out-of-band Rejection and Phase Response for Sinc sampler for
+// down-sampling ratio #0.
+TEST(SincDownSamp0, TotalResponse) {
   TestDownSampleRatio0(Resampler::WindowedSinc, AudioResult::FreqRespSincDown0.data(),
                        AudioResult::SinadSincDown0.data(), AudioResult::PhaseSincDown0.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespSincDown0.data(),
                           AudioResult::kPrevFreqRespSincDown0.data());
-}
-
-// Measure SINAD for Sinc sampler for down-sampling ratio #0.
-TEST(Sinad, Sinc_DownSamp0) {
-  TestDownSampleRatio0(Resampler::WindowedSinc, AudioResult::FreqRespSincDown0.data(),
-                       AudioResult::SinadSincDown0.data(), AudioResult::PhaseSincDown0.data());
 
   EvaluateSinadResults(AudioResult::SinadSincDown0.data(), AudioResult::kPrevSinadSincDown0.data());
-}
-
-// Measure Out-of-band Rejection for Sinc sampler for down-sampling ratio #0.
-TEST(Rejection, Sinc_DownSamp0) {
-  TestDownSampleRatio0(Resampler::WindowedSinc, AudioResult::FreqRespSincDown0.data(),
-                       AudioResult::SinadSincDown0.data(), AudioResult::PhaseSincDown0.data());
 
   EvaluateRejectionResults(AudioResult::SinadSincDown0.data(),
                            AudioResult::kPrevSinadSincDown0.data());
-}
-
-// Measure Phase Response for Sinc sampler for down-sampling ratio #0.
-TEST(Phase, Sinc_DownSamp0) {
-  TestDownSampleRatio0(Resampler::WindowedSinc, AudioResult::FreqRespSincDown0.data(),
-                       AudioResult::SinadSincDown0.data(), AudioResult::PhaseSincDown0.data());
 
   EvaluatePhaseResults(AudioResult::PhaseSincDown0.data(), AudioResult::kPrevPhaseSincDown0.data());
 }
 
-// Measure Freq Response for Sinc sampler for down-sampling ratio #1.
-TEST(FrequencyResponse, Sinc_DownSamp1) {
+// Measure Freq Response, SINAD, Out-of-band Rejection and Phase Response for Sinc sampler for
+// down-sampling ratio #1.
+TEST(SincDownSamp1, TotalResponse) {
   TestDownSampleRatio1(Resampler::WindowedSinc, AudioResult::FreqRespSincDown1.data(),
                        AudioResult::SinadSincDown1.data(), AudioResult::PhaseSincDown1.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespSincDown1.data(),
                           AudioResult::kPrevFreqRespSincDown1.data());
-}
-
-// Measure SINAD for Sinc sampler for down-sampling ratio #1.
-TEST(Sinad, Sinc_DownSamp1) {
-  TestDownSampleRatio1(Resampler::WindowedSinc, AudioResult::FreqRespSincDown1.data(),
-                       AudioResult::SinadSincDown1.data(), AudioResult::PhaseSincDown1.data());
 
   EvaluateSinadResults(AudioResult::SinadSincDown1.data(), AudioResult::kPrevSinadSincDown1.data());
-}
-
-// Measure Out-of-band Rejection for Sinc sampler for down-sampling ratio #1.
-TEST(Rejection, Sinc_DownSamp1) {
-  TestDownSampleRatio1(Resampler::WindowedSinc, AudioResult::FreqRespSincDown1.data(),
-                       AudioResult::SinadSincDown1.data(), AudioResult::PhaseSincDown1.data());
 
   EvaluateRejectionResults(AudioResult::SinadSincDown1.data(),
                            AudioResult::kPrevSinadSincDown1.data());
-}
-
-// Measure Phase Response for Sinc sampler for down-sampling ratio #1.
-TEST(Phase, Sinc_DownSamp1) {
-  TestDownSampleRatio1(Resampler::WindowedSinc, AudioResult::FreqRespSincDown1.data(),
-                       AudioResult::SinadSincDown1.data(), AudioResult::PhaseSincDown1.data());
 
   EvaluatePhaseResults(AudioResult::PhaseSincDown1.data(), AudioResult::kPrevPhaseSincDown1.data());
 }
 
-// Measure Freq Response for Sinc sampler for down-sampling ratio #2.
-TEST(FrequencyResponse, Sinc_DownSamp2) {
+// Measure Freq Response, SINAD, Out-of-band Rejection and Phase Response for Sinc sampler for
+// down-sampling ratio #2.
+TEST(SincDownSamp2, TotalResponse) {
   TestDownSampleRatio2(Resampler::WindowedSinc, AudioResult::FreqRespSincDown2.data(),
                        AudioResult::SinadSincDown2.data(), AudioResult::PhaseSincDown2.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespSincDown2.data(),
                           AudioResult::kPrevFreqRespSincDown2.data());
-}
-
-// Measure SINAD for Sinc sampler for down-sampling ratio #2.
-TEST(Sinad, Sinc_DownSamp2) {
-  TestDownSampleRatio2(Resampler::WindowedSinc, AudioResult::FreqRespSincDown2.data(),
-                       AudioResult::SinadSincDown2.data(), AudioResult::PhaseSincDown2.data());
 
   EvaluateSinadResults(AudioResult::SinadSincDown2.data(), AudioResult::kPrevSinadSincDown2.data());
-}
-
-// Measure Out-of-band Rejection for Sinc sampler for down-sampling ratio #2.
-TEST(Rejection, Sinc_DownSamp2) {
-  TestDownSampleRatio2(Resampler::WindowedSinc, AudioResult::FreqRespSincDown2.data(),
-                       AudioResult::SinadSincDown2.data(), AudioResult::PhaseSincDown2.data());
 
   EvaluateRejectionResults(AudioResult::SinadSincDown2.data(),
                            AudioResult::kPrevSinadSincDown2.data());
-}
-
-// Measure Phase Response for Sinc sampler for down-sampling ratio #2.
-TEST(Phase, Sinc_DownSamp2) {
-  TestDownSampleRatio2(Resampler::WindowedSinc, AudioResult::FreqRespSincDown2.data(),
-                       AudioResult::SinadSincDown2.data(), AudioResult::PhaseSincDown2.data());
 
   EvaluatePhaseResults(AudioResult::PhaseSincDown2.data(), AudioResult::kPrevPhaseSincDown2.data());
 }
 
-// Measure Freq Response for Sinc sampler with minimum down-sampling rate change.
-TEST(FrequencyResponse, Sinc_MicroSRC) {
+// Measure Freq Response, SINAD, Out-of-band Rejection and Phase Response for Sinc sampler with
+// minimum down-sampling rate change.
+TEST(SincMicroSRC, TotalResponse) {
   TestMicroSampleRatio(Resampler::WindowedSinc, AudioResult::FreqRespSincMicro.data(),
                        AudioResult::SinadSincMicro.data(), AudioResult::PhaseSincMicro.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespSincMicro.data(),
                           AudioResult::kPrevFreqRespSincMicro.data());
-}
-
-// Measure SINAD for Sinc sampler with minimum down-sampling rate change.
-TEST(Sinad, Sinc_MicroSRC) {
-  TestMicroSampleRatio(Resampler::WindowedSinc, AudioResult::FreqRespSincMicro.data(),
-                       AudioResult::SinadSincMicro.data(), AudioResult::PhaseSincMicro.data());
 
   EvaluateSinadResults(AudioResult::SinadSincMicro.data(), AudioResult::kPrevSinadSincMicro.data());
-}
-
-// Measure Out-of-band Rejection for Sinc sampler with minimum down-sampling rate change.
-TEST(Rejection, Sinc_MicroSRC) {
-  TestMicroSampleRatio(Resampler::WindowedSinc, AudioResult::FreqRespSincMicro.data(),
-                       AudioResult::SinadSincMicro.data(), AudioResult::PhaseSincMicro.data());
 
   EvaluateRejectionResults(AudioResult::SinadSincMicro.data(),
                            AudioResult::kPrevSinadSincMicro.data());
-}
-
-// Measure Phase Response for Sinc sampler with minimum down-sampling rate change.
-TEST(Phase, Sinc_MicroSRC) {
-  TestMicroSampleRatio(Resampler::WindowedSinc, AudioResult::FreqRespSincMicro.data(),
-                       AudioResult::SinadSincMicro.data(), AudioResult::PhaseSincMicro.data());
 
   EvaluatePhaseResults(AudioResult::PhaseSincMicro.data(), AudioResult::kPrevPhaseSincMicro.data());
 }
 
-// Measure Freq Response for Sinc sampler for up-sampling ratio #1.
-TEST(FrequencyResponse, Sinc_UpSamp1) {
+// Measure Freq Response, SINAD and Phase Response for Sinc sampler for up-sampling ratio #1.
+TEST(SincUpSamp1, TotalResponse) {
   TestUpSampleRatio1(Resampler::WindowedSinc, AudioResult::FreqRespSincUp1.data(),
                      AudioResult::SinadSincUp1.data(), AudioResult::PhaseSincUp1.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespSincUp1.data(),
                           AudioResult::kPrevFreqRespSincUp1.data());
-}
-
-// Measure SINAD for Sinc sampler for up-sampling ratio #1.
-TEST(Sinad, Sinc_UpSamp1) {
-  TestUpSampleRatio1(Resampler::WindowedSinc, AudioResult::FreqRespSincUp1.data(),
-                     AudioResult::SinadSincUp1.data(), AudioResult::PhaseSincUp1.data());
 
   EvaluateSinadResults(AudioResult::SinadSincUp1.data(), AudioResult::kPrevSinadSincUp1.data());
-}
-
-// Measure Phase Response for Sinc sampler for up-sampling ratio #1.
-TEST(Phase, Sinc_UpSamp1) {
-  TestUpSampleRatio1(Resampler::WindowedSinc, AudioResult::FreqRespSincUp1.data(),
-                     AudioResult::SinadSincUp1.data(), AudioResult::PhaseSincUp1.data());
 
   EvaluatePhaseResults(AudioResult::PhaseSincUp1.data(), AudioResult::kPrevPhaseSincUp1.data());
 }
 
-// Measure Freq Response for Sinc sampler for up-sampling ratio #2.
-TEST(FrequencyResponse, Sinc_UpSamp2) {
+// Measure Freq Response, SINAD and Phase Response for Sinc sampler for up-sampling ratio #2.
+TEST(SincUpSamp2, TotalResponse) {
   TestUpSampleRatio2(Resampler::WindowedSinc, AudioResult::FreqRespSincUp2.data(),
                      AudioResult::SinadSincUp2.data(), AudioResult::PhaseSincUp2.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespSincUp2.data(),
                           AudioResult::kPrevFreqRespSincUp2.data());
-}
-
-// Measure SINAD for Sinc sampler for up-sampling ratio #2.
-TEST(Sinad, Sinc_UpSamp2) {
-  TestUpSampleRatio2(Resampler::WindowedSinc, AudioResult::FreqRespSincUp2.data(),
-                     AudioResult::SinadSincUp2.data(), AudioResult::PhaseSincUp2.data());
 
   EvaluateSinadResults(AudioResult::SinadSincUp2.data(), AudioResult::kPrevSinadSincUp2.data());
-}
-
-// Measure Phase Response for Sinc sampler for up-sampling ratio #2.
-TEST(Phase, Sinc_UpSamp2) {
-  TestUpSampleRatio2(Resampler::WindowedSinc, AudioResult::FreqRespSincUp2.data(),
-                     AudioResult::SinadSincUp2.data(), AudioResult::PhaseSincUp2.data());
 
   EvaluatePhaseResults(AudioResult::PhaseSincUp2.data(), AudioResult::kPrevPhaseSincUp2.data());
 }
 
-// Measure Freq Response for Sinc sampler for up-sampling ratio #3.
-TEST(FrequencyResponse, Sinc_UpSamp3) {
+// Measure Freq Response, SINAD and Phase Response for Sinc sampler for up-sampling ratio #3.
+TEST(SincUpSamp3, TotalResponse) {
   TestUpSampleRatio3(Resampler::WindowedSinc, AudioResult::FreqRespSincUp3.data(),
                      AudioResult::SinadSincUp3.data(), AudioResult::PhaseSincUp3.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespSincUp3.data(),
                           AudioResult::kPrevFreqRespSincUp3.data());
-}
-
-// Measure SINAD for Sinc sampler for up-sampling ratio #3.
-TEST(Sinad, Sinc_UpSamp3) {
-  TestUpSampleRatio3(Resampler::WindowedSinc, AudioResult::FreqRespSincUp3.data(),
-                     AudioResult::SinadSincUp3.data(), AudioResult::PhaseSincUp3.data());
 
   EvaluateSinadResults(AudioResult::SinadSincUp3.data(), AudioResult::kPrevSinadSincUp3.data());
-}
-
-// Measure Phase Response for Sinc sampler for up-sampling ratio #3.
-TEST(Phase, Sinc_UpSamp3) {
-  TestUpSampleRatio3(Resampler::WindowedSinc, AudioResult::FreqRespSincUp3.data(),
-                     AudioResult::SinadSincUp3.data(), AudioResult::PhaseSincUp3.data());
 
   EvaluatePhaseResults(AudioResult::PhaseSincUp3.data(), AudioResult::kPrevPhaseSincUp3.data());
 }
@@ -827,15 +690,6 @@ AudioBuffer<ASF::FLOAT> PopulateNxNSourceBuffer(int64_t num_frames, int32_t num_
 // the multi-chan buffer (at micro-SRC); compare each channel to existing mono results.
 void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_db,
                         double* phase_rad) {
-  if (!std::isnan(level_db[0])) {
-    // This run already has NxN frequency response and SINAD results for this sampler and resampling
-    // ratio; don't waste time and cycles rerunning it.
-    return;
-  }
-  // Set this to a valid (worst-case) value, so that (for any outcome) another test does not later
-  // rerun this combination of sampler and resample ratio.
-  level_db[0] = -INFINITY;
-
   // For this multi-channel cross-talk test, we put one of the summary frequencies in each channel.
   // We micro-SRC these signals, and ensure that our frequency response, SINAD and phase response
   // are the same as when we test these frequencies in isolation.
@@ -961,32 +815,19 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   }
 }
 
-// Measure Freq Response for NxN Sinc sampler, with minimum down-sampling rate change.
-TEST(FrequencyResponse, Sinc_NxN) {
+// Measure Freq Response, SINAD and Phase Response for NxN Sinc sampler, with minimum down-sampling
+// rate change. This test case simultaneously evaluates the summary frequencies -- one per channel.
+TEST(SincNxN, TotalResponse) {
   TestNxNEquivalence(Resampler::WindowedSinc, AudioResult::FreqRespSincNxN.data(),
                      AudioResult::SinadSincNxN.data(), AudioResult::PhaseSincNxN.data());
 
-  // The final param signals to evaluate only at summary frequencies.
+  // The final 'true' param signals to evaluate only at summary frequencies.
   EvaluateFreqRespResults(AudioResult::FreqRespSincNxN.data(),
                           AudioResult::kPrevFreqRespSincMicro.data(), true);
-}
 
-// Measure SINAD for NxN Sinc sampler, with minimum down-sampling rate change.
-TEST(Sinad, Sinc_NxN) {
-  TestNxNEquivalence(Resampler::WindowedSinc, AudioResult::FreqRespSincNxN.data(),
-                     AudioResult::SinadSincNxN.data(), AudioResult::PhaseSincNxN.data());
-
-  // The final param signals to evaluate only at summary frequencies.
   EvaluateSinadResults(AudioResult::SinadSincNxN.data(), AudioResult::kPrevSinadSincMicro.data(),
                        true);
-}
 
-// Measure Phase Response for NxN Sinc sampler, with minimum down-sampling rate change.
-TEST(Phase, Sinc_NxN) {
-  TestNxNEquivalence(Resampler::WindowedSinc, AudioResult::FreqRespSincNxN.data(),
-                     AudioResult::SinadSincNxN.data(), AudioResult::PhaseSincNxN.data());
-
-  // The final param signals to evaluate only at summary frequencies.
   EvaluatePhaseResults(AudioResult::PhaseSincNxN.data(), AudioResult::kPrevPhaseSincMicro.data(),
                        true);
 }
