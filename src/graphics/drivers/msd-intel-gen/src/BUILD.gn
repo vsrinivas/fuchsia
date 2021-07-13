@@ -27,6 +27,8 @@ source_set("src") {
     "global_context.cc",
     "global_context.h",
     "gpu_mapping.h",
+    "gpu_progress.cc",
+    "gpu_progress.h",
     "gtt.h",
     "gtt_shim.cc",
     "interrupt_manager.h",
