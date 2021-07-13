@@ -409,12 +409,17 @@ void Controller::ResetPipe(registers::Pipe pipe) {
 bool Controller::ResetTrans(registers::Trans trans) {
   registers::TranscoderRegs trans_regs(trans);
 
-  // Disable transcoder and wait it to stop
+  // Disable transcoder and wait for it to stop.
+  //
+  // Per https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-icllp-vol12-displayengine_0.pdf,
+  // page 131, "DSI Transcoder Disable Sequence", we should only be turning off the transcoder once the
+  // associated backlight, audio, and image planes are disabled. Because this is a logical "reset", we only
+  // log failures rather than crashing the driver.
   auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
   trans_conf.set_transcoder_enable(0);
   trans_conf.WriteTo(mmio_space());
   if (!WAIT_ON_MS(!trans_regs.Conf().ReadFrom(mmio_space()).transcoder_state(), 60)) {
-    zxlogf(ERROR, "Failed to reset transcoder");
+    zxlogf(WARNING, "Failed to reset transcoder");
     return false;
   }
 
