@@ -62,7 +62,7 @@ async fn read_per_package_source(root_dir: DirectoryProxy) {
 async fn assert_read_max_buffer_success(root_dir: &DirectoryProxy, path: &str) {
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
 }
 
@@ -73,25 +73,25 @@ async fn assert_read_buffer_success(root_dir: &DirectoryProxy, path: &str) {
 
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, bytes) = file.read(buffer_size.try_into().unwrap()).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
 
 async fn assert_read_past_end(root_dir: &DirectoryProxy, path: &str) {
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
 
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(bytes, &[]);
 }
 
 async fn assert_read_at_max_buffer_success(root_dir: &DirectoryProxy, path: &str) {
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
 }
 
@@ -105,7 +105,7 @@ async fn assert_read_at_success(root_dir: &DirectoryProxy, path: &str) {
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, bytes) =
         file.read_at(count.try_into().unwrap(), offset.try_into().unwrap()).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
 
@@ -116,7 +116,7 @@ async fn assert_seek_success(root_dir: &DirectoryProxy, path: &str, seek_origin:
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, position) =
         file.seek(expected_position.try_into().unwrap(), seek_origin).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(position, expected_position as u64);
 }
 
@@ -132,12 +132,12 @@ async fn assert_seek_affects_read(root_dir: &DirectoryProxy, path: &str) {
     let seek_offset = rng.gen_range(0, path.len());
     let expected_contents = &path[path.len() - seek_offset..];
     let (status, position) = file.seek((seek_offset as i64) * -1, SeekOrigin::End).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
 
     assert_eq!(position, (path.len() - seek_offset) as u64);
 
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
 
@@ -155,11 +155,11 @@ async fn assert_read_at_does_not_affect_seek(
     let seek_offset = rng.gen_range(0, path.len()) as i64;
 
     let (status, position) = file.seek(seek_offset, seek_origin).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(position, seek_offset as u64);
 
     let (status, bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
 }
 
@@ -175,11 +175,11 @@ async fn assert_read_at_does_not_affect_seek_end_origin(root_dir: &DirectoryProx
     let seek_offset = rng.gen_range(0, path.len()) as i64 * -1;
 
     let (status, position) = file.seek(seek_offset, SeekOrigin::End).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(position, (path.len() as i64 + seek_offset) as u64);
 
     let (status, bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
 
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
 }
@@ -189,7 +189,7 @@ async fn assert_read_exceeds_buffer_success(root_dir: &DirectoryProxy, path: &st
 
     // Read the first MAX_BUF contents.
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(
         std::str::from_utf8(&bytes).unwrap(),
         &repeat_by_n('a', fidl_fuchsia_io::MAX_BUF.try_into().unwrap())
@@ -197,23 +197,23 @@ async fn assert_read_exceeds_buffer_success(root_dir: &DirectoryProxy, path: &st
 
     // There should be one remaining "a".
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), "a");
 
     // Since we are now at the end of the file, bytes should be empty.
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(bytes, &[]);
 }
 
 async fn assert_seek_past_end(root_dir: &DirectoryProxy, path: &str, seek_origin: SeekOrigin) {
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, position) = file.seek(path.len() as i64 + 1, seek_origin).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(path.len() as u64 + 1, position);
 
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(bytes, &[]);
 }
 
@@ -222,11 +222,11 @@ async fn assert_seek_past_end(root_dir: &DirectoryProxy, path: &str, seek_origin
 async fn assert_seek_past_end_end_origin(root_dir: &DirectoryProxy, path: &str) {
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, position) = file.seek(1, SeekOrigin::End).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(path.len() as u64 + 1, position);
 
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(bytes, &[]);
 }
 
@@ -287,12 +287,12 @@ async fn test_get_buffer_success(
     get_buffer_flags: u32,
 ) -> Box<fidl_fuchsia_mem::Buffer> {
     let (status, buffer) = file.get_buffer(get_buffer_flags).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Ok(()));
+    let () = zx::Status::ok(status).unwrap();
     let buffer = buffer.unwrap();
 
     let vmo_size = buffer.vmo.get_size().unwrap().try_into().unwrap();
     let mut actual_contents = vec![0u8; vmo_size];
-    assert_eq!(buffer.vmo.read(actual_contents.as_mut_slice(), 0), Ok(()));
+    let () = buffer.vmo.read(actual_contents.as_mut_slice(), 0).unwrap();
 
     assert!(
         path.as_bytes()
