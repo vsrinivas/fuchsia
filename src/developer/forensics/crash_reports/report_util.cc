@@ -56,14 +56,18 @@ std::string Logname(std::string name) {
     return name;
   }
 
-  // Determine if there's a ".cmx" suffix in |name|.
-  const size_t cmx_suffix = name.find_last_of(".cmx");
-  if (cmx_suffix == std::string::npos || cmx_suffix <= last_colon) {
+  // Remove everything leading up to the last colon.
+  name.erase(name.begin(), name.begin() + last_colon + 1);
+
+  // Determine if there's a ".cm" suffix in |name|.
+  const size_t cm_suffix = name.rfind(".cm");
+  if (cm_suffix == std::string::npos) {
     return name;
   }
 
-  // Extract the string between the last colon and the ".cmx" suffix.
-  return name.substr(last_colon + 1, cmx_suffix - sizeof(".cmx") - last_colon + 1);
+  // Erase the ".cm" and everything after it.
+  name.erase(name.begin() + cm_suffix, name.end());
+  return name;
 }
 
 namespace {
