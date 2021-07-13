@@ -22,6 +22,7 @@ rustc_binary("bin") {
     "//src/connectivity/bluetooth/lib/fuchsia-audio-dai",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/lib/profile-client",
+    "//src/connectivity/bluetooth/lib/vigil",
     "//src/connectivity/lib/at-commands",
     "//src/lib/async-utils",
     "//src/lib/diagnostics/inspect/runtime/rust",

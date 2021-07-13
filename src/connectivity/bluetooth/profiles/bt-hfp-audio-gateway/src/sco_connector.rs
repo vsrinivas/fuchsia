@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_bluetooth_bredr as bredr;
+use fuchsia_async as fasync;
 use fuchsia_bluetooth::types::PeerId;
 use fuchsia_zircon as zx;
-use futures::{Future, StreamExt};
+use futures::{Future, FutureExt, StreamExt};
 use log::trace;
 
 use crate::error::ScoConnectError;
@@ -17,7 +18,15 @@ pub struct ScoConnection {
     /// The parameters that this connection was set up with.
     pub params: bredr::ScoConnectionParameters,
     /// Socket which holds the connection open. Held so when this is dropped the connection closes.
-    _socket: zx::Socket,
+    socket: zx::Socket,
+}
+
+impl ScoConnection {
+    pub fn on_closed(&self) -> impl Future<Output = ()> + 'static {
+        fasync::OnSignals::new(&self.socket, zx::Signals::SOCKET_PEER_CLOSED)
+            .extend_lifetime()
+            .map(|_| ())
+    }
 }
 
 pub struct ScoConnector {
@@ -100,7 +109,7 @@ impl ScoConnector {
             for codec in codecs {
                 let params = parameters_for_codec(codec);
                 match Self::initiate_sco(proxy.clone(), peer_id.clone(), params.clone()).await {
-                    Ok(socket) => return Ok(ScoConnection { params, _socket: socket }),
+                    Ok(socket) => return Ok(ScoConnection { params, socket }),
                     Err(e) => {
                         trace!("Failed to connect SCO with {:?} ({:?}), trying others..", params, e)
                     }
@@ -109,7 +118,7 @@ impl ScoConnector {
 
             let params = SCO_PARAMS_FALLBACK.clone();
             match Self::initiate_sco(proxy, peer_id.clone(), params.clone()).await {
-                Ok(socket) => Ok(ScoConnection { params, _socket: socket }),
+                Ok(socket) => Ok(ScoConnection { params, socket }),
                 Err(e) => {
                     trace!("Failed to connect SCO with fallback ({:?}), failing..", e);
                     Err(ScoConnectError::ScoFailed)

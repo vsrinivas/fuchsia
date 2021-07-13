@@ -16,15 +16,19 @@ use {
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
-        future::Either,
-        lock::Mutex,
+        future::{self, Either, Future},
         select,
         stream::{empty, Empty},
         FutureExt, StreamExt,
     },
     log::{debug, info, warn},
     profile_client::ProfileEvent,
-    std::{convert::TryInto, fmt, sync::Arc},
+    std::{
+        convert::TryInto,
+        fmt,
+        sync::{Arc, Mutex},
+    },
+    vigil::{DropWatch, Vigil},
 };
 
 use super::{
@@ -63,7 +67,7 @@ pub(super) struct PeerTask {
     gain_control: GainControl,
     connection: ServiceLevelConnection,
     sco_connector: ScoConnector,
-    sco_connection: Option<ScoConnection>,
+    sco_connection: Option<Vigil<ScoConnection>>,
     ringer: Ringer,
     audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
 }
@@ -362,6 +366,7 @@ impl PeerTask {
 
     pub async fn run(mut self, mut task_channel: mpsc::Receiver<PeerRequest>) -> Self {
         loop {
+            let mut sco_connection_closed_fut = self.on_sco_connection_closed().fuse();
             select! {
                 // New request coming from elsewhere in the component
                 request = task_channel.next() => {
@@ -408,6 +413,9 @@ impl PeerTask {
                         debug!("Peer task channel closed");
                         break;
                     }
+                }
+                _ = sco_connection_closed_fut => {
+                    self.audio_connection_release();
                 }
                 update = self.network_updates.next() => {
                     if let Some(update) = stream_item_map_or_log(update, "PeerHandler::WatchNetworkUpdate") {
@@ -467,18 +475,41 @@ impl PeerTask {
 
         let params = connection.params.clone();
 
-        let mut audio = self.audio_control.lock().await;
-        // Start the DAI with the given parameters
-        if let Err(e) = audio.start(self.id.clone(), params) {
-            // Cancel the SCO connection, we can't send audio.
-            // TODO(fxbug.dev/79784): this probably means we should just cancel out of HFP and
-            // this peer's connection entirely.
-            warn!("Couldn't start Audio DAI ({:?}) - dropping audio connection", e);
-            return Err(Error::system(format!("Couldn't start audio DAI"), e));
+        {
+            let mut audio = self.audio_control.lock().expect("Audio lock poisoned");
+            // Start the DAI with the given parameters
+            if let Err(e) = audio.start(self.id.clone(), params) {
+                // Cancel the SCO connection, we can't send audio.
+                // TODO(fxbug.dev/79784): this probably means we should just cancel out of HFP and
+                // this peer's connection entirely.
+                warn!("Couldn't start Audio DAI ({:?}) - dropping audio connection", e);
+                return Err(Error::system(format!("Couldn't start audio DAI"), e));
+            }
         }
 
-        self.sco_connection = Some(connection);
+        let vigil = Vigil::new(connection);
+
+        Vigil::watch(&vigil, {
+            let control = self.audio_control.clone();
+            move |_| match control.lock().expect("Audio lock poisoned").stop() {
+                Err(e) => warn!("Couldn't stop audio: {:?}", e),
+                Ok(()) => info!("Stopped HFP Audio"),
+            }
+        });
+
+        self.sco_connection = Some(vigil);
         Ok(())
+    }
+
+    fn on_sco_connection_closed(&self) -> impl Future<Output = ()> + 'static {
+        match self.sco_connection.as_ref() {
+            Some(connection) => connection.on_closed().left_future(),
+            None => future::pending().right_future(),
+        }
+    }
+
+    fn audio_connection_release(&mut self) {
+        drop(self.sco_connection.take());
     }
 
     /// Request to send the phone `status` by initiating the Phone Status Indicator
@@ -1345,20 +1376,72 @@ mod tests {
             let res = exec.run_until_stalled(&mut audio_connection_fut).expect("should be done");
             res.expect("should have started up okay");
 
-            // Should start up the test audio control.
-            {
-                let mut lock = exec.run_singlethreaded(&mut audio_control.lock());
-                lock.start(PeerId(0), bredr::ScoConnectionParameters::EMPTY)
-                    .expect_err("shouldn't be able to start, already started");
-            }
-
             remote_sco
         };
+
+        // Should have started up the test audio control. Test by trying to start it again, it
+        // should be an error.
+        {
+            let mut lock = audio_control.lock().expect("Audio lock poisoned");
+            lock.start(PeerId(0), bredr::ScoConnectionParameters::EMPTY)
+                .expect_err("shouldn't be able to start, already started");
+        }
 
         // Trying to start when a connection exists should be an error.
         let audio_connection_fut = peer.setup_audio_connection(None);
         pin_mut!(audio_connection_fut);
         let res = exec.run_until_stalled(&mut audio_connection_fut).expect("should be done");
         res.expect_err("can't start when already started");
+    }
+
+    #[fuchsia::test]
+    fn audio_is_stopped_when_sco_connection_closes() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        // SLC is connected at the start of the test.
+        let (connection, _old_remote) = create_and_connect_slc();
+        let (mut peer, _sender, receiver, mut profile_requests) = setup_peer_task(Some(connection));
+
+        assert!(peer.connection.connected());
+
+        let audio_control = peer.audio_control.clone();
+
+        let remote_sco = {
+            let audio_connection_fut = peer.setup_audio_connection(None);
+            pin_mut!(audio_connection_fut);
+
+            exec.run_until_stalled(&mut audio_connection_fut)
+                .expect_pending("shouldn't be done yet");
+
+            // Expect a sco connection, and have it succeed.
+            let remote_sco =
+                exec.run_singlethreaded(expect_sco_connection(&mut profile_requests, Ok(())));
+
+            let res = exec.run_until_stalled(&mut audio_connection_fut).expect("should be done");
+            res.expect("should have started up okay");
+
+            remote_sco
+        };
+
+        // Should have started up the test audio control.
+        {
+            let mut lock = audio_control.lock().expect("Audio lock poisoned");
+            lock.start(PeerId(0), bredr::ScoConnectionParameters::EMPTY)
+                .expect_err("shouldn't be able to start, already started");
+        }
+
+        // Set up the run task.
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+        let _ = exec.run_until_stalled(&mut run_fut);
+
+        drop(remote_sco);
+
+        // Spin the run task to notice that the SCO connection has failed, and drop
+        // the audio / stop the audio.
+        let _ = exec.run_until_stalled(&mut run_fut);
+
+        // Should have stopped the audio - check by trying to stop it again, it should be an error
+        let mut lock = audio_control.lock().expect("Audio lock poisoned");
+        let _ = lock.stop().expect_err("shouldn't be able to stop, it should already be stopped");
     }
 }

@@ -9,9 +9,13 @@ use {
     fidl_fuchsia_bluetooth_hfp::{CallManagerProxy, PeerHandlerMarker},
     fidl_fuchsia_bluetooth_hfp_test as hfp_test,
     fuchsia_bluetooth::types::PeerId,
-    futures::{channel::mpsc::Receiver, lock::Mutex, select, stream::StreamExt},
+    futures::{channel::mpsc::Receiver, select, stream::StreamExt},
     profile_client::{ProfileClient, ProfileEvent},
-    std::{collections::hash_map::Entry, matches, sync::Arc},
+    std::{
+        collections::hash_map::Entry,
+        matches,
+        sync::{Arc, Mutex},
+    },
 };
 
 use crate::{

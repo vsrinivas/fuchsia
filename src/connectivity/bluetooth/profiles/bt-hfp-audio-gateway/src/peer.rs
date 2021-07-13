@@ -16,9 +16,9 @@ use {
     fidl_fuchsia_bluetooth_hfp::{PeerHandlerMarker, PeerHandlerProxy},
     fuchsia_async::Task,
     fuchsia_bluetooth::types::PeerId,
-    futures::{channel::mpsc, lock::Mutex, Future, FutureExt, SinkExt, TryFutureExt},
+    futures::{channel::mpsc, Future, FutureExt, SinkExt, TryFutureExt},
     profile_client::ProfileEvent,
-    std::sync::Arc,
+    std::sync::{Arc, Mutex},
 };
 
 #[cfg(test)]
