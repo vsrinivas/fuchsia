@@ -25,15 +25,19 @@ def main():
     if not os.path.exists(app_path):
         os.makedirs(app_path)
 
-    script_template = string.Template(
-        '''#!/bin/sh
+    # `dart` and `snapshot` are used in the output app script, use absolute path
+    # so the script would work regardless where it's invoked.
+    abs_dart = os.path.abspath(args.dart)
+    abs_snapshot = os.path.abspath(args.snapshot)
 
-$dart \\
-  $snapshot \\
-  "$$@"
-''')
+    script_content = f'''#!/bin/sh
+
+{abs_dart} \\
+  {abs_snapshot} \\
+  "$@"
+'''
     with open(app_file, 'w') as file:
-        file.write(script_template.substitute(args.__dict__))
+        file.write(script_content)
     permissions = (
         stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP |
         stat.S_IWGRP | stat.S_IXGRP | stat.S_IROTH)

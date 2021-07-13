@@ -55,13 +55,10 @@ template("_dart_snapshot_invocation") {
     args = [
       "--out",
       rebase_path(app_path, root_build_dir),
-
-      # `--dart` and `--snapshot` are used in the output app script, use
-      # absolute path so the script would work regardless where it's invoked.
       "--dart",
-      rebase_path(dart_binary),
+      rebase_path(dart_binary, root_build_dir),
       "--snapshot",
-      rebase_path(snapshot),
+      rebase_path(snapshot, root_build_dir),
     ]
 
     metadata = {

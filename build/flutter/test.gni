@@ -152,7 +152,7 @@ if (current_toolchain == dart_toolchain) {
           rebased_source = rebase_path(_source_path, target_gen_dir)
           args = [
             "--output",
-            rebase_path(_bootstrap_filename),
+            rebase_path(_bootstrap_filename, root_build_dir),
             "--test-name",
             "$rebased_source",
           ]
@@ -397,7 +397,7 @@ if (current_toolchain == dart_toolchain) {
         rebase_path("$root_build_dir/dummy/..",
                     get_path_info(_invocation_file, "dir")),
         "--out",
-        rebase_path(_invocation_file),
+        rebase_path(_invocation_file, root_build_dir),
         "--test",
         rebase_path(_delegate_file, root_build_dir),
       ]

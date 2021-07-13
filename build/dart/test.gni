@@ -108,12 +108,16 @@ template("dart_test") {
     outputs = [ _grouped_main_file ]
     args = [
       "--out",
-      rebase_path(_grouped_main_file),
+      rebase_path(_grouped_main_file, root_build_dir),
     ]
     foreach(src, invoker.sources) {
       args += [
         "--source",
-        rebase_path("$_source_dir/$src"),
+
+        # Sources are imported to the grouped test, so their paths should be
+        # relative to the output grouped test file.
+        rebase_path("$_source_dir/$src",
+                    get_path_info(_grouped_main_file, "dir")),
       ]
     }
     testonly = true
@@ -219,7 +223,7 @@ template("dart_test") {
       rebase_path("$root_build_dir/dummy/..",
                   get_path_info(_invocation, "dir")),
       "--out",
-      rebase_path(_invocation),
+      rebase_path(_invocation, root_build_dir),
       "--dart",
       rebase_path(_dart_binary, root_build_dir),
       "--snapshot",

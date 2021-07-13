@@ -239,7 +239,7 @@ template("dart_kernel") {
       "--filesystem-scheme",
       _multi_root_scheme,
       "--filesystem-root",
-      rebase_path("//"),
+      rebase_path("//", root_build_dir),
       "--packages",
       "$_multi_root_scheme:///$_rebased_packages_path",
 

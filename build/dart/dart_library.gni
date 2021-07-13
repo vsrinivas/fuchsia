@@ -291,9 +291,9 @@ if (current_toolchain == dart_toolchain) {
 
         args = [
                  "--source_dir",
-                 rebase_path(source_dir),
+                 rebase_path(source_dir, root_build_dir),
                  "--stamp",
-                 rebase_path(output_file),
+                 rebase_path(output_file, root_build_dir),
                ] + invoker.sources
 
         forward_variables_from(invoker, [ "testonly" ])
