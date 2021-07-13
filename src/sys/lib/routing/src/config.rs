@@ -101,7 +101,7 @@ pub enum AllowlistEntry {
     /// Example string form in config: "/foo/**", "/foo/bar/**"
     Realm(AbsoluteMoniker),
     /// Allow any components that are in AbsoluteMoniker's collection with the given name. Also a
-    /// prefix match against the target moniker but additionally scoped ot a specific collection.
+    /// prefix match against the target moniker but additionally scoped to a specific collection.
     /// Example string form in config: "/foo/tests:**", "/bootstrap/drivers:**"
     Collection(AbsoluteMoniker, String),
 }
@@ -128,27 +128,26 @@ pub struct SecurityPolicy {
 /// Allowlists for Zircon job policy. Part of runtime security policy.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct JobPolicyAllowlists {
-    /// Absolute monikers for components allowed to be given the ZX_POL_AMBIENT_MARK_VMO_EXEC job
-    /// policy.
+    /// Entries for components allowed to be given the ZX_POL_AMBIENT_MARK_VMO_EXEC job policy.
     ///
     /// Components must request this policy by including "job_policy_ambient_mark_vmo_exec: true" in
     /// their manifest's program object and must be using the ELF runner.
     /// This is equivalent to the v1 'deprecated-ambient-replace-as-executable' feature.
-    pub ambient_mark_vmo_exec: Vec<AbsoluteMoniker>,
+    pub ambient_mark_vmo_exec: Vec<AllowlistEntry>,
 
-    /// Absolute monikers for components allowed to have their original process marked as critical
-    /// to component_manager's job.
+    /// Entries for components allowed to have their original process marked as critical to
+    /// component_manager's job.
     ///
     /// Components must request this critical marking by including "main_process_critical: true" in
     /// their manifest's program object and must be using the ELF runner.
-    pub main_process_critical: Vec<AbsoluteMoniker>,
+    pub main_process_critical: Vec<AllowlistEntry>,
 
-    /// Absolute monikers for components allowed to call zx_process_create directly (e.g., do not
-    /// have ZX_POL_NEW_PROCESS set to ZX_POL_ACTION_DENY).
+    /// Entries for components allowed to call zx_process_create directly (e.g., do not have
+    /// ZX_POL_NEW_PROCESS set to ZX_POL_ACTION_DENY).
     ///
     /// Components must request this policy by including "job_policy_create_raw_processes: true" in
     /// their manifest's program object and must be using the ELF runner.
-    pub create_raw_processes: Vec<AbsoluteMoniker>,
+    pub create_raw_processes: Vec<AllowlistEntry>,
 }
 
 /// The available capability sources for capability allow lists. This is a strict
@@ -214,17 +213,6 @@ impl RuntimeConfig {
         cm_fidl_validator::validate_capabilities(&capabilities)?;
         Ok(capabilities.into_iter().map(FidlIntoNative::fidl_into_native).collect())
     }
-}
-
-fn parse_absolute_monikers_from_strings(
-    strs: &Option<Vec<String>>,
-) -> Result<Vec<AbsoluteMoniker>, Error> {
-    let result: Result<Vec<AbsoluteMoniker>, MonikerError> = if let Some(strs) = strs {
-        strs.iter().map(|s| AbsoluteMoniker::parse_string_without_instances(s)).collect()
-    } else {
-        Ok(Vec::new())
-    };
-    result.context(format!("Moniker parsing error for {:?}", strs))
 }
 
 #[derive(Debug, Clone, Error, PartialEq, Eq)]
@@ -498,12 +486,9 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
 
     fn try_from(security_policy: component_internal::SecurityPolicy) -> Result<Self, Error> {
         let job_policy = if let Some(job_policy) = &security_policy.job_policy {
-            let ambient_mark_vmo_exec =
-                parse_absolute_monikers_from_strings(&job_policy.ambient_mark_vmo_exec)?;
-            let main_process_critical =
-                parse_absolute_monikers_from_strings(&job_policy.main_process_critical)?;
-            let create_raw_processes =
-                parse_absolute_monikers_from_strings(&job_policy.create_raw_processes)?;
+            let ambient_mark_vmo_exec = parse_allowlist_entries(&job_policy.ambient_mark_vmo_exec)?;
+            let main_process_critical = parse_allowlist_entries(&job_policy.main_process_critical)?;
+            let create_raw_processes = parse_allowlist_entries(&job_policy.create_raw_processes)?;
             JobPolicyAllowlists {
                 ambient_mark_vmo_exec,
                 main_process_critical,
@@ -715,14 +700,14 @@ mod tests {
                 security_policy: SecurityPolicy {
                     job_policy: JobPolicyAllowlists {
                         ambient_mark_vmo_exec: vec![
-                            AbsoluteMoniker::root(),
-                            AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
+                            AllowlistEntry::Exact(AbsoluteMoniker::root()),
+                            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
                         ],
                         main_process_critical: vec![
-                            AbsoluteMoniker::from(vec!["something:0", "important:0"]),
+                            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["something:0", "important:0"])),
                         ],
                         create_raw_processes: vec![
-                            AbsoluteMoniker::from(vec!["another:0", "thing:0"]),
+                            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["another:0", "thing:0"])),
                         ],
                     },
                     capability_policy: HashMap::from_iter(vec![
@@ -820,7 +805,9 @@ mod tests {
             root_component_url: None,
             component_id_index_path: None,
             ..component_internal::Config::EMPTY
-        }, MonikerError, MonikerError::InvalidMoniker {rep: "bad".to_string()}),
+        }, AllowlistEntryError, AllowlistEntryError::OtherInvalidMoniker(
+            "bad".into(),
+            MonikerError::InvalidMoniker { rep: "bad".into()})),
         invalid_capability_policy_empty_allowlist_cap => (component_internal::Config {
             debug: None,
             list_children_batch_size: None,

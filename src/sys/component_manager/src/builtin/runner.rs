@@ -128,7 +128,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            config::{JobPolicyAllowlists, SecurityPolicy},
+            config::{AllowlistEntry, JobPolicyAllowlists, SecurityPolicy},
             model::{
                 hooks::Hooks,
                 testing::{mocks::MockRunner, routing_test_helpers::*},
@@ -193,7 +193,9 @@ mod tests {
         let config = Arc::new(RuntimeConfig {
             security_policy: SecurityPolicy {
                 job_policy: JobPolicyAllowlists {
-                    ambient_mark_vmo_exec: vec![AbsoluteMoniker::from(vec!["foo:0"])],
+                    ambient_mark_vmo_exec: vec![AllowlistEntry::Exact(AbsoluteMoniker::from(
+                        vec!["foo:0"],
+                    ))],
                     ..Default::default()
                 },
                 ..Default::default()

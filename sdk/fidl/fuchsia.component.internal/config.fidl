@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.component.internal;
 
 using fuchsia.component;
@@ -111,29 +110,43 @@ table SecurityPolicy {
     3: DebugRegistrationPolicyAllowlists debug_registration_policy;
 };
 
+/// A single entry in an allowlist, expressed in one of three forms:
+///
+///   1. Exact absolute moniker - Most entries should fall under this case,
+///      where the exact absolute monikers of allowed components are listed.
+///      For example, "/foo/bar".
+///   2. Realm - Realms can be allowlisted such that any descendant will be
+///      allowed without being listed explicitly. For example, "/foo/**"
+///      allows any descendant of "/foo" (but not foo itself).
+///   3. Collection - Individual collections can also be allowlisted. For
+///      example, "/foo/bar:**" will allow any child in foo's "bar"
+///      collection and any descendant thereof, but not foo or other
+///      children of foo.
+alias AllowlistEntryMoniker = string:fuchsia.component.MAX_MONIKER_LENGTH;
+
 /// Allowlists for Zircon job policy.
 table JobPolicyAllowlists {
-    /// Absolute monikers for components allowed to be given the ZX_POL_AMBIENT_MARK_VMO_EXEC job
-    /// policy.
+    /// Allowlist entry monikers for components allowed to be given the
+    /// ZX_POL_AMBIENT_MARK_VMO_EXEC job policy.
     ///
     /// Components must request this policy by including "job_policy_ambient_mark_vmo_exec: true" in
     /// their CML's `program` section and must be using the ELF runner.
     /// This is equivalent to the v1 'deprecated-ambient-replace-as-executable' feature.
-    1: vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX_ALLOWLIST_SIZE ambient_mark_vmo_exec;
+    1: vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE ambient_mark_vmo_exec;
 
-    /// Absolute monikers for components allowed to have their original process marked as critical
-    /// to component_manager's job.
+    /// Allowlist entry monikers for components allowed to have their original process
+    /// marked as critical to component_manager's job.
     ///
     /// Components must request this critical marking by including "main_process_critical: true" in
     /// their CML's `program` section and must be using the ELF runner.
-    2: vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX_ALLOWLIST_SIZE main_process_critical;
+    2: vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE main_process_critical;
 
-    /// Absolute monikers for components allowed to call zx_process_create directly (e.g., do not
-    /// have ZX_POL_NEW_PROCESS set to ZX_POL_ACTION_DENY).
+    /// Allowlist entry monikers for components allowed to call zx_process_create directly
+    /// (e.g., do not have ZX_POL_NEW_PROCESS set to ZX_POL_ACTION_DENY).
     ///
     /// Components must request this policy by including "job_policy_create_raw_processes: true" in
     /// their manifest's program object and must be using the ELF runner.
-    3: vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX_ALLOWLIST_SIZE create_raw_processes;
+    3: vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE create_raw_processes;
 };
 
 /// Determine what content to expose through component manager's outgoing
@@ -195,21 +208,9 @@ table CapabilityAllowlistEntry {
     /// with any other properties required by a particular capability type.
     3: AllowlistedCapability capability;
 
-    /// The set of absolute monikers that are allowed to use this specific
-    /// capability.
-    /// The monikers that are allowed to use this specific capability. Entries
-    /// can take one of three forms:
-    ///   1. Exact absolute moniker - Most entries should fall under this case,
-    ///      where the exact absolute monikers of allowed components are listed.
-    ///      For example, "/foo/bar".
-    ///   2. Realm - Realms can be allowlisted such that any descendant will be
-    ///      allowed without being listed explicitly. For example, "/foo/**"
-    ///      allows any descendant of "/foo" (but not foo itself).
-    ///   3. Collection - Individual collections can also be allowlisted. For
-    ///      example, "/foo/bar:**" will allow any child in foo's "bar"
-    ///      collection and any descendant thereof, but not foo or other
-    ///      children of foo.
-    4: vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX_ALLOWLIST_SIZE target_monikers;
+    /// The set of components, described by either exact absolute monikers, realm, or collection,
+    /// that are allowed to use this specific capability.
+    4: vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE target_monikers;
 
     /// The original source type of this capability, self or framework.
     5: fuchsia.sys2.Ref source;

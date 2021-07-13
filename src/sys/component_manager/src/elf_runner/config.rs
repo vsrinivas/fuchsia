@@ -147,7 +147,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            config::{JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
+            config::{AllowlistEntry, JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
             model::policy::{PolicyError, ScopedPolicyChecker},
         },
         fidl_fuchsia_data as fdata,
@@ -165,9 +165,9 @@ mod tests {
             Arc::new(RuntimeConfig {
                 security_policy: SecurityPolicy {
                     job_policy: JobPolicyAllowlists {
-                        ambient_mark_vmo_exec: vec![TEST_MONIKER.clone()],
-                        main_process_critical: vec![TEST_MONIKER.clone()],
-                        create_raw_processes: vec![TEST_MONIKER.clone()],
+                        ambient_mark_vmo_exec: vec![AllowlistEntry::Exact(TEST_MONIKER.clone())],
+                        main_process_critical: vec![AllowlistEntry::Exact(TEST_MONIKER.clone())],
+                        create_raw_processes: vec![AllowlistEntry::Exact(TEST_MONIKER.clone())],
                     },
                     capability_policy: HashMap::new(),
                     debug_capability_policy: HashMap::new(),

@@ -587,7 +587,7 @@ mod tests {
         crate::model::policy::ScopedPolicyChecker,
         crate::{
             builtin::runner::BuiltinRunnerFactory,
-            config::{JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
+            config::{AllowlistEntry, JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
             model::testing::test_helpers::{create_fs_with_mock_logsink, MockServiceRequest},
         },
         anyhow::Error,
@@ -1256,7 +1256,9 @@ mod tests {
         let config = Arc::new(RuntimeConfig {
             security_policy: SecurityPolicy {
                 job_policy: JobPolicyAllowlists {
-                    ambient_mark_vmo_exec: vec![AbsoluteMoniker::from(vec!["foo:0"])],
+                    ambient_mark_vmo_exec: vec![AllowlistEntry::Exact(AbsoluteMoniker::from(
+                        vec!["foo:0"],
+                    ))],
                     ..Default::default()
                 },
                 ..Default::default()
@@ -1333,12 +1335,13 @@ mod tests {
             program
         });
 
-        // Config does not allowlist any monikers to be marked as critical
+        // Config does not allowlist any monikers to be marked as critical without being
+        // allowlisted, so make sure we permit this one.
         let config = Arc::new(RuntimeConfig {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             security_policy: SecurityPolicy {
                 job_policy: JobPolicyAllowlists {
-                    main_process_critical: vec![AbsoluteMoniker::from(vec![])],
+                    main_process_critical: vec![AllowlistEntry::Exact(AbsoluteMoniker::root())],
                     ..Default::default()
                 },
                 ..Default::default()
