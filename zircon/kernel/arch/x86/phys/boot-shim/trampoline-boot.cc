@@ -9,11 +9,13 @@
 #include <lib/arch/x86/standard-segments.h>
 #include <lib/arch/zbi-boot.h>
 #include <lib/memalloc/allocator.h>
+#include <lib/zbitl/items/mem_config.h>
 
 #include <cstddef>
 #include <cstring>
 
 #include <ktl/byte.h>
+#include <phys/page-table.h>
 #include <phys/symbolize.h>
 
 // This describes the "trampoline" area that is set up in some memory that's
@@ -155,14 +157,34 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
   // space is safely allocated in our present reckoning so it's disjoint from
   // the data and kernel image memory and from this shim's own image, but as
   // soon as we boot into the new kernel it will be reclaimable memory.
-  auto result = BootZbi::Load(extra_data_capacity + Trampoline::size(), kFixedLoadAddress);
-  if (result.is_error()) {
+  if (auto result = BootZbi::Load(extra_data_capacity + Trampoline::size(), kFixedLoadAddress);
+      result.is_error()) {
     return result.take_error();
   }
 
   auto extra_space = DataZbi().storage().subspan(DataZbi().size_bytes());
   auto trampoline = extra_space.subspan(extra_data_capacity);
   trampoline_ = new (trampoline.data()) Trampoline(trampoline.size());
+
+  // In the x86-64 case, we set up page-tables out of the .bss, which must
+  // persist after booting the next kernel payload; however, this part of the
+  // .bss might be clobbered by that self-same fixed load image. To avoid that
+  // issue, now that physical memory management as been bootstrapped, we re-set
+  // up the address space out of the allocator, which will avoid allocating
+  // from out of the load image's range that we just reserved.
+#ifdef __x86_64__
+  // TODO(fxbug.dev/77359): Reaching into the ZBI here is a layering violation.
+  // This will be removed once ArchSetUpAddressSpaceLate() no longer needs a
+  // zbitl::MemRangeTable as input.
+  zbitl::View<zbitl::ByteView> view(DataZbi().storage());
+  zbitl::MemRangeTable table;
+  if (auto result = zbitl::MemRangeTable::FromView(view); result.is_error()) {
+    return fitx::error{BootZbi::Error{.zbi_error = std::move(result).error_value()}};
+  } else {
+    table = std::move(result).value();
+  }
+  ArchSetUpAddressSpaceLate(table);
+#endif
 
   return fitx::ok();
 }

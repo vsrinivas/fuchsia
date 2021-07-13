@@ -8,7 +8,7 @@
 #include <zircon/assert.h>
 
 #include <phys/allocation.h>
-#include <phys/arch.h>
+#include <phys/page-table.h>
 #include <phys/symbolize.h>
 
 #include "legacy-boot.h"

@@ -68,4 +68,7 @@ inline void ApplyRelocations() {
 // found for the allocator.
 void InitMemory(void* bootloader_data);
 
+// Perform any architecture-specific set-up.
+void ArchSetUp();
+
 #endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_MAIN_H_

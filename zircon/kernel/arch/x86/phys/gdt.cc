@@ -6,7 +6,7 @@
 
 #include <lib/arch/x86/standard-segments.h>
 
-#include <phys/arch.h>
+#include <phys/main.h>
 
 namespace {
 

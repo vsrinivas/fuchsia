@@ -48,7 +48,7 @@ if (current_toolchain == default_toolchain) {
       ]
       deps = [
         "//zircon/kernel/lib/arch",
-        "//zircon/kernel/phys:arch-header",
+        "//zircon/kernel/phys:main",
       ]
     }
   } else if (toolchain_environment == "kernel.phys32") {
@@ -179,7 +179,7 @@ if (current_toolchain == default_toolchain) {
       deps = [
         ":address-space",
         "//zircon/kernel/phys:allocation",
-        "//zircon/kernel/phys:arch-header",
+        "//zircon/kernel/phys:page-table",
         "//zircon/kernel/phys:symbolize",
         "//zircon/kernel/phys/lib/memalloc",
         "//zircon/system/ulib/hwreg",
@@ -282,7 +282,7 @@ if (current_toolchain == default_toolchain) {
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/phys:allocation",
-      "//zircon/kernel/phys:arch-header",
+      "//zircon/kernel/phys:page-table",
       "//zircon/kernel/phys:symbolize",
       "//zircon/kernel/phys/lib/memalloc",
       "//zircon/kernel/phys/lib/page-table",
@@ -318,7 +318,7 @@ phys_qemu_test("paging-test") {
   deps = [
     ":legacy-boot",
     "//zircon/kernel/phys:allocation",
-    "//zircon/kernel/phys:arch-header",
+    "//zircon/kernel/phys:page-table",
     "//zircon/kernel/phys:symbolize",
     "//zircon/kernel/phys/test:test-main",
   ]

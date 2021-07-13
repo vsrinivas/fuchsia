@@ -6,13 +6,17 @@
 
 #include <lib/arch/arm64/system.h>
 #include <lib/arch/cache.h>
+#include <lib/memalloc/allocator.h>
 #include <lib/page-table/arch/arm64/builder.h>
 #include <lib/page-table/builder.h>
 #include <lib/page-table/types.h>
+#include <lib/zbitl/items/mem_config.h>
+#include <zircon/boot/image.h>
 
 #include <ktl/byte.h>
 #include <ktl/optional.h>
-#include <phys/arch.h>
+#include <phys/allocation.h>
+#include <phys/page-table.h>
 
 namespace {
 
@@ -106,35 +110,6 @@ void EnablePaging(Paddr root) {
   }
 }
 
-// A page_table::MemoryManager that uses the given allocator, and
-// assumes a 1:1 mapping from physical addresses to host virtual
-// addresses.
-class BootstrapMemoryManager final : public page_table::MemoryManager {
- public:
-  explicit BootstrapMemoryManager(memalloc::Allocator& allocator) : allocator_(&allocator) {}
-
-  ktl::byte* Allocate(size_t size, size_t alignment) final {
-    zx::status<uint64_t> result = allocator_->Allocate(size, alignment);
-    if (result.is_error()) {
-      return nullptr;
-    }
-    return reinterpret_cast<ktl::byte*>(result.value());
-  }
-
-  Paddr PtrToPhys(ktl::byte* ptr) final {
-    // We have a 1:1 virtual/physical mapping.
-    return Paddr(reinterpret_cast<uint64_t>(ptr));
-  }
-
-  ktl::byte* PhysToPtr(Paddr phys) final {
-    // We have a 1:1 virtual/physical mapping.
-    return reinterpret_cast<ktl::byte*>(phys.value());
-  }
-
- private:
-  memalloc::Allocator* allocator_;
-};
-
 void CreateBootstapPageTable(page_table::MemoryManager& allocator,
                              const zbitl::MemRangeTable& memory_map) {
   // Create a page table data structure.
@@ -172,7 +147,9 @@ void CreateBootstapPageTable(page_table::MemoryManager& allocator,
 
 }  // namespace
 
-void ArchSetUpAddressSpace(memalloc::Allocator& allocator, const zbitl::MemRangeTable& table) {
-  BootstrapMemoryManager manager(allocator);
+void ArchSetUpAddressSpaceEarly(const zbitl::MemRangeTable& table) {
+  AllocationMemoryManager manager(Allocation::GetAllocator());
   CreateBootstapPageTable(manager, table);
 }
+
+void ArchSetUpAddressSpaceLate(const zbitl::MemRangeTable& table) {}

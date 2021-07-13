@@ -135,7 +135,6 @@ if (toolchain_environment == "kernel.phys" ||
       "zbi-main.cc",
     ]
     deps = [
-      ":arch-header",
       ":main",
       ":zbi-memory",
       "//zircon/kernel/arch/$zircon_cpu/phys",
@@ -167,17 +166,18 @@ if (toolchain_environment == "kernel.phys" ||
     }
   }
 
-  # Transitive dependencies for the <phys/arch.h> header.
-  source_set("arch-header") {
-    public = [ "include/phys/arch.h" ]
+  # Transitive dependencies for the <phys/page-table.h> header.
+  source_set("page-table") {
+    public = [ "include/phys/page-table.h" ]
+    sources = [ "page-table.cc" ]
 
     public_configs = [ ":includes" ]
 
     public_deps = [
-      "//zircon/kernel/lib/libc",
-      "//zircon/kernel/phys/lib/memalloc",
-      "//zircon/system/ulib/zbitl",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/phys/lib/page-table",
     ]
+    deps = [ "//zircon/kernel/phys/lib/memalloc" ]
   }
 
   # This is linked into the special-case phys_executable() tests that
@@ -193,6 +193,7 @@ if (toolchain_environment == "kernel.phys" ||
     deps = [
       ":main",
       "//zircon/kernel/phys/lib/memalloc",
+      "//zircon/kernel/phys/lib/page-table",
     ]
     public_deps = [
       "//zircon/kernel/lib/ktl",
@@ -231,8 +232,8 @@ if (toolchain_environment == "kernel.phys" ||
     sources = [ "zbi-memory.cc" ]
     deps = [
       ":allocation",
-      ":arch-header",
       ":main",
+      ":page-table",
       "//zircon/kernel/arch/$zircon_cpu/phys:address-space",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/phys/lib/memalloc",

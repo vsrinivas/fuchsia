@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <phys/arch.h>
+#include <phys/main.h>
 
 void ArchSetUp() {
   // Nothing.

@@ -13,7 +13,6 @@
 
 #include <ktl/byte.h>
 #include <ktl/span.h>
-#include <phys/arch.h>
 #include <phys/main.h>
 
 FILE FILE::stdout_;

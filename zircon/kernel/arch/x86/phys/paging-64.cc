@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/memalloc/allocator.h>
 #include <lib/page-table/types.h>
 #include <stdio.h>
 
@@ -11,7 +12,8 @@
 #include <ktl/array.h>
 #include <ktl/byte.h>
 #include <ktl/span.h>
-#include <phys/arch.h>
+#include <phys/allocation.h>
+#include <phys/page-table.h>
 
 #include "address-space.h"
 
@@ -85,8 +87,13 @@ class BootstrapMemoryManager final : public page_table::MemoryManager {
 
 }  // namespace
 
-void ArchSetUpAddressSpace(memalloc::Allocator& allocator, const zbitl::MemRangeTable& table) {
-  BootstrapMemoryManager bootstrap_allocator(gBootstrapMemory);
-  InstallIdentityMapPageTables(bootstrap_allocator, table);
-  bootstrap_allocator.Release(allocator);
+void ArchSetUpAddressSpaceEarly(const zbitl::MemRangeTable& table) {
+  BootstrapMemoryManager manager(gBootstrapMemory);
+  InstallIdentityMapPageTables(manager, table);
+  manager.Release(Allocation::GetAllocator());
+}
+
+void ArchSetUpAddressSpaceLate(const zbitl::MemRangeTable& table) {
+  AllocationMemoryManager manager(Allocation::GetAllocator());
+  InstallIdentityMapPageTables(manager, table);
 }

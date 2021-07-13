@@ -14,8 +14,8 @@
 
 #include <ktl/string_view.h>
 #include <phys/allocation.h>
-#include <phys/arch.h>
 #include <phys/main.h>
+#include <phys/page-table.h>
 
 namespace {
 
@@ -82,5 +82,5 @@ void InitMemory(void* zbi) {
   Allocation::InitReservedRanges();
 
   // Set up our own address space.
-  ArchSetUpAddressSpace(Allocation::GetAllocator(), *memory);
+  ArchSetUpAddressSpaceEarly(*memory);
 }

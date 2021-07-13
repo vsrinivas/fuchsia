@@ -13,7 +13,7 @@
 
 #include <ktl/limits.h>
 #include <phys/allocation.h>
-#include <phys/arch.h>
+#include <phys/page-table.h>
 #include <phys/symbolize.h>
 #include <pretty/sizes.h>
 
@@ -99,5 +99,5 @@ void EnablePaging() {
   auto mem_config = cpp20::as_bytes(gLegacyBoot.mem_config);
   auto table = zbitl::MemRangeTable::FromSpan(ZBI_TYPE_MEM_CONFIG, mem_config);
   ZX_ASSERT(table.is_ok());
-  ArchSetUpAddressSpace(Allocation::GetAllocator(), table.value());
+  ArchSetUpAddressSpaceLate(table.value());
 }

@@ -12,49 +12,14 @@
 
 #include <hwreg/x86msr.h>
 #include <phys/allocation.h>
-#include <phys/arch.h>
+#include <phys/page-table.h>
 #include <phys/symbolize.h>
 
 #include "address-space.h"
 
-namespace {
+void ArchSetUpAddressSpaceEarly(const zbitl::MemRangeTable& table) {}
 
-// On x86-32, the page tables are set up before paging is enabled, so there is
-// no bootstrapping issue with accessing page table memory.  Conversely, the
-// fixed .bss location based on the fixed 1 MiB load address may overlap with
-// areas that should be reserved.  So it's preferable to go directly to the
-// physical page allocator that respects explicitly reserved ranges.
-
-class AllocationMemoryManager final : public page_table::MemoryManager {
- public:
-  explicit AllocationMemoryManager(memalloc::Allocator& allocator) : allocator_(allocator) {}
-
-  ktl::byte* Allocate(size_t size, size_t alignment) final {
-    auto result = allocator_.Allocate(size, alignment);
-    if (result.is_error()) {
-      printf("Cannot allocate %zu bytes @ %zu for bootstrap page tables!\n", size, alignment);
-      return nullptr;
-    }
-    return reinterpret_cast<ktl::byte*>(static_cast<uintptr_t>(result.value()));
-  }
-
-  page_table::Paddr PtrToPhys(ktl::byte* ptr) final {
-    // We have a 1:1 virtual/physical mapping.
-    return page_table::Paddr(reinterpret_cast<uintptr_t>(ptr));
-  }
-
-  ktl::byte* PhysToPtr(page_table::Paddr phys) final {
-    // We have a 1:1 virtual/physical mapping.
-    return reinterpret_cast<ktl::byte*>(static_cast<uintptr_t>(phys.value()));
-  }
-
- private:
-  memalloc::Allocator& allocator_;
-};
-
-}  // namespace
-
-void ArchSetUpAddressSpace(memalloc::Allocator& allocator, const zbitl::MemRangeTable& table) {
+void ArchSetUpAddressSpaceLate(const zbitl::MemRangeTable& table) {
   ZX_ASSERT_MSG(arch::BootCpuid<arch::CpuidAmdFeatureFlagsD>().lm(),
                 "CPU does not support 64-bit mode!");
   ZX_ASSERT_MSG(arch::BootCpuid<arch::CpuidFeatureFlagsD>().pse(), "x86-64 requires PSE support!");
@@ -81,8 +46,14 @@ void ArchSetUpAddressSpace(memalloc::Allocator& allocator, const zbitl::MemRange
       .Write();
 
   // Set up the identity-mapping page tables.  This installs the %cr3 pointer.
-  AllocationMemoryManager pt_allocator(allocator);
-  InstallIdentityMapPageTables(pt_allocator, table);
+  //
+  // On x86-32, the page tables are set up before paging is enabled, so there is
+  // no bootstrapping issue with accessing page table memory.  Conversely, the
+  // fixed .bss location based on the fixed 1 MiB load address may overlap with
+  // areas that should be reserved.  So it's preferable to go directly to the
+  // physical page allocator that respects explicitly reserved ranges.
+  AllocationMemoryManager manager(Allocation::GetAllocator());
+  InstallIdentityMapPageTables(manager, table);
 
   // Now actually turn on paging.  This affects us immediately in 32-bit mode,
   // as well as being mandatory for 64-bit mode.

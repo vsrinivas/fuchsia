@@ -19,7 +19,8 @@ if (toolchain_environment == "kernel.phys") {
     include_dirs = [ "//." ]
     deps = [
       "//zircon/kernel/lib/arch",
-      "//zircon/kernel/phys:arch-header",
+      "//zircon/kernel/phys:allocation",
+      "//zircon/kernel/phys:page-table",
       "//zircon/kernel/phys/lib/memalloc",
       "//zircon/kernel/phys/lib/page-table",
       "//zircon/system/ulib/zbitl",
@@ -34,7 +35,7 @@ if (toolchain_environment == "kernel.phys") {
     include_dirs = [ "//zircon/.." ]
     deps = [
       "//zircon/kernel/lib/arch",
-      "//zircon/kernel/phys:arch-header",
+      "//zircon/kernel/phys:main",
       "//zircon/system/ulib/static-pie",
     ]
   }
