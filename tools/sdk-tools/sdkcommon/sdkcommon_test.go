@@ -1131,7 +1131,9 @@ func TestRunFFXDoctor(t *testing.T) {
 }
 
 func TestMapToDeviceConfig(t *testing.T) {
-
+	testSDK := SDKProperties{
+		dataPath: t.TempDir(),
+	}
 	tests := []struct {
 		jsonString   string
 		deviceConfig DeviceConfig
@@ -1209,7 +1211,7 @@ func TestMapToDeviceConfig(t *testing.T) {
 			t.Errorf("Error parsing json for %v: %v", i, err)
 		}
 
-		actualDevice, ok := mapToDeviceConfig(data[test.deviceName])
+		actualDevice, ok := testSDK.mapToDeviceConfig(data[test.deviceName])
 		if !ok {
 			t.Errorf("Error mapping to DeviceConfig %v: %v", i, data)
 		}

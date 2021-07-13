@@ -914,7 +914,7 @@ func (sdk SDKProperties) GetDeviceConfigurations() ([]DeviceConfig, error) {
 	if deviceConfigMap, ok := configData[deviceConfigurationKey].(map[string]interface{}); ok {
 		for k, v := range deviceConfigMap {
 			if !isReservedProperty(k) {
-				if device, ok := mapToDeviceConfig(v); ok {
+				if device, ok := sdk.mapToDeviceConfig(v); ok {
 					if defaultDeviceName == device.DeviceName {
 						device.IsDefault = true
 						visitedDefaultDevice = true
@@ -954,7 +954,7 @@ func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, erro
 	}
 
 	if deviceData, ok := configData[dataKey]; ok {
-		if deviceConfig, ok := mapToDeviceConfig(deviceData); ok {
+		if deviceConfig, ok := sdk.mapToDeviceConfig(deviceData); ok {
 			// Skip checking ffx for default device.
 			defaultDeviceName, err := sdk.getDefaultDeviceName(true)
 			if err != nil {
@@ -1270,12 +1270,13 @@ func isReservedProperty(property string) bool {
 }
 
 // mapToDeviceConfig converts the map returned by json into a DeviceConfig struct.
-func mapToDeviceConfig(data interface{}) (DeviceConfig, bool) {
+func (sdk SDKProperties) mapToDeviceConfig(data interface{}) (DeviceConfig, bool) {
 	var (
-		device     DeviceConfig
-		deviceData map[string]interface{}
-		ok         bool
-		value      string
+		device      DeviceConfig
+		deviceData  map[string]interface{}
+		invalidKeys []string
+		ok          bool
+		value       string
 	)
 
 	if deviceData, ok = data.(map[string]interface{}); ok {
@@ -1291,7 +1292,7 @@ func mapToDeviceConfig(data interface{}) (DeviceConfig, bool) {
 			if val, ok := deviceData[key]; ok {
 				value = fmt.Sprintf("%v", val)
 			} else {
-				fmt.Fprintf(os.Stderr, "Cannot get %v from %v", key, deviceData)
+				invalidKeys = append(invalidKeys, key)
 				continue
 			}
 			switch key {
@@ -1311,6 +1312,9 @@ func mapToDeviceConfig(data interface{}) (DeviceConfig, bool) {
 				device.SSHPort = value
 			}
 		}
+	}
+	if len(invalidKeys) > 0 {
+		fmt.Fprintf(os.Stderr, "Cannot read the data for the following keys: %v. Verify that %v is a valid config file.\n", strings.Join(invalidKeys, ", "), sdk.globalPropertiesFilename)
 	}
 	return device, ok
 }
