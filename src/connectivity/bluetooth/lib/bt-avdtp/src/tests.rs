@@ -284,6 +284,54 @@ fn command_timeout() {
     assert!(exec.run_until_stalled(&mut another_fut).is_pending());
 }
 
+#[test]
+fn command_response_can_be_discarded() {
+    let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let response_fut = peer.discover();
+
+    // Command should be sent before we poll a response.
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x01, received[1]); // 0x01 = Discover
+
+    // Responding to the first command after it timed out doesn't complete the new command
+    let txlabel_raw = received[0] & 0xF0;
+    let response_first: &[u8] = &[
+        txlabel_raw | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x01,                         // Discover
+        0x3E << 2 | 0x0 << 1,         // SEID (3E), Not In Use (0b0)
+        0x00 << 4 | 0x1 << 3,         // Audio (0x00), Sink (0x01)
+    ];
+
+    // Should be able to drop the future without ever polling it.
+    drop(response_fut);
+
+    // Make another discovery, and it should be sent.
+    let mut another_fut = Box::pin(peer.discover());
+    let received = recv_remote(&remote).unwrap();
+
+    // Writing the response to the first discovery will get ignored.
+    assert!(remote.as_ref().write(response_first).is_ok());
+
+    assert!(exec.run_until_stalled(&mut another_fut).is_pending());
+
+    // Responding to the first command after it timed out doesn't complete the new command
+    let txlabel_raw = received[0] & 0xF0;
+    let response_second: &[u8] = &[
+        txlabel_raw | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x01,                         // Discover
+        0x3E << 2 | 0x0 << 1,         // SEID (3E), Not In Use (0b0)
+        0x00 << 4 | 0x1 << 3,         // Audio (0x00), Sink (0x01)
+    ];
+
+    assert!(remote.as_ref().write(response_second).is_ok());
+
+    // Finish out the discovery we haven't dropped.
+    assert!(exec.run_until_stalled(&mut another_fut).is_ready());
+}
+
 macro_rules! incoming_cmd_length_fail_test {
     ($test_name:ident, $signal_value:expr, $length:expr) => {
         #[test]

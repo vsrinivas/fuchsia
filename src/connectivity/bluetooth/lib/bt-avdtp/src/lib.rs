@@ -3,20 +3,28 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_async::{DurationExt, TimeoutExt},
+    fuchsia_async::{DurationExt, OnTimeout, TimeoutExt},
     fuchsia_bluetooth::types::Channel,
     fuchsia_zircon::{self as zx, Duration},
     futures::{
-        future::FusedFuture,
+        future::{FusedFuture, MaybeDone},
         ready,
         stream::Stream,
         task::{Context, Poll, Waker},
+        Future, FutureExt, TryFutureExt,
     },
     log::{info, trace, warn},
     packet_encoding::{Decodable, Encodable},
     parking_lot::Mutex,
     slab::Slab,
-    std::{collections::VecDeque, convert::TryFrom, marker::Unpin, mem, pin::Pin, sync::Arc},
+    std::{
+        collections::VecDeque,
+        convert::TryFrom,
+        marker::{PhantomData, Unpin},
+        mem,
+        pin::Pin,
+        sync::Arc,
+    },
 };
 
 #[cfg(test)]
@@ -46,7 +54,7 @@ pub use crate::{
 ///
 /// Responses are sent using responders that are included in the request stream from the connected
 /// peer.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Peer {
     inner: Arc<PeerInner>,
 }
@@ -82,13 +90,8 @@ impl Peer {
     /// Asynchronously returns a the reply in a vector of endpoint information.
     /// Error will be RemoteRejected with the error code returned by the remote
     /// if the remote peer rejected the command.
-    pub async fn discover(&self) -> Result<Vec<StreamInformation>> {
-        let response: Result<DiscoverResponse> =
-            self.send_command(SignalIdentifier::Discover, &[]).await;
-        match response {
-            Ok(response) => Ok(response.endpoints),
-            Err(e) => Err(e),
-        }
+    pub fn discover(&self) -> impl Future<Output = Result<Vec<StreamInformation>>> {
+        self.send_command::<DiscoverResponse>(SignalIdentifier::Discover, &[]).ok_into()
     }
 
     /// Send a Get Capabilities (Sec 8.7) command to the remote peer for the
@@ -98,17 +101,16 @@ impl Peer {
     /// In general, Get All Capabilities should be preferred to this command.
     /// Error will be RemoteRejected with the error code reported by the remote
     /// if the remote peer rejects the command.
-    pub async fn get_capabilities<'a>(
-        &'a self,
-        stream_id: &'a StreamEndpointId,
-    ) -> Result<Vec<ServiceCapability>> {
+    pub fn get_capabilities(
+        &self,
+        stream_id: &StreamEndpointId,
+    ) -> impl Future<Output = Result<Vec<ServiceCapability>>> {
         let stream_params = &[stream_id.to_msg()];
-        let response: Result<GetCapabilitiesResponse> =
-            self.send_command(SignalIdentifier::GetCapabilities, stream_params).await;
-        match response {
-            Ok(response) => Ok(response.capabilities),
-            Err(e) => Err(e),
-        }
+        self.send_command::<GetCapabilitiesResponse>(
+            SignalIdentifier::GetCapabilities,
+            stream_params,
+        )
+        .ok_into()
     }
 
     /// Send a Get All Capabilities (Sec 8.8) command to the remote peer for the
@@ -117,17 +119,16 @@ impl Peer {
     /// reported.
     /// Error will be RemoteRejected with the error code reported by the remote
     /// if the remote peer rejects the command.
-    pub async fn get_all_capabilities<'a>(
-        &'a self,
-        stream_id: &'a StreamEndpointId,
-    ) -> Result<Vec<ServiceCapability>> {
+    pub fn get_all_capabilities(
+        &self,
+        stream_id: &StreamEndpointId,
+    ) -> impl Future<Output = Result<Vec<ServiceCapability>>> {
         let stream_params = &[stream_id.to_msg()];
-        let response: Result<GetCapabilitiesResponse> =
-            self.send_command(SignalIdentifier::GetAllCapabilities, stream_params).await;
-        match response {
-            Ok(response) => Ok(response.capabilities),
-            Err(e) => Err(e),
-        }
+        self.send_command::<GetCapabilitiesResponse>(
+            SignalIdentifier::GetAllCapabilities,
+            stream_params,
+        )
+        .ok_into()
     }
 
     /// Send a Stream Configuration (Sec 8.9) command to the remote peer for the
@@ -136,12 +137,12 @@ impl Peer {
     /// Panics if `capabilities` is empty.
     /// Returns Ok(()) if the command was accepted, and RemoteConfigRejected
     /// if the remote refused.
-    pub async fn set_configuration<'a>(
-        &'a self,
-        stream_id: &'a StreamEndpointId,
-        local_stream_id: &'a StreamEndpointId,
-        capabilities: &'a [ServiceCapability],
-    ) -> Result<()> {
+    pub fn set_configuration(
+        &self,
+        stream_id: &StreamEndpointId,
+        local_stream_id: &StreamEndpointId,
+        capabilities: &[ServiceCapability],
+    ) -> impl Future<Output = Result<()>> {
         assert!(!capabilities.is_empty(), "must set at least one capability");
         let mut params: Vec<u8> = Vec::new();
         params.resize(capabilities.iter().fold(2, |a, x| a + x.encoded_len()), 0);
@@ -149,12 +150,14 @@ impl Peer {
         params[1] = local_stream_id.to_msg();
         let mut idx = 2;
         for capability in capabilities {
-            capability.encode(&mut params[idx..])?;
+            if let Err(e) = capability.encode(&mut params[idx..]) {
+                return futures::future::err(e).left_future();
+            }
             idx += capability.encoded_len();
         }
-        let response: Result<SimpleResponse> =
-            self.send_command(SignalIdentifier::SetConfiguration, &params).await;
-        response.and(Ok(()))
+        self.send_command::<SimpleResponse>(SignalIdentifier::SetConfiguration, &params)
+            .ok_into()
+            .right_future()
     }
 
     /// Send a Get Stream Configuration (Sec 8.10) command to the remote peer
@@ -163,17 +166,16 @@ impl Peer {
     /// configured between these two peers.
     /// Error will be RemoteRejected with the error code reported by the remote
     /// if the remote peer rejects this command.
-    pub async fn get_configuration<'a>(
-        &'a self,
-        stream_id: &'a StreamEndpointId,
-    ) -> Result<Vec<ServiceCapability>> {
+    pub fn get_configuration(
+        &self,
+        stream_id: &StreamEndpointId,
+    ) -> impl Future<Output = Result<Vec<ServiceCapability>>> {
         let stream_params = &[stream_id.to_msg()];
-        let response: Result<GetCapabilitiesResponse> =
-            self.send_command(SignalIdentifier::GetConfiguration, stream_params).await;
-        match response {
-            Ok(response) => Ok(response.capabilities),
-            Err(e) => Err(e),
-        }
+        self.send_command::<GetCapabilitiesResponse>(
+            SignalIdentifier::GetConfiguration,
+            stream_params,
+        )
+        .ok_into()
     }
 
     /// Send a Stream Reconfigure (Sec 8.11) command to the remote peer for the
@@ -184,11 +186,11 @@ impl Peer {
     /// Panics if there are no capabilities to configure.
     /// Returns Ok(()) if the command was accepted, and RemoteConfigRejected
     /// if the remote refused.
-    pub async fn reconfigure<'a>(
-        &'a self,
-        stream_id: &'a StreamEndpointId,
-        capabilities: &'a [ServiceCapability],
-    ) -> Result<()> {
+    pub fn reconfigure(
+        &self,
+        stream_id: &StreamEndpointId,
+        capabilities: &[ServiceCapability],
+    ) -> impl Future<Output = Result<()>> {
         assert!(!capabilities.is_empty(), "must set at least one capability");
         let mut params: Vec<u8> = Vec::new();
         params.resize(capabilities.iter().fold(1, |a, x| a + x.encoded_len()), 0);
@@ -196,25 +198,25 @@ impl Peer {
         let mut idx = 1;
         for capability in capabilities {
             if !capability.is_application() {
-                return Err(Error::Encoding);
+                return futures::future::err(Error::Encoding).left_future();
             }
-            capability.encode(&mut params[idx..])?;
+            if let Err(e) = capability.encode(&mut params[idx..]) {
+                return futures::future::err(e).left_future();
+            }
             idx += capability.encoded_len();
         }
-        let response: Result<SimpleResponse> =
-            self.send_command(SignalIdentifier::Reconfigure, &params).await;
-        response.and(Ok(()))
+        self.send_command::<SimpleResponse>(SignalIdentifier::Reconfigure, &params)
+            .ok_into()
+            .right_future()
     }
 
     /// Send a Open Stream Command (Sec 8.12) to the remote peer for the given
     /// `stream_id`.
     /// Returns Ok(()) if the command is accepted, and RemoteRejected if the
     /// remote peer rejects the command with the code returned by the remote.
-    pub async fn open<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<()> {
+    pub fn open(&self, stream_id: &StreamEndpointId) -> impl Future<Output = Result<()>> {
         let stream_params = &[stream_id.to_msg()];
-        let response: Result<SimpleResponse> =
-            self.send_command(SignalIdentifier::Open, stream_params).await;
-        response.and(Ok(()))
+        self.send_command::<SimpleResponse>(SignalIdentifier::Open, stream_params).ok_into()
     }
 
     /// Send a Start Stream Command (Sec 8.13) to the remote peer for all the
@@ -222,25 +224,23 @@ impl Peer {
     /// Returns Ok(()) if the command is accepted, and RemoteStreamRejected
     /// with the stream endpoint id and error code reported by the remote if
     /// the remote signals a failure.
-    pub async fn start<'a>(&'a self, stream_ids: &'a [StreamEndpointId]) -> Result<()> {
+    pub fn start(&self, stream_ids: &[StreamEndpointId]) -> impl Future<Output = Result<()>> {
         let mut stream_params = Vec::with_capacity(stream_ids.len());
         for stream_id in stream_ids {
             stream_params.push(stream_id.to_msg());
         }
-        let response: Result<SimpleResponse> =
-            self.send_command(SignalIdentifier::Start, &stream_params).await;
-        response.and(Ok(()))
+        self.send_command::<SimpleResponse>(SignalIdentifier::Start, &stream_params).ok_into()
     }
 
     /// Send a Close Stream Command (Sec 8.14) to the remote peer for the given
     /// `stream_id`.
     /// Returns Ok(()) if the command is accepted, and RemoteRejected if the
     /// remote peer rejects the command with the code returned by the remote.
-    pub async fn close<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<()> {
+    pub fn close(&self, stream_id: &StreamEndpointId) -> impl Future<Output = Result<()>> {
         let stream_params = &[stream_id.to_msg()];
-        let response: Result<SimpleResponse> =
-            self.send_command(SignalIdentifier::Close, stream_params).await;
-        response.and(Ok(()))
+        let response: CommandResponseFut<SimpleResponse> =
+            self.send_command::<SimpleResponse>(SignalIdentifier::Close, stream_params);
+        response.ok_into()
     }
 
     /// Send a Suspend Command (Sec 8.15) to the remote peer for all the
@@ -248,41 +248,37 @@ impl Peer {
     /// Returns Ok(()) if the command is accepted, and RemoteStreamRejected
     /// with the stream endpoint id and error code reported by the remote if
     /// the remote signals a failure.
-    pub async fn suspend<'a>(&'a self, stream_ids: &'a [StreamEndpointId]) -> Result<()> {
+    pub fn suspend(&self, stream_ids: &[StreamEndpointId]) -> impl Future<Output = Result<()>> {
         let mut stream_params = Vec::with_capacity(stream_ids.len());
         for stream_id in stream_ids {
             stream_params.push(stream_id.to_msg());
         }
-        let response: Result<SimpleResponse> =
-            self.send_command(SignalIdentifier::Suspend, &stream_params).await;
-        response.and(Ok(()))
+        let response: CommandResponseFut<SimpleResponse> =
+            self.send_command::<SimpleResponse>(SignalIdentifier::Suspend, &stream_params);
+        response.ok_into()
     }
 
     /// Send an Abort (Sec 8.16) to the remote peer for the given `stream_id`.
     /// Returns Ok(()) if the command is accepted, and Err(Timeout) if the remote
     /// timed out.  The remote peer is not allowed to reject this command, and
     /// commands that have invalid `stream_id` will timeout instead.
-    pub async fn abort<'a>(&'a self, stream_id: &'a StreamEndpointId) -> Result<()> {
+    pub fn abort(&self, stream_id: &StreamEndpointId) -> impl Future<Output = Result<()>> {
         let stream_params = &[stream_id.to_msg()];
-        let response: Result<SimpleResponse> =
-            self.send_command(SignalIdentifier::Abort, stream_params).await;
-        response.and(Ok(()))
+        self.send_command::<SimpleResponse>(SignalIdentifier::Abort, stream_params).ok_into()
     }
 
     /// Send a Delay Report (Sec 8.19) to the remote peer for the given `stream_id`.
     /// `delay` is in tenths of milliseconds.
     /// Returns Ok(()) if the command is accepted, and RemoteRejected if the
     /// remote peer rejects the command with the code returned by the remote.
-    pub async fn delay_report<'a>(
-        &'a self,
-        stream_id: &'a StreamEndpointId,
+    pub fn delay_report(
+        &self,
+        stream_id: &StreamEndpointId,
         delay: u16,
-    ) -> Result<()> {
+    ) -> impl Future<Output = Result<()>> {
         let delay_bytes: [u8; 2] = delay.to_be_bytes();
         let params = &[stream_id.to_msg(), delay_bytes[0], delay_bytes[1]];
-        let response: Result<SimpleResponse> =
-            self.send_command(SignalIdentifier::DelayReport, params).await;
-        response.and(Ok(()))
+        self.send_command::<SimpleResponse>(SignalIdentifier::DelayReport, params).ok_into()
     }
 
     /// The maximum amount of time we will wait for a response to a signaling command.
@@ -291,28 +287,70 @@ impl Peer {
 
     /// Sends a signal on the channel and receive a future that will complete
     /// when we get the expected response.
-    async fn send_command<'a, D: Decodable<Error = Error>>(
-        &'a self,
+    fn send_command<D: Decodable<Error = Error>>(
+        &self,
         signal: SignalIdentifier,
-        payload: &'a [u8],
-    ) -> Result<D> {
-        let id = self.inner.add_response_waiter()?;
-        let header = SignalingHeader::new(id, signal, SignalingMessageType::Command);
-
-        {
+        payload: &[u8],
+    ) -> CommandResponseFut<D> {
+        let send_result = (|| {
+            let id = self.inner.add_response_waiter()?;
+            let header = SignalingHeader::new(id, signal, SignalingMessageType::Command);
             let mut buf = vec![0; header.encoded_len()];
-
             header.encode(buf.as_mut_slice())?;
             buf.extend_from_slice(payload);
-
             self.inner.send_signal(buf.as_slice())?;
+            Ok(header)
+        })();
+
+        CommandResponseFut::new(send_result, self.inner.clone())
+    }
+}
+
+/// A future representing the result of a AVDTP command. Decodes the response when it arrives.
+struct CommandResponseFut<D: Decodable> {
+    id: SignalIdentifier,
+    fut: MaybeDone<OnTimeout<CommandResponse, fn() -> Result<Vec<u8>>>>,
+    _phantom: PhantomData<D>,
+}
+
+impl<D: Decodable> Unpin for CommandResponseFut<D> {}
+
+impl<D: Decodable<Error = Error>> CommandResponseFut<D> {
+    fn new(send_result: Result<SignalingHeader>, inner: Arc<PeerInner>) -> Self {
+        let header = match send_result {
+            Err(e) => {
+                return Self {
+                    id: SignalIdentifier::Abort,
+                    fut: MaybeDone::Done(Err(e)),
+                    _phantom: PhantomData,
+                }
+            }
+            Ok(header) => header,
+        };
+        let response = CommandResponse { id: header.label(), inner: Some(inner.clone()) };
+        let err_timeout: fn() -> Result<Vec<u8>> = || Err(Error::Timeout);
+        let timedout_fut = response.on_timeout(Peer::COMMAND_TIMEOUT.after_now(), err_timeout);
+
+        Self {
+            id: header.signal(),
+            fut: futures::future::maybe_done(timedout_fut),
+            _phantom: PhantomData,
         }
+    }
+}
 
-        let response = CommandResponse { id: header.label(), inner: Some(self.inner.clone()) };
+impl<D: Decodable<Error = Error>> Future for CommandResponseFut<D> {
+    type Output = Result<D>;
 
-        let deadline = Peer::COMMAND_TIMEOUT.after_now();
-        let response_buf = response.on_timeout(deadline, || Err(Error::Timeout)).await?;
-        decode_signaling_response(header.signal(), response_buf)
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        ready!(self.fut.poll_unpin(cx));
+        let maybe_done = Pin::new(&mut self.fut);
+        Poll::Ready(
+            maybe_done
+                .take_output()
+                .unwrap_or(Err(Error::AlreadyReceived))
+                .and_then(|buf| decode_signaling_response(self.id, buf)),
+        )
     }
 }
 
@@ -574,6 +612,12 @@ impl Decodable for SimpleResponse {
     }
 }
 
+impl Into<()> for SimpleResponse {
+    fn into(self) -> () {
+        ()
+    }
+}
+
 #[derive(Debug)]
 struct DiscoverResponse {
     endpoints: Vec<StreamInformation>,
@@ -591,6 +635,12 @@ impl Decodable for DiscoverResponse {
             endpoints.push(endpoint);
         }
         Ok(DiscoverResponse { endpoints })
+    }
+}
+
+impl Into<Vec<StreamInformation>> for DiscoverResponse {
+    fn into(self) -> Vec<StreamInformation> {
+        self.endpoints
     }
 }
 
@@ -681,6 +731,12 @@ impl Decodable for GetCapabilitiesResponse {
             }
         }
         Ok(GetCapabilitiesResponse { capabilities })
+    }
+}
+
+impl Into<Vec<ServiceCapability>> for GetCapabilitiesResponse {
+    fn into(self) -> Vec<ServiceCapability> {
+        self.capabilities
     }
 }
 
@@ -841,7 +897,7 @@ pub struct CommandResponse {
 
 impl Unpin for CommandResponse {}
 
-impl futures::Future for CommandResponse {
+impl Future for CommandResponse {
     type Output = Result<Vec<u8>>;
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
