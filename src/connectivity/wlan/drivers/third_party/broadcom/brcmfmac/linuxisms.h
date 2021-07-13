@@ -50,14 +50,14 @@ typedef uint64_t __be64;
 #define GENMASK1(val) ((1UL << (val)) - 1)
 #define GENMASK(start, end) ((GENMASK1((start) + 1) & ~GENMASK1(end)))
 
-#define WARN(cond, msg)                                                                         \
-  ({                                                                                            \
-    bool ret_cond = cond;                                                                       \
-    if (ret_cond) {                                                                             \
-      BRCMF_WARN("brcmfmac: unexpected condition %s warns %s at %s:%d\n", #cond, msg, __FILE__, \
-                 __LINE__);                                                                     \
-    }                                                                                           \
-    ret_cond;                                                                                   \
+#define WARN(cond, msg)                                                                       \
+  ({                                                                                          \
+    bool ret_cond = cond;                                                                     \
+    if (ret_cond) {                                                                           \
+      BRCMF_WARN("brcmfmac: unexpected condition %s warns %s at %s:%d", #cond, msg, __FILE__, \
+                 __LINE__);                                                                   \
+    }                                                                                         \
+    ret_cond;                                                                                 \
   })
 
 // TODO(cphoenix): Looks like these evaluate cond multiple times. And maybe should
@@ -161,7 +161,7 @@ LINUX_FUNCVI(cfg80211_connect_done)
 LINUX_FUNCVV(cfg80211_michael_mic_failure)
 LINUX_FUNCVI(netif_carrier_off)
 
-#define netdev_for_each_mc_addr(a, b) for (({BRCMF_INFO("Calling netdev_for_each_mc_addr\n"); \
+#define netdev_for_each_mc_addr(a, b) for (({BRCMF_INFO("Calling netdev_for_each_mc_addr"); \
                                              a = nullptr;});1;)
 
 #define KBUILD_MODNAME "brcmfmac"

@@ -128,7 +128,7 @@ static void brcmf_feat_firmware_capabilities(struct brcmf_if* ifp) {
 
   err = brcmf_fil_iovar_data_get(ifp, "cap", caps, sizeof(caps), &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Failed to determine firmware capabilities: %s, fw err %s\n",
+    BRCMF_ERR("Failed to determine firmware capabilities: %s, fw err %s",
               zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
     return;
   }

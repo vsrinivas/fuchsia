@@ -328,7 +328,7 @@ static zx_status_t brcmf_set_iface_macaddr(net_device* ndev,
 
   err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr.byte, ETH_ALEN, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Setting mac address failed: %s, fw err %s\n", zx_status_get_string(err),
+    BRCMF_ERR("Setting mac address failed: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
     return err;
   }
@@ -1072,13 +1072,13 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
     *sync_id_out = params->sync_id;
   } else {
     if (err == ZX_ERR_UNAVAILABLE) {
-      BRCMF_ERR("system busy : escan canceled sme state: 0x%lx\n",
+      BRCMF_ERR("system busy : escan canceled sme state: 0x%lx",
                 atomic_load(&ifp->vif->sme_state));
     } else if (err == ZX_ERR_SHOULD_WAIT) {
-      BRCMF_INFO("firmware is busy, failing the scan, please retry later. %s, fw err %s\n",
+      BRCMF_INFO("firmware is busy, failing the scan, please retry later. %s, fw err %s",
                  zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
     } else {
-      BRCMF_ERR("escan failed: %s, fw err %s\n", zx_status_get_string(err),
+      BRCMF_ERR("escan failed: %s, fw err %s", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fw_err));
     }
   }
@@ -1121,19 +1121,19 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
   struct brcmf_cfg80211_info* cfg = ndev_to_if(ndev)->drvr->config;
 
   if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
-    BRCMF_ERR("Scanning already: status (%lu)\n", cfg->scan_status.load());
+    BRCMF_ERR("Scanning already: status (%lu)", cfg->scan_status.load());
     return ZX_ERR_UNAVAILABLE;
   }
   if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status)) {
-    BRCMF_ERR("Scanning being aborted: status (%lu)\n", cfg->scan_status.load());
+    BRCMF_ERR("Scanning being aborted: status (%lu)", cfg->scan_status.load());
     return ZX_ERR_UNAVAILABLE;
   }
   if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status)) {
-    BRCMF_ERR("Scanning suppressed: status (%lu)\n", cfg->scan_status.load());
+    BRCMF_ERR("Scanning suppressed: status (%lu)", cfg->scan_status.load());
     return ZX_ERR_UNAVAILABLE;
   }
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
-    BRCMF_INFO("Scan request suppressed: connect in progress (status: %lu)\n",
+    BRCMF_INFO("Scan request suppressed: connect in progress (status: %lu)",
                vif->sme_state.load());
     return ZX_ERR_SHOULD_WAIT;
   }
@@ -1333,7 +1333,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, wlan_ieee80211::Reas
     // Calling WLC_DISASSOC to stop excess roaming
     err = brcmf_fil_cmd_data_set(vif->ifp, BRCMF_C_DISASSOC, nullptr, 0, &fwerr);
     if (err != ZX_OK) {
-      BRCMF_ERR("WLC_DISASSOC failed: %s, fw err %s\n", zx_status_get_string(err),
+      BRCMF_ERR("WLC_DISASSOC failed: %s, fw err %s", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fwerr));
     }
     if (vif->wdev.iftype == WLAN_INFO_MAC_ROLE_CLIENT) {
@@ -1916,7 +1916,7 @@ static zx_status_t brcmf_get_ctrl_channel(brcmf_if* ifp, uint16_t* chanspec_out,
   // Get chanspec of the given IF from firmware.
   err = brcmf_fil_iovar_data_get(ifp, "chanspec", chanspec_out, sizeof(uint16_t), &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Failed to retrieve chanspec: %s, fw err %s\n", zx_status_get_string(err),
+    BRCMF_ERR("Failed to retrieve chanspec: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
     return err;
   }
@@ -2072,7 +2072,7 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
     bcme_status_t fw_err;
     zx_status_t status = brcmf_fil_iovar_data_get(ifp, "reset_cnts", nullptr, 0, &fw_err);
     if (status != ZX_OK) {
-      BRCMF_WARN("Failed to clear counters: %s, fw err %s\n", zx_status_get_string(status),
+      BRCMF_WARN("Failed to clear counters: %s, fw err %s", zx_status_get_string(status),
                  brcmf_fil_get_errstr(fw_err));
     }
   }
@@ -2999,7 +2999,7 @@ static wlan_stop_result_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
 
   if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state) &&
       !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state)) {
-    BRCMF_INFO("attempt to stop already stopped AP\n");
+    BRCMF_INFO("attempt to stop already stopped AP");
     return WLAN_STOP_RESULT_BSS_ALREADY_STOPPED;
   }
 
@@ -4368,11 +4368,11 @@ void brcmf_convert_histograms_report_snr(const histograms_report_t& histograms_r
 
 zx_status_t brcmf_get_histograms_report(brcmf_if* ifp, histograms_report_t* out_report) {
   if (ifp == nullptr) {
-    BRCMF_ERR("Invalid interface\n");
+    BRCMF_ERR("Invalid interface");
     return ZX_ERR_INTERNAL;
   }
   if (out_report == nullptr) {
-    BRCMF_ERR("Invalid histograms_report_t pointer\n");
+    BRCMF_ERR("Invalid histograms_report_t pointer");
     return ZX_ERR_INTERNAL;
   }
 
@@ -4416,7 +4416,7 @@ zx_status_t brcmf_get_histograms_report(brcmf_if* ifp, histograms_report_t* out_
   if (get_histograms_success) {
     return ZX_OK;
   }
-  BRCMF_ERR("Failed to get per-antenna metrics\n");
+  BRCMF_ERR("Failed to get per-antenna metrics");
   return ZX_ERR_INTERNAL;
 }
 
@@ -4512,7 +4512,7 @@ void brcmf_if_stats_query_req(net_device* ndev) {
         wlanif_antenna_id_t antenna_id;
         const auto antenna_id_status = brcmf_convert_antenna_id(histograms_report, &antenna_id);
         if (antenna_id_status != ZX_OK) {
-          BRCMF_ERR("Invalid antenna ID, freq: %d idx: %d\n", histograms_report.antennaid.freq,
+          BRCMF_ERR("Invalid antenna ID, freq: %d idx: %d", histograms_report.antennaid.freq,
                     histograms_report.antennaid.idx);
           return;
         }
@@ -4918,7 +4918,7 @@ zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf
   if (wdev->iftype == WLAN_INFO_MAC_ROLE_CLIENT) {
     // Status should be connected.
     if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
-      BRCMF_ERR("CSA on %s. Not associated.\n", ndev->name);
+      BRCMF_ERR("CSA on %s. Not associated.", ndev->name);
       return ZX_ERR_BAD_STATE;
     }
   }
@@ -5207,24 +5207,24 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
   }
 
   if (data == nullptr || e->datalen == 0) {
-    BRCMF_ERR("Received ASSOC_IND with no IEs\n");
+    BRCMF_ERR("Received ASSOC_IND with no IEs");
     return ZX_ERR_INVALID_ARGS;
   }
 
   const struct brcmf_tlv* ssid_ie = brcmf_parse_tlvs(data, e->datalen, WLAN_IE_TYPE_SSID);
   if (ssid_ie == nullptr) {
-    BRCMF_ERR("Received ASSOC_IND with no SSID IE\n");
+    BRCMF_ERR("Received ASSOC_IND with no SSID IE");
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (ssid_ie->len > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
-    BRCMF_ERR("Received ASSOC_IND with invalid SSID IE\n");
+    BRCMF_ERR("Received ASSOC_IND with invalid SSID IE");
     return ZX_ERR_INVALID_ARGS;
   }
 
   const struct brcmf_tlv* rsn_ie = brcmf_parse_tlvs(data, e->datalen, WLAN_IE_TYPE_RSNE);
   if (rsn_ie && rsn_ie->len > WLAN_IE_BODY_MAX_LEN) {
-    BRCMF_ERR("Received ASSOC_IND with invalid RSN IE\n");
+    BRCMF_ERR("Received ASSOC_IND with invalid RSN IE");
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -5390,7 +5390,7 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
   // TODO(fxb/61311): Remove once this verbose logging is no longer needed in
   // brcmf_indicate_client_disconnect(). This log should be moved to CONN
   // for production code.
-  BRCMF_INFO("client disconnect indicated. state %s, rssi, %d snr, %d\n",
+  BRCMF_INFO("client disconnect indicated. state %s, rssi, %d snr, %d",
              brcmf_get_client_connect_state_string(ifp), ndev->last_known_rssi_dbm,
              ndev->last_known_snr_db);
   BRCMF_INFO_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
@@ -5521,7 +5521,7 @@ static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp,
 
   if (event == BRCMF_E_ROAM && status == BRCMF_E_STATUS_SUCCESS) {
     if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
-      BRCMF_ERR("Received roaming notification - unsupported\n");
+      BRCMF_ERR("Received roaming notification - unsupported");
     } else {
       brcmf_bss_connect_done(ifp, brcmf_connect_status_t::CONNECTED, WLAN_ASSOC_RESULT_SUCCESS);
       brcmf_net_setcarrier(ifp, true);

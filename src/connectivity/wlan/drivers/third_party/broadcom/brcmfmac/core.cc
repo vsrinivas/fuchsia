@@ -656,7 +656,7 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr, bool drvr_restarting) {
   /* Bus is ready, do any initialization */
   ret = brcmf_c_preinit_dcmds(ifp);
   if (ret != ZX_OK) {
-    BRCMF_ERR("preinit fail.\n");
+    BRCMF_ERR("preinit fail.");
     goto fail;
   }
 
@@ -672,7 +672,7 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr, bool drvr_restarting) {
   if (drvr_restarting) {
     ret = brcmf_proto_reset(drvr);
     if (ret != ZX_OK) {
-      BRCMF_ERR("proto_init fail.\n");
+      BRCMF_ERR("proto_init fail.");
       goto fail;
     }
   }
