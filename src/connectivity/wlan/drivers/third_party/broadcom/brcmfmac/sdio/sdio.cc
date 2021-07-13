@@ -3121,7 +3121,7 @@ zx_status_t brcmf_sdio_load_files(brcmf_pub* drvr, bool reload) TA_NO_THREAD_SAF
            drvr->device, brcmf_bus_type::BRCMF_BUS_TYPE_SDIO,
            static_cast<wlan::brcmfmac::CommonCoreId>(bus_if->chip), bus_if->chiprev,
            &firmware_binary)) != ZX_OK) {
-    BRCMF_ERR("Load firmware binary failed, error: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Load firmware binary failed, error: %s", zx_status_get_string(status));
     if (reload)
       drvr->fw_reloading.unlock();
     return status;
@@ -3135,7 +3135,7 @@ zx_status_t brcmf_sdio_load_files(brcmf_pub* drvr, bool reload) TA_NO_THREAD_SAF
            wlan::brcmfmac::GetNvramBinary(drvr->device, brcmf_bus_type::BRCMF_BUS_TYPE_SDIO,
                                           static_cast<wlan::brcmfmac::CommonCoreId>(bus_if->chip),
                                           bus_if->chiprev, &nvram_binary)) != ZX_OK) {
-    BRCMF_ERR("Load nvram binary failed, error: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Load nvram binary failed, error: %s", zx_status_get_string(status));
     if (reload)
       drvr->fw_reloading.unlock();
     return status;
@@ -3153,7 +3153,7 @@ zx_status_t brcmf_sdio_load_files(brcmf_pub* drvr, bool reload) TA_NO_THREAD_SAF
 
   if ((status = brcmf_sdio_firmware_callback(drvr, firmware_binary.data(), firmware_binary.size(),
                                              nvram_binary.data(), nvram_binary.size())) != ZX_OK) {
-    BRCMF_ERR("Load nvram binary failed, error: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Load nvram binary failed, error: %s", zx_status_get_string(status));
     if (reload)
       drvr->fw_reloading.unlock();
     return status;
@@ -3164,7 +3164,7 @@ zx_status_t brcmf_sdio_load_files(brcmf_pub* drvr, bool reload) TA_NO_THREAD_SAF
            wlan::brcmfmac::GetClmBinary(drvr->device, brcmf_bus_type::BRCMF_BUS_TYPE_SDIO,
                                         static_cast<wlan::brcmfmac::CommonCoreId>(bus_if->chip),
                                         bus_if->chiprev, &clm_binary)) != ZX_OK) {
-    BRCMF_ERR("Load CLM binary failed, error: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Load CLM binary failed, error: %s", zx_status_get_string(status));
     if (reload)
       drvr->fw_reloading.unlock();
     return status;
@@ -3208,7 +3208,7 @@ zx_status_t brcmf_sdio_recovery(struct brcmf_bus* bus) TA_NO_THREAD_SAFETY_ANALY
   }
 
   if ((error = brcmf_bus_started(sdiod->drvr, true)) != ZX_OK) {
-    BRCMF_ERR("Initialization after bus started failed.\n");
+    BRCMF_ERR("Initialization after bus started failed.");
     brcmf_proto_bcdc_detach(drvr);
     return error;
   }

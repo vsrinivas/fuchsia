@@ -238,7 +238,7 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
 
 void brcmf_sdiod_change_state(struct brcmf_sdio_dev* sdiodev, enum brcmf_sdiod_state state) {
   if (sdiodev->state == BRCMF_SDIOD_NOMEDIUM || state == sdiodev->state) {
-    BRCMF_ERR("No medium or equal state: %d\n", sdiodev->state);
+    BRCMF_ERR("No medium or equal state: %d", sdiodev->state);
     return;
   }
 
