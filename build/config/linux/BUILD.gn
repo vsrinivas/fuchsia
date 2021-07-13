@@ -22,7 +22,7 @@ config("compiler") {
   ]
 
   rustflags = [
-    "-Clinker=$clang_prefix/clang++",
+    "-Clinker=$rebased_clang_prefix/clang++",
     "-Cdefault-linker-libraries",
   ]
   foreach(flag, ldflags) {

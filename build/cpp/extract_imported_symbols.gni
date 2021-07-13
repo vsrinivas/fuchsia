@@ -74,12 +74,12 @@ template("extract_imported_symbols") {
 
     outputs = [ invoker.symbols ]
 
-    inputs = [ rebase_path("$clang_prefix/llvm-nm", ".", root_build_dir) ]
+    inputs = [ "$clang_prefix/llvm-nm" ]
 
     if (defined(invoker.library)) {
       inputs += [ invoker.library ]
       args = [
-        "$clang_prefix/llvm-nm",
+        "$rebased_clang_prefix/llvm-nm",
         rebase_path(invoker.library, root_build_dir),
         rebase_path(invoker.symbols, root_build_dir),
       ]
@@ -87,7 +87,7 @@ template("extract_imported_symbols") {
       depfile = "$target_gen_dir/${target_name}.d"
       inputs += [ _library_rsp_file ]
       args = [
-        "$clang_prefix/llvm-nm",
+        "$rebased_clang_prefix/llvm-nm",
         "@" + rebase_path(_library_rsp_file, root_build_dir),
         rebase_path(invoker.symbols, root_build_dir),
         rebase_path(depfile, root_build_dir),

@@ -53,8 +53,7 @@ if (is_host) {
 
   golden_test("fidlgen_hlcpp_golden_tests") {
     goldens_dir = "goldens/bindings"
-    reformat_goldens_bin =
-        rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
+    reformat_goldens_bin = "${clang_prefix}/clang-format"
     reformat_goldens_args = [ "--style=google" ]
     deps = []
     entries = []
@@ -84,8 +83,7 @@ if (is_host) {
 
   golden_test("fidlgen_hlcpp_natural_types_golden_tests") {
     goldens_dir = "goldens/natural_types"
-    reformat_goldens_bin =
-        rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
+    reformat_goldens_bin = "${clang_prefix}/clang-format"
     reformat_goldens_args = [ "--style=google" ]
     deps = []
     entries = []

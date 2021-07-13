@@ -61,7 +61,7 @@ import("//build/toolchain/zircon/clang.gni")
 #         Path to breakpad .sym file.
 #       - Type: path relative to `${toolchain_spec.lib_dir}`
 #
-_clang_lib_dir = rebase_path("$clang_prefix/../lib", ".", root_build_dir)
+_clang_lib_dir = "$clang_prefix/../lib"
 _clang_runtime_file = "$_clang_lib_dir/runtime.json"
 _clang_runtime = read_file(_clang_runtime_file, "json")
 

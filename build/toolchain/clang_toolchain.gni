@@ -34,7 +34,7 @@ import("//build/toolchain/rbe.gni")
 #   prefix
 #     Optional: The path from which "cc", "cxx", "ar", "ld" and
 #     "strip" will be found (unless overridden).  If not given,
-#     prefix defaults to $clang_prefix.
+#     prefix defaults to $rebased_clang_prefix.
 #
 #   cc
 #   cxx
@@ -78,7 +78,7 @@ template("clang_toolchain") {
       }
     }
 
-    prefix = clang_prefix
+    prefix = rebased_clang_prefix
     if (defined(invoker.prefix)) {
       prefix = invoker.prefix
     }

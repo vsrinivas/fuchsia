@@ -69,14 +69,9 @@ template("toolchain_utils_action") {
       util = "llvm-${util}"
     }
 
-    # NOTE: clang_prefix is already rebased to root_build_dir, so compute its
-    # path relative to the root source directory. Note that rebase_path() always
-    # return a path relative to the new base, so prepend "//" to fix it, otherwise
-    # the result will be interpreted as relative to this BUILD.gn file.
-    rebased_util_path = "${clang_prefix}/${util}"
-    util_path = "//" + rebase_path(rebased_util_path, "//", root_build_dir)
+    util_path = "${clang_prefix}/${util}"
     utils_inputs += [ util_path ]
-    utils_paths += [ rebased_util_path ]
+    utils_paths += [ rebase_path(util_path, root_build_dir) ]
   }
 
   target(target_type, target_name) {

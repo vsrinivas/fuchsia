@@ -50,8 +50,8 @@ template("verify_manifest_elf_binaries") {
       args += [
         "--check-debug-files",
 
-        # NOTE: clang_prefix and rustc_prefix are already rebased!
-        "--toolchain-lib-dir=${clang_prefix}/../lib",
+        # NOTE: rustc_prefix is already rebased!
+        "--toolchain-lib-dir=${rebased_clang_prefix}/../lib",
         "--toolchain-lib-dir=${rustc_prefix}/../lib",
       ]
     }

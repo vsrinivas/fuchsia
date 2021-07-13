@@ -93,7 +93,7 @@ template("_fidl_cpp_codegen_impl") {
       "--include-stem",
       invoker.output_stem,
       "--clang-format-path",
-      rebase_path("${clang_prefix}/clang-format", "", root_build_dir),
+      "${rebased_clang_prefix}/clang-format",
     ]
 
     header_file = "${file_stem}.h"

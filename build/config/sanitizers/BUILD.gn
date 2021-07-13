@@ -36,7 +36,7 @@ variant("asan") {
     libclang_rt_asan = rebase_path(
             exec_script("/usr/bin/env",
                         [
-                          "${clang_prefix}/clang",
+                          "${rebased_clang_prefix}/clang",
                           "--target=${current_target_tuple}",
                           "-print-file-name=libclang_rt.${asan}${extension}",
                         ],

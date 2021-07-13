@@ -10,7 +10,7 @@ import("//build/toolchain/runtime/toolchain_runtime_deps.gni")
 
 declare_args() {
   # Path to Clang lib directory.
-  clang_lib_dir = rebase_path("${clang_prefix}/../lib", root_build_dir)
+  clang_lib_dir = "${rebased_clang_prefix}/../lib"
 
   # Path to rustc lib directory.
   rustc_lib_dir = rebase_path("${rustc_prefix}/../lib", root_build_dir)

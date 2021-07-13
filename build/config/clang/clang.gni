@@ -5,9 +5,7 @@
 import("//build/config/clang/clang_cpu.gni")
 import("//build/config/current_target_tuple.gni")
 
-default_clang_prefix =
-    rebase_path("//prebuilt/third_party/clang/${host_platform}/bin",
-                root_build_dir)
+default_clang_prefix = "//prebuilt/third_party/clang/${host_platform}/bin"
 
 declare_args() {
   # The default clang toolchain provided by the prebuilt. This variable is
@@ -22,28 +20,29 @@ declare_args() {
   use_cxx_relative_vtables = true
 }
 
+# The value of clang_prefix relative to root_build_dir, useful
+# when expanding it in command arguments.
+rebased_clang_prefix = rebase_path(clang_prefix, root_build_dir)
+
 # TODO(phosek): this is inefficient, rather this should come from a JSON file.
 # Relative path makes command-lines remote-portable.
-clang_resource_dir =
-    rebase_path(
-        exec_script(rebase_path("$clang_prefix/clang", "", root_build_dir),
-                    [
-                      "--target=$current_target_tuple",
-                      "-print-resource-dir",
-                    ],
-                    "trim string",
-                    []),
-        root_build_dir)
+clang_resource_dir = rebase_path(exec_script("$clang_prefix/clang",
+                                             [
+                                               "--target=$current_target_tuple",
+                                               "-print-resource-dir",
+                                             ],
+                                             "trim string",
+                                             []),
+                                 root_build_dir)
 
 # We only provide dynamic runtime libs on Fuchsia.
 if (is_fuchsia) {
   # TODO(fxbug.dev/57729): Get this information from runtime.json instead.
-  clang_libunwind =
-      exec_script(rebase_path("$clang_prefix/clang++", "", root_build_dir),
-                  [
-                    "--target=$current_target_tuple",
-                    "-print-file-name=libunwind.so",
-                  ],
-                  "trim string",
-                  [])
+  clang_libunwind = exec_script("$clang_prefix/clang++",
+                                [
+                                  "--target=$current_target_tuple",
+                                  "-print-file-name=libunwind.so",
+                                ],
+                                "trim string",
+                                [])
 }

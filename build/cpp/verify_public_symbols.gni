@@ -35,13 +35,13 @@ template("verify_public_symbols") {
     inputs = [
       invoker.current,
       invoker.reference,
-      rebase_path("$clang_prefix/llvm-cxxfilt", ".", root_build_dir),
+      "$clang_prefix/llvm-cxxfilt",
     ]
 
     outputs = [ stamp_file ]
 
     args = [
-      "$clang_prefix/llvm-cxxfilt",
+      "$rebased_clang_prefix/llvm-cxxfilt",
       invoker.library_name,
       rebase_path(invoker.current, root_build_dir),
       rebase_path(invoker.reference, root_build_dir),

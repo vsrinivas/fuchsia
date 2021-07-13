@@ -814,7 +814,7 @@ action("check_vtables_in_rodata") {
     "vtable for libunwind::UnwindCursor<libunwind::LocalAddressSpace, libunwind::Registers_arm64>",
 
     "--readelf",
-    rebase_path("$clang_prefix/llvm-readelf", root_build_dir),
+    "$rebased_clang_prefix/llvm-readelf",
 
     # Write to a file.
     "-o",

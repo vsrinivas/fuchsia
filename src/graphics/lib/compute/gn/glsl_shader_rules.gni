@@ -85,18 +85,14 @@ template("graphics_compute_generate_debug_glsl_shader_foreach") {
       inputs = []
     }
     inputs += [
-      # NOTE: graphics_compute_clang_format_host_tool is already rebased
-      # to root_build_dir, so undo this here.
-      "//" + rebase_path(graphics_compute_clang_format_host_tool,
-                         "//",
-                         root_build_dir),
+      graphics_compute_clang_format_host_tool,
       _host_glslang_executable,
     ]
     script =
         "${graphics_compute_dir}/scripts/preprocess_and_format_glsl_shader.py"
     args = [
       "--clang-format-tool",
-      graphics_compute_clang_format_host_tool,
+      rebase_path(graphics_compute_clang_format_host_tool, root_build_dir),
       "--glslangValidator-tool",
       rebase_path(_host_glslang_executable, root_build_dir),
       "-o",

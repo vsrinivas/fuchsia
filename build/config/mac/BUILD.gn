@@ -26,12 +26,12 @@ config("compiler") {
   ]
   ldflags = [
     "-nostdlib++",
-    "${clang_prefix}/../lib/libc++.a",
+    "${rebased_clang_prefix}/../lib/libc++.a",
   ]
   configs = [ ":sysroot" ]
 
   rustflags = [
-    "-Clinker=$clang_prefix/clang++",
+    "-Clinker=$rebased_clang_prefix/clang++",
     "-Cdefault-linker-libraries",
   ]
   foreach(flag, ldflags) {
