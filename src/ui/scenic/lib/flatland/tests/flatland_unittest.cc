@@ -503,10 +503,9 @@ class FlatlandTest : public gtest::TestLoopFixture {
 
   void RegisterPresentError(fuchsia::ui::composition::FlatlandPtr& flatland_channel,
                             scheduling::SessionId session_id) {
-    flatland_channel.events().OnPresentProcessed =
-        [this, session_id](OnPresentProcessedValues values, Error error) {
-          flatland_errors_[session_id] = error;
-        };
+    flatland_channel.events().OnError = [this, session_id](Error error) {
+      flatland_errors_[session_id] = error;
+    };
   }
 
  protected:
@@ -597,7 +596,6 @@ TEST_F(FlatlandTest, PresentWithNoFieldsSet) {
   EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(flatland->GetRoot().GetInstanceId(), _));
   fuchsia::ui::composition::PresentArgs present_args;
   flatland->Present(std::move(present_args));
-  EXPECT_EQ(GetPresentError(flatland->GetSessionId()), Error::NO_ERROR);
 
   EXPECT_CALL(*mock_flatland_presenter_,
               ScheduleUpdateForSession(kDefaultRequestedPresentationTime, _, kDefaultUnsquashable));

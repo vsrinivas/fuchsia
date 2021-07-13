@@ -11,8 +11,6 @@ using zx;
 /// The set of error codes returned in [`OnPresentProcessed`]. Everything except NO_ERROR, causes
 /// Flatland channel to be closed.
 enum Error {
-    /// Indicates that the operation was successful.
-    NO_ERROR = 0;
     /// Indicates that the parameters used the function calls are invalid.
     BAD_OPERATION = 1;
     /// Indicates that `additional_present_credits` field was not properly processed and the client
@@ -229,8 +227,8 @@ protocol Flatland {
     /// Complete execution of all feed-forward operations.
     ///
     /// If executing an operation produces an error (e.g., CreateTransform(0)),
-    /// [`OnPresentProcessed`] emits a non-success Error type. Operations that produce errors
-    /// are ignored and the channel is closed.
+    /// an [`OnError`] event is emitted. Operations that produce errors are ignored and
+    /// the channel is closed.
     ///
     /// If the execution is completed successfully, [`OnPresentProcessed`] emits NO_ERROR along
     /// with other valid fields.
@@ -266,11 +264,7 @@ protocol Flatland {
     ///
     /// - response `values` the table of information a client needs to produce
     /// its next frame. See [`OnPresentProcessedValues`] for more information.
-    ///
-    /// - response `error` the error a client may receive after performing some
-    /// invalid operations. If there is an `error` with a positive int value, then
-    /// `values` is not guaranteed to hold any valid fields.
-    -> OnPresentProcessed(OnPresentProcessedValues values, Error error);
+    -> OnPresentProcessed(OnPresentProcessedValues values);
 
     /// This event is fired whenever a set of one or more [`Present`]s are
     /// presented simultaneously, and are therefore no longer in flight.
@@ -285,6 +279,15 @@ protocol Flatland {
     ///
     /// TODO(fxbug.dev/63305): remove `num_presents_allowed` from this event.
     -> OnFramePresented(fuchsia.scenic.scheduling.FramePresentedInfo frame_presented_info);
+
+    /// If an error occurrs after a [`Present`], an `OnError` event will fire
+    /// with associated information.
+    ///
+    /// Errors will close the connection with the client.
+    ///
+    /// - response `error` the error a client may receive after performing some
+    /// invalid operations.
+    -> OnError(Error error);
 
     // ***** Graph management *****
 

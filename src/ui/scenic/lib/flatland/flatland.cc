@@ -969,7 +969,7 @@ void Flatland::OnPresentProcessed(uint32_t additional_present_credits,
     values.set_additional_present_credits(additional_present_credits);
     values.set_future_presentation_infos(std::move(presentation_infos));
 
-    binding_.events().OnPresentProcessed(std::move(values), Error::NO_ERROR);
+    binding_.events().OnPresentProcessed(std::move(values));
   }
 }
 
@@ -1005,7 +1005,7 @@ void Flatland::ReportLinkProtocolError(const std::string& error_log) {
 
 void Flatland::CloseConnection(Error error) {
   // Send the error to the client before closing the connection.
-  binding_.events().OnPresentProcessed({}, error);
+  binding_.events().OnError(error);
 
   // Cancel the async::Wait before closing the connection, or it will assert on destruction.
   zx_status_t status = peer_closed_waiter_.Cancel();
