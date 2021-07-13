@@ -660,7 +660,10 @@
             to: "#session-manager",
         },
         {
-            protocol: "fuchsia.input.injection.InputDeviceRegistry",
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.session.Launcher",
+            ],
             from: "#session-manager",
             to: "#appmgr",
             dependency: "weak_for_migration",
