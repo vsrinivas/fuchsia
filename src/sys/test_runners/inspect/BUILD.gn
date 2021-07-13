@@ -77,7 +77,6 @@ group("inspect") {
 
 fuchsia_unittest_component("test-component") {
   deps = [ ":bin_test" ]
-  v2 = true
 }
 
 fuchsia_test_package("inspect-test-runner-test") {

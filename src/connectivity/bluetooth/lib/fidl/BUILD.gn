@@ -25,7 +25,6 @@ executable("tests_bin") {
 }
 
 fuchsia_unittest_package("bt-lib-fidl-tests") {
-  v2 = true
   deps = [ ":tests_bin" ]
 }
 

@@ -70,7 +70,6 @@ rustc_library("routing") {
 }
 
 fuchsia_unittest_package("fuchsia-routing-tests") {
-  v2 = true
   deps = [
     ":routing_test",
     "//src/sys/test_runners:tmp_storage",

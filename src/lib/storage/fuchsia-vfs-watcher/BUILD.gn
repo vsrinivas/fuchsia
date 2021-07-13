@@ -29,7 +29,6 @@ rustc_library("fuchsia-vfs-watcher") {
 }
 
 fuchsia_unittest_package("fuchsia-vfs-watcher-tests") {
-  v2 = true
   deps = [
     ":fuchsia-vfs-watcher_test",
     "//src/sys/test_runners:tmp_storage",

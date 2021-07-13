@@ -29,7 +29,6 @@ rustc_library("async-helpers") {
 }
 
 fuchsia_unittest_package("async-helpers-tests") {
-  v2 = true
   deps = [ ":async-helpers_test" ]
 }
 

@@ -72,7 +72,6 @@ fuchsia_package("triage-detect") {
 }
 
 fuchsia_unittest_package("triage-detect-tests") {
-  v2 = true
   deps = [ ":lib_test" ]
 }
 

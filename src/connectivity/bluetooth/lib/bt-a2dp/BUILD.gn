@@ -58,7 +58,6 @@ rustc_library("bt-a2dp") {
 }
 
 fuchsia_unittest_package("bt-a2dp-lib-tests") {
-  v2 = true
   deps = [ ":bt-a2dp_test" ]
 }
 

@@ -41,7 +41,6 @@ fuchsia_shell_package("bt-bredr-profile") {
 }
 
 fuchsia_unittest_package("bt-bredr-profile-unittests") {
-  v2 = true
   deps = [ ":bin_test" ]
 }
 

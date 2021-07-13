@@ -37,7 +37,6 @@ rustc_library("fuchsia-audio-device-output") {
 }
 
 fuchsia_unittest_package("fuchsia-audio-device-output-tests") {
-  v2 = true
   deps = [ ":fuchsia-audio-device-output_test" ]
 }
 

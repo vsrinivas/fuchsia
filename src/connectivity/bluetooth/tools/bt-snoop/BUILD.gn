@@ -58,7 +58,6 @@ fuchsia_package_with_single_component("bt-snoop") {
 }
 
 fuchsia_unittest_package("bt-snoop-unittests") {
-  v2 = true
   deps = [ ":bin_test" ]
 }
 

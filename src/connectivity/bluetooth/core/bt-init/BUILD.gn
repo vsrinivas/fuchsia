@@ -105,7 +105,7 @@ config_data("bootstrap_config") {
 fuchsia_unittest_package("tests-v1") {
   component_name = "bt-init-unittests"
   package_name = "bt-init-unittests"
-  v2 = true
+
   deps = [
     ":bin_test",
     ":default-config",
@@ -115,7 +115,7 @@ fuchsia_unittest_package("tests-v1") {
 fuchsia_unittest_package("tests-v2") {
   component_name = "bt-init-unittests-v2"
   package_name = "bt-init-unittests-v2"
-  v2 = true
+
   deps = [
     ":bin_v2_test",
     ":default-config",

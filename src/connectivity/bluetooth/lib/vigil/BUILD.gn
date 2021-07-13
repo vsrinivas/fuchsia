@@ -29,7 +29,6 @@ rustc_library("vigil") {
 }
 
 fuchsia_unittest_package("vigil-tests") {
-  v2 = true
   deps = [ ":vigil_test" ]
 }
 

@@ -58,7 +58,6 @@ rustc_library("pseudo-fs") {
 }
 
 fuchsia_unittest_package("pseudo-fs-tests") {
-  v2 = true
   deps = [ ":pseudo-fs_test" ]
 }
 

@@ -40,7 +40,6 @@ fuchsia_shell_package("bt-avdtp-tool") {
 }
 
 fuchsia_unittest_package("bt-avdtp-tool-unittests") {
-  v2 = true
   deps = [ ":bin_test" ]
 }
 

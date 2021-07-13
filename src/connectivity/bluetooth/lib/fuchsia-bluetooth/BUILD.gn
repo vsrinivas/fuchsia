@@ -74,7 +74,6 @@ rustc_library("fuchsia-bluetooth") {
 }
 
 fuchsia_unittest_package("bluetooth-crate-tests") {
-  v2 = true
   deps = [ ":fuchsia-bluetooth_test" ]
 }
 

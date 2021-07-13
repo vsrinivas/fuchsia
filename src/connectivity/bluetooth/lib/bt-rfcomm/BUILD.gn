@@ -41,7 +41,6 @@ rustc_library("bt-rfcomm") {
 }
 
 fuchsia_unittest_package("bt-rfcomm-lib-tests") {
-  v2 = true
   deps = [ ":bt-rfcomm_test" ]
 }
 

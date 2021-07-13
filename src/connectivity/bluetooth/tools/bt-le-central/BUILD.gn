@@ -43,7 +43,6 @@ fuchsia_shell_package("bt-le-central") {
 }
 
 fuchsia_unittest_package("bt-le-central-unittests") {
-  v2 = true
   deps = [ ":bin_test" ]
 }
 

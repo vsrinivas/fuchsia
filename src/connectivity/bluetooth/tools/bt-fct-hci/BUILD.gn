@@ -41,7 +41,6 @@ fuchsia_shell_package("bt-fct-hci") {
 }
 
 fuchsia_unittest_package("bt-fct-hci-unittests") {
-  v2 = true
   deps = [ ":bin_test" ]
 }
 

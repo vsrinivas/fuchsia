@@ -118,7 +118,6 @@ core_shard("bt-a2dp-core-shard") {
 }
 
 fuchsia_unittest_package("bt-a2dp-tests") {
-  v2 = true
   deps = [ ":bin_test" ]
 }
 

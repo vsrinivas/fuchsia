@@ -26,7 +26,6 @@ rustc_library("profile-client") {
 }
 
 fuchsia_unittest_package("profile-client-tests") {
-  v2 = true
   deps = [ ":profile-client_test" ]
 }
 

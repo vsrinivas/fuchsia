@@ -113,7 +113,6 @@ rustc_library("vfs") {
 }
 
 fuchsia_unittest_package("vfs-tests") {
-  v2 = true
   deps = [ ":vfs_test" ]
 }
 

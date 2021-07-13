@@ -32,7 +32,6 @@ fuchsia_shell_package("bt-le-peripheral") {
 }
 
 fuchsia_unittest_package("bt-le-peripheral-unittests") {
-  v2 = true
   deps = [ ":bin_test" ]
 }
 

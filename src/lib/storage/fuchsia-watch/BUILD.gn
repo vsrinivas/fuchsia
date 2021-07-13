@@ -26,7 +26,6 @@ rustc_library("fuchsia-watch") {
 }
 
 fuchsia_unittest_package("fuchsia-watch-tests") {
-  v2 = true
   deps = [
     ":fuchsia-watch_test",
     "//src/sys/test_runners:tmp_storage",

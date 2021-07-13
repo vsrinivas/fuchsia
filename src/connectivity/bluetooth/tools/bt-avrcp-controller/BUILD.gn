@@ -37,7 +37,6 @@ fuchsia_shell_package("bt-avrcp-controller") {
 }
 
 fuchsia_unittest_package("bt-avrcp-controller-unittests") {
-  v2 = true
   deps = [ ":bin_test" ]
 }
 
