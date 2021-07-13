@@ -22,8 +22,7 @@ namespace feedback_data {
 // 2.0 MB. If the file 'limit_data_flag_path' does not exist, prediction is disabled.
 class InspectDataBudget {
  public:
-  InspectDataBudget(const char* limit_data_flag_path, InspectNodeManager* node,
-                    cobalt::Logger* cobalt);
+  InspectDataBudget(bool limit_data, InspectNodeManager* node, cobalt::Logger* cobalt);
 
   void UpdateBudget(const std::map<std::string, ArchiveFileStats>& file_size_stats);
 

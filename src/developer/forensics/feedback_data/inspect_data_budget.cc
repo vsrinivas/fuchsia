@@ -24,10 +24,9 @@ const size_t kStartingInspectDataBudgetInBytes = kMaxInspectDataBudgetInBytes;
 
 }  // namespace
 
-InspectDataBudget::InspectDataBudget(const char* limit_data_flag_path, InspectNodeManager* node,
+InspectDataBudget::InspectDataBudget(const bool limit_data, InspectNodeManager* node,
                                      cobalt::Logger* cobalt)
-    : inspect_node_(node), cobalt_(cobalt) {
-  limit_data_flag_ = std::filesystem::exists(limit_data_flag_path);
+    : limit_data_flag_(limit_data), inspect_node_(node), cobalt_(cobalt) {
   inspect_budget_enabled_ =
       inspect_node_->Get("/inspect_budget")
           .CreateString("is_budget_enabled", limit_data_flag_ ? "true" : "false");

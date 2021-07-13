@@ -48,17 +48,14 @@ class InspectDataBudgetTest : public UnitTestFixture {
 
   void MakeUnlimitedBudget() {
     inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
-    inspect_data_budget_ = std::make_unique<InspectDataBudget>(
-        "non-existent_path", inspect_node_manager_.get(), cobalt_.get());
+    inspect_data_budget_ =
+        std::make_unique<InspectDataBudget>(false, inspect_node_manager_.get(), cobalt_.get());
   }
 
   void MakeLimitedBudget() {
     inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
-
-    std::string limit_data_flag_path = files::JoinPath(tmp_dir_.path(), "limit_inspect_data");
-    files::WriteFile(limit_data_flag_path, " ");
-    inspect_data_budget_ = std::make_unique<InspectDataBudget>(
-        limit_data_flag_path.c_str(), inspect_node_manager_.get(), cobalt_.get());
+    inspect_data_budget_ =
+        std::make_unique<InspectDataBudget>(true, inspect_node_manager_.get(), cobalt_.get());
   }
 
   void CalcBudget(size_t zip_file_bytes) {
@@ -80,8 +77,6 @@ class InspectDataBudgetTest : public UnitTestFixture {
  private:
   timekeeper::TestClock clock_;
   std::unique_ptr<InspectNodeManager> inspect_node_manager_;
-
-  files::ScopedTempDir tmp_dir_;
   std::unique_ptr<InspectDataBudget> inspect_data_budget_;
 
   std::unique_ptr<cobalt::Logger> cobalt_;
