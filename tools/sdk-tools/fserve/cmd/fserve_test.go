@@ -246,13 +246,13 @@ func TestStartServer(t *testing.T) {
 		{syscallWait4: mockWait4NoError,
 			expectedError: "",
 			logLevel:      logger.WarningLevel,
-			expectedArgs:  []string{"serve", "-q", "-repo", "/fake/repo/path", "-l", ":8083"},
+			expectedArgs:  []string{"serve", "-q", "-repo", "/fake/repo/path", "-c", "2", "-l", ":8083"},
 		},
 
 		{syscallWait4: mockWait4NoError,
 			expectedError: "",
 			logLevel:      logger.DebugLevel,
-			expectedArgs:  []string{"serve", "-repo", "/fake/repo/path", "-l", ":8083"},
+			expectedArgs:  []string{"serve", "-repo", "/fake/repo/path", "-c", "2", "-l", ":8083"},
 		},
 
 		{syscallWait4: mockWait4WithError,
@@ -413,7 +413,8 @@ func TestSetPackageSource(t *testing.T) {
 			name:          "devhost",
 			expectedSSHArgs: [][]string{
 				{"echo", "$SSH_CONNECTION"},
-				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+				{"pkgctl", "repo", "add", "url", "-n", "devhost", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+				{"pkgctl", "rule", "rule", "replace", "json", `'{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`},
 			},
 		},
 		{
@@ -424,7 +425,8 @@ func TestSetPackageSource(t *testing.T) {
 			name:          "devhost",
 			expectedSSHArgs: [][]string{
 				{"echo", "$SSH_CONNECTION"},
-				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+				{"pkgctl", "repo", "add", "url", "-n", "devhost", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+				{"pkgctl", "rule", "rule", "replace", "json", `'{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`},
 			},
 		},
 		{
@@ -435,7 +437,8 @@ func TestSetPackageSource(t *testing.T) {
 			name:          "devhost",
 			expectedSSHArgs: [][]string{
 				{"echo", "$SSH_CONNECTION"},
-				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+				{"pkgctl", "repo", "add", "url", "-n", "devhost", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+				{"pkgctl", "rule", "rule", "replace", "json", `'{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`},
 			},
 		},
 		{
@@ -447,7 +450,8 @@ func TestSetPackageSource(t *testing.T) {
 			sshPort:       "1022",
 			expectedSSHArgs: [][]string{
 				{"echo", "$SSH_CONNECTION"},
-				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+				{"pkgctl", "repo", "add", "url", "-n", "devhost", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+				{"pkgctl", "rule", "rule", "replace", "json", `'{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`},
 			},
 		},
 		{
@@ -460,7 +464,8 @@ func TestSetPackageSource(t *testing.T) {
 			persist:       true,
 			expectedSSHArgs: [][]string{
 				{"echo", "$SSH_CONNECTION"},
-				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json", "-p"},
+				{"pkgctl", "repo", "add", "url", "-p", "-n", "devhost", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+				{"pkgctl", "rule", "rule", "replace", "json", `'{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`},
 			},
 		},
 	}
@@ -688,93 +693,105 @@ func TestMain(t *testing.T) {
 		t.Fail()
 	}
 	tests := []struct {
-		args                []string
-		deviceConfiguration string
-		defaultConfigDevice string
-		ffxDefaultDevice    string
-		ffxTargetList       string
-		ffxTargetDefault    string
-		expectedPMArgs      string
-		expectedAddSrcArgs  string
+		args                    []string
+		deviceConfiguration     string
+		defaultConfigDevice     string
+		ffxDefaultDevice        string
+		ffxTargetList           string
+		ffxTargetDefault        string
+		expectedPMArgs          string
+		expectedAddSrcArgs      string
+		expectedRuleReplaceArgs string
 	}{
 		// Test case for no configuration, but 1 device discoverable.
 		{
-			args:               []string{os.Args[0], "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--level", "debug"},
-			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
-			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			args:                    []string{os.Args[0], "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--level", "debug"},
+			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
+			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
-			args:               []string{os.Args[0], "-data-path", dataDir, "--bucket", "test-bucket", "--image", "test-image", "--version", "1.0.0"},
-			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
-			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			args:                    []string{os.Args[0], "-data-path", dataDir, "--bucket", "test-bucket", "--image", "test-image", "--version", "1.0.0"},
+			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
+			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
-			args:               []string{os.Args[0], "-data-path", dataDir, "--clean", "--image", "test-image", "--version", "1.0.0"},
-			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
-			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			args:                    []string{os.Args[0], "-data-path", dataDir, "--clean", "--image", "test-image", "--version", "1.0.0"},
+			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
+			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
-			args:               []string{os.Args[0], "-data-path", dataDir, "--device-ip", "::2", "--image", "test-image", "--version", "1.0.0", "--repo-dir", dataDir + "/custom/packages/amber-files"},
-			expectedPMArgs:     "serve -repo " + dataDir + "/custom/packages/amber-files  -l :8083",
-			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::2 amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			args:                    []string{os.Args[0], "-data-path", dataDir, "--device-ip", "::2", "--image", "test-image", "--version", "1.0.0", "--repo-dir", dataDir + "/custom/packages/amber-files"},
+			expectedPMArgs:          "serve -repo " + dataDir + "/custom/packages/amber-files -c 2 -l :8083",
+			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::2 pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::2 pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
 			args:          []string{os.Args[0], "-data-path", dataDir, "--kill", "--version", "1.0.0"},
 			ffxTargetList: `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
 		},
 		{
-			args:               []string{os.Args[0], "-data-path", dataDir, "--name", "test-devhost", "--image", "test-image", "--version", "1.0.0"},
-			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
-			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n test-devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			args:                    []string{os.Args[0], "-data-path", dataDir, "--name", "test-devhost", "--image", "test-image", "--version", "1.0.0"},
+			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
+			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::1f pkgctl repo add url -n test-devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"test-devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
-			args:               []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive"},
-			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
-			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			args:                    []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive"},
+			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
+			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
-			args:               []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--persist"},
-			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
-			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json -p", dataDir),
+			args:                    []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--persist"},
+			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
+			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::1f pkgctl repo add url -p -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
 			args:          []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--prepare"},
 			ffxTargetList: `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
 		},
 		{
-			args:               []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--private-key", "/path/to/key"},
-			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
-			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -i /path/to/key -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			args:                    []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--private-key", "/path/to/key"},
+			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
+			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -i /path/to/key -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -i /path/to/key -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
-			args:               []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--sshconfig", "/path/to/custom/sshconfig"},
-			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8083",
-			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			expectedAddSrcArgs: fmt.Sprintf("-F /path/to/custom/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json"),
+			args:                    []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--sshconfig", "/path/to/custom/sshconfig"},
+			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
+			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs:      fmt.Sprintf("-F /path/to/custom/sshconfig -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json"),
+			expectedRuleReplaceArgs: `-F /path/to/custom/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`,
 		},
 		{
-			args:               []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--server-port", "8999"},
-			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -l :8999",
-			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8999/config.json", dataDir),
+			args:                    []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--server-port", "8999"},
+			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8999",
+			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8999/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
-			args:               []string{os.Args[0], "-data-path", dataDir, "--device-name", "test-device", "--image", "test-image", "--version", "1.0.0"},
-			expectedPMArgs:     "serve -repo " + filepath.Join(dataDir, "test-device/packages/amber-files") + " -l :8083",
-			ffxTargetList:      `[{"nodename":"test-device","rcs_state":"N","serial":"N","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			expectedAddSrcArgs: fmt.Sprintf("-F %s/sshconfig -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			args:                    []string{os.Args[0], "-data-path", dataDir, "--device-name", "test-device", "--image", "test-image", "--version", "1.0.0"},
+			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "test-device/packages/amber-files") + " -c 2 -l :8083",
+			ffxTargetList:           `[{"nodename":"test-device","rcs_state":"N","serial":"N","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
 			args:           []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive"},
-			expectedPMArgs: "serve -repo " + filepath.Join(dataDir, "remote-target-name/packages/amber-files") + " -l :8083",
+			expectedPMArgs: "serve -repo " + filepath.Join(dataDir, "remote-target-name/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:  `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
 			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
 			"remote-target-name":{
@@ -796,11 +813,12 @@ func TestMain(t *testing.T) {
 					"ssh-port":"",
 					"default": "false"}
 			}`,
-			defaultConfigDevice: "\"remote-target-name\"",
-			expectedAddSrcArgs:  fmt.Sprintf("-F %s/sshconfig  -p 2202 -v ::1f amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			defaultConfigDevice:     "\"remote-target-name\"",
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig  -p 2202 -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -p 2202 -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		}, {
 			args:           []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--device-name", "test-device"},
-			expectedPMArgs: "serve -repo " + filepath.Join(dataDir, "test-device/packages/amber-files") + " -l :8083",
+			expectedPMArgs: "serve -repo " + filepath.Join(dataDir, "test-device/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:  `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
 			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
 			"remote-target-name":{
@@ -822,8 +840,9 @@ func TestMain(t *testing.T) {
 					"ssh-port":"",
 					"default": "false"}
 			}`,
-			defaultConfigDevice: "\"remote-target-name\"",
-			expectedAddSrcArgs:  fmt.Sprintf("-F %s/sshconfig -v ::ff amber_ctl add_src -n devhost -f http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			defaultConfigDevice:     "\"remote-target-name\"",
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::ff pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::ff pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 	}
 
@@ -831,6 +850,7 @@ func TestMain(t *testing.T) {
 		t.Run(fmt.Sprintf("testcase_%d", testcase), func(t *testing.T) {
 			os.Args = test.args
 			os.Setenv("_EXPECTED_ADD_SRC_ARGS", test.expectedAddSrcArgs)
+			os.Setenv("_EXPECTED_RULE_REPLACE_ARGS", test.expectedRuleReplaceArgs)
 			os.Setenv("FSERVE_EXPECTED_ARGS", test.expectedPMArgs)
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DATA", test.deviceConfiguration)
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE", test.defaultConfigDevice)
@@ -919,6 +939,28 @@ func fakeKeygen(args []string) {
 
 func fakeSSH(args []string) {
 
+	checkLen := func(expected, actual []string) {
+		if len(actual) != len(expected) {
+			fmt.Fprintf(os.Stderr, "Argument count mismatch. Expected %v, actual: %v\n", len(expected), len(actual))
+			fmt.Fprintf(os.Stderr, "Expected: %v\n", expected)
+			fmt.Fprintf(os.Stderr, "Actual  : %v\n", actual)
+			os.Exit(1)
+		}
+	}
+
+	checkFields := func(expected, actual []string) {
+		for i := range actual {
+			if actual[i] != expected[i] {
+				fmt.Fprintf(os.Stderr,
+					"Mismatched args index %v. Expected: %v actual: %v\n",
+					i, expected[i], actual[i])
+				fmt.Fprintf(os.Stderr, "Full args Expected: %v actual: %v",
+					expected, actual)
+				os.Exit(3)
+			}
+		}
+	}
+
 	if args[len(args)-1] == "$SSH_CONNECTION" {
 		fmt.Printf("%v 54545 fe80::c00f:f0f0:eeee:cccc 22\n", hostaddr)
 		os.Exit(0)
@@ -926,22 +968,15 @@ func fakeSSH(args []string) {
 
 	if strings.HasSuffix(args[len(args)-1], "config.json") || strings.HasSuffix(args[len(args)-2], "config.json") {
 		expected := strings.Fields(os.Getenv("_EXPECTED_ADD_SRC_ARGS"))
-		if len(args) != len(expected) {
-			fmt.Fprintf(os.Stderr, "Argument count mismatch. Expected %v, actual: %v\n", len(args), len(expected))
-			fmt.Fprintf(os.Stderr, "Expected: %v\n", expected)
-			fmt.Fprintf(os.Stderr, "Actual  : %v\n", args)
-			os.Exit(1)
-		}
-		for i := range args {
-			if args[i] != expected[i] {
-				fmt.Fprintf(os.Stderr,
-					"Mismatched args index %v. Expected: %v actual: %v\n",
-					i, expected[i], args[i])
-				fmt.Fprintf(os.Stderr, "Full args Expected: %v actual: %v",
-					expected, args)
-				os.Exit(3)
-			}
-		}
+		checkLen(expected, args)
+		checkFields(expected, args)
+		os.Exit(0)
+	}
+
+	if len(args) > 4 && strings.Contains(args[len(args)-4], "rule") {
+		expected := strings.Fields(os.Getenv("_EXPECTED_RULE_REPLACE_ARGS"))
+		checkLen(expected, args)
+		checkFields(expected, args)
 		os.Exit(0)
 	}
 
@@ -1071,7 +1106,7 @@ func fakePM(args []string) {
 		if logLevel != "debug" && logLevel != "trace" {
 			expected = append(expected, "-q")
 		}
-		expected = append(expected, "-repo", "/fake/repo/path", "-l", ":8083")
+		expected = append(expected, "-repo", "/fake/repo/path", "-c", "2", "-l", ":8083")
 	}
 	ok := len(args) == len(expected)
 	if ok {
