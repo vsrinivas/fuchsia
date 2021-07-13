@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/input/injector.h"
 
+#include <lib/fit/single_threaded_executor.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -870,40 +872,79 @@ TEST_P(InjectorBadViewportTest, InjectBadViewport_ShouldCloseChannel) {
   EXPECT_TRUE(error_callback_fired);
 }
 
-class InjectorInspectionTest : public gtest::RealLoopFixture {
+class InjectorInspectionTest : public gtest::TestLoopFixture {
  protected:
-  std::vector<inspect::UintArrayValue::HistogramBucket> GetHistogramBuckets(
-      const std::vector<std::string>& path, const std::string& property) {
-    inspect::Hierarchy root = RunPromise(inspect::ReadFromInspector(inspector_)).take_value();
+  void SetUp() override {
+    injector_impl_.emplace(
+        inspector_.GetRoot().CreateChild("injector"), InjectorSettingsTemplate(),
+        ViewportTemplate(), injector_.NewRequest(),
+        /*is_descendant_and_connected=*/[](auto...) { return true; },
+        /*inject=*/[this](auto...) { ++num_injections_; },
+        /*on_channel_closed=*/[] {});
+  }
 
-    const inspect::Hierarchy* parent = root.GetByPath(path);
-    FX_CHECK(parent) << "no node found at path " << fxl::JoinStrings(path, "/");
+  std::pair<inspect::Hierarchy, const inspect::Hierarchy*> ReadHierarchyFromInspector() {
+    fit::result<inspect::Hierarchy> result;
+    fit::single_threaded_executor exec;
+    exec.schedule_task(
+        inspect::ReadFromInspector(inspector_).then([&](fit::result<inspect::Hierarchy>& res) {
+          result = std::move(res);
+        }));
+    exec.run();
+
+    inspect::Hierarchy root = result.take_value();
+    const inspect::Hierarchy* hierarchy = root.GetByPath({"injector"});
+    FX_DCHECK(hierarchy);
+    return {std::move(root), hierarchy};
+  }
+
+  std::vector<inspect::UintArrayValue::HistogramBucket> GetHistogramBuckets(
+      const std::string& property) {
+    const auto [root, parent] = ReadHierarchyFromInspector();
     const inspect::UintArrayValue* histogram =
         parent->node().get_property<inspect::UintArrayValue>(property);
-    FX_CHECK(histogram) << "no histogram named " << property << " in node with path "
-                        << fxl::JoinStrings(path, "/");
+    FX_CHECK(histogram) << "no histogram named " << property << " found";
     return histogram->GetBuckets();
   }
 
+  uint64_t GetInjectionsAtMinute(uint64_t minute) {
+    const auto [root, parent] = ReadHierarchyFromInspector();
+    const inspect::Hierarchy* node = parent->GetByPath({kHistoryNodeName});
+    FX_CHECK(node);
+    const inspect::UintPropertyValue* count = node->node().get_property<inspect::UintPropertyValue>(
+        "Events at minute " + std::to_string(minute));
+    if (count) {
+      return count->value();
+    } else {
+      FX_LOGS(INFO) << "Found no data for minute " << minute;
+      ;
+      return 0;
+    }
+  }
+
+  uint64_t GetTotalInjections() {
+    const auto [root, parent] = ReadHierarchyFromInspector();
+    const inspect::Hierarchy* node = parent->GetByPath({kHistoryNodeName});
+    FX_CHECK(node);
+    const inspect::UintPropertyValue* total =
+        node->node().get_property<inspect::UintPropertyValue>("Total");
+    FX_CHECK(total);
+    return total->value();
+  }
+
+  const std::string kHistoryNodeName =
+      "Last " + std::to_string(scenic_impl::input::InjectorInspector::kNumMinutesOfHistory) +
+      " minutes of injected events";
   inspect::Inspector inspector_;
+  DevicePtr injector_;
+  uint64_t num_injections_ = 0;
+  std::optional<scenic_impl::input::Injector> injector_impl_;
 };
 
 TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
-  // Set up an isolated Injector.
-  DevicePtr injector;
-
   bool error_callback_fired = false;
-  injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
-
-  bool connectivity_is_good = true;
-  uint32_t num_injections = 0;
-  scenic_impl::input::Injector injector_impl(
-      inspector_.GetRoot().CreateChild("injector"), InjectorSettingsTemplate(), ViewportTemplate(),
-      injector.NewRequest(),
-      /*is_descendant_and_connected=*/
-      [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
-      /*inject=*/[&num_injections](auto...) { ++num_injections; },
-      /*on_channel_closed=*/[] {});
+  injector_.set_error_handler(
+      [&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
   {  // Inject ADD event.
     bool injection_callback_fired = false;
@@ -911,14 +952,14 @@ TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
     event.mutable_data()->pointer_sample().set_phase(Phase::ADD);
     std::vector<InjectionEvent> events;
     events.emplace_back(std::move(event));
-    injector->Inject({std::move(events)},
-                     [&injection_callback_fired] { injection_callback_fired = true; });
+    injector_->Inject({std::move(events)},
+                      [&injection_callback_fired] { injection_callback_fired = true; });
     RunLoopUntilIdle();
     EXPECT_TRUE(injection_callback_fired);
 
     // 2 injections, since an injected ADD becomes "ADD; DOWN"
     // in fuchsia.ui.input.PointerEvent's state machine.
-    EXPECT_EQ(num_injections, 2u);
+    EXPECT_EQ(num_injections_, 2u);
     EXPECT_FALSE(error_callback_fired);
   }
 
@@ -928,12 +969,12 @@ TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
     InjectionEvent event = InjectionEventTemplate();
     event.mutable_data()->pointer_sample().set_phase(Phase::CHANGE);
     events.emplace_back(std::move(event));
-    injector->Inject({std::move(events)},
-                     [&injection_callback_fired] { injection_callback_fired = true; });
+    injector_->Inject({std::move(events)},
+                      [&injection_callback_fired] { injection_callback_fired = true; });
     RunLoopUntilIdle();
     EXPECT_TRUE(injection_callback_fired);
 
-    EXPECT_EQ(num_injections, 3u);
+    EXPECT_EQ(num_injections_, 3u);
     EXPECT_FALSE(error_callback_fired);
   }
 
@@ -943,14 +984,14 @@ TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
     InjectionEvent event = InjectionEventTemplate();
     event.mutable_data()->pointer_sample().set_phase(Phase::REMOVE);
     events.emplace_back(std::move(event));
-    injector->Inject({std::move(events)},
-                     [&injection_callback_fired] { injection_callback_fired = true; });
+    injector_->Inject({std::move(events)},
+                      [&injection_callback_fired] { injection_callback_fired = true; });
     RunLoopUntilIdle();
     EXPECT_TRUE(injection_callback_fired);
 
     // 5 injections, since an injected REMOVE becomes "UP; REMOVE" in
     // fuchsia.ui.input.PointerEvent's state machine.
-    EXPECT_EQ(num_injections, 5u);
+    EXPECT_EQ(num_injections_, 5u);
     EXPECT_FALSE(error_callback_fired);
   }
 
@@ -969,20 +1010,20 @@ TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
 
     std::vector<InjectionEvent> events;
     events.emplace_back(std::move(event));
-    injector->Inject({std::move(events)},
-                     [&injection_callback_fired] { injection_callback_fired = true; });
+    injector_->Inject({std::move(events)},
+                      [&injection_callback_fired] { injection_callback_fired = true; });
     RunLoopUntilIdle();
     EXPECT_TRUE(injection_callback_fired);
 
     // Still 5 injections; the callback is not invoked for viewport changes.
-    EXPECT_EQ(num_injections, 5u);
+    EXPECT_EQ(num_injections_, 5u);
     EXPECT_FALSE(error_callback_fired);
   }
 
   {
     uint64_t count = 0;
     for (const inspect::UintArrayValue::HistogramBucket& bucket :
-         GetHistogramBuckets({"injector"}, "viewport_event_latency")) {
+         GetHistogramBuckets("viewport_event_latency")) {
       count += bucket.count;
     }
 
@@ -992,12 +1033,129 @@ TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
   {
     uint64_t count = 0;
     for (const inspect::UintArrayValue::HistogramBucket& bucket :
-         GetHistogramBuckets({"injector"}, "pointer_event_latency")) {
+         GetHistogramBuckets("pointer_event_latency")) {
       count += bucket.count;
     }
 
     EXPECT_EQ(count, 3u);
   }
+}
+
+TEST_F(InjectorInspectionTest, InspectHistory) {
+  const uint64_t kMaxNum = scenic_impl::input::InjectorInspector::kNumMinutesOfHistory;
+  ASSERT_TRUE(kMaxNum > 2) << "This test assumes a minimum length of history";
+
+  const uint64_t start_minute = Now().get() / zx::min(1).get();
+
+  bool error_callback_fired = false;
+  injector_.set_error_handler(
+      [&error_callback_fired](zx_status_t) { error_callback_fired = true; });
+
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute), 0u);
+  EXPECT_EQ(GetTotalInjections(), 0u);
+
+  // Inject events. Each one should register in inspect.
+  {
+    InjectionEvent event = InjectionEventTemplate();
+    event.mutable_data()->pointer_sample().set_phase(Phase::ADD);
+    std::vector<InjectionEvent> events;
+    events.emplace_back(std::move(event));
+    injector_->Inject({std::move(events)}, [] {});
+    RunLoopUntilIdle();
+  }
+
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute), 1u);
+  EXPECT_EQ(GetTotalInjections(), 1u);
+
+  {
+    std::vector<InjectionEvent> events;
+    InjectionEvent event = InjectionEventTemplate();
+    event.mutable_data()->pointer_sample().set_phase(Phase::CHANGE);
+    events.emplace_back(std::move(event));
+    injector_->Inject({std::move(events)}, [] {});
+    RunLoopUntilIdle();
+  }
+
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute), 2u);
+  EXPECT_EQ(GetTotalInjections(), 2u);
+
+  {
+    std::vector<InjectionEvent> events;
+    InjectionEvent event = InjectionEventTemplate();
+    event.mutable_data()->pointer_sample().set_phase(Phase::CHANGE);
+    events.emplace_back(std::move(event));
+    injector_->Inject({std::move(events)}, [] {});
+    RunLoopUntilIdle();
+  }
+
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute), 3u);
+  EXPECT_EQ(GetTotalInjections(), 3u);
+
+  {  // Inject VIEWPORT event. It should not be reflected in the injection stats.
+    InjectionEvent event;
+    event.set_timestamp(1);
+    {
+      fuchsia::ui::pointerinjector::Viewport viewport;
+      viewport.set_extents({{{-242, -383}, {124, 252}}});
+      viewport.set_viewport_to_context_transform(kIdentityMatrix);
+      fuchsia::ui::pointerinjector::Data data;
+      data.set_viewport(std::move(viewport));
+      event.set_data(std::move(data));
+    }
+
+    std::vector<InjectionEvent> events;
+    events.emplace_back(std::move(event));
+    injector_->Inject({std::move(events)}, [] {});
+    RunLoopUntilIdle();
+  }
+
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute), 3u);
+  EXPECT_EQ(GetTotalInjections(), 3u);
+
+  // Roll forward one minute, inject an event and observe that history has updated correctly.
+  RunLoopFor(zx::min(1));
+  {
+    std::vector<InjectionEvent> events;
+    InjectionEvent event = InjectionEventTemplate();
+    event.mutable_data()->pointer_sample().set_phase(Phase::CHANGE);
+    events.emplace_back(std::move(event));
+    injector_->Inject({std::move(events)}, [] {});
+    RunLoopUntilIdle();
+  }
+
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute), 3u);
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute + 1), 1u);
+  EXPECT_EQ(GetTotalInjections(), 4u);
+
+  // Roll forward one less than the size of the ringbuffer. Now the start minute should have
+  // disappeared, but not the second minute.
+  RunLoopFor(zx::min(kMaxNum - 1));
+
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute), 0u);
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute + 1), 1u);
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute + kMaxNum), 0u);
+  EXPECT_EQ(GetTotalInjections(), 1u);
+
+  {
+    std::vector<InjectionEvent> events;
+    {
+      InjectionEvent event = InjectionEventTemplate();
+      event.mutable_data()->pointer_sample().set_phase(Phase::CHANGE);
+      events.emplace_back(std::move(event));
+    }
+    {
+      InjectionEvent event = InjectionEventTemplate();
+      event.mutable_data()->pointer_sample().set_phase(Phase::CHANGE);
+      events.emplace_back(std::move(event));
+    }
+    injector_->Inject({std::move(events)}, [] {});
+    RunLoopUntilIdle();
+  }
+
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute), 0u);
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute + 1), 1u);
+  EXPECT_EQ(GetInjectionsAtMinute(start_minute + kMaxNum), 2u);
+  EXPECT_EQ(GetTotalInjections(), 3u);
 }
 
 }  // namespace input::test

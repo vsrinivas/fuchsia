@@ -25,10 +25,18 @@ constexpr zx::duration kLatencyHistogramInitialStep = zx::msec(1);
 constexpr uint64_t kLatencyHistogramStepMultiplier = 2;
 constexpr size_t kLatencyHistogramBuckets = 14;
 
+uint64_t GetCurrentMinute(const zx::time timestamp) { return timestamp.get() / zx::min(1).get(); }
+
 }  // namespace
 
 InjectorInspector::InjectorInspector(inspect::Node node)
     : node_(std::move(node)),
+      history_stats_node_(node_.CreateLazyValues("Injection history",
+                                                 [this] {
+                                                   inspect::Inspector insp;
+                                                   ReportStats(insp);
+                                                   return fit::make_ok_promise(std::move(insp));
+                                                 })),
       viewport_event_latency_(node_.CreateExponentialUintHistogram(
           "viewport_event_latency", kLatencyHistogramFloor.to_nsecs(),
           kLatencyHistogramInitialStep.to_nsecs(), kLatencyHistogramStepMultiplier,
@@ -39,27 +47,57 @@ InjectorInspector::InjectorInspector(inspect::Node node)
           kLatencyHistogramBuckets)) {}
 
 void InjectorInspector::OnPointerInjectorEvent(const fuchsia::ui::pointerinjector::Event& event) {
-  if (!event.has_data() || !event.has_timestamp()) {
-    FX_LOGS(ERROR) << "OnPointerInjectorEvent() called with an incomplete event";
-    return;
-  }
+  FX_DCHECK(event.has_data() && event.has_timestamp());
+  FX_DCHECK(async_get_default_dispatcher());
 
-  async_dispatcher_t* dispatcher = async_get_default_dispatcher();
-  if (dispatcher == nullptr) {
-    FX_LOGS(ERROR) << "pointerinjector::Event dropped from inspect metrics. "
-                      "async_get_default_dispatcher() returned null.";
-    return;
-  }
-
-  zx::duration latency = async::Now(dispatcher) - zx::time(event.timestamp());
-
+  const zx::time now = async::Now(async_get_default_dispatcher());
+  const zx::duration latency = now - zx::time(event.timestamp());
   if (event.data().is_viewport()) {
     viewport_event_latency_.Insert(latency.to_nsecs());
   } else if (event.data().is_pointer_sample()) {
+    UpdateHistory(now);
     pointer_event_latency_.Insert(latency.to_nsecs());
   } else {
     FX_LOGS(ERROR) << "pointerinjector::Event dropped from inspect metrics. Unexpected data type.";
   }
+}
+
+void InjectorInspector::UpdateHistory(const zx::time now) {
+  const uint64_t current_minute = GetCurrentMinute(now);
+
+  // Add elements to the front and pop from the back so that the newest element will be read out
+  // first when we later iterate over the deque.
+  if (history_.empty() || history_.front().minute_key != current_minute) {
+    history_.push_front({
+        .minute_key = current_minute,
+    });
+  }
+  history_.front().num_injected_events++;
+
+  // Pop off everything older than |kNumMinutesOfHistory|.
+  while (history_.size() > 1 &&
+         (current_minute - history_.back().minute_key) >= kNumMinutesOfHistory) {
+    history_.pop_back();
+  }
+}
+
+void InjectorInspector::ReportStats(inspect::Inspector& inspector) const {
+  inspect::Node node = inspector.GetRoot().CreateChild(
+      "Last " + std::to_string(kNumMinutesOfHistory) + " minutes of injected events");
+
+  uint64_t total = 0;
+  const uint64_t current_minute = GetCurrentMinute(async::Now(async_get_default_dispatcher()));
+  for (const auto& [minute, num_injected_events] : history_) {
+    if (minute + kNumMinutesOfHistory <= current_minute) {
+      break;
+    }
+
+    node.CreateUint("Events at minute " + std::to_string(minute), num_injected_events, &inspector);
+
+    total += num_injected_events;
+  }
+  node.CreateUint("Total", total, &inspector);
+  inspector.emplace(std::move(node));
 }
 
 namespace {

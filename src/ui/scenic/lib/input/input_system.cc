@@ -158,7 +158,8 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
       /*inject_mouse_exclusive*/
       [](const InternalPointerEvent& event, StreamId stream_id) {},
       /*inject_mouse_hit_tested*/
-      [](const InternalPointerEvent& event, StreamId stream_id) {});
+      [](const InternalPointerEvent& event, StreamId stream_id) {},
+      this->context()->inspect_node()->CreateChild("PointerinjectorRegistry"));
 
   this->context()->app_context()->outgoing()->AddPublicService(
       pointer_capture_registry_.GetHandler(this));

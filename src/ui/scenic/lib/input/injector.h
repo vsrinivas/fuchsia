@@ -35,11 +35,27 @@ class InjectorInspector {
 
   void OnPointerInjectorEvent(const fuchsia::ui::pointerinjector::Event& event);
 
+  // How long to track injection history.
+  static constexpr uint64_t kNumMinutesOfHistory = 10;
+
  private:
+  struct InspectHistory {
+    // The minute this was recorded during. Used as the key for appending new values.
+    uint64_t minute_key;
+    // Number of injected events during |minute_key|.
+    uint64_t num_injected_events;
+  };
+
+  void UpdateHistory(zx::time now);
+  void ReportStats(inspect::Inspector& inspector) const;
+
   inspect::Node node_;
+  inspect::LazyNode history_stats_node_;
 
   inspect::ExponentialUintHistogram viewport_event_latency_;
   inspect::ExponentialUintHistogram pointer_event_latency_;
+
+  std::deque<InspectHistory> history_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InjectorInspector);
 };
