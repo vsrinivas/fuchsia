@@ -109,7 +109,7 @@ func main() {
 	testsPath := flag.Arg(0)
 	tests, err := loadTests(testsPath)
 	if err != nil {
-		logger.Fatalf(ctx, "failed to load tests from %q: %v", testsPath, err)
+		logger.Fatalf(ctx, "failed to load tests from %q: %s", testsPath, err)
 	}
 
 	// Configure a test outputs object, responsible for producing TAP output,
@@ -128,7 +128,7 @@ func main() {
 	tapProducer.Plan(len(tests))
 	outputs, err := createTestOutputs(tapProducer, testOutDir)
 	if err != nil {
-		logger.Fatalf(ctx, "failed to create test results object: %v", err)
+		logger.Fatalf(ctx, "failed to create test results object: %s", err)
 	}
 	defer outputs.Close()
 
@@ -144,7 +144,7 @@ func main() {
 
 	cleanUp, err := environment.Ensure()
 	if err != nil {
-		logger.Fatalf(ctx, "failed to setup environment: %v", err)
+		logger.Fatalf(ctx, "failed to setup environment: %s", err)
 	}
 	defer cleanUp()
 

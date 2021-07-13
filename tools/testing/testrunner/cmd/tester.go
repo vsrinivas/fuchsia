@@ -187,7 +187,7 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	}
 
 	if exists, profileErr := osmisc.FileExists(profileAbs); profileErr != nil {
-		logger.Errorf(ctx, "unable to determine whether a profile was emitted: %v", profileErr)
+		logger.Errorf(ctx, "unable to determine whether a profile was emitted: %s", profileErr)
 	} else if exists {
 		// TODO(fxbug.dev/61208): delete determination of build IDs once
 		// profiles embed this information.
@@ -221,7 +221,7 @@ func (t *subprocessTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.
 				abs := filepath.Join(t.localOutputDir, sink.File)
 				exists, err := osmisc.FileExists(abs)
 				if err != nil {
-					return fmt.Errorf("unable to determine if local data sink %q exists: %v", sink.File, err)
+					return fmt.Errorf("unable to determine if local data sink %q exists: %w", sink.File, err)
 				} else if !exists {
 					return fmt.Errorf("expected a local data sink %q, but no such file exists", sink.File)
 				}
@@ -253,7 +253,7 @@ func (s *serialSocket) runDiagnostics(ctx context.Context) error {
 	}
 	socket, err := serial.NewSocket(ctx, s.socketPath)
 	if err != nil {
-		return fmt.Errorf("newSerialSocket failed: %v", err)
+		return fmt.Errorf("newSerialSocket failed: %w", err)
 	}
 	defer socket.Close()
 	return serial.RunDiagnostics(ctx, socket)
@@ -339,16 +339,16 @@ func (t *fuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command [
 	retry.Retry(ctx, retry.WithMaxAttempts(t.connectionErrorRetryBackoff, maxReconnectAttempts), func() error {
 		cmdErr = t.client.Run(ctx, command, stdout, stderr)
 		if sshutil.IsConnectionError(cmdErr) {
-			logger.Errorf(ctx, "attempting to reconnect over SSH after error: %v", cmdErr)
+			logger.Errorf(ctx, "attempting to reconnect over SSH after error: %s", cmdErr)
 			if err := t.reconnect(ctx); err != nil {
-				logger.Errorf(ctx, "%s: %v", constants.FailedToReconnectMsg, err)
+				logger.Errorf(ctx, "%s: %s", constants.FailedToReconnectMsg, err)
 				// If we fail to reconnect, continuing is likely hopeless.
 				return nil
 			}
 			// Return non-ConnectionError because code in main.go will exit early if
 			// it sees that. Since reconnection succeeded, we don't want that.
 			// TODO(garymm): Clean this up; have main.go do its own connection recovery between tests.
-			cmdErr = fmt.Errorf("%v", cmdErr)
+			cmdErr = fmt.Errorf("%s", cmdErr)
 			return cmdErr
 		}
 		// Not a connection error -> command passed or failed -> break retry loop.
@@ -382,13 +382,13 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		startTime := clock.Now(ctx)
 		var sinksPerTest map[string]runtests.DataSinkReference
 		if sinksPerTest, sinkErr = t.copier.GetReferences(dataOutputDir); sinkErr != nil {
-			logger.Errorf(ctx, "failed to determine data sinks for test %q: %v", test.Name, sinkErr)
+			logger.Errorf(ctx, "failed to determine data sinks for test %q: %s", test.Name, sinkErr)
 		} else {
 			sinks = sinksPerTest[test.Name]
 		}
 		duration := clock.Now(ctx).Sub(startTime)
 		if sinks.Size() > 0 {
-			logger.Debugf(ctx, "%d data sinks found in %v", sinks.Size(), duration)
+			logger.Debugf(ctx, "%d data sinks found in %s", sinks.Size(), duration)
 		}
 	}
 
@@ -403,7 +403,7 @@ func (t *fuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.
 	v2Sinks, err := t.copier.GetReferences(dataOutputDirV2)
 	if err != nil {
 		// If we fail to get v2 sinks, just log the error but continue to copy v1 sinks.
-		logger.Errorf(ctx, "failed to determine data sinks for v2 tests: %v", err)
+		logger.Errorf(ctx, "failed to determine data sinks for v2 tests: %s", err)
 	}
 	var v2SinkRefs []runtests.DataSinkReference
 	for _, ref := range v2Sinks {
@@ -422,13 +422,13 @@ func (t *fuchsiaSSHTester) copySinks(ctx context.Context, sinkRefs []runtests.Da
 	startTime := clock.Now(ctx)
 	sinkMap, err := t.copier.Copy(sinkRefs, localOutputDir)
 	if err != nil {
-		return fmt.Errorf("failed to copy data sinks off target: %v", err)
+		return fmt.Errorf("failed to copy data sinks off target: %w", err)
 	}
 	copyDuration := clock.Now(ctx).Sub(startTime)
 	sinkRef := runtests.DataSinkReference{Sinks: sinkMap}
 	numSinks := sinkRef.Size()
 	if numSinks > 0 {
-		logger.Debugf(ctx, "copied %d data sinks in %v", numSinks, copyDuration)
+		logger.Debugf(ctx, "copied %d data sinks in %s", numSinks, copyDuration)
 	}
 	return nil
 }
@@ -446,9 +446,9 @@ func (t *fuchsiaSSHTester) RunSnapshot(ctx context.Context, snapshotFile string)
 	startTime := clock.Now(ctx)
 	err = t.runSSHCommandWithRetry(ctx, []string{"/bin/snapshot"}, snapshotOutFile, os.Stderr)
 	if err != nil {
-		logger.Errorf(ctx, "%s: %v", constants.FailedToRunSnapshotMsg, err)
+		logger.Errorf(ctx, "%s: %s", constants.FailedToRunSnapshotMsg, err)
 	}
-	logger.Debugf(ctx, "ran snapshot in %v", clock.Now(ctx).Sub(startTime))
+	logger.Debugf(ctx, "ran snapshot in %s", clock.Now(ctx).Sub(startTime))
 	return err
 }
 
@@ -623,7 +623,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	if err != nil {
 		return sinks, err
 	}
-	logger.Debugf(ctx, "starting: %v", command)
+	logger.Debugf(ctx, "starting: %s", command)
 
 	// If a single read from the socket includes both the bytes that indicate the test started and the bytes
 	// that indicate the test completed, then the startedReader will consume the bytes needed for detecting

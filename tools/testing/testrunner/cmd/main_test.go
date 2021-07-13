@@ -179,7 +179,7 @@ func TestValidateTest(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			err := validateTest(c.test)
 			if c.expectErr != (err != nil) {
-				t.Errorf("got error: %v, expectErr: %v", err, c.expectErr)
+				t.Errorf("got error: %q, expectErr: %t", err, c.expectErr)
 			}
 		})
 	}
@@ -399,7 +399,7 @@ func TestRunAndOutputTest(t *testing.T) {
 			producer := tap.NewProducer(&buf)
 			o, err := createTestOutputs(producer, "")
 			if err != nil {
-				t.Fatalf("failed to create a test outputs object: %v", err)
+				t.Fatalf("failed to create a test outputs object: %s", err)
 			}
 			defer o.Close()
 			if c.runs == 0 {
@@ -408,7 +408,7 @@ func TestRunAndOutputTest(t *testing.T) {
 			results, err := runAndOutputTest(context.Background(), testsharder.Test{Test: c.test, Runs: c.runs, RunAlgorithm: c.runAlgorithm}, tester, o, &buf, &buf, "out-dir")
 
 			if err != c.expectedErr {
-				t.Fatalf("got error: %v, expected: %v", err, c.expectedErr)
+				t.Fatalf("got error: %q, expected: %q", err, c.expectedErr)
 			}
 
 			opts := []cmp.Option{
@@ -446,7 +446,7 @@ func TestRunAndOutputTest(t *testing.T) {
 			expectedOutputRegex := regexp.MustCompile(strings.ReplaceAll(strings.ReplaceAll(expectedOutput, "(", "\\("), ")", "\\)"))
 			submatches := expectedOutputRegex.FindStringSubmatch(actualOutput)
 			if len(submatches) != 1 {
-				t.Errorf("unexpected output:\nexpected: %v\nactual: %v\n", expectedOutput, actualOutput)
+				t.Errorf("unexpected output:\nexpected: %q\nactual: %q\n", expectedOutput, actualOutput)
 			}
 		})
 	}

@@ -45,7 +45,7 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 
 	duration := result.EndTime.Sub(result.StartTime)
 	if duration <= 0 {
-		return fmt.Errorf("test %q must have positive duration: (start, end) = (%v, %v)", result.Name, result.StartTime, result.EndTime)
+		return fmt.Errorf("test %q must have positive duration: (start, end) = (%s, %s)", result.Name, result.StartTime, result.EndTime)
 	}
 
 	o.summary.Tests = append(o.summary.Tests, runtests.TestDetails{
@@ -59,18 +59,18 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 		DataSinks:      result.DataSinks.Sinks,
 	})
 
-	desc := fmt.Sprintf("%s (%v)", result.Name, duration)
+	desc := fmt.Sprintf("%s (%s)", result.Name, duration)
 	o.tap.Ok(result.Result == runtests.TestSuccess, desc)
 
 	if o.outDir != "" {
 		outputRelPath = filepath.Join(o.outDir, outputRelPath)
 		pathWriter, err := osmisc.CreateFile(outputRelPath)
 		if err != nil {
-			return fmt.Errorf("failed to create stdio file for test %q: %v", result.Name, err)
+			return fmt.Errorf("failed to create stdio file for test %q: %w", result.Name, err)
 		}
 		defer pathWriter.Close()
 		if _, err := pathWriter.Write(result.Stdio); err != nil {
-			return fmt.Errorf("failed to write stdio file for test %q: %v", result.Name, err)
+			return fmt.Errorf("failed to write stdio file for test %q: %w", result.Name, err)
 		}
 	}
 	return nil
@@ -110,7 +110,7 @@ func (o *testOutputs) Close() error {
 	summaryPath := filepath.Join(o.outDir, runtests.TestSummaryFilename)
 	s, err := osmisc.CreateFile(summaryPath)
 	if err != nil {
-		return fmt.Errorf("failed to create file: %v", err)
+		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer s.Close()
 	_, err = io.Copy(s, bytes.NewBuffer(summaryBytes))

@@ -105,7 +105,7 @@ func TestSubprocessTester(t *testing.T) {
 		os.MkdirAll(filepath.Dir(abs), 0o700)
 		f, err := os.Create(abs)
 		if err != nil {
-			t.Fatalf("failed to create profile: %v", err)
+			t.Fatalf("failed to create profile: %s", err)
 		}
 		f.Close()
 	}
@@ -174,7 +174,7 @@ func TestSubprocessTester(t *testing.T) {
 			outDir := filepath.Join(tmpDir, c.test.Path)
 			ref, err := tester.Test(context.Background(), testsharder.Test{Test: c.test}, ioutil.Discard, ioutil.Discard, outDir)
 			if gotErr := (err != nil); gotErr != c.wantErr {
-				t.Errorf("tester.Test got error: %v, want error: %t", err, c.wantErr)
+				t.Errorf("tester.Test got error: %s, want error: %t", err, c.wantErr)
 			}
 			if err == nil {
 				if _, statErr := os.Stat(outDir); statErr != nil {
@@ -299,7 +299,7 @@ func TestSSHTester(t *testing.T) {
 			}
 			defer func() {
 				if err := tester.Close(); err != nil {
-					t.Errorf("Close returned error: %v", err)
+					t.Errorf("Close returned error: %s", err)
 				}
 			}()
 			wantReconnCalls := len(c.reconErrs)
@@ -319,7 +319,7 @@ func TestSSHTester(t *testing.T) {
 				}
 			} else {
 				if !c.wantErr {
-					t.Errorf("tester.Test got error: %v, want nil", err)
+					t.Errorf("tester.Test got error: %s, want nil", err)
 				}
 				if isConnErr := sshutil.IsConnectionError(err); isConnErr != c.wantConnErr {
 					t.Errorf("got isConnErr: %t, want: %t", isConnErr, c.wantConnErr)
@@ -329,12 +329,12 @@ func TestSSHTester(t *testing.T) {
 			if c.runSnapshot {
 				p := filepath.Join(t.TempDir(), "testrunner-cmd-test")
 				if err = tester.RunSnapshot(context.Background(), p); err != nil {
-					t.Errorf("failed to run snapshot: %v", err)
+					t.Errorf("failed to run snapshot: %s", err)
 				}
 			}
 			if c.runV2 {
 				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{sinks}, &testOutputs{}); err != nil {
-					t.Errorf("failed to collect v2 sinks: %v", err)
+					t.Errorf("failed to collect v2 sinks: %s", err)
 				}
 			}
 
@@ -376,7 +376,6 @@ func TestSSHTester(t *testing.T) {
 					t.Errorf("expected sinks in dir: %s, but got: %s", expectedRemoteDir, copier.remoteDir)
 				}
 			}
-
 		})
 	}
 }
@@ -403,18 +402,18 @@ func (s *fakeSerialServer) Serve() error {
 	listener, err := net.Listen("unix", s.socketPath)
 	if err != nil {
 		s.listeningChan <- false
-		return fmt.Errorf("Listen(%s) failed: %v", s.socketPath, err)
+		return fmt.Errorf("Listen(%s) failed: %w", s.socketPath, err)
 	}
 	defer listener.Close()
 	s.listeningChan <- true
 	conn, err := listener.Accept()
 	if err != nil {
-		return fmt.Errorf("Accept() failed: %v", err)
+		return fmt.Errorf("Accept() failed: %w", err)
 	}
 	defer conn.Close()
 	// Signal we're ready to accept input.
 	if _, err := conn.Write([]byte(serialConsoleCursor)); err != nil {
-		return fmt.Errorf("conn.Write() failed: %v", err)
+		return fmt.Errorf("conn.Write() failed: %w", err)
 	}
 	reader := iomisc.NewMatchingReader(conn, [][]byte{[]byte(s.shutdownString)})
 	for {
@@ -425,7 +424,7 @@ func (s *fakeSerialServer) Serve() error {
 			if err == io.EOF {
 				return nil
 			}
-			return fmt.Errorf("conn.Read() failed: %v", err)
+			return fmt.Errorf("conn.Read() failed: %w", err)
 		}
 	}
 }
@@ -526,7 +525,7 @@ func TestSerialTester(t *testing.T) {
 			buff := make([]byte, len(expectedCmd))
 			for i := 0; i < expectedTries; i++ {
 				if _, err := io.ReadFull(serial, buff); err != nil {
-					t.Errorf("error reading from serial: %v", err)
+					t.Errorf("error reading from serial: %s", err)
 				} else if string(buff) != expectedCmd {
 					t.Errorf("unexpected command: %s", buff)
 				}
@@ -545,7 +544,7 @@ func TestSerialTester(t *testing.T) {
 				go func() {
 					if b, err := io.ReadAll(serial); err != nil {
 						fmt.Println(err)
-						errs <- fmt.Errorf("error reading from serial: %v", err)
+						errs <- fmt.Errorf("error reading from serial: %w", err)
 					} else if string(b) != expectedCmd || string(b) != "" {
 						errs <- fmt.Errorf("unexpected serial input: %s", string(buff))
 					}
@@ -685,7 +684,8 @@ func TestCommandForTest(t *testing.T) {
 				Test: build.Test{
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cmx",
-				}},
+				},
+			},
 			expected: []string{"runtests", "--output", "REMOTE_DIR", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
@@ -694,7 +694,8 @@ func TestCommandForTest(t *testing.T) {
 			test: testsharder.Test{
 				Test: build.Test{
 					Path: "/path/to/test",
-				}},
+				},
+			},
 			expected: []string{"runtests", "--output", "REMOTE_DIR", "/path/to/test"},
 		},
 		{
@@ -703,7 +704,8 @@ func TestCommandForTest(t *testing.T) {
 			test: testsharder.Test{
 				Test: build.Test{
 					Path: "/path/to/test",
-				}},
+				},
+			},
 			timeout:  time.Second,
 			expected: []string{"runtests", "--output", "REMOTE_DIR", "-i", "1", "/path/to/test"},
 		},
@@ -724,7 +726,8 @@ func TestCommandForTest(t *testing.T) {
 			test: testsharder.Test{
 				Test: build.Test{
 					Path: "/path/to/test",
-				}},
+				},
+			},
 			wantErr: true,
 		},
 		{
@@ -734,7 +737,8 @@ func TestCommandForTest(t *testing.T) {
 				Test: build.Test{
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cmx",
-				}},
+				},
+			},
 			expected: []string{"run-test-component", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
@@ -744,7 +748,8 @@ func TestCommandForTest(t *testing.T) {
 				Test: build.Test{
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cmx",
-				}},
+				},
+			},
 			timeout:  time.Second,
 			expected: []string{"run-test-component", "--timeout=1", "fuchsia-pkg://example.com/test.cmx"},
 		},
@@ -756,7 +761,8 @@ func TestCommandForTest(t *testing.T) {
 					Path:        "/path/to/test",
 					PackageURL:  "fuchsia-pkg://example.com/test.cmx",
 					LogSettings: build.LogSettings{MaxSeverity: "ERROR"},
-				}},
+				},
+			},
 			timeout:  time.Second,
 			expected: []string{"run-test-component", "--max-log-severity=ERROR", "--timeout=1", "fuchsia-pkg://example.com/test.cmx"},
 		},
@@ -779,7 +785,8 @@ func TestCommandForTest(t *testing.T) {
 				Test: build.Test{
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cm",
-				}},
+				},
+			},
 			expected: []string{"run-test-suite", "--filter-ansi", "fuchsia-pkg://example.com/test.cm"},
 		},
 		{
@@ -789,7 +796,8 @@ func TestCommandForTest(t *testing.T) {
 				Test: build.Test{
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cm",
-				}},
+				},
+			},
 			expected: []string{"run-test-suite", "--filter-ansi", "fuchsia-pkg://example.com/test.cm"},
 		},
 		{
@@ -800,7 +808,8 @@ func TestCommandForTest(t *testing.T) {
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cm",
 					Parallel:   2,
-				}},
+				},
+			},
 			expected: []string{"run-test-suite", "--filter-ansi", "--parallel", "2", "fuchsia-pkg://example.com/test.cm"},
 		},
 		{
@@ -810,7 +819,8 @@ func TestCommandForTest(t *testing.T) {
 				Test: build.Test{
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cm",
-				}},
+				},
+			},
 			timeout:  time.Second,
 			expected: []string{"run-test-suite", "--filter-ansi", "--timeout", "1", "fuchsia-pkg://example.com/test.cm"},
 		},
@@ -824,13 +834,12 @@ func TestCommandForTest(t *testing.T) {
 					t.Errorf("commandForTest returned nil error, want non-nil error")
 				}
 			} else if !c.wantErr {
-				t.Errorf("commandForTest returned error: %v, want nil", err)
+				t.Errorf("commandForTest returned error: %s, want nil", err)
 			}
 			if !reflect.DeepEqual(command, c.expected) {
 				t.Errorf("unexpected command:\nexpected: %q\nactual: %q\n", c.expected, command)
 			}
 		})
-
 	}
 }
 
