@@ -23,7 +23,7 @@ Run Fuchsia as normal, for example using `fx serve` and `fx emu -N`.
 To monitor starnix, look for log messages with the `starnix` tag:
 
 ```sh
-fx log --tag starnix
+fx log --tag starnix --hide_metadata --pretty
 ```
 
 ### Run a Linux binary
