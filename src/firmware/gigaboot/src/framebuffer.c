@@ -9,6 +9,8 @@
 #include <string.h>
 #include <xefi.h>
 
+#include "logo.h"
+
 static efi_graphics_output_protocol* fb_get_gop() {
   static efi_graphics_output_protocol* gop = NULL;
   if (!gop) {
@@ -121,8 +123,6 @@ void print_fb_modes() {
   }
 }
 
-#include "logo.h"
-
 static efi_graphics_output_blt_pixel font_white = {
     .Red = 0xFF,
     .Green = 0xFF,
@@ -160,25 +160,11 @@ void draw_logo() {
     return;
   }
 
-  // Un-RLE the logo
-  unsigned char* iptr = logo_rle;
-  efi_graphics_output_blt_pixel* optr = tmp;
-  unsigned entries = sizeof(logo_rle) / 2;
-  while (entries-- > 0) {
-    unsigned count = *iptr++;
-    unsigned alpha = *iptr++;
-    efi_graphics_output_blt_pixel px = {
-        .Red = (alpha * 0xFF) / 255,
-        .Green = 0,
-        .Blue = (alpha * 0x80) / 255,
-    };
-    while (count-- > 0) {
-      *optr++ = px;
-    }
-  }
-
+  logo_load(tmp);
   gop->Blt(gop, tmp, EfiBltBufferToVideo, 0, 0, h_res - logo_width - (h_res / 75),
            v_res - logo_height - (v_res / 75), logo_width, logo_height, 0);
+
+  gBS->FreePool(tmp);
 }
 
 static void putchar(efi_graphics_output_protocol* gop, const gfx_font* font, unsigned ch,
