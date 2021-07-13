@@ -206,6 +206,20 @@ static zx_status_t modified_get_metadata(brcmf_bus* bus, void* data, size_t exp_
   return ZX_OK;
 }
 
+static zx_status_t validate_not_invoked_on_del(struct brcmf_if* ifp,
+                                                   const struct brcmf_event_msg* e, void* data) {
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+  struct brcmf_if_event* ifevent = (struct brcmf_if_event*)data;
+
+  // Ensure this is a DEL event and that vif event handling is not armed.
+  EXPECT_EQ(BRCMF_E_IF_DEL, ifevent->action);
+  EXPECT_EQ(false, brcmf_cfg80211_vif_event_armed(cfg));
+
+  // If the above are true, then we do not expect the event handler to be invoked.
+  EXPECT_TRUE(false) << "Event handler is not expected to be invoked in this case";
+  return ZX_OK;
+}
+
 TEST_F(DynamicIfTest, CreateDestroy) {
   Init();
 
@@ -230,6 +244,37 @@ TEST_F(DynamicIfTest, CreateDestroy) {
   EXPECT_EQ(DeleteInterface(&softap_ifc_), ZX_OK);
   EXPECT_EQ(DeviceCount(), 1U);
 }
+
+// fxbug.dev/78738 resulted because of a race created by the invokation of the event handler prior
+// to handling of the armed check based interface removal. In this test, we use a fake event handler
+// to validate that the handler is invoked after all BRCMF_E_IF_DEL related handling is complete.
+TEST_F(DynamicIfTest, EventHandlingOnSoftAPDel) {
+  Init();
+  brcmf_simdev* sim = device_->GetSim();
+  wireless_dev* wdev = nullptr;
+
+  // We manually start the AP interface to avoid the additional logic within
+  // StartInterface(). This allows us to keep the interface removal simple.
+  wlan_info_mac_role_t ap_role = WLAN_INFO_MAC_ROLE_AP;
+  EXPECT_EQ(ZX_OK, softap_ifc_.Init(env_, ap_role));
+
+  wlanphy_impl_create_iface_req_t req = {
+      .role = ap_role,
+      .mlme_channel = softap_ifc_.ch_mlme_,
+      .has_init_mac_addr = false,
+  };
+  EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, kFakeApName, nullptr, &req, &wdev));
+
+  // Override callback function to validate that it does not get invoked for del event.
+  brcmf_fweh_unregister(sim->drvr, BRCMF_E_IF);
+  EXPECT_EQ(ZX_OK, brcmf_fweh_register(sim->drvr, BRCMF_E_IF, validate_not_invoked_on_del));
+
+  struct net_device* ndev = wdev->netdev;
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  EXPECT_EQ(wdev->iftype, WLAN_INFO_MAC_ROLE_AP);
+  EXPECT_EQ(ZX_OK, brcmf_fil_bsscfg_data_set(ifp, "interface_remove", nullptr, 0));
+}
+
 
 // Verify if all iovars in metadata were set.
 static void verify_metadata_iovars(brcmf_simdev* sim, brcmf_if* ifp) {

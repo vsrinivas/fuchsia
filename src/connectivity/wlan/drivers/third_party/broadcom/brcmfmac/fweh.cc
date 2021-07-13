@@ -229,16 +229,23 @@ void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* 
     brcmf_proto_reset_iface(drvr, ifp->ifidx);
   }
 
-  err = brcmf_fweh_call_event_handler(ifp, static_cast<brcmf_fweh_event_code>(emsg->event_code),
-                                      emsg, data);
-
   if (ifp && ifevent->action == BRCMF_E_IF_DEL) {
     bool armed = brcmf_cfg80211_vif_event_armed(drvr->config);
 
-    /* Default handling in case no-one waits for this event */
+    // If no one is waiting for the event, remove interface and don't invoke
+    // event handler, since ifp is no longer valid once interface is removed.
     if (!armed) {
       brcmf_remove_interface(ifp, false);
+      return;
     }
+  }
+
+  err = brcmf_fweh_call_event_handler(ifp, static_cast<brcmf_fweh_event_code>(emsg->event_code),
+                                      emsg, data);
+  if (err != ZX_OK) {
+    BRCMF_WARN("Event handler failed with err: %s event_code: %d", zx_status_get_string(err),
+               emsg->event_code);
+    return;
   }
 }
 
