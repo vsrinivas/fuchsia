@@ -20,8 +20,7 @@ const char kRamDeviceClassPath[] = "/dev/class/aml-ram";
 void SetRamDevice(monitor::Monitor* app) {
   // Look for optional RAM device that provides bandwidth measurement interface.
   fuchsia::hardware::ram::metrics::DevicePtr ram_device;
-  std::error_code _ignore;
-  if (std::filesystem::exists(kRamDeviceClassPath, _ignore)) {
+  if (std::filesystem::exists(kRamDeviceClassPath)) {
     for (const auto& entry : std::filesystem::directory_iterator(kRamDeviceClassPath)) {
       int fd = open(entry.path().c_str(), O_RDWR);
       if (fd > -1) {

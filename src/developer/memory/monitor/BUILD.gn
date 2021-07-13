@@ -79,7 +79,10 @@ executable("bin") {
 fuchsia_component("component") {
   component_name = "memory_monitor"
   manifest = "meta/memory_monitor.cml"
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    ":dummy_config",
+  ]
 }
 
 # Allow launching legacy v1 component to support existing use cases in tests.
@@ -106,4 +109,14 @@ config_data("userdebug_config") {
   for_pkg = "memory_monitor"
   sources = [ "config/send_critical_pressure_crash_reports" ]
   outputs = [ "send_critical_pressure_crash_reports" ]
+}
+
+# TODO(fxbug.dev/77872): memory_monitor crashes if there is no sub-directory for
+# memory_monitor in config-data. Ensure that there is always *something*, even
+# if it's useless.
+# After the bug above is fixed, delete this target.
+config_data("dummy_config") {
+  for_pkg = "memory_monitor"
+  sources = [ "config/send_critical_pressure_crash_reports" ]
+  outputs = [ "dummy" ]
 }
