@@ -33,7 +33,8 @@ fn update_stat_from_result(node: &FsNode, attrs: zxio_node_attributes_t) -> Resu
     let mut state = node.state_mut();
     state.inode_num = attrs.id;
     // TODO - store these in FsNodeState and convert on fstat
-    state.mode = unsafe { zxio_get_posix_mode(attrs.protocols, attrs.abilities) };
+    state.mode =
+        FileMode::from_bits(unsafe { zxio_get_posix_mode(attrs.protocols, attrs.abilities) });
     state.size = attrs.content_size as usize;
     state.storage_size = attrs.storage_size as usize;
     state.blksize = BYTES_PER_BLOCK;

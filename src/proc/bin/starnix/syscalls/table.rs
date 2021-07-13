@@ -67,6 +67,12 @@ impl FromSyscallArg for FdNumber {
     }
 }
 
+impl FromSyscallArg for FileMode {
+    fn from_arg(arg: u64) -> FileMode {
+        FileMode::from_bits(arg as u32)
+    }
+}
+
 impl FromSyscallArg for UncheckedSignal {
     fn from_arg(arg: u64) -> UncheckedSignal {
         UncheckedSignal::new(arg)
@@ -149,6 +155,8 @@ pub fn dispatch_syscall(
         ioctl[4],
         kill[2],
         lseek[3],
+        mkdirat[3],
+        mknodat[4],
         mmap[6],
         mprotect[3],
         munmap[2],

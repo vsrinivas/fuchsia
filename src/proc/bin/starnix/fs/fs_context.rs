@@ -17,7 +17,7 @@ struct FsContextState {
     cwd: NamespaceNode,
 
     // See <https://man7.org/linux/man-pages/man2/umask.2.html>
-    umask: mode_t,
+    umask: FileMode,
 }
 
 /// The file system context associated with a task.
@@ -50,7 +50,7 @@ impl FsContext {
         Arc::new(FsContext {
             namespace,
             root: root.clone(),
-            state: RwLock::new(FsContextState { cwd: root, umask: 0o022 }),
+            state: RwLock::new(FsContextState { cwd: root, umask: FileMode::DEFAULT_UMASK }),
         })
     }
 
@@ -79,41 +79,61 @@ impl FsContext {
         state.cwd = file.name().clone();
     }
 
-    /// Lookup a namespace node in this file system.
+    /// Lookup the parent of a namespace node.
     ///
-    /// Consider using Task::open_file or Task::open_file_at rather than
+    /// Consider using Task::open_file_at or Task::lookup_parent_at rather than
     /// calling this function directly.
-    pub fn lookup_node(&self, dir: NamespaceNode, path: &FsStr) -> Result<NamespaceNode, Errno> {
+    ///
+    /// This function resolves all but the last component of the given path.
+    /// The function returns the parent directory of the last component as well
+    /// as the last component.
+    ///
+    /// If path is empty, this function returns dir and an empty path.
+    /// Similarly, if path ends with "." or "..", these components will be
+    /// returned along with the parent.
+    ///
+    /// The returned parent might not be a directory.
+    pub fn lookup_parent<'a>(
+        &self,
+        dir: NamespaceNode,
+        path: &'a FsStr,
+    ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
         let mut node = dir;
-        for component in path.split(|c| *c == b'/') {
-            if component == b"." || component == b"" {
-                // ignore
-            } else if component == b".." {
-                // TODO: make sure this can't escape a chroot
-                node = node.parent().unwrap_or(node);
-            } else {
-                node = node.lookup(component)?;
-            }
+        let mut it = path.split(|c| *c == b'/');
+        let mut current = it.next().unwrap_or(b"");
+        while let Some(next) = it.next() {
+            node = node.lookup(current)?;
+            current = next;
         }
-        Ok(node)
+        Ok((node, current))
     }
 
-    #[cfg(test)]
-    pub fn apply_umask(&self, mode: mode_t) -> mode_t {
+    /// Lookup a namespace node.
+    ///
+    /// Consider using Task::open_file_at or Task::lookup_parent_at rather than
+    /// calling this function directly.
+    ///
+    /// This function resolves the component of the given path.
+    pub fn lookup_node(&self, dir: NamespaceNode, path: &FsStr) -> Result<NamespaceNode, Errno> {
+        let (parent, basename) = self.lookup_parent(dir, path)?;
+        parent.lookup(basename)
+    }
+
+    pub fn apply_umask(&self, mode: FileMode) -> FileMode {
         let umask = self.state.read().umask;
         mode & !umask
     }
 
-    pub fn set_umask(&self, umask: mode_t) -> mode_t {
+    pub fn set_umask(&self, umask: FileMode) -> FileMode {
         let mut state = self.state.write();
         let old_umask = state.umask;
 
         // umask() sets the calling process's file mode creation mask
-        // (umask) to mask & 0777 (i.e., only the file permission bits of
+        // (umask) to mask & 0o777 (i.e., only the file permission bits of
         // mask are used), and returns the previous value of the mask.
         //
         // See <https://man7.org/linux/man-pages/man2/umask.2.html>
-        state.umask = umask & 0o777;
+        state.umask = umask & FileMode::ALLOW_ALL;
 
         old_umask
     }
@@ -130,10 +150,10 @@ mod test {
     async fn test_umask() {
         let fs = create_test_file_system();
 
-        assert_eq!(0o22, fs.set_umask(0o3020));
-        assert_eq!(0o646, fs.apply_umask(0o666));
-        assert_eq!(0o3646, fs.apply_umask(0o3666));
-        assert_eq!(0o20, fs.set_umask(0o11));
+        assert_eq!(FileMode::from_bits(0o22), fs.set_umask(FileMode::from_bits(0o3020)));
+        assert_eq!(FileMode::from_bits(0o646), fs.apply_umask(FileMode::from_bits(0o666)));
+        assert_eq!(FileMode::from_bits(0o3646), fs.apply_umask(FileMode::from_bits(0o3666)));
+        assert_eq!(FileMode::from_bits(0o20), fs.set_umask(FileMode::from_bits(0o11)));
     }
 
     #[fasync::run_singlethreaded(test)]

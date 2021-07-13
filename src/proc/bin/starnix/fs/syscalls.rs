@@ -158,29 +158,39 @@ pub fn sys_fstatfs(
 /// A convenient wrapper for Task::open_file_at.
 ///
 /// Reads user_path from user memory and then calls through to Task::open_file_at.
-fn open_file_internal(
+fn open_file_at(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,
     flags: u32,
-    _mode: mode_t,
+    mode: FileMode,
 ) -> Result<FileHandle, Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
-    task.open_file_at(dir_fd, path, OpenFlags::from_bits_truncate(flags))
+    task.open_file_at(dir_fd, path, OpenFlags::from_bits_truncate(flags), mode)
 }
 
-/// A convenient wrapper for Task::lookup_node_at.
-///
-/// Reads user_path from user memory and then calls through to Task::open_file_at.
-fn lookup_node_internal(
+fn lookup_parent_at<T, F>(
+    task: &Task,
+    dir_fd: FdNumber,
+    user_path: UserCString,
+    callback: F,
+) -> Result<T, Errno>
+where
+    F: Fn(NamespaceNode, &FsStr) -> Result<T, Errno>,
+{
+    let mut buf = [0u8; PATH_MAX as usize];
+    let path = task.mm.read_c_string(user_path, &mut buf)?;
+    let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
+    callback(parent, basename)
+}
+
+fn lookup_node_at(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,
 ) -> Result<FsNodeHandle, Errno> {
-    let mut buf = [0u8; PATH_MAX as usize];
-    let path = task.mm.read_c_string(user_path, &mut buf)?;
-    task.lookup_node_at(dir_fd, path)
+    lookup_parent_at(task, dir_fd, user_path, |parent, basename| Ok(parent.lookup(basename)?.node))
 }
 
 pub fn sys_openat(
@@ -188,9 +198,9 @@ pub fn sys_openat(
     dir_fd: FdNumber,
     user_path: UserCString,
     flags: u32,
-    mode: mode_t,
+    mode: FileMode,
 ) -> Result<SyscallResult, Errno> {
-    let file = open_file_internal(&ctx.task, dir_fd, user_path, flags, mode)?;
+    let file = open_file_at(&ctx.task, dir_fd, user_path, flags, mode)?;
     Ok(ctx.task.files.add(file)?.into())
 }
 
@@ -210,7 +220,7 @@ pub fn sys_faccessat(
         return Err(EINVAL);
     }
 
-    let node = lookup_node_internal(&ctx.task, dir_fd, user_path)?;
+    let node = lookup_node_at(&ctx.task, dir_fd, user_path)?;
 
     if mode == F_OK {
         return Ok(SUCCESS);
@@ -235,8 +245,14 @@ pub fn sys_faccessat(
 }
 
 pub fn sys_chdir(ctx: &SyscallContext<'_>, user_path: UserCString) -> Result<SyscallResult, Errno> {
-    let file =
-        open_file_internal(&ctx.task, FdNumber::AT_FDCWD, user_path, O_RDONLY | O_DIRECTORY, 0)?;
+    // TODO: This should probably use lookup_node.
+    let file = open_file_at(
+        &ctx.task,
+        FdNumber::AT_FDCWD,
+        user_path,
+        O_RDONLY | O_DIRECTORY,
+        FileMode::default(),
+    )?;
     ctx.task.fs.chdir(&file);
     Ok(SUCCESS)
 }
@@ -278,7 +294,7 @@ pub fn sys_newfstatat(
         not_implemented!("newfstatat: flags 0x{:x}", flags);
         return Err(ENOSYS);
     }
-    let node = lookup_node_internal(&ctx.task, dir_fd, user_path)?;
+    let node = lookup_node_at(&ctx.task, dir_fd, user_path)?;
     let result = node.update_stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
@@ -291,7 +307,7 @@ pub fn sys_readlinkat(
     _buffer: UserAddress,
     _buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    let _ = lookup_node_internal(&ctx.task, dir_fd, user_path)?;
+    let _ = lookup_node_at(&ctx.task, dir_fd, user_path)?;
     Err(EINVAL)
 }
 
@@ -310,7 +326,7 @@ pub fn sys_truncate(
     length: off_t,
 ) -> Result<SyscallResult, Errno> {
     let length = length.try_into().map_err(|_| EINVAL)?;
-    let node = lookup_node_internal(&ctx.task, FdNumber::AT_FDCWD, user_path)?;
+    let node = lookup_node_at(&ctx.task, FdNumber::AT_FDCWD, user_path)?;
     // TODO: Check for writability.
     node.truncate(length)?;
     Ok(SUCCESS)
@@ -328,6 +344,43 @@ pub fn sys_ftruncate(
     Ok(SUCCESS)
 }
 
+pub fn sys_mkdirat(
+    ctx: &SyscallContext<'_>,
+    dir_fd: FdNumber,
+    user_path: UserCString,
+    mode: FileMode,
+) -> Result<SyscallResult, Errno> {
+    let mode = ctx.task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
+    lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
+        parent.mknod(basename, FileMode::IFDIR | mode)
+    })?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_mknodat(
+    ctx: &SyscallContext<'_>,
+    dir_fd: FdNumber,
+    user_path: UserCString,
+    mode: FileMode,
+    _dev: dev_t,
+) -> Result<SyscallResult, Errno> {
+    let file_type = match mode & FileMode::IFMT {
+        FileMode::IFREG => FileMode::IFREG,
+        FileMode::IFBLK => FileMode::IFBLK,
+        FileMode::IFIFO => FileMode::IFIFO,
+        FileMode::IFSOCK => FileMode::IFSOCK,
+        FileMode::EMPTY => FileMode::IFREG,
+        _ => {
+            return Err(EINVAL);
+        }
+    };
+    let mode = file_type | ctx.task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
+    lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
+        parent.mknod(basename, mode)
+    })?;
+    Ok(SUCCESS)
+}
+
 pub fn sys_getcwd(
     ctx: &SyscallContext<'_>,
     buf: UserAddress,
@@ -342,8 +395,8 @@ pub fn sys_getcwd(
     return Ok(bytes.len().into());
 }
 
-pub fn sys_umask(ctx: &SyscallContext<'_>, umask: mode_t) -> Result<SyscallResult, Errno> {
-    Ok(ctx.task.fs.set_umask(umask).into())
+pub fn sys_umask(ctx: &SyscallContext<'_>, umask: FileMode) -> Result<SyscallResult, Errno> {
+    Ok(ctx.task.fs.set_umask(umask).bits().into())
 }
 
 fn get_fd_flags(flags: u32) -> FdFlags {

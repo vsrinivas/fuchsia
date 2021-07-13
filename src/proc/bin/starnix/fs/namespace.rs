@@ -97,9 +97,11 @@ impl NamespaceNode {
         Ok(FileObject::new(self.node.open()?, self.clone(), flags))
     }
 
-    /// Create a file
-    pub fn create(&self, name: &FsStr) -> Result<NamespaceNode, Errno> {
-        Ok(self.with_new_node(self.node.create(name)?))
+    pub fn mknod(&self, name: &FsStr, mode: FileMode) -> Result<NamespaceNode, Errno> {
+        if name.is_empty() || name == b"." || name == b".." {
+            return Err(EEXIST);
+        }
+        Ok(self.with_new_node(self.node.mknod(name, mode)?))
     }
 
     /// Traverse down a parent-to-child link in the namespace.
@@ -108,13 +110,20 @@ impl NamespaceNode {
     /// FsNode except at mountpoints, where the link switches from one
     /// filesystem to another.
     pub fn lookup(&self, name: &FsStr) -> Result<NamespaceNode, Errno> {
-        let child = self.with_new_node(self.node.component_lookup(name)?);
-        if let Some(namespace) = self.namespace() {
-            if let Some(mount) = namespace.mount_points.read().get(&child) {
-                return Ok(mount.root());
+        if name == b"." || name == b"" {
+            Ok(self.clone())
+        } else if name == b".." {
+            // TODO: make sure this can't escape a chroot
+            Ok(self.parent().unwrap_or_else(|| self.clone()))
+        } else {
+            let child = self.with_new_node(self.node.component_lookup(name)?);
+            if let Some(namespace) = self.namespace() {
+                if let Some(mount) = namespace.mount_points.read().get(&child) {
+                    return Ok(mount.root());
+                }
             }
+            Ok(child)
         }
-        Ok(child)
     }
 
     /// Traverse up a child-to-parent link in the namespace.
@@ -221,9 +230,9 @@ mod test {
     #[test]
     fn test_namespace() -> anyhow::Result<()> {
         let root_node = new_tmpfs();
-        let _dev_node = root_node.mkdir(b"dev".to_vec()).expect("failed to mkdir dev");
+        let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
         let dev_root_node = new_tmpfs();
-        let _dev_pts_node = dev_root_node.mkdir(b"pts".to_vec()).expect("failed to mkdir pts");
+        let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_node);
         let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
@@ -242,9 +251,9 @@ mod test {
     #[test]
     fn test_mount_does_not_upgrade() -> anyhow::Result<()> {
         let root_node = new_tmpfs();
-        let _dev_node = root_node.mkdir(b"dev".to_vec()).expect("failed to mkdir dev");
+        let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
         let dev_root_node = new_tmpfs();
-        let _dev_pts_node = dev_root_node.mkdir(b"pts".to_vec()).expect("failed to mkdir pts");
+        let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_node);
         let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
@@ -262,9 +271,9 @@ mod test {
     #[test]
     fn test_path() -> anyhow::Result<()> {
         let root_node = new_tmpfs();
-        let _dev_node = root_node.mkdir(b"dev".to_vec()).expect("failed to mkdir dev");
+        let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
         let dev_root_node = new_tmpfs();
-        let _dev_pts_node = dev_root_node.mkdir(b"pts".to_vec()).expect("failed to mkdir pts");
+        let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_node);
         let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
@@ -282,10 +291,10 @@ mod test {
     #[test]
     fn test_nested_path() -> anyhow::Result<()> {
         let root_node = new_tmpfs();
-        let _dev_node = root_node.mkdir(b"dev".to_vec()).expect("failed to mkdir dev");
+        let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
         let dev_root_node = new_tmpfs();
-        let parent_node = dev_root_node.mkdir(b"parent".to_vec()).expect("failed to mkdir parent");
-        let _dev_pts_node = parent_node.mkdir(b"pts".to_vec()).expect("failed to mkdir pts");
+        let parent_node = dev_root_node.mkdir(b"parent").expect("failed to mkdir parent");
+        let _dev_pts_node = parent_node.mkdir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_node);
         let dev = ns.root().lookup(b"dev").expect("failed to find dev");

@@ -138,7 +138,7 @@ mod test {
         let test_vmo = zx::Vmo::create(test_mem_size).unwrap();
 
         let path = b"test.bin";
-        let _file_node = fs.create(path).unwrap();
+        let _file_node = fs.mknod(path, FileMode::IFREG | FileMode::ALLOW_ALL).unwrap();
 
         let wr_file = task_owner.task.open_file(path, OpenFlags::RDWR).unwrap();
 
@@ -169,15 +169,26 @@ mod test {
         let task = &task_owner.task;
 
         let path = b"test.bin";
-        let file = task.open_file(path, OpenFlags::CREAT).expect("failed to create file");
+        let file = task
+            .open_file_at(
+                FdNumber::AT_FDCWD,
+                path,
+                OpenFlags::CREAT | OpenFlags::RDONLY,
+                FileMode::ALLOW_ALL,
+            )
+            .expect("failed to create file");
         assert_eq!(0, file.read(task, &[]).expect("failed to read"));
         assert!(file.write(task, &[]).is_err());
 
-        let file = task.open_file(path, OpenFlags::WRONLY).expect("failed to open file WRONLY");
+        let file = task
+            .open_file_at(FdNumber::AT_FDCWD, path, OpenFlags::WRONLY, FileMode::ALLOW_ALL)
+            .expect("failed to open file WRONLY");
         assert!(file.read(task, &[]).is_err());
         assert_eq!(0, file.write(task, &[]).expect("failed to write"));
 
-        let file = task.open_file(path, OpenFlags::RDWR).expect("failed to open file RDWR");
+        let file = task
+            .open_file_at(FdNumber::AT_FDCWD, path, OpenFlags::RDWR, FileMode::ALLOW_ALL)
+            .expect("failed to open file RDWR");
         assert_eq!(0, file.read(task, &[]).expect("failed to read"));
         assert_eq!(0, file.write(task, &[]).expect("failed to write"));
     }

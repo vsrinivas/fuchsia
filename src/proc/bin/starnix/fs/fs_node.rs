@@ -28,13 +28,21 @@ pub type FsNodeHandle = Arc<FsNode>;
 
 #[derive(Default)]
 pub struct FsNodeState {
+    /// A partial cache of the children of this node.
+    ///
+    /// FsNodes are added to this cache when they are looked up and removed
+    /// when they are no longer referenced.
+    ///
+    /// This cache can also include partially initialized nodes that are in
+    /// the process of being looked up. If the lookup fails, the nodes will
+    /// be dropped from the cache.
     children: HashMap<FsString, Weak<FsNode>>,
     pub inode_num: ino_t,
     pub device_num: dev_t,
     pub size: usize,
     pub storage_size: usize,
     pub blksize: usize,
-    pub mode: mode_t,
+    pub mode: FileMode,
     pub uid: uid_t,
     pub gid: gid_t,
     pub link_count: u64,
@@ -70,11 +78,12 @@ pub trait FsNodeOps: Send + Sync {
 
 impl FsNode {
     pub fn new_root<T: FsNodeOps + 'static>(ops: T, device: DeviceHandle) -> FsNodeHandle {
-        Self::new_orphan(ops, S_IFDIR | 0777, device)
+        // TODO: apply_umask
+        Self::new_orphan(ops, FileMode::IFDIR | FileMode::ALLOW_ALL, device)
     }
     pub fn new_orphan<T: FsNodeOps + 'static>(
         ops: T,
-        mode: mode_t,
+        mode: FileMode,
         device: DeviceHandle,
     ) -> FsNodeHandle {
         let ops: Box<dyn FsNodeOps> = Box::new(ops);
@@ -84,7 +93,7 @@ impl FsNode {
         let node_state = FsNodeState {
             inode_num: inode_number,
             device_num: device_id,
-            mode: mode,
+            mode,
             time_create: now,
             time_access: now,
             time_modify: now,
@@ -122,19 +131,6 @@ impl FsNode {
         self.ops().open(&self)
     }
 
-    pub fn create(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        let node = self.get_or_create_empty_child(name.to_vec());
-        let exists = node.initialize(|name| self.ops().create(&node, name))?;
-        if exists {
-            return Err(EEXIST);
-        }
-        let now = fuchsia_runtime::utc_time();
-        let mut st = self.state.write();
-        st.time_access = now;
-        st.time_modify = now;
-        Ok(node)
-    }
-
     pub fn component_lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
         let node = self.get_or_create_empty_child(name.to_vec());
         node.initialize(|name| self.ops().lookup(&self, name))?;
@@ -142,12 +138,32 @@ impl FsNode {
     }
 
     #[cfg(test)]
-    pub fn mkdir(self: &FsNodeHandle, name: FsString) -> Result<FsNodeHandle, Errno> {
-        let node = self.get_or_create_empty_child(name);
-        let exists = node.initialize(|name| self.ops().mkdir(&self, name))?;
+    pub fn mkdir(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+        // TODO: apply_umask
+        self.mknod(name, FileMode::IFDIR | FileMode::ALLOW_ALL)
+    }
+
+    pub fn mknod(self: &FsNodeHandle, name: &FsStr, mode: FileMode) -> Result<FsNodeHandle, Errno> {
+        let node = self.get_or_create_empty_child(name.to_vec());
+        let exists = node.initialize(|name| {
+            // TODO: Record the mode.
+            // TODO: Why do create and mkdir take different first parameters?
+            // It's likely one of them is incorrect.
+            if mode.is_reg() {
+                self.ops().create(&node, name)
+            } else if mode.is_dir() {
+                self.ops().mkdir(&self, name)
+            } else {
+                Err(EINVAL)
+            }
+        })?;
         if exists {
             return Err(EEXIST);
         }
+        let now = fuchsia_runtime::utc_time();
+        let mut st = self.state.write();
+        st.time_access = now;
+        st.time_modify = now;
         Ok(node)
     }
 
@@ -166,7 +182,7 @@ impl FsNode {
         const BYTES_PER_BLOCK: i64 = 512;
         stat_t {
             st_ino: state.inode_num,
-            st_mode: state.mode,
+            st_mode: state.mode.bits(),
             st_size: state.size as off_t,
             st_blocks: state.storage_size as i64 / BYTES_PER_BLOCK,
             st_nlink: state.link_count,
@@ -227,6 +243,13 @@ impl FsNode {
         Ok(exists)
     }
 
+    // This function is only useful for tests and has some oddities.
+    //
+    // For example, not all the children might have been looked up yet, which
+    // means the returned vector could be missing some names.
+    //
+    // Also, the vector might have "extra" names that are in the process of
+    // being looked up. If the lookup fails, they'll be removed.
     #[cfg(test)]
     fn copy_child_names(&self) -> Vec<FsString> {
         self.state
@@ -264,9 +287,9 @@ mod test {
     fn test_tmpfs() {
         let tmpfs = AnonNodeDevice::new(0);
         let root = FsNode::new_root(TmpfsDirectory, tmpfs);
-        let usr = root.mkdir(b"usr".to_vec()).unwrap();
-        let _etc = root.mkdir(b"etc".to_vec()).unwrap();
-        let _usr_bin = usr.mkdir(b"bin".to_vec()).unwrap();
+        let usr = root.mkdir(b"usr").unwrap();
+        let _etc = root.mkdir(b"etc").unwrap();
+        let _usr_bin = usr.mkdir(b"bin").unwrap();
         let mut names = root.copy_child_names();
         names.sort();
         assert!(names.iter().eq([b"etc", b"usr"].iter()));

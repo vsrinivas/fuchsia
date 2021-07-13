@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 mod errno;
+mod file_mode;
 mod open_flags;
 pub mod uapi;
 mod user_address;
 mod user_buffer;
 
 pub use errno::*;
+pub use file_mode::*;
 pub use open_flags::*;
 pub use uapi::*;
 pub use user_address::*;

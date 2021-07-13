@@ -11,6 +11,7 @@ pub type FsStr = [u8];
 /// collected (i.e., whose last element does not match the predicate) and the
 /// second of which is the elements that were collected (i.e., that match the
 /// predicate).
+#[cfg(test)]
 fn rcollect<T, F>(slice: &[T], pred: F) -> (&[T], &[T])
 where
     F: Fn(&T) -> bool,
@@ -29,6 +30,7 @@ where
 /// Split the path into its dirname and basename.
 ///
 /// Intended to match Python's os.path.split.
+#[cfg(test)]
 pub fn split(path: &FsStr) -> (&FsStr, &FsStr) {
     let (remaining, basename) = rcollect(path, |b| b != &b'/');
     let (dirname, slashes) = rcollect(remaining, |b| b == &b'/');

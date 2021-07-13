@@ -109,6 +109,7 @@ if (target_cpu == "x64") {
       "task/waiter.rs",
       "testing.rs",
       "types/errno.rs",
+      "types/file_mode.rs",
       "types/mod.rs",
       "types/open_flags.rs",
       "types/uapi.rs",

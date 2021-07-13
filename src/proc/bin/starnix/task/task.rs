@@ -401,7 +401,12 @@ impl Task {
     /// Returns a FileHandle but does not install the FileHandle in the FdTable
     /// for this task.
     pub fn open_file(&self, path: &FsStr, flags: OpenFlags) -> Result<FileHandle, Errno> {
-        self.open_file_at(FdNumber::AT_FDCWD, path, flags)
+        if flags.contains(OpenFlags::CREAT) {
+            // In order to support OpenFlags::CREAT we would need to take a
+            // FileMode argument.
+            return Err(EINVAL);
+        }
+        self.open_file_at(FdNumber::AT_FDCWD, path, flags, FileMode::default())
     }
 
     /// The primary entry point for opening files relative to a task.
@@ -418,23 +423,41 @@ impl Task {
         dir_fd: FdNumber,
         path: &FsStr,
         flags: OpenFlags,
+        mode: FileMode,
     ) -> Result<FileHandle, Errno> {
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
-        if flags.contains(OpenFlags::CREAT) {
-            let (dirname, basename) = path::split(path);
-            self.fs.lookup_node(dir, dirname)?.create(basename)?.open(flags)
-        } else {
-            self.fs.lookup_node(dir, path)?.open(flags)
-        }
+        let (parent, basename) = self.fs.lookup_parent(dir, path)?;
+        let node = match parent.lookup(basename) {
+            Ok(node) => node,
+            Err(errno) => {
+                if !flags.contains(OpenFlags::CREAT) {
+                    return Err(errno);
+                }
+                // TODO: Do we need to check the errno and attempt to create
+                // the file only when we get ENOENT?
+                parent.mknod(
+                    basename,
+                    FileMode::IFREG | self.fs.apply_umask(mode & FileMode::ALLOW_ALL),
+                )?
+            }
+        };
+        node.open(flags)
     }
 
-    /// Gets an FsNode at the given path relative to the given dir_fd.
+    /// A wrapper for FsContext::lookup_parent_at that resolves the given
+    /// dir_fd to a NamespaceNode.
     ///
-    /// Similar to open_file_at but rather than opening the node to create a
-    /// FileObject, this function returns the underlying FsNode.
-    pub fn lookup_node_at(&self, dir_fd: FdNumber, path: &FsStr) -> Result<FsNodeHandle, Errno> {
+    /// Absolute paths are resolve relative to the root of the FsContext for
+    /// this task. Relative paths are resolve relative to dir_fd. To resolve
+    /// relative to the current working directory, pass FdNumber::AT_FDCWD for
+    /// dir_fd.
+    pub fn lookup_parent_at<'a>(
+        &self,
+        dir_fd: FdNumber,
+        path: &'a FsStr,
+    ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
-        Ok(self.fs.lookup_node(dir, path)?.node.clone())
+        self.fs.lookup_parent(dir, path)
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
