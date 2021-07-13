@@ -74,6 +74,7 @@ async fn setup_test_topology() -> (RealmInstance, ProfileObserver, PiconetMember
         .add_profile_with_capabilities(
             RFCOMM_MONIKER.to_string(),
             RFCOMM_URL_V2.to_string(),
+            None,
             vec![],
             expose,
         )

@@ -25,6 +25,7 @@ use {
 static MOCK_PICONET_SERVER_URL_V2: &str =
     "fuchsia-pkg://fuchsia.com/mock-piconet-server#meta/mock-piconet-server-v2.cm";
 static PROFILE_INTERPOSER_PREFIX: &str = "profile-interposer";
+static BT_RFCOMM_PREFIX: &str = "bt-rfcomm";
 
 /// Specification data for creating a peer in the mock piconet. This may be a
 /// peer that will be driven by test code or one that is an actual bluetooth
@@ -32,6 +33,9 @@ static PROFILE_INTERPOSER_PREFIX: &str = "profile-interposer";
 pub struct PiconetMemberSpec {
     pub name: String,
     pub id: bt_types::PeerId,
+    /// The optional hermetic RFCOMM component URL to be used by piconet members
+    /// that need RFCOMM functionality.
+    rfcomm_url: Option<String>,
     observer: Option<bredr::PeerObserverProxy>,
 }
 
@@ -54,13 +58,33 @@ impl PiconetMemberSpec {
         let (peer_proxy, peer_stream) =
             f_end::create_proxy_and_stream::<bredr::PeerObserverMarker>().unwrap();
 
-        (Self { name, id: bt_types::PeerId::random(), observer: Some(peer_proxy) }, peer_stream)
+        (
+            Self {
+                name,
+                id: bt_types::PeerId::random(),
+                observer: Some(peer_proxy),
+                rfcomm_url: None,
+            },
+            peer_stream,
+        )
+    }
+
+    /// Create a PiconetMemberSpec configured to be used with a Profile component which is under
+    /// test. This Profile may use RFCOMM - when the topology is built, an RFCOMM intermediary
+    /// component will also be defined.
+    pub fn for_profile_with_rfcomm(
+        name: String,
+        rfcomm_url: String,
+    ) -> (Self, bredr::PeerObserverRequestStream) {
+        let (mut spec, peer_stream) = Self::for_profile(name);
+        spec.rfcomm_url = Some(rfcomm_url);
+        (spec, peer_stream)
     }
 
     /// Create a PiconetMemberSpec designed to be used with a peer that will be driven
     /// by test code.
     pub fn for_mock_peer(name: String) -> Self {
-        Self { name, id: bt_types::PeerId::random(), observer: None }
+        Self { name, id: bt_types::PeerId::random(), rfcomm_url: None, observer: None }
     }
 }
 
@@ -209,19 +233,22 @@ impl ProfileObserver {
     }
 }
 
-/// Adds a profile. This also creates a component that sits between the profile
-/// and the Mock Piconet Server. This node acts as a facade between the profile
-/// under test and the Test Server. If the PiconetMemberSpec passed in contains
-/// a Channel then PeerObserver events will be forwarded to that channel.
+/// Adds a profile to the test topology.
+///
+/// This also creates a component that sits between the profile and the Mock Piconet Server.
+/// This node acts as a facade between the profile under test and the Server.
+/// If the `spec` contains a channel then `PeerObserver` events will be forwarded to that
+/// channel.
 /// `additional_capabilities` specifies capability routings for any protocols used/exposed
 /// by the profile.
-async fn add_profile<'a>(
+async fn add_profile_to_topology<'a>(
     builder: &mut RealmBuilder,
     spec: &'a mut PiconetMemberSpec,
     server_moniker: String,
     profile_url: String,
     additional_capabilities: Vec<CapabilityRoute>,
 ) -> Result<(), Error> {
+    // Specify the interposer component that will provide `Profile` to the profile under test.
     let mock_piconet_member_name = interposer_name_for_profile(&spec.name);
     add_mock_piconet_component(
         builder,
@@ -232,24 +259,43 @@ async fn add_profile<'a>(
     )
     .await?;
 
-    // set up the profile
+    // If required, specify the RFCOMM intermediary component.
+    let rfcomm_moniker = bt_rfcomm_moniker_for_profile(&spec.name);
+    if let Some(url) = &spec.rfcomm_url {
+        add_bt_rfcomm_intermediary(builder, rfcomm_moniker.clone(), url.clone()).await?;
+    }
+
+    // Specify the profile under test.
     {
         let _ = builder
             .add_eager_component(spec.name.to_string(), ComponentSource::Url(profile_url))
             .await?;
     }
 
-    // Route:
-    //   * Profile from mock piconet member to profile under test
-    //   * ProfileTest from Mock Piconet Server to mock piconet member
-    //   * LogSink from parent to the profile under test + mock piconet member.
+    // Capability routes:
+    //   * If `bt-rfcomm` is specified as an intermediary, `Profile` from mock piconet member
+    //     to `bt-rfcomm` and then from `bt-rfcomm` to profile under test.
+    //     Otherwise, `Profile` directly from mock piconet member to profile under test.
+    //   * `ProfileTest` from Mock Piconet Server to mock piconet member
+    //   * `LogSink` from parent to the profile under test & mock piconet member.
     //   * Additional capabilities from the profile under test to AboveRoot to be
     //     accessible via the test realm service directory.
     {
-        builder.add_protocol_route::<bredr::ProfileMarker>(
-            RouteEndpoint::component(mock_piconet_member_name.clone()),
-            vec![RouteEndpoint::component(spec.name.to_string())],
-        )?;
+        if spec.rfcomm_url.is_some() {
+            builder.add_protocol_route::<bredr::ProfileMarker>(
+                RouteEndpoint::component(mock_piconet_member_name.clone()),
+                vec![RouteEndpoint::component(rfcomm_moniker.clone())],
+            )?;
+            builder.add_protocol_route::<bredr::ProfileMarker>(
+                RouteEndpoint::component(rfcomm_moniker.clone()),
+                vec![RouteEndpoint::component(spec.name.to_string())],
+            )?;
+        } else {
+            builder.add_protocol_route::<bredr::ProfileMarker>(
+                RouteEndpoint::component(mock_piconet_member_name.clone()),
+                vec![RouteEndpoint::component(spec.name.to_string())],
+            )?;
+        }
 
         builder.add_protocol_route::<bredr::ProfileTestMarker>(
             RouteEndpoint::component(&server_moniker),
@@ -521,17 +567,36 @@ async fn add_mock_piconet_server(builder: &mut RealmBuilder) -> String {
     name
 }
 
+/// Adds the `bt-rfcomm` component, identified by the `url`, to the component topology.
+async fn add_bt_rfcomm_intermediary(
+    builder: &mut RealmBuilder,
+    moniker: String,
+    url: String,
+) -> Result<(), Error> {
+    builder.add_eager_component(moniker.clone(), ComponentSource::url(url)).await?;
+
+    builder.add_protocol_route::<LogSinkMarker>(
+        RouteEndpoint::AboveRoot,
+        vec![RouteEndpoint::Component(moniker)],
+    )?;
+    Ok(())
+}
+
 fn mock_piconet_server_moniker() -> Moniker {
     vec!["mock-piconet-server".to_string()].into()
+}
+
+fn bt_rfcomm_moniker_for_profile(profile_name: &'_ str) -> String {
+    format!("{}-for-{}", BT_RFCOMM_PREFIX, profile_name)
 }
 
 fn interposer_name_for_profile(profile_name: &'_ str) -> String {
     format!("{}-{}", PROFILE_INTERPOSER_PREFIX, profile_name)
 }
 
-/// Represents the topology of the piconet set up by an integration test.
+/// Represents the topology of a piconet set up by an integration test.
 ///
-/// Provides an API to add members to the piconet, define Bluetooth profiles to be used
+/// Provides an API to add members to the piconet, define Bluetooth profiles to be run
 /// under test, and specify capability routing in the topology. Bluetooth profiles
 /// specified in the topology _must_ be v2 components.
 ///
@@ -585,7 +650,7 @@ impl PiconetHarness {
         Ok(mock)
     }
 
-    pub async fn add_mock_piconet_member_from_spec(
+    async fn add_mock_piconet_member_from_spec(
         &mut self,
         mock: &'_ mut PiconetMemberSpec,
     ) -> Result<(), Error> {
@@ -605,12 +670,14 @@ impl PiconetHarness {
         name: String,
         profile_url: String,
     ) -> Result<ProfileObserver, Error> {
-        self.add_profile_with_capabilities(name, profile_url, vec![], vec![]).await
+        self.add_profile_with_capabilities(name, profile_url, None, vec![], vec![]).await
     }
 
     /// Add a profile with moniker `name` to the test topology.
-    /// The profile should be accessible via the provided `profile_url` and will be launched
-    /// during the test.
+    ///
+    /// `profile_url` specifies the component URL of the profile under test.
+    /// `rfcomm_url` specifies the optional hermetic RFCOMM component URL to be used as an
+    /// intermediary in the test topology.
     /// `use_capabilities` specifies any capabilities used by the profile that will be
     /// provided outside the test realm.
     /// `expose_capabilities` specifies any capabilities provided by the profile to be
@@ -621,10 +688,15 @@ impl PiconetHarness {
         &mut self,
         name: String,
         profile_url: String,
+        rfcomm_url: Option<String>,
         use_capabilities: Vec<Capability>,
         expose_capabilities: Vec<Capability>,
     ) -> Result<ProfileObserver, Error> {
-        let (mut spec, request_stream) = PiconetMemberSpec::for_profile(name);
+        let (mut spec, request_stream) = if let Some(url) = rfcomm_url {
+            PiconetMemberSpec::for_profile_with_rfcomm(name, url)
+        } else {
+            PiconetMemberSpec::for_profile(name)
+        };
         let mut caps = routes_from_capabilities(
             use_capabilities,
             RouteEndpoint::AboveRoot,
@@ -646,8 +718,14 @@ impl PiconetHarness {
         profile_url: String,
         capabilities: Vec<CapabilityRoute>,
     ) -> Result<(), Error> {
-        add_profile(&mut self.builder, spec, self.ps_moniker.clone(), profile_url, capabilities)
-            .await
+        add_profile_to_topology(
+            &mut self.builder,
+            spec,
+            self.ps_moniker.clone(),
+            profile_url,
+            capabilities,
+        )
+        .await
     }
 }
 
@@ -882,6 +960,65 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_add_profile_with_rfcomm() {
+        let mut test_harness = PiconetHarness::new().await;
+
+        let profile_name = "test-profile-member";
+        let profile_moniker: Moniker = vec![profile_name.to_string()].into();
+        let interposer_name = super::interposer_name_for_profile(profile_name);
+        let bt_rfcomm_name = super::bt_rfcomm_moniker_for_profile(profile_name);
+        let profile_url = "fuchsia-pkg://fuchsia.com/example#meta/example.cm".to_string();
+        let rfcomm_url = "fuchsia-pkg://fuchsia.com/example#meta/bt-rfcomm.cm".to_string();
+
+        // Add a profile with a fake URL
+        let _profile_member = test_harness
+            .add_profile_with_capabilities(
+                profile_name.to_string(),
+                profile_url,
+                Some(rfcomm_url),
+                vec![],
+                vec![],
+            )
+            .await
+            .expect("failed to add profile");
+
+        let mut topology = test_harness.builder.build();
+        assert!(topology.contains(&profile_moniker).await.expect("failed to check realm contents"));
+        assert!(topology
+            .contains(&vec![interposer_name.clone()].into())
+            .await
+            .expect("failed to check realm contents"));
+        assert!(topology
+            .contains(&vec![bt_rfcomm_name.clone()].into())
+            .await
+            .expect("failed to check realm contents"));
+
+        // validate routes
+        let profile_capability_name =
+            CapabilityName(bredr::ProfileMarker::SERVICE_NAME.to_string());
+
+        // `Profile` is offered by root to bt-rfcomm from interposer.
+        let profile_offer1 = OfferDecl::Protocol(OfferProtocolDecl {
+            source: OfferSource::Child(interposer_name.clone()),
+            source_name: profile_capability_name.clone(),
+            target: OfferTarget::Child(bt_rfcomm_name.clone()),
+            target_name: profile_capability_name.clone(),
+            dependency_type: DependencyType::Strong,
+        });
+        // `Profile` is offered from bt-rfcomm to profile.
+        let profile_offer2 = OfferDecl::Protocol(OfferProtocolDecl {
+            source: OfferSource::Child(bt_rfcomm_name.clone()),
+            source_name: profile_capability_name.clone(),
+            target: OfferTarget::Child(profile_name.to_string()),
+            target_name: profile_capability_name.clone(),
+            dependency_type: DependencyType::Strong,
+        });
+        let root = topology.get_decl(&vec![].into()).await.expect("unable to get root decl");
+        assert!(root.offers.contains(&profile_offer1));
+        assert!(root.offers.contains(&profile_offer2));
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_add_profile_with_additional_capabilities() {
         let mut test_harness = PiconetHarness::new().await;
         let profile_name = "test-profile-member";
@@ -898,6 +1035,7 @@ mod tests {
             .add_profile_with_capabilities(
                 profile_name.to_string(),
                 "fuchsia-pkg://fuchsia.com/example#meta/example.cm".to_string(),
+                None,
                 use_capabilities,
                 expose_capabilities,
             )

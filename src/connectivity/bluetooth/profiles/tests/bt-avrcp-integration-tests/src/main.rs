@@ -285,6 +285,7 @@ async fn avrcp_disallows_handler_double_sets() -> Result<(), Error> {
         .add_profile_with_capabilities(
             "bt-avrcp-profile".to_string(),
             AVRCP_URL_V2.to_string(),
+            None,
             vec![],
             vec![Capability::protocol(PeerManagerMarker::SERVICE_NAME)],
         )
@@ -366,6 +367,7 @@ async fn avrcp_remote_receives_set_absolute_volume_request() -> Result<(), Error
         .add_profile_with_capabilities(
             "bt-avrcp-profile".to_string(),
             AVRCP_URL_V2.to_string(),
+            None,
             vec![],
             vec![Capability::protocol(PeerManagerMarker::SERVICE_NAME)],
         )
