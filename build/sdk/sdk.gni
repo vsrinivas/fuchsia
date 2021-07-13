@@ -115,9 +115,9 @@ template("sdk") {
 
     args = [
       "--manifest",
-      rebase_path(intermediate_manifest_file),
+      rebase_path(intermediate_manifest_file, root_build_dir),
       "--updated",
-      rebase_path(computed_api_file),
+      rebase_path(computed_api_file, root_build_dir),
     ]
 
     # TODO(fxbug.dev/5535): always set this argument.
@@ -125,7 +125,7 @@ template("sdk") {
       inputs += [ invoker.api ]
       args += [
         "--reference",
-        rebase_path(invoker.api),
+        rebase_path(invoker.api, root_build_dir),
       ]
     }
 
@@ -183,9 +183,9 @@ template("sdk") {
 
     args = [
       "--manifest",
-      rebase_path(final_manifest_file),
+      rebase_path(final_manifest_file, root_build_dir),
       "--meta",
-      rebase_path(sdk_meta_file),
+      rebase_path(sdk_meta_file, root_build_dir),
       "--target-arch",
       target_triple,
       "--host-arch",

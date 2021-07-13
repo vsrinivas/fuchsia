@@ -57,7 +57,7 @@ template("sdk_molecule") {
 
     args = [
              "--out",
-             rebase_path(manifest),
+             rebase_path(manifest, root_build_dir),
              "--deps",
            ] + dep_manifests
 

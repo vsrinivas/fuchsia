@@ -51,11 +51,11 @@ template("merged_sdk") {
 
           args = [
             "--base-archive",
-            rebase_path(latest_archive),
+            rebase_path(latest_archive, root_build_dir),
             "--complement-archive",
-            rebase_path(dep_archive),
+            rebase_path(dep_archive, root_build_dir),
             "--output-archive",
-            rebase_path(merged_archive),
+            rebase_path(merged_archive, root_build_dir),
           ]
 
           if (index == 1) {

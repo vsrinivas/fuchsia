@@ -226,7 +226,7 @@ template("sdk_atom") {
 
         args = [
           "--output",
-          rebase_path(current_api_file),
+          rebase_path(current_api_file, root_build_dir),
         ]
 
         deps = gn_deps
@@ -236,7 +236,7 @@ template("sdk_atom") {
           args += [
             "--file",
             file.dest,
-            rebase_path(file.source),
+            rebase_path(file.source, root_build_dir),
           ]
         }
       }
@@ -304,7 +304,7 @@ template("sdk_atom") {
       inputs += [ rebase_path(invoker.file_list) ]
       args += [
         "--file-list",
-        rebase_path(invoker.file_list),
+        rebase_path(invoker.file_list, root_build_dir),
       ]
     }
   }
