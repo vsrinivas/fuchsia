@@ -275,12 +275,7 @@ free memory, while out-of-memory will be signaled at 50MB free memory.
 ### kernel.serial=[none | legacy | qemu | \<type>,\<base>,\<irq>]
 **Default:** `none`
 
-This controls what serial port is used.  If provided, it overrides the serial
-port described by the system's bootdata.  The kernel debug serial port is
-a reserved resource and may not be used outside of the kernel.
-
-If set to "none", the kernel debug serial port will be disabled and will not
-be reserved, allowing the default serial port to be used outside the kernel.
+TODO(53594)
 
 ### vdso.ticks_get_force_syscall=\<bool>
 **Default:** `false`

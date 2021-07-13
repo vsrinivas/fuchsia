@@ -21,7 +21,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string-file.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/time.h>
@@ -35,7 +34,6 @@
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <ktl/algorithm.h>
-#include <ktl/move.h>
 #include <lk/init.h>
 #include <platform/console.h>
 #include <platform/debug.h>
@@ -378,22 +376,27 @@ static void update_zbi_uart(const DebugPort& port) {
 
 // Set up serial based on a parsed kernel command line.
 //
-// UARTs with early boot support (IOMMU, MMIO) will be set up in this case, while those needing to
-// be started later (ACPI) will be left uninitialised.
-static void handle_serial_cmdline(SerialConfig* config) {
-  SmallString serial_mode = {};
-  StringFile string_file(serial_mode);
-  BootOptions::PrintValue(gBootOptions->serial, string_file.file());
+// Return "true" if a command line config was found. UARTs with early boot support (IOMMU, MMIO)
+// will be set up in this case, while those needing to be started later (ACPI) will be left
+// uninitialised.
+static bool handle_serial_cmdline(SerialConfig* config) {
+  // Fetch the command line.
+  const char* serial_mode = gCmdline.GetString(kernel_option::kSerial);
+  if (serial_mode == nullptr) {
+    // Nothing provided.
+    config->type = SerialConfig::Type::kUnspecified;
+    return false;
+  }
 
   // Otherwise, parse command line and update "bootloader.uart".
-  zx_status_t result = parse_serial_cmdline(ktl::move(string_file).take().data(), config);
+  zx_status_t result = parse_serial_cmdline(serial_mode, config);
   if (result != ZX_OK) {
     dprintf(INFO, "Failed to parse \"kernel.serial\" parameter. Disabling serial.\n");
     // Explictly disable the serial.
     setup_uart({DebugPort::Type::Disabled, 0, 0, 0, 0});
     // Return true, because we found a config (albiet, an invalid one).
     config->type = SerialConfig::Type::kDisabled;
-    return;
+    return true;
   }
 
   // Set up MMIO-based UARTs now.
@@ -410,7 +413,7 @@ static void handle_serial_cmdline(SerialConfig* config) {
     mark_mmio_region_to_reserve(port.phys_addr, PAGE_SIZE);
 
     setup_uart(port);
-    return;
+    return true;
   }
 
   // Set up IO port-based UARTs now.
@@ -424,9 +427,11 @@ static void handle_serial_cmdline(SerialConfig* config) {
     mark_pio_region_to_reserve(port.io_port, 8);
 
     setup_uart(port);
-    return;
+    return true;
   }
+
   // We have a config, but can't set it up yet.
+  return true;
 }
 
 // Attempt to read information about a debug UART out of the ZBI.
@@ -501,21 +506,12 @@ static bool handle_serial_acpi() {
 
 void pc_init_debug_early() {
   // Fetch serial information from the command line.
-  switch (gBootOptions->serial_source) {
-      // The default is the null::Driver which will provide 'none' as serial mode.
-      // effectively disabling the serial.
-    case OptionSource::kDefault:
-    case OptionSource::kCmdLine:
-      handle_serial_cmdline(&kernel_serial_command_line);
-      break;
-    // This means that physboot:
-    //  (1) Didn't find any command line option for serial.
-    //  (2) Did find a serial entry in the zbi.
-    // So we can just skip parsing the command line all together and go into the zbi.
-    case OptionSource::kZbi:
-      handle_serial_zbi();
-      break;
+  if (handle_serial_cmdline(&kernel_serial_command_line)) {
+    return;
   }
+
+  // Failing that, attempt to fetch serial information from the ZBI.
+  handle_serial_zbi();
 }
 
 void pc_init_debug_post_acpi() {
