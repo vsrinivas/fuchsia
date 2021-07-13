@@ -44,11 +44,11 @@ The security properties of a Bluetooth connection under which pairing secrets we
 example, an Identity Resolving Key that was distributed by a peer over a link encrypted with an
 unauthenticated Temporary Key is considered to be "unauthenticated".
 
-Key               | Value Type | Description
-------------------|------------|--------------------------------------------------------------------
-authenticated     | Boolean    | `true` if MITM protection was enabled
-secureConnections | Boolean    | `true` if the secret was exchanged using Secure Connections pairing
-encryptionKeySize | Number     | Size of the encryption key used for the exchange
+Key               | Value Type     | Description
+------------------|----------------|--------------------------------------------------------------------
+authenticated     | Boolean        | `true` if MITM protection was enabled
+secureConnections | Boolean        | `true` if the secret was exchanged using Secure Connections pairing
+encryptionKeySize | Number (8-bit) | Size of the encryption key used for the exchange
 
 Example:
 
@@ -62,25 +62,33 @@ Example:
 
 #### Key {#key}
 
-128-bit number that represents a pairing secret. Common types of keys that use this schema are the
-Identity Resolving Key (IRK) and the Connection Signature Resolving Key (CSRK).
+128-bit number that represents a secret associated with pairing. A common key that uses this schema
+is the local device's Identity Resolving Key (IRK).
 
-Each key has a 128-bit value and may optionally have [security properties](#security-properties).
-Security properties are usually present for keys distributed to a Fuchsia system by a peer during
-pairing and represent the security of the connection under which the key was received.
+When used by itself, a Key represents a locally generated key stored for future distribution.
 
-A locally generated key that is stored for future distribution may not have security properties.
+Key   | Value Type                                  | Description
+------|---------------------------------------------|-----------------------------------------
+value | Array of Number (8-bits)                    | 16-octet key in little-endian byte order
 
-Key                           | Value Type                                  | Description
-------------------------------|---------------------------------------------|-----------------------------------------
-securityProperties (optional) | [Security Properties](#security-properties) | Link security during distribution
-value                         | Array of Number (8-bits)                    | 16-octet key in little-endian byte order
+#### Peer key {#key}
+
+128-bit key that represents a pairing-related secret from the peer. A common key that uses this
+schema is the peer's Identity Resolving Key (IRK).
+
+Each key has a 128-bit value (like [Key](#key)) and [security properties](#security-properties),
+which represent the security of the connection when the key was distributed.
+
+Key      | Value Type                                  | Description
+---------|---------------------------------------------|-----------------------------------------
+security | [Security properties](#security-properties) | Link security during distribution
+value    | Array of Number (8-bits)                    | Underlying 16-octet key in little-endian byte order
 
 The following example represents a key with MITM protection of value `0x100f0e0d0c0b0a090807060504030201`:
 
 ```
 {
-    "securityProperies": {
+    "security": {
         "authenticated": true,
         "secureConnections": false,
         "encryptionKeySize": 16
@@ -91,25 +99,24 @@ The following example represents a key with MITM protection of value `0x100f0e0d
 
 #### Long term key {#ltk}
 
-128-bit key used to establish an encrypted connection. This schema is used to represent both the Low
-Energy Long Term Key (LTK) and the BR/EDR Link Key.
+128-bit key used to establish an encrypted connection. This schema is used to represent the Low
+Energy Long Term Key (LTK).
 
-Unlike the [Key](#key) type, a Long Term Key always has [security properties](#security-properties).
-The security properties of a Long Term Key represent not only the security of the connection used to
-distribute and generate the key but also the security of the key itself.
+The security properties of a Long Term Key's peer key represent not only the security of the
+connection used to distribute and generate the key, but also the security of the key itself.
 
-Key             | Value Type      | Description
-----------------|-----------------|---------------------
-key             | [Key](#key)     | The encryption key.
-ediv (optional) | Number (16-bit) | Encrypted Diversifier; required for legacy LE LTK
-rand (optional) | Number (64-bit) | Random value; required for legacy LE LTK
+Key  | Value Type                | Description
+-----|---------------------------|---------------------
+key  | [Peer key](#peer-key)     | The encryption key.
+ediv | Number (16-bit)           | Encrypted Diversifier
+rand | Number (64-bit)           | Random value
 
 Example:
 
 ```
 {
     "key": {
-        "securityProperies": {
+        "security": {
             "authenticated": true,
             "secureConnections": false,
             "encryptionKeySize": 16
@@ -129,16 +136,12 @@ for every available controller. Fuchsia stores some metadata for a bt-host that 
 
 Key             | Value Type          | Description
 ----------------|---------------------|-----------------------
-irk             | [Key](#key)         | Identity Resolving Key that is distributed to all peers of the bt-host
+irk (optional)  | [Key](#key)         | Identity Resolving Key that is distributed to all peers of the bt-host
 
 Example:
 
 ```
 {
-    "identityAddress": {
-        "type": "public",
-        "value": [202, 202, 254, 202, 239, 190]
-    },
     "irk": {
         "value": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     }
@@ -165,40 +168,40 @@ connectionInterval | Number (16-bit) | Connection interval in controller timesli
 connectionLatency  | Number (16-bit) | Connection latency in controller timeslices
 supervisionTimeout | Number (16-bit) | Supervision timeout in controller timeslices
 
-#### LE data {#le-data}
+#### LE bond data {#le-data}
 
-Key                             | Value Type                                        | Description
---------------------------------|---------------------------------------------------|----------------------------------------------
-peerLtk (optional)              | [Long Term Key](#ltk)                             | Long Term Key distributed by the peer
-localLtk (optional)             | [Long Term Key](#ltk)                             | Long Term Key generated locally and distributed to the peer
-peerIrk (optional)              | [Key](#key)                                       | The peer's Identity Resolving Key
-connectionParameters (optional) | [LE Connection Parameters](#le-connection-params) | The peer's preferred connection parameters
+Key                             | Value Type                                         | Description
+--------------------------------|----------------------------------------------------|----------------------------------------------
+connectionParameters (optional) | [LE Connection Parameters](#le-connection-params)  | The peer's preferred connection parameters
+peerLtk (optional)              | [Long Term Key](#ltk)                              | Long Term Key distributed by the peer
+localLtk (optional)             | [Long Term Key](#ltk)                              | Long Term Key generated locally and distributed to the peer
+irk (optional)                  | [Peer key](#peer-key)                              | The peer's Identity Resolving Key
 
-#### BR/EDR data {#bredr-data}
+#### BR/EDR bond data {#bredr-data}
 
-Key            | Value Type            | Description
----------------|-----------------------|-----------------------------------------------------------
-rolePreference | String                | `"leader"` or `"follower"`
-linkKey        | [Long Term Key](#ltk) | The link encryption key
-services       | Array of String       | Cached discovered service UUIDs
+Key                       | Value Type            | Description
+--------------------------|-----------------------|-----------------------------------------------------------
+rolePreference (optional) | String                | `"leader"` or `"follower"`
+linkKey (optional)        | [Peer key](#peer-key) | The link encryption key
+services                  | Array of String       | Cached discovered service UUIDs
 
 #### Bonding data schema
 
-Key              | Value Type                 | Description
------------------|----------------------------|------------------------
-identifier       | Number                     | 64-bit opaque peer ID
-hostAddress      | [Address](#address)        | The identity address of the local bt-host the peer is bonded to
-address          | [Address](#address)        | The identity address of the peer
-name             | String                     | The complete or short "local name" of the peer.
-le (optional)    | [LE Data](#le-data)        | Bonding data for the Low Energy transport
-bredr (optional) | [BR/EDR Data](#bredr-data) | Bonding data for the BR/EDR transport
+Key              | Value Type                      | Description
+-----------------|---------------------------------|------------------------
+identifier       | Number                          | 64-bit opaque peer ID
+address          | [Address](#address)             | The identity address of the peer
+hostAddress      | [Address](#address)             | The identity address of the local bt-host the peer is bonded to
+name (optional)  | String                          | The complete or short "local name" of the peer.
+le (optional)    | [LE bond data](#le-data)        | Bonding data for the Low Energy transport
+bredr (optional) | [BR/EDR bond data](#bredr-data) | Bonding data for the BR/EDR transport
 
 Example:
 
 ```
 {
     "identifier": 1,
-    "identityAddress: {
+    "address: {
         "type": "random",
         "value": [202, 202, 254, 202, 239, 190]
     },
@@ -210,14 +213,13 @@ Example:
     "le": {
         "peerLtk": {
             "key": {
-                "securityProperies": {
+                "security": {
                     "authenticated": true,
                     "secureConnections": false,
                     "encryptionKeySize": 16
                 },
                 "value": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
             },
-            "keySize": 16,
             "ediv": 0,
             "rand": 0,
         },
