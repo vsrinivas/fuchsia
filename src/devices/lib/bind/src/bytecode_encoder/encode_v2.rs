@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::bind_program_v2_constants::*;
-use crate::compiler::{BindProgram, BindProgramEncodeError, CompositeBindRules};
-use crate::instruction_encoder::encode_instructions;
-use crate::symbol_table_encoder::SymbolTableEncoder;
+use crate::bytecode_constants::*;
+use crate::bytecode_encoder::error::BindRulesEncodeError;
+use crate::bytecode_encoder::instruction_encoder::encode_instructions;
+use crate::bytecode_encoder::symbol_table_encoder::SymbolTableEncoder;
+use crate::compiler::{BindRules, CompositeBindRules};
 
 /// Functions for encoding the new bytecode format. When the
 /// old bytecode format is deleted, the "v2" should be removed from the names.
 
-pub fn encode_to_bytecode_v2(bind_program: BindProgram) -> Result<Vec<u8>, BindProgramEncodeError> {
+pub fn encode_to_bytecode_v2(bind_rules: BindRules) -> Result<Vec<u8>, BindRulesEncodeError> {
     let mut symbol_table_encoder = SymbolTableEncoder::new();
     let mut instruction_bytecode =
-        encode_instructions(bind_program.instructions, &mut symbol_table_encoder)?;
+        encode_instructions(bind_rules.instructions, &mut symbol_table_encoder)?;
 
     let mut bytecode: Vec<u8> = vec![];
 
@@ -34,10 +35,8 @@ pub fn encode_to_bytecode_v2(bind_program: BindProgram) -> Result<Vec<u8>, BindP
     Ok(bytecode)
 }
 
-pub fn encode_to_string_v2(
-    bind_program: BindProgram,
-) -> Result<(String, usize), BindProgramEncodeError> {
-    let result = encode_to_bytecode_v2(bind_program)?;
+pub fn encode_to_string_v2(bind_rules: BindRules) -> Result<(String, usize), BindRulesEncodeError> {
+    let result = encode_to_bytecode_v2(bind_rules)?;
     let byte_count = result.len();
     Ok((
         result.into_iter().map(|byte| format!("{:#x}", byte)).collect::<Vec<String>>().join(","),
@@ -47,10 +46,10 @@ pub fn encode_to_string_v2(
 
 pub fn encode_composite_to_bytecode(
     bind_rules: CompositeBindRules,
-) -> Result<Vec<u8>, BindProgramEncodeError> {
+) -> Result<Vec<u8>, BindRulesEncodeError> {
     let mut symbol_table_encoder = SymbolTableEncoder::new();
     if bind_rules.device_name.is_empty() {
-        return Err(BindProgramEncodeError::MissingCompositeDeviceName);
+        return Err(BindRulesEncodeError::MissingCompositeDeviceName);
     }
 
     // Instruction bytecode begins with the device name ID.
@@ -95,8 +94,9 @@ pub fn encode_composite_to_bytecode(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bind_library::ValueType;
-    use crate::compiler::{Symbol, SymbolicInstruction, SymbolicInstructionInfo};
+    use crate::compiler::Symbol;
+    use crate::compiler::{SymbolicInstruction, SymbolicInstructionInfo};
+    use crate::parser::bind_library::ValueType;
     use std::collections::HashMap;
 
     // Constants representing the number of bytes in an operand and value.
@@ -165,7 +165,7 @@ mod test {
             self.verify_next_u32(val.value);
         }
 
-        pub fn verify_bind_program_header(&mut self) {
+        pub fn verify_bind_rules_header(&mut self) {
             self.verify_magic_num(BIND_MAGIC_NUM);
             self.verify_next_u32(BYTECODE_VERSION);
         }
@@ -291,14 +291,14 @@ mod test {
             },
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
-        checker.verify_bind_program_header();
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
+        checker.verify_bind_rules_header();
         checker.verify_sym_table_header(67);
 
         checker.verify_symbol_table(&[
@@ -341,15 +341,15 @@ mod test {
 
     #[test]
     fn test_empty_symbol_table() {
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
 
-        checker.verify_bind_program_header();
+        checker.verify_bind_rules_header();
         checker.verify_sym_table_header(0);
         checker.verify_instructions_header(UNCOND_ABORT_BYTES);
         checker.verify_unconditional_abort();
@@ -385,14 +385,14 @@ mod test {
             },
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
-        checker.verify_bind_program_header();
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
+        checker.verify_bind_rules_header();
         checker.verify_sym_table_header(41);
 
         checker.verify_symbol_table(&["puffleg", "sunangel", "mountaingem"]);
@@ -442,15 +442,15 @@ mod test {
             rhs: Symbol::StringValue(long_str.to_string()),
         }];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
         assert_eq!(
-            Err(BindProgramEncodeError::InvalidStringLength(long_str.to_string())),
-            encode_to_bytecode_v2(bind_program)
+            Err(BindRulesEncodeError::InvalidStringLength(long_str.to_string())),
+            encode_to_bytecode_v2(bind_rules)
         );
     }
 
@@ -467,14 +467,14 @@ mod test {
             },
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
-        checker.verify_bind_program_header();
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
+        checker.verify_bind_rules_header();
         checker.verify_sym_table_header(0);
 
         checker.verify_instructions_header(COND_ABORT_BYTES + COND_ABORT_BYTES);
@@ -497,14 +497,14 @@ mod test {
             SymbolicInstruction::Label(1),
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
-        checker.verify_bind_program_header();
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
+        checker.verify_bind_rules_header();
         checker.verify_sym_table_header(0);
 
         checker.verify_instructions_header(UNCOND_JMP_BYTES + UNCOND_ABORT_BYTES + JMP_PAD_BYTES);
@@ -530,14 +530,14 @@ mod test {
             SymbolicInstruction::Label(1),
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
-        checker.verify_bind_program_header();
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
+        checker.verify_bind_rules_header();
         checker.verify_sym_table_header(0);
 
         // Verify the instructions.
@@ -580,14 +580,14 @@ mod test {
             SymbolicInstruction::Label(2),
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
-        checker.verify_bind_program_header();
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
+        checker.verify_bind_rules_header();
         checker.verify_sym_table_header(0);
 
         let expected_bytes =
@@ -638,15 +638,15 @@ mod test {
             SymbolicInstruction::Label(1),
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
 
-        checker.verify_bind_program_header();
+        checker.verify_bind_rules_header();
         checker.verify_sym_table_header(0);
 
         // Verify the instructions.
@@ -701,14 +701,14 @@ mod test {
             SymbolicInstruction::Label(2),
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
-        checker.verify_bind_program_header();
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
+        checker.verify_bind_rules_header();
         checker.verify_sym_table_header(0);
 
         let instructions_bytes = COND_JMP_BYTES
@@ -759,14 +759,14 @@ mod test {
             SymbolicInstruction::Label(1),
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
-        checker.verify_bind_program_header();
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
+        checker.verify_bind_rules_header();
         checker.verify_sym_table_header(0);
 
         let instructions_bytes = UNCOND_JMP_BYTES
@@ -804,16 +804,13 @@ mod test {
             SymbolicInstruction::Label(1),
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        assert_eq!(
-            Err(BindProgramEncodeError::DuplicateLabel(1)),
-            encode_to_bytecode_v2(bind_program)
-        );
+        assert_eq!(Err(BindRulesEncodeError::DuplicateLabel(1)), encode_to_bytecode_v2(bind_rules));
     }
 
     #[test]
@@ -824,15 +821,15 @@ mod test {
             SymbolicInstruction::UnconditionalAbort,
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
 
-        checker.verify_bind_program_header();
+        checker.verify_bind_rules_header();
         checker.verify_sym_table_header(0);
 
         checker.verify_instructions_header(UNCOND_ABORT_BYTES + JMP_PAD_BYTES + UNCOND_ABORT_BYTES);
@@ -849,15 +846,15 @@ mod test {
             SymbolicInstruction::UnconditionalAbort,
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
         assert_eq!(
-            Err(BindProgramEncodeError::InvalidGotoLocation(1)),
-            encode_to_bytecode_v2(bind_program)
+            Err(BindRulesEncodeError::InvalidGotoLocation(1)),
+            encode_to_bytecode_v2(bind_rules)
         );
     }
 
@@ -869,16 +866,13 @@ mod test {
             SymbolicInstruction::Label(1),
         ];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        assert_eq!(
-            Err(BindProgramEncodeError::MissingLabel(2)),
-            encode_to_bytecode_v2(bind_program)
-        );
+        assert_eq!(Err(BindRulesEncodeError::MissingLabel(2)), encode_to_bytecode_v2(bind_rules));
     }
 
     #[test]
@@ -888,15 +882,15 @@ mod test {
             rhs: Symbol::BoolValue(true),
         }];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
         assert_eq!(
-            Err(BindProgramEncodeError::MismatchValueTypes(ValueType::Number, ValueType::Bool)),
-            encode_to_bytecode_v2(bind_program)
+            Err(BindRulesEncodeError::MismatchValueTypes(ValueType::Number, ValueType::Bool)),
+            encode_to_bytecode_v2(bind_rules)
         );
     }
 
@@ -907,15 +901,15 @@ mod test {
             rhs: Symbol::BoolValue(true),
         }];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
         assert_eq!(
-            Err(BindProgramEncodeError::IncorrectTypesInValueComparison),
-            encode_to_bytecode_v2(bind_program)
+            Err(BindRulesEncodeError::IncorrectTypesInValueComparison),
+            encode_to_bytecode_v2(bind_rules)
         );
     }
 
@@ -925,28 +919,28 @@ mod test {
             lhs: Symbol::DeprecatedKey(5),
             rhs: Symbol::DeprecatedKey(6),
         }];
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
         assert_eq!(
-            Err(BindProgramEncodeError::IncorrectTypesInValueComparison),
-            encode_to_bytecode_v2(bind_program)
+            Err(BindRulesEncodeError::IncorrectTypesInValueComparison),
+            encode_to_bytecode_v2(bind_rules)
         );
 
         let instructions = vec![SymbolicInstruction::AbortIfNotEqual {
             lhs: Symbol::DeprecatedKey(5),
             rhs: Symbol::Key("wagtail".to_string(), ValueType::Number),
         }];
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
         assert_eq!(
-            Err(BindProgramEncodeError::IncorrectTypesInValueComparison),
-            encode_to_bytecode_v2(bind_program)
+            Err(BindRulesEncodeError::IncorrectTypesInValueComparison),
+            encode_to_bytecode_v2(bind_rules)
         );
     }
 
@@ -955,16 +949,13 @@ mod test {
         let instructions =
             vec![SymbolicInstruction::UnconditionalAbort, SymbolicInstruction::UnconditionalBind];
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        assert_eq!(
-            Err(BindProgramEncodeError::MatchNotSupported),
-            encode_to_bytecode_v2(bind_program)
-        );
+        assert_eq!(Err(BindRulesEncodeError::MatchNotSupported), encode_to_bytecode_v2(bind_rules));
     }
 
     #[test]
@@ -999,7 +990,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
-        checker.verify_bind_program_header();
+        checker.verify_bind_rules_header();
         checker.verify_sym_table_header(30);
 
         checker.verify_symbol_table(&["wader", "ruff", "plover"]);
@@ -1064,7 +1055,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
-        checker.verify_bind_program_header();
+        checker.verify_bind_rules_header();
 
         checker.verify_sym_table_header(48);
         checker.verify_symbol_table(&["mimid", "trembler", "thrasher", "catbird"]);
@@ -1126,7 +1117,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
-        checker.verify_bind_program_header();
+        checker.verify_bind_rules_header();
 
         checker.verify_sym_table_header(14);
         checker.verify_symbol_table(&["currawong"]);
@@ -1191,7 +1182,7 @@ mod test {
         };
 
         assert_eq!(
-            Err(BindProgramEncodeError::MissingLabel(1)),
+            Err(BindRulesEncodeError::MissingLabel(1)),
             encode_composite_to_bytecode(bind_rules)
         );
     }
@@ -1208,7 +1199,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
-        checker.verify_bind_program_header();
+        checker.verify_bind_rules_header();
 
         checker.verify_sym_table_header(15);
         checker.verify_symbol_table(&["treehunter"]);
@@ -1234,7 +1225,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
-        checker.verify_bind_program_header();
+        checker.verify_bind_rules_header();
 
         checker.verify_sym_table_header(17);
         checker.verify_symbol_table(&["spiderhunter"]);
@@ -1255,7 +1246,7 @@ mod test {
         };
 
         assert_eq!(
-            Err(BindProgramEncodeError::MissingCompositeDeviceName),
+            Err(BindRulesEncodeError::MissingCompositeDeviceName),
             encode_composite_to_bytecode(bind_rules)
         );
     }

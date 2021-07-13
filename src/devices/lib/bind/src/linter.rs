@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::bind_library;
 use crate::errors::UserError;
-use crate::parser_common::CompoundIdentifier;
+use crate::parser::bind_library;
+use crate::parser::common::CompoundIdentifier;
 use std::fmt;
 use thiserror::Error;
 

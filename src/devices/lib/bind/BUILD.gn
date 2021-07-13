@@ -54,48 +54,55 @@ rustc_library("lib") {
   ]
 
   sources = [
-    "src/bind_composite.rs",
-    "src/bind_library.rs",
-    "src/bind_program.rs",
-    "src/bind_program_v2_constants.rs",
-    "src/bytecode_common.rs",
-    "src/compiler.rs",
+    "src/bytecode_constants.rs",
+    "src/bytecode_encoder/encode_v1.rs",
+    "src/bytecode_encoder/encode_v2.rs",
+    "src/bytecode_encoder/error.rs",
+    "src/bytecode_encoder/error.rs",
+    "src/bytecode_encoder/instruction_encoder.rs",
+    "src/bytecode_encoder/mod.rs",
+    "src/bytecode_encoder/symbol_table_encoder.rs",
+    "src/compiler/compiler.rs",
+    "src/compiler/dependency_graph.rs",
+    "src/compiler/instruction.rs",
+    "src/compiler/mod.rs",
     "src/ddk_bind_constants.rs",
-    "src/debugger.rs",
-    "src/decode_bind_rules.rs",
-    "src/dependency_graph.rs",
-    "src/device_specification.rs",
-    "src/encode_bind_program_v1.rs",
-    "src/encode_bind_program_v2.rs",
+    "src/debugger/debugger.rs",
+    "src/debugger/device_specification.rs",
+    "src/debugger/mod.rs",
+    "src/debugger/offline_debugger.rs",
     "src/errors.rs",
-    "src/instruction.rs",
-    "src/instruction_encoder.rs",
+    "src/interpreter/common.rs",
+    "src/interpreter/decode_bind_rules.rs",
+    "src/interpreter/match_bind.rs",
+    "src/interpreter/mod.rs",
     "src/lib.rs",
     "src/linter.rs",
-    "src/match_bind.rs",
-    "src/offline_debugger.rs",
-    "src/parser_common.rs",
-    "src/symbol_table_encoder.rs",
+    "src/parser/bind_composite.rs",
+    "src/parser/bind_library.rs",
+    "src/parser/bind_rules.rs",
+    "src/parser/common.rs",
+    "src/parser/mod.rs",
     "src/test.rs",
   ]
   inputs = [ "tests_schema.json" ]
 }
 
 rustc_fuzzer("bind_rules_bytecode_fuzzer") {
-  source_root = "src/bytecode_fuzzer.rs"
-  sources = [ "src/bytecode_fuzzer.rs" ]
+  source_root = "src/fuzzer/bytecode_fuzzer.rs"
+  sources = [ "src/fuzzer/bytecode_fuzzer.rs" ]
   deps = [ ":lib" ]
 }
 
 rustc_fuzzer("instruction_section_fuzzer") {
-  source_root = "src/bytecode_section_fuzzer.rs"
-  sources = [ "src/bytecode_section_fuzzer.rs" ]
+  source_root = "src/fuzzer/bytecode_section_fuzzer.rs"
+  sources = [ "src/fuzzer/bytecode_section_fuzzer.rs" ]
   deps = [ ":lib" ]
 }
 
 rustc_fuzzer("symbol_table_section_fuzzer") {
-  source_root = "src/bytecode_section_fuzzer.rs"
-  sources = [ "src/bytecode_section_fuzzer.rs" ]
+  source_root = "src/fuzzer/bytecode_section_fuzzer.rs"
+  sources = [ "src/fuzzer/bytecode_section_fuzzer.rs" ]
   deps = [ ":lib" ]
 }
 

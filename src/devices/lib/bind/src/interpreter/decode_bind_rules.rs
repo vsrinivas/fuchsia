@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::bind_program_v2_constants::*;
-use crate::bytecode_common::*;
+use crate::bytecode_constants::*;
+use crate::interpreter::common::*;
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
 

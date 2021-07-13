@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::bind_library;
-use crate::bind_program_v2_constants::*;
-use crate::bytecode_common::*;
+use crate::bytecode_constants::*;
 use crate::compiler::Symbol;
-use crate::decode_bind_rules::DecodedBindRules;
+use crate::interpreter::common::*;
+use crate::interpreter::decode_bind_rules::DecodedBindRules;
+use crate::parser::bind_library;
 use core::hash::Hash;
 use num_traits::FromPrimitive;
 use std::collections::HashMap;

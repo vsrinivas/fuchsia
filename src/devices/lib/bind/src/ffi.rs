@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use bind::compiler::Symbol;
-use bind::match_bind::{match_bytecode, PropertyKey};
+use bind::interpreter::match_bind::{match_bytecode, PropertyKey};
 use std::collections::HashMap;
 use std::ffi::CStr;
 

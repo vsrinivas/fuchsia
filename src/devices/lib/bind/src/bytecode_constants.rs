@@ -4,9 +4,6 @@
 
 use num_derive::FromPrimitive;
 
-/// Constants and enums for encoding the new bytecode format. When the
-/// old bytecode format is deleted, the "v2" should be removed from the names.
-
 // Magic number for BIND.
 pub const BIND_MAGIC_NUM: u32 = 0x42494E44;
 

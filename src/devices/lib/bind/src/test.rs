@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::compiler,
-    crate::device_specification::DeviceSpecification,
+    crate::compiler::compiler,
+    crate::debugger::device_specification::DeviceSpecification,
+    crate::debugger::offline_debugger::{self, debug_from_device_specification},
     crate::errors::UserError,
-    crate::offline_debugger::{self, debug_from_device_specification},
-    crate::parser_common,
+    crate::parser,
     serde::Deserialize,
     serde_json,
     std::collections::HashMap,
@@ -39,8 +39,8 @@ struct TestSuite {
 
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum TestError {
-    BindParserError(parser_common::BindParserError),
-    DeviceSpecParserError(parser_common::BindParserError),
+    BindParserError(parser::common::BindParserError),
+    DeviceSpecParserError(parser::common::BindParserError),
     DebuggerError(offline_debugger::DebuggerError),
     CompilerError(compiler::CompilerError),
     InvalidSchema,
@@ -49,14 +49,14 @@ pub enum TestError {
     InvalidJsonError,
 }
 
-pub fn run(program: &str, libraries: &[String], tests: &str) -> Result<bool, TestError> {
-    TestSuite::try_from(tests).and_then(|t| t.run(program, libraries))
+pub fn run(rules: &str, libraries: &[String], tests: &str) -> Result<bool, TestError> {
+    TestSuite::try_from(tests).and_then(|t| t.run(rules, libraries))
 }
 
 impl TestSuite {
-    fn run(&self, program: &str, libraries: &[String]) -> Result<bool, TestError> {
-        let bind_program = compiler::compile(program, libraries, false, false)
-            .map_err(TestError::CompilerError)?;
+    fn run(&self, rules: &str, libraries: &[String]) -> Result<bool, TestError> {
+        let bind_rules =
+            compiler::compile(rules, libraries, false, false).map_err(TestError::CompilerError)?;
 
         for test in &self.specs {
             let mut device_specification = DeviceSpecification::new();
@@ -66,7 +66,7 @@ impl TestSuite {
                     .map_err(TestError::DeviceSpecParserError)?;
             }
 
-            let result = debug_from_device_specification(&bind_program, device_specification)
+            let result = debug_from_device_specification(&bind_rules, device_specification)
                 .map_err(TestError::DebuggerError)?;
             match (&test.expected, result) {
                 (ExpectedResult::Match, false) => return Ok(false),

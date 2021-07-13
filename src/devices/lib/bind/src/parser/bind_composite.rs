@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::bind_program::{statement_block, Statement, StatementBlock};
-use crate::parser_common::{
+use crate::parser::bind_rules::{statement_block, Statement, StatementBlock};
+use crate::parser::common::{
     compound_identifier, many_until_eof, map_err, using_list, ws, BindParserError,
     CompoundIdentifier, Include, NomSpan,
 };
@@ -100,10 +100,10 @@ fn composite<'a>(input: NomSpan<'a>) -> IResult<NomSpan, Ast, BindParserError> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bind_program::{Condition, ConditionOp};
     use crate::make_identifier;
-    use crate::parser_common::test::check_result;
-    use crate::parser_common::{Span, Value};
+    use crate::parser::bind_rules::{Condition, ConditionOp};
+    use crate::parser::common::test::check_result;
+    use crate::parser::common::{Span, Value};
 
     mod composite_name {
         use super::*;

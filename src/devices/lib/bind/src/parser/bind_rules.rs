@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::parser_common::{
+use crate::parser::common::{
     compound_identifier, condition_value, many_until_eof, map_err, skip_ws, using_list, ws,
     BindParserError, CompoundIdentifier, Include, NomSpan, Span, Value,
 };
@@ -79,7 +79,7 @@ impl<'a> TryFrom<&'a str> for Ast<'a> {
     type Error = BindParserError;
 
     fn try_from(input: &'a str) -> Result<Self, Self::Error> {
-        match program(NomSpan::new(input)) {
+        match rules(NomSpan::new(input)) {
             Ok((_, ast)) => Ok(ast),
             Err(nom::Err::Error(e)) => Err(e),
             Err(nom::Err::Failure(e)) => Err(e),
@@ -191,7 +191,7 @@ fn statement(input: NomSpan) -> IResult<NomSpan, Statement, BindParserError> {
     alt((condition_statement, if_statement, accept, keyword_false, keyword_true))(input)
 }
 
-fn program(input: NomSpan) -> IResult<NomSpan, Ast, BindParserError> {
+fn rules(input: NomSpan) -> IResult<NomSpan, Ast, BindParserError> {
     let (input, using) = ws(using_list)(input)?;
     let (input, statements) = many_until_eof(ws(statement))(input)?;
     if statements.is_empty() {
@@ -204,7 +204,7 @@ fn program(input: NomSpan) -> IResult<NomSpan, Ast, BindParserError> {
 mod test {
     use super::*;
     use crate::make_identifier;
-    use crate::parser_common::test::check_result;
+    use crate::parser::common::test::check_result;
 
     mod condition_ops {
         use super::*;
@@ -699,13 +699,13 @@ mod test {
         }
     }
 
-    mod programs {
+    mod rules {
         use super::*;
 
         #[test]
         fn simple() {
             check_result(
-                program(NomSpan::new("using a; x == 1;")),
+                rules(NomSpan::new("using a; x == 1;")),
                 "",
                 Ast {
                     using: vec![Include { name: make_identifier!["a"], alias: None }],
@@ -725,7 +725,7 @@ mod test {
         #[test]
         fn empty() {
             assert_eq!(
-                program(NomSpan::new("")),
+                rules(NomSpan::new("")),
                 Err(nom::Err::Error(BindParserError::NoStatements("".to_string())))
             );
         }
@@ -734,7 +734,7 @@ mod test {
         fn requires_statement() {
             // Must have a statement.
             assert_eq!(
-                program(NomSpan::new("using a;")),
+                rules(NomSpan::new("using a;")),
                 Err(nom::Err::Error(BindParserError::NoStatements("".to_string())))
             );
         }
@@ -742,7 +742,7 @@ mod test {
         #[test]
         fn using_list_optional() {
             check_result(
-                program(NomSpan::new("x == 1;")),
+                rules(NomSpan::new("x == 1;")),
                 "",
                 Ast {
                     using: vec![],
@@ -763,7 +763,7 @@ mod test {
         fn requires_semicolons() {
             // TODO(fxbug.dev/35146): Improve the error type that is returned here.
             assert_eq!(
-                program(NomSpan::new("x == 1")),
+                rules(NomSpan::new("x == 1")),
                 Err(nom::Err::Error(BindParserError::TrueKeyword("x == 1".to_string())))
             );
         }
@@ -771,7 +771,7 @@ mod test {
         #[test]
         fn multiple_statements() {
             check_result(
-                program(NomSpan::new(
+                rules(NomSpan::new(
                     "x == 1; accept y { true } false; if z == 2 { a != 3; } else { a == 3; }",
                 )),
                 "",

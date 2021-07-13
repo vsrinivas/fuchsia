@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::compiler::{BindProgram, BindProgramDecodeError, BindProgramEncodeError, Symbol};
-use crate::instruction::{Condition, Instruction, InstructionInfo};
+use crate::bytecode_encoder::error::BindRulesEncodeError;
+use crate::compiler::instruction::{Condition, Instruction, InstructionInfo};
+use crate::compiler::{BindRules, BindRulesDecodeError, Symbol};
+
 use bitfield::bitfield;
 use byteorder::ByteOrder;
 use num_derive::FromPrimitive;
@@ -70,7 +72,7 @@ impl fmt::Display for RawInstruction<[u32; 3]> {
 
 pub fn to_raw_instruction(
     instruction: Instruction,
-) -> Result<RawInstruction<[u32; 3]>, BindProgramEncodeError> {
+) -> Result<RawInstruction<[u32; 3]>, BindRulesEncodeError> {
     let (c, o, a, b, v) = match instruction {
         Instruction::Abort(condition) => {
             let (c, b, v) = encode_condition(condition)?;
@@ -96,7 +98,7 @@ pub fn to_raw_instruction(
     Ok(raw_instruction)
 }
 
-fn encode_condition(condition: Condition) -> Result<(u32, u32, u32), BindProgramEncodeError> {
+fn encode_condition(condition: Condition) -> Result<(u32, u32, u32), BindRulesEncodeError> {
     match condition {
         Condition::Always => Ok((RawCondition::Always as u32, 0, 0)),
         Condition::Equal(b, v) => {
@@ -112,21 +114,21 @@ fn encode_condition(condition: Condition) -> Result<(u32, u32, u32), BindProgram
     }
 }
 
-pub fn encode_symbol(symbol: Symbol) -> Result<u32, BindProgramEncodeError> {
+pub fn encode_symbol(symbol: Symbol) -> Result<u32, BindRulesEncodeError> {
     // The old bytecode format can only support numeric values.
     match symbol {
         Symbol::DeprecatedKey(value) => Ok(value),
         Symbol::NumberValue(value64) => match u32::try_from(value64) {
             Ok(value32) => Ok(value32),
-            _ => Err(BindProgramEncodeError::IntegerOutOfRange),
+            _ => Err(BindRulesEncodeError::IntegerOutOfRange),
         },
-        _ => Err(BindProgramEncodeError::UnsupportedSymbol),
+        _ => Err(BindRulesEncodeError::UnsupportedSymbol),
     }
 }
 
 pub fn encode_instruction(
     info: InstructionInfo,
-) -> Result<RawInstruction<[u32; 3]>, BindProgramEncodeError> {
+) -> Result<RawInstruction<[u32; 3]>, BindRulesEncodeError> {
     let mut raw_instruction = to_raw_instruction(info.instruction)?;
     raw_instruction.set_line(info.debug.line);
     raw_instruction.set_ast_location(info.debug.ast_location as u32);
@@ -136,9 +138,9 @@ pub fn encode_instruction(
 
 pub fn decode_from_bytecode_v1(
     bytes: &Vec<u8>,
-) -> Result<Vec<RawInstruction<[u32; 3]>>, BindProgramDecodeError> {
+) -> Result<Vec<RawInstruction<[u32; 3]>>, BindRulesDecodeError> {
     if bytes.len() % 12 != 0 {
-        return Err(BindProgramDecodeError::InvalidBinaryLength);
+        return Err(BindRulesDecodeError::InvalidBinaryLength);
     }
     let mut instructions = Vec::<RawInstruction<[u32; 3]>>::new();
     for i in (0..bytes.len()).step_by(12) {
@@ -150,12 +152,12 @@ pub fn decode_from_bytecode_v1(
     Ok(instructions)
 }
 
-pub fn encode_to_bytecode_v1(bind_program: BindProgram) -> Result<Vec<u8>, BindProgramEncodeError> {
-    let result = bind_program
+pub fn encode_to_bytecode_v1(bind_rules: BindRules) -> Result<Vec<u8>, BindRulesEncodeError> {
+    let result = bind_rules
         .instructions
         .into_iter()
         .map(|inst| encode_instruction(inst.to_instruction()))
-        .collect::<Result<Vec<_>, BindProgramEncodeError>>()?;
+        .collect::<Result<Vec<_>, BindRulesEncodeError>>()?;
     Ok(result
         .into_iter()
         .flat_map(|RawInstruction([a, b, c])| {
@@ -164,12 +166,12 @@ pub fn encode_to_bytecode_v1(bind_program: BindProgram) -> Result<Vec<u8>, BindP
         .collect::<Vec<_>>())
 }
 
-pub fn encode_to_string_v1(bind_program: BindProgram) -> Result<String, BindProgramEncodeError> {
-    let result = bind_program
+pub fn encode_to_string_v1(bind_rules: BindRules) -> Result<String, BindRulesEncodeError> {
+    let result = bind_rules
         .instructions
         .into_iter()
         .map(|inst| encode_instruction(inst.to_instruction()))
-        .collect::<Result<Vec<_>, BindProgramEncodeError>>()?;
+        .collect::<Result<Vec<_>, BindRulesEncodeError>>()?;
     Ok(result
         .into_iter()
         .map(|RawInstruction([word0, word1, word2])| {
@@ -181,8 +183,8 @@ pub fn encode_to_string_v1(bind_program: BindProgram) -> Result<String, BindProg
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bytecode_encoder::encode_v1::RawInstruction;
     use crate::compiler::{SymbolicInstruction, SymbolicInstructionInfo};
-    use crate::encode_bind_program_v1::RawInstruction;
     use std::collections::HashMap;
 
     #[test]
@@ -296,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_unsupported_symbols() {
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: vec![SymbolicInstructionInfo {
                 location: None,
                 instruction: SymbolicInstruction::AbortIfNotEqual {
@@ -308,12 +310,9 @@ mod tests {
             use_new_bytecode: false,
         };
 
-        assert_eq!(
-            Err(BindProgramEncodeError::UnsupportedSymbol),
-            encode_to_bytecode_v1(bind_program)
-        );
+        assert_eq!(Err(BindRulesEncodeError::UnsupportedSymbol), encode_to_bytecode_v1(bind_rules));
 
-        let bind_program = BindProgram {
+        let bind_rules = BindRules {
             instructions: vec![SymbolicInstructionInfo {
                 location: None,
                 instruction: SymbolicInstruction::AbortIfNotEqual {
@@ -325,10 +324,7 @@ mod tests {
             use_new_bytecode: false,
         };
 
-        assert_eq!(
-            Err(BindProgramEncodeError::IntegerOutOfRange),
-            encode_to_bytecode_v1(bind_program)
-        );
+        assert_eq!(Err(BindRulesEncodeError::IntegerOutOfRange), encode_to_bytecode_v1(bind_rules));
     }
 
     #[test]
@@ -336,13 +332,13 @@ mod tests {
         let bytes = vec![1u8; 3];
         assert_eq!(
             decode_from_bytecode_v1(&bytes).err(),
-            Some(BindProgramDecodeError::InvalidBinaryLength)
+            Some(BindRulesDecodeError::InvalidBinaryLength)
         );
 
         let bytes = vec![1u8; 13];
         assert_eq!(
             decode_from_bytecode_v1(&bytes).err(),
-            Some(BindProgramDecodeError::InvalidBinaryLength)
+            Some(BindRulesDecodeError::InvalidBinaryLength)
         );
     }
 

@@ -4,9 +4,9 @@
 
 use {
     anyhow::{format_err, Result},
+    bind::bytecode_encoder::encode_v1::RawInstruction,
+    bind::compiler::instruction::DeviceProperty,
     bind::debugger,
-    bind::encode_bind_program_v1::RawInstruction,
-    bind::instruction::DeviceProperty,
     ffx_core::ffx_plugin,
     ffx_driver_debug_bind_args::DriverDebugBindCommand,
     fidl_fuchsia_driver_development::{BindRulesBytecode, DriverDevelopmentProxy},

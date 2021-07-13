@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::parser_common::{
+use crate::parser::common::{
     compound_identifier, condition_value, many_until_eof, map_err, ws, BindParserError,
     CompoundIdentifier, NomSpan, Value,
 };
@@ -86,7 +86,7 @@ fn device_specification(input: NomSpan) -> IResult<NomSpan, DeviceSpecification,
 mod test {
     use super::*;
     use crate::make_identifier;
-    use crate::parser_common::test::check_result;
+    use crate::parser::common::test::check_result;
 
     mod properties {
         use super::*;

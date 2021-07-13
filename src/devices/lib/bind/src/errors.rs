@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::bytecode_common::BytecodeError;
-use crate::compiler::{BindProgramDecodeError, BindProgramEncodeError, CompilerError};
-use crate::debugger;
-use crate::dependency_graph::DependencyError;
+use crate::bytecode_encoder::error::BindRulesEncodeError;
+use crate::compiler::dependency_graph::DependencyError;
+use crate::compiler::{BindRulesDecodeError, CompilerError};
+use crate::debugger::debugger;
+use crate::debugger::offline_debugger;
+use crate::interpreter::common::BytecodeError;
 use crate::linter::LinterError;
-use crate::offline_debugger;
-use crate::parser_common::{BindParserError, CompoundIdentifier};
+use crate::parser::common::{BindParserError, CompoundIdentifier};
 use crate::test;
 use std::fmt;
 
@@ -124,7 +125,7 @@ impl From<BindParserError> for UserError {
             }
             BindParserError::NoStatements(span) => UserError::new(
                 "E021",
-                "Bind programs must contain at least one statement.",
+                "Bind rules must contain at least one statement.",
                 Some(span),
                 false,
             ),
@@ -215,7 +216,7 @@ impl From<CompilerError> for UserError {
             ),
             CompilerError::UnknownKey(identifier) => UserError::new(
                 "E108",
-                &format!("Bind program refers to undefined identifier: `{}`.", identifier),
+                &format!("Bind rules refers to undefined identifier: `{}`.", identifier),
                 None,
                 false,
             ),
@@ -251,7 +252,7 @@ impl From<DependencyError<CompoundIdentifier>> for UserError {
 impl From<offline_debugger::DebuggerError> for UserError {
     fn from(error: offline_debugger::DebuggerError) -> Self {
         match error {
-            offline_debugger::DebuggerError::BindParserError(error) => UserError::from(error),
+            offline_debugger::DebuggerError::ParserError(error) => UserError::from(error),
             offline_debugger::DebuggerError::CompilerError(error) => UserError::from(error),
             offline_debugger::DebuggerError::DuplicateKey(identifier) => UserError::new(
                 "E300",
@@ -264,7 +265,7 @@ impl From<offline_debugger::DebuggerError> for UserError {
             ),
             offline_debugger::DebuggerError::MissingLabel => UserError::new(
                 "E301",
-                "Missing label in the bind program symbolic instructions.",
+                "Missing label in the bind rules symbolic instructions.",
                 None,
                 true,
             ),
@@ -310,26 +311,20 @@ impl From<debugger::DebuggerError> for UserError {
             }
             debugger::DebuggerError::InvalidCondition(condition) => UserError::new(
                 "E002",
-                &format!(
-                    "A bind program instruction contained an invalid condition: {}.",
-                    condition
-                ),
+                &format!("A bind rules instruction contained an invalid condition: {}.", condition),
                 None,
                 true,
             ),
             debugger::DebuggerError::InvalidOperation(operation) => UserError::new(
                 "E003",
-                &format!(
-                    "A bind program instruction contained an invalid operation: {}.",
-                    operation
-                ),
+                &format!("A bind rules instruction contained an invalid operation: {}.", operation),
                 None,
                 true,
             ),
             debugger::DebuggerError::InvalidAstLocation(ast_location) => UserError::new(
                 "E004",
                 &format!(
-                    "A bind program instruction contained an invalid AST location: {}.",
+                    "A bind rules instruction contained an invalid AST location: {}.",
                     ast_location
                 ),
                 None,
@@ -337,13 +332,13 @@ impl From<debugger::DebuggerError> for UserError {
             ),
             debugger::DebuggerError::IncorrectAstLocation => UserError::new(
                 "E005",
-                "The debugger only works with bind programs written in the new bind language.",
+                "The debugger only works with bind rules written in the new bind language.",
                 None,
                 false,
             ),
             debugger::DebuggerError::MissingLabel => UserError::new(
                 "E006",
-                "The bind program contained a GOTO with no matching LABEL.",
+                "The bind rules contained a GOTO with no matching LABEL.",
                 None,
                 true,
             ),
@@ -351,7 +346,7 @@ impl From<debugger::DebuggerError> for UserError {
                 "E007",
                 concat!(
                     "Device doesn't have a BIND_PROTOCOL property. ",
-                    "The outcome of the bind program would depend on the device's protocol_id."
+                    "The outcome of the bind rules would depend on the device's protocol_id."
                 ),
                 None,
                 false,
@@ -373,7 +368,7 @@ impl From<debugger::DebuggerError> for UserError {
             }
             debugger::DebuggerError::InvalidDeprecatedKey(key) => UserError::new(
                 "E011",
-                &format!("The bind program contained an invalid deprecated key: {:#06x}.", key),
+                &format!("The bind rules contained an invalid deprecated key: {:#06x}.", key),
                 None,
                 true,
             ),
@@ -381,84 +376,81 @@ impl From<debugger::DebuggerError> for UserError {
     }
 }
 
-impl From<BindProgramEncodeError> for UserError {
-    fn from(error: BindProgramEncodeError) -> Self {
+impl From<BindRulesEncodeError> for UserError {
+    fn from(error: BindRulesEncodeError) -> Self {
         match error {
-            BindProgramEncodeError::InvalidStringLength(str) => UserError::new(
+            BindRulesEncodeError::InvalidStringLength(str) => UserError::new(
                 "E600",
-                &format!(
-                    "The bind program contains a string that exceeds 255 characters: {}.",
-                    str
-                ),
+                &format!("The bind rules contains a string that exceeds 255 characters: {}.", str),
                 None,
                 true,
             ),
-            BindProgramEncodeError::UnsupportedSymbol => UserError::new(
+            BindRulesEncodeError::UnsupportedSymbol => UserError::new(
                 "E601",
                 "Symbol is not supported in the old bytecode format.",
                 None,
                 true,
             ),
-            BindProgramEncodeError::IntegerOutOfRange => {
+            BindRulesEncodeError::IntegerOutOfRange => {
                 UserError::new("E602", &format!("Integer out of range"), None, true)
             }
-            BindProgramEncodeError::MismatchValueTypes(lhs, rhs) => UserError::new(
+            BindRulesEncodeError::MismatchValueTypes(lhs, rhs) => UserError::new(
                 "E603",
                 &format!("Cannot compare different value types for {:?} and {:?}", lhs, rhs),
                 None,
                 true,
             ),
-            BindProgramEncodeError::IncorrectTypesInValueComparison => UserError::new(
+            BindRulesEncodeError::IncorrectTypesInValueComparison => UserError::new(
                 "E604",
                 "The LHS value must represent a key and the RHS value must represent a bool,
                  string, number or enum value",
                 None,
                 true,
             ),
-            BindProgramEncodeError::DuplicateLabel(label_id) => UserError::new(
+            BindRulesEncodeError::DuplicateLabel(label_id) => UserError::new(
                 "E605",
                 &format!("Duplicate label {} in instructions", label_id),
                 None,
                 true,
             ),
-            BindProgramEncodeError::MissingLabel(label_id) => UserError::new(
+            BindRulesEncodeError::MissingLabel(label_id) => UserError::new(
                 "E606",
                 &format!("Missing label {} in instructions", label_id),
                 None,
                 true,
             ),
-            BindProgramEncodeError::InvalidGotoLocation(label_id) => UserError::new(
+            BindRulesEncodeError::InvalidGotoLocation(label_id) => UserError::new(
                 "E607",
                 &format!(
-                    "Bind program cannot move backwards. Label {} appears before Goto statement",
+                    "Bind rules cannot move backwards. Label {} appears before Goto statement",
                     label_id
                 ),
                 None,
                 true,
             ),
-            BindProgramEncodeError::JumpOffsetOutOfRange(label_id) => UserError::new(
+            BindRulesEncodeError::JumpOffsetOutOfRange(label_id) => UserError::new(
                 "E608",
                 &format!("The jump offset for label {} exceeds 32 bits", label_id),
                 None,
                 true,
             ),
-            BindProgramEncodeError::MatchNotSupported => UserError::new(
+            BindRulesEncodeError::MatchNotSupported => UserError::new(
                 "E609",
                 "Match instructions are not supported in the new bytecode",
                 None,
                 true,
             ),
-            BindProgramEncodeError::MissingCompositeDeviceName => {
+            BindRulesEncodeError::MissingCompositeDeviceName => {
                 UserError::new("E610", "Composite bind rules missing a device name", None, true)
             }
         }
     }
 }
 
-impl From<BindProgramDecodeError> for UserError {
-    fn from(error: BindProgramDecodeError) -> Self {
+impl From<BindRulesDecodeError> for UserError {
+    fn from(error: BindRulesDecodeError) -> Self {
         match error {
-            BindProgramDecodeError::InvalidBinaryLength => UserError::new(
+            BindRulesDecodeError::InvalidBinaryLength => UserError::new(
                 "E700",
                 &format!(
                     "The bind binary cannot be divided into instructions. \

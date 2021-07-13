@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::bind_program_v2_constants::*;
-use crate::compiler::BindProgramEncodeError;
+use crate::bytecode_constants::*;
+use crate::bytecode_encoder::error::BindRulesEncodeError;
 use std::collections::HashMap;
 
 pub struct SymbolTableEncoder {
@@ -23,9 +23,9 @@ impl SymbolTableEncoder {
 
     // Assign a unique key to |value| and add it to the list of encoded symbols and
     // the bytecode.
-    fn add_symbol(&mut self, value: String) -> Result<u32, BindProgramEncodeError> {
+    fn add_symbol(&mut self, value: String) -> Result<u32, BindRulesEncodeError> {
         if value.len() > MAX_STRING_LENGTH {
-            return Err(BindProgramEncodeError::InvalidStringLength(value));
+            return Err(BindRulesEncodeError::InvalidStringLength(value));
         }
 
         let symbol_key = self.unique_key;
@@ -42,7 +42,7 @@ impl SymbolTableEncoder {
     }
 
     // Retrieve the key for |value|. Add |value| if it's missing.
-    pub fn get_key(&mut self, value: String) -> Result<u32, BindProgramEncodeError> {
+    pub fn get_key(&mut self, value: String) -> Result<u32, BindRulesEncodeError> {
         match self.encoded_symbols.get(&value) {
             Some(key) => Ok(*key),
             None => self.add_symbol(value),

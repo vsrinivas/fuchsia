@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::parser_common::{
+use crate::parser::common::{
     bool_literal, compound_identifier, identifier, many_until_eof, map_err, numeric_literal,
     string_literal, using_list, ws, BindParserError, CompoundIdentifier, Include, NomSpan,
 };
@@ -182,7 +182,7 @@ fn library(input: NomSpan) -> IResult<NomSpan, Ast, BindParserError> {
 mod test {
     use super::*;
     use crate::make_identifier;
-    use crate::parser_common::test::check_result;
+    use crate::parser::common::test::check_result;
 
     mod number_value_lists {
         use super::*;

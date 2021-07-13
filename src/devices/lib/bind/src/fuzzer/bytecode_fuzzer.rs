@@ -4,7 +4,7 @@
 
 //! This module contains fuzzing targets for the new bytecode.
 
-use bind::match_bind::match_bytecode;
+use bind::interpreter::match_bind::match_bytecode;
 use fuzz::fuzz;
 use std::collections::HashMap;
 

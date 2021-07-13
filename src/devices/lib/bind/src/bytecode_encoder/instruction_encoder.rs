@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::bind_library::ValueType;
-use crate::bind_program_v2_constants::*;
-use crate::compiler::{BindProgramEncodeError, Symbol, SymbolicInstructionInfo};
-use crate::instruction::{Condition, Instruction};
-use crate::symbol_table_encoder::SymbolTableEncoder;
+use crate::bytecode_constants::*;
+use crate::bytecode_encoder::error::BindRulesEncodeError;
+use crate::bytecode_encoder::symbol_table_encoder::SymbolTableEncoder;
+use crate::compiler::instruction::{Condition, Instruction};
+use crate::compiler::Symbol;
+use crate::compiler::SymbolicInstructionInfo;
+use crate::parser::bind_library::ValueType;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
@@ -51,7 +53,7 @@ impl<'a> InstructionEncoder<'a> {
     pub fn encode(
         &mut self,
         symbol_table_encoder: &mut SymbolTableEncoder,
-    ) -> Result<Vec<u8>, BindProgramEncodeError> {
+    ) -> Result<Vec<u8>, BindRulesEncodeError> {
         let mut bytecode: Vec<u8> = vec![];
 
         while let Some(symbolic_inst) = self.inst_iter.next() {
@@ -74,22 +76,22 @@ impl<'a> InstructionEncoder<'a> {
                 Instruction::Match(_) => {
                     // Match statements are not supported in the new bytecode. Once
                     // the old bytecode is removed, they can be deleted.
-                    return Err(BindProgramEncodeError::MatchNotSupported);
+                    return Err(BindRulesEncodeError::MatchNotSupported);
                 }
             };
         }
 
         // Update the jump instruction offsets.
         for (label_id, data) in self.label_map.iter() {
-            // If the label index is not available, then the label is missing in the bind program.
+            // If the label index is not available, then the label is missing in the bind rules.
             if data.index.is_none() {
-                return Err(BindProgramEncodeError::MissingLabel(*label_id));
+                return Err(BindRulesEncodeError::MissingLabel(*label_id));
             }
 
             let label_index = data.index.unwrap();
             for usage in data.jump_instructions.iter() {
                 let offset = u32::try_from(label_index - usage.index - usage.inst_offset)
-                    .map_err(|_| BindProgramEncodeError::JumpOffsetOutOfRange(*label_id))?;
+                    .map_err(|_| BindRulesEncodeError::JumpOffsetOutOfRange(*label_id))?;
 
                 let offset_bytes = offset.to_le_bytes();
                 for i in 0..4 {
@@ -106,8 +108,8 @@ impl<'a> InstructionEncoder<'a> {
         bytecode: &mut Vec<u8>,
         symbol_table_encoder: &mut SymbolTableEncoder,
         condition: Condition,
-    ) -> Result<(), BindProgramEncodeError> {
-        // Since the bind program aborts when a condition statement fails, we encode the opposite
+    ) -> Result<(), BindRulesEncodeError> {
+        // Since the bind rules aborts when a condition statement fails, we encode the opposite
         // condition in the Abort instruction. For example, if the given condition is Equal, we
         // would encode AbortIfNotEqual.
         match condition {
@@ -132,7 +134,7 @@ impl<'a> InstructionEncoder<'a> {
         symbol_table_encoder: &mut SymbolTableEncoder,
         condition: Condition,
         label_id: u32,
-    ) -> Result<(), BindProgramEncodeError> {
+    ) -> Result<(), BindRulesEncodeError> {
         let offset_index = bytecode.len() + 1;
         let placeholder_offset = (0 as u32).to_le_bytes();
         match condition {
@@ -154,10 +156,10 @@ impl<'a> InstructionEncoder<'a> {
 
         // If the label's index is already set, then the label appears before
         // the jump statement. We can make this assumption because we're
-        // encoding the bind program in one direction.
+        // encoding the bind rules in one direction.
         if let Some(data) = self.label_map.get(&label_id) {
             if data.index.is_some() {
-                return Err(BindProgramEncodeError::InvalidGotoLocation(label_id));
+                return Err(BindRulesEncodeError::InvalidGotoLocation(label_id));
             }
         }
 
@@ -179,10 +181,10 @@ impl<'a> InstructionEncoder<'a> {
         &mut self,
         bytecode: &mut Vec<u8>,
         label_id: u32,
-    ) -> Result<(), BindProgramEncodeError> {
+    ) -> Result<(), BindRulesEncodeError> {
         if let Some(data) = self.label_map.get(&label_id) {
             if data.index.is_some() {
-                return Err(BindProgramEncodeError::DuplicateLabel(label_id));
+                return Err(BindRulesEncodeError::DuplicateLabel(label_id));
             }
         }
 
@@ -201,10 +203,10 @@ impl<'a> InstructionEncoder<'a> {
         symbol_table_encoder: &mut SymbolTableEncoder,
         lhs: Symbol,
         rhs: Symbol,
-    ) -> Result<(), BindProgramEncodeError> {
+    ) -> Result<(), BindRulesEncodeError> {
         // LHS value should represent a key.
         if !is_symbol_key(&lhs) {
-            return Err(BindProgramEncodeError::IncorrectTypesInValueComparison);
+            return Err(BindRulesEncodeError::IncorrectTypesInValueComparison);
         }
 
         let rhs_val_type = match rhs {
@@ -214,7 +216,7 @@ impl<'a> InstructionEncoder<'a> {
             Symbol::EnumValue(_) => ValueType::Enum,
             _ => {
                 // The RHS value should not represent a key.
-                return Err(BindProgramEncodeError::IncorrectTypesInValueComparison);
+                return Err(BindRulesEncodeError::IncorrectTypesInValueComparison);
             }
         };
 
@@ -222,7 +224,7 @@ impl<'a> InstructionEncoder<'a> {
         // types match.
         if let Symbol::Key(_, lhs_val_type) = lhs {
             if lhs_val_type != rhs_val_type {
-                return Err(BindProgramEncodeError::MismatchValueTypes(lhs_val_type, rhs_val_type));
+                return Err(BindRulesEncodeError::MismatchValueTypes(lhs_val_type, rhs_val_type));
             }
         }
 
@@ -236,7 +238,7 @@ impl<'a> InstructionEncoder<'a> {
         bytecode: &mut Vec<u8>,
         symbol_table_encoder: &mut SymbolTableEncoder,
         symbol: Symbol,
-    ) -> Result<(), BindProgramEncodeError> {
+    ) -> Result<(), BindRulesEncodeError> {
         let (value_type, value) = match symbol {
             Symbol::NumberValue(value) => Ok((RawValueType::NumberValue as u8, value as u32)),
             Symbol::BoolValue(value) => Ok((RawValueType::BoolValue as u8, value as u32)),
@@ -263,6 +265,6 @@ impl<'a> InstructionEncoder<'a> {
 pub fn encode_instructions<'a>(
     instructions: Vec<SymbolicInstructionInfo<'a>>,
     symbol_table_encoder: &mut SymbolTableEncoder,
-) -> Result<Vec<u8>, BindProgramEncodeError> {
+) -> Result<Vec<u8>, BindRulesEncodeError> {
     InstructionEncoder::new(instructions).encode(symbol_table_encoder)
 }

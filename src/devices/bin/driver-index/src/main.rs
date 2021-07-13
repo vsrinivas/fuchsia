@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::{self, Context};
-use bind::match_bind::{match_bind, DeviceProperties, MatchBindData, PropertyKey};
+use bind::interpreter::decode_bind_rules::DecodedBindRules;
+use bind::interpreter::match_bind::{match_bind, DeviceProperties, MatchBindData, PropertyKey};
 use cm_rust::FidlIntoNative;
 use fidl_fuchsia_driver_framework as fdf;
 use fidl_fuchsia_driver_framework::{DriverIndexRequest, DriverIndexRequestStream};
@@ -30,7 +31,7 @@ enum IncomingRequest {
     DriverIndexProtocol(DriverIndexRequestStream),
 }
 
-fn get_program_string_value(component: &cm_rust::ComponentDecl, key: &str) -> Option<String> {
+fn get_rules_string_value(component: &cm_rust::ComponentDecl, key: &str) -> Option<String> {
     for entry in component.program.as_ref()?.info.entries.as_ref()? {
         if entry.key == key {
             match entry.value.as_ref()?.as_ref() {
@@ -48,7 +49,7 @@ fn get_program_string_value(component: &cm_rust::ComponentDecl, key: &str) -> Op
 
 fn node_to_device_property(
     node_properties: &Vec<fdf::NodeProperty>,
-) -> Result<bind::match_bind::DeviceProperties, zx_status_t> {
+) -> Result<DeviceProperties, zx_status_t> {
     let mut device_properties = DeviceProperties::new();
 
     for property in node_properties {
@@ -66,7 +67,7 @@ fn node_to_device_property(
 struct ResolvedDriver {
     component_url: url::Url,
     driver_path: String,
-    bind_rules: bind::decode_bind_rules::DecodedBindRules,
+    bind_rules: DecodedBindRules,
 }
 
 impl std::fmt::Display for ResolvedDriver {
@@ -97,14 +98,15 @@ impl ResolvedDriver {
         let component: fsys::ComponentDecl = io_util::read_file_fidl(&component).await?;
         let component = component.fidl_into_native();
 
-        let bind_path = get_program_string_value(&component, "bind")
+        let bind_path = get_rules_string_value(&component, "bind")
             .ok_or(anyhow::anyhow!("Missing bind path"))?;
         let bind =
             io_util::open_file(&dir, std::path::Path::new(&bind_path), fio::OPEN_RIGHT_READABLE)?;
         let bind = io_util::read_file_bytes(&bind).await?;
-        let bind = bind::decode_bind_rules::DecodedBindRules::new(bind)?;
+        let bind = DecodedBindRules::new(bind)?;
 
-        let driver_path = get_program_string_value(&component, "program")
+        // TODO(fxb/78950): Replace "program" with "rules".
+        let driver_path = get_rules_string_value(&component, "program")
             .ok_or(anyhow::anyhow!("Missing bind path"))?;
 
         Ok(ResolvedDriver {
@@ -117,7 +119,7 @@ impl ResolvedDriver {
     fn matches(
         &self,
         properties: &DeviceProperties,
-    ) -> Result<bool, bind::bytecode_common::BytecodeError> {
+    ) -> Result<bool, bind::interpreter::common::BytecodeError> {
         match_bind(
             MatchBindData {
                 symbol_table: &self.bind_rules.symbol_table,
@@ -346,7 +348,7 @@ mod tests {
     }
 
     // This test depends on '/pkg/config/drivers_for_test.json' existing in the test package.
-    // The test reads that json file to determine which bind programs to read and index.
+    // The test reads that json file to determine which bind rules to read and index.
     #[fasync::run_singlethreaded(test)]
     async fn read_from_json() {
         let (resolver, resolver_stream) =
