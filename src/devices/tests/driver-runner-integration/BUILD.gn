@@ -43,18 +43,11 @@ fuchsia_component("driver-manager-component") {
   ]
 }
 
-bind_index_metadata("driver_bind_manifest") {
-  testonly = true
-  deps = []
-  outputs = [ "config/driver-index.json" ]
-}
-
 fuchsia_test_package("driver-runner-integration-test") {
   test_components = [ ":driver-runner-integration-test-component" ]
   deps = [
     ":driver-manager-component",
     ":driver-runner-integration-root",
-    ":driver_bind_manifest",
     "//src/devices/bin/driver-index:component",
     "//src/devices/bin/driver_host2",
     "//src/devices/misc/drivers/packaged:component",
