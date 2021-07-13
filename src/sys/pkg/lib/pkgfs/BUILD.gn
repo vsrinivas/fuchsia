@@ -53,15 +53,23 @@ rustc_library("pkgfs") {
   ]
 }
 
-fuchsia_component("pkgfs-lib-test") {
-  testonly = true
+fuchsia_unittest_component("pkgfs-lib-test") {
   manifest = "meta/pkgfs-lib-test.cmx"
   deps = [ ":pkgfs_test" ]
 }
 
 fuchsia_test_package("pkgfs-tests") {
   test_components = [ ":pkgfs-lib-test" ]
+
+  # [blobfs] ERROR: [src/storage/blobfs/blob.cc(419)] downloaded blob did not match provided digest 71922c2ce9b17ea08ff139e3c699ea04558caf955ea56924f69b6daf4c3ce852
+  # [block,driver_host:misc,driver] ERROR: [src/devices/block/drivers/core/manager.cc(103)] block: Joining un-closed FIFO server
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   deps = [
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
     "//src/storage/bin/blobfs",
     "//src/sys/pkg/bin/pkgfs:pkgsvr",
     "//src/sys/pkg/bin/pm:pm_bin",
@@ -70,8 +78,5 @@ fuchsia_test_package("pkgfs-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":pkgfs-tests",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
-  ]
+  public_deps = [ ":pkgfs-tests" ]
 }

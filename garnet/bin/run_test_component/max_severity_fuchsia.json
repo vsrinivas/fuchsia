@@ -102,10 +102,6 @@
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/pkgfs-tests#meta/pkgfs-lib-test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/scenic_unittests#meta/scenic_unittests.cmx"
         },
         {
