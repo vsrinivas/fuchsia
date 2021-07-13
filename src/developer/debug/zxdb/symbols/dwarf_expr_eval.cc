@@ -352,6 +352,7 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case 0xf2:  // DW_OP_GNU_implicit_pointer (pre-DWARF5 GNU extension for the non-GNU one).
       return OpImplicitPointer("DW_OP_GNU_implicit_pointer");
 
+    case llvm::dwarf::DW_OP_entry_value:
     case 0xf3:  // DW_OP_GNU_entry_value
       return OpEntryValue();
 
@@ -784,24 +785,85 @@ DwarfExprEval::Completion DwarfExprEval::OpDup() {
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpEntryValue() {
-  // This GNU extension is a ULEB128 length followed by a sub-expression of that length. This
-  // sub-expression is supposed to be evaluated in a separate stack using the register values that
-  // were present at the beginning of the function:
-  // https://gcc.gnu.org/ml/gcc-patches/2010-08/txt00152.txt
-  //
-  // Generally if the registers were saved registers it would just encode those locations. This is
-  // really used for non-saved registers and requires that the debugger have previously saved those
-  // registers separately. This isn't something that we currently do, and can't be done in general
-  // (it could be implemented if you previously single- stepped into that function though).
+  // A ULEB128 length followed by a sub-expression of that length. This sub-expression is evaluated
+  // in a separate stack using the register values that were present at the beginning of the
+  // function.
   StackEntry length;
   if (!ReadLEBUnsigned(&length))
     return Completion::kSync;
+  if (length == 0 || !data_extractor_.CanRead(static_cast<size_t>(length))) {
+    ReportError("DW_OP_entry_value sub expression is a bad length.");
+    return Completion::kSync;
+  }
 
-  if (is_string_output())
-    return AppendString("DW_OP_GNU_entry_value(" + ToString128(length) + ")");
+  // Read the DWARF expression to evaluate.
+  std::vector<uint8_t> sub_expr_bytes(static_cast<size_t>(length));
+  if (!data_extractor_.ReadBytes(sub_expr_bytes.size(), sub_expr_bytes.data())) {
+    ReportError("Not enough data for DW_OP_entry_value.");
+    return Completion::kSync;
+  }
 
-  ReportError("Optimized out (DW_OP_GNU_entry_value)");
-  return Completion::kSync;
+  DwarfExpr sub_expr(std::move(sub_expr_bytes), expr_.source());
+  FX_DCHECK(!nested_eval_);
+  nested_eval_ = std::make_unique<DwarfExprEval>();
+
+  if (is_string_output()) {
+    std::string nested_str("DW_OP_entry_value(");
+
+    // For string output the data provider doesn't matter, so keep using ours since the entry
+    // provider might not be available.
+    nested_str += nested_eval_->ToString(data_provider_, symbol_context_, std::move(sub_expr),
+                                         string_output_mode_ == StringOutput::kPretty);
+
+    nested_str += ")";
+    AppendString(nested_str);
+    nested_eval_.reset();
+    return Completion::kSync;
+  }
+
+  // Get the data provider for the nested context.
+  auto entry_data_provider = data_provider_->GetEntryDataProvider();
+  if (!entry_data_provider) {
+    ReportError("Can not compute function entry values in this context.");
+    return Completion::kSync;
+  }
+
+  // Since we own the nested evaluator, it's OK to capture |this| in the callback.
+  //
+  // The nested evaluator may complete synchronously (the common case) or not. We need to know that
+  // from the callback to know whether to call ContinueEval() or not, and this information isn't
+  // passed to the callback. The shared boolean allows us to track this.
+  auto is_async_completion = std::make_shared<bool>(false);
+  Completion completion = nested_eval_->Eval(
+      std::move(entry_data_provider), symbol_context_, std::move(sub_expr),
+      [this, is_async_completion](DwarfExprEval* nested, const Err& err) {
+        // TODO(brettw) do we need to call ContinueEval on error? What about in other cases this
+        // comes up? They may be wrong.
+        if (err.has_error()) {
+          ReportError(err);
+        } else if (nested->GetResultType() == ResultType::kData) {
+          // The nested expression is expected to produce exactly one stack entry, not data.
+          ReportError("DWARF entry value expression produced an incorrect result type.");
+        } else {
+          // Success case, save the result.
+          Push(nested->GetResult());
+        }
+
+        if (*is_async_completion) {
+          // The nested_eval_ needs to be cleared before continuing, but we can't delete it from
+          // within its own callback. Schedule it to be deleted from the message loop.
+          debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                                      [old_eval = std::move(nested_eval_)]() {});
+          ContinueEval();
+        }
+      });
+
+  if (completion == Completion::kSync) {
+    nested_eval_.reset();
+  } else {
+    *is_async_completion = true;
+  }
+  return completion;
 }
 
 // 1 parameter: Signed LEB128 offset from frame base pointer.

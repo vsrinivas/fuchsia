@@ -54,6 +54,11 @@ class Abi {
 
   virtual ~Abi() = default;
 
+  // Returns true if the register is one of the callee-saved registers that is supposed to be
+  // preserved across function calls. These registers should generally be valid in non-topmost
+  // stack frames as the unwind information should be able to reconstitute them.
+  virtual bool IsRegisterCalleeSaved(debug_ipc::RegisterID reg) const = 0;
+
   // Returns the register used to return a machine word like a pointer or a "regular"-sized integer.
   virtual debug_ipc::RegisterID GetReturnRegisterForMachineInt() const = 0;
 

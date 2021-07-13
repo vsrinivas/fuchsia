@@ -13,6 +13,7 @@ namespace zxdb {
 class AbiNull : public Abi {
  public:
   // Abi implementation.
+  bool IsRegisterCalleeSaved(debug_ipc::RegisterID reg) const final { return false; }
   debug_ipc::RegisterID GetReturnRegisterForMachineInt() const final {
     return debug_ipc::RegisterID::kUnknown;
   }

@@ -53,6 +53,13 @@ class CallSiteSymbolDataProvider : public ProcessSymbolDataProvider {
 
   ~CallSiteSymbolDataProvider() override;
 
+  // The unwind tables will generate values for every register but normally only the callee-saved
+  // registers will have valid values. Code should check this before returning any registers from
+  // the frame_provider_.
+  //
+  // TODO(fxbug.dev/74320) remove this when the unwinder only reports registers it knows about.
+  bool IsRegisterCalleeSaved(debug_ipc::RegisterID id);
+
   // Looks up to see if there's a matching call site parameter for the given register. Returns if
   // if so, or nullptr if no match.
   fxl::RefPtr<CallSiteParameter> ParameterForRegister(debug_ipc::RegisterID id);

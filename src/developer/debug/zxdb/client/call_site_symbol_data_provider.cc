@@ -6,6 +6,8 @@
 
 #include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/expr/eval_dwarf_expr.h"
 #include "src/developer/debug/zxdb/symbols/call_site.h"
 #include "src/developer/debug/zxdb/symbols/call_site_parameter.h"
@@ -43,18 +45,29 @@ fxl::RefPtr<SymbolDataProvider> CallSiteSymbolDataProvider::GetEntryDataProvider
 
 std::optional<containers::array_view<uint8_t>> CallSiteSymbolDataProvider::GetRegister(
     debug_ipc::RegisterID id) {
-  // The previous frame's data provider should have all the caller-saved registers. Any additional
-  // registers provided by the CallSiteParameters would can't always be evaluated synchronously,
-  // so we don't try. Therefore, anything synchronous comes from the saved registers in the caller.
-  return frame_provider_->GetRegister(id);
+  // The previous frame's data provider should have all the callee-saved registers. Any additional
+  // registers provided by the CallSiteParameters can't always be evaluated synchronously, so we
+  // don't try. Therefore, anything synchronous comes from the saved registers in the caller.
+  fxl::RefPtr<CallSiteParameter> param = ParameterForRegister(id);
+  if (param && !param->value_expr().empty())
+    return std::nullopt;  // There is a parameter. Overrides need to be evaluated asynchronously.
+
+  // No parameter, fall back to saved regular registers.
+  if (IsRegisterCalleeSaved(id))
+    return frame_provider_->GetRegister(id);
+
+  // Anything else is synchronously known to be unknown.
+  return containers::array_view<uint8_t>();
 }
 
 void CallSiteSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
                                                   GetRegisterCallback cb) {
   fxl::RefPtr<CallSiteParameter> param = ParameterForRegister(id);
   if (!param || param->value_expr().empty()) {
-    // No CallSiteParameter, fall back to the frame's saved registers.
-    frame_provider_->GetRegisterAsync(id, std::move(cb));
+    // No CallSiteParameter. If this is a caller-saved register, we can use the ones we have.
+    if (IsRegisterCalleeSaved(id))
+      return frame_provider_->GetRegisterAsync(id, std::move(cb));
+    cb(Err("Call site register not available"), {});
     return;
   }
 
@@ -107,6 +120,10 @@ void CallSiteSymbolDataProvider::GetFrameBaseAsync(GetFrameBaseCallback callback
 
 uint64_t CallSiteSymbolDataProvider::GetCanonicalFrameAddress() const {
   return frame_provider_->GetCanonicalFrameAddress();
+}
+
+bool CallSiteSymbolDataProvider::IsRegisterCalleeSaved(debug_ipc::RegisterID id) {
+  return process() && process()->session()->arch_info().abi()->IsRegisterCalleeSaved(id);
 }
 
 fxl::RefPtr<CallSiteParameter> CallSiteSymbolDataProvider::ParameterForRegister(

@@ -14,6 +14,7 @@ class Type;
 class AbiX64 : public Abi {
  public:
   // Abi implementation.
+  bool IsRegisterCalleeSaved(debug_ipc::RegisterID reg) const final;
   debug_ipc::RegisterID GetReturnRegisterForMachineInt() const final {
     return debug_ipc::RegisterID::kX64_rax;
   }

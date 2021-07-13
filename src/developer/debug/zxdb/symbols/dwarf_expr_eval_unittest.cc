@@ -117,6 +117,7 @@ const debug_ipc::RegisterID kDWARFReg0ID = debug_ipc::RegisterID::kARMv8_x0;
 const debug_ipc::RegisterID kDWARFReg1ID = debug_ipc::RegisterID::kARMv8_x1;
 const debug_ipc::RegisterID kDWARFReg3ID = debug_ipc::RegisterID::kARMv8_x3;
 const debug_ipc::RegisterID kDWARFReg4ID = debug_ipc::RegisterID::kARMv8_x4;
+const debug_ipc::RegisterID kDWARFReg5ID = debug_ipc::RegisterID::kARMv8_x5;
 const debug_ipc::RegisterID kDWARFReg6ID = debug_ipc::RegisterID::kARMv8_x6;
 const debug_ipc::RegisterID kDWARFReg9ID = debug_ipc::RegisterID::kARMv8_x9;
 
@@ -954,23 +955,41 @@ TEST_F(DwarfExprEvalTest, Piece_ValueUnknown) {
       "20 00 00 00 00 00 00 00\n",
       eval().TakeResultData().ToString());
 
-  // This program doesn't yet work since we don't support *_entry_value.
-  // TODO(fxbug.dev/6322) enable this test when *_entry_value is supported since this expression
-  // covers a lot of features:
-  //
+  // A complex program using "entry_value" that Clang produced (more general version of above).
   // clang-format off
-  //   std::vector<uint8_t> entry_value{
-  //     llvm::dwarf::DW_OP_implicit_value, 0x4, 0x00, 0x00, 0x9c, 0x42,
-  //     llvm::dwarf::DW_OP_piece, 0x4,
-  //     llvm::dwarf::DW_OP_GNU_entry_value(DW_OP_reg5 RDI),  // This needs some decoding to bytes.
-  //     llvm::dwarf::DW_OP_stack_value,
-  //     llvm::dwarf::DW_OP_piece, 0x1,
-  //     llvm::dwarf::DW_OP_piece, 0xb,
-  //     llvm::dwarf::DW_OP_const1u, 0x20,
-  //     llvm::dwarf::DW_OP_stack_value,
-  //     llvm::dwarf::DW_OP_piece, 0x8
-  //   };
+  std::vector<uint8_t> entry_value{
+    llvm::dwarf::DW_OP_implicit_value, 0x4, 0x00, 0x00, 0x9c, 0x42,
+    llvm::dwarf::DW_OP_piece, 0x4,
+    llvm::dwarf::DW_OP_GNU_entry_value, 0x1,  // 1 byte "entry value" expression follows.
+    llvm::dwarf::DW_OP_reg5,                  // The actual "entry value" expression.
+    llvm::dwarf::DW_OP_stack_value,
+    llvm::dwarf::DW_OP_piece, 0x1,
+    llvm::dwarf::DW_OP_piece, 0xb,
+    llvm::dwarf::DW_OP_const1u, 0x20,
+    llvm::dwarf::DW_OP_stack_value,
+    llvm::dwarf::DW_OP_piece, 0x8
+  };
   // clang-format on
+
+  // Provide the entry value for register 5.
+  auto entry_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  provider()->set_entry_provider(entry_provider);
+  entry_provider->AddRegisterValue(kDWARFReg5ID, true, 0x8877665544332211);
+
+  DoEvalTest(entry_value, true, DwarfExprEval::Completion::kSync, 0,
+             DwarfExprEval::ResultType::kData,
+             "DW_OP_implicit_value(4, 0x429c0000), DW_OP_piece(4), "
+             "DW_OP_entry_value(DW_OP_reg5), DW_OP_stack_value, DW_OP_piece(1), "
+             "DW_OP_piece(11), DW_OP_const1u(32), DW_OP_stack_value, DW_OP_piece(8)");
+  EXPECT_EQ(
+      //           Low byte of entry value reg5.
+      //           |
+      // Float---- |  Pad-----   Double-----------------
+      "00 00 9c 42 11 ?? ?? ??   ?? ?? ?? ?? ?? ?? ?? ??\n"
+
+      // uint64---------------
+      "20 00 00 00 00 00 00 00\n",
+      eval().TakeResultData().ToString());
 }
 
 TEST_F(DwarfExprEvalTest, Piece_Memory) {
@@ -1029,6 +1048,67 @@ TEST_F(DwarfExprEvalTest, PrettyPrint) {
   EXPECT_EQ(
       "register(x3), register(x0) + 2, push(3), + 1, push(" + to_hex_string(kModuleBase + 1) + ")",
       stringified);
+}
+
+TEST_F(DwarfExprEvalTest, EntryValue) {
+  auto entry_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  provider()->set_entry_provider(entry_provider);
+
+  constexpr uint64_t kEntryX0 = 0x12783645190;
+  entry_provider->AddRegisterValue(kDWARFReg0ID, true, kEntryX0);
+
+  // The most common type of "entry value" expression is just the register value directly.
+  std::vector<uint8_t> simple_program{
+      llvm::dwarf::DW_OP_entry_value,
+      1,
+      llvm::dwarf::DW_OP_reg0,
+      llvm::dwarf::DW_OP_stack_value,
+  };
+  DoEvalTest(simple_program, true, DwarfExprEval::Completion::kSync, kEntryX0,
+             DwarfExprEval::ResultType::kValue, "DW_OP_entry_value(DW_OP_reg0), DW_OP_stack_value");
+  eval().Clear();
+
+  // An entry value expression with a bad length.
+  std::vector<uint8_t> bad_length{llvm::dwarf::DW_OP_entry_value, 23, llvm::dwarf::DW_OP_reg0};
+  DoEvalTest(bad_length, false, DwarfExprEval::Completion::kSync, 0,
+             DwarfExprEval::ResultType::kValue,
+             "ERROR: \"DW_OP_entry_value sub expression is a bad length.\"",
+             "DW_OP_entry_value sub expression is a bad length.");
+  eval().Clear();
+
+  // Asynchronous entry-value evaluation. In practice this will seldon happen, but it probably means
+  // the entry value is computable from the stack in the calling function.
+  constexpr uint8_t kEntryOffset = 0x31;  // Register offset in entry frame.
+  constexpr uint8_t kTopOffset = 0x01;    // Register offset in top frame.
+  std::vector<uint8_t> complex_program{
+      llvm::dwarf::DW_OP_entry_value, 3,  // 3 bytes in the program below.
+
+      // Entry value program.
+      llvm::dwarf::DW_OP_breg6, kEntryOffset, llvm::dwarf::DW_OP_deref,
+
+      // This is evaluated in the top frame so will get a different value for reg6.
+      llvm::dwarf::DW_OP_breg6, kTopOffset, llvm::dwarf::DW_OP_minus};
+
+  // Register values in both frames.
+  constexpr uint64_t kEntryX6 = 0x12345678;
+  entry_provider->AddRegisterValue(kDWARFReg6ID, true, kEntryX6);
+  constexpr uint64_t kTopX6 = 0x99;
+  provider()->AddRegisterValue(kDWARFReg6ID, true, kTopX6);
+
+  // The entry frame expression computes *(X6 + kEntryOffset).
+  constexpr uint64_t kEntryAddress = kEntryX6 + kEntryOffset;
+  constexpr uint64_t kEntryValue = 0x1122334455667788;
+  std::vector<uint8_t> entry_value = {0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11};
+  entry_provider->AddMemory(kEntryAddress, entry_value);
+
+  // The outer expression computs (X6 + offset) and then subtracts that from the entry value.
+  constexpr uint64_t kExpected = kEntryValue - (kTopX6 + kTopOffset);
+
+  DoEvalTest(complex_program, true, DwarfExprEval::Completion::kAsync, kExpected,
+             DwarfExprEval::ResultType::kPointer,
+             "DW_OP_entry_value(DW_OP_breg6(49), DW_OP_deref), DW_OP_breg6(1), DW_OP_minus");
+
+  eval().Clear();
 }
 
 }  // namespace zxdb

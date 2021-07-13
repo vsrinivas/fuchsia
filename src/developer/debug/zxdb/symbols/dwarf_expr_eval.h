@@ -314,6 +314,9 @@ class DwarfExprEval {
   // or registers should clear this.
   bool result_is_constant_ = true;
 
+  // The nested evaluator for executing DW_OP_entry_value expressions.
+  std::unique_ptr<DwarfExprEval> nested_eval_;
+
   fxl::WeakPtrFactory<DwarfExprEval> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DwarfExprEval);

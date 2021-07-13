@@ -13,7 +13,7 @@
 
 namespace zxdb {
 
-// An implementation of SymbolDataProdiver for testing.
+// An implementation of SymbolDataProvider for testing.
 class MockSymbolDataProvider : public SymbolDataProvider {
  public:
   // An insertion-time ordered list of (register, data) pairs of writes.
@@ -23,6 +23,9 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   using MemoryWrites = std::vector<std::pair<uint64_t, std::vector<uint8_t>>>;
 
   void set_arch(debug_ipc::Arch arch) { arch_ = arch; }
+  void set_entry_provider(fxl::RefPtr<SymbolDataProvider> ep) {
+    entry_data_provider_ = std::move(ep);
+  }
   void set_ip(uint64_t ip) { ip_ = ip; }
   void set_bp(uint64_t bp) { bp_ = bp; }
   void set_cfa(uint64_t cfa) { cfa_ = cfa; }
@@ -46,6 +49,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
 
   // SymbolDataProvider implementation.
   debug_ipc::Arch GetArch() override { return arch_; }
+  fxl::RefPtr<SymbolDataProvider> GetEntryDataProvider() const override;
   std::optional<containers::array_view<uint8_t>> GetRegister(debug_ipc::RegisterID id) override;
   void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback) override;
   void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
@@ -73,6 +77,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   MockSymbolDataProvider();
 
   debug_ipc::Arch arch_ = debug_ipc::Arch::kArm64;
+  fxl::RefPtr<SymbolDataProvider> entry_data_provider_;
 
   uint64_t ip_ = 0;
   uint64_t bp_ = 0;

@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/client/call_site_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -51,8 +52,11 @@ fxl::RefPtr<SymbolDataProvider> FrameSymbolDataProvider::GetEntryDataProvider() 
   size_t prev_frame_index = *frame_index_or + 1;
   if (prev_frame_index >= stack.size())
     return nullptr;
+  const Frame* prev_frame = stack[prev_frame_index];
 
-  return stack[prev_frame_index]->GetSymbolDataProvider();
+  return fxl::MakeRefCounted<CallSiteSymbolDataProvider>(
+      frame_->GetThread()->GetProcess()->GetWeakPtr(), prev_frame->GetLocation(),
+      prev_frame->GetSymbolDataProvider());
 }
 
 std::optional<containers::array_view<uint8_t>> FrameSymbolDataProvider::GetRegister(RegisterID id) {

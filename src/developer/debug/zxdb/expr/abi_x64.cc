@@ -215,6 +215,26 @@ Abi::CollectionByValueReturn AllocateRegistersForByValueReturning(
 
 }  // namespace
 
+bool AbiX64::IsRegisterCalleeSaved(debug_ipc::RegisterID reg) const {
+  switch (reg) {
+    case debug_ipc::RegisterID::kX64_rbx:
+    case debug_ipc::RegisterID::kX64_bh:  // All variants of "rbx".
+    case debug_ipc::RegisterID::kX64_bl:
+    case debug_ipc::RegisterID::kX64_bx:
+    case debug_ipc::RegisterID::kX64_ebx:
+    case debug_ipc::RegisterID::kX64_rsp:
+    case debug_ipc::RegisterID::kX64_rbp:
+    case debug_ipc::RegisterID::kX64_r12:
+    case debug_ipc::RegisterID::kX64_r13:
+    case debug_ipc::RegisterID::kX64_r14:
+    case debug_ipc::RegisterID::kX64_r15:
+    case debug_ipc::RegisterID::kX64_rip:
+      return true;
+    default:
+      return false;
+  }
+}
+
 std::optional<debug_ipc::RegisterID> AbiX64::GetReturnRegisterForBaseType(
     const BaseType* base_type) {
   switch (base_type->base_type()) {
