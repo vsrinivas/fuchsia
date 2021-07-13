@@ -22,10 +22,6 @@ declare_args() {
   # Enable this to include fuchsia tracing capability
   magma_enable_tracing = true
 
-  # Enable this to have the msd include a suite of tests and invoke them
-  # automatically when the driver starts.
-  magma_enable_developer_build = false
-
   # The path to a prebuilt libvulkan.so for an IMG GPU.
   prebuilt_libvulkan_img_path = ""
 
@@ -220,6 +216,7 @@ template("icd_config_data") {
     resource(resource_target_name) {
       sources = manifest_files
       outputs = [ "${resource_path}/{{source_file_part}}" ]
+      deps = [ ":${manifest_target}" ]
     }
   }
   config_data(target_name) {

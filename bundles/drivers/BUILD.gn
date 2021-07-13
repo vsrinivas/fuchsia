@@ -82,7 +82,7 @@ group("pci") {
   if (target_cpu == "x64") {
     deps += [
       "//src/connectivity/ethernet/drivers/realtek-8111:realtek-8111",
-      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-intel-gen",
+      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:msd-intel-gen",
     ]
   }
 }

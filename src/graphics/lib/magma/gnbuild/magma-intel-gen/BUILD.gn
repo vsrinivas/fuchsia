@@ -7,49 +7,35 @@ import("//build/components/fuchsia_package_with_single_component.gni")
 import("//build/config.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
+fuchsia_system_package("msd-intel-gen") {
+  deps = [ "//src/graphics/drivers/msd-intel-gen:msd_intel" ]
+}
+
+fuchsia_system_package("msd-intel-gen-test") {
+  testonly = true
+  deps = [ "//src/graphics/drivers/msd-intel-gen:msd_intel_test" ]
+}
+
+group("test-driver") {
+  testonly = true
+  deps = [
+    ":msd-intel-gen-test",
+    "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file",
+  ]
+}
+
+fuchsia_test_component("msd_intel_gen_nonhardware_tests") {
+  deps = [ "//src/graphics/drivers/msd-intel-gen:tests" ]
+  manifest = "meta/msd_intel_gen_nonhardware_tests.cmx"
+}
+
+fuchsia_test_component("msd_intel_gen_integration_tests") {
+  deps = [ "//src/graphics/drivers/msd-intel-gen/tests/integration" ]
+  manifest = "meta/msd_intel_gen_integration_tests.cmx"
+}
+
 # Mesa Intel Vulkan driver requires x64 build
 if (target_cpu == "x64") {
-  group("magma-vulkan-system") {
-    if (!magma_enable_developer_build) {
-      public_deps = [ ":magma-intel-gen" ]
-    }
-  }
-
-  group("magma-vulkan-config") {
-    if (!magma_enable_developer_build) {
-      public_deps = [ ":magma-intel-gen-config" ]
-    }
-  }
-
-  if (magma_enable_developer_build) {
-    group("magma-dev") {
-      testonly = true
-      public_deps = [
-        ":magma-intel-gen",
-        ":magma-intel-gen-config",
-      ]
-      deps =
-          [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
-    }
-  }
-
-  fuchsia_system_package("magma-intel-gen") {
-    if (magma_enable_developer_build) {
-      testonly = true
-    }
-
-    deps = []
-
-    if (magma_enable_developer_build) {
-      deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
-    } else {
-      deps += [ "$msd_intel_gen_build_root:msd_intel" ]
-    }
-
-    # This package is reachable from //garnet/packages/prod:all
-    allowed_in_extra_deps = true
-  }
-
   resource("vulkan_metadata") {
     sources = [ "metadata.json" ]
     outputs = [ "meta/metadata/metadata.json" ]
@@ -64,7 +50,7 @@ if (target_cpu == "x64") {
     fuchsia_package_with_single_component("libvulkan_intel_gen") {
       component_name = "vulkan"
       deps = [
-        ":magma-intel-gen-config-resource",
+        ":libvulkan_intel_config_resource",
         ":vulkan_metadata",
         "//third_party/mesa:magma_vulkan",
       ]
@@ -72,7 +58,7 @@ if (target_cpu == "x64") {
     }
   }
 
-  icd_config_data("magma-intel-gen-config") {
+  icd_config_data("libvulkan_intel_config") {
     icds = [
       {
         lib = "libvulkan_intel.so"
@@ -80,12 +66,7 @@ if (target_cpu == "x64") {
       },
     ]
     resource_path = "meta/icd.d"
-    resource_target_name = "magma-intel-gen-config-resource"
-  }
-
-  fuchsia_test_component("msd_intel_gen_nonhardware_tests") {
-    deps = [ "$msd_intel_gen_build_root:tests" ]
-    manifest = "meta/msd_intel_gen_nonhardware_tests.cmx"
+    resource_target_name = "libvulkan_intel_config_resource"
   }
 
   fuchsia_test_component("mesa_unit_tests") {
@@ -124,11 +105,6 @@ if (target_cpu == "x64") {
       ":state_pool_no_free",
       ":block_pool_no_free",
     ]
-  }
-
-  fuchsia_test_component("msd_intel_gen_integration_tests") {
-    deps = [ "//src/graphics/drivers/msd-intel-gen/tests/integration" ]
-    manifest = "meta/msd_intel_gen_integration_tests.cmx"
   }
 
   fuchsia_test_component("mesa_integration_tests") {
