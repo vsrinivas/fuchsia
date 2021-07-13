@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use parking_lot::Condvar;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::signals::types::*;
+use crate::task::Task;
 use crate::task::Waiter;
 use crate::types::*;
 
 pub struct Scheduler {
-    /// The condvars that suspended tasks are waiting on, organized by pid_t of the suspended task.
+    /// The waiters that suspended tasks are waiting on, organized by pid_t of the task that is
+    /// waited on (i.e., the task that is meant to exit).
     pub exit_waiters: HashMap<pid_t, Vec<Arc<Waiter>>>,
 
-    /// The condvars that suspended tasks are waiting on, organized by pid_t of the suspended task.
-    pub suspended_tasks: HashMap<pid_t, Arc<Condvar>>,
+    /// The waiters that suspended tasks are waiting on, organized by pid_t of the suspended task.
+    pub suspended_tasks: HashMap<pid_t, Arc<Waiter>>,
 
     /// The number of pending signals for a given task.
     ///
@@ -42,27 +43,23 @@ impl Scheduler {
 
     /// Adds a task to the set of tasks currently suspended via `rt_sigsuspend`.
     ///
-    /// Attempting to add a task that already exists is an error, and will panic.
-    ///
-    /// The suspended task will wait on the condition variable, and will be notified when it is
-    /// the target of an appropriate signal.
-    pub fn add_suspended_task(&mut self, pid: pid_t) -> Arc<Condvar> {
-        assert!(!self.is_task_suspended(pid));
-        let condvar = Arc::new(Condvar::new());
-        self.suspended_tasks.insert(pid, condvar.clone());
-        condvar
+    /// The task's `task.waiter` will be used to wake the task back up.
+    pub fn add_suspended_task(&mut self, task: &Task) {
+        fuchsia_syslog::fx_log_info!("Suspending task: {}", task.id);
+        self.suspended_tasks.insert(task.id, task.waiter.clone());
     }
 
+    #[cfg(test)]
     /// Returns true if the Task associated with `pid` is currently suspended in `rt_sigsuspend`.
     pub fn is_task_suspended(&self, pid: pid_t) -> bool {
         self.suspended_tasks.contains_key(&pid)
     }
 
-    /// Removes the condition variable that `pid` is waiting on.
+    /// Removes the waiter that `pid` is waiting on.
     ///
-    /// The returned condition variable is meant to be notified before it is dropped in order
+    /// The returned waiter is meant to be notified before it is dropped in order
     /// for the task to resume operation in `rt_sigsuspend`.
-    pub fn remove_suspended_task(&mut self, pid: pid_t) -> Option<Arc<Condvar>> {
+    pub fn remove_suspended_task(&mut self, pid: pid_t) -> Option<Arc<Waiter>> {
         self.suspended_tasks.remove(&pid)
     }
 

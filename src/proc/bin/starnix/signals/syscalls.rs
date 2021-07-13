@@ -159,10 +159,14 @@ pub fn sys_rt_sigsuspend(
     let mut mask = sigset_t::default();
     ctx.task.mm.read_object(user_mask, &mut mask)?;
 
-    // Save the old signal mask so it can be restored once the task wakes back up.
-    let mut current_signal_mask = ctx.task.signal_mask.lock();
-    let old_mask = *current_signal_mask;
-    *current_signal_mask = mask & !(Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
+    // This block makes sure the lock on the signal mask is released before waiting.
+    let (old_mask, current_signal_mask) = {
+        // Save the old signal mask so it can be restored once the task wakes back up.
+        let mut current_signal_mask = ctx.task.signal_mask.lock();
+        let old_mask = *current_signal_mask;
+        *current_signal_mask = mask & !(Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
+        (old_mask, *current_signal_mask)
+    };
 
     // This block makes sure the write lock on the pids is dropped before waiting.
     let waiter = {
@@ -172,21 +176,20 @@ pub fn sys_rt_sigsuspend(
             .get_pending_signals(ctx.task.id)
             .iter()
             .filter(|&(signal, &num_signals)| {
-                num_signals > 0 && signal.passes_mask(*current_signal_mask)
+                num_signals > 0 && signal.passes_mask(current_signal_mask)
             })
             .next()
             .is_some()
         {
             None
         } else {
-            Some(scheduler.add_suspended_task(ctx.task.id))
+            scheduler.add_suspended_task(ctx.task);
+            Some(ctx.task.waiter.clone())
         }
     };
 
     if let Some(waiter) = waiter {
-        // Since a given task can't wait twice, it's fine to pass the current signal mask as the
-        // associated mutex.
-        waiter.wait(&mut current_signal_mask);
+        waiter.wait()?;
     }
 
     // Save the old mask, so that the task can restore it after the signal handler executes.
