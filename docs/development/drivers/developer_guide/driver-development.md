@@ -83,9 +83,10 @@ To generate a driver declaration macro including these bind rules, there should
 be a corresponding `bind_rules` build target.
 
 ```
-bind_rules("bind") {
+driver_bind_rules("bind") {
     rules = "ahci.bind"
-    output = "ahci-bind.h"
+    header_output = "ahci-bind.h"
+    bind_output = "ahci.bindbc"
     deps = [
         "//src/devices/bind/deprecated.pci",
     ]

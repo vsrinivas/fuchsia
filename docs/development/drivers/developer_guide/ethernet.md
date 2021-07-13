@@ -102,9 +102,10 @@ generated header file `intel_ethernet_bind.h`, which is generated through the
 `BUILD` target:
 
 ```
-bind_rules("intel_ethernet_bind") {
+driver_bind_rules("intel_ethernet_bind") {
   rules = “intel_ethernet.bind”
-  output = “intel_ethernet_bind.h”
+  header_output = “intel_ethernet_bind.h”
+  bind_output = “intel_ethernet.bindbc”
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }
 ```

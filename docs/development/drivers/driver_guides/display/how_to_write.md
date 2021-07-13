@@ -61,9 +61,10 @@ To begin, create:
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-bind_rules("fancy-display-bind") {
+driver_bind_rules("fancy-display-bind") {
   rules = "fancy-display.bind"
-  output = "fancy-display-bind.h"
+  header_output = "fancy-display-bind.h"
+  bind_output = "fancy-display.bindbc"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/board_maker_company.platform",
