@@ -31,6 +31,11 @@
 #include "macros.h"
 namespace syslog_backend {
 
+// Returns true if we are running in the DDK.
+// This is used to customize logging behavior for drivers
+// and related driver functionality.
+bool fx_log_compat_no_interest_listener();
+
 // Flushes a record to the legacy fx_logger, if available.
 // Returns true on success.
 bool fx_log_compat_flush_record(LogBuffer* buffer);
@@ -425,6 +430,14 @@ void LogState::ConnectAsync() {
   descriptor_ = std::move(local);
 }
 void LogState::Connect() {
+  // Always disable the interest listener for the DDK.
+  // Once structured logging is available in the SDK
+  // this may unblock support for this.
+  // For now -- we have no way to properly support
+  // this functionality for drivers.
+  if (fx_log_compat_no_interest_listener()) {
+    serve_interest_listener_ = false;
+  }
   if (this->serve_interest_listener_) {
     if (!interest_listener_dispatcher_) {
       loop_.StartThread("log-interest-listener-thread");

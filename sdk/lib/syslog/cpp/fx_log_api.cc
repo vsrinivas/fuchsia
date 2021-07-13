@@ -10,6 +10,7 @@
 #include "macros.h"
 
 namespace syslog_backend {
+bool fx_log_compat_no_interest_listener() { return false; }
 bool fx_log_compat_flush_record(LogBuffer* buffer) {
   auto header = MsgHeader::CreatePtr(buffer);
   // Write fatal logs to stderr as well because death tests sometimes verify a certain
