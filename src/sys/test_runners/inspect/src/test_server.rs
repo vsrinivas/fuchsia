@@ -24,6 +24,7 @@ use {
 };
 
 const NANOS_IN_SECONDS: f64 = 1_000_000_000.0;
+const DEFAULT_PARALLEL: u16 = 1;
 
 /// Output a log for the test. Automatically prepends the current monotonic time.
 macro_rules! test_stdout {
@@ -219,7 +220,7 @@ impl TestServer {
                                 .expect("Can't convert listener channel to proxy");
 
                             let mut tasks = vec![];
-                            let parallel = options.parallel.unwrap_or(16u16);
+                            let parallel = options.parallel.unwrap_or(DEFAULT_PARALLEL);
                             for test in tests.into_iter() {
                                 let spec = spec.clone();
                                 let proxy = proxy.clone();
