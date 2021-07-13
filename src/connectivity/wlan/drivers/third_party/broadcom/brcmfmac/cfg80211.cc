@@ -3674,10 +3674,10 @@ static void brcmf_ap_start_timeout(struct brcmf_cfg80211_info* cfg) {
 
 /* Start AP mode */
 void brcmf_if_start_req(net_device* ndev, const wlanif_start_req_t* req) {
-  BRCMF_IFDBG(WLANIF, ndev, "Start AP request from SME. rsne_len: %zu", req->rsne_len);
+  BRCMF_IFDBG(WLANIF, ndev, "Start AP request from SME. rsne_len: %zu, channel: %u", req->rsne_len,
+              req->channel);
 #if !defined(NDEBUG)
-  BRCMF_DBG(WLANIF, "  ssid: " SSID_FMT_STR " , channel: %u",
-            SSID_FMT_BYTES(req->ssid.data, req->ssid.len), req->channel);
+  BRCMF_DBG(WLANIF, "  ssid: " SSID_FMT_STR, SSID_FMT_BYTES(req->ssid.data, req->ssid.len));
 #endif /* !defined(NDEBUG) */
 
   uint8_t result_code = brcmf_cfg80211_start_ap(ndev, req);
