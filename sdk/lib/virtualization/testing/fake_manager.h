@@ -6,6 +6,7 @@
 #define LIB_VIRTUALIZATION_TESTING_FAKE_MANAGER_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/virtualization/testing/fake_guest_vsock.h>
@@ -17,9 +18,9 @@ namespace testing {
 // Provides an implementation of |fuchsia::virtualization::Manager| that
 // can create a single Environment/Guest. This is intended to make testing the
 // common case of a single component creating a single guest.
-class FakeManager : public fuchsia::virtualization::Manager,
-                    public fuchsia::virtualization::Realm,
-                    public fuchsia::virtualization::Guest {
+class FakeManager : public fuchsia::virtualization::testing::Manager_TestBase,
+                    public fuchsia::virtualization::testing::Realm_TestBase,
+                    public fuchsia::virtualization::testing::Guest_TestBase {
  public:
   FakeGuestVsock* GuestVsock() { return &guest_vsock_; }
 
@@ -31,25 +32,16 @@ class FakeManager : public fuchsia::virtualization::Manager,
   // |fuchsia::virtualization::Manager|
   void Create(fidl::StringPtr label,
               fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
-  void List(ListCallback callback) override;
-  void Connect(uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
 
   // |fuchsia::virtualization::Realm|
   void LaunchInstance(std::string url, fidl::StringPtr label,
                       fuchsia::virtualization::GuestConfig guest_config,
                       fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
                       LaunchInstanceCallback callback) override;
-  void ListInstances(ListInstancesCallback callback) override;
-  void ConnectToInstance(
-      uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller) override;
-  void ConnectToBalloon(
-      uint32_t id,
-      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> controller) override;
   void GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) override;
 
-  // |fuchsia::virtualization::Guest|
-  void GetSerial(GetSerialCallback callback) override;
+  void NotImplemented_(const std::string& name) override;
 
   FakeHostVsock host_vsock_{&guest_vsock_};
   FakeGuestVsock guest_vsock_{&host_vsock_};

@@ -29,41 +29,8 @@ void FakeManager::GetHostVsockEndpoint(
   host_vsock_.AddBinding(std::move(request));
 }
 
-// Methods below are not supported by the FakeManager:
-
-void FakeManager::GetSerial(GetSerialCallback callback) {
-  FX_CHECK(false) << "Guest::GetSerial is not supported by "
-                     "FakeManager";
-  callback(zx::socket());
-}
-
-void FakeManager::List(ListCallback callback) {
-  FX_CHECK(false) << "Manager::List is not supported by "
-                     "FakeManager";
-  callback({});
-}
-
-void FakeManager::Connect(uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) {
-  FX_CHECK(false) << "Manager::Connect is not supported by "
-                     "FakeManager";
-}
-
-void FakeManager::ListInstances(ListInstancesCallback callback) {
-  FX_CHECK(false) << "Realm::List is not supported by "
-                     "FakeManager";
-  callback({});
-}
-
-void FakeManager::ConnectToInstance(
-    uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller) {
-  FX_CHECK(false) << "Realm::ConnectToInstance is not "
-                     "supported by FakeManager";
-}
-
-void FakeManager::ConnectToBalloon(
-    uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> controller) {
-  FX_CHECK(false) << "Realm::ConnectToBalloon is not "
-                     "supported by FakeManager";
+void FakeManager::NotImplemented_(const std::string& name) {
+  FX_CHECK(false) << "Method not supported by FakeManager: " << name;
 }
 
 }  // namespace testing
