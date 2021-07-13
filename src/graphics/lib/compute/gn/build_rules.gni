@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-_host_build = is_host
-if (_host_build) {
-  import("build_rules_for_host.gni")
-} else {
+_fuchsia_build = is_fuchsia
+if (_fuchsia_build) {
   import("build_rules_for_fuchsia.gni")
+} else {
+  import("build_rules_for_host.gni")
 }
 
 # Create a simple host or device executable.
