@@ -410,3 +410,50 @@ declare_macro!(fidl_socket_addr_v4, FidlGen, SocketAddrV4);
 declare_macro!(fidl_socket_addr_v6, FidlGen, SocketAddrV6);
 declare_macro!(fidl_mac, FidlGen, MacAddress);
 declare_macro!(fidl_subnet, FidlGen, CidrAddress);
+
+/// Generator for net-types types.
+enum NetGen {}
+
+impl Generator<IpAddr> for NetGen {
+    fn generate(input: IpAddr) -> TokenStream {
+        let (t, inner) = match input {
+            IpAddr::V4(v4) => (quote! { V4 }, Self::generate(v4)),
+            IpAddr::V6(v6) => (quote! { V6 }, Self::generate(v6)),
+        };
+        quote! {
+            net_types::ip::IpAddr::#t(#inner)
+        }
+    }
+}
+
+impl Generator<Ipv4Addr> for NetGen {
+    fn generate(input: Ipv4Addr) -> TokenStream {
+        let octets = input.octets();
+        quote! {
+            net_types::ip::Ipv4Addr::new([#(#octets),*])
+        }
+    }
+}
+
+impl Generator<Ipv6Addr> for NetGen {
+    fn generate(input: Ipv6Addr) -> TokenStream {
+        let octets = input.octets();
+        quote! {
+            net_types::ip::Ipv6Addr::new([#(#octets),*])
+        }
+    }
+}
+
+impl Generator<MacAddress> for NetGen {
+    fn generate(input: MacAddress) -> TokenStream {
+        let MacAddress(octets) = input;
+        quote! {
+            net_types::ethernet::Mac::new([#(#octets),*])
+        }
+    }
+}
+
+declare_macro!(net_ip, NetGen, IpAddr);
+declare_macro!(net_ip_v4, NetGen, Ipv4Addr);
+declare_macro!(net_ip_v6, NetGen, Ipv6Addr);
+declare_macro!(net_mac, NetGen, MacAddress);

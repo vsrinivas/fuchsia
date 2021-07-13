@@ -67,6 +67,26 @@ impl Default for State {
     }
 }
 
+impl std::str::FromStr for State {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "None" => Ok(Self::None),
+            "Removed" => Ok(Self::Removed),
+            "Down" => Ok(Self::Down),
+            "Up" => Ok(Self::Up),
+            "LinkLayerUp" => Ok(Self::LinkLayerUp),
+            "NetworkLayerUp" => Ok(Self::NetworkLayerUp),
+            "Local" => Ok(Self::Local),
+            "Gateway" => Ok(Self::Gateway),
+            "WalledGarden" => Ok(Self::WalledGarden),
+            "Internet" => Ok(Self::Internet),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 enum Proto {
     IPv4,
@@ -472,7 +492,7 @@ fn log_state(info: Option<&mut InspectInfo>, proto: Proto, state: State) {
 async fn compute_state(
     &fnet_interfaces_ext::Properties {
         id: _,
-        name: _,
+        ref name,
         device_class,
         online,
         ref addresses,
@@ -505,10 +525,22 @@ async fn compute_state(
     // state to LinkLayerUp.
 
     let (ipv4, ipv6) = futures::join!(
-        network_layer_state(&v4_addrs, routes, pinger, IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS)
-            .map(|state| StateEvent { state, time: fasync::Time::now() }),
-        network_layer_state(&v6_addrs, routes, pinger, IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS)
-            .map(|state| StateEvent { state, time: fasync::Time::now() })
+        network_layer_state(
+            &name,
+            &v4_addrs,
+            routes,
+            pinger,
+            IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS
+        )
+        .map(|state| StateEvent { state, time: fasync::Time::now() }),
+        network_layer_state(
+            &name,
+            &v6_addrs,
+            routes,
+            pinger,
+            IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS
+        )
+        .map(|state| StateEvent { state, time: fasync::Time::now() })
     );
     Some(IpVersions { ipv4, ipv6 })
 }
@@ -557,6 +589,7 @@ fn local_routes(
 
 // `network_layer_state` determines the L3 reachability state.
 async fn network_layer_state(
+    name: &str,
     addresses: &[fnet::Subnet],
     routes: &[fnetstack::RouteTableEntry],
     p: &dyn Ping,
@@ -604,7 +637,7 @@ async fn network_layer_state(
                 })
             });
             let reachable = futures::stream::iter(gateway_addr_iter)
-                .filter_map(|gw_addr| async move { p.ping(gw_addr).await.then(|| ()) });
+                .filter_map(|gw_addr| async move { p.ping(name, gw_addr).await.then(|| ()) });
             pin_mut!(reachable);
             reachable.next().await
         });
@@ -614,7 +647,7 @@ async fn network_layer_state(
         None => return State::Local,
     };
 
-    if !p.ping(std::net::SocketAddr::new(internet_ping_address, 0)).await {
+    if !p.ping(name, std::net::SocketAddr::new(internet_ping_address, 0)).await {
         return State::Gateway;
     }
     return State::Internet;
@@ -745,7 +778,7 @@ mod tests {
 
     #[async_trait]
     impl Ping for FakePing {
-        async fn ping(&self, addr: std::net::SocketAddr) -> bool {
+        async fn ping(&self, interface_name: &str, addr: std::net::SocketAddr) -> bool {
             if self.gateway_addrs.contains(&addr.ip()) {
                 return self.gateway_response;
             }
@@ -754,7 +787,12 @@ mod tests {
             {
                 return self.internet_response;
             }
-            panic!("ping destination address {} is not in the set of gateway URLs ({:?}) or equal to the IPv4/IPv6 internet connectivity check address", addr, self.gateway_addrs);
+            panic!(
+                "ping destination address {} on interface {} \
+                is not in the set of gateway URLs ({:?}) \
+                or equal to the IPv4/IPv6 internet connectivity check address",
+                interface_name, addr, self.gateway_addrs
+            );
         }
     }
 
@@ -838,6 +876,7 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
+                ETHERNET_INTERFACE_NAME,
                 &[address],
                 &route_table,
                 &FakePing {
@@ -854,6 +893,7 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
+                ETHERNET_INTERFACE_NAME,
                 &[address],
                 &route_table,
                 &FakePing {
@@ -870,6 +910,7 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
+                ETHERNET_INTERFACE_NAME,
                 &[address],
                 &route_table,
                 &FakePing {
@@ -886,6 +927,7 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
+                ETHERNET_INTERFACE_NAME,
                 &[address],
                 &route_table_2,
                 &FakePing::default(),
@@ -897,7 +939,14 @@ mod tests {
         );
 
         assert_eq!(
-            network_layer_state(&[], &route_table, &FakePing::default(), ping_internet_addr).await,
+            network_layer_state(
+                ETHERNET_INTERFACE_NAME,
+                &[],
+                &route_table,
+                &FakePing::default(),
+                ping_internet_addr
+            )
+            .await,
             State::Up,
             "No address"
         );

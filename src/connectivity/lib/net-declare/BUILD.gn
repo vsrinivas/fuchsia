@@ -28,7 +28,10 @@ rustc_library("net-declare") {
   with_unit_tests = true
   deps = [ ":net-declare-macros" ]
 
-  test_deps = [ "//sdk/fidl/fuchsia.net:fuchsia.net-rustc" ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//src/connectivity/lib/net-types",
+  ]
 
   sources = [ "src/lib.rs" ]
 

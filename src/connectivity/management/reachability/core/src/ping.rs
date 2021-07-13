@@ -13,12 +13,15 @@ const SEQ_MIN: u16 = 1;
 const SEQ_MAX: u16 = 3;
 const TIMEOUT: fasync::Duration = fasync::Duration::from_seconds(1);
 
-async fn ping<I>(addr: I::Addr) -> anyhow::Result<()>
+async fn ping<I>(interface_name: &str, addr: I::Addr) -> anyhow::Result<()>
 where
     I: ping::Ip,
     I::Addr: std::fmt::Display + Copy,
 {
     let socket = ping::new_icmp_socket::<I>().context("failed to create socket")?;
+    let () = socket
+        .bind_device(Some(interface_name.as_bytes()))
+        .with_context(|| format!("failed to bind socket to device {}", interface_name))?;
     let (mut sink, mut stream) = ping::new_unicast_sink_and_stream::<
         I,
         _,
@@ -55,17 +58,17 @@ where
 #[async_trait]
 pub trait Ping {
     /// Returns true if the address is reachable, false otherwise.
-    async fn ping(&self, addr: SocketAddr) -> bool;
+    async fn ping(&self, interface_name: &str, addr: SocketAddr) -> bool;
 }
 
 pub struct Pinger;
 
 #[async_trait]
 impl Ping for Pinger {
-    async fn ping(&self, addr: SocketAddr) -> bool {
+    async fn ping(&self, interface_name: &str, addr: SocketAddr) -> bool {
         let r = match addr {
-            SocketAddr::V4(addr_v4) => ping::<ping::Ipv4>(addr_v4).await,
-            SocketAddr::V6(addr_v6) => ping::<ping::Ipv6>(addr_v6).await,
+            SocketAddr::V4(addr_v4) => ping::<ping::Ipv4>(interface_name, addr_v4).await,
+            SocketAddr::V6(addr_v6) => ping::<ping::Ipv6>(interface_name, addr_v6).await,
         };
         match r {
             Ok(()) => true,

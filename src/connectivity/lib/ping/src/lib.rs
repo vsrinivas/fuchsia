@@ -206,6 +206,12 @@ where
         addr: &I::Addr,
         cx: &mut Context<'_>,
     ) -> Poll<std::io::Result<usize>>;
+
+    /// Binds this to an interface so that packets can only flow in/out via the specified
+    /// interface.
+    ///
+    /// If `interface` is `None`, the binding is removed.
+    fn bind_device(&self, interface: Option<&[u8]>) -> std::io::Result<()>;
 }
 
 /// Parameters of a ping request/reply.
@@ -494,6 +500,10 @@ mod test {
             let len = buf.len();
             let () = self.buffer.borrow_mut().push_back((buf, addr.clone()));
             Poll::Ready(Ok(len))
+        }
+
+        fn bind_device(&self, interface: Option<&[u8]>) -> std::io::Result<()> {
+            panic!("unexpected call to bind_device({:?})", interface);
         }
     }
 

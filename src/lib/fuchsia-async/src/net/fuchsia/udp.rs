@@ -216,6 +216,24 @@ impl DatagramSocket {
     pub fn broadcast(&self) -> io::Result<bool> {
         self.0.as_ref().broadcast()
     }
+
+    /// Sets the `SO_BINDTODEVICE` socket option.
+    ///
+    /// If a socket is bound to an interface, only packets received from that particular interface
+    /// are processed by the socket. Note that this only works for some socket types, particularly
+    /// AF_INET sockets.
+    ///
+    /// The binding will be removed if `interface` is `None` or an empty byte slice.
+    pub fn bind_device(&self, interface: Option<&[u8]>) -> io::Result<()> {
+        self.0.as_ref().bind_device(interface)
+    }
+
+    /// Gets the value of the `SO_BINDTODEVICE` socket option.
+    ///
+    /// `Ok(None)` will be returned if the socket option is not set.
+    pub fn device(&self) -> io::Result<Option<Vec<u8>>> {
+        self.0.as_ref().device()
+    }
 }
 
 /// Future returned by [`UdpSocket::recv_from()`].

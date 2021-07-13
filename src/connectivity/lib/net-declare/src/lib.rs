@@ -41,7 +41,7 @@ pub use net_declare_macros::fidl_ip_v4;
 /// string.
 pub use net_declare_macros::fidl_ip_v6;
 /// Declares a [`fidl_fuchsia_net::MacAddress`] from a parsable MAC address in
-/// the form "aa:bb:cc:dd:ee:ff".
+/// the form `aa:bb:cc:dd:ee:ff`.
 pub use net_declare_macros::fidl_mac;
 /// Declares an [`fidl_fuchsia_net::SocketAddress`] from a parsable IP address +
 /// port string (either V4 or V6).
@@ -65,8 +65,19 @@ pub use net_declare_macros::fidl_socket_addr_v4;
 /// [Rust issue 1992]: https://github.com/rust-lang/rfcs/issues/1992
 pub use net_declare_macros::fidl_socket_addr_v6;
 /// Declares a [`fidl_fuchsia_net::Subnet`] from a parsable CIDR address string
-/// in the form `addr/prefix`. E.g. 192.168.0.1/24 or ff08::1/64.
+/// in the form `addr/prefix`, e.g. `192.168.0.1/24` or `ff08::1/64`.
 pub use net_declare_macros::fidl_subnet;
+
+/// Declares a [`net_types::ip::IpAddr`] from a parsable IP address (either V4
+/// or V6) string.
+pub use net_declare_macros::net_ip;
+/// Declares a [`net_types::ip::Ipv4Addr`] from a parsable IPv4 address string.
+pub use net_declare_macros::net_ip_v4;
+/// Declares a [`net_types::ip::Ipv6Addr`] from a parsable IPv6 address string.
+pub use net_declare_macros::net_ip_v6;
+/// Declares a [`net_types::ethernet::Mac`] from a parsable MAC address in
+/// the form `aa:bb:cc:dd:ee:ff`.
+pub use net_declare_macros::net_mac;
 
 /// Redeclaration of macros to generate `std` types.
 pub mod std {
@@ -88,6 +99,14 @@ pub mod fidl {
     pub use super::fidl_socket_addr_v4 as socket_addr_v4;
     pub use super::fidl_socket_addr_v6 as socket_addr_v6;
     pub use super::fidl_subnet as subnet;
+}
+
+/// Redeclaration of macros to generate `net_types` types.
+pub mod net {
+    pub use super::net_ip as ip;
+    pub use super::net_ip_v4 as ip_v4;
+    pub use super::net_ip_v6 as ip_v6;
+    pub use super::net_mac as mac;
 }
 
 #[cfg(test)]
@@ -275,6 +294,44 @@ mod tests {
                 prefix_len: 64
             },
             fidl_subnet!("ff01::0102/64")
+        );
+    }
+
+    #[test]
+    fn test_net_ip() {
+        assert_eq!(
+            net_types::ip::IpAddr::from(net_types::ip::Ipv4Addr::new([192, 168, 0, 1])),
+            net_ip!("192.168.0.1")
+        );
+
+        assert_eq!(
+            net_types::ip::IpAddr::from(net_types::ip::Ipv6Addr::new([
+                0xFF, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02
+            ])),
+            net_ip!("ff01::0102"),
+        );
+    }
+
+    #[test]
+    fn test_net_ip_v4() {
+        assert_eq!(net_types::ip::Ipv4Addr::new([192, 168, 0, 1]), net_ip_v4!("192.168.0.1"),);
+    }
+
+    #[test]
+    fn test_net_ip_v6() {
+        assert_eq!(
+            net_types::ip::Ipv6Addr::new([
+                0xFF, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02
+            ]),
+            net_ip_v6!("ff01::0102"),
+        );
+    }
+
+    #[test]
+    fn test_net_mac() {
+        assert_eq!(
+            net_types::ethernet::Mac::new([0, 1, 2, 3, 4, 5]),
+            net_mac!("00:01:02:03:04:05")
         );
     }
 }

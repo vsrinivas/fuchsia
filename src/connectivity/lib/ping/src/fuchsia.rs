@@ -38,6 +38,16 @@ where
     ) -> Poll<std::io::Result<usize>> {
         self.async_send_to_vectored(bufs, &(*addr).clone().into(), cx)
     }
+
+    /// Binds this to an interface so that packets can only flow in/out via the specified
+    /// interface.
+    ///
+    /// Implemented by setting the `SO_BINDTODEVICE` socket option.
+    ///
+    /// See [`fuchsia_async::net::DatagramSocket::bind_device()`].
+    fn bind_device(&self, interface: Option<&[u8]>) -> std::io::Result<()> {
+        self.bind_device(interface)
+    }
 }
 
 /// Create a new ICMP socket.
