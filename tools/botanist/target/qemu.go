@@ -249,7 +249,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	if storageFull.Path != "" {
 		if t.config.FVMTool != "" {
 			if err := extendStorageFull(ctx, &storageFull, t.config.FVMTool, storageFullMinSize); err != nil {
-				return fmt.Errorf("failed to extend fvm.blk to %d bytes: %v", storageFullMinSize, err)
+				return fmt.Errorf("failed to extend fvm.blk to %d bytes: %w", storageFullMinSize, err)
 			}
 		}
 		qemuCmd.AddVirtioBlkPciDrive(qemu.Drive{
@@ -261,7 +261,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	if t.config.MinFS != nil {
 		absMinFsPath, err := normalizeFile(t.config.MinFS.Image)
 		if err != nil {
-			return fmt.Errorf("could not find minfs image %q: %v", t.config.MinFS.Image, err)
+			return fmt.Errorf("could not find minfs image %q: %w", t.config.MinFS.Image, err)
 		}
 		// Swarming hard-links Isolate downloads with a cache and the very same
 		// cached minfs image will be used across multiple tasks. To ensure
@@ -296,7 +296,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	if t.config.Logfile != "" {
 		logfile, err := filepath.Abs(t.config.Logfile)
 		if err != nil {
-			return fmt.Errorf("cannot get absolute path for %q: %v", t.config.Logfile, err)
+			return fmt.Errorf("cannot get absolute path for %q: %w", t.config.Logfile, err)
 		}
 		chardev.Logfile = logfile
 	}

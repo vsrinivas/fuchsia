@@ -116,11 +116,11 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	data, err := ioutil.ReadFile(r.configFile)
 	if err != nil {
-		return fmt.Errorf("%s: %v", constants.ReadConfigFileErrorMsg, err)
+		return fmt.Errorf("%s: %w", constants.ReadConfigFileErrorMsg, err)
 	}
 	var objs []json.RawMessage
 	if err := json.Unmarshal(data, &objs); err != nil {
-		return fmt.Errorf("could not unmarshal config file as a JSON list: %v", err)
+		return fmt.Errorf("could not unmarshal config file as a JSON list: %w", err)
 	}
 
 	var targets []target.Target
@@ -490,7 +490,7 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 
 	cleanUp, err := environment.Ensure()
 	if err != nil {
-		logger.Errorf(ctx, "failed to setup environment: %v", err)
+		logger.Errorf(ctx, "failed to setup environment: %s", err)
 		return subcommands.ExitFailure
 	}
 	defer cleanUp()
@@ -522,32 +522,32 @@ func deriveTarget(ctx context.Context, obj []byte, opts target.Options) (target.
 	var x typed
 
 	if err := json.Unmarshal(obj, &x); err != nil {
-		return nil, fmt.Errorf("object in list has no \"type\" field: %v", err)
+		return nil, fmt.Errorf("object in list has no \"type\" field: %w", err)
 	}
 	switch x.Type {
 	case "aemu":
 		var cfg target.QEMUConfig
 		if err := json.Unmarshal(obj, &cfg); err != nil {
-			return nil, fmt.Errorf("invalid QEMU config found: %v", err)
+			return nil, fmt.Errorf("invalid QEMU config found: %w", err)
 		}
 		return target.NewAEMUTarget(cfg, opts)
 	case "qemu":
 		var cfg target.QEMUConfig
 		if err := json.Unmarshal(obj, &cfg); err != nil {
-			return nil, fmt.Errorf("invalid QEMU config found: %v", err)
+			return nil, fmt.Errorf("invalid QEMU config found: %w", err)
 		}
 		return target.NewQEMUTarget(cfg, opts)
 	case "device":
 		var cfg target.DeviceConfig
 		if err := json.Unmarshal(obj, &cfg); err != nil {
-			return nil, fmt.Errorf("invalid device config found: %v", err)
+			return nil, fmt.Errorf("invalid device config found: %w", err)
 		}
 		t, err := target.NewDeviceTarget(ctx, cfg, opts)
 		return t, err
 	case "gce":
 		var cfg target.GCEConfig
 		if err := json.Unmarshal(obj, &cfg); err != nil {
-			return nil, fmt.Errorf("invalid GCE config found: %v", err)
+			return nil, fmt.Errorf("invalid GCE config found: %w", err)
 		}
 		return target.NewGCETarget(ctx, cfg, opts)
 	default:

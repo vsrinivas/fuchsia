@@ -279,8 +279,8 @@ func (g *GCETarget) provisionSSHKey(ctx context.Context) error {
 	pubkey = strings.TrimSuffix(pubkey, "\n")
 	pubkey = fmt.Sprintf("\"%s %s\"", pubkey, g.currentUser)
 	cmds := []serial.Command{
-		{[]string{"/pkgfs/packages/sshd-host/0/bin/hostkeygen"}, 0},
-		{[]string{"echo", pubkey, ">", "/data/ssh/authorized_keys"}, 0},
+		{Cmd: []string{"/pkgfs/packages/sshd-host/0/bin/hostkeygen"}},
+		{Cmd: []string{"echo", pubkey, ">", "/data/ssh/authorized_keys"}},
 	}
 	if err := serial.RunCommands(ctx, g.serial, cmds); err != nil {
 		return err
@@ -314,7 +314,7 @@ func (g *GCETarget) addSSHKey() error {
 		"-user", g.currentUser,
 		"-pubkey", g.pubkeyPath,
 	}
-	logger.Infof(g.loggerCtx, "GCE Mediator client command: %v", invocation)
+	logger.Infof(g.loggerCtx, "GCE Mediator client command: %s", invocation)
 	cmd := exec.Command(invocation[0], invocation[1:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -340,7 +340,7 @@ func (g *GCETarget) createInstance() error {
 		"-pubkey", g.pubkeyPath,
 	}
 
-	logger.Infof(g.loggerCtx, "GCE Mediator client command: %v", invocation)
+	logger.Infof(g.loggerCtx, "GCE Mediator client command: %s", invocation)
 	cmd := exec.Command(invocation[0], invocation[1:]...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

@@ -77,8 +77,10 @@ func LoadDeviceConfigs(path string) ([]DeviceConfig, error) {
 	return configs, nil
 }
 
-var _ Target = (*DeviceTarget)(nil)
-var _ ConfiguredTarget = (*DeviceTarget)(nil)
+var (
+	_ Target           = (*DeviceTarget)(nil)
+	_ ConfiguredTarget = (*DeviceTarget)(nil)
+)
 
 // DeviceTarget represents a target device.
 type DeviceTarget struct {
@@ -201,7 +203,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 			logger.Debugf(ctx, "watching serial for string that indicates device has booted: %q", bootedLogSignature)
 			socket, err := net.Dial("unix", serialSocketPath)
 			if err != nil {
-				bootedLogChan <- fmt.Errorf("failed to open serial socket connection: %v", err)
+				bootedLogChan <- fmt.Errorf("failed to open serial socket connection: %w", err)
 				return
 			}
 			defer socket.Close()
