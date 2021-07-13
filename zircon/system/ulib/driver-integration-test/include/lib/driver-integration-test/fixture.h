@@ -76,6 +76,8 @@ class IsolatedDevmgr {
     return devmgr_.component_lifecycle_svc();
   }
 
+  const zx::process& driver_manager_process() const { return devmgr_.driver_manager_process(); }
+
  private:
   devmgr_integration_test::IsolatedDevmgr devmgr_;
 };

@@ -40,7 +40,7 @@ class PowerTestCase : public zxtest::Test {
     args.load_drivers.push_back("/boot/driver/ddk-power-test.so");
     args.load_drivers.push_back("/boot/driver/ddk-power-test-child.so");
 
-    args.no_exit_after_suspend = true;
+    args.no_exit_after_suspend = false;
 
     board_test::DeviceEntry dev = {};
     dev.vid = PDEV_VID_TEST;
@@ -834,6 +834,10 @@ TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
   ASSERT_OK(call_status);
   ASSERT_EQ(parent_dev_suspend_response->result.response().cur_state,
             DevicePowerState::kDevicePowerStateD3Cold);
+
+  zx_signals_t signals;
+  devmgr.driver_manager_process().wait_one(ZX_TASK_TERMINATED,
+                                           zx::deadline_after(zx::duration::infinite()), &signals);
 }
 
 TEST_F(PowerTestCase, SelectiveResume_Success) {
@@ -1130,6 +1134,10 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
   ASSERT_OK(call_status);
   ASSERT_EQ(parent_dev_suspend_response->result.response().cur_state,
             DevicePowerState::kDevicePowerStateD3Cold);
+
+  zx_signals_t signals;
+  devmgr.driver_manager_process().wait_one(ZX_TASK_TERMINATED,
+                                           zx::deadline_after(zx::duration::infinite()), &signals);
 }
 
 TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
@@ -1206,6 +1214,10 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
   ASSERT_OK(call_status);
   ASSERT_EQ(parent_dev_suspend_response->result.response().cur_state,
             DevicePowerState::kDevicePowerStateD3Cold);
+
+  zx_signals_t signals;
+  devmgr.driver_manager_process().wait_one(ZX_TASK_TERMINATED,
+                                           zx::deadline_after(zx::duration::infinite()), &signals);
 }
 
 TEST_F(PowerTestCase, SelectiveResume_AfterSetPerformanceState) {
