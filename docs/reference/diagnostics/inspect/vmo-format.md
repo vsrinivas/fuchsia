@@ -26,28 +26,28 @@ The Inspect Format described in this document has the following goals:
 
 - **Low-overhead mutations to data**
 
-The Inspect File Format allows data to be changed in-place. For instance,
-the overhead of incrementing an integer is ~2 atomic increments.
+    The Inspect File Format allows data to be changed in-place. For instance,
+    the overhead of incrementing an integer is ~2 atomic increments.
 
 - **Support a non-static hierarchy**
 
-The hierarchy stored in an Inspect File can be modified at
-runtime. Children can be added or removed from the hierarchy at any
-time. In this way, the hierarchy can closely represent the hierarchy of
-objects in the component's working set.
+    The hierarchy stored in an Inspect File can be modified at
+    runtime. Children can be added or removed from the hierarchy at any
+    time. In this way, the hierarchy can closely represent the hierarchy of
+    objects in the component's working set.
 
 - **Single writer, multiple reader concurrency without explicit synchronization**
 
-Readers operating concurrently with the writer map the VMO and attempt to
-take a snapshot of the data. Writers indicate being in a critical section
-though a *generation counter* that requires no explicit synchronization
-with readers. Readers use the generation counter to determine when a
-snapshot of the VMO is consistent and may be safely read.
+    Readers operating concurrently with the writer map the VMO and attempt to
+    take a snapshot of the data. Writers indicate being in a critical section
+    though a *generation counter* that requires no explicit synchronization
+    with readers. Readers use the generation counter to determine when a
+    snapshot of the VMO is consistent and may be safely read.
 
 - **Data may remain available after component termination**
 
-A reader may maintain a handle to the VMO containing Inspect data even
-after the writing component terminates.
+    A reader may maintain a handle to the VMO containing Inspect data even
+    after the writing component terminates.
 
 [inspect]: /docs/development/diagnostics/inspect/README.md
 [updating-format]: /docs/reference/diagnostics/inspect/updating-vmo-format.md

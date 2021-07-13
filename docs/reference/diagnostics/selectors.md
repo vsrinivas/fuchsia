@@ -71,8 +71,8 @@ Each segment (the sections delimited by forward slashes) of the component select
 describes exactly one "level” of the component topology.
 
 Component selector segments may contain any characters, however if a segment needs to
-contain asterisks (`*`), forward slashes (`/`), back slashes (`\`), or colons (`:`) they must
-be escaped with a backslash (`\`).
+contain asterisks (`*`), forward slashes (`/`), back slashes (`\\`), or colons (`:`) they must
+be escaped with a backslash (`\\`).
 
 
 ### Wildcarding {#wildcarding}
@@ -143,7 +143,7 @@ to a specific node within the data hierarchy.
 
 Each segment (the sections delimited by forward slashes) of the selector describes exactly one
 level, or node, of the data hierarchy. Hierarchy path selector segments may contain any characters,
-however if a segment needs to contain asterisk (`*`), forward slashes (`/`), back slashes (`\`),
+however if a segment needs to contain asterisk (`*`), forward slashes (`/`), back slashes (`\\`),
 or colons (`:`) they must be escaped.
 
 One thing to note that is unique to hierarchy path selectors and not component selectors, is the
@@ -191,8 +191,8 @@ hierarchies have string names. Omitting the property selector is effectively a
 [hierarchy path selector](#hierarchy-path-selector)
 
 Like the previous selector segments, if you wish to match against asterisks (`*`),
-forward slashes (`/`), back slashes (`\`) or colons (`:`) they must be escaped with a
-backslash (`\`).
+forward slashes (`/`), back slashes (`\\`) or colons (`:`) they must be escaped with a
+backslash (`\\`).
 
 ### Wildcarding {#wildcarding}
 
