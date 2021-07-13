@@ -34,6 +34,10 @@ extern "C" {
 // reserved ID to represent an invalid object
 #define MAGMA_INVALID_OBJECT_ID 0ull
 
+// All vendor-specific command buffer flags must be >=
+// MAGMA_COMMAND_BUFFER_VENDOR_FLAGS_0.
+#define MAGMA_COMMAND_BUFFER_VENDOR_FLAGS_0 (1ull << 16)
+
 // possible values for magma_status_t
 #define MAGMA_STATUS_OK (0)
 #define MAGMA_STATUS_INTERNAL_ERROR (-1)
@@ -215,14 +219,14 @@ typedef struct magma_poll_item {
   uint32_t result;
 } magma_poll_item_t;
 
-// a buffer plus its associated relocations referenced by a command buffer
+// Deprecated: a buffer plus its associated relocations referenced by a command buffer
 struct magma_system_exec_resource {
   uint64_t buffer_id;
   uint64_t offset;
   uint64_t length;
 };
 
-// A batch buffer to be executed plus the resources required to execute it
+// Deprecated: a batch buffer to be executed plus the resources required to execute it
 // Ensure 8 byte alignment for semaphores and resources that may follow in a stream.
 struct magma_system_command_buffer {
   uint32_t resource_count;
@@ -230,6 +234,24 @@ struct magma_system_command_buffer {
   uint64_t batch_start_offset;           // relative to the starting offset of the buffer
   uint32_t wait_semaphore_count;
   uint32_t signal_semaphore_count;
+} __attribute__((__aligned__(8)));
+
+// A buffer plus its associated relocations referenced by a command buffer
+struct magma_exec_resource {
+  uint64_t buffer_id;
+  uint64_t offset;
+  uint64_t length;
+};
+
+// A batch buffer to be executed plus the resources required to execute it
+// Ensure 8 byte alignment for semaphores and resources that may follow in a stream.
+struct magma_command_buffer {
+  uint32_t resource_count;
+  uint32_t batch_buffer_resource_index;  // resource index of the batch buffer to execute
+  uint64_t batch_start_offset;           // relative to the starting offset of the buffer
+  uint32_t wait_semaphore_count;
+  uint32_t signal_semaphore_count;
+  uint64_t flags;
 } __attribute__((__aligned__(8)));
 
 struct magma_inline_command_buffer {

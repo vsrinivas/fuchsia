@@ -20,8 +20,8 @@ std::shared_ptr<MsdVsiContext> MsdVsiContext::Create(std::weak_ptr<MsdVsiConnect
 }
 
 std::unique_ptr<MappedBatch> MsdVsiContext::CreateBatch(std::shared_ptr<MsdVsiContext> context,
-                                                        magma_system_command_buffer* cmd_buf,
-                                                        magma_system_exec_resource* exec_resources,
+                                                        magma_command_buffer* cmd_buf,
+                                                        magma_exec_resource* exec_resources,
                                                         msd_buffer_t** msd_buffers,
                                                         msd_semaphore_t** msd_wait_semaphores,
                                                         msd_semaphore_t** msd_signal_semaphores) {
@@ -49,9 +49,9 @@ std::unique_ptr<MappedBatch> MsdVsiContext::CreateBatch(std::shared_ptr<MsdVsiCo
 
   // The CommandBuffer does not support batches with zero resources.
   if (resources.size() > 0) {
-    auto command_buffer = CommandBuffer::Create(
-        context, connection->client_id(), std::make_unique<magma_system_command_buffer>(*cmd_buf),
-        std::move(resources), std::move(signal_semaphores));
+    auto command_buffer = CommandBuffer::Create(context, connection->client_id(),
+                                                std::make_unique<magma_command_buffer>(*cmd_buf),
+                                                std::move(resources), std::move(signal_semaphores));
     if (!command_buffer) {
       return DRETP(nullptr, "Failed to create command buffer");
     }
@@ -118,10 +118,13 @@ magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64
 }
 
 magma_status_t msd_context_execute_command_buffer_with_resources(
-    struct msd_context_t* ctx, struct magma_system_command_buffer* cmd_buf,
-    struct magma_system_exec_resource* exec_resources, struct msd_buffer_t** buffers,
+    struct msd_context_t* ctx, struct magma_command_buffer* cmd_buf,
+    struct magma_exec_resource* exec_resources, struct msd_buffer_t** buffers,
     struct msd_semaphore_t** wait_semaphores, struct msd_semaphore_t** signal_semaphores) {
   auto context = MsdVsiAbiContext::cast(ctx)->ptr();
+
+  if (cmd_buf->flags)
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Flags not supported");
 
   std::unique_ptr<MappedBatch> batch = MsdVsiContext::CreateBatch(
       context, cmd_buf, exec_resources, buffers, wait_semaphores, signal_semaphores);

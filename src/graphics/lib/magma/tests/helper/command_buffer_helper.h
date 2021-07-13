@@ -64,9 +64,9 @@ class CommandBufferHelper {
   msd_semaphore_t** msd_wait_semaphores() { return msd_wait_semaphores_.data(); }
   msd_semaphore_t** msd_signal_semaphores() { return msd_signal_semaphores_.data(); }
 
-  magma_system_command_buffer* abi_cmd_buf() {
+  magma_command_buffer* abi_cmd_buf() {
     DASSERT(buffer_data_);
-    return reinterpret_cast<magma_system_command_buffer*>(buffer_data_);
+    return reinterpret_cast<magma_command_buffer*>(buffer_data_);
   }
 
   uint64_t* abi_wait_semaphore_ids() { return reinterpret_cast<uint64_t*>(abi_cmd_buf() + 1); }
@@ -75,14 +75,14 @@ class CommandBufferHelper {
     return reinterpret_cast<uint64_t*>(abi_wait_semaphore_ids() + kWaitSemaphoreCount);
   }
 
-  magma_system_exec_resource* abi_resources() {
-    return reinterpret_cast<magma_system_exec_resource*>(abi_signal_semaphore_ids() +
-                                                         kSignalSemaphoreCount);
+  magma_exec_resource* abi_resources() {
+    return reinterpret_cast<magma_exec_resource*>(abi_signal_semaphore_ids() +
+                                                  kSignalSemaphoreCount);
   }
 
   bool Execute() {
-    auto command_buffer = std::make_unique<magma_system_command_buffer>(*abi_cmd_buf());
-    std::vector<magma_system_exec_resource> resources;
+    auto command_buffer = std::make_unique<magma_command_buffer>(*abi_cmd_buf());
+    std::vector<magma_exec_resource> resources;
     for (uint32_t i = 0; i < kNumResources; i++) {
       resources.emplace_back(abi_resources()[i]);
     }
@@ -120,9 +120,8 @@ class CommandBufferHelper {
         dev_(std::move(dev)),
         connection_(std::move(connection)),
         ctx_(ctx) {
-    uint64_t buffer_size = sizeof(magma_system_command_buffer) +
-                           sizeof(uint64_t) * kSignalSemaphoreCount +
-                           sizeof(magma_system_exec_resource) * kNumResources;
+    uint64_t buffer_size = sizeof(magma_command_buffer) + sizeof(uint64_t) * kSignalSemaphoreCount +
+                           sizeof(magma_exec_resource) * kNumResources;
 
     buffer_ = magma::PlatformBuffer::Create(buffer_size, "command-buffer-backing");
     DASSERT(buffer_);

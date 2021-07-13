@@ -56,7 +56,7 @@ class MagmaExecuteMsdVsi : public testing::Test {
     magma_buffer_t magma_buffer_;
     uint64_t size_;
     uint32_t gpu_address_;
-    magma_system_exec_resource resource_;
+    magma_exec_resource resource_;
     void* cpu_address_ = nullptr;
   };
 
@@ -166,21 +166,22 @@ class MagmaExecuteMsdVsi : public testing::Test {
     ASSERT_EQ(magma_create_semaphore(magma_vsi_.GetConnection(), &semaphore), MAGMA_STATUS_OK);
     uint64_t semaphore_id = magma_get_semaphore_id(semaphore);
 
-    std::vector<magma_system_exec_resource> resources;
+    std::vector<magma_exec_resource> resources;
     resources.push_back(command_stream->etna_buffer->resource_);
 
-    magma_system_command_buffer command_buffer = {
+    magma_command_buffer command_buffer = {
         .resource_count = static_cast<uint32_t>(resources.size()),
         .batch_buffer_resource_index = 0,
         .batch_start_offset = 0,
         .wait_semaphore_count = 0,
-        .signal_semaphore_count = 1};
+        .signal_semaphore_count = 1,
+        .flags = 0};
 
     EXPECT_NE(resources[0].length, 0ul);
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_execute_command_buffer_with_resources(
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_execute_command_buffer_with_resources2(
                                    magma_vsi_.GetConnection(), magma_vsi_.GetContextId(),
                                    &command_buffer, resources.data(), &semaphore_id));
     magma_poll_item_t item = {.semaphore = semaphore,

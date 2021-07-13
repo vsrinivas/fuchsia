@@ -34,8 +34,8 @@ class MsdVsiContext {
   // context state buffer, which will be executed before the batch buffer if |context|
   // differs from the context of the last executed command buffer.
   static std::unique_ptr<MappedBatch> CreateBatch(std::shared_ptr<MsdVsiContext> context,
-                                                  magma_system_command_buffer* cmd_buf,
-                                                  magma_system_exec_resource* exec_resources,
+                                                  magma_command_buffer* cmd_buf,
+                                                  magma_exec_resource* exec_resources,
                                                   msd_buffer_t** msd_buffers,
                                                   msd_semaphore_t** msd_wait_semaphores,
                                                   msd_semaphore_t** msd_signal_semaphores);

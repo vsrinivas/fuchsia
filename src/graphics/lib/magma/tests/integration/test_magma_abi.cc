@@ -407,7 +407,8 @@ class TestConnection {
 
     constexpr int64_t kTimeoutNs = ms_to_ns(100);
     auto start = std::chrono::steady_clock::now();
-    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), to_uint32(items.size()), kTimeoutNs));
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT,
+              magma_poll(items.data(), to_uint32(items.size()), kTimeoutNs));
     EXPECT_LE(kTimeoutNs, std::chrono::duration_cast<std::chrono::nanoseconds>(
                               std::chrono::steady_clock::now() - start)
                               .count());
@@ -421,7 +422,8 @@ class TestConnection {
     magma_reset_semaphore(items[0].semaphore);
 
     start = std::chrono::steady_clock::now();
-    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), to_uint32(items.size()), kTimeoutNs));
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT,
+              magma_poll(items.data(), to_uint32(items.size()), kTimeoutNs));
     EXPECT_LE(kTimeoutNs, std::chrono::duration_cast<std::chrono::nanoseconds>(
                               std::chrono::steady_clock::now() - start)
                               .count());
@@ -898,12 +900,27 @@ class TestConnectionWithContext : public TestConnection {
     EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_error(connection()));
   }
 
-  void ExecuteCommandBufferNoResources() {
+  void ExecuteCommandBufferWithResources2(uint32_t resource_count) {
     ASSERT_TRUE(connection());
 
-    magma_system_command_buffer command_buffer = {.resource_count = 0};
+    magma_command_buffer command_buffer = {.resource_count = resource_count};
+    magma_exec_resource resources[resource_count];
+
+    memset(resources, 0, sizeof(magma_exec_resource) * resource_count);
     EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_execute_command_buffer_with_resources(
+              magma_execute_command_buffer_with_resources2(connection(), context_id(),
+                                                           &command_buffer, resources, nullptr));
+
+    // Command buffer is mostly zeros, so we expect an error here
+    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_error(connection()));
+  }
+
+  void ExecuteCommandBufferNoResources2() {
+    ASSERT_TRUE(connection());
+
+    magma_command_buffer command_buffer = {.resource_count = 0};
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_execute_command_buffer_with_resources2(
                   connection(), context_id(), &command_buffer, nullptr /* resources */, nullptr));
 
     // Empty command buffers may or may not be valid.
@@ -1030,8 +1047,12 @@ TEST(MagmaAbi, ExecuteCommandBufferWithResources) {
   TestConnectionWithContext().ExecuteCommandBufferWithResources(5);
 }
 
-TEST(MagmaAbi, ExecuteCommandBufferNoResources) {
-  TestConnectionWithContext().ExecuteCommandBufferNoResources();
+TEST(MagmaAbi, ExecuteCommandBufferWithResources2) {
+  TestConnectionWithContext().ExecuteCommandBufferWithResources2(5);
+}
+
+TEST(MagmaAbi, ExecuteCommandBufferNoResources2) {
+  TestConnectionWithContext().ExecuteCommandBufferNoResources2();
 }
 
 TEST(MagmaAbi, FlowControl) {

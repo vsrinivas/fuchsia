@@ -44,7 +44,7 @@ class MsdMockContext : public msd_context_t {
   MsdMockContext(MsdMockConnection* connection) : connection_(connection) { magic_ = kMagic; }
   virtual ~MsdMockContext();
 
-  magma_status_t ExecuteCommandBufferWithResources(magma_system_command_buffer* cmd_buf,
+  magma_status_t ExecuteCommandBufferWithResources(magma_command_buffer* cmd_buf,
                                                    msd_buffer_t** buffers) {
     last_submitted_exec_resources_.clear();
     for (uint32_t i = 0; i < cmd_buf->resource_count; i++) {

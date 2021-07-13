@@ -102,8 +102,8 @@ magma_status_t LinuxPlatformConnectionClient::ReadNotificationChannel(void* buff
 }
 
 void LinuxPlatformConnectionClient::ExecuteCommandBufferWithResources(
-    uint32_t context_id, magma_system_command_buffer* command_buffer,
-    magma_system_exec_resource* resources, uint64_t* semaphores) {
+    uint32_t context_id, magma_command_buffer* command_buffer, magma_exec_resource* resources,
+    uint64_t* semaphores) {
   std::vector<magma_system_exec_resource> resource_array;
   resource_array.reserve(command_buffer->resource_count);
 
@@ -120,7 +120,7 @@ void LinuxPlatformConnectionClient::ExecuteCommandBufferWithResources(
     semaphore_array.push_back(semaphores[i]);
   }
 
-  auto command_buffer_ptr = std::make_unique<magma_system_command_buffer>();
+  auto command_buffer_ptr = std::make_unique<magma_command_buffer>();
   *command_buffer_ptr = *command_buffer;
 
   magma::Status status = delegate_->ExecuteCommandBufferWithResources(

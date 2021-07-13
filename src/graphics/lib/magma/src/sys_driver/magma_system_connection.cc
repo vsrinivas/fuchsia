@@ -87,8 +87,8 @@ MagmaSystemContext* MagmaSystemConnection::LookupContext(uint32_t context_id) {
 }
 
 magma::Status MagmaSystemConnection::ExecuteCommandBufferWithResources(
-    uint32_t context_id, std::unique_ptr<magma_system_command_buffer> command_buffer,
-    std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores) {
+    uint32_t context_id, std::unique_ptr<magma_command_buffer> command_buffer,
+    std::vector<magma_exec_resource> resources, std::vector<uint64_t> semaphores) {
   auto context = LookupContext(context_id);
   if (!context)
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,

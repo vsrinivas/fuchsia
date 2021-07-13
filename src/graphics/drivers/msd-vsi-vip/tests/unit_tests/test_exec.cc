@@ -506,12 +506,13 @@ TEST_F(TestExec, BatchHasTooManyResources) {
                                              buffer_desc.map_page_count, buffer_desc.gpu_addr,
                                              &buffer));
 
-  auto command_buffer = std::make_unique<magma_system_command_buffer>(magma_system_command_buffer{
+  auto command_buffer = std::make_unique<magma_command_buffer>(magma_command_buffer{
       .resource_count = 3,
       .batch_buffer_resource_index = 0,
       .batch_start_offset = buffer_desc.batch_offset,
       .wait_semaphore_count = 0,
       .signal_semaphore_count = 0,
+      .flags = 0,
   });
   std::vector<CommandBuffer::ExecResource> resources;
   resources.emplace_back(

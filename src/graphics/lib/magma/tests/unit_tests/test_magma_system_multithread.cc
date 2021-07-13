@@ -82,8 +82,8 @@ class TestMultithread {
           connection->MapBufferGpu(id, gpu_addr, 0, batch_buffer->size() / page_size(), kMapFlags));
       gpu_addr += batch_buffer->size() + extra_page_count * page_size();
 
-      auto command_buffer = std::make_unique<magma_system_command_buffer>();
-      std::vector<magma_system_exec_resource> exec_resources(1);
+      auto command_buffer = std::make_unique<magma_command_buffer>();
+      std::vector<magma_exec_resource> exec_resources(1);
       EXPECT_TRUE(InitCommandBuffer(command_buffer.get(), &exec_resources[0], batch_buffer.get()));
 
       EXPECT_TRUE(context->ExecuteCommandBufferWithResources(std::move(command_buffer),
@@ -91,8 +91,7 @@ class TestMultithread {
     }
   }
 
-  bool InitCommandBuffer(magma_system_command_buffer* command_buffer,
-                         magma_system_exec_resource* exec_resource,
+  bool InitCommandBuffer(magma_command_buffer* command_buffer, magma_exec_resource* exec_resource,
                          magma::PlatformBuffer* batch_buffer) {
     command_buffer->resource_count = 1;
     command_buffer->batch_buffer_resource_index = 0;

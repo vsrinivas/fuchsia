@@ -43,9 +43,8 @@ class LinuxPlatformConnectionClient : public PlatformConnectionClient {
   magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size, size_t* buffer_size_out,
                                          magma_bool_t* more_data_out) override;
 
-  void ExecuteCommandBufferWithResources(uint32_t context_id,
-                                         magma_system_command_buffer* command_buffer,
-                                         magma_system_exec_resource* resources,
+  void ExecuteCommandBufferWithResources(uint32_t context_id, magma_command_buffer* command_buffer,
+                                         magma_exec_resource* resources,
                                          uint64_t* semaphores) override;
 
   void ExecuteImmediateCommands(uint32_t context_id, uint64_t command_count,

@@ -68,6 +68,9 @@ class VirtioMagma : public VirtioMagmaGeneric,
   zx_status_t Handle_execute_command_buffer_with_resources(
       const virtio_magma_execute_command_buffer_with_resources_ctrl_t* request,
       virtio_magma_execute_command_buffer_with_resources_resp_t* response) override;
+  zx_status_t Handle_execute_command_buffer_with_resources2(
+      const virtio_magma_execute_command_buffer_with_resources2_ctrl_t* request,
+      virtio_magma_execute_command_buffer_with_resources2_resp_t* response) override;
   zx_status_t Handle_virt_create_image(const virtio_magma_virt_create_image_ctrl_t* request,
                                        virtio_magma_virt_create_image_resp_t* response) override;
   zx_status_t Handle_virt_get_image_info(

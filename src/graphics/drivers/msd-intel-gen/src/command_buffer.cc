@@ -12,8 +12,8 @@
 #include "platform_trace.h"
 
 std::unique_ptr<CommandBuffer> CommandBuffer::Create(std::weak_ptr<ClientContext> context,
-                                                     magma_system_command_buffer* cmd_buf,
-                                                     magma_system_exec_resource* exec_resources,
+                                                     magma_command_buffer* cmd_buf,
+                                                     magma_exec_resource* exec_resources,
                                                      msd_buffer_t** msd_buffers,
                                                      msd_semaphore_t** msd_wait_semaphores,
                                                      msd_semaphore_t** msd_signal_semaphores) {
@@ -40,7 +40,7 @@ std::unique_ptr<CommandBuffer> CommandBuffer::Create(std::weak_ptr<ClientContext
   }
 
   auto command_buffer = std::unique_ptr<CommandBuffer>(
-      new CommandBuffer(context, std::make_unique<magma_system_command_buffer>(*cmd_buf)));
+      new CommandBuffer(context, std::make_unique<magma_command_buffer>(*cmd_buf)));
 
   if (!command_buffer->InitializeResources(std::move(resources), std::move(wait_semaphores),
                                            std::move(signal_semaphores)))
@@ -50,7 +50,7 @@ std::unique_ptr<CommandBuffer> CommandBuffer::Create(std::weak_ptr<ClientContext
 }
 
 CommandBuffer::CommandBuffer(std::weak_ptr<ClientContext> context,
-                             std::unique_ptr<magma_system_command_buffer> cmd_buf)
+                             std::unique_ptr<magma_command_buffer> cmd_buf)
     : context_(context), command_buffer_(std::move(cmd_buf)), nonce_(TRACE_NONCE()) {}
 
 CommandBuffer::~CommandBuffer() {

@@ -8,6 +8,7 @@ int etnaviv_cl_test_gc7000(int argc, char* argv[]);
 }
 
 #include <assert.h>
+
 #include <chrono>
 #include <limits>
 #include <thread>
@@ -136,12 +137,13 @@ class TestMsdVsiDevice : public drm_test_info {
 
   bool SubmitCommandBuffer(TestMsdVsiDevice::EtnaBuffer* etna_buf, uint32_t length,
                            std::shared_ptr<magma::PlatformSemaphore> signal) {
-    auto command_buffer = std::make_unique<magma_system_command_buffer>(magma_system_command_buffer{
+    auto command_buffer = std::make_unique<magma_command_buffer>(magma_command_buffer{
         .resource_count = 1,
         .batch_buffer_resource_index = 0,
         .batch_start_offset = 0,
         .wait_semaphore_count = 0,
         .signal_semaphore_count = 1,
+        .flags = 0,
     });
     auto batch = std::make_unique<CommandBuffer>(context_, 0, std::move(command_buffer));
     EXPECT_NE(batch, nullptr);

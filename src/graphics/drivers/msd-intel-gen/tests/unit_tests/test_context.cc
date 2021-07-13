@@ -171,7 +171,7 @@ class TestContext {
       // Don't need a fully initialized command buffer
       std::shared_ptr<MsdIntelBuffer> command_buffer_content =
           MsdIntelBuffer::Create(PAGE_SIZE, "test");
-      magma_system_command_buffer* command_buffer_desc;
+      magma_command_buffer* command_buffer_desc;
       ASSERT_TRUE(command_buffer_content->platform_buffer()->MapCpu(
           reinterpret_cast<void**>(&command_buffer_desc)));
 
@@ -180,6 +180,7 @@ class TestContext {
       command_buffer_desc->batch_start_offset = 0;
       command_buffer_desc->wait_semaphore_count = 0;
       command_buffer_desc->signal_semaphore_count = 0;
+      command_buffer_desc->flags = 0;
 
       std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores;
       for (uint32_t i = 0; i < semaphore_count; i++) {

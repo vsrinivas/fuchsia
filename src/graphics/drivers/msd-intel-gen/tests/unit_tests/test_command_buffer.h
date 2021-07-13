@@ -19,13 +19,13 @@ class TestCommandBuffer {
     if (!command_buffer_descriptor->platform_buffer()->MapCpu(&ptr))
       return DRETP(nullptr, "MapCpu failed");
 
-    auto cmd_buf_ptr = reinterpret_cast<magma_system_command_buffer*>(ptr);
+    auto cmd_buf_ptr = reinterpret_cast<magma_command_buffer*>(ptr);
     auto semaphores_ptr = reinterpret_cast<uint64_t*>(cmd_buf_ptr + 1);
-    auto exec_resources_ptr = reinterpret_cast<magma_system_exec_resource*>(
+    auto exec_resources_ptr = reinterpret_cast<magma_exec_resource*>(
         semaphores_ptr + cmd_buf_ptr->wait_semaphore_count + cmd_buf_ptr->signal_semaphore_count);
 
     auto command_buffer = std::unique_ptr<CommandBuffer>(
-        new CommandBuffer(context, std::make_unique<magma_system_command_buffer>(*cmd_buf_ptr)));
+        new CommandBuffer(context, std::make_unique<magma_command_buffer>(*cmd_buf_ptr)));
 
     std::vector<CommandBuffer::ExecResource> resources;
     resources.reserve(cmd_buf_ptr->resource_count);

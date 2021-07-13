@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.gpu.magma;
 
 using fuchsia.url;
@@ -106,11 +105,26 @@ struct Resource {
     uint64 length;
 };
 
+/// Deprecated
 struct CommandBuffer {
     /// Index of the resource containing instructions to start the command buffer.
     uint32 batch_buffer_resource_index;
     /// Starting offset within the resource.
     uint64 batch_start_offset;
+};
+
+flexible bits CommandBufferFlags : uint64 {
+    /// Vendor specific definitions start here
+    VENDOR_FLAG_0 = 0x10000;
+};
+
+struct CommandBuffer2 {
+    /// Index of the resource containing instructions to start the command buffer.
+    uint32 batch_buffer_resource_index;
+    /// Starting offset within the resource.
+    uint64 batch_start_offset;
+    /// Flags.
+    CommandBufferFlags flags;
 };
 
 /// Performance counter pools contain byte ranges of buffers. Whenever a performance counter dump is
@@ -146,10 +160,19 @@ protocol Primary {
     /// Destroys context `context_id`.
     DestroyContext(uint32 context_id);
 
+    /// Deprecated:
     /// Submits a command buffer for execution on the GPU, with associated resources.
     ExecuteCommandBufferWithResources(
         uint32 context_id,
         CommandBuffer command_buffer,
+        vector<Resource>:MAX resources,
+        vector<zx.koid>:MAX wait_semaphores,
+        vector<zx.koid>:MAX signal_semaphores);
+
+    /// Submits a command buffer for execution on the GPU, with associated resources.
+    ExecuteCommandBufferWithResources2(
+        uint32 context_id,
+        CommandBuffer2 command_buffer,
         vector<Resource>:MAX resources,
         vector<zx.koid>:MAX wait_semaphores,
         vector<zx.koid>:MAX signal_semaphores);

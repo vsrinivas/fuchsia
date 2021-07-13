@@ -78,12 +78,12 @@ class TestConnection : public magma::TestDeviceBase {
     // Increment gpu address for next iteration
     gpu_addr_ += (1 + extra_page_count_) * PAGE_SIZE;
 
-    magma_system_command_buffer command_buffer;
-    magma_system_exec_resource exec_resource;
+    magma_command_buffer command_buffer;
+    magma_exec_resource exec_resource;
     EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resource, batch_buffer, buffer_size));
     EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_execute_command_buffer_with_resources(connection_, context_id_, &command_buffer,
-                                                          &exec_resource, nullptr));
+              magma_execute_command_buffer_with_resources2(
+                  connection_, context_id_, &command_buffer, &exec_resource, nullptr));
 
     magma::InflightList list;
 
@@ -156,14 +156,14 @@ class TestConnection : public magma::TestDeviceBase {
     reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1] = 0xdeadbeef;
   }
 
-  bool InitCommandBuffer(magma_system_command_buffer* command_buffer,
-                         magma_system_exec_resource* exec_resource, magma_buffer_t batch_buffer,
-                         uint64_t batch_buffer_length) {
+  bool InitCommandBuffer(magma_command_buffer* command_buffer, magma_exec_resource* exec_resource,
+                         magma_buffer_t batch_buffer, uint64_t batch_buffer_length) {
     command_buffer->batch_buffer_resource_index = 0;
     command_buffer->batch_start_offset = 0;
     command_buffer->resource_count = 1;
     command_buffer->wait_semaphore_count = 0;
     command_buffer->signal_semaphore_count = 0;
+    command_buffer->flags = 0;
 
     exec_resource->buffer_id = magma_get_buffer_id(batch_buffer);
     exec_resource->offset = 0;
@@ -212,12 +212,12 @@ class TestConnection : public magma::TestDeviceBase {
 
     InitBatchBuffer(vaddr, size, true, kUnmappedBufferGpuAddress);
 
-    magma_system_command_buffer command_buffer;
-    magma_system_exec_resource exec_resource;
+    magma_command_buffer command_buffer;
+    magma_exec_resource exec_resource;
     EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resource, batch_buffer, size));
     EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_execute_command_buffer_with_resources(connection_, context_id_, &command_buffer,
-                                                          &exec_resource, nullptr));
+              magma_execute_command_buffer_with_resources2(
+                  connection_, context_id_, &command_buffer, &exec_resource, nullptr));
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 

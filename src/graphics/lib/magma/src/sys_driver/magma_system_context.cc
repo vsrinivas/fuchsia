@@ -14,8 +14,8 @@
 #include "platform_trace.h"
 
 magma::Status MagmaSystemContext::ExecuteCommandBufferWithResources(
-    std::unique_ptr<magma_system_command_buffer> cmd_buf,
-    std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores) {
+    std::unique_ptr<magma_command_buffer> cmd_buf, std::vector<magma_exec_resource> resources,
+    std::vector<uint64_t> semaphores) {
   // used to keep resources in scope until msd_context_execute_command_buffer returns
   std::vector<std::shared_ptr<MagmaSystemBuffer>> system_resources;
   system_resources.reserve(cmd_buf->resource_count);

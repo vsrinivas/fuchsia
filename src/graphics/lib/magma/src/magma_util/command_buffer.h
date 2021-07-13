@@ -28,7 +28,7 @@ class CommandBuffer : public MappedBatch<Context, typename GpuMapping::BufferTyp
   using GpuMappingView = GpuMappingView<Buffer>;
 
   CommandBuffer(std::weak_ptr<Context> context, uint64_t connection_id,
-                std::unique_ptr<magma_system_command_buffer> command_buffer)
+                std::unique_ptr<magma_command_buffer> command_buffer)
       : context_(context),
         command_buffer_(std::move(command_buffer)),
         connection_id_(connection_id),
@@ -56,7 +56,7 @@ class CommandBuffer : public MappedBatch<Context, typename GpuMapping::BufferTyp
 
   // Initializes the command buffer with the given resources and semaphores.  The number of
   // resources and semaphores given here must match the sizes passed in the
-  // magma_system_command_buffer at construction. Wait semaphores are held but not otherwise used.
+  // magma_command_buffer at construction. Wait semaphores are held but not otherwise used.
   // Signal semaphores are signaled when the CommandBuffer is destroyed.
   bool InitializeResources(
       std::vector<ExecResource> resources,
@@ -128,7 +128,7 @@ class CommandBuffer : public MappedBatch<Context, typename GpuMapping::BufferTyp
   void UnmapResourcesGpu() { exec_resource_mappings_.clear(); }
 
   const std::weak_ptr<Context> context_;
-  const std::unique_ptr<magma_system_command_buffer> command_buffer_;
+  const std::unique_ptr<magma_command_buffer> command_buffer_;
   const uint64_t connection_id_;
   const uint64_t nonce_;
 

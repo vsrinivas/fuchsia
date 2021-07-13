@@ -62,13 +62,13 @@ class TestConnection : public magma::TestDeviceBase {
 
     EXPECT_TRUE(ClearBuffer(result_buffer, size, 0xabcd1234));
 
-    magma_system_command_buffer command_buffer;
-    std::vector<magma_system_exec_resource> exec_resources;
+    magma_command_buffer command_buffer;
+    std::vector<magma_exec_resource> exec_resources;
     EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resources, batch_buffer, result_buffer));
 
     EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_execute_command_buffer_with_resources(connection_, context_id, &command_buffer,
-                                                          exec_resources.data(), nullptr));
+              magma_execute_command_buffer_with_resources2(connection_, context_id, &command_buffer,
+                                                           exec_resources.data(), nullptr));
 
     {
       magma::InflightList list;
@@ -146,8 +146,8 @@ class TestConnection : public magma::TestDeviceBase {
     return true;
   }
 
-  bool InitCommandBuffer(magma_system_command_buffer* command_buffer,
-                         std::vector<magma_system_exec_resource>* exec_resources,
+  bool InitCommandBuffer(magma_command_buffer* command_buffer,
+                         std::vector<magma_exec_resource>* exec_resources,
                          magma_buffer_t batch_buffer, magma_buffer_t result_buffer) {
     exec_resources->clear();
 
@@ -164,6 +164,7 @@ class TestConnection : public magma::TestDeviceBase {
     command_buffer->resource_count = exec_resources->size();
     command_buffer->wait_semaphore_count = 0;
     command_buffer->signal_semaphore_count = 0;
+    command_buffer->flags = 0;
 
     return true;
   }

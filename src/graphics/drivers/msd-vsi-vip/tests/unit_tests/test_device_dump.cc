@@ -261,12 +261,13 @@ TEST_F(TestDeviceDump, DumpCommandBufferMultipleResources) {
                                                desc.map_page_count, desc.gpu_addr, &bufs[i]));
   }
 
-  auto command_buffer = std::make_unique<magma_system_command_buffer>(magma_system_command_buffer{
+  auto command_buffer = std::make_unique<magma_command_buffer>(magma_command_buffer{
       .resource_count = kResourcesCount,
       .batch_buffer_resource_index = 0,
       .batch_start_offset = 0,
       .wait_semaphore_count = 0,
       .signal_semaphore_count = 0,
+      .flags = 0,
   });
   auto batch = std::make_unique<CommandBuffer>(default_context(), 0, std::move(command_buffer));
   ASSERT_NE(batch, nullptr);

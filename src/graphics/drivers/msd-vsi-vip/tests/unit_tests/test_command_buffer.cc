@@ -5,7 +5,9 @@
 #include "test_command_buffer.h"
 
 #include <assert.h>
+
 #include <limits>
+
 #include <gtest/gtest.h>
 
 #include "helper/platform_device_helper.h"
@@ -56,12 +58,13 @@ void TestCommandBuffer::CreateAndPrepareBatch(
     uint32_t data_size, uint32_t batch_offset, std::shared_ptr<magma::PlatformSemaphore> signal,
     std::optional<CommandBuffer::ExecResource> context_state_buffer,
     std::unique_ptr<CommandBuffer>* out_batch) {
-  auto command_buffer = std::make_unique<magma_system_command_buffer>(magma_system_command_buffer{
+  auto command_buffer = std::make_unique<magma_command_buffer>(magma_command_buffer{
       .resource_count = 1,
       .batch_buffer_resource_index = 0,
       .batch_start_offset = batch_offset,
       .wait_semaphore_count = 0,
       .signal_semaphore_count = signal ? 1 : 0u,
+      .flags = 0,
   });
   std::vector<CommandBuffer::ExecResource> resources;
   resources.emplace_back(

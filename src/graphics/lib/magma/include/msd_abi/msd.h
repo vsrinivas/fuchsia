@@ -93,8 +93,8 @@ void msd_context_destroy(struct msd_context_t* ctx);
 // execution
 // |signal_semaphores| are the semaphores to be signaled upon completion of the command buffer
 magma_status_t msd_context_execute_command_buffer_with_resources(
-    struct msd_context_t* ctx, struct magma_system_command_buffer* command_buffer,
-    struct magma_system_exec_resource* exec_resources, struct msd_buffer_t** buffers,
+    struct msd_context_t* ctx, struct magma_command_buffer* command_buffer,
+    struct magma_exec_resource* exec_resources, struct msd_buffer_t** buffers,
     struct msd_semaphore_t** wait_semaphores, struct msd_semaphore_t** signal_semaphores);
 
 // Executes a buffer of commands of |commands_size| bytes.

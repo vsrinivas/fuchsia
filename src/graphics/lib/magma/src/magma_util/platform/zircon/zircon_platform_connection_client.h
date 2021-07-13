@@ -25,8 +25,8 @@ class PrimaryWrapper {
   magma_status_t ReleaseObject(uint64_t object_id, magma::PlatformObject::Type object_type);
   magma_status_t CreateContext(uint32_t context_id);
   magma_status_t DestroyContext(uint32_t context_id);
-  magma_status_t ExecuteCommandBufferWithResources(
-      uint32_t context_id, fuchsia_gpu_magma::wire::CommandBuffer command_buffer,
+  magma_status_t ExecuteCommandBufferWithResources2(
+      uint32_t context_id, fuchsia_gpu_magma::wire::CommandBuffer2 command_buffer,
       ::fidl::VectorView<fuchsia_gpu_magma::wire::Resource> resources,
       ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores);
   magma_status_t ExecuteImmediateCommands(uint32_t context_id,

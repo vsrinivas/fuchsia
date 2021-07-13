@@ -44,9 +44,7 @@ TEST(TestCommandBuffer, SequenceNumber) {
   constexpr uint64_t kConnectionId = 1234;
   auto context = std::make_shared<Context>();
 
-  auto magma_command_buffer = std::make_unique<magma_system_command_buffer>();
-
-  CommandBuffer command_buffer(context, kConnectionId, std::move(magma_command_buffer));
+  CommandBuffer command_buffer(context, kConnectionId, std::make_unique<magma_command_buffer>());
 
   EXPECT_TRUE(command_buffer.IsCommandBuffer());
   EXPECT_EQ(context, command_buffer.GetContext().lock());
@@ -76,73 +74,65 @@ TEST(TestCommandBuffer, InitializeResources) {
   signal_semaphores.push_back(magma::PlatformSemaphore::Create());
 
   {
-    magma_system_command_buffer magma_command_buffer = {
-        .resource_count = static_cast<uint32_t>(resources.size()) - 1,
-        .batch_buffer_resource_index = 0,
-        .batch_start_offset = 0,
-        .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
-        .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
-    };
-
     CommandBuffer command_buffer(
         context, kConnectionId,
-        std::make_unique<magma_system_command_buffer>(magma_command_buffer));
+        std::make_unique<magma_command_buffer>(magma_command_buffer{
+            .resource_count = static_cast<uint32_t>(resources.size()) - 1,
+            .batch_buffer_resource_index = 0,
+            .batch_start_offset = 0,
+            .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
+            .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
+            .flags = 0,
+        }));
 
     EXPECT_FALSE(command_buffer.InitializeResources(resources, wait_semaphores, signal_semaphores));
   }
 
   {
-    magma_system_command_buffer magma_command_buffer = {
-        .resource_count = static_cast<uint32_t>(resources.size()),
-        .batch_buffer_resource_index = 0,
-        .batch_start_offset = 0,
-        .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()) - 1,
-        .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
-    };
-
     CommandBuffer command_buffer(
         context, kConnectionId,
-        std::make_unique<magma_system_command_buffer>(magma_command_buffer));
+        std::make_unique<magma_command_buffer>(magma_command_buffer{
+            .resource_count = static_cast<uint32_t>(resources.size()),
+            .batch_buffer_resource_index = 0,
+            .batch_start_offset = 0,
+            .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()) - 1,
+            .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
+            .flags = 0,
+        }));
 
     EXPECT_FALSE(command_buffer.InitializeResources(resources, wait_semaphores, signal_semaphores));
   }
 
   {
-    magma_system_command_buffer magma_command_buffer = {
-        .resource_count = static_cast<uint32_t>(resources.size()),
-        .batch_buffer_resource_index = 0,
-        .batch_start_offset = 0,
-        .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
-        .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()) - 1,
-    };
-
     CommandBuffer command_buffer(
         context, kConnectionId,
-        std::make_unique<magma_system_command_buffer>(magma_command_buffer));
+        std::make_unique<magma_command_buffer>(magma_command_buffer{
+            .resource_count = static_cast<uint32_t>(resources.size()),
+            .batch_buffer_resource_index = 0,
+            .batch_start_offset = 0,
+            .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
+            .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()) - 1,
+            .flags = 0,
+        }));
 
     EXPECT_FALSE(command_buffer.InitializeResources(resources, wait_semaphores, signal_semaphores));
   }
 
   {
-    magma_system_command_buffer magma_command_buffer = {
-        .resource_count = static_cast<uint32_t>(resources.size()),
-        .batch_buffer_resource_index = 0,
-        .batch_start_offset = 0,
-        .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
-        .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
-    };
-
     CommandBuffer command_buffer(
         context, kConnectionId,
-        std::make_unique<magma_system_command_buffer>(magma_command_buffer));
+        std::make_unique<magma_command_buffer>(magma_command_buffer{
+            .resource_count = static_cast<uint32_t>(resources.size()),
+            .batch_buffer_resource_index = 0,
+            .batch_start_offset = 0,
+            .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
+            .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
+            .flags = 0,
+        }));
 
     EXPECT_TRUE(command_buffer.InitializeResources(resources, wait_semaphores, signal_semaphores));
-
-    EXPECT_EQ(command_buffer.GetLength(),
-              resources[magma_command_buffer.batch_buffer_resource_index].length);
-
-    EXPECT_EQ(command_buffer.GetBatchBufferId(),
-              resources[magma_command_buffer.batch_buffer_resource_index].buffer->id());
+    EXPECT_EQ(command_buffer.GetLength(), resources[0].length);
+    EXPECT_EQ(command_buffer.GetBatchBufferId(), resources[0].buffer->id());
   }
 }
 
@@ -164,16 +154,16 @@ TEST(TestCommandBuffer, PrepareForExecution) {
   signal_semaphores.push_back(magma::PlatformSemaphore::Create());
   signal_semaphores.push_back(magma::PlatformSemaphore::Create());
 
-  magma_system_command_buffer magma_command_buffer = {
-      .resource_count = static_cast<uint32_t>(resources.size()),
-      .batch_buffer_resource_index = 0,
-      .batch_start_offset = 0,
-      .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
-      .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
-  };
-
   auto command_buffer = std::make_unique<CommandBuffer>(
-      context, kConnectionId, std::make_unique<magma_system_command_buffer>(magma_command_buffer));
+      context, kConnectionId,
+      std::make_unique<magma_command_buffer>(magma_command_buffer{
+          .resource_count = static_cast<uint32_t>(resources.size()),
+          .batch_buffer_resource_index = 0,
+          .batch_start_offset = 0,
+          .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
+          .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
+          .flags = 0,
+      }));
 
   EXPECT_TRUE(command_buffer->InitializeResources(resources, wait_semaphores, signal_semaphores));
 

@@ -128,6 +128,46 @@ magma_status_t magma_execute_command_buffer_with_resources(
   return static_cast<magma_status_t>(response.result_return);
 }
 
+magma_status_t magma_execute_command_buffer_with_resources2(
+    magma_connection_t connection, uint32_t context_id,
+    struct magma_command_buffer* command_buffer,
+    struct magma_exec_resource* resources, uint64_t* semaphore_ids) {
+#if VIRTMAGMA_DEBUG
+  printf("%s\n", __PRETTY_FUNCTION__);
+#endif
+
+  virtmagma_command_buffer virt_command_buffer;
+  virt_command_buffer.command_buffer_size = sizeof(magma_command_buffer);
+  virt_command_buffer.command_buffer =
+      reinterpret_cast<decltype(virt_command_buffer.command_buffer)>(command_buffer);
+  virt_command_buffer.resource_size =
+      sizeof(magma_system_exec_resource) * command_buffer->resource_count;
+  virt_command_buffer.resources =
+      reinterpret_cast<decltype(virt_command_buffer.resources)>(resources);
+  virt_command_buffer.semaphore_size = sizeof(uint64_t) * (command_buffer->wait_semaphore_count +
+                                                           command_buffer->signal_semaphore_count);
+  virt_command_buffer.semaphores =
+      reinterpret_cast<decltype(virt_command_buffer.resources)>(semaphore_ids);
+
+  virtio_magma_execute_command_buffer_with_resources2_ctrl request{};
+  virtio_magma_execute_command_buffer_with_resources2_resp response{};
+  request.hdr.type = VIRTIO_MAGMA_CMD_EXECUTE_COMMAND_BUFFER_WITH_RESOURCES2;
+
+  auto connection_wrapped = virtmagma_connection_t::Get(connection);
+  request.connection = reinterpret_cast<decltype(request.connection)>(connection_wrapped->Object());
+
+  request.context_id = context_id;
+  request.command_buffer = reinterpret_cast<decltype(request.command_buffer)>(&virt_command_buffer);
+
+  int32_t file_descriptor = connection_wrapped->Parent();
+
+  if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
+                              sizeof(response))) {
+    assert(false);
+  }
+  return static_cast<magma_status_t>(response.result_return);
+}
+
 magma_status_t magma_buffer_get_info(magma_connection_t connection, magma_buffer_t buffer,
                                      magma_buffer_info_t* info_out) {
   return MAGMA_STATUS_UNIMPLEMENTED;

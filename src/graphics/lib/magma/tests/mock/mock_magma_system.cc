@@ -135,6 +135,14 @@ magma_status_t magma_execute_command_buffer_with_resources(
   return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_execute_command_buffer_with_resources2(
+    magma_connection_t connection, uint32_t context_id,
+    struct magma_system_command_buffer* command_buffer,
+    struct magma_system_exec_resource* resources, uint64_t* semaphore_ids, uint64_t flags) {
+  DLOG("magma_execute_command_buffer_with_resources2 - STUB");
+  return MAGMA_STATUS_OK;
+}
+
 magma_status_t magma_execute_immediate_commands2(
     magma_connection_t connection, uint32_t context_id, uint64_t command_count,
     struct magma_inline_command_buffer* command_buffers) {

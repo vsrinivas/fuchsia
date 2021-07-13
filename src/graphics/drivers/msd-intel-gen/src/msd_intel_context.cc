@@ -240,9 +240,9 @@ magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64
 }
 
 magma_status_t msd_context_execute_command_buffer_with_resources(
-    msd_context_t* ctx, magma_system_command_buffer* cmd_buf,
-    magma_system_exec_resource* exec_resources, msd_buffer_t** buffers,
-    msd_semaphore_t** wait_semaphores, msd_semaphore_t** signal_semaphores) {
+    msd_context_t* ctx, magma_command_buffer* cmd_buf, magma_exec_resource* exec_resources,
+    msd_buffer_t** buffers, msd_semaphore_t** wait_semaphores,
+    msd_semaphore_t** signal_semaphores) {
   auto context = MsdIntelAbiContext::cast(ctx)->ptr();
 
   auto command_buffer = CommandBuffer::Create(context, cmd_buf, exec_resources, buffers,

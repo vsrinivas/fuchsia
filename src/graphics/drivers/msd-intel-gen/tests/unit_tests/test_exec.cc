@@ -79,16 +79,17 @@ class TestExec {
       void* vaddr;
       ASSERT_TRUE(buffer->platform_buffer()->MapCpu(&vaddr));
 
-      auto cmd_buf = static_cast<magma_system_command_buffer*>(vaddr);
+      auto cmd_buf = static_cast<magma_command_buffer*>(vaddr);
       cmd_buf->batch_buffer_resource_index = 0;
       cmd_buf->batch_start_offset = 0;
       cmd_buf->resource_count = 1;
       cmd_buf->wait_semaphore_count = 0;
       cmd_buf->signal_semaphore_count = 1;
+      cmd_buf->flags = 0;
       auto semaphores = reinterpret_cast<uint64_t*>(cmd_buf + 1);
       semaphores[0] = semaphore->id();
       // Batch buffer
-      auto resources = reinterpret_cast<magma_system_exec_resource*>(semaphores + 1);
+      auto resources = reinterpret_cast<magma_exec_resource*>(semaphores + 1);
       resources[0].buffer_id = batch_buffer->platform_buffer()->id();
       resources[0].offset = 0;
       resources[0].length = batch_buffer->platform_buffer()->size();
@@ -152,16 +153,17 @@ class TestExec {
       void* vaddr;
       ASSERT_TRUE(buffer->platform_buffer()->MapCpu(&vaddr));
 
-      auto cmd_buf = static_cast<magma_system_command_buffer*>(vaddr);
+      auto cmd_buf = static_cast<magma_command_buffer*>(vaddr);
       cmd_buf->batch_buffer_resource_index = 0;
       cmd_buf->batch_start_offset = 0;
       cmd_buf->resource_count = 2;
       cmd_buf->wait_semaphore_count = 0;
       cmd_buf->signal_semaphore_count = 1;
+      cmd_buf->flags = 0;
       auto semaphores = reinterpret_cast<uint64_t*>(cmd_buf + 1);
       semaphores[0] = semaphore->id();
       // Batch buffer
-      auto resources = reinterpret_cast<magma_system_exec_resource*>(semaphores + 1);
+      auto resources = reinterpret_cast<magma_exec_resource*>(semaphores + 1);
       resources[0].buffer_id = batch_buffer->platform_buffer()->id();
       resources[0].offset = 0;
       resources[0].length = batch_buffer->platform_buffer()->size();
@@ -221,16 +223,17 @@ class TestExec {
       void* vaddr;
       ASSERT_TRUE(buffer->platform_buffer()->MapCpu(&vaddr));
 
-      auto cmd_buf = static_cast<magma_system_command_buffer*>(vaddr);
+      auto cmd_buf = static_cast<magma_command_buffer*>(vaddr);
       cmd_buf->batch_buffer_resource_index = 0;
       cmd_buf->batch_start_offset = 0;
       cmd_buf->resource_count = 2;
       cmd_buf->wait_semaphore_count = 0;
       cmd_buf->signal_semaphore_count = 1;
+      cmd_buf->flags = 0;
       auto semaphores = reinterpret_cast<uint64_t*>(cmd_buf + 1);
       semaphores[0] = semaphore->id();
       // Batch buffer
-      auto resources = reinterpret_cast<magma_system_exec_resource*>(semaphores + 1);
+      auto resources = reinterpret_cast<magma_exec_resource*>(semaphores + 1);
       resources[0].buffer_id = batch_buffer->platform_buffer()->id();
       resources[0].offset = 0;
       resources[0].length = batch_buffer->platform_buffer()->size();

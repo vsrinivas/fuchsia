@@ -38,8 +38,8 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
   magma::Status CreateContext(uint32_t context_id) override;
   magma::Status DestroyContext(uint32_t context_id) override;
   magma::Status ExecuteCommandBufferWithResources(
-      uint32_t context_id, std::unique_ptr<magma_system_command_buffer> command_buffer,
-      std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores) override;
+      uint32_t context_id, std::unique_ptr<magma_command_buffer> command_buffer,
+      std::vector<magma_exec_resource> resources, std::vector<uint64_t> semaphores) override;
   magma::Status MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
                              uint64_t page_count, uint64_t flags) override;
   magma::Status UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override;
