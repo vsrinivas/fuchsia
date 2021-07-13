@@ -32,6 +32,7 @@ use std::sync::Arc;
 
 use crate::auth::Credentials;
 use crate::fs::fuchsia::{create_file_from_handle, new_remote_filesystem};
+use crate::fs::tmpfs::new_tmpfs;
 use crate::fs::*;
 use crate::signals::signal_handling::*;
 use crate::strace;
@@ -39,6 +40,7 @@ use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::table::dispatch_syscall;
 use crate::syscalls::*;
 use crate::task::*;
+use crate::types::*;
 
 // TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
 // for exception channels.
@@ -243,6 +245,15 @@ async fn start_component(
             args.iter().map(|arg| CString::new(arg.clone())).collect::<Result<Vec<CString>, _>>()
         })
         .unwrap_or(Ok(vec![]))?;
+    let mount = runner::get_program_strvec(&start_info, "mount")
+        .map(|mounts| {
+            mounts
+                .iter()
+                .map(|mount| CString::new(mount.clone()))
+                .collect::<Result<Vec<CString>, _>>()
+        })
+        .unwrap_or(Ok(vec![]))?;
+
     let environ = runner::get_program_strvec(&start_info, "environ")
         .map(|args| {
             args.iter().map(|arg| CString::new(arg.clone())).collect::<Result<Vec<CString>, _>>()
@@ -275,15 +286,27 @@ async fn start_component(
     );
     let namespace = Namespace::new(root_node);
 
-    let task_owner = Task::create_process(
-        &kernel,
-        &binary_path,
-        0,
-        files,
-        FsContext::new(namespace),
-        Credentials::new(3),
-        None,
-    )?;
+    let fs = FsContext::new(namespace);
+    for mnt in mount {
+        let mut field_iter = mnt.as_bytes().splitn(2, |c| *c == b':');
+        let mut mount_point =
+            field_iter.next().ok_or_else(|| anyhow!("mount point is missing from {:?}", mnt))?;
+        if mount_point.len() > 0 && mount_point[0] == b'/' {
+            mount_point = &mount_point[1..];
+        }
+        let fs_type =
+            field_iter.next().ok_or_else(|| anyhow!("fs type is missing from {:?}", mnt))?;
+        let tmpfs = match fs_type {
+            b"tmpfs" => Ok(new_tmpfs()),
+            _ => Err(EINVAL),
+        }?;
+
+        let mount_node = fs.lookup_node(fs.root.clone(), mount_point)?;
+        mount_node.mount(&tmpfs)?;
+    }
+
+    let task_owner =
+        Task::create_process(&kernel, &binary_path, 0, files, fs, Credentials::new(3), None)?;
 
     let mut argv = vec![binary_path];
     argv.extend(args.into_iter());

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
-
 use super::*;
 use crate::devices::*;
 use crate::fd_impl_seekable;

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt;
@@ -160,7 +159,6 @@ impl NamespaceNode {
         components.join(&b'/')
     }
 
-    #[cfg(test)]
     pub fn mount(&self, node: &FsNodeHandle) -> Result<(), Errno> {
         if let Some(namespace) = self.namespace() {
             match namespace.mount_points.write().entry(self.clone()) {

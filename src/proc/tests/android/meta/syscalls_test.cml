@@ -3,5 +3,9 @@
     program: {
         binary: "system/bin/syscalls_test",
         root: "root",
+        mount: [
+            "/data:tmpfs",
+            "/tmp:tmpfs",
+        ],
     },
 }
