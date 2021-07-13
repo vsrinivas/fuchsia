@@ -130,7 +130,7 @@ pub struct StartCommand {
     pub gcs_bucket: Option<String>,
 
     /// image file name used to fetch from gcs. Default is "qemu-x64".
-    /// To view availabe image names run `gsutil ls -l gs://fuchsia/development/$(gsutil cat gs://fuchsia/development/LATEST_LINUX)/images`.
+    /// To view available image names run `gsutil ls -l gs://fuchsia/development/$(gsutil cat gs://fuchsia/development/LATEST_LINUX)/images`.
     #[argh(option)]
     pub image_name: Option<String>,
 
@@ -261,7 +261,7 @@ fn default_window_width() -> usize {
     1280
 }
 
-fn default_port() -> usize {
+fn default_port() -> u16 {
     8080
 }
 
@@ -326,7 +326,7 @@ pub struct RemoteCommand {
 
     /// port used on local machine to connect with remote emulator over HTTP (default: 8080)
     #[argh(option, default = "default_port()")]
-    pub port: usize,
+    pub port: u16,
 
     /// arguments to pass to the emulator
     #[argh(positional)]
