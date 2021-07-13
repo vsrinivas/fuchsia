@@ -979,7 +979,7 @@ TEST_F(DwarfExprEvalTest, Piece_ValueUnknown) {
   DoEvalTest(entry_value, true, DwarfExprEval::Completion::kSync, 0,
              DwarfExprEval::ResultType::kData,
              "DW_OP_implicit_value(4, 0x429c0000), DW_OP_piece(4), "
-             "DW_OP_entry_value(DW_OP_reg5), DW_OP_stack_value, DW_OP_piece(1), "
+             "DW_OP_GNU_entry_value(DW_OP_reg5), DW_OP_stack_value, DW_OP_piece(1), "
              "DW_OP_piece(11), DW_OP_const1u(32), DW_OP_stack_value, DW_OP_piece(8)");
   EXPECT_EQ(
       //           Low byte of entry value reg5.

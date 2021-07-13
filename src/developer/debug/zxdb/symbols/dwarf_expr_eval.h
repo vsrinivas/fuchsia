@@ -187,8 +187,10 @@ class DwarfExprEval {
   void ReadMemory(TargetPointer address, uint32_t byte_size,
                   fit::callback<void(DwarfExprEval* eval, std::vector<uint8_t> value)> on_success);
 
-  void ReportError(const std::string& msg);
-  void ReportError(const Err& err);
+  // Reports the given error. Always returns "kSync" so the caller can do "return ReportError()"
+  // which would be the common case.
+  Completion ReportError(const std::string& msg);
+  Completion ReportError(const Err& err);
   void ReportStackUnderflow();
   void ReportUnimplementedOpcode(uint8_t op);
 
@@ -220,7 +222,7 @@ class DwarfExprEval {
   Completion OpDiv();
   Completion OpDrop();
   Completion OpDup();
-  Completion OpEntryValue();
+  Completion OpEntryValue(const char* op_name);
   Completion OpFbreg();
   Completion OpImplicitPointer(const char* op_name);
   Completion OpImplicitValue();
