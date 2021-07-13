@@ -2,7 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//src/developer/forensics/last_reboot/*" ]
+visibility = [
+  "//src/developer/forensics/feedback/*",
+  "//src/developer/forensics/last_reboot/*",
+]
 
 ###############################################################################
 # SOURCES
@@ -28,33 +31,12 @@ source_set("main") {
   ]
 
   deps = [
-    ":main_service",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/utils:previous_boot_file",
-    "//src/developer/forensics/utils/component",
+    "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
+    "//src/developer/forensics/feedback/migration/shell:main",
   ]
 
   visibility += [ "//src/developer/forensics:*" ]
-}
-
-source_set("main_service") {
-  sources = [
-    "main_service.cc",
-    "main_service.h",
-  ]
-
-  public_deps = [
-    ":last_reboot_info_provider",
-    ":reboot_watcher",
-    ":reporter",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/inspect/cpp",
-    "//src/developer/forensics/feedback/reboot_log",
-    "//src/developer/forensics/utils:inspect_node_manager",
-    "//src/developer/forensics/utils:inspect_protocol_stats",
-    "//src/developer/forensics/utils/cobalt",
-  ]
 }
 
 source_set("reboot_watcher") {

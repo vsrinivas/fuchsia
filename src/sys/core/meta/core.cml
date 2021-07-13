@@ -364,18 +364,9 @@
             ],
         },
         {
-            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
-            from: "#appmgr",
-            to: "#last_reboot",
-            dependency: "weak_for_migration",
-        },
-        {
             protocol: [ "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister" ],
             from: "parent",
-            to: [
-                "#last_reboot",
-                "#sampler",
-            ],
+            to: [ "#sampler" ],
         },
         {
             protocol: [ "fuchsia.diagnostics.FeedbackArchiveAccessor" ],
@@ -499,10 +490,7 @@
         {
             protocol: "fuchsia.feedback.CrashReporter",
             from: "#appmgr",
-            to: [
-                "#detect",
-                "#last_reboot",
-            ],
+            to: [ "#detect" ],
             dependency: "weak_for_migration",
         },
         {
@@ -604,11 +592,6 @@
             from: "#appmgr",
             to: "#temperature-logger",
             dependency: "weak_for_migration",
-        },
-        {
-            directory: "boot",
-            from: "parent",
-            to: "#last_reboot",
         },
         {
             directory: "minfs",
@@ -730,7 +713,7 @@
             ],
         },
         {
-            protocol: "fuchsia.feedback.LastRebootInfoProvider",
+            protocol: "fuchsia.feedback.internal.LastRebootDirectoryMigrator",
             from: "#last_reboot",
             to: "#appmgr",
         },

@@ -41,7 +41,7 @@ class SingleBindingFidlServer : public TestBase {
     }
   }
 
-  bool IsBound() const { return binding_ && binding_->is_bound(); }
+  virtual bool IsBound() const { return binding_ && binding_->is_bound(); }
 
   // |TestBase|
   void NotImplemented_(const std::string& name) override {

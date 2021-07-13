@@ -9,11 +9,14 @@ source_set("utils") {
     "file_utils.h",
     "log.cc",
     "log.h",
+    "migrate.cc",
+    "migrate.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/fit",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
     "//src/developer/forensics/utils:errors",

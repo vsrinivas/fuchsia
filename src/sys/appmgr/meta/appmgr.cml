@@ -380,9 +380,11 @@
             protocol: "fuchsia.space.Manager",
             path: "/svc_for_sys/fuchsia.space.Manager",
         },
+
+        // TODO(fxbug.dev/71830): Remove once the Feedback migration has completed.
         {
-            protocol: "fuchsia.feedback.LastRebootInfoProvider",
-            path: "/svc_for_sys/fuchsia.feedback.LastRebootInfoProvider",
+            protocol: "fuchsia.feedback.internal.LastRebootDirectoryMigrator",
+            path: "/svc_for_sys/fuchsia.feedback.internal.LastRebootDirectoryMigrator",
         },
         {
             protocol: "fuchsia.stash.Store",

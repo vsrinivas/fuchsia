@@ -13,5 +13,10 @@ void RebootMethodsWatcherRegister::Register(
   watcher_->OnReboot(reason_, [] {});
 }
 
+void RebootMethodsWatcherRegisterHangs::Register(
+    ::fidl::InterfaceHandle<fuchsia::hardware::power::statecontrol::RebootMethodsWatcher> watcher) {
+  watcher_ = watcher.Bind();
+}
+
 }  // namespace stubs
 }  // namespace forensics

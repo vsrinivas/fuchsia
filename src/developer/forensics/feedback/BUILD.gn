@@ -11,17 +11,74 @@ group("tests") {
   deps = [
     "migration:tests",
     "reboot_log/tests",
+    "tests:feedback-tests",
   ]
 }
 
 ###############################################################################
 # SOURCES
 ###############################################################################
+source_set("constants") {
+  sources = [ "constants.h" ]
+
+  public_deps = [ "//zircon/public/lib/zx" ]
+}
+
 source_set("main") {
   sources = [
     "main.cc",
     "main.h",
   ]
 
+  deps = [
+    ":constants",
+    ":main_service",
+    ":namespace_init",
+    "reboot_log",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
+    "//src/developer/forensics/feedback/migration/utils",
+    "//src/developer/forensics/utils/component",
+    "//src/lib/files",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}
+
+source_set("main_service") {
+  sources = [
+    "last_reboot.cc",
+    "last_reboot.h",
+    "main_service.cc",
+    "main_service.h",
+  ]
+
+  public_deps = [
+    "reboot_log",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fit",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/forensics/last_reboot:last_reboot_info_provider",
+    "//src/developer/forensics/last_reboot:reboot_watcher",
+    "//src/developer/forensics/last_reboot:reporter",
+    "//src/developer/forensics/utils:inspect_node_manager",
+    "//src/developer/forensics/utils:inspect_protocol_stats",
+    "//src/developer/forensics/utils/cobalt",
+    "//src/developer/forensics/utils/component",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+
   deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+source_set("namespace_init") {
+  sources = [
+    "namespace_init.cc",
+    "namespace_init.h",
+  ]
+
+  public_deps = [ ":constants" ]
+
+  deps = [ "//src/lib/files" ]
 }

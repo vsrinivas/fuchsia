@@ -10,7 +10,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "fuchsia/feedback/internal/cpp/fidl.h"
 #include "src/developer/forensics/feedback/migration/utils/file_utils.h"
+#include "src/developer/forensics/feedback/migration/utils/tests/directory_migrator_stubs.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
@@ -18,53 +20,8 @@ namespace forensics {
 namespace feedback {
 namespace {
 
-class DirectoryMigratorForTest : public fuchsia::feedback::internal::FeedbackDataDirectoryMigrator {
- public:
-  // How the stub should erroneously behave.
-  enum class ErrorResponse { kDropConnection, kHang };
-
-  DirectoryMigratorForTest(std::optional<std::string> data_path,
-                           std::optional<std::string> cache_path,
-                           std::optional<ErrorResponse> error_response = std::nullopt)
-      : data_path_(std::move(data_path)),
-        cache_path_(std::move(cache_path)),
-        error_response_(error_response) {}
-
-  void GetDirectories(GetDirectoriesCallback callback) override {
-    if (!error_response_) {
-      callback(PathToInterfaceHandle(data_path_), PathToInterfaceHandle(cache_path_));
-    }
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::feedback::internal::FeedbackDataDirectoryMigrator>
-  GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::feedback::internal::FeedbackDataDirectoryMigrator>
-                      request) {
-      if (error_response_ == ErrorResponse::kDropConnection) {
-        return;
-      }
-
-      bindings_.AddBinding(this, std::move(request));
-    };
-  }
-
- private:
-  ::fidl::InterfaceHandle<fuchsia::io::Directory> PathToInterfaceHandle(
-      const std::optional<std::string>& path) {
-    ::fidl::InterfaceHandle<fuchsia::io::Directory> handle;
-    if (!path) {
-      return handle;
-    }
-
-    return IntoInterfaceHandle(fbl::unique_fd(open(path->c_str(), O_DIRECTORY | O_RDWR, 0777)));
-  }
-
-  std::optional<std::string> data_path_;
-  std::optional<std::string> cache_path_;
-  std::optional<ErrorResponse> error_response_;
-
-  fidl::BindingSet<fuchsia::feedback::internal::FeedbackDataDirectoryMigrator> bindings_;
-};
+using DirectoryMigratorForTest =
+    DirectoryMigratorStub<fuchsia::feedback::internal::FeedbackDataDirectoryMigrator>;
 
 class DirectoryMigratorPtrTest : public UnitTestFixture {
  public:

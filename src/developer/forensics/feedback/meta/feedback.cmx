@@ -1,9 +1,25 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/connectivity/network/lib/net_interfaces/client.shard.cmx"
+        "//src/connectivity/network/lib/net_interfaces/client.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/feedback"
+    },
+    "sandbox": {
+        "boot": [
+            "log"
+        ],
+        "features": [
+            "isolated-cache-storage",
+            "isolated-persistent-storage",
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.feedback.CrashReporter",
+            "fuchsia.feedback.internal.LastRebootDirectoryMigrator",
+            "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+            "fuchsia.metrics.MetricEventLoggerFactory"
+        ]
     }
 }

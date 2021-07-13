@@ -28,30 +28,6 @@ executable("last_reboot_info_provider_unittest_exe") {
   ]
 }
 
-executable("main_service_unittest_exe") {
-  testonly = true
-
-  # "main_service_unittest" is rather generic for the default_output_dir that
-  # is set to root_out_dir so instead we write the binary to target_out_dir.
-  output_dir = target_out_dir
-
-  sources = [ "main_service_unittest.cc" ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/last_reboot:main_service",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:cobalt",
-    "//src/developer/forensics/testing/stubs:reboot_methods_watcher_register",
-    "//src/lib/files",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/inspect",
-  ]
-}
-
 executable("reboot_watcher_unittest_exe") {
   testonly = true
 
@@ -106,14 +82,6 @@ fuchsia_component("last_reboot_info_provider_unittest") {
   deps = [ ":last_reboot_info_provider_unittest_exe" ]
 }
 
-fuchsia_component("main_service_unittest") {
-  testonly = true
-
-  manifest = "meta/main_service_unittest.cml"
-
-  deps = [ ":main_service_unittest_exe" ]
-}
-
 fuchsia_component("reboot_watcher_unittest") {
   testonly = true
 
@@ -141,7 +109,6 @@ fuchsia_test_package("last-reboot-tests") {
   }
   test_components = [
     ":last_reboot_info_provider_unittest",
-    ":main_service_unittest",
     ":reboot_watcher_unittest",
     ":reporter_unittest",
   ]

@@ -10,22 +10,10 @@
     },
     capabilities: [
         {
-            protocol: [ "fuchsia.feedback.LastRebootInfoProvider" ],
+            protocol: [ "fuchsia.feedback.internal.LastRebootDirectoryMigrator" ],
         },
     ],
     use: [
-        {
-            protocol: [
-                "fuchsia.feedback.CrashReporter",
-                "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
-                "fuchsia.metrics.MetricEventLoggerFactory",
-            ],
-        },
-        {
-            directory: "boot",
-            rights: [ "r*" ],
-            path: "/boot",
-        },
         {
             storage: "cache",
             path: "/cache",
@@ -41,7 +29,7 @@
     ],
     expose: [
         {
-            protocol: "fuchsia.feedback.LastRebootInfoProvider",
+            protocol: "fuchsia.feedback.internal.LastRebootDirectoryMigrator",
             from: "self",
         },
     ],

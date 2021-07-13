@@ -1,0 +1,114 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("last_reboot_unittest_exe") {
+  testonly = true
+
+  sources = [ "last_reboot_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//src/developer/forensics/feedback:main_service",
+    "//src/developer/forensics/feedback/reboot_log",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:cobalt",
+    "//src/developer/forensics/testing/stubs:crash_reporter",
+    "//src/developer/forensics/testing/stubs:reboot_methods_watcher_register",
+    "//src/developer/forensics/utils/cobalt",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("main_service_unittest_exe") {
+  testonly = true
+
+  # "main_service_unittest_exe" is used a bunch in Forensics.
+  output_dir = target_out_dir
+
+  sources = [ "main_service_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/forensics/feedback:main_service",
+    "//src/developer/forensics/feedback/reboot_log",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:cobalt",
+    "//src/developer/forensics/testing/stubs:crash_reporter",
+    "//src/developer/forensics/testing/stubs:reboot_methods_watcher_register",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("namespace_init_unittest_exe") {
+  testonly = true
+
+  # "namespace_init_unittest_exe" is also used by feedback-data.
+  output_dir = target_out_dir
+
+  sources = [ "namespace_init_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback:namespace_init",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/lib/files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("last_reboot_unittest") {
+  testonly = true
+
+  manifest = "meta/last_reboot_unittest.cml"
+
+  deps = [ ":last_reboot_unittest_exe" ]
+}
+
+fuchsia_component("main_service_unittest") {
+  testonly = true
+
+  manifest = "meta/main_service_unittest.cml"
+
+  deps = [ ":main_service_unittest_exe" ]
+}
+
+fuchsia_component("namespace_init_unittest") {
+  testonly = true
+
+  manifest = "meta/namespace_init_unittest.cml"
+
+  deps = [ ":namespace_init_unittest_exe" ]
+}
+
+###############################################################################
+# PACKAGES
+###############################################################################
+fuchsia_test_package("feedback-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  test_components = [
+    ":last_reboot_unittest",
+    ":main_service_unittest",
+    ":namespace_init_unittest",
+  ]
+}
