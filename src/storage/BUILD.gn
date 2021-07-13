@@ -37,5 +37,6 @@ group("tools") {
     "extractor:tools",
     "factory/export_ffs:export-ffs",
     "tools/blobfs-compression:blobfs-compression",
+    "volume_image/ftl:ftl-volume-extractor-host",
   ]
 }

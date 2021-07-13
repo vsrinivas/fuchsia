@@ -18,8 +18,11 @@ const char* InMemoryNdm::Attach(const ftl::Volume* ftl_volume) {
   options.block_size =
       static_cast<uint32_t>(raw_nand_->options.page_size * raw_nand_->options.pages_per_block);
   options.eb_size = raw_nand_->options.oob_bytes_size;
-  options.max_bad_blocks = 0;
-  options.num_blocks = raw_nand_->options.page_count / raw_nand_->options.pages_per_block + 1;
+  options.max_bad_blocks = max_bad_blocks_;
+  if (raw_nand_->options.page_count % raw_nand_->options.pages_per_block != 0) {
+    return "InMemoryNdm::Attach page_count not divisble by pages_per_block.";
+  }
+  options.num_blocks = raw_nand_->options.page_count / raw_nand_->options.pages_per_block;
   options.page_size = static_cast<uint32_t>(raw_nand_->options.page_size);
   options.flags = 0;
   return CreateNdmVolume(ftl_volume, options);

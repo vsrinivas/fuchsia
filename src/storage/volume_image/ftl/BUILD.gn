@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
+
 source_set("raw-nand-options") {
   public = [ "options.h" ]
 }
@@ -80,7 +82,6 @@ source_set("ftl-image") {
 }
 
 source_set("ftl-test-helper") {
-  testonly = true
   sources = [ "ftl_test_helper.cc" ]
   public = [ "ftl_test_helper.h" ]
 
@@ -117,6 +118,21 @@ source_set("ftl-test") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+executable("ftl-volume-extractor") {
+  output_name = "ftl-volume-extractor"
+  sources = [ "ftl_volume_extractor.cc" ]
+  deps = [
+    ":ftl-test-helper",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/ftl:ftl",
+  ]
+}
+
+install_host_tools("ftl-volume-extractor-host") {
+  deps = [ ":ftl-volume-extractor" ]
+  outputs = [ "ftl-volume-extractor" ]
 }
 
 source_set("ftl-integration-test") {

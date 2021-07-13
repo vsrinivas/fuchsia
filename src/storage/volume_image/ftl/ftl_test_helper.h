@@ -25,11 +25,21 @@ struct InMemoryRawNand {
 // Provides a in memory NDM driver usable for unit testing.
 class InMemoryNdm final : public ftl::NdmBaseDriver {
  public:
-  explicit InMemoryNdm(InMemoryRawNand* raw_nand, uint64_t page_size, uint64_t oob_size)
+  // The options in raw_nand should be prepopulated as desired, and optionally
+  // page_data and page_oob. page_size and oob_size should have the
+  // corresponding sizes to match with the sizes used in raw_nand, where
+  // page_size is the size of volume pages and oob_size is the size of the
+  // corresponding out of band data used by the FTL. max_bad_blocks is the
+  // maximum number of bad blocks to support in the ndm, more means a smaller
+  // overall volume as spare blocks at the end of the volume are set aside to
+  // account for this.
+  explicit InMemoryNdm(InMemoryRawNand* raw_nand, uint64_t page_size, uint64_t oob_size,
+                       uint32_t max_bad_blocks = 0)
       : NdmBaseDriver(ftl::DefaultLogger()),
         raw_nand_(raw_nand),
         page_size_(page_size),
-        oob_size_(oob_size) {}
+        oob_size_(oob_size),
+        max_bad_blocks_(max_bad_blocks) {}
 
   // Performs driver initialization. Returns an error string, or nullptr on
   // success.
@@ -75,6 +85,7 @@ class InMemoryNdm final : public ftl::NdmBaseDriver {
   InMemoryRawNand* raw_nand_ = nullptr;
   uint64_t page_size_ = 0;
   uint64_t oob_size_ = 0;
+  uint32_t max_bad_blocks_ = 0;
 };
 
 }  // namespace storage::volume_image
