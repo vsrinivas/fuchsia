@@ -54,7 +54,8 @@ Err RunVerbNext(ConsoleContext* context, const Command& cmd) {
   if (Err err = AssertStoppedThreadCommand(context, cmd, true, "next"); err.has_error())
     return err;
 
-  auto controller = std::make_unique<StepOverThreadController>(StepMode::kSourceLine);
+  auto controller = std::make_unique<StepOverThreadController>(StepMode::kSourceLine,
+                                                               &ScheduleAsyncPrintReturnValue);
   cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);

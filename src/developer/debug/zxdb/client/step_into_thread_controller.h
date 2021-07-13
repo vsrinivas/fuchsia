@@ -7,6 +7,7 @@
 
 #include <optional>
 
+#include "src/developer/debug/zxdb/client/function_return_info.h"
 #include "src/developer/debug/zxdb/client/step_mode.h"
 #include "src/developer/debug/zxdb/client/step_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
@@ -29,14 +30,19 @@ class StepIntoThreadController : public ThreadController {
  public:
   // Constructor for kSourceLine and kInstruction modes. It will initialize itself to the thread's
   // current position when the thread is attached.
-  explicit StepIntoThreadController(StepMode mode);
+  //
+  // The function_return callback (if supplied) will be issued when the "step into" terminates with
+  // the completion of the function.
+  explicit StepIntoThreadController(StepMode mode, FunctionReturnCallback function_return = {});
 
   // Steps given the source file/line.
-  explicit StepIntoThreadController(const FileLine& line);
+  explicit StepIntoThreadController(const FileLine& line,
+                                    FunctionReturnCallback function_return = {});
 
   // Constructor for a kAddressRange mode (the mode is implicit). Continues execution as long as the
   // IP is in range.
-  explicit StepIntoThreadController(AddressRanges ranges);
+  explicit StepIntoThreadController(AddressRanges ranges,
+                                    FunctionReturnCallback function_return = {});
 
   ~StepIntoThreadController() override;
 

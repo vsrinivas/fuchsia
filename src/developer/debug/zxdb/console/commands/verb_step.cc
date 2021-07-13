@@ -86,7 +86,8 @@ Err RunVerbStep(ConsoleContext* context, const Command& cmd) {
 
   if (cmd.args().empty()) {
     // Step for a single line.
-    auto controller = std::make_unique<StepIntoThreadController>(StepMode::kSourceLine);
+    auto controller = std::make_unique<StepIntoThreadController>(StepMode::kSourceLine,
+                                                                 &ScheduleAsyncPrintReturnValue);
     cmd.thread()->ContinueWith(std::move(controller), std::move(completion));
   } else if (cmd.args().size() == 1) {
     // Step into a specific named subroutine. This uses the "step over" controller with a special
@@ -111,7 +112,7 @@ Err RunVerbStep(ConsoleContext* context, const Command& cmd) {
 
 VerbRecord GetStepVerbRecord() {
   return VerbRecord(&RunVerbStep, {"step", "s"}, kStepShortHelp, kStepHelp, CommandGroup::kStep,
-                  SourceAffinity::kSource);
+                    SourceAffinity::kSource);
 }
 
 }  // namespace zxdb

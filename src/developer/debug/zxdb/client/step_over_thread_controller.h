@@ -35,11 +35,16 @@ class StepOverThreadController : public ThreadController {
  public:
   // Constructor for kSourceLine and kInstruction modes. It will initialize itself to the thread's
   // current position when the thread is attached.
+  //
+  // The function_return callback (if supplied) will be issued when the "step over" terminates with
+  // the completion of the function. It will not be called for every function that is skipped over
+  // as part of execution.
   explicit StepOverThreadController(StepMode mode, FunctionReturnCallback function_return = {});
 
   // Constructor for a kAddressRange mode (the mode is implicit). Continues execution as long as the
   // IP is in range.
-  explicit StepOverThreadController(AddressRanges range);
+  explicit StepOverThreadController(AddressRanges range,
+                                    FunctionReturnCallback function_return = {});
 
   ~StepOverThreadController() override;
 
@@ -90,6 +95,7 @@ class StepOverThreadController : public ThreadController {
   // Only set when we're stepping out to get back to the original function.
   std::unique_ptr<FinishThreadController> finish_;
 
+  FunctionReturnInfo return_info_;
   FunctionReturnCallback function_return_callback_;  // Possibly null.
 };
 

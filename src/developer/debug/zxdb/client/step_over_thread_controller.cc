@@ -26,10 +26,12 @@ StepOverThreadController::StepOverThreadController(StepMode mode,
   FX_DCHECK(mode != StepMode::kAddressRange);
 }
 
-StepOverThreadController::StepOverThreadController(AddressRanges ranges)
+StepOverThreadController::StepOverThreadController(AddressRanges ranges,
+                                                   FunctionReturnCallback function_return)
     : step_mode_(StepMode::kAddressRange),
       address_ranges_(ranges),
-      step_into_(std::make_unique<StepThreadController>(std::move(ranges))) {}
+      step_into_(std::make_unique<StepThreadController>(std::move(ranges))),
+      function_return_callback_(std::move(function_return)) {}
 
 StepOverThreadController::~StepOverThreadController() = default;
 
@@ -44,6 +46,7 @@ void StepOverThreadController::InitWithThread(Thread* thread, fit::callback<void
 
   // Save the info for the frame we're stepping inside of for future possible stepping out.
   frame_fingerprint_ = stack.GetFrameFingerprint(0);
+  return_info_.InitFromTopOfStack(thread);
   if (step_mode_ == StepMode::kSourceLine) {
     // Always take the file/line from the frame rather than from LineDetails. In the case of
     // ambiguous inline locations, the LineDetails will contain only the innermost inline frame's
@@ -113,12 +116,24 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     current_fingerprint = stack.GetFrameFingerprint(0);
   }
 
-  // If we get here the thread is no longer in range but could be in a sub-
-  // frame that we need to step out of.
-  if (!FrameFingerprint::Newer(current_fingerprint, frame_fingerprint_)) {
-    Log("Neither in range nor in a newer frame.");
+  // The thread is no longer in range but could be in a different frame. It could be a newer frame
+  // we need to step out of, or the same or older frame in which case we're done.
+  if (frame_fingerprint_ == current_fingerprint) {
+    // Same frame. Since we're not in range, this means we're done.
+    Log("Step over complete, ended up in the same function.");
     return kStopDone;
   }
+  if (FrameFingerprint::Newer(frame_fingerprint_, current_fingerprint)) {
+    // Just stepped out of a function to an older frame, this means we're done and additionally
+    // need to issue the return callback to indicate the function return.
+    Log("Stepped out of the function, done.");
+    if (function_return_callback_)
+      function_return_callback_(return_info_);
+    return kStopDone;
+  }
+
+  // This else case is that the current frame is newer than the frame we were stepping in. This
+  // means we have to step out of the new frame to continue.
 
   if (stack.size() < 2) {
     Log("In a newer frame but there are not enough frames to step out.");
@@ -150,11 +165,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   // Since the IPC will serialize the command, we know that successful breakpoint sets will arrive
   // before telling the thread to continue.
   Log("In a new frame, passing through to 'finish'.");
-  finish_ =
-      std::make_unique<FinishThreadController>(stack, 0, [this](const FunctionReturnInfo& info) {
-        if (function_return_callback_)
-          function_return_callback_(info);
-      });
+  finish_ = std::make_unique<FinishThreadController>(stack, 0);
   finish_->InitWithThread(thread(), [](const Err&) {});
 
   // Pass the "none" exception type here to bypass checking the exception type. The current

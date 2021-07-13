@@ -8,6 +8,7 @@
 #include <optional>
 
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
+#include "src/developer/debug/zxdb/client/function_return_info.h"
 #include "src/developer/debug/zxdb/client/step_mode.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/developer/debug/zxdb/common/address_ranges.h"
@@ -31,14 +32,17 @@ class StepThreadController : public ThreadController {
  public:
   // Constructor for kSourceLine and kInstruction modes. It will initialize itself to the thread's
   // current position when the thread is attached.
-  explicit StepThreadController(StepMode mode);
+  //
+  // The function_return callback (if supplied) will be issued when the "step into" terminates with
+  // the completion of the function.
+  explicit StepThreadController(StepMode mode, FunctionReturnCallback function_return = {});
 
   // Steps given the source file/line.
-  explicit StepThreadController(const FileLine& line);
+  explicit StepThreadController(const FileLine& line, FunctionReturnCallback function_return = {});
 
   // Constructor for a kAddressRange mode (the mode is implicit). Continues execution as long as the
   // IP is in range.
-  explicit StepThreadController(AddressRanges ranges);
+  explicit StepThreadController(AddressRanges ranges, FunctionReturnCallback function_return = {});
 
   ~StepThreadController() override;
 
@@ -68,13 +72,13 @@ class StepThreadController : public ThreadController {
   bool TrySteppingIntoInline(StepIntoInline command);
 
   StepMode step_mode_;
+  FrameFingerprint original_frame_fingerprint_;
 
   // When step_mode_ == kSourceLine, this represents the line information and the stack fingerprint
   // of where stepping started. The file/line may be given in the constructor or we may need to
   // compute it upon init from the current location (whether it needs setting is encoded by the
   // optional).
   std::optional<FileLine> file_line_;
-  FrameFingerprint original_frame_fingerprint_;
 
   // Range of addresses we're currently stepping in. This may change when we're stepping over source
   // lines and wind up in a region with no line numbers. It will be empty when stepping by
@@ -83,6 +87,9 @@ class StepThreadController : public ThreadController {
 
   // Handles stepping out or through special functions we want to ignore.
   std::unique_ptr<ThreadController> function_step_;
+
+  FunctionReturnInfo return_info_;
+  FunctionReturnCallback function_return_callback_;  // Possibly null.
 };
 
 }  // namespace zxdb

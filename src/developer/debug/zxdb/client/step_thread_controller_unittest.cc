@@ -169,8 +169,8 @@ TEST_F(StepThreadControllerTest, Line0) {
 }
 
 void StepThreadControllerTest::SetUnsymbolizedSetting(bool stop_on_no_symbols) {
-  thread()->session()->system().settings().SetBool(
-      ClientSettings::System::kSkipUnsymbolized, !stop_on_no_symbols);
+  thread()->session()->system().settings().SetBool(ClientSettings::System::kSkipUnsymbolized,
+                                                   !stop_on_no_symbols);
 }
 
 // Tests shared library thunks which have no symbol information in a module which otherwise has
@@ -539,6 +539,61 @@ TEST_F(StepThreadControllerTest, StepThroughLine0) {
   // It should automatically continue over the "line 0" entry.
   EXPECT_TRUE(continued);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
+}
+
+// Does a step in range that results in finishing the current function.
+TEST_F(StepThreadControllerTest, StepOut) {
+  SymbolContext symbol_context(kSymbolizedModuleAddress);
+
+  // Recall the top frame from GetStack() is inline which we don't want, so we remove it to leave
+  // "TopFunction" at the top of the stack.
+  auto mock_frames = GetStack();
+  mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 1);
+
+  // Start with an exception in the function.
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
+
+  // Holds the result of any seen non-inline function returns.
+  std::optional<FunctionReturnInfo> return_info;
+
+  // Step in the top function's range, logging the return_info.
+  auto step_into = std::make_unique<StepThreadController>(
+      AddressRanges(kTopFunctionRange),
+      [&return_info](const FunctionReturnInfo& info) { return_info = info; });
+  bool continued = false;
+  thread()->ContinueWith(std::move(step_into), [&continued](const Err& err) {
+    if (!err.has_error())
+      continued = true;
+  });
+  EXPECT_TRUE(continued);
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continued.
+
+  // Issue an intermediate stop while in range (construct the stack the same was as above).
+  mock_frames = GetStack();
+  mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 1);
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
+
+  // The thread should be auto-resumed.
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continued.
+  EXPECT_FALSE(return_info);
+
+  // Issue a stop at the previous frame.
+  mock_frames = GetStack();
+  mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 2);  // Remove top two.
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
+
+  // Should not have been resumed and the return callback should be issued.
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());
+  ASSERT_TRUE(return_info);
+
+  EXPECT_EQ(thread(), return_info->thread);
+  EXPECT_EQ(GetTopFunction()->GetAssignedName(), return_info->symbol.Get()->GetAssignedName());
 }
 
 }  // namespace zxdb

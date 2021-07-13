@@ -19,13 +19,20 @@
 
 namespace zxdb {
 
-StepThreadController::StepThreadController(StepMode mode) : step_mode_(mode) {}
+StepThreadController::StepThreadController(StepMode mode, FunctionReturnCallback function_return)
+    : step_mode_(mode), function_return_callback_(std::move(function_return)) {}
 
-StepThreadController::StepThreadController(const FileLine& line)
-    : step_mode_(StepMode::kSourceLine), file_line_(line) {}
+StepThreadController::StepThreadController(const FileLine& line,
+                                           FunctionReturnCallback function_return)
+    : step_mode_(StepMode::kSourceLine),
+      file_line_(line),
+      function_return_callback_(std::move(function_return)) {}
 
-StepThreadController::StepThreadController(AddressRanges ranges)
-    : step_mode_(StepMode::kAddressRange), current_ranges_(ranges) {}
+StepThreadController::StepThreadController(AddressRanges ranges,
+                                           FunctionReturnCallback function_return)
+    : step_mode_(StepMode::kAddressRange),
+      current_ranges_(ranges),
+      function_return_callback_(std::move(function_return)) {}
 
 StepThreadController::~StepThreadController() = default;
 
@@ -61,11 +68,13 @@ void StepThreadController::InitWithThread(Thread* thread, fit::callback<void(con
       Log("Stepping in empty range.");
     }
 
-    original_frame_fingerprint_ = thread->GetStack().GetFrameFingerprint(0);
   } else {
     // In the "else" cases, the range will already have been set up.
     Log("Stepping in %s", current_ranges_.ToString().c_str());
   }
+
+  original_frame_fingerprint_ = thread->GetStack().GetFrameFingerprint(0);
+  return_info_.InitFromTopOfStack(thread);
 
   cb(Err());
 }
@@ -263,6 +272,13 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
   // location and want to have our default to be to stay in the same (outermost) frame.
   stack.SetHideAmbiguousInlineFrameCount(stack.GetAmbiguousInlineFrameCount());
   TrySteppingIntoInline(StepIntoInline::kCommit);
+
+  // We may have just stepped out to an older frame, issue the return callback if so.
+  if (function_return_callback_ &&
+      FrameFingerprint::Newer(original_frame_fingerprint_, stack.GetFrameFingerprint(0))) {
+    function_return_callback_(return_info_);
+  }
+
   return kStopDone;
 }
 

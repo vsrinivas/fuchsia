@@ -20,6 +20,12 @@ struct FunctionReturnInfo {
   // The symbol for the function that just completed. This won't be valid if the function stepped
   // out of an unsymbolized function.
   LazySymbol symbol;
+
+  // Initializes the values from the 0'th stack entry for the given thread. This is intended to
+  // be saved for later for when that function returns.
+  //
+  // On error (if there is no stack entry) does nothing.
+  void InitFromTopOfStack(Thread* thread);
 };
 
 // This callback type is used by thread controllers to notify their clients that a physical
