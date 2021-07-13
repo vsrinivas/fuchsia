@@ -47,7 +47,7 @@ pub enum SlcRequest {
 
     SendDtmf {
         code: DtmfCode,
-        response: Box<dyn FnOnce() -> AgUpdate>,
+        response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate>,
     },
 
     SpeakerVolumeSynchronization {

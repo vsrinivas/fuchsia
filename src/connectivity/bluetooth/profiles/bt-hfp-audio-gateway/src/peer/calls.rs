@@ -264,11 +264,25 @@ impl Calls {
     }
 
     /// Send a dtmf code to the call manager for active call,
-    pub async fn send_dtmf_code(&mut self, _code: DtmfCode) {
-        unimplemented!(
-            "Sending a dtmf code can fail where other call requests cannot. \
-            It must be handled separately"
-        );
+    pub async fn send_dtmf_code(&mut self, code: DtmfCode) -> Result<(), ()> {
+        let idx = self.oldest_by_state(CallState::OngoingActive).ok_or(())?.0;
+        let call = self.current_calls.get(idx).expect("Index was just determined to be present");
+        match call.proxy.send_dtmf_code(code.into()).await {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(status)) => {
+                info!("Dtmf Code could not be sent to Call {}: {}", idx, status);
+                Err(())
+            }
+            Err(e) => {
+                self.remove_call(idx);
+                if e.is_closed() {
+                    info!("Dtmf Code could not be sent: Call {} removed", idx);
+                } else {
+                    warn!("Dtmf Code could not be sent: Call {} removed. Error: {}", idx, e);
+                }
+                Err(())
+            }
+        }
     }
 
     /// Return a Vec of the current call state for every call that `Calls` is tracking.
@@ -565,10 +579,11 @@ impl From<FidlCallAction> for CallAction {
 mod tests {
     use {
         super::*,
+        async_utils::PollExt,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_bluetooth_hfp::{
-            CallDirection, CallMarker, CallRequest, CallRequestStream, PeerHandlerMarker,
-            PeerHandlerRequest, PeerHandlerRequestStream,
+            CallDirection, CallMarker, CallRequest, CallRequestStream, CallWatchStateResponder,
+            PeerHandlerMarker, PeerHandlerRequest, PeerHandlerRequestStream,
         },
         fuchsia_async as fasync,
         matches::assert_matches,
@@ -796,6 +811,40 @@ mod tests {
         responder.send(state).expect("response to succeed");
     }
 
+    #[track_caller]
+    fn assert_dtmf_code(
+        exec: &mut fasync::TestExecutor,
+        stream: &mut CallRequestStream,
+        expected: DtmfCode,
+        mut response: Result<(), i32>,
+    ) {
+        let expected = expected.into();
+        // Get SendDtmfCode request for call
+        let responder = match exec.run_until_stalled(&mut stream.next()) {
+            Poll::Ready(Some(Ok(CallRequest::SendDtmfCode { responder, code })))
+                if code == expected =>
+            {
+                responder
+            }
+            result => panic!("Unexpected request: {:?}", result),
+        };
+        // Respond with a call state.
+        responder.send(&mut response).expect("response to succeed");
+    }
+
+    /// Get the next CallRequest::WatchState hanging get responder from `stream` and return it.
+    #[track_caller]
+    fn get_watch_state(
+        exec: &mut fasync::TestExecutor,
+        stream: &mut CallRequestStream,
+    ) -> CallWatchStateResponder {
+        // Get WatchState request for call
+        match exec.run_until_stalled(&mut stream.next()) {
+            Poll::Ready(Some(Ok(CallRequest::WatchState { responder, .. }))) => return responder,
+            result => panic!("Unexpected result: {:?}", result),
+        };
+    }
+
     /// Assert the Calls stream is pending, manually driving async execution.
     #[track_caller]
     fn assert_calls_pending(exec: &mut fasync::TestExecutor, calls: &mut Calls) {
@@ -959,5 +1008,61 @@ mod tests {
         let next_call = new_next_call_fidl(None, "2");
         let result = calls.handle_new_call(next_call);
         assert_matches!(result, Err(Error::MissingParameter(_)));
+    }
+
+    #[test]
+    fn send_dtmf_code_to_call() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let (mut calls, _handler_stream, mut call_1, _idx_1, _num_1) = setup_ongoing_call();
+        poll_calls_until_pending(&mut exec, &mut calls);
+
+        // Send DTMF code to a call that is not in a state which accepts DTMF codes.
+        {
+            let send = calls.send_dtmf_code(DtmfCode::One);
+            futures::pin_mut!(send);
+            let result = exec.run_until_stalled(&mut send).unwrap();
+            // Call is IncomingRinging so it cannot accept a DTMF Code.
+            assert!(result.is_err());
+        }
+
+        // Updaate the call state to one which will accept DTMF codes.
+        update_call(&mut exec, &mut call_1, CallState::OngoingActive);
+        poll_calls_until_pending(&mut exec, &mut calls);
+        let watch_state_responder = get_watch_state(&mut exec, &mut call_1);
+
+        // Sending a DTMF code should now succeed.
+        {
+            let send = calls.send_dtmf_code(DtmfCode::One);
+            futures::pin_mut!(send);
+            assert!(exec.run_until_stalled(&mut send).is_pending());
+            assert_dtmf_code(&mut exec, &mut call_1, DtmfCode::One, Ok(()));
+            let result = exec.run_until_stalled(&mut send).unwrap();
+            // Call is OngoingActive so the DTMF Code request returns the expected result.
+            assert!(result.is_ok());
+        }
+
+        // Errors from DTMF codes are propagated back to sender.
+        {
+            let send = calls.send_dtmf_code(DtmfCode::One);
+            futures::pin_mut!(send);
+            assert!(exec.run_until_stalled(&mut send).is_pending());
+            assert_dtmf_code(&mut exec, &mut call_1, DtmfCode::One, Err(0));
+            let result = exec.run_until_stalled(&mut send).unwrap();
+            // Call is OngoingActive so the DTMF Code request returns the expected result.
+            assert!(result.is_err());
+        }
+
+        // DTMF codes are not valid when there are no calls present.
+        drop(watch_state_responder);
+        drop(call_1);
+        poll_calls_until_pending(&mut exec, &mut calls);
+        {
+            let send = calls.send_dtmf_code(DtmfCode::One);
+            futures::pin_mut!(send);
+            let result = exec.run_until_stalled(&mut send).unwrap();
+            // There are no calls present to which to direct the DTMF code.
+            assert!(result.is_err());
+        }
     }
 }

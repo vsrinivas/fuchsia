@@ -882,7 +882,7 @@ pub(crate) mod tests {
         expect_slc_ready(&mut exec, &mut slc, std::mem::discriminant(&slc_volume_request));
 
         let dtmf_request =
-            SlcRequest::SendDtmf { code: DtmfCode::One, response: Box::new(|| AgUpdate::Ok) };
+            SlcRequest::SendDtmf { code: DtmfCode::One, response: Box::new(Into::into) };
         expect_slc_ready(&mut exec, &mut slc, std::mem::discriminant(&dtmf_request));
     }
 

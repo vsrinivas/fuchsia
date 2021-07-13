@@ -163,7 +163,8 @@ impl Procedure for DtmfProcedure {
                 self.state.transition();
                 match code.as_str().try_into() {
                     Ok(code) => {
-                        SlcRequest::SendDtmf { code, response: Box::new(|| AgUpdate::Ok) }.into()
+                        let response = Box::new(Into::into);
+                        SlcRequest::SendDtmf { code, response }.into()
                     }
                     Err(()) => ProcedureRequest::Error(ProcedureError::InvalidHfArgument(update)),
                 }
@@ -174,7 +175,7 @@ impl Procedure for DtmfProcedure {
 
     fn ag_update(&mut self, update: AgUpdate, _state: &mut SlcState) -> ProcedureRequest {
         match (self.state, update) {
-            (State::SendRequest, update @ AgUpdate::Ok) => {
+            (State::SendRequest, update @ (AgUpdate::Ok | AgUpdate::Error)) => {
                 self.state.transition();
                 update.into()
             }
@@ -221,7 +222,7 @@ mod tests {
         let req = proc.hf_update(at::Command::Vts { code: "1".into() }, &mut SlcState::default());
         let update = match req {
             ProcedureRequest::Request(SlcRequest::SendDtmf { code: DtmfCode::One, response }) => {
-                response()
+                response(Ok(()))
             }
             x => panic!("Unexpected message: {:?}", x),
         };
@@ -229,6 +230,24 @@ mod tests {
         assert_matches!(
             req,
             ProcedureRequest::SendMessages(msgs) if msgs == vec![at::Response::Ok]
+        );
+        assert!(proc.is_terminated());
+    }
+
+    #[test]
+    fn procedure_with_err_response() {
+        let mut proc = DtmfProcedure::new();
+        let req = proc.hf_update(at::Command::Vts { code: "1".into() }, &mut SlcState::default());
+        let update = match req {
+            ProcedureRequest::Request(SlcRequest::SendDtmf { code: DtmfCode::One, response }) => {
+                response(Err(()))
+            }
+            x => panic!("Unexpected message: {:?}", x),
+        };
+        let req = proc.ag_update(update, &mut SlcState::default());
+        assert_matches!(
+            req,
+            ProcedureRequest::SendMessages(msgs) if msgs == vec![at::Response::Error]
         );
         assert!(proc.is_terminated());
     }

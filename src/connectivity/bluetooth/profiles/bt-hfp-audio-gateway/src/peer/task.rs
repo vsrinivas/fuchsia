@@ -282,8 +282,8 @@ impl PeerTask {
                 self.connection.receive_ag_request(marker, response(name_option)).await;
             }
             SlcRequest::SendDtmf { code, response } => {
-                self.calls.send_dtmf_code(code).await;
-                self.connection.receive_ag_request(marker, response()).await;
+                let result = self.calls.send_dtmf_code(code).await;
+                self.connection.receive_ag_request(marker, response(result)).await;
             }
             SlcRequest::SendHfIndicator { indicator, response } => {
                 self.hf_indicator_update(indicator);
