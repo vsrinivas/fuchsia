@@ -16,6 +16,7 @@ use euclid::{
     point2, size2,
 };
 use fuchsia_framebuffer::PixelFormat;
+use fuchsia_trace::duration;
 use std::{
     io::Read,
     iter, mem,
@@ -523,6 +524,8 @@ impl Composition {
     }
     /// Creates a composition using an initial set of layers.
     pub fn with_layers(layers: impl IntoIterator<Item = Layer>, background_color: Color) -> Self {
+        duration!("gfx", "render::Composition::with_layers");
+
         let mut peekable = layers.into_iter().peekable();
         let layers = match peekable.peek() {
             Some(Layer { raster: Raster { inner: RasterInner::Mold(_) }, .. }) => Layers::Mold(
@@ -586,6 +589,8 @@ impl Composition {
         R: RangeBounds<usize>,
         I: IntoIterator<Item = Layer>,
     {
+        duration!("gfx", "render::Composition::replace");
+
         let mut iter = with.into_iter().peekable();
         if let Layers::Empty = self.layers {
             match iter.peek() {

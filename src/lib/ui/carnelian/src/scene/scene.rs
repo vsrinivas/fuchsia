@@ -21,6 +21,7 @@ use crate::{
 };
 use anyhow::{bail, Error};
 use euclid::{size2, vec2};
+use fuchsia_trace::duration;
 use fuchsia_zircon::{AsHandleRef, Event, Signals};
 use std::{
     any::Any,
@@ -55,7 +56,7 @@ fn cursor_layer_pair(cursor_raster: &Raster, position: IntPoint) -> Vec<Layer> {
     ]
 }
 
-type LayerMap = BTreeMap<FacetId, LayerGroup>;
+type LayerMap = BTreeMap<FacetId, Vec<Layer>>;
 
 /// Options for creating a scene.
 pub struct SceneOptions {
@@ -202,35 +203,29 @@ impl Scene {
         self.groups.set_group_arranger(group_id, arranger);
     }
 
-    pub(crate) fn layers(
+    pub(crate) fn update_scene_layers(
         &mut self,
         size: Size,
         render_context: &mut RenderContext,
         view_context: &ViewAssistantContext,
-    ) -> Vec<Layer> {
-        let mut layers = Vec::new();
+    ) {
+        duration!("gfx", "Scene::update_scene_layers");
 
-        for facet_id in &self.facet_order {
-            let facet_entry = self.facets.get_mut(facet_id).expect("facet");
-            let facet_layers = if let Some(facet_layers) = self.layers.get(facet_id) {
-                facet_layers.0.clone()
-            } else {
-                Vec::new()
-            };
+        for (facet_id, facet_entry) in &mut self.facets {
+            let facet_layers = self.layers.remove(facet_id).unwrap_or_else(|| Vec::new());
             let mut layer_group = LayerGroup(facet_layers);
             facet_entry
                 .facet
                 .update_layers(size, &mut layer_group, render_context, view_context)
                 .expect("update_layers");
-            for layer in &mut layer_group.0 {
-                layer.raster =
-                    layer.raster.clone().translate(facet_entry.location.to_vector().to_i32());
+            if facet_entry.location != Point::zero() {
+                for layer in &mut layer_group.0 {
+                    layer.raster =
+                        layer.raster.clone().translate(facet_entry.location.to_vector().to_i32());
+                }
             }
-            layers.append(&mut layer_group.0.clone());
-
-            self.layers.insert(*facet_id, layer_group);
+            self.layers.insert(*facet_id, layer_group.0);
         }
-        layers
     }
 
     fn create_or_update_rendering(
@@ -250,7 +245,7 @@ impl Scene {
     }
 
     fn update_composition(
-        layers: Vec<Layer>,
+        layers: impl IntoIterator<Item = Layer>,
         mouse_position: &Option<IntPoint>,
         mouse_cursor_raster: &Option<Raster>,
         corner_knockouts: &Option<Raster>,
@@ -318,8 +313,16 @@ impl Scene {
             &None
         };
 
+        self.update_scene_layers(size, render_context, context);
+
+        let layers = &self.layers;
+        let scene_layers = self.facet_order.iter().flat_map(|id| {
+            let facet_layers = layers.get(id).expect("layers");
+            facet_layers.iter().map(|layer| layer.clone())
+        });
+
         Self::update_composition(
-            self.layers(size, render_context, context),
+            scene_layers,
             mouse_cursor_position,
             &self.mouse_cursor_raster,
             &corner_knockouts,

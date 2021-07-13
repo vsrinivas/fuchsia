@@ -19,7 +19,7 @@ use fidl_fuchsia_sysmem::{
 };
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_framebuffer::{sysmem::set_allocator_name, PixelFormat};
-use fuchsia_trace::duration;
+use fuchsia_trace::{duration_begin, duration_end};
 use fuchsia_zircon as zx;
 use fuchsia_zircon_sys as sys;
 
@@ -232,11 +232,11 @@ fn render_composition(
     display_rotation: DisplayRotation,
     clip: Rect<u32>,
 ) {
-    duration!("gfx", "render_composition");
-
+    duration_begin!("gfx", "render::Context<Mold>::clear_layers", "count" => composition.layers.len() as u32);
     for layer in mold_composition.layers_mut() {
         layer.disable();
     }
+    duration_end!("gfx", "render::Context<Mold>::clear_layers");
 
     // mold and Carnelian use different APIs to express path clips:
     // Carnelian has an optional clip field on layers while mold
@@ -261,6 +261,7 @@ fn render_composition(
         };
     }
 
+    duration_begin!("gfx", "render::Context<Mold>::print_layers", "count" => composition.layers.len() as u32);
     while let Some(layer) = layers.next() {
         if layer.raster.prints.is_empty() {
             continue;
@@ -365,7 +366,9 @@ fn render_composition(
 
         order += 1;
     }
+    duration_end!("gfx", "render::Context<Mold>::print_layers");
 
+    duration_begin!("gfx", "render::Context<Mold>::render_composition");
     mold_composition.render(
         buffer,
         composition.background_color.to_linear_bgra(),
@@ -374,6 +377,7 @@ fn render_composition(
             clip.origin.y as usize..(clip.origin.y + clip.size.height) as usize,
         )),
     );
+    duration_end!("gfx", "render::Context<Mold>::render_composition");
 }
 
 impl Context<Mold> for MoldContext {
