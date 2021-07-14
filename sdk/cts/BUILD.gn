@@ -20,7 +20,14 @@ build_api_module("cts_artifacts") {
 }
 
 cts_artifacts("cts_data_files") {
-  data = [ "sdk/cts/data/test_manifest.json" ]
+  data = [
+    "sdk/cts/data/test_manifest.json",
+
+    # TODO(fxb/80700): Combine the ABI and API targets, and add these LICENSE files in //sdk:cts.
+    "LICENSE",
+    "AUTHORS",
+    "PATENTS",
+  ]
 }
 
 group("cts_no_e2e") {
@@ -43,6 +50,7 @@ group("cts_no_e2e") {
 group("cts") {
   testonly = true
   deps = [
+    ":cts_artifacts",
     ":cts_no_e2e",
     "tests",
   ]
