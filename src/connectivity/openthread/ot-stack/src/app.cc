@@ -24,6 +24,7 @@ namespace {
 constexpr char kMigrationConfigPath[] = "/config/data/migration_config.json";
 
 constexpr uint8_t kSpinelResetFrame[]{0x80, 0x06, 0x0};
+constexpr uint8_t kSpinelResetFrameLen = 4;
 }  // namespace
 
 OtStackApp::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtStackApp& app) : app_(app) {}
@@ -244,9 +245,11 @@ std::vector<uint8_t> OtStackApp::OtStackCallBackImpl::Process() {
 }
 
 void OtStackApp::OtStackCallBackImpl::SendOneFrameToClient(uint8_t* buffer, uint32_t size) {
-  if (memcmp(buffer, kSpinelResetFrame, sizeof(kSpinelResetFrame)) == 0) {
+  if ((size == kSpinelResetFrameLen) &&
+      (memcmp(buffer, kSpinelResetFrame, sizeof(kSpinelResetFrame)) == 0) &&
+      ((buffer[kSpinelResetFrameLen - 1] & 0x70) == 0x70)) {
     // Reset frame
-    FX_LOGS(WARNING) << "ot-stack: reset frame received from ot-radio";
+    FX_LOGS(WARNING) << "ot-stack: Not sending reset frame to host";
     return;
   }
   app_.client_inbound_queue_.emplace_back(buffer, buffer + size);
