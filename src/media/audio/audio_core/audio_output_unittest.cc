@@ -4,13 +4,13 @@
 
 #include "src/media/audio/audio_core/audio_output.h"
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/fake_stream.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/effects_loader/testing/test_effects.h"
 

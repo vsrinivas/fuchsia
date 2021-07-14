@@ -14,11 +14,11 @@
 #include <gtest/gtest_prod.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/cached_readable_stream_buffer.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 

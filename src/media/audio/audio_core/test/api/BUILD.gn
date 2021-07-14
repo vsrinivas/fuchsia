@@ -57,7 +57,7 @@ audio_core_api_test_component("audio-capturer-test") {
   source = "audio_capturer_test.cc"
   executable_deps = [
     "//sdk/lib/media/audio/cpp",
-    "//src/media/audio/lib/clock:clone_mono",
+    "//src/media/audio/lib/clock",
     "//src/media/audio/lib/clock/testing",
   ]
 }
@@ -89,7 +89,7 @@ audio_core_api_test_component("audio-renderer-test") {
   source = "audio_renderer_test.cc"
   executable_deps = [
     "//sdk/lib/media/audio/cpp",
-    "//src/media/audio/lib/clock:clone_mono",
+    "//src/media/audio/lib/clock",
     "//src/media/audio/lib/clock/testing",
   ]
 }

@@ -12,9 +12,9 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 

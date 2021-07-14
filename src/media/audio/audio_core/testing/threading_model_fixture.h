@@ -14,10 +14,10 @@
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/context.h"
-#include "src/media/audio/audio_core/testing/fake_clock_factory.h"
 #include "src/media/audio/audio_core/testing/fake_plug_detector.h"
 #include "src/media/audio/audio_core/testing/test_process_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/lib/clock/testing/fake_audio_clock_factory.h"
 
 namespace media::audio::testing {
 
@@ -90,9 +90,10 @@ class ThreadingModelFixture : public gtest::TestLoopFixture {
     auto threading_model = std::make_unique<TestThreadingModel>(&test_loop());
     auto plug_detector = std::make_unique<testing::FakePlugDetector>();
     fake_plug_detector_ = plug_detector.get();
-    context_ = Context::Create(std::move(threading_model),
-                               component_context_provider_.TakeContext(), std::move(plug_detector),
-                               ProcessConfig::instance(), std::make_shared<FakeClockFactory>());
+    context_ =
+        Context::Create(std::move(threading_model), component_context_provider_.TakeContext(),
+                        std::move(plug_detector), ProcessConfig::instance(),
+                        std::make_shared<FakeAudioClockFactory>());
   }
   TestProcessConfig process_config_;
   TestThreadingModel threading_model_{&test_loop()};

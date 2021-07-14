@@ -6,7 +6,6 @@
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
-#include "src/media/audio/audio_core/testing/audio_clock_helper.h"
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
@@ -81,8 +80,8 @@ class AudioDriverClockTest : public testing::ThreadingModelFixture {
   void ValidateClockAdvancesAtClockMonotonicRate(uint32_t clock_domain) {
     CreateDrivers(clock_domain);
 
-    audio_clock_helper::VerifyAdvances(driver_->reference_clock(), context().clock_factory());
-    audio_clock_helper::VerifyIsSystemMonotonic(driver_->reference_clock());
+    clock::testing::VerifyAdvances(driver_->reference_clock(), context().clock_factory());
+    clock::testing::VerifyIsSystemMonotonic(driver_->reference_clock());
   }
 
   // Verify that AudioDriver correctly uses driver position notifications to rate-adjust

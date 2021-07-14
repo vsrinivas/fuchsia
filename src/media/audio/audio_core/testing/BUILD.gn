@@ -8,16 +8,11 @@ source_set("testing") {
   testonly = true
 
   sources = [
-    "audio_clock_helper.cc",
-    "audio_clock_helper.h",
-    "fake_audio_clock.h",
     "fake_audio_device.h",
     "fake_audio_driver.cc",
     "fake_audio_driver.h",
     "fake_audio_renderer.cc",
     "fake_audio_renderer.h",
-    "fake_clock_factory.cc",
-    "fake_clock_factory.h",
     "fake_plug_detector.h",
     "fake_profile_provider.h",
     "fake_stream.cc",
@@ -41,38 +36,11 @@ source_set("testing") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/media/audio/audio_core:audio_core_lib",
     "//src/media/audio/audio_core/mixer",
-    "//src/media/audio/lib/clock:clone_mono",
+    "//src/media/audio/lib/clock",
     "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/test:message_transceiver",
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/audio-proto-utils",
   ]
-}
-
-executable("unittest_bin") {
-  visibility = [ ":*" ]
-  testonly = true
-  output_name = "audio_testing_unittests"
-
-  sources = [ "fake_audio_clock_unittest.cc" ]
-
-  deps = [
-    ":testing",
-    "//garnet/public/lib/gtest",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/media/audio/audio_core:audio_core_lib",
-    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
-    "//src/media/audio/lib/clock/testing:testing",
-  ]
-}
-
-fuchsia_unittest_package("audio_testing_unittests") {
-  manifest = "meta/audio_testing_unittests.cmx"
-  deps = [ ":unittest_bin" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":audio_testing_unittests" ]
 }

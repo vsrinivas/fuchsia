@@ -12,13 +12,13 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/effects_stage.h"
 #include "src/media/audio/audio_core/mix_stage.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/volume_curve.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {

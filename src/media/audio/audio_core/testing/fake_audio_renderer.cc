@@ -6,10 +6,10 @@
 
 #include <lib/async/cpp/time.h>
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/packet.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 
 namespace media::audio::testing {

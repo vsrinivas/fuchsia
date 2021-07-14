@@ -8,7 +8,6 @@
 
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/process_config.h"
-#include "src/media/audio/audio_core/testing/audio_clock_helper.h"
 #include "src/media/audio/audio_core/testing/fake_stream.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
@@ -839,14 +838,14 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
                                                        kDefaultTransform, *device_clock_);
 
-  audio_clock_helper::VerifyReadOnlyRights(pipeline->reference_clock());
-  audio_clock_helper::VerifyAdvances(pipeline->reference_clock(), context().clock_factory());
-  audio_clock_helper::VerifyCannotBeRateAdjusted(pipeline->reference_clock());
+  clock::testing::VerifyReadOnlyRights(pipeline->reference_clock());
+  clock::testing::VerifyAdvances(pipeline->reference_clock(), context().clock_factory());
+  clock::testing::VerifyCannotBeRateAdjusted(pipeline->reference_clock());
 
   auto& loopback_clock = pipeline->loopback()->reference_clock();
-  audio_clock_helper::VerifyReadOnlyRights(loopback_clock);
-  audio_clock_helper::VerifyAdvances(loopback_clock, context().clock_factory());
-  audio_clock_helper::VerifyCannotBeRateAdjusted(loopback_clock);
+  clock::testing::VerifyReadOnlyRights(loopback_clock);
+  clock::testing::VerifyAdvances(loopback_clock, context().clock_factory());
+  clock::testing::VerifyCannotBeRateAdjusted(loopback_clock);
   ASSERT_TRUE(pipeline->reference_clock() == loopback_clock);
 }
 

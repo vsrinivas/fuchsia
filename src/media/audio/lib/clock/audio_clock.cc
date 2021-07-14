@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/audio_clock.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/clock.h>
@@ -12,7 +12,7 @@
 #include <sstream>
 #include <string>
 
-#include "src/media/audio/audio_core/audio_clock_coefficients.h"
+#include "src/media/audio/lib/clock/audio_clock_coefficients.h"
 #include "src/media/audio/lib/clock/pid_control.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
@@ -46,16 +46,9 @@ AudioClock AudioClock::DeviceFixed(zx::clock clock, uint32_t domain) {
 
 //
 // Policy-related static methods
-Mixer::Resampler AudioClock::UpgradeResamplerIfNeeded(Mixer::Resampler initial_resampler_hint,
-                                                      AudioClock& source_clock,
-                                                      AudioClock& dest_clock) {
-  // If we use micro-SRC for synchronization, select the higher quality resampler.
-  if (initial_resampler_hint == Mixer::Resampler::Default &&
-      AudioClock::SyncModeForClocks(source_clock, dest_clock) == AudioClock::SyncMode::MicroSrc) {
-    return Mixer::Resampler::WindowedSinc;
-  }
-
-  return initial_resampler_hint;
+bool AudioClock::SynchronizationNeedsHighQualityResampler(AudioClock& source_clock,
+                                                          AudioClock& dest_clock) {
+  return AudioClock::SyncModeForClocks(source_clock, dest_clock) == AudioClock::SyncMode::MicroSrc;
 }
 
 AudioClock::SyncMode AudioClock::SyncModeForClocks(AudioClock& source_clock,
@@ -128,7 +121,7 @@ int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest
       clock_to_adjust = &dest_clock;
       __FALLTHROUGH;
     case SyncMode::RevertSourceToMonotonic:
-      adjust_ppm = source_pos_error / kLockToMonotonicErrorThreshold;
+      adjust_ppm = static_cast<int32_t>(source_pos_error / kLockToMonotonicErrorThreshold);
       adjust_ppm = std::clamp<int32_t>(adjust_ppm, ZX_CLOCK_UPDATE_MIN_RATE_ADJUST,
                                        ZX_CLOCK_UPDATE_MAX_RATE_ADJUST);
 
@@ -189,14 +182,14 @@ std::string AudioClock::SyncInfo(AudioClock& source_clock, AudioClock& dest_cloc
   auto sync_mode = SyncModeForClocks(source_clock, dest_clock);
 
   auto mono_to_source_ref = source_clock.ref_clock_to_clock_mono().Inverse();
-  double source_ppm =
-      1'000'000.0 * mono_to_source_ref.subject_delta() / mono_to_source_ref.reference_delta() -
-      1'000'000.0;
+  double mono_to_source_rate = static_cast<double>(mono_to_source_ref.subject_delta()) /
+                               static_cast<double>(mono_to_source_ref.reference_delta());
+  double source_ppm = 1'000'000.0 * mono_to_source_rate - 1'000'000.0;
 
   auto mono_to_dest_ref = dest_clock.ref_clock_to_clock_mono().Inverse();
-  double dest_ppm =
-      1'000'000.0 * mono_to_dest_ref.subject_delta() / mono_to_dest_ref.reference_delta() -
-      1'000'000.0;
+  double mono_to_dest_rate = static_cast<double>(mono_to_dest_ref.subject_delta()) /
+                             static_cast<double>(mono_to_dest_ref.reference_delta());
+  double dest_ppm = 1'000'000.0 * mono_to_dest_rate - 1'000'000.0;
 
   std::string micro_src_str;
   if (sync_mode == SyncMode::MicroSrc) {
@@ -297,9 +290,10 @@ void AudioClock::ResetRateAdjustment(zx::time reset_time) { feedback_control_.St
 
 int32_t AudioClock::TuneForError(zx::time monotonic_time, zx::duration source_pos_error) {
   // Tune the PID and retrieve the current correction (a zero-centric, rate-relative adjustment).
-  feedback_control_.TuneForError(monotonic_time, source_pos_error.to_nsecs());
+  feedback_control_.TuneForError(monotonic_time, static_cast<double>(source_pos_error.to_nsecs()));
   double rate_adjustment = feedback_control_.Read();
-  int32_t rate_adjust_ppm = ClampPpm(round(rate_adjustment * 1'000'000.0));
+  int32_t rate_adjust_ppm = ClampPpm(
+      static_cast<int32_t>(std::round(static_cast<double>(rate_adjustment) * 1'000'000.0)));
 
   LogClockAdjustments(source_pos_error, rate_adjust_ppm);
 

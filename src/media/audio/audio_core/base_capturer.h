@@ -16,7 +16,6 @@
 
 #include <fbl/intrusive_double_list.h>
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/capture_packet_queue.h"
 #include "src/media/audio/audio_core/context.h"
@@ -27,6 +26,7 @@
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
 

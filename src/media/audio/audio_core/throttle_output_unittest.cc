@@ -4,9 +4,9 @@
 
 #include "src/media/audio/audio_core/throttle_output.h"
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 
 namespace media::audio {
 namespace {

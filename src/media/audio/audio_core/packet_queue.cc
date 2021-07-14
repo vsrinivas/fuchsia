@@ -9,9 +9,9 @@
 
 #include <iomanip>
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
 
 namespace media::audio {

@@ -10,17 +10,30 @@
 
 #include <optional>
 
+#include "src/media/audio/lib/clock/audio_clock.h"
+#include "src/media/audio/lib/clock/audio_clock_factory.h"
+
 namespace media::audio::clock::testing {
 
 // Clock should have rights DUPLICATE, TRANSFER, READ; clock should not have WRITE
 void VerifyReadOnlyRights(const zx::clock& ref_clock);
+void VerifyReadOnlyRights(const AudioClock& audio_clock);
+
 void VerifyAdvances(const zx::clock& ref_clock);
+void VerifyAdvances(const AudioClock& audio_clock,
+                    std::shared_ptr<AudioClockFactory> clock_factory);
 
 void VerifyCannotBeRateAdjusted(const zx::clock& ref_clock);
+void VerifyCannotBeRateAdjusted(const AudioClock& audio_clock);
+
 void VerifyCanBeRateAdjusted(const zx::clock& ref_clock);
+void VerifyCanBeRateAdjusted(const AudioClock& audio_clock);
 
 void VerifyIsSystemMonotonic(const zx::clock& clock);
+void VerifyIsSystemMonotonic(const AudioClock& audio_clock);
+
 void VerifyIsNotSystemMonotonic(const zx::clock& clock);
+void VerifyIsNotSystemMonotonic(const AudioClock& audio_clock);
 
 struct ClockProperties {
   std::optional<zx::time> start_val = std::nullopt;

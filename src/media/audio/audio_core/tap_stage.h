@@ -7,9 +7,9 @@
 
 #include <memory>
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 #include "src/media/audio/audio_core/stream.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 
 namespace media::audio {
 

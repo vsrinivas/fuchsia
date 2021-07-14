@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/audio_clock.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
@@ -382,21 +382,6 @@ TEST_F(AudioClockTest, RevertDestToMonotonicAdjustments) {
   TestRevertToMonotonic(
       AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain),
       AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic()));
-}
-
-// Death tests, grouped separately
-using AudioClockDeathTest = AudioClockTest;
-
-TEST_F(AudioClockDeathTest, InvalidZxClockHaltsCreate) {
-  // Uninitialized clock cannot be passed to CreateAs...
-  ASSERT_DEATH(AudioClock::ClientFixed(zx::clock()), "");
-  ASSERT_DEATH(AudioClock::ClientAdjustable(zx::clock()), "");
-  ASSERT_DEATH(AudioClock::DeviceFixed(zx::clock(), kCustomDomain), "");
-  ASSERT_DEATH(AudioClock::DeviceAdjustable(zx::clock(), kCustomDomain), "");
-
-  // Clock without WRITE rights cannot be passed to CreateAs...Adjustable
-  ASSERT_DEATH(AudioClock::ClientAdjustable(clock::CloneOfMonotonic()), "");
-  ASSERT_DEATH(AudioClock::DeviceAdjustable(clock::CloneOfMonotonic(), kCustomDomain), "");
 }
 
 }  // namespace media::audio

@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/media/audio/audio_core/testing/fake_audio_clock.h"
+#include "src/media/audio/lib/clock/testing/fake_audio_clock.h"
 
 #include <gtest/gtest.h>
 
@@ -12,9 +12,9 @@ namespace media::audio::testing {
 
 class FakeAudioClockTest : public ::testing::Test {
  protected:
-  void SetUp() override { clock_factory_ = std::make_shared<FakeClockFactory>(); }
+  void SetUp() override { clock_factory_ = std::make_shared<FakeAudioClockFactory>(); }
 
-  std::shared_ptr<FakeClockFactory> clock_factory_;
+  std::shared_ptr<FakeAudioClockFactory> clock_factory_;
 };
 
 TEST_F(FakeAudioClockTest, InitTransform) {

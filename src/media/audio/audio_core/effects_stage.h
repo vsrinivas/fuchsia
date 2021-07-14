@@ -7,11 +7,11 @@
 
 #include <memory>
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/cached_readable_stream_buffer.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/volume_curve.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/effects_loader/effects_processor.h"
 
 namespace media::audio {

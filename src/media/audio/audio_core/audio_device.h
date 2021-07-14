@@ -15,7 +15,6 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/audio_clock_factory.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/device_config.h"
@@ -25,6 +24,7 @@
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/wakeup_event.h"
+#include "src/media/audio/lib/clock/audio_clock_factory.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {

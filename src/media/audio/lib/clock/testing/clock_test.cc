@@ -83,6 +83,10 @@ void VerifyReadOnlyRights(const zx::clock& ref_clock) {
   EXPECT_NE(ref_clock.duplicate(rights | ZX_RIGHT_WRITE, &dupe_clock), ZX_OK);
 }
 
+void VerifyReadOnlyRights(const AudioClock& audio_clock) {
+  EXPECT_FALSE(audio_clock.is_adjustable());
+}
+
 constexpr zx_duration_t kWaitInterval = ZX_USEC(50);
 void VerifyAdvances(const zx::clock& clock) {
   zx_time_t before, after;
@@ -93,12 +97,28 @@ void VerifyAdvances(const zx::clock& clock) {
   EXPECT_GE(after - before, kWaitInterval);
 }
 
+void VerifyAdvances(const AudioClock& audio_clock,
+                    std::shared_ptr<AudioClockFactory> clock_factory) {
+  constexpr zx::duration kWaitInterval = zx::usec(50);
+  zx::time before = audio_clock.Read();
+  clock_factory->AdvanceMonoTimeBy(kWaitInterval);
+  zx::time after = audio_clock.Read();
+
+  // Due to lack of precision, verify that we have advanced in general, rather than by the specific
+  // kWaitInterval amount.
+  EXPECT_GE(after - before, kWaitInterval / 2);
+}
+
 // ...try to rate-adjust this clock -- this should fail
 void VerifyCannotBeRateAdjusted(const zx::clock& clock) {
   zx::clock::update_args args;
   args.reset().set_rate_adjust(+12);
 
   EXPECT_NE(clock.update(args), ZX_OK) << "clock.update with rate_adjust should fail";
+}
+
+void VerifyCannotBeRateAdjusted(const AudioClock& audio_clock) {
+  EXPECT_FALSE(audio_clock.is_adjustable()) << "AudioClock is adjustable";
 }
 
 // Rate-adjusting this clock should succeed. Validate that the rate change took effect and
@@ -129,6 +149,10 @@ void VerifyCanBeRateAdjusted(const zx::clock& clock) {
   EXPECT_EQ(clock_details.mono_to_synthetic.rate.synthetic_ticks, 999'900u);
 }
 
+void VerifyCanBeRateAdjusted(const AudioClock& audio_clock) {
+  EXPECT_TRUE(audio_clock.is_adjustable()) << "AudioClock is not adjustable";
+}
+
 // Validate that given clock is identical to CLOCK_MONOTONIC
 void VerifyIsSystemMonotonic(const zx::clock& clock) {
   zx_clock_details_v1_t clock_details;
@@ -140,6 +164,13 @@ void VerifyIsSystemMonotonic(const zx::clock& clock) {
             clock_details.mono_to_synthetic.rate.synthetic_ticks);
 }
 
+void VerifyIsSystemMonotonic(const AudioClock& audio_clock) {
+  EXPECT_EQ(audio_clock.ref_clock_to_clock_mono().subject_time(),
+            audio_clock.ref_clock_to_clock_mono().reference_time());
+  EXPECT_EQ(audio_clock.ref_clock_to_clock_mono().rate().subject_delta(),
+            audio_clock.ref_clock_to_clock_mono().rate().reference_delta());
+}
+
 // Validate that given clock is NOT identical to CLOCK_MONOTONIC
 void VerifyIsNotSystemMonotonic(const zx::clock& clock) {
   zx_clock_details_v1_t clock_details;
@@ -149,6 +180,13 @@ void VerifyIsNotSystemMonotonic(const zx::clock& clock) {
                    clock_details.mono_to_synthetic.synthetic_offset &&
                clock_details.mono_to_synthetic.rate.reference_ticks ==
                    clock_details.mono_to_synthetic.rate.synthetic_ticks);
+}
+
+void VerifyIsNotSystemMonotonic(const AudioClock& audio_clock) {
+  EXPECT_NE(audio_clock.ref_clock_to_clock_mono().subject_time(),
+            audio_clock.ref_clock_to_clock_mono().reference_time());
+  EXPECT_NE(audio_clock.ref_clock_to_clock_mono().rate().subject_delta(),
+            audio_clock.ref_clock_to_clock_mono().rate().reference_delta());
 }
 
 }  // namespace media::audio::clock::testing

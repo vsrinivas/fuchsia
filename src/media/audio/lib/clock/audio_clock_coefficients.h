@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_COEFFICIENTS_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_COEFFICIENTS_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_CLOCK_AUDIO_CLOCK_COEFFICIENTS_H_
+#define SRC_MEDIA_AUDIO_LIB_CLOCK_AUDIO_CLOCK_COEFFICIENTS_H_
 
 #include <lib/zx/time.h>
 
@@ -51,4 +51,4 @@ constexpr clock::PidControl::Coefficients kPidFactorsAdjustDeviceClock = {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_COEFFICIENTS_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_CLOCK_AUDIO_CLOCK_COEFFICIENTS_H_

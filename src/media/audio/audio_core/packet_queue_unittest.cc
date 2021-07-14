@@ -11,7 +11,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "src/media/audio/audio_core/audio_clock.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 
 namespace media::audio {

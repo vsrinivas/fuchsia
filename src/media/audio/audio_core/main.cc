@@ -8,7 +8,6 @@
 #include <lib/trace-provider/provider.h>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/media/audio/audio_core/audio_clock_factory.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/base_capturer.h"
 #include "src/media/audio/audio_core/pin_executable_memory.h"
@@ -19,6 +18,7 @@
 #include "src/media/audio/audio_core/thermal_agent.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/ultrasound_factory.h"
+#include "src/media/audio/lib/clock/audio_clock_factory.h"
 
 namespace media::audio {
 

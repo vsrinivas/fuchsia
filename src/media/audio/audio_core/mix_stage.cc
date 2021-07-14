@@ -86,8 +86,11 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
     return nullptr;
   }
 
-  resampler_hint = AudioClock::UpgradeResamplerIfNeeded(resampler_hint, stream->reference_clock(),
-                                                        reference_clock());
+  if (resampler_hint == Mixer::Resampler::Default &&
+      AudioClock::SynchronizationNeedsHighQualityResampler(stream->reference_clock(),
+                                                           reference_clock())) {
+    resampler_hint = Mixer::Resampler::WindowedSinc;
+  }
 
   auto mixer =
       std::shared_ptr<Mixer>(Mixer::Select(stream->format().stream_type(), format().stream_type(),

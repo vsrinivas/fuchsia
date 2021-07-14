@@ -7,10 +7,10 @@
 
 #include <lib/zx/clock.h>
 
-#include "src/media/audio/audio_core/audio_clock_factory.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
+#include "src/media/audio/lib/clock/audio_clock_factory.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 
 namespace media::audio::testing {

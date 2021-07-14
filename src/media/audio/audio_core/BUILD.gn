@@ -49,10 +49,6 @@ source_set("audio_core_lib") {
     "audio_admin.h",
     "audio_capturer.cc",
     "audio_capturer.h",
-    "audio_clock.cc",
-    "audio_clock.h",
-    "audio_clock_coefficients.h",
-    "audio_clock_factory.h",
     "audio_core_impl.cc",
     "audio_core_impl.h",
     "audio_device.cc",
@@ -242,7 +238,6 @@ executable("unittest_bin") {
     "activity_dispatcher_unittest.cc",
     "audio_admin_unittest.cc",
     "audio_capturer_unittest.cc",
-    "audio_clock_unittest.cc",
     "audio_device_settings_unittest.cc",
     "audio_device_unittest.cc",
     "audio_driver_clock_unittest.cc",
@@ -341,7 +336,6 @@ group("tests") {
     ":audio_core_unittests",
     "mixer:tests",
     "test",
-    "testing:tests",
 
     # include this explicitly, in case product includes a custom audio_core package by other name
     "//src/media/audio/audio_core",

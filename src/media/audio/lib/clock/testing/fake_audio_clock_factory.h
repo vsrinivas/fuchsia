@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_CLOCK_MANAGER_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_CLOCK_MANAGER_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_CLOCK_TESTING_FAKE_AUDIO_CLOCK_FACTORY_H_
+#define SRC_MEDIA_AUDIO_LIB_CLOCK_TESTING_FAKE_AUDIO_CLOCK_FACTORY_H_
 
 #include <lib/zx/clock.h>
 
@@ -11,14 +11,14 @@
 #include <unordered_map>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/audio_clock_factory.h"
+#include "src/media/audio/lib/clock/audio_clock_factory.h"
 
 namespace media::audio::testing {
 
-class FakeClockFactory : public AudioClockFactory,
-                         public std::enable_shared_from_this<FakeClockFactory> {
+class FakeAudioClockFactory : public AudioClockFactory,
+                              public std::enable_shared_from_this<FakeAudioClockFactory> {
  public:
-  FakeClockFactory() = default;
+  FakeAudioClockFactory() = default;
 
   std::unique_ptr<AudioClock> CreateClientAdjustable(zx::clock clock) override;
   std::unique_ptr<AudioClock> CreateClientFixed(zx::clock clock) override;
@@ -64,4 +64,4 @@ class FakeClockFactory : public AudioClockFactory,
 
 }  // namespace media::audio::testing
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_CLOCK_MANAGER_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_CLOCK_TESTING_FAKE_AUDIO_CLOCK_FACTORY_H_

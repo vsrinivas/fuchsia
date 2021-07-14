@@ -15,7 +15,6 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/link_matrix.h"
@@ -24,6 +23,7 @@
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 #include "src/media/audio/lib/wav/wav_writer.h"

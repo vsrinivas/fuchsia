@@ -10,9 +10,9 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace/event.h>
 
-#include "src/media/audio/audio_core/audio_clock_factory.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/lib/clock/audio_clock_factory.h"
 
 namespace media::audio {
 

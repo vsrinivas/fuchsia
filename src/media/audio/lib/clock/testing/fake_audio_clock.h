@@ -2,30 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_AUDIO_CLOCK_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_AUDIO_CLOCK_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_CLOCK_TESTING_FAKE_AUDIO_CLOCK_H_
+#define SRC_MEDIA_AUDIO_LIB_CLOCK_TESTING_FAKE_AUDIO_CLOCK_H_
 
-#include "src/media/audio/audio_core/testing/fake_clock_factory.h"
+#include "src/media/audio/lib/clock/testing/fake_audio_clock_factory.h"
 
 namespace media::audio::testing {
 
 class FakeAudioClock : public AudioClock {
  public:
-  static FakeAudioClock ClientAdjustable(std::shared_ptr<FakeClockFactory> factory,
+  static FakeAudioClock ClientAdjustable(std::shared_ptr<FakeAudioClockFactory> factory,
                                          zx::clock clock) {
     return FakeAudioClock(std::move(factory), std::move(clock), Source::Client, true);
   }
 
-  static FakeAudioClock ClientFixed(std::shared_ptr<FakeClockFactory> factory, zx::clock clock) {
+  static FakeAudioClock ClientFixed(std::shared_ptr<FakeAudioClockFactory> factory,
+                                    zx::clock clock) {
     return FakeAudioClock(std::move(factory), std::move(clock), Source::Client, false);
   }
 
-  static FakeAudioClock DeviceAdjustable(std::shared_ptr<FakeClockFactory> factory, zx::clock clock,
-                                         uint32_t domain) {
+  static FakeAudioClock DeviceAdjustable(std::shared_ptr<FakeAudioClockFactory> factory,
+                                         zx::clock clock, uint32_t domain) {
     return FakeAudioClock(std::move(factory), std::move(clock), Source::Device, true, domain);
   }
 
-  static FakeAudioClock DeviceFixed(std::shared_ptr<FakeClockFactory> factory, zx::clock clock,
+  static FakeAudioClock DeviceFixed(std::shared_ptr<FakeAudioClockFactory> factory, zx::clock clock,
                                     uint32_t domain) {
     return FakeAudioClock(std::move(factory), std::move(clock), Source::Device, false, domain);
   }
@@ -55,16 +56,16 @@ class FakeAudioClock : public AudioClock {
   }
 
  private:
-  FakeAudioClock(std::shared_ptr<FakeClockFactory> factory, zx::clock clock, Source source,
+  FakeAudioClock(std::shared_ptr<FakeAudioClockFactory> factory, zx::clock clock, Source source,
                  bool adjustable, uint32_t domain = kInvalidDomain)
       : AudioClock(std::move(clock), source, adjustable, domain),
         factory_(std::move(factory)),
         clock_id_(audio::clock::GetKoid(DuplicateClock().take_value())) {}
 
-  std::shared_ptr<FakeClockFactory> factory_;
+  std::shared_ptr<FakeAudioClockFactory> factory_;
   zx_koid_t clock_id_;
 };
 
 }  // namespace media::audio::testing
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_AUDIO_CLOCK_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_CLOCK_TESTING_FAKE_AUDIO_CLOCK_H_

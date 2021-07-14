@@ -2,19 +2,50 @@
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 # Helper functions for clock-related gtest cases
+
+import("//build/components.gni")
+
 source_set("testing") {
   testonly = true
 
   sources = [
     "clock_test.cc",
     "clock_test.h",
+    "fake_audio_clock.h",
+    "fake_audio_clock_factory.cc",
+    "fake_audio_clock_factory.h",
   ]
 
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/fit-promise",
-    "//src/media/audio/lib/clock:clone_mono",
+    "//src/media/audio/lib/clock",
     "//zircon/public/lib/affine",
     "//zircon/public/lib/zx",
   ]
+}
+
+executable("unittest_bin") {
+  visibility = [ ":*" ]
+  testonly = true
+  output_name = "audio_testing_unittests"
+
+  sources = [ "fake_audio_clock_unittest.cc" ]
+
+  deps = [
+    ":testing",
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/media/audio/audio_core:audio_core_lib",
+    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
+  ]
+}
+
+fuchsia_unittest_package("audio-libclock-testing-unittests") {
+  deps = [ ":unittest_bin" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":audio-libclock-testing-unittests" ]
 }

@@ -6,38 +6,15 @@
 import("//build/components.gni")
 
 source_set("clock") {
-  public_deps = [
-    ":clone_mono",
-    ":pid",
-    ":utils",
-  ]
-}
-
-source_set("clone_mono") {
   sources = [
+    "audio_clock.cc",
+    "audio_clock.h",
+    "audio_clock_coefficients.h",
+    "audio_clock_factory.h",
     "clone_mono.cc",
     "clone_mono.h",
-  ]
-
-  deps = [ "//sdk/lib/syslog/cpp" ]
-
-  public_deps = [ "//zircon/public/lib/zx" ]
-}
-
-source_set("pid") {
-  sources = [
     "pid_control.cc",
     "pid_control.h",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/zx",
-  ]
-}
-
-source_set("utils") {
-  sources = [
     "utils.cc",
     "utils.h",
   ]
@@ -45,6 +22,7 @@ source_set("utils") {
   deps = [ "//sdk/lib/syslog/cpp" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/lib/fit-promise",
     "//src/media/audio/lib/timeline",
     "//zircon/public/lib/affine",
@@ -58,6 +36,7 @@ executable("unittest_bin") {
   output_name = "audio-libclock-unittests"
 
   sources = [
+    "audio_clock_unittest.cc",
     "clone_mono_unittest.cc",
     "pid_control_unittest.cc",
     "utils_unittest.cc",
@@ -75,14 +54,39 @@ executable("unittest_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
+executable("death_unittest_bin") {
+  visibility = [ ":*" ]
+  testonly = true
+  output_name = "audio-libclock-death-unittests"
+
+  sources = [ "audio_clock_death_unittest.cc" ]
+
+  deps = [
+    ":clock",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/zircon/lib/zircon",
+  ]
+}
+
 fuchsia_unittest_package("audio-libclock-unittests") {
   deps = [ ":unittest_bin" ]
+}
+
+fuchsia_unittest_package("audio-libclock-death-unittests") {
+  manifest = "meta/audio-libclock-death-unittests.cmx"
+  deps = [ ":death_unittest_bin" ]
   test_specs = {
-    environments = basic_envs
+    log_settings = {
+      max_severity = "FATAL"
+    }
   }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":audio-libclock-unittests" ]
+  deps = [
+    ":audio-libclock-death-unittests",
+    ":audio-libclock-unittests",
+    "testing:tests",
+  ]
 }

@@ -14,7 +14,6 @@
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
-#include "src/media/audio/audio_core/testing/audio_clock_helper.h"
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/audio_core/throttle_output.h"
@@ -537,7 +536,7 @@ TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
 TEST_F(AudioRendererTest, ReferenceClockIsAdvancing) {
   auto fidl_clock = GetReferenceClock();
   clock::testing::VerifyAdvances(fidl_clock);
-  audio_clock_helper::VerifyAdvances(renderer_->reference_clock(), context().clock_factory());
+  clock::testing::VerifyAdvances(renderer_->reference_clock(), context().clock_factory());
 }
 
 TEST_F(AudioRendererTest, ReferenceClockIsReadOnly) {
@@ -545,13 +544,13 @@ TEST_F(AudioRendererTest, ReferenceClockIsReadOnly) {
   clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
 
   // Within audio_core, the default clock is rate-adjustable.
-  audio_clock_helper::VerifyCanBeRateAdjusted(renderer_->reference_clock());
+  clock::testing::VerifyCanBeRateAdjusted(renderer_->reference_clock());
 }
 
 TEST_F(AudioRendererTest, DefaultClockIsClockMonotonic) {
   auto fidl_clock = GetReferenceClock();
   clock::testing::VerifyIsSystemMonotonic(fidl_clock);
-  audio_clock_helper::VerifyIsSystemMonotonic(renderer_->reference_clock());
+  clock::testing::VerifyIsSystemMonotonic(renderer_->reference_clock());
 }
 
 // The renderer clock is valid, before and after devices are routed.

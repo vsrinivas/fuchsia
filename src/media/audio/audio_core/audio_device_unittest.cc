@@ -12,7 +12,6 @@
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/device_registry.h"
-#include "src/media/audio/audio_core/testing/audio_clock_helper.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
@@ -96,7 +95,7 @@ TEST_F(AudioDeviceTest, ReferenceClockIsAdvancing) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(device_->driver_info_fetched_);
-  audio_clock_helper::VerifyAdvances(device_->reference_clock(), context().clock_factory());
+  clock::testing::VerifyAdvances(device_->reference_clock(), context().clock_factory());
 }
 
 TEST_F(AudioDeviceTest, DefaultClockIsClockMono) {
@@ -104,7 +103,7 @@ TEST_F(AudioDeviceTest, DefaultClockIsClockMono) {
   RunLoopUntilIdle();
   EXPECT_TRUE(device_->driver_info_fetched_);
 
-  audio_clock_helper::VerifyIsSystemMonotonic(device_->reference_clock());
+  clock::testing::VerifyIsSystemMonotonic(device_->reference_clock());
 }
 
 }  // namespace

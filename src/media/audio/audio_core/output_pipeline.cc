@@ -4,12 +4,12 @@
 
 #include "src/media/audio/audio_core/output_pipeline.h"
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/effects_stage.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/tap_stage.h"
 #include "src/media/audio/audio_core/thermal_agent.h"
 #include "src/media/audio/audio_core/usage_settings.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 
 namespace media::audio {
 

@@ -11,12 +11,12 @@
 
 #include <optional>
 
-#include "src/media/audio/audio_core/audio_clock_factory.h"
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/reporter.h"
+#include "src/media/audio/lib/clock/audio_clock_factory.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {

@@ -7,7 +7,6 @@
 
 #include "src/media/audio/audio_core/mix_stage.h"
 #include "src/media/audio/audio_core/packet_queue.h"
-#include "src/media/audio/audio_core/testing/audio_clock_helper.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
@@ -194,7 +193,7 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
 
     device_clock_ = context().clock_factory()->CreateDeviceFixed(clock::CloneOfMonotonic(),
                                                                  AudioClock::kMonotonicDomain);
-    audio_clock_helper::VerifyAdvances(*device_clock_, context().clock_factory());
+    clock::testing::VerifyAdvances(*device_clock_, context().clock_factory());
 
     zx::time source_start = context().clock_factory()->mono_time();
     if (clock_mode == ClockMode::WITH_OFFSET) {
@@ -207,7 +206,7 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
 
     client_clock_ = context().clock_factory()->CreateClientFixed(
         source_start, clock_mode == ClockMode::RATE_ADJUST ? rate_adjust_ppm : 0);
-    audio_clock_helper::VerifyAdvances(*client_clock_, context().clock_factory());
+    clock::testing::VerifyAdvances(*client_clock_, context().clock_factory());
   }
 };
 
@@ -248,7 +247,7 @@ class AdjustableClockTest : public MixStageClockTest,
 
     client_clock_ =
         context().clock_factory()->CreateClientAdjustable(clock::AdjustableCloneOfMonotonic());
-    audio_clock_helper::VerifyAdvances(*client_clock_, context().clock_factory());
+    clock::testing::VerifyAdvances(*client_clock_, context().clock_factory());
 
     auto device_start = context().clock_factory()->mono_time();
     if (clock_mode == ClockMode::WITH_OFFSET) {
@@ -263,7 +262,7 @@ class AdjustableClockTest : public MixStageClockTest,
         device_start, clock_mode == ClockMode::RATE_ADJUST ? rate_adjust_ppm : 0,
         kNonMonotonicDomain);
 
-    audio_clock_helper::VerifyAdvances(*device_clock_, context().clock_factory());
+    clock::testing::VerifyAdvances(*device_clock_, context().clock_factory());
   }
 };
 
@@ -308,7 +307,7 @@ class RevertToMonoTest : public MixStageClockTest, public ::testing::WithParamIn
     EXPECT_EQ(adjusted_clock.update(args), ZX_OK);
 
     client_clock_ = context().clock_factory()->CreateClientAdjustable(std::move(adjusted_clock));
-    audio_clock_helper::VerifyAdvances(*client_clock_, context().clock_factory());
+    clock::testing::VerifyAdvances(*client_clock_, context().clock_factory());
 
     auto device_start = context().clock_factory()->mono_time();
     if (clock_mode == ClockMode::WITH_OFFSET) {
@@ -322,7 +321,7 @@ class RevertToMonoTest : public MixStageClockTest, public ::testing::WithParamIn
     device_clock_ =
         context().clock_factory()->CreateDeviceFixed(device_start, 0, AudioClock::kMonotonicDomain);
 
-    audio_clock_helper::VerifyAdvances(*device_clock_, context().clock_factory());
+    clock::testing::VerifyAdvances(*device_clock_, context().clock_factory());
   }
 };
 

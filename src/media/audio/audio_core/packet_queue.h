@@ -13,11 +13,11 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/packet.h"
 #include "src/media/audio/audio_core/pending_flush_token.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
 
 namespace media::audio {

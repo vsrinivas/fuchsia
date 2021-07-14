@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_CLOCK_AUDIO_CLOCK_H_
+#define SRC_MEDIA_AUDIO_LIB_CLOCK_AUDIO_CLOCK_H_
 
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
@@ -11,10 +11,8 @@
 
 #include <string>
 
-#include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/lib/clock/pid_control.h"
 #include "src/media/audio/lib/clock/utils.h"
-#include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
@@ -64,10 +62,6 @@ class AudioClock {
   static AudioClock DeviceAdjustable(zx::clock clock, uint32_t domain);
   static AudioClock DeviceFixed(zx::clock clock, uint32_t domain);
 
-  static Mixer::Resampler UpgradeResamplerIfNeeded(Mixer::Resampler resampler_hint,
-                                                   AudioClock& source_clock,
-                                                   AudioClock& dest_clock);
-
   virtual ~AudioClock() = default;
 
   // No copy
@@ -97,6 +91,10 @@ class AudioClock {
       zx_rights_t rights = ZX_RIGHT_SAME_RIGHTS) const;
   fpromise::result<zx::clock, zx_status_t> DuplicateClockReadOnly() const;
   virtual zx::time Read() const;
+
+  // Reports whether clock synchronization requires a high quality resampler.
+  static bool SynchronizationNeedsHighQualityResampler(AudioClock& source_clock,
+                                                       AudioClock& dest_clock);
 
   // We synchronize audio clocks so that positions (not just rates) align, reconciling differences
   // using feedback controls. Given position error at monotonic_time, we tune the relationship
@@ -184,4 +182,4 @@ class AudioClock {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_CLOCK_AUDIO_CLOCK_H_

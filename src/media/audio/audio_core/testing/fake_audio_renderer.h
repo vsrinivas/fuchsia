@@ -13,13 +13,13 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "src/media/audio/audio_core/audio_clock_factory.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
+#include "src/media/audio/lib/clock/audio_clock_factory.h"
 
 namespace media::audio::testing {
 

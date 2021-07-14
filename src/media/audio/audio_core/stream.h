@@ -11,9 +11,9 @@
 
 #include <optional>
 
-#include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/packet.h"
 #include "src/media/audio/audio_core/stream_usage.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_FACTORY_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_FACTORY_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_CLOCK_AUDIO_CLOCK_FACTORY_H_
+#define SRC_MEDIA_AUDIO_LIB_CLOCK_AUDIO_CLOCK_FACTORY_H_
 
-#include "src/media/audio/audio_core/audio_clock.h"
+#include "src/media/audio/lib/clock/audio_clock.h"
 
 namespace media::audio {
 
@@ -40,7 +40,7 @@ class AudioClockFactory {
   }
 
   //
-  // The following are intended to be test-only and overridden in FakeClockFactory.
+  // The following are intended to be test-only and overridden in FakeAudioClockFactory.
   //
 
   virtual std::unique_ptr<AudioClock> CreateClientAdjustable(zx::time start_time,
@@ -77,4 +77,4 @@ class AudioClockFactory {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_FACTORY_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_CLOCK_AUDIO_CLOCK_FACTORY_H_
