@@ -1277,9 +1277,11 @@ that derive from the `core` you can [add it to core directly](#add-core-direct),
 otherwise you need to use [core realm variability](#add-core-shard) to allow
 products without your component to continue to boot.
 
-Please see other documentation for additional detail on how eager impacts
-[lifecycle][eager-lifecycle] and is used in the [manifest][eager-manifest] more
-generally.
+The `eager` component should be in the base package set; `eager` is generally
+incompatible with being outside the base package set.
+
+For more details on how `eager` impacts component startup see,
+[lifecycle][eager-lifecycle] and [component manifests][eager-manifest].
 
 ### Shell binaries
 
@@ -1913,7 +1915,7 @@ moving forward. To use this protocol, add it
 [device-model]: /docs/concepts/drivers/device_driver_model/device-model.md
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
 [emulatortest]: /tools/emulator/emulatortest
-[eager-lifecyle]: /docs/concepts/components/v2/lifecycle.md#eager
+[eager-lifecycle]: /docs/concepts/components/v2/lifecycle.md#eager
 [eager-manifest]: /docs/concepts/components/v2/component_manifests.md#children
 [event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
 [event-scopes]: /docs/concepts/components/v2/capabilities/event.md#using-events

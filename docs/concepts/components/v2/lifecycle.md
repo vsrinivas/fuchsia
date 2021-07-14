@@ -110,11 +110,31 @@ component manager exhibits the following behavior:
     [component_manager] ERROR: Failed to route protocol `fuchsia.appmgr.Startup` with target component `/startup:0`: failed to resolve "fuchsia-pkg://fuchsia.com/your_component#meta/your_component.cm": package not found: remote resolver responded with PackageNotFound
     ```
 
-Several tests and products build system images which contain only a subset of components.
-Components marked with `eager` will cause system crashes when they are not present in these builds.
-You should declare the components using **core realm shards** to ensure they can be safely excluded
-from test builds and product images containing subsets of components.
+An `eager` component should be in the same package set as its parent since the
+component will be started at the same time as its parent. Typically `eager`
+components should be in the product's base [package set][doc-package-set].
 
+Components marked as `eager` whose ancestors are marked `eager` up
+to the root will cause system crashes when they are not present. This is
+important because many tests and products create system images containing only a
+subset of all available components. You should declare these components using
+[**core realm shards**][core-shard] to ensure they can be safely excluded from
+test builds and product images containing subsets of components.
+
+You can determine if your package is in base. If your package is not present in
+base the command below will print no output.
+
+```posix-terminal
+fx list-packages --base {{ '<var label="package name">my-package</var>' }}
+```
+
+You can also look at all the packages in the the base package set.
+
+```posix-terminal
+fx list-packages --base
+```
+
+[core-shard]: /src/sys/core/README.md
 [doc-collections]: realms.md#collections
 [doc-lifecycle]: lifecycle.md
 [doc-manifests-children]: component_manifests.md#children
@@ -122,6 +142,7 @@ from test builds and product images containing subsets of components.
 [doc-manifests-offer]: component_manifests.md#offer
 [doc-manifests]: component_manifests.md
 [doc-monikers]: monikers.md
+[doc-package-set]: /docs/concepts/packages/package.md#types_of_packages
 [doc-storage]: capabilities/storage.md
 [doc-topology]: topology.md
 [handler-example]: /examples/components/basic/src/lifecycle_full.rs
