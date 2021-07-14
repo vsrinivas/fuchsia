@@ -729,9 +729,9 @@ build_api_module("tool_paths") {
 group("tool_paths.metadata") {
   visibility = [ ":tool_paths" ]
   prebuilt_tools = [
-    "$rustc_tool_dir/cargo",
-    "$rustc_tool_dir/rustc",
-    "$rustc_tool_dir/rustdoc",
+    "$rustc_prefix/cargo",
+    "$rustc_prefix/rustc",
+    "$rustc_prefix/rustdoc",
     "//garnet/bin/perfcompare",
 
     # reclient is using fairly generic names (bootstrap, dumpstats). We may

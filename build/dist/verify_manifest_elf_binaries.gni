@@ -49,10 +49,8 @@ template("verify_manifest_elf_binaries") {
     if (defined(invoker.check_debug_files) && invoker.check_debug_files) {
       args += [
         "--check-debug-files",
-
-        # NOTE: rustc_prefix is already rebased!
         "--toolchain-lib-dir=${rebased_clang_prefix}/../lib",
-        "--toolchain-lib-dir=${rustc_prefix}/../lib",
+        "--toolchain-lib-dir=${rebased_rustc_prefix}/../lib",
       ]
     }
     deps = invoker.deps

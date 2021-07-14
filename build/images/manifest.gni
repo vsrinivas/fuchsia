@@ -10,14 +10,20 @@ import("//build/toolchain/runtime/toolchain_runtime_deps.gni")
 
 declare_args() {
   # Path to Clang lib directory.
-  clang_lib_dir = "${rebased_clang_prefix}/../lib"
+  clang_lib_dir = "${clang_prefix}/../lib"
 
   # Path to rustc lib directory.
-  rustc_lib_dir = rebase_path("${rustc_prefix}/../lib", root_build_dir)
+  rustc_lib_dir = "${rustc_prefix}/../lib"
 
   # Extra args to globally apply to the manifest generation script.
   extra_manifest_args = []
 }
+
+# Rebased versions of `clang_lib_dir` and `rustc_lib_dir`.
+# Note that this operation also replaces '.../bin/../lib' in
+# the paths with '.../lib'
+rebased_clang_lib_dir = rebase_path(clang_lib_dir, root_build_dir)
+rebased_rustc_lib_dir = rebase_path(rustc_lib_dir, root_build_dir)
 
 # Action target that generates a manifest file in the `target=/abs/file`
 # format used by `zbi`, `blobfs`, etc.  ELF files in the manifest have
@@ -114,8 +120,8 @@ template("generate_manifest") {
              "--stripped-dir=" + rebase_path(stripped_dir, root_build_dir),
              "--build-id-dir=" +
                  rebase_path("$root_build_dir/.build-id", root_build_dir),
-             "--toolchain-lib-dir=" + clang_lib_dir,
-             "--toolchain-lib-dir=" + rustc_lib_dir,
+             "--toolchain-lib-dir=" + rebased_clang_lib_dir,
+             "--toolchain-lib-dir=" + rebased_rustc_lib_dir,
              "@" + rebase_path(response_file, root_build_dir),
            ]
   }

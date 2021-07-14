@@ -161,7 +161,7 @@ foreach(entry, _clang_runtime) {
 _clang_runtime = []
 _clang_runtime = _new_clang_runtime
 
-_rustc_lib_dir = rebase_path("$rustc_prefix/../lib", ".", root_build_dir)
+_rustc_lib_dir = "$rustc_prefix/../lib"
 _rustc_runtime_file = "$_rustc_lib_dir/runtime.json"
 _rustc_runtime = read_file(_rustc_runtime_file, "json")
 

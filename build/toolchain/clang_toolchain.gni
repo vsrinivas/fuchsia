@@ -88,6 +88,8 @@ template("clang_toolchain") {
           rebase_path("//build/rbe/rustc-remote-wrapper.sh", root_build_dir)
     }
 
+    rebased_rust_sysroot = rebase_path(rust_sysroot, root_build_dir)
+
     # Configure Rust remote builds.
     _rust_wrapper = ""
     _rust_concurrent_jobs = concurrent_jobs.local
@@ -108,7 +110,7 @@ template("clang_toolchain") {
     cxx = "${prefix}/clang++"
     ar = "${prefix}/llvm-ar"
     ld = cxx
-    rustc = "${rustc_prefix}/rustc"
+    rustc = "${rebased_rustc_prefix}/rustc"
     verify_depfile = string_join(" ",
                                  [
                                    rebase_path(python_exe_src, root_build_dir),
@@ -287,7 +289,7 @@ template("clang_toolchain") {
               " -entry \".debug=$unstripped_outfile\""
         }
       }
-      rust_sysroot = "$rust_sysroot"
+      rust_sysroot = "$rebased_rust_sysroot"
     }
 
     tool("rust_rlib") {
@@ -306,7 +308,7 @@ template("clang_toolchain") {
           [ "{{output_dir}}/lib{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{target_out_dir}}"
       default_output_extension = ".rlib"
-      rust_sysroot = "$rust_sysroot"
+      rust_sysroot = "$rebased_rust_sysroot"
     }
 
     tool("rust_staticlib") {
@@ -325,7 +327,7 @@ template("clang_toolchain") {
       default_output_dir = "{{target_out_dir}}"
       default_output_extension = ".a"
       output_prefix = "lib"
-      rust_sysroot = "$rust_sysroot"
+      rust_sysroot = "$rebased_rust_sysroot"
     }
 
     tool("rust_cdylib") {
@@ -416,7 +418,7 @@ template("clang_toolchain") {
               " -entry \".debug=$unstripped_outfile\""
         }
       }
-      rust_sysroot = "$rust_sysroot"
+      rust_sysroot = "$rebased_rust_sysroot"
     }
 
     tool("rust_dylib") {
@@ -489,7 +491,7 @@ template("clang_toolchain") {
               " -entry \".debug=$unstripped_outfile\""
         }
       }
-      rust_sysroot = "$rust_sysroot"
+      rust_sysroot = "$rebased_rust_sysroot"
     }
 
     tool("rust_macro") {
@@ -511,7 +513,7 @@ template("clang_toolchain") {
         default_output_extension = ".so"
       }
       output_prefix = "lib"
-      rust_sysroot = "$rust_sysroot"
+      rust_sysroot = "$rebased_rust_sysroot"
     }
 
     tool("alink") {

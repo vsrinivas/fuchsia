@@ -7,11 +7,9 @@ import("//build/config/compiler.gni")
 import("//build/config/sysroot.gni")
 import("//build/fidl/toolchain.gni")
 
-default_rust_sysroot =
-    rebase_path("//prebuilt/third_party/rust/${host_platform}", root_build_dir)
+default_rust_sysroot = "//prebuilt/third_party/rust/${host_platform}"
 
-default_rustc_tool_dir = "//prebuilt/third_party/rust/${host_platform}/bin"
-default_rustc_prefix = rebase_path(default_rustc_tool_dir, root_build_dir)
+default_rustc_prefix = "//prebuilt/third_party/rust/${host_platform}/bin"
 
 _rustc_version = read_file(
         "//prebuilt/third_party/rust/${host_platform}/.versions/rust.cipd_version",
@@ -71,12 +69,9 @@ if (rustc_prefix == default_rustc_prefix &&
       "WARNING: Using prebuilt toolchain, but rustc_version_string is set! Toolchain updates won't be detected.")
 }
 
-# rustc_tool_dir: Like rustc_prefix, but an absolute path.
-if (rustc_prefix == default_rustc_prefix) {
-  rustc_tool_dir = default_rustc_tool_dir
-} else {
-  rustc_tool_dir = rebase_path(rustc_prefix, "", root_build_dir)
-}
+# rust_prefix path rebased to root_build_dir, useful in string expansions
+# that go into command arguments.
+rebased_rustc_prefix = rebase_path(rustc_prefix, root_build_dir)
 
 if (is_fuchsia) {
   rust_panic = "abort"
