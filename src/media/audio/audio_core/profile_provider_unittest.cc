@@ -30,21 +30,6 @@ class ProfileProviderTest : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
 };
 
-TEST_F(ProfileProviderTest, CallRegisterHandler) {
-  bool called = false;
-  ASSERT_TRUE(fake_profile_provider_.SetProfile(24));
-  zx::thread self;
-  ASSERT_EQ(zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &self), ZX_OK);
-  profile_provider_->RegisterHandler(std::move(self), "test", zx::duration(10000000).to_nsecs(),
-                                     [&called](uint64_t period, uint64_t capacity) {
-                                       ASSERT_EQ(period, 0UL);
-                                       ASSERT_EQ(capacity, 0UL);
-                                       called = true;
-                                     });
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-}
-
 TEST_F(ProfileProviderTest, CallRegisterHandlerWithCapacity) {
   bool called = false;
   zx::thread self;
