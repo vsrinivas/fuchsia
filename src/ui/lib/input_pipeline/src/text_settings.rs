@@ -39,6 +39,7 @@ impl InputHandler for Handler {
                 let keymap_id = match *self.keymap_id.lock().await {
                     Some(ref id) => match id {
                         fkeymap::Id::FrAzerty => Some("FR_AZERTY".to_owned()),
+                        fkeymap::Id::UsDvorak => Some("US_DVORAK".to_owned()),
                         fkeymap::Id::UsQwerty | fkeymap::IdUnknown!() => {
                             Some("US_QWERTY".to_owned())
                         }
@@ -150,6 +151,7 @@ mod tests {
             Test { keymap_id: None, expected: Some("US_QWERTY".to_owned()) },
             Test { keymap_id: Some(fkeymap::Id::UsQwerty), expected: Some("US_QWERTY".to_owned()) },
             Test { keymap_id: Some(fkeymap::Id::FrAzerty), expected: Some("FR_AZERTY".to_owned()) },
+            Test { keymap_id: Some(fkeymap::Id::UsDvorak), expected: Some("US_DVORAK".to_owned()) },
         ];
         for test in tests {
             let mut handler = Handler::new(test.keymap_id.clone());

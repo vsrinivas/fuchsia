@@ -16,6 +16,8 @@ flexible enum Id {
     US_QWERTY = 0;
     /// The FR AZERTY keymap.
     FR_AZERTY = 1;
+    /// The US Dvorak keymap.
+    US_DVORAK = 2;
 };
 
 /// Mutator interface to the keymap configuration.

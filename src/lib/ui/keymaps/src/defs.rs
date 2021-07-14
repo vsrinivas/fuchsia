@@ -166,7 +166,7 @@ lazy_static! {
         Some(('j', Some('J'), true).into()),
         Some(('e', Some('E'), true).into()),
         // 0x08
-        Some(('.', Some('>'), true).into()),
+        Some(('.', Some('>')).into()),
         Some(('u', Some('U'), true).into()),
         Some(('i', Some('I'), true).into()),
         Some(('d', Some('D'), true).into()),
@@ -181,18 +181,18 @@ lazy_static! {
         Some(('r', Some('R'), true).into()),
         Some(('l', Some('L'), true).into()),
         // 0x14
-        Some(('\'', Some('"'), true).into()),
+        Some(('\'', Some('"')).into()),
         Some(('p', Some('P'), true).into()),
         Some(('o', Some('O'), true).into()),
         Some(('y', Some('Y'), true).into()),
         // 0x18
         Some(('g', Some('G'), true).into()),
         Some(('k', Some('K'), true).into()),
-        Some((',', Some('<'), true).into()),
+        Some((',', Some('<')).into()),
         Some(('q', Some('Q'), true).into()),
         // 0x1c
         Some(('f', Some('F'), true).into()),
-        Some((';', Some(':'), true).into()),
+        Some((';', Some(':')).into()),
         Some(('1', Some('!')).into()),
         Some(('2', Some('@')).into()),
         // 0x20
@@ -219,14 +219,14 @@ lazy_static! {
         Some(('=', Some('+')).into()),
         Some(('\\', Some('|')).into()),
         None,
-        Some(('s', Some('S')).into()),
+        Some(('s', Some('S'), true).into()),
         // 0x34
         Some(('-', Some('_')).into()),
         Some(('`', Some('~')).into()),
-        Some(('w', Some('W')).into()),
-        Some(('v', Some('V')).into()),
+        Some(('w', Some('W'), true).into()),
+        Some(('v', Some('V'), true).into()),
         // 0x38
-        Some(('z', Some('Z')).into()),
+        Some(('z', Some('Z'), true).into()),
         None,
         None,
         None,

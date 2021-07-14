@@ -11,7 +11,7 @@ pub struct Command {
     #[argh(
         option,
         from_str_fn(to_keymap_id),
-        description = "the keymap to use, one of US_QWERTY,FR_AZERTY"
+        description = "the keymap to use, one of US_QWERTY,FR_AZERTY,US_DVORAK"
     )]
     pub keymap: fkeymap::Id,
 }
@@ -20,6 +20,7 @@ fn to_keymap_id(value: &str) -> Result<fkeymap::Id, String> {
     match value {
         "US_QWERTY" => Ok(fkeymap::Id::UsQwerty),
         "FR_AZERTY" => Ok(fkeymap::Id::FrAzerty),
+        "US_DVORAK" => Ok(fkeymap::Id::UsDvorak),
         _ => Err(format!("keymap identifier not recognized: {}", value)),
     }
 }
