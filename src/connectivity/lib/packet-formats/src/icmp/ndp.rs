@@ -53,6 +53,53 @@ pub struct RouterSolicitation {
 
 impl_icmp_message!(Ipv6, RouterSolicitation, RouterSolicitation, IcmpUnusedCode, Options<B>);
 
+/// The preference for a route as defined by [RFC 4191 section 2.1].
+///
+/// [RFC 4191 section 2.1]: https://datatracker.ietf.org/doc/html/rfc4191#section-2.1
+#[allow(missing_docs)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum RoutePreference {
+    High,
+    Medium,
+    Low,
+    Reserved,
+}
+
+impl Default for RoutePreference {
+    fn default() -> RoutePreference {
+        // As per RFC 4191 section 2.1,
+        //
+        //   Preference values are encoded as a two-bit signed integer, as
+        //   follows:
+        //
+        //      01      High
+        //      00      Medium (default)
+        //      11      Low
+        //      10      Reserved - MUST NOT be sent
+        RoutePreference::Medium
+    }
+}
+
+impl core::convert::From<RoutePreference> for u8 {
+    fn from(v: RoutePreference) -> u8 {
+        // As per RFC 4191 section 2.1,
+        //
+        //   Preference values are encoded as a two-bit signed integer, as
+        //   follows:
+        //
+        //      01      High
+        //      00      Medium (default)
+        //      11      Low
+        //      10      Reserved - MUST NOT be sent
+        match v {
+            RoutePreference::High => 0b01,
+            RoutePreference::Medium => 0b00,
+            RoutePreference::Low => 0b11,
+            RoutePreference::Reserved => 0b10,
+        }
+    }
+}
+
 /// An NDP Router Advertisement.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned, PartialEq, Eq)]
 #[repr(C)]
@@ -83,11 +130,60 @@ impl RouterAdvertisement {
     /// within the network.
     const OTHER_CONFIGURATION_FLAG: u8 = 0x40;
 
+    // As per RFC 4191 section 2.2,
+    //
+    //      0                   1                   2                   3
+    //      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    //     |     Type      |     Code      |          Checksum             |
+    //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    //     | Cur Hop Limit |M|O|H|Prf|Resvd|       Router Lifetime         |
+    //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    //     |                         Reachable Time                        |
+    //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    //     |                          Retrans Timer                        |
+    //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    //
+    //  Fields:
+    //
+    //   Prf (Default Router Preference)
+    //            2-bit signed integer.  Indicates whether to prefer this
+    //            router over other default routers.  If the Router Lifetime
+    //            is zero, the preference value MUST be set to (00) by the
+    //            sender and MUST be ignored by the receiver.  If the Reserved
+    //            (10) value is received, the receiver MUST treat the value as
+    //            if it were (00).
+    const DEFAULT_ROUTER_PREFERENCE_SHIFT: u8 = 3;
+    const DEFAULT_ROUTER_PREFERENCE_MASK: u8 = 0b11 << Self::DEFAULT_ROUTER_PREFERENCE_SHIFT;
+
     /// Creates a new Router Advertisement with the specified field values.
+    ///
+    /// Equivalent to calling `with_prf` with a default preference value.
     pub fn new(
         current_hop_limit: u8,
         managed_flag: bool,
         other_config_flag: bool,
+        router_lifetime: u16,
+        reachable_time: u32,
+        retransmit_timer: u32,
+    ) -> Self {
+        Self::with_prf(
+            current_hop_limit,
+            managed_flag,
+            other_config_flag,
+            RoutePreference::default(),
+            router_lifetime,
+            reachable_time,
+            retransmit_timer,
+        )
+    }
+
+    /// Creates a new Router Advertisement with the specified field values.
+    pub fn with_prf(
+        current_hop_limit: u8,
+        managed_flag: bool,
+        other_config_flag: bool,
+        preference: RoutePreference,
         router_lifetime: u16,
         reachable_time: u32,
         retransmit_timer: u32,
@@ -101,6 +197,9 @@ impl RouterAdvertisement {
         if other_config_flag {
             configuration_mo |= Self::OTHER_CONFIGURATION_FLAG;
         }
+
+        configuration_mo |= (u8::from(preference) << Self::DEFAULT_ROUTER_PREFERENCE_SHIFT)
+            & Self::DEFAULT_ROUTER_PREFERENCE_MASK;
 
         Self {
             current_hop_limit,
@@ -712,6 +811,8 @@ mod tests {
     use net_types::ip::{Ip, IpAddress};
     use packet::serialize::Serializer;
     use packet::{InnerPacketBuilder, ParseBuffer};
+    use test_case::test_case;
+    use zerocopy::LayoutVerified;
 
     use super::*;
     use crate::icmp::{IcmpPacket, IcmpPacketBuilder, IcmpParseArgs};
@@ -1035,5 +1136,123 @@ mod tests {
             .as_ref()
             .to_vec();
         assert_eq!(&serialized, &ADVERTISEMENT_IP_PACKET_BYTES);
+    }
+
+    struct SerializeRATest {
+        hop_limit: u8,
+        managed_flag: bool,
+        other_config_flag: bool,
+        preference: RoutePreference,
+        router_lifetime_seconds: u16,
+        reachable_time_seconds: u32,
+        retransmit_timer_seconds: u32,
+    }
+
+    #[test_case(
+        SerializeRATest{
+            hop_limit: 1,
+            managed_flag: true,
+            other_config_flag: false,
+            preference: RoutePreference::High,
+            router_lifetime_seconds: 1_000,
+            reachable_time_seconds: 1_000_000,
+            retransmit_timer_seconds: 5,
+        }; "test_1")]
+    #[test_case(
+        SerializeRATest{
+            hop_limit: 64,
+            managed_flag: false,
+            other_config_flag: true,
+            preference: RoutePreference::Low,
+            router_lifetime_seconds: 5,
+            reachable_time_seconds: 23425621,
+            retransmit_timer_seconds: 13252521,
+        }; "test_2")]
+    fn serialize_router_advertisement(test: SerializeRATest) {
+        let SerializeRATest {
+            hop_limit,
+            managed_flag,
+            other_config_flag,
+            preference,
+            router_lifetime_seconds,
+            reachable_time_seconds,
+            retransmit_timer_seconds,
+        } = test;
+
+        const SRC_IP: Ipv6Addr =
+            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+        const DST_IP: Ipv6Addr =
+            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17]);
+        let serialized = packet::EmptyBuf
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                SRC_IP,
+                DST_IP,
+                IcmpUnusedCode,
+                RouterAdvertisement::with_prf(
+                    hop_limit,
+                    managed_flag,
+                    other_config_flag,
+                    preference,
+                    router_lifetime_seconds,
+                    reachable_time_seconds,
+                    retransmit_timer_seconds,
+                ),
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+
+        // As per RFC 4191 section 2.2,
+        //
+        //      0                   1                   2                   3
+        //      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //     |     Type      |     Code      |          Checksum             |
+        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //     | Cur Hop Limit |M|O|H|Prf|Resvd|       Router Lifetime         |
+        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //     |                         Reachable Time                        |
+        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //     |                          Retrans Timer                        |
+        //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //
+        // As  per RFC 4861 section 4.2,
+        //
+        //    ICMP Fields:
+        //
+        //      Type           134
+        //
+        //      Code           0
+        const RA_LEN: u32 = 16;
+        let mut expected = [0; RA_LEN as usize];
+        expected[0] = 134;
+        expected[4] = hop_limit;
+        if managed_flag {
+            expected[5] |= 1 << 7;
+        }
+        if other_config_flag {
+            expected[5] |= 1 << 6;
+        }
+        expected[5] |= u8::from(preference) << 3;
+        let (mut router_lifetime, _rest) =
+            LayoutVerified::<_, U16>::new_from_prefix(&mut expected[6..]).unwrap();
+        router_lifetime.set(router_lifetime_seconds);
+        let (mut reachable_time, _rest) =
+            LayoutVerified::<_, U32>::new_from_prefix(&mut expected[8..]).unwrap();
+        reachable_time.set(reachable_time_seconds);
+        let (mut retransmit_timer, _rest) =
+            LayoutVerified::<_, U32>::new_from_prefix(&mut expected[12..]).unwrap();
+        retransmit_timer.set(retransmit_timer_seconds);
+
+        let mut c = internet_checksum::Checksum::new();
+        // Checksum pseudo-header.
+        c.add_bytes(SRC_IP.bytes());
+        c.add_bytes(DST_IP.bytes());
+        c.add_bytes(U32::new(RA_LEN).as_bytes());
+        c.add_bytes(&[0, crate::ip::Ipv6Proto::Icmpv6.into()]);
+        // Checksum actual message.
+        c.add_bytes(&expected[..]);
+        expected[2..4].copy_from_slice(&c.checksum()[..]);
+
+        assert_eq!(serialized.as_ref(), &expected[..]);
     }
 }

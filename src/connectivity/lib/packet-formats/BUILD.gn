@@ -27,6 +27,8 @@ rustc_library("packet-formats") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [ "//third_party/rust_crates:test-case" ]
+
   sources = [
     "src/arp.rs",
     "src/error.rs",
