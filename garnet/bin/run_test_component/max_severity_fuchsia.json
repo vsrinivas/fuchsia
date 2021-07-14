@@ -54,7 +54,7 @@
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/fvm-test#meta/fvm-test.cmx"
+            "url": "fuchsia-pkg://fuchsia.com/fvm-integration-test#meta/fvm-integration-test.cmx"
         },
         {
             "max_severity": "ERROR",

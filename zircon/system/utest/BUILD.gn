@@ -23,7 +23,6 @@ group("tests") {
     "fidl-utils:tests",
     "fpu:tests",
     "fs-test-utils:tests",
-    "fvm:tests",
     "getentropy:tests",
     "inspector:tests",
     "int-types:tests",

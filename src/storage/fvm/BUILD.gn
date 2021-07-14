@@ -4,10 +4,12 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 group("tests") {
   testonly = true
   deps = [
+    ":fvm-integration-test",
     ":fvm_unit($host_toolchain)",
     ":test_package",
     "//src/storage/fvm/driver:tests",
@@ -105,4 +107,56 @@ fuchsia_component("fvm_unit_test_component") {
 fuchsia_test_package("test_package") {
   package_name = "fvm-tests"
   test_components = [ ":fvm_unit_test_component" ]
+}
+
+test("fvm-integration") {
+  output_name = "fvm-integration-test"
+  sources = [
+    "fvm_integration_test.cc",
+    "resize_integration_test.cc",
+  ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/storage/fs_management",
+    "//src/storage/blobfs",
+    "//src/storage/fvm",
+    "//src/storage/memfs",
+    "//src/storage/minfs",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/devmgr-launcher",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fvm-devices",
+    "//zircon/system/ulib/ramdevice-client",
+  ]
+}
+
+isolated_devmgr_unittest_package("fvm-integration-test") {
+  executable_path = "test/fvm-integration-test"
+
+  deps = [
+    ":fvm-integration",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
+    "//src/storage/fvm/driver",
+  ]
 }
