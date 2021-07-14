@@ -18,51 +18,22 @@ log anything more severe than `INFO`.
 
 For instance, to allow a test to produce `ERROR` logs:
 
-  * {Using fuchsia\_test\_package}
+```gn
+fuchsia_component("my-package") {
+  testonly = true
+  manifest = "meta/my-test.cmx"
+  deps = [ ":my_test" ]
+}
 
-  ```gn
-  fuchsia_component("my-package") {
-    testonly = true
-    manifest = "meta/my-test.cmx"
-    deps = [ ":my_test" ]
+fuchsia_test_package("my-package") {
+  test_specs = {
+      log_settings = {
+        max_severity = "ERROR"
+      }
   }
-
-  fuchsia_test_package("my-package") {
-    test_specs = {
-        log_settings = {
-          max_severity = "ERROR"
-        }
-    }
-    test_components = [ ":my-test" ]
-  }
-  ```
-
-  * {Using test\_package}
-
-  ```gn
-  test_package("my-package") {
-    deps = [
-      ":my_test",
-    ]
-
-    meta = []
-      {
-        path = rebase_path("meta/my-test.cmx")
-        dest = "my-test.cmx"
-      },
-    ]
-
-    tests = [
-      {
-        log_settings = {
-          max_severity = "ERROR"
-        }
-        name = "my_test"
-        environments = basic_envs
-      },
-    ]
-  }
-  ```
+  test_components = [ ":my-test" ]
+}
+```
 
 To make the test fail on any message more severe than `INFO`,
 set `max_severity` to `"INFO"`.
