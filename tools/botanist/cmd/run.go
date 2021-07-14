@@ -223,6 +223,11 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		if err := r.startTargets(ctx, targets, socketPath); err != nil {
 			return fmt.Errorf("%s: %w", constants.FailedToStartTargetMsg, err)
 		}
+		for _, t := range targets {
+			if err := r.addPackageRepo(ctx, t); err != nil {
+				return err
+			}
+		}
 		defer func() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			defer cancel()
@@ -291,27 +296,22 @@ func (r *RunCommand) setupSSHEnvironment(ctx context.Context, t target.Target, s
 	}
 
 	var addr net.IPAddr
-	if configuredIP, ok := r.getConfiguredTargetIP(t); ok {
-		addr.IP = configuredIP
-		env[constants.IPv4AddrEnvKey] = addr.String()
-	} else {
-		ipv4Addr, ipv6Addr, err := r.resolveTargetIP(ctx, t, socketPath)
-		if err != nil {
-			return nil, cleanups, err
-		} else if ipv4Addr == nil && ipv6Addr.IP == nil {
-			return nil, cleanups, fmt.Errorf("failed to resolve an IP address for %s", t.Nodename())
-		}
-		if ipv4Addr != nil {
-			addr.IP = ipv4Addr
-			logger.Debugf(ctx, "IPv4 address of %s found: %s", t.Nodename(), ipv4Addr)
-			env[constants.IPv4AddrEnvKey] = ipv4Addr.String()
-		}
-		if ipv6Addr.IP != nil {
-			// Prefer IPv6 if both IPv4 and IPv6 are available.
-			addr = ipv6Addr
-			logger.Debugf(ctx, "IPv6 address of %s found: %s", t.Nodename(), ipv6Addr)
-			env[constants.IPv6AddrEnvKey] = ipv6Addr.String()
-		}
+	ipv4Addr, ipv6Addr, err := r.resolveTargetIP(ctx, t, socketPath)
+	if err != nil {
+		return nil, cleanups, err
+	} else if ipv4Addr == nil && ipv6Addr.IP == nil {
+		return nil, cleanups, fmt.Errorf("failed to resolve an IP address for %s", t.Nodename())
+	}
+	if ipv4Addr != nil {
+		addr.IP = ipv4Addr
+		logger.Debugf(ctx, "IPv4 address of %s found: %s", t.Nodename(), ipv4Addr)
+		env[constants.IPv4AddrEnvKey] = ipv4Addr.String()
+	}
+	if ipv6Addr.IP != nil {
+		// Prefer IPv6 if both IPv4 and IPv6 are available.
+		addr = ipv6Addr
+		logger.Debugf(ctx, "IPv6 address of %s found: %s", t.Nodename(), ipv6Addr)
+		env[constants.IPv6AddrEnvKey] = ipv6Addr.String()
 	}
 	env[constants.DeviceAddrEnvKey] = addr.String()
 
@@ -333,15 +333,6 @@ func (r *RunCommand) setupSSHEnvironment(ctx context.Context, t target.Target, s
 	}
 	cleanups = append(cleanups, client.Close)
 
-	if r.repoURL != "" {
-		if err := botanist.AddPackageRepository(ctx, client, r.repoURL, r.blobURL); err != nil {
-			if err := r.dumpSyslogOverSerial(ctx, socketPath); err != nil {
-				logger.Errorf(ctx, err.Error())
-			}
-			return nil, cleanups, fmt.Errorf("%s: %w", constants.PackageRepoSetupErrorMsg, err)
-		}
-	}
-
 	if r.syslogFile != "" {
 		stopStreaming, err := r.startSyslogStream(ctx, client)
 		if err != nil {
@@ -356,6 +347,50 @@ func (r *RunCommand) setupSSHEnvironment(ctx context.Context, t target.Target, s
 
 	env[constants.SSHKeyEnvKey] = t.SSHKey()
 	return env, cleanups, nil
+}
+
+func (r *RunCommand) addPackageRepo(ctx context.Context, t target.Target) error {
+	if r.repoURL == "" {
+		return nil
+	}
+	// TODO: This function really shouldn't need to resolve IP/create an SSH
+	// client, but the existing code flow + the restrictive target interface
+	// prevents an easy way to reuse this information across functions.
+	// We should refactor this to avoid the overhead in the future.
+	ipv4, ipv6, err := r.resolveTargetIP(ctx, t, "")
+	if err != nil {
+		return err
+	}
+	addr := net.IPAddr{IP: ipv4}
+	if ipv6.IP != nil {
+		addr = ipv6
+	}
+	p, err := ioutil.ReadFile(t.SSHKey())
+	if err != nil {
+		return err
+	}
+	config, err := sshutil.DefaultSSHConfig(p)
+	if err != nil {
+		return err
+	}
+	client, err := sshutil.NewClient(
+		ctx,
+		sshutil.ConstantAddrResolver{Addr: &net.TCPAddr{
+			IP:   addr.IP,
+			Zone: addr.Zone,
+			Port: sshutil.SSHPort,
+		}},
+		config,
+		sshutil.DefaultConnectBackoff(),
+	)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	if err := botanist.AddPackageRepository(ctx, client, r.repoURL, r.blobURL); err != nil {
+		return fmt.Errorf("%s: %w", constants.PackageRepoSetupErrorMsg, err)
+	}
+	return nil
 }
 
 func (r *RunCommand) getConfiguredTargetIP(t target.Target) (net.IP, bool) {
@@ -431,6 +466,10 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 }
 
 func (r *RunCommand) resolveTargetIP(ctx context.Context, t target.Target, socketPath string) (net.IP, net.IPAddr, error) {
+	// If the target has a preconfigured IPv4, return it and avoid an expensive resolve.
+	if configuredIP, ok := r.getConfiguredTargetIP(t); ok {
+		return configuredIP, net.IPAddr{}, nil
+	}
 	ipv4Addr, ipv6Addr, err := func() (net.IP, net.IPAddr, error) {
 		ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
