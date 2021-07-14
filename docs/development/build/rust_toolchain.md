@@ -106,7 +106,7 @@ correct package manager for your machine.
    DEV_ROOT={{ '<var>' }}DEV_ROOT{{ '</var>' }}
 
    $DEV_ROOT/infra/fuchsia/prebuilt/tools/vpython \
-     $DEV_ROOT/infra/fuchsia/recipes/recipes/rust_toolchain.resources/generate_config.py \
+     $DEV_ROOT/infra/fuchsia/recipes/recipes/contrib/rust_toolchain.resources/generate_config.py \
        config_toml \
        --clang-prefix=$DEV_ROOT/fuchsia/prebuilt/third_party/clang/linux-x64 \
        --host-sysroot=$DEV_ROOT/fuchsia/prebuilt/third_party/sysroot/linux \
@@ -114,7 +114,7 @@ correct package manager for your machine.
       | tee fuchsia-config.toml
 
    $DEV_ROOT/infra/fuchsia/prebuilt/tools/vpython \
-       $DEV_ROOT/infra/fuchsia/recipes/recipes/rust_toolchain.resources/generate_config.py \
+       $DEV_ROOT/infra/fuchsia/recipes/recipes/contrib/rust_toolchain.resources/generate_config.py \
          environment \
          --eval \
          --clang-prefix=$DEV_ROOT/fuchsia/prebuilt/third_party/clang/linux-x64 \
@@ -149,7 +149,7 @@ correct package manager for your machine.
    ( source fuchsia-env.sh && ./x.py install --config fuchsia-config.toml ) && \
    rm -rf install/fuchsia-rust/lib/.build-id && \
    $DEV_ROOT/infra/fuchsia/prebuilt/tools/vpython \
-     $DEV_ROOT/infra/fuchsia/recipes/recipes/rust_toolchain.resources/generate_config.py \
+     $DEV_ROOT/infra/fuchsia/recipes/recipes/contrib/rust_toolchain.resources/generate_config.py \
        runtime \
      | $DEV_ROOT/infra/fuchsia/prebuilt/tools/vpython \
          $DEV_ROOT/infra/fuchsia/recipes/recipe_modules/toolchain/resources/runtimes.py \
