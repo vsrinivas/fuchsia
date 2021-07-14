@@ -1833,6 +1833,7 @@ zx_status_t ClientProxy::Init(inspect::Node* parent_node, zx::channel server_cha
   node_ = parent_node->CreateChild(
       fbl::StringPrintf("%s-%d", is_vc_ ? "vc" : "primary", handler_.id()).c_str());
   is_owner_property_ = node_.CreateBool("is_owner", false);
+
   mtx_init(&task_mtx_, mtx_plain);
   auto seed = static_cast<uint32_t>(zx::clock::get_monotonic().get());
   initial_cookie_ = rand_r(&seed);

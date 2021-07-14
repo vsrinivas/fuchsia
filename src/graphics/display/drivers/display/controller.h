@@ -215,10 +215,14 @@ class Controller : public ControllerParent,
   ddk::DisplayCaptureImplProtocolClient dc_capture_;
   ddk::DisplayClampRgbImplProtocolClient dc_clamp_rgb_;
   ddk::I2cImplProtocolClient i2c_;
-  zx_time_t last_vsync_timestamp_{};
 
+  zx_time_t last_vsync_timestamp_{};
   inspect::UintProperty last_vsync_ns_property_;
   inspect::UintProperty last_vsync_interval_ns_property_;
+
+  zx_time_t last_valid_apply_config_timestamp_{};
+  inspect::UintProperty last_valid_apply_config_timestamp_ns_property_;
+  inspect::UintProperty last_valid_apply_config_interval_ns_property_;
 };
 
 }  // namespace display

@@ -511,9 +511,11 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   // that Trace Viewer looks for in its "Highlight VSync" feature.
   TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD, "display_id", display_id);
   TRACE_DURATION("gfx", "Display::Controller::OnDisplayVsync", "display_id", display_id);
+
   last_vsync_ns_property_.Set(timestamp);
   last_vsync_interval_ns_property_.Set(timestamp - last_vsync_timestamp_);
   last_vsync_timestamp_ = timestamp;
+
   fbl::AutoLock lock(mtx());
   size_t found_handles = 0;
   DisplayInfo* info = nullptr;
@@ -684,6 +686,11 @@ zx_status_t Controller::DisplayControllerInterfaceGetAudioFormat(
 
 void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc,
                              uint32_t client_stamp, uint32_t client_id) {
+  zx_time_t timestamp = zx_clock_get_monotonic();
+  last_valid_apply_config_timestamp_ns_property_.Set(timestamp);
+  last_valid_apply_config_interval_ns_property_.Set(timestamp - last_valid_apply_config_timestamp_);
+  last_valid_apply_config_timestamp_ = timestamp;
+
   fbl::Array<const display_config_t*> display_configs(new const display_config_t*[count], count);
   uint32_t display_count = 0;
   {
@@ -1136,6 +1143,10 @@ Controller::Controller(zx_device_t* parent)
   root_ = inspector_.GetRoot().CreateChild("display");
   last_vsync_ns_property_ = root_.CreateUint("last_vsync_timestamp_ns", 0);
   last_vsync_interval_ns_property_ = root_.CreateUint("last_vsync_interval_ns", 0);
+  last_valid_apply_config_timestamp_ns_property_ =
+      root_.CreateUint("last_valid_apply_config_timestamp_ns", 0);
+  last_valid_apply_config_interval_ns_property_ =
+      root_.CreateUint("last_valid_apply_config_interval_ns", 0);
 }
 
 Controller::~Controller() { zxlogf(INFO, "Controller::~Controller"); }
