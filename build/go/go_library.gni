@@ -26,11 +26,6 @@
 #     List of source files, relative to source_dir.
 #     TODO(fxbug.dev/3037): make this attribute required.
 #
-#   allow_globbing (optional)
-#     Allows a library to include all its sources without listing them.
-#     This limits what the GN dependency graph keeps track of and should
-#     only be used by third-party libraries. Defaults to false.
-#
 #   deps (optional)
 #     List of labels for Go libraries this target depends on.
 #
@@ -117,10 +112,11 @@ template("go_library") {
            ] + rebase_path(dependent_libraries, root_build_dir)
 
     if (defined(invoker.allow_globbing) && invoker.allow_globbing) {
+      assert(target_name == "syzkaller-go",
+             "allow_globbing is deprecated, see https://fxbug.dev/80334")
       assert(!defined(invoker.sources),
              "sources cannot be listed when globbing is enabled")
       args += [ "--allow-globbing" ]
-      deps += [ "//build/go:globbing_allowlist" ]
     } else {
       assert(defined(invoker.sources) && invoker.sources != [],
              "sources must be listed")
