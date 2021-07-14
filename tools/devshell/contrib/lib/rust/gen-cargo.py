@@ -51,7 +51,7 @@ def main():
         print("")
         print("Check that:")
         print(f"  - `{args.gn_target}` is an existing Rust target")
-        print("  - You ran `fx set` with --gen-cargo-toml")
+        print("  - You ran `fx set` with --cargo-toml-gen")
         print("  - You have run `fx build`")
         return 1
 
