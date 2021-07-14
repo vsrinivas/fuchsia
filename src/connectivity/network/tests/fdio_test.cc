@@ -326,7 +326,7 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
         .events = POLLOUT,
     };
   }
-  int n = poll(pfds.data(), pfds.size(), kTimeout);
+  int n = poll(pfds.data(), pfds.size(), std::chrono::milliseconds(kTimeout).count());
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(static_cast<size_t>(n), pfds.size());
   for (auto const& pfd : pfds) {

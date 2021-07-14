@@ -29,10 +29,10 @@ ssize_t fill_stream_send_buf(int fd, int peer_fd) {
     constexpr int bufsize = 1;
 #endif
 
-    socklen_t optlen = sizeof(bufsize);
-
-    EXPECT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bufsize, optlen), 0) << strerror(errno);
-    EXPECT_EQ(setsockopt(peer_fd, SOL_SOCKET, SO_RCVBUF, &bufsize, optlen), 0) << strerror(errno);
+    EXPECT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)), 0)
+        << strerror(errno);
+    EXPECT_EQ(setsockopt(peer_fd, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)), 0)
+        << strerror(errno);
   }
 
   int sndbuf_opt;

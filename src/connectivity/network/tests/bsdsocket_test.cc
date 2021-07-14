@@ -1401,7 +1401,7 @@ TEST(LocalhostTest, AcceptAfterReset) {
         .fd = server.get(),
         .events = POLLIN,
     };
-    int n = poll(&pfd, 1, kTimeout);
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
     EXPECT_EQ(pfd.revents, POLLIN);
@@ -1430,7 +1430,7 @@ TEST(LocalhostTest, AcceptAfterReset) {
         .fd = conn.get(),
     };
 
-    int n = poll(&pfd, 1, kTimeout);
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
     EXPECT_EQ(pfd.revents, POLLERR | POLLHUP);
@@ -1497,7 +1497,7 @@ TEST(NetStreamTest, UnconnectPoll) {
                                 .fd = bound.get(),
                                 .events = events,
                             }};
-    int n = poll(pfds, std::size(pfds), kTimeout);
+    int n = poll(pfds, std::size(pfds), std::chrono::milliseconds(kTimeout).count());
     EXPECT_GE(n, 0) << strerror(errno);
     EXPECT_EQ(n, static_cast<int>(std::size(pfds))) << " events = " << std::hex << events;
 
@@ -1666,7 +1666,7 @@ TEST_P(HangupTest, DuringConnect) {
         .fd = listener.get(),
         .events = POLLIN,
     };
-    int n = poll(&pfd, 1, kTimeout);
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
     ASSERT_EQ(pfd.revents, POLLIN);
@@ -1718,7 +1718,7 @@ TEST_P(HangupTest, DuringConnect) {
                 .fd = connecting_client.get(),
                 .events = POLLIN,
             };
-            int n = poll(&pfd, 1, kTimeout);
+            int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
             EXPECT_GE(n, 0) << strerror(errno);
             EXPECT_EQ(n, 1);
 #if !defined(__Fuchsia__)
@@ -1747,7 +1747,7 @@ TEST_P(HangupTest, DuringConnect) {
                 .fd = established_client.get(),
                 .events = POLLIN,
             };
-            int n = poll(&pfd, 1, kTimeout);
+            int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
             EXPECT_GE(n, 0) << strerror(errno);
             EXPECT_EQ(n, 1);
             EXPECT_EQ(pfd.revents, POLLIN);
@@ -1814,7 +1814,7 @@ TEST_P(HangupTest, DuringConnect) {
             .fd = expected.fd.get(),
             .events = POLLIN,
         };
-        int n = poll(&pfd, 1, kTimeout);
+        int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
         EXPECT_GE(n, 0) << strerror(errno);
         EXPECT_EQ(n, 1);
         EXPECT_EQ(pfd.revents, POLLIN | POLLHUP | POLLERR);
@@ -2117,7 +2117,7 @@ TEST_F(NetStreamSocketsTest, PeerClosedPOLLOUT) {
       .fd = server().get(),
       .events = POLLOUT,
   };
-  int n = poll(&pfd, 1, kTimeout);
+  int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
   EXPECT_GE(n, 0) << strerror(errno);
   EXPECT_EQ(n, 1);
   EXPECT_EQ(pfd.revents, POLLOUT | POLLERR | POLLHUP);
@@ -2322,7 +2322,7 @@ TEST(NetStreamTest, NonBlockingAcceptWrite) {
       .fd = acptfd.get(),
       .events = POLLIN,
   };
-  int n = poll(&pfd, 1, kTimeout);
+  int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(n, 1);
 
@@ -2368,7 +2368,7 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
       .fd = acptfd.get(),
       .events = POLLIN,
   };
-  int n = poll(&pfd, 1, kTimeout);
+  int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(n, 1);
 
@@ -2422,7 +2422,7 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
         .fd = connfd.get(),
         .events = POLLOUT,
     };
-    int n = poll(&pfd, 1, kTimeout);
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
 
@@ -2489,7 +2489,7 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
         .fd = connfd.get(),
         .events = POLLIN,
     };
-    int n = poll(&pfd, 1, kTimeout);
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
 
@@ -2806,7 +2806,7 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
         .events = POLLIN,
     };
 
-    int n = poll(&pfd, 1, kTimeout);
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
     EXPECT_EQ(pfd.revents, POLLIN);
@@ -2832,7 +2832,7 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
               .fd = other.get(),
               .events = POLLIN,
           };
-          int n = poll(&pfd, 1, kTimeout);
+          int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
           ASSERT_GE(n, 0) << strerror(errno);
           ASSERT_EQ(n, 1);
           EXPECT_EQ(pfd.revents, POLLIN);
@@ -3029,7 +3029,7 @@ TEST_P(IOMethodTest, NullptrFaultSTREAM) {
         .fd = client.get(),
         .events = POLLOUT,
     };
-    int n = poll(&pfd, 1, kTimeout);
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
   }
@@ -3092,7 +3092,7 @@ TEST_P(IOReadingMethodTest, DatagramSocketErrorWhileBlocked) {
   // Send a UDP packet to trigger a port unreachable response.
   ASSERT_EQ(send(fd.get(), bytes, sizeof(bytes), 0), ssize_t(sizeof(bytes))) << strerror(errno);
   // The blocking recv call should terminate with an error.
-  ASSERT_EQ(fut.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
+  ASSERT_EQ(fut.wait_for(kTimeout), std::future_status::ready);
 
   {
     // Postcondition sanity check: no pending events on the socket, the POLLERR should've been
@@ -3159,7 +3159,7 @@ void TestDatagramSocketClearPoller(bool nonblocking, F consumeError) {
     struct pollfd pfd = {
         .fd = fd.get(),
     };
-    int n = poll(&pfd, 1, kTimeout);
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
     ASSERT_EQ(pfd.revents & POLLERR, POLLERR);
@@ -3289,7 +3289,7 @@ TEST_P(ConnectingIOTest, BlockedIO) {
       .fd = listener.get(),
       .events = POLLIN,
   };
-  int n = poll(&pfd, 1, kTimeout);
+  int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(n, 1);
   ASSERT_EQ(pfd.revents, POLLIN);
@@ -3388,7 +3388,7 @@ TEST_P(ConnectingIOTest, BlockedIO) {
     }
   }
 
-  EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
+  EXPECT_EQ(fut.wait_for(kTimeout), std::future_status::ready);
 }
 
 std::string connectingIOParamsToString(const ::testing::TestParamInfo<connectingIOParams> info) {
@@ -3450,7 +3450,7 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
         .fd = listener.get(),
         .events = POLLIN,
     };
-    int n = poll(&pfd, 1, kTimeout);
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
     ASSERT_EQ(pfd.revents, POLLIN);
@@ -3476,7 +3476,7 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
         .events = POLLIN,
     };
     // When the listening socket is closed, the peer would reset the connection.
-    int n = poll(&pfd, 1, kTimeout);
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     EXPECT_GE(n, 0) << strerror(errno);
     EXPECT_EQ(n, 1);
     EXPECT_EQ(pfd.revents, POLLIN | POLLHUP | POLLERR);
@@ -3570,7 +3570,7 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
         .fd = connfd.get(),
         .events = POLLOUT,
     };
-    int n = poll(&pfd, 1, kTimeout);
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
 
@@ -3724,7 +3724,7 @@ TEST_F(NetStreamSocketsTest, Shutdown) {
       .fd = client().get(),
       .events = POLLRDHUP,
   };
-  int n = poll(&pfd, 1, kTimeout);
+  int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
   EXPECT_GE(n, 0) << strerror(errno);
   EXPECT_EQ(n, 1);
   EXPECT_EQ(pfd.revents, POLLRDHUP);
@@ -3750,7 +3750,7 @@ TEST_F(NetStreamSocketsTest, ResetOnFullReceiveBufferShutdown) {
   struct pollfd pfd = {
       .fd = client().get(),
   };
-  int n = poll(&pfd, 1, kTimeout);
+  int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(n, 1);
   EXPECT_EQ(pfd.revents, POLLHUP | POLLERR);
@@ -3796,7 +3796,7 @@ TEST_F(NetStreamSocketsTest, ShutdownReset) {
         .fd = client().get(),
         .events = POLLRDHUP,
     };
-    int n = poll(&pfd, 1, kTimeout);
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
     EXPECT_EQ(pfd.revents, POLLRDHUP);
@@ -3811,7 +3811,7 @@ TEST_F(NetStreamSocketsTest, ShutdownReset) {
   struct pollfd pfd = {
       .fd = client().get(),
   };
-  int n = poll(&pfd, 1, kTimeout);
+  int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(n, 1);
   EXPECT_EQ(pfd.revents, POLLHUP | POLLERR);
@@ -3830,23 +3830,26 @@ TEST_F(NetStreamSocketsTest, ShutdownPendingWrite) {
   // All client reads are expected to return here, including the last
   // read on receiving a FIN. Keeping a timeout for unexpected failures.
   struct timeval tv = {
-      .tv_sec = kTimeout,
+      .tv_sec = std::chrono::seconds(kTimeout).count(),
   };
   EXPECT_EQ(setsockopt(client().get(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)), 0)
       << strerror(errno);
 
   ssize_t rcvd = 0;
-  ssize_t ret;
   // Keep a large enough buffer to reduce the number of read calls, as
   // we expect the receive buffer to be filled up at this point.
   char buf[4096];
   // Each read would make room for the server to send out more data
   // that has been enqueued from successful server socket writes.
-  while ((ret = read(client().get(), &buf, sizeof(buf))) > 0) {
+  for (;;) {
+    ssize_t ret = read(client().get(), &buf, sizeof(buf));
+    ASSERT_GE(ret, 0) << strerror(errno);
+    // Expect the last read to return 0 after the stack sees a FIN.
+    if (ret == 0) {
+      break;
+    }
     rcvd += ret;
   }
-  // Expect the last read to return 0 after the stack sees a FIN.
-  EXPECT_EQ(ret, 0) << strerror(errno);
   // Expect no data drops and all written data by server is received
   // by the client().
   EXPECT_EQ(rcvd, wrote);
@@ -3927,7 +3930,7 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
       break;
     }
   }
-  ASSERT_EQ(fut.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
+  ASSERT_EQ(fut.wait_for(kTimeout), std::future_status::ready);
 
 #if !defined(__Fuchsia__)
   auto undo = disableSIGPIPE(isWrite);
@@ -4004,7 +4007,7 @@ ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flag
       EXPECT_EQ(shutdown(recvfd, SHUT_RD), 0) << strerror(errno);
       // We do not use 'timeout' because that maybe short here. We expect to succeed and hence use a
       // known large timeout to ensure the test does not hang in case underlying code is broken.
-      EXPECT_EQ(recv.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
+      EXPECT_EQ(recv.wait_for(kTimeout), std::future_status::ready);
       EXPECT_EQ(recv.get(), 0);
       break;
     }
@@ -4021,7 +4024,7 @@ ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flag
                 0)
           << strerror(errno);
       // We use a known large timeout for the same reason as for the above case.
-      EXPECT_EQ(recv.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
+      EXPECT_EQ(recv.wait_for(kTimeout), std::future_status::ready);
       EXPECT_EQ(recv.get(), 0);
       break;
     }
@@ -4139,10 +4142,9 @@ TEST_P(DatagramSendTest, DatagramSend) {
       break;
     }
   }
-  auto expect_success_timeout = std::chrono::milliseconds(kTimeout);
   auto start = std::chrono::steady_clock::now();
   EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0, &addr,
-                            &addrlen, SOCK_DGRAM, expect_success_timeout),
+                            &addrlen, SOCK_DGRAM, kTimeout),
             ssize_t(msg.size()));
   auto success_rcv_duration = std::chrono::steady_clock::now() - start;
   EXPECT_EQ(std::string(recvbuf, msg.size()), msg);
@@ -4171,7 +4173,7 @@ TEST_P(DatagramSendTest, DatagramSend) {
     }
   }
   EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0, &addr,
-                            &addrlen, SOCK_DGRAM, expect_success_timeout),
+                            &addrlen, SOCK_DGRAM, kTimeout),
             ssize_t(msg.size()));
   EXPECT_EQ(std::string(recvbuf, msg.size()), msg);
 
@@ -4242,7 +4244,7 @@ TEST(NetDatagramTest, DatagramConnectWrite) {
       .fd = recvfd.get(),
       .events = POLLIN,
   };
-  int n = poll(&pfd, 1, kTimeout);
+  int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(n, 1);
   char buf[sizeof(msg) + 1] = {};
@@ -4317,7 +4319,7 @@ TEST(NetDatagramTest, POLLOUT) {
       .fd = fd.get(),
       .events = POLLOUT,
   };
-  int n = poll(&pfd, 1, kTimeout);
+  int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(n, 1);
 
@@ -4599,11 +4601,10 @@ TEST_P(NetSocketTest, SocketPeekTest) {
             sendlen)
       << strerror(errno);
 
-  auto expect_success_timeout = std::chrono::milliseconds(kTimeout);
   auto start = std::chrono::steady_clock::now();
   // First peek on first byte.
   EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, 1, MSG_PEEK, &addr, &addrlen,
-                            socketType, expect_success_timeout),
+                            socketType, kTimeout),
             1);
   auto success_rcv_duration = std::chrono::steady_clock::now() - start;
   EXPECT_EQ(recvbuf[0], sendbuf[0]);
@@ -4618,7 +4619,7 @@ TEST_P(NetSocketTest, SocketPeekTest) {
     // TODO(https://fxbug.dev/74639) : Use SO_RCVLOWAT instead of retry.
     do {
       readLen = asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), flags, &addr,
-                                &addrlen, socketType, expect_success_timeout);
+                                &addrlen, socketType, kTimeout);
       if (HasFailure()) {
         break;
       }
@@ -4927,7 +4928,7 @@ TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
             .fd = recvfd.get(),
             .events = POLLIN,
         };
-        int n = poll(&pfd, 1, kTimeout);
+        int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
         ASSERT_GE(n, 0) << strerror(errno);
         ASSERT_EQ(n, 1);
         char buf[sizeof(msg) + 1] = {};

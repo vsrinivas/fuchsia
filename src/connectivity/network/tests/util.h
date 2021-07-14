@@ -7,10 +7,9 @@
 
 #include <sys/types.h>
 
-#include <cstdint>
+#include <chrono>
 
-// TODO(iyerm): 10s seems too long for our test-cases
-constexpr int kTimeout = 10000;  // 10 seconds
+constexpr std::chrono::duration kTimeout = std::chrono::seconds(10);
 
 ssize_t fill_stream_send_buf(int fd, int peer_fd);
 
