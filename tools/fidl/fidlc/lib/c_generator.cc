@@ -115,6 +115,9 @@ bool IdentifierAllowed(const flat::Library* library, const flat::Name& name) {
 
 bool TypeAllowed(const flat::Library* library, const flat::Type* type) {
   assert(type != nullptr);
+  // treat box types like we do nullable structs
+  if (type->kind == flat::Type::Kind::kBox)
+    type = static_cast<const flat::BoxType*>(type)->boxed_type;
   if (type->kind == flat::Type::Kind::kIdentifier) {
     auto identifier_type = static_cast<const flat::IdentifierType*>(type);
     if (!IdentifierAllowed(library, identifier_type->name)) {
