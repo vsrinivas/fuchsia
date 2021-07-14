@@ -93,17 +93,9 @@ inbound/outbound requests to the `RfcommServer`, which manages the active RFCOMM
 between the local endpoint and any remote peers. The main entry point to this module is the
 [`RfcommServer`](src/rfcomm/server.rs).
 
-### `frame` mod
-
-The `frame` module contains the packet definitions for all of the supported RFCOMM commands.
-It includes encoding and decoding definitions to convert to & from byte buffers containing
-RFCOMM data. The module defines the data types used to store RFCOMM commands and responses - these
-types are used throughout the `rfcomm` mod. The main entry point to this module is the
-[`Frame`](src/rfcomm/frame/mod.rs) object.
-
 ### `session` mod
 
-The `session` module contains the business logic for managing an RFCOMM Session between the
+The `session` module contains the logic for managing an RFCOMM Session between the
 local endpoint and a remote peer. It contains a handler for reading incoming data from the
-remote peer, parsing into a valid RFCOMM frame, and doing the necessary RFCOMM work.
+remote peer, parsing into a valid RFCOMM frame, and doing the necessary RFCOMM operations.
 The main entry point to this module is the [`Session`](src/rfcomm/session/mod.rs) object.
