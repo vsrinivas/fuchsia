@@ -10,6 +10,22 @@ import("//build/packages/prebuilt_test_package.gni")
 # package as their prebuilt FAR tests. We use this manifest for determining
 # which test packages to enable and how each test package is run.
 #
+# test_manifest.json should contain a JSON list of objects. Each object's schema is:
+#
+#   package (required)
+#     The name of the Fuchsia package
+#     Type: string
+#
+#   component_name (required)
+#     The name of the test component.
+#     Type: string
+#
+#   archive_name (optional)
+#     The name of the archive file containing the Fuchsia package, relative to
+#     $archive_dir, below.
+#     Type: string
+#     Default: $package
+#
 # Parameters
 #
 #   archive_dir (required)
@@ -33,6 +49,10 @@ template("prebuilt_test_manifest") {
   foreach(test, manifest) {
     test_package = test.package
     component_name = test.component_name
+    archive_name = test_package
+    if (defined(test.archive_name)) {
+      archive_name = test.archive_name
+    }
     test_disabled = false
     if (defined(invoker.disabled_tests)) {
       foreach(disabled_test, invoker.disabled_tests) {
@@ -44,7 +64,7 @@ template("prebuilt_test_manifest") {
     }
     if (!test_disabled) {
       prebuilt_test_package(test_package) {
-        archive = "${invoker.archive_dir}/${test_package}.far"
+        archive = "${invoker.archive_dir}/${archive_name}.far"
         component_name = component_name
         forward_variables_from(invoker,
                                [
