@@ -8,6 +8,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/lib/fsl/handles/object_info.h"
+
 namespace scenic_impl {
 
 using fuchsia::ui::scenic::SessionEndpoints;
@@ -45,6 +47,8 @@ void Scenic::SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>
 }
 
 void Scenic::CloseSession(scheduling::SessionId session_id) {
+  FX_LOGS(INFO) << "Scenic::CloseSession() session_id=" << session_id;
+
   sessions_.erase(session_id);
 
   if (frame_scheduler_) {
@@ -122,6 +126,13 @@ void Scenic::CreateSessionT(SessionEndpoints endpoints, CreateSessionTCallback c
 
 void Scenic::CreateSessionImmediately(SessionEndpoints endpoints) {
   const SessionId session_id = scheduling::GetNextSessionId();
+
+  zx_koid_t koid;
+  zx_koid_t peer_koid;
+  std::tie(koid, peer_koid) = fsl::GetKoids(endpoints.session().channel().get());
+  FX_LOGS(INFO) << "Scenic::CreateSessionImmediately() session_id=" << session_id
+                << " koid=" << koid << " peer_koid=" << peer_koid;
+
   auto destroy_session_function = [this, session_id](auto...) { CloseSession(session_id); };
 
   auto session = std::make_unique<scenic_impl::Session>(
