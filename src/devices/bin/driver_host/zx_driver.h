@@ -27,8 +27,7 @@ struct BindContext {
 struct CreationContext {
   fbl::RefPtr<zx_device_t> parent;
   fbl::RefPtr<zx_device_t> child;
-  zx::unowned_channel device_controller_rpc;
-  fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client;
+  fidl::WireSharedClient<fuchsia_device_manager::Coordinator> coordinator_client;
 };
 
 void set_bind_context(internal::BindContext* ctx);

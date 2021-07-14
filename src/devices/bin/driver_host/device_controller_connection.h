@@ -6,37 +6,28 @@
 #define SRC_DEVICES_BIN_DRIVER_HOST_DEVICE_CONTROLLER_CONNECTION_H_
 
 #include <fuchsia/device/manager/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/io2/llcpp/fidl.h>
-#include <lib/zx/channel.h>
 
 #include <fbl/ref_ptr.h>
-
-#include "async_loop_owned_rpc_handler.h"
 
 class DriverHostContext;
 struct zx_device;
 
 class DeviceControllerConnection
-    : public AsyncLoopOwnedRpcHandler<DeviceControllerConnection>,
-      public fidl::WireServer<fuchsia_device_manager::DeviceController> {
+    : public fidl::WireServer<fuchsia_device_manager::DeviceController> {
  public:
   // |ctx| must outlive this connection
-  DeviceControllerConnection(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
-                             fidl::ServerEnd<fuchsia_device_manager::DeviceController> rpc,
-                             fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client);
+  DeviceControllerConnection(
+      DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
+      fidl::WireSharedClient<fuchsia_device_manager::Coordinator> coordinator_client);
 
   // |ctx| must outlive this connection
-  static zx_status_t Create(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
-                            fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client,
-                            std::unique_ptr<DeviceControllerConnection>* conn);
+  static std::unique_ptr<DeviceControllerConnection> Create(
+      DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
+      fidl::WireSharedClient<fuchsia_device_manager::Coordinator> coordinator_client);
 
-  ~DeviceControllerConnection();
-
-  static void HandleRpc(std::unique_ptr<DeviceControllerConnection> conn,
-                        async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal);
-  zx_status_t HandleRead();
+  static void Bind(std::unique_ptr<DeviceControllerConnection> conn,
+                   fidl::ServerEnd<fuchsia_device_manager::DeviceController> request,
+                   async_dispatcher_t* dispatcher);
 
   const fbl::RefPtr<zx_device>& dev() const { return dev_; }
 
@@ -45,7 +36,8 @@ class DeviceControllerConnection
   const fbl::RefPtr<zx_device> dev_;
 
  private:
-  fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client_;
+  fidl::WireSharedClient<fuchsia_device_manager::Coordinator> coordinator_client_;
+
   // Fidl methods
   void BindDriver(BindDriverRequestView request, BindDriverCompleter::Sync& _completer) override;
   void ConnectProxy(ConnectProxyRequestView request,
@@ -57,11 +49,6 @@ class DeviceControllerConnection
   void CompleteRemoval(CompleteRemovalRequestView request,
                        CompleteRemovalCompleter::Sync& _completer) override;
   void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override;
-};
-
-struct DevhostRpcReadContext {
-  const char* path;
-  DeviceControllerConnection* conn;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_DEVICE_CONTROLLER_CONNECTION_H_

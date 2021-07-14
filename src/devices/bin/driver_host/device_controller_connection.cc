@@ -5,7 +5,7 @@
 #include "device_controller_connection.h"
 
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
 
@@ -221,35 +221,71 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalRequestView requ
 
 DeviceControllerConnection::DeviceControllerConnection(
     DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
-    fidl::ServerEnd<fuchsia_device_manager::DeviceController> rpc,
-    fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client)
+    fidl::WireSharedClient<fuchsia_device_manager::Coordinator> coordinator_client)
     : driver_host_context_(ctx),
       dev_(std::move(dev)),
       coordinator_client_(std::move(coordinator_client)) {
-  dev_->rpc = zx::unowned_channel(rpc.channel());
   dev_->coordinator_client = coordinator_client_.Clone();
-  dev_->conn.store(this);
-  set_channel(std::move(rpc.channel()));
 }
 
-DeviceControllerConnection::~DeviceControllerConnection() {
-  // Ensure that the device has no dangling references to the resources we're
-  // destroying.  This is safe because a device only ever has one associated
-  // DeviceControllerConnection.
-  dev_->conn.store(nullptr);
-  dev_->rpc = zx::unowned_channel();
+std::unique_ptr<DeviceControllerConnection> DeviceControllerConnection::Create(
+    DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
+    fidl::WireSharedClient<fuchsia_device_manager::Coordinator> coordinator_client) {
+  return std::make_unique<DeviceControllerConnection>(ctx, std::move(dev),
+                                                      std::move(coordinator_client));
 }
 
-zx_status_t DeviceControllerConnection::Create(
-    DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel controller_rpc,
-    fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client,
-    std::unique_ptr<DeviceControllerConnection>* conn) {
-  *conn = std::make_unique<DeviceControllerConnection>(
-      ctx, std::move(dev), std::move(controller_rpc), std::move(coordinator_client));
-  if (*conn == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  return ZX_OK;
+void DeviceControllerConnection::Bind(
+    std::unique_ptr<DeviceControllerConnection> conn,
+    fidl::ServerEnd<fuchsia_device_manager::DeviceController> request,
+    async_dispatcher_t* dispatcher) {
+  auto dev = conn->dev_;
+  fbl::AutoLock al(&dev->controller_lock);
+  dev->controller_binding = fidl::BindServer(
+      dispatcher, std::move(request), std::move(conn),
+      [](DeviceControllerConnection* self, fidl::UnbindInfo info,
+         fidl::ServerEnd<fuchsia_device_manager::DeviceController> server_end) {
+        auto& dev = self->dev_;
+        switch (info.reason()) {
+          case fidl::Reason::kUnbind:
+          case fidl::Reason::kClose:
+            // These are initiated by ourself.
+            break;
+          case fidl::Reason::kPeerClosed:
+            // Check if we were expecting this peer close.  If not, this could be a
+            // serious bug.
+            {
+              fbl::AutoLock al(&dev->controller_lock);
+              if (!dev->controller_binding) {
+                // We're in the middle of shutting down, so just stop processing
+                // signals and wait for the queued shutdown packet.  It has a
+                // reference to the connection, which it will use to recover
+                // ownership of it.
+                return;
+              }
+            }
+
+            // This is expected in test environments where driver_manager has
+            // terminated.
+            // TODO(fxbug.dev/52627): Support graceful termination.
+            LOGD(WARNING, *dev, "driver_manager disconnected from device %p", dev.get());
+            zx_process_exit(1);
+            break;
+          case fidl::Reason::kDispatcherError:
+          case fidl::Reason::kDecodeError:
+          case fidl::Reason::kUnexpectedMessage:
+            LOGD(FATAL, *dev, "Failed to handle RPC for device %p: %s", dev.get(),
+                 info.FormatDescription().c_str());
+            break;
+          case fidl::Reason::kEncodeError:
+            LOGD(FATAL, *dev, "Failed to encode message for device %p: %s", dev.get(),
+                 info.FormatDescription().c_str());
+            break;
+          default:
+            LOGD(FATAL, *dev, "Unknown fidl error for device %p: %s", dev.get(),
+                 info.FormatDescription().c_str());
+        }
+      });
 }
 
 // Handler for when a io.fidl open() is called on a device
@@ -260,82 +296,4 @@ void DeviceControllerConnection::Open(OpenRequestView request, OpenCompleter::Sy
          request->path.data());
   }
   driver_host_context_->DeviceConnect(this->dev(), request->flags, request->object.TakeChannel());
-}
-
-void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConnection> conn,
-                                           async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                           zx_status_t status, const zx_packet_signal_t* signal) {
-  const auto& dev = conn->dev_;
-  if (status != ZX_OK) {
-    LOGD(ERROR, *dev, "Failed to wait for device controller connection: %s",
-         zx_status_get_string(status));
-    return;
-  }
-  if (signal->observed & ZX_CHANNEL_READABLE) {
-    zx_status_t r = conn->HandleRead();
-    if (r != ZX_OK) {
-      if (dev->conn.load() == nullptr && (r == ZX_ERR_INTERNAL || r == ZX_ERR_PEER_CLOSED)) {
-        // Treat this as a PEER_CLOSED below.  It can happen if the
-        // devcoordinator sent us a request while we asked the
-        // devcoordinator to remove us.  The coordinator then closes the
-        // channel before we can reply, and the FIDL bindings convert
-        // the PEER_CLOSED on zx_channel_write() to a ZX_ERR_INTERNAL.  See fxbug.dev/33897.
-        __UNUSED auto r = conn.release();
-        return;
-      }
-      LOGD(FATAL, *dev, "Failed to handle RPC for device %p: %s", dev.get(),
-           zx_status_get_string(r));
-    }
-    BeginWait(std::move(conn), dispatcher);
-    return;
-  }
-  if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    // Check if we were expecting this peer close.  If not, this could be a
-    // serious bug.
-    if (dev->conn.load() == nullptr) {
-      // We're in the middle of shutting down, so just stop processing
-      // signals and wait for the queued shutdown packet.  It has a
-      // reference to the connection, which it will use to recover
-      // ownership of it.
-      __UNUSED auto r = conn.release();
-      return;
-    }
-
-    // This is expected in test environments where driver_manager has terminated.
-    // TODO(fxbug.dev/52627): Support graceful termination.
-    LOGD(WARNING, *dev, "driver_manager disconnected from device %p", dev.get());
-    zx_process_exit(1);
-  }
-  LOGD(WARNING, *dev, "Unexpected signal state %#08x for device %p", signal->observed, dev.get());
-  BeginWait(std::move(conn), dispatcher);
-}
-
-zx_status_t DeviceControllerConnection::HandleRead() {
-  zx::unowned_channel conn = channel();
-  uint8_t msg[8192];
-  zx_handle_info_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t msize = sizeof(msg);
-  uint32_t hcount = std::size(hin);
-  zx_status_t status = conn->read_etc(0, msg, hin, msize, hcount, &msize, &hcount);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  fidl_incoming_msg_t fidl_msg = {
-      .bytes = msg,
-      .handles = hin,
-      .num_bytes = msize,
-      .num_handles = hcount,
-  };
-
-  if (fidl_msg.num_bytes < sizeof(fidl_message_header_t)) {
-    FidlHandleInfoCloseMany(fidl_msg.handles, fidl_msg.num_handles);
-    return ZX_ERR_IO;
-  }
-
-  auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
-  DevmgrFidlTxn txn(std::move(conn), hdr->txid);
-  fidl::WireDispatch<fuchsia_device_manager::DeviceController>(
-      this, fidl::IncomingMessage::FromEncodedCMessage(&fidl_msg), &txn);
-  return txn.Status();
 }

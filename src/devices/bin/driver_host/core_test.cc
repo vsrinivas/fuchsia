@@ -22,7 +22,8 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
   FakeCoordinator() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     loop_.StartThread("driver_host-test-coordinator-loop");
   }
-  zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
+  zx_status_t Connect(async_dispatcher_t* dispatcher,
+                      fidl::ServerEnd<fuchsia_device_manager::Coordinator> request) {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
@@ -120,22 +121,24 @@ class CoreTest : public zxtest::Test {
   ~CoreTest() { internal::RegisterContextForApi(nullptr); }
 
   void Connect(fbl::RefPtr<zx_device> device) {
-    zx::channel controller_local, controller_remote;
-    ASSERT_OK(zx::channel::create(0, &controller_local, &controller_remote));
-    zx::channel coordinator_local, coordinator_remote;
-    ASSERT_OK(zx::channel::create(0, &coordinator_local, &coordinator_remote));
+    auto coordinator_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Coordinator>();
+    ASSERT_OK(coordinator_endpoints.status_value());
 
-    fidl::Client<fuchsia_device_manager::Coordinator> client;
-    client.Bind(std::move(coordinator_remote), ctx_.loop().dispatcher());
+    fidl::WireSharedClient client(std::move(coordinator_endpoints->client),
+                                  ctx_.loop().dispatcher());
 
-    std::unique_ptr<DeviceControllerConnection> conn;
-    ASSERT_OK(DeviceControllerConnection::Create(&ctx_, device, std::move(controller_local),
-                                                 std::move(client), &conn));
+    auto controller_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
+    ASSERT_OK(controller_endpoints.status_value());
 
-    ASSERT_OK(coordinator_.Connect(coordinator_.dispatcher(), std::move(coordinator_local)));
-    // Leak this here to pretend its being managed by an async loop.  It'll be later reclaimed when
-    // |device| is destroyed
-    [[maybe_unused]] auto unused = conn.release();
+    auto conn = DeviceControllerConnection::Create(&ctx_, device, std::move(client));
+
+    DeviceControllerConnection::Bind(std::move(conn), std::move(controller_endpoints->server),
+                                     ctx_.loop().dispatcher());
+
+    ASSERT_OK(
+        coordinator_.Connect(coordinator_.dispatcher(), std::move(coordinator_endpoints->server)));
+
+    clients_.push_back(controller_endpoints->client.TakeChannel());
   }
 
   // This simulates receiving an unbind and remove request from the devcoordinator.
@@ -150,6 +153,7 @@ class CoreTest : public zxtest::Test {
     ctx_.DeviceCompleteRemoval(dev);
   }
 
+  std::vector<zx::channel> clients_;
   DriverHostContext ctx_;
   fbl::RefPtr<zx_driver> drv_;
   FakeCoordinator coordinator_;

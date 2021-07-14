@@ -254,12 +254,8 @@ struct zx_device
   zx::eventpair local_event;
 
   // The RPC channel is owned by |conn|
-  // fuchsia.device.manager.DeviceController
-  zx::unowned_channel rpc;
-
-  // The RPC channel is owned by |conn|
   // fuchsia.device.manager.Coordinator
-  fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client;
+  fidl::WireSharedClient<fuchsia_device_manager::Coordinator> coordinator_client;
 
   fit::callback<void(zx_status_t)> init_cb;
 
@@ -296,7 +292,9 @@ struct zx_device
   // This is an atomic so that the connection's async loop can inspect this
   // value to determine if an expected shutdown is happening.  See comments in
   // DriverManagerRemove().
-  std::atomic<DeviceControllerConnection*> conn = nullptr;
+  fbl::Mutex controller_lock;
+  std::optional<fidl::ServerBindingRef<fuchsia_device_manager::DeviceController>> controller_binding
+      TA_GUARDED(controller_lock);
   // Actual type is DevfsVnode.  Needs to be fs::Vnode to break header cycle
   fbl::RefPtr<fs::Vnode> vnode;
 

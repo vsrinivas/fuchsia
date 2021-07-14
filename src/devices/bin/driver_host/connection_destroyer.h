@@ -21,8 +21,6 @@ class ConnectionDestroyer {
     return &destroyer;
   }
 
-  zx_status_t QueueDeviceControllerConnection(async_dispatcher_t* dispatcher,
-                                              DeviceControllerConnection* conn);
   zx_status_t QueueProxyConnection(async_dispatcher_t* dispatcher, ProxyIostate* conn);
 
  private:
@@ -38,7 +36,6 @@ class ConnectionDestroyer {
                       const zx_packet_user_t* data);
 
   enum class Type {
-    DeviceController,
     Proxy,
   };
 
