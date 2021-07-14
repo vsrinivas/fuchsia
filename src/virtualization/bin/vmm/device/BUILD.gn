@@ -13,8 +13,8 @@ group("packages") {
     ":virtio_gpu",
     ":virtio_input",
     ":virtio_magma",
-    ":virtio_net",
     ":virtio_wl",
+    "virtio_net",
     "virtio_rng",
   ]
 }
@@ -246,30 +246,6 @@ fuchsia_package_with_single_component("virtio_magma_mock_system") {
   testonly = true
   manifest = "../meta/virtio_magma.cmx"
   deps = [ ":virtio_magma_bin_mock_system" ]
-}
-
-executable("virtio_net_bin") {
-  visibility = [ ":*" ]
-
-  output_name = "virtio_net"
-  sources = [
-    "guest_ethernet.cc",
-    "guest_ethernet.h",
-    "virtio_net.cc",
-  ]
-  deps = [
-    ":virtio",
-    "//sdk/fidl/fuchsia.hardware.ethernet",
-    "//sdk/fidl/fuchsia.netstack",
-    "//sdk/lib/fit-promise",
-    "//src/connectivity/network/lib/net_interfaces/cpp",
-    "//zircon/system/ulib/async:async-cpp",
-  ]
-}
-
-fuchsia_package_with_single_component("virtio_net") {
-  manifest = "../meta/virtio_net.cmx"
-  deps = [ ":virtio_net_bin" ]
 }
 
 executable("virtio_wl_bin") {
