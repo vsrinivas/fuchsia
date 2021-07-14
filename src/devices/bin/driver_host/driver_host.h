@@ -8,7 +8,6 @@
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async/cpp/wait.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -28,7 +27,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 
-#include "async_loop_owned_rpc_handler.h"
 #include "defaults.h"
 #include "driver_host_context.h"
 #include "lock.h"
@@ -47,16 +45,14 @@ DriverHostContext* ContextForApi();
 void RegisterContextForApi(DriverHostContext* context);
 
 class DriverHostControllerConnection
-    : public AsyncLoopOwnedRpcHandler<DriverHostControllerConnection>,
-      public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
+    : public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
  public:
   // |ctx| must outlive this connection
   explicit DriverHostControllerConnection(DriverHostContext* ctx) : driver_host_context_(ctx) {}
 
-  static void HandleRpc(std::unique_ptr<DriverHostControllerConnection> conn,
-                        async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal);
-  zx_status_t HandleRead();
+  static void Bind(std::unique_ptr<DriverHostControllerConnection> conn,
+                   fidl::ServerEnd<fuchsia_device_manager::DriverHostController> request,
+                   async_dispatcher_t* dispatcher);
 
  private:
   void CreateDevice(CreateDeviceRequestView request,

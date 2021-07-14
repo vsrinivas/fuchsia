@@ -206,14 +206,12 @@ zx_driver::zx_driver(fx_logger_t* logger, std::string_view libname, InspectNodeC
 
 zx_driver::~zx_driver() { fx_logger_destroy(logger_); }
 
-zx_status_t DriverHostContext::SetupRootDevcoordinatorConnection(zx::channel ch) {
+void DriverHostContext::SetupDriverHostController(
+    fidl::ServerEnd<fuchsia_device_manager::DriverHostController> request) {
   auto conn = std::make_unique<internal::DriverHostControllerConnection>(this);
-  if (conn == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
 
-  conn->set_channel(std::move(ch));
-  return internal::DriverHostControllerConnection::BeginWait(std::move(conn), loop_.dispatcher());
+  internal::DriverHostControllerConnection::Bind(std::move(conn), std::move(request),
+                                                 loop_.dispatcher());
 }
 
 // Send message to driver_manager asking to add child device to
@@ -634,64 +632,40 @@ void DriverHostControllerConnection::Restart(RestartRequestView request,
   completer.Reply(ZX_OK);
 }
 
-zx_status_t DriverHostControllerConnection::HandleRead() {
-  zx::unowned_channel conn = channel();
-  uint8_t msg[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_info_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t msize = sizeof(msg);
-  uint32_t hcount = std::size(hin);
-  zx_status_t status = conn->read_etc(0, msg, hin, msize, hcount, &msize, &hcount);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  fidl_incoming_msg_t fidl_msg = {
-      .bytes = msg,
-      .handles = hin,
-      .num_bytes = msize,
-      .num_handles = hcount,
-  };
-
-  if (fidl_msg.num_bytes < sizeof(fidl_message_header_t)) {
-    FidlHandleInfoCloseMany(fidl_msg.handles, fidl_msg.num_handles);
-    return ZX_ERR_IO;
-  }
-
-  auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
-  DevmgrFidlTxn txn(std::move(conn), hdr->txid);
-  fidl::WireDispatch<fuchsia_device_manager::DriverHostController>(
-      this, fidl::IncomingMessage::FromEncodedCMessage(&fidl_msg), &txn);
-  return txn.Status();
-}
-
-// handles devcoordinator rpc
-
-void DriverHostControllerConnection::HandleRpc(std::unique_ptr<DriverHostControllerConnection> conn,
-                                               async_dispatcher_t* dispatcher,
-                                               async::WaitBase* wait, zx_status_t status,
-                                               const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to wait on %p from driver_manager: %s", conn.get(),
-         zx_status_get_string(status));
-    return;
-  }
-  if (signal->observed & ZX_CHANNEL_READABLE) {
-    status = conn->HandleRead();
-    if (status != ZX_OK) {
-      LOGF(FATAL, "Unhandled RPC on %p from driver_manager: %s", conn.get(),
-           zx_status_get_string(status));
-    }
-    BeginWait(std::move(conn), dispatcher);
-    return;
-  }
-  if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    // This is expected in test environments where driver_manager has terminated.
-    // TODO(fxbug.dev/52627): Support graceful termination.
-    LOGF(WARNING, "Disconnected %p from driver_manager", conn.get());
-    zx_process_exit(1);
-  }
-  LOGF(WARNING, "Unexpected signal state %#08x", signal->observed);
-  BeginWait(std::move(conn), dispatcher);
+void DriverHostControllerConnection::Bind(
+    std::unique_ptr<DriverHostControllerConnection> conn,
+    fidl::ServerEnd<fuchsia_device_manager::DriverHostController> request,
+    async_dispatcher_t* dispatcher) {
+  fidl::BindServer(dispatcher, std::move(request), std::move(conn),
+                   [](DriverHostControllerConnection* self, fidl::UnbindInfo info,
+                      fidl::ServerEnd<fuchsia_device_manager::DriverHostController> server_end) {
+                     switch (info.reason()) {
+                       case fidl::Reason::kUnbind:
+                       case fidl::Reason::kClose:
+                         // These are initiated by ourself.
+                         break;
+                       case fidl::Reason::kPeerClosed:
+                         // This is expected in test environments where driver_manager has
+                         // terminated.
+                         // TODO(fxbug.dev/52627): Support graceful termination.
+                         LOGF(WARNING, "Disconnected %p from driver_manager", self);
+                         zx_process_exit(1);
+                         break;
+                       case fidl::Reason::kDispatcherError:
+                       case fidl::Reason::kDecodeError:
+                       case fidl::Reason::kUnexpectedMessage:
+                         LOGF(FATAL, "Failed to handle RPC on %p from driver_manager: %s", self,
+                              info.FormatDescription().c_str());
+                         break;
+                       case fidl::Reason::kEncodeError:
+                         LOGF(FATAL, "Failed to encode message on %p: %s", self,
+                              info.FormatDescription().c_str());
+                         break;
+                       default:
+                         LOGF(FATAL, "Unknown fidl error on %p: %s", self,
+                              info.FormatDescription().c_str());
+                     }
+                   });
 }
 
 int main(int argc, char** argv) {
@@ -715,8 +689,9 @@ int main(int argc, char** argv) {
     LOGF(WARNING, "No root resource handle");
   }
 
-  zx::channel root_conn_channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
-  if (!root_conn_channel.is_valid()) {
+  fidl::ServerEnd<fuchsia_device_manager::DriverHostController> controller_request(
+      zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 0))));
+  if (!controller_request.is_valid()) {
     LOGF(ERROR, "Invalid root connection to driver_manager");
     return ZX_ERR_BAD_HANDLE;
   }
@@ -745,12 +720,7 @@ int main(int argc, char** argv) {
   }
   auto stop_tracing = fit::defer([]() { stop_trace_provider(); });
 
-  status = ctx.SetupRootDevcoordinatorConnection(std::move(root_conn_channel));
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to watch root connection to driver_manager: %s",
-         zx_status_get_string(status));
-    return status;
-  }
+  ctx.SetupDriverHostController(std::move(controller_request));
 
   status = ctx.inspect().Serve(zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)),
                                ctx.loop().dispatcher());

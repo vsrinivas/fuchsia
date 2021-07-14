@@ -14,7 +14,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 
-#include "async_loop_owned_event_handler.h"
 #include "inspect.h"
 #include "lock.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
@@ -30,7 +29,8 @@ class DriverHostContext {
 
   ~DriverHostContext();
 
-  zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch);
+  void SetupDriverHostController(
+      fidl::ServerEnd<fuchsia_device_manager::DriverHostController> request);
 
   void ProxyIosDestroy(const fbl::RefPtr<zx_device_t>& dev);
 
