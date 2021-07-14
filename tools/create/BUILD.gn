@@ -48,10 +48,7 @@ install_host_tools("install") {
 
 group("create") {
   testonly = true
-  deps = [
-    ":install",
-    ":tests",
-  ]
+  deps = [ ":install" ]
 }
 
 group("tests") {

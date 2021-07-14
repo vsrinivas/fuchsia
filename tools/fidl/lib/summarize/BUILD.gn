@@ -52,10 +52,7 @@ if (is_host) {
 
 group("summarize") {
   testonly = true
-  deps = [
-    ":gopkg($host_toolchain)",
-    ":tests",
-  ]
+  deps = [ ":gopkg($host_toolchain)" ]
 }
 
 group("tests") {
