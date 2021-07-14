@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
 
 import (
 	"context"
+	"errors"
 	"runtime"
 	"sync"
+	"syscall/zx"
 	"testing"
 	"time"
 
@@ -153,7 +156,6 @@ func TestDnsWatcherCancelledContext(t *testing.T) {
 }
 
 func TestDnsWatcherDisallowMultiplePending(t *testing.T) {
-	t.Skip("Go bindings don't currently support simultaneous calls, test is invalid.")
 	watcherCollection, _ := createCollection()
 
 	watcher := bindWatcher(t, watcherCollection)
@@ -167,11 +169,13 @@ func TestDnsWatcherDisallowMultiplePending(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		wg.Add(1)
 		go func() {
+			defer wg.Done()
+
+			var gotErr *zx.Error
 			_, err := watcher.WatchServers(context.Background())
-			if err == nil {
-				t.Errorf("non-nil error watching servers, expected error")
+			if !(errors.As(err, &gotErr) && gotErr.Status == zx.ErrPeerClosed) {
+				t.Errorf("got watcher.WatchServers() = (_, %s), want %s", err, zx.ErrPeerClosed)
 			}
-			wg.Done()
 		}()
 	}
 }

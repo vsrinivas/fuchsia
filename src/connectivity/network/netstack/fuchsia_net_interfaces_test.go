@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"runtime"
+	"sync"
 	"syscall/zx"
 	"testing"
 
@@ -128,6 +131,39 @@ func wantInterfaceProperties(ns *Netstack, nicid tcpip.NICID) interfaces.Propert
 		}
 	}
 	return interfaceProperties(ns.stack.NICInfo()[nicid], hasDefaultIpv4Route, hasDefaultIpv6Route, nil)
+}
+
+func TestInterfacesWatcherDisallowMultiplePending(t *testing.T) {
+	ns, _ := newNetstack(t)
+	si := &interfaceStateImpl{ns: ns}
+
+	request, watcher, err := interfaces.NewWatcherWithCtxInterfaceRequest()
+	if err != nil {
+		t.Fatalf("failed to create Watcher protocol channel pair: %s", err)
+	}
+	if err := si.GetWatcher(context.Background(), interfaces.WatcherOptions{}, request); err != nil {
+		t.Fatalf("failed to call GetWatcher: %s", err)
+	}
+	event, err := watcher.Watch(context.Background())
+	if err := assertWatchResult(event, err, interfaces.EventWithIdle(interfaces.Empty{})); err != nil {
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			_, err := watcher.Watch(context.Background())
+			var gotErr *zx.Error
+			if !(errors.As(err, &gotErr) && gotErr.Status == zx.ErrPeerClosed) {
+				t.Errorf("got watcher.Watch() = (_, %s), want %s", err, zx.ErrPeerClosed)
+			}
+		}()
+	}
 }
 
 func TestInterfacesWatcher(t *testing.T) {

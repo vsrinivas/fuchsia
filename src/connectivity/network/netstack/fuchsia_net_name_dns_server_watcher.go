@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"syscall/zx/fidl"
@@ -21,8 +23,9 @@ import (
 )
 
 type dnsServerWatcher struct {
-	parent *dnsServerWatcherCollection
-	mu     struct {
+	parent      *dnsServerWatcherCollection
+	cancelServe context.CancelFunc
+	mu          struct {
 		sync.Mutex
 		isHanging    bool
 		lastObserved []dns.Server
@@ -57,7 +60,8 @@ func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, err
 	defer w.mu.Unlock()
 
 	if w.mu.isHanging {
-		return nil, fmt.Errorf("dnsServerWatcher: not allowed to watch twice")
+		w.cancelServe()
+		return nil, errors.New("not allowed to call DnsServerWatcher.WatchServers when a call is already pending")
 	}
 
 	for {
@@ -109,14 +113,16 @@ func newDnsServerWatcherCollection(getServersCacheAndChannel func() ([]dns.Serve
 // starts serving on its channel.
 func (c *dnsServerWatcherCollection) Bind(request name.DnsServerWatcherWithCtxInterfaceRequest) error {
 	go func() {
+		ctx, cancel := context.WithCancel(context.Background())
 		watcher := dnsServerWatcher{
-			parent: c,
+			parent:      c,
+			cancelServe: cancel,
 		}
 
 		stub := name.DnsServerWatcherWithCtxStub{
 			Impl: &watcher,
 		}
-		component.ServeExclusive(context.Background(), &stub, request.Channel, func(err error) {
+		component.ServeExclusiveConcurrent(ctx, &stub, request.Channel, func(err error) {
 			// NB: this protocol is not discoverable, so the bindings do not include its name.
 			_ = syslog.WarnTf("fuchsia.net.name.DnsServerWatcher", "%s", err)
 		})

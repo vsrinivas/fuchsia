@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -9,6 +10,7 @@ package netstack
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -195,7 +197,7 @@ func (wi *interfaceWatcherImpl) Watch(ctx fidl.Context) (interfaces.Event, error
 
 	if wi.mu.isHanging {
 		wi.cancelServe()
-		return interfaces.Event{}, fmt.Errorf("not allowed to watch when a call is already in progress")
+		return interfaces.Event{}, errors.New("not allowed to call Watcher.Watch when a call is already pending")
 	}
 
 	for {
