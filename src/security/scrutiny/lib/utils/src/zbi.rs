@@ -21,10 +21,16 @@ const ZBI_TYPE_CONTAINER: u32 = 0x544f4f42;
 /// LSW of sha256("bootitem")
 const ZBI_ITEM_MAGIC: u32 = 0xb5781729;
 
+/// ZBI header size in bytes.
+const ZBI_HEADER_SIZE: u64 = 32;
+
 /// Set in the flags if the section is compressed. We assume all compression
 /// is ZSTD. If this flag is set ZbiHeader.extra will be the uncompressed
 /// size of the image.
 const ZBI_FLAG_STORAGE_COMPRESSED: u32 = 0x00000001;
+
+/// Magic number for the vboot structure which can encase a ZBI.
+const VBOOT_MAGIC: u64 = 0x534f454d4f524843;
 
 /// Defines all of the known ZBI section types. These are used to partition
 /// the Zircon boot image into sections.
@@ -104,8 +110,8 @@ impl ZbiHeader {
 
 #[derive(Error, Debug)]
 pub enum ZbiError {
-    #[error("Zbi container header type does not match expected value")]
-    InvalidContainerHeader,
+    #[error("Zbi container header type does not match expected value {0}")]
+    InvalidContainerHeader(u32),
     #[error("Zbi container header magic value doesn't match expected value {0}")]
     InvalidContainerMagic(u32),
     #[error("Zbi item header magic value doesn't match expected value")]
@@ -124,10 +130,19 @@ impl ZbiReader {
     }
 
     pub fn parse(&mut self) -> Result<Vec<ZbiSection>> {
+        // The ZBI can be wrapped inside a vboot file. If this is the
+        // case before parsing the ZBI seek out the kernel partition holding
+        // the ZBI inside the VBoot image.
+        let magic = self.cursor.read_u64::<LittleEndian>()?;
+        self.cursor.set_position(0);
+        if magic == VBOOT_MAGIC {
+            VBootSeeker::seek_to_partition(&mut self.cursor)?;
+        }
+
         // Parse the header and validate it is a ZBI.
         let container_header = ZbiHeader::parse(&mut self.cursor)?;
         if container_header.zbi_type != ZBI_TYPE_CONTAINER {
-            return Err(Error::new(ZbiError::InvalidContainerHeader {}));
+            return Err(Error::new(ZbiError::InvalidContainerHeader(container_header.zbi_type)));
         }
         if container_header.magic != ZBI_ITEM_MAGIC {
             return Err(Error::new(ZbiError::InvalidContainerMagic(container_header.magic)));
@@ -218,6 +233,27 @@ impl ZbiReader {
             zbi_type if zbi_type == ZbiType::KernelX64 as u32 => ZbiType::KernelX64,
             _ => ZbiType::Unknown,
         }
+    }
+}
+
+struct VBootSeeker {}
+
+impl VBootSeeker {
+    /// Seeks from the start of a vboot image scanning for the ZBI header that
+    /// is wrapped within it. This doesn't attempt to understand the underlying
+    /// VBoot format it just attempts to find the inner ZBI partition.
+    pub fn seek_to_partition(cursor: &mut Cursor<Vec<u8>>) -> Result<()> {
+        const SEEK_ALIGNMENT: u64 = 4;
+        let mut header = ZbiHeader::parse(cursor)?;
+        let mut cur_pos = cursor.position();
+        while header.zbi_type != ZBI_TYPE_CONTAINER || header.magic != ZBI_ITEM_MAGIC {
+            cur_pos += SEEK_ALIGNMENT;
+            cursor.set_position(cur_pos);
+            header = ZbiHeader::parse(cursor)?;
+        }
+        cursor.set_position(cursor.position() - ZBI_HEADER_SIZE);
+        info!("Found ZBI inside VBoot at position: {}", cursor.position());
+        Ok(())
     }
 }
 
