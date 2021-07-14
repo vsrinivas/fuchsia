@@ -297,7 +297,7 @@ class WithErrorSyntax_HandleInResult_Result final {
   friend ::fidl::Equality<
       ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result>;
   WithErrorSyntax_HandleInResult_Result(
-      fit::result<::zx::handle, uint32_t>&& result) {
+      fpromise::result<::zx::handle, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
       set_response(
@@ -307,18 +307,20 @@ class WithErrorSyntax_HandleInResult_Result final {
       set_err(std::move(result.take_error()));
     }
   }
-  WithErrorSyntax_HandleInResult_Result(fit::ok_result<::zx::handle>&& result)
+  WithErrorSyntax_HandleInResult_Result(
+      fpromise::ok_result<::zx::handle>&& result)
       : WithErrorSyntax_HandleInResult_Result(
-            fit::result<::zx::handle, uint32_t>(std::move(result))) {}
-  WithErrorSyntax_HandleInResult_Result(fit::error_result<uint32_t>&& result)
+            fpromise::result<::zx::handle, uint32_t>(std::move(result))) {}
+  WithErrorSyntax_HandleInResult_Result(
+      fpromise::error_result<uint32_t>&& result)
       : WithErrorSyntax_HandleInResult_Result(
-            fit::result<::zx::handle, uint32_t>(std::move(result))) {}
-  operator fit::result<::zx::handle, uint32_t>() && {
+            fpromise::result<::zx::handle, uint32_t>(std::move(result))) {}
+  operator fpromise::result<::zx::handle, uint32_t>() && {
     if (is_err()) {
-      return fit::error(err());
+      return fpromise::error(err());
     }
     ::std::tuple<::zx::handle> value_tuple = std::move(response());
-    return fit::ok(std::move(std::get<0>(value_tuple)));
+    return fpromise::ok(std::move(std::get<0>(value_tuple)));
   }
 
  private:
@@ -576,7 +578,8 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   friend ::fidl::Equality<
       ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>;
   WithErrorSyntax_ResponseAsStruct_Result(
-      fit::result<::std::tuple<int64_t, int64_t, int64_t>, uint32_t>&& result) {
+      fpromise::result<::std::tuple<int64_t, int64_t, int64_t>, uint32_t>&&
+          result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
       set_response(
@@ -587,19 +590,21 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
     }
   }
   WithErrorSyntax_ResponseAsStruct_Result(
-      fit::ok_result<::std::tuple<int64_t, int64_t, int64_t>>&& result)
+      fpromise::ok_result<::std::tuple<int64_t, int64_t, int64_t>>&& result)
       : WithErrorSyntax_ResponseAsStruct_Result(
-            fit::result<::std::tuple<int64_t, int64_t, int64_t>, uint32_t>(
+            fpromise::result<::std::tuple<int64_t, int64_t, int64_t>, uint32_t>(
                 std::move(result))) {}
-  WithErrorSyntax_ResponseAsStruct_Result(fit::error_result<uint32_t>&& result)
+  WithErrorSyntax_ResponseAsStruct_Result(
+      fpromise::error_result<uint32_t>&& result)
       : WithErrorSyntax_ResponseAsStruct_Result(
-            fit::result<::std::tuple<int64_t, int64_t, int64_t>, uint32_t>(
+            fpromise::result<::std::tuple<int64_t, int64_t, int64_t>, uint32_t>(
                 std::move(result))) {}
-  operator fit::result<::std::tuple<int64_t, int64_t, int64_t>, uint32_t>() && {
+  operator fpromise::result<::std::tuple<int64_t, int64_t, int64_t>,
+                            uint32_t>() && {
     if (is_err()) {
-      return fit::error(err());
+      return fpromise::error(err());
     }
-    return fit::ok(std::move(response()));
+    return fpromise::ok(std::move(response()));
   }
 
  private:
@@ -754,7 +759,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   friend ::fidl::Equality<
       ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>;
   WithErrorSyntax_ErrorAsPrimitive_Result(
-      fit::result<void, uint32_t>&& result) {
+      fpromise::result<void, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
       set_response(
@@ -763,17 +768,18 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
       set_err(std::move(result.take_error()));
     }
   }
-  WithErrorSyntax_ErrorAsPrimitive_Result(fit::ok_result<void>&& result)
+  WithErrorSyntax_ErrorAsPrimitive_Result(fpromise::ok_result<void>&& result)
       : WithErrorSyntax_ErrorAsPrimitive_Result(
-            fit::result<void, uint32_t>(std::move(result))) {}
-  WithErrorSyntax_ErrorAsPrimitive_Result(fit::error_result<uint32_t>&& result)
+            fpromise::result<void, uint32_t>(std::move(result))) {}
+  WithErrorSyntax_ErrorAsPrimitive_Result(
+      fpromise::error_result<uint32_t>&& result)
       : WithErrorSyntax_ErrorAsPrimitive_Result(
-            fit::result<void, uint32_t>(std::move(result))) {}
-  operator fit::result<void, uint32_t>() && {
+            fpromise::result<void, uint32_t>(std::move(result))) {}
+  operator fpromise::result<void, uint32_t>() && {
     if (is_err()) {
-      return fit::error(err());
+      return fpromise::error(err());
     }
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:
@@ -1396,7 +1402,7 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   friend ::fidl::Equality<
       ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>;
   WithErrorSyntax_ErrorAsEnum_Result(
-      fit::result<void, ::fidl::test::protocols::ErrorEnum>&& result) {
+      fpromise::result<void, ::fidl::test::protocols::ErrorEnum>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
       set_response(
@@ -1405,20 +1411,20 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
       set_err(std::move(result.take_error()));
     }
   }
-  WithErrorSyntax_ErrorAsEnum_Result(fit::ok_result<void>&& result)
+  WithErrorSyntax_ErrorAsEnum_Result(fpromise::ok_result<void>&& result)
       : WithErrorSyntax_ErrorAsEnum_Result(
-            fit::result<void, ::fidl::test::protocols::ErrorEnum>(
+            fpromise::result<void, ::fidl::test::protocols::ErrorEnum>(
                 std::move(result))) {}
   WithErrorSyntax_ErrorAsEnum_Result(
-      fit::error_result<::fidl::test::protocols::ErrorEnum>&& result)
+      fpromise::error_result<::fidl::test::protocols::ErrorEnum>&& result)
       : WithErrorSyntax_ErrorAsEnum_Result(
-            fit::result<void, ::fidl::test::protocols::ErrorEnum>(
+            fpromise::result<void, ::fidl::test::protocols::ErrorEnum>(
                 std::move(result))) {}
-  operator fit::result<void, ::fidl::test::protocols::ErrorEnum>() && {
+  operator fpromise::result<void, ::fidl::test::protocols::ErrorEnum>() && {
     if (is_err()) {
-      return fit::error(err());
+      return fpromise::error(err());
     }
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:
