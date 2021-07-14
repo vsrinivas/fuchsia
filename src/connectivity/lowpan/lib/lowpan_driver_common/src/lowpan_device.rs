@@ -87,21 +87,7 @@ pub trait Driver: Send + Sync {
     /// returns immediately.
     fn join_network(
         &self,
-        params: ProvisioningParams,
-    ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>>;
-
-    /// Commissions this device onto an unknown network.
-    ///
-    /// See [`fidl_fuchsia_lowpan_device::DeviceExtra::commission_network`] for more information.
-    ///
-    /// Note that the future returned from this method is not
-    /// for the return value, rather it is used for handling
-    /// the `progress` ServerEnd and making progress on the
-    /// `join` operation. From a FIDL point of view, this method
-    /// returns immediately.
-    fn commission_network(
-        &self,
-        secret: &[u8],
+        params: JoinParams,
     ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>>;
 
     /// Returns the value of the current credential, if one is available.
@@ -452,51 +438,6 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
                             // we only report them to the logs rather than passing
                             // them up.
                             fx_log_err!("Error during DeviceExtraRequest::FormNetwork: {:?}", err);
-                        }
-                    }
-                    DeviceExtraRequest::CommissionNetwork { secret, progress, .. } => {
-                        use fidl_fuchsia_lowpan_device::ProvisioningMonitorRequest;
-                        let stream = progress.into_stream()?;
-                        let control_handle = stream.control_handle();
-
-                        // Convert the stream of requests (of which there is only one
-                        // variant) into a stream of `ProvisioningMonitorNextResponder`
-                        // instances, for clarity.
-                        let responder_stream = stream.map_ok(|x| match x {
-                            ProvisioningMonitorRequest::WatchProgress { responder } => responder,
-                        });
-
-                        let result_stream = self.commission_network(&secret);
-
-                        // We now have a stream of responder instances which need
-                        // to be matched up to the results from the results stream.
-                        // We zip these into a single stream and then send each result
-                        // to the next responder.
-                        let ret = responder_stream
-                            .zip(result_stream)
-                            .map(move |x| match x {
-                                (Ok(responder), Ok(mut result)) => Ok(responder.send(&mut result)?),
-                                (Err(err), _) => Err(Error::from(err).context(
-                                    "DeviceExtraRequest::CommissionNetwork:responder_stream",
-                                )),
-                                (_, Err(status)) => {
-                                    control_handle.shutdown_with_epitaph(status);
-                                    Err(Error::from(status).context(
-                                        "DeviceExtraRequest::CommissionNetwork:result_stream",
-                                    ))
-                                }
-                            })
-                            .try_for_each(|_| ready(Ok(())))
-                            .await;
-
-                        if let Err(err) = ret {
-                            // These errors only affect the provisioning session, so
-                            // we only report them to the logs rather than passing
-                            // them up.
-                            fx_log_err!(
-                                "Error during DeviceExtraRequest::CommissionNetwork: {:?}",
-                                err
-                            );
                         }
                     }
                     DeviceExtraRequest::GetCredential { responder, .. } => {

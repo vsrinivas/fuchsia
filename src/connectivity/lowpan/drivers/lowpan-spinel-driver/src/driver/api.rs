@@ -465,7 +465,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
 
     fn join_network(
         &self,
-        params: ProvisioningParams,
+        params: JoinParams,
     ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
         fx_log_info!("Got join command: {:?}", params);
 
@@ -1070,44 +1070,6 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                     .collect::<Vec<_>>()
             })
             .await
-    }
-
-    fn commission_network(
-        &self,
-        _secret: &[u8],
-    ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
-        fx_log_info!("Got commission command");
-
-        let init_task = async move {
-            // Wait for our turn.
-            let _lock = self.wait_for_api_task_lock("commission_network").await?;
-
-            // Wait until we are ready.
-            self.wait_for_state(DriverState::is_initialized).await;
-
-            // TODO: Uncomment this line once implemented and remove the error line below
-            // Ok(_lock)
-            Result::<(), _>::Err(ZxStatus::NOT_SUPPORTED.into())
-        };
-
-        let stream = self.frame_handler.inspect_as_stream(|frame| {
-            fx_log_debug!("commission_network: Inspecting {:?}", frame);
-
-            // This method may return the following values:
-            //
-            // * Normal Conditions:
-            //    * None: Keep processing and emit nothing from the stream.
-            //    * Some(Ok(Some(Ok(progress)))): Emit the given progress value from the stream.
-            //    * Some(Ok(None)): Close the stream with no error.
-            // * Error Conditions:
-            //    * Some(Err(zx_error)): Close the stream with a `ZxStatus`.
-            //    * Some(Ok(Some(Err(provision_err)))): Close the stream with a `ProvisionError`
-
-            // TODO: Add code to monitor and emit results here.
-            None
-        });
-
-        self.start_ongoing_stream_process(init_task, stream, Time::INFINITE)
     }
 
     async fn replace_mac_address_filter_settings(

@@ -81,15 +81,22 @@ impl Driver for DummyDevice {
 
     fn join_network(
         &self,
-        params: ProvisioningParams,
+        params: JoinParams,
     ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
         fx_log_info!("Got join command: {:?}", params);
 
         futures::stream::empty()
             .chain(ready(Ok(Ok(dummy_device::ProvisioningProgress::Progress(0.5)))).into_stream())
             .chain(
-                ready(Ok(Ok(dummy_device::ProvisioningProgress::Identity(params.identity))))
-                    .into_stream(),
+                ready(Ok(Ok(dummy_device::ProvisioningProgress::Identity(Identity {
+                    raw_name: Some("MyNet".as_bytes().to_vec()),
+                    xpanid: Some(vec![0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77]),
+                    net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
+                    channel: Some(11),
+                    panid: Some(0x1234),
+                    ..Identity::EMPTY
+                }))))
+                .into_stream(),
             )
             .boxed()
     }
@@ -299,18 +306,6 @@ impl Driver for DummyDevice {
         fx_log_info!("Got send_mfg_command command: {:?}", command);
 
         Ok("error: The dummy driver currently has no manufacturing commands.".to_string())
-    }
-
-    fn commission_network(
-        &self,
-        secret: &[u8],
-    ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
-        fx_log_info!("Got commission command with secret {:?}", secret);
-
-        futures::stream::empty()
-            .chain(ready(Ok(Ok(dummy_device::ProvisioningProgress::Progress(0.5)))).into_stream())
-            .chain(ready(Ok(Err(ProvisionError::NetworkNotFound))).into_stream())
-            .boxed()
     }
 
     async fn replace_mac_address_filter_settings(

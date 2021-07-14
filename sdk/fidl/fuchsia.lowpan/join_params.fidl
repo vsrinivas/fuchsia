@@ -1,0 +1,18 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+/// Parameters for DeviceExtra::JoinNetwork command.
+flexible union JoinParams {
+    /// Attempts to find and join a known pre-existing network.
+    1: ProvisioningParams provisioning_parameter;
+
+    /// Attempts to find and join an unknown pre-existing network
+    /// that is configured to accept and provision devices with
+    /// the given shared secret, or PSKd. This allows new devices to
+    /// join existing networks without knowing the credentials for
+    /// the specific network.
+    2: JoinerCommissioningParams joiner_parameter;
+};

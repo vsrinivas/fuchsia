@@ -12,6 +12,8 @@ fidl("fuchsia.lowpan") {
     "channel_info.fidl",
     "credential.fidl",
     "identity.fidl",
+    "join_params.fidl",
+    "joiner_commissioning_params.fidl",
     "misc.fidl",
     "provisioning_params.fidl",
     "role.fidl",

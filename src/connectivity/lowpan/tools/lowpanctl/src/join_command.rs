@@ -6,7 +6,7 @@ use crate::context::LowpanCtlContext;
 use anyhow::{format_err, Context, Error};
 use argh::FromArgs;
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_lowpan::{Credential, Identity, ProvisioningParams};
+use fidl_fuchsia_lowpan::{Credential, Identity, JoinParams, ProvisioningParams};
 use fidl_fuchsia_lowpan_device::{ProvisioningMonitorMarker, ProvisioningProgress};
 use hex;
 
@@ -95,21 +95,21 @@ impl JoinCommand {
         Ok(cred_master_key_vec.map(|value| Box::new(Credential::MasterKey(value))))
     }
 
-    fn get_provisioning_params(&self) -> Result<ProvisioningParams, Error> {
-        Ok(ProvisioningParams {
+    fn get_join_params(&self) -> Result<JoinParams, Error> {
+        Ok(JoinParams::ProvisioningParameter(ProvisioningParams {
             identity: self.get_identity()?,
             credential: self.get_credential()?,
-        })
+        }))
     }
 
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
-        let mut provision_args = self.get_provisioning_params()?;
+        let mut join_args = self.get_join_params()?;
         let (_, device_extra, _) =
             context.get_default_device_proxies().await.context("Unable to get device instance")?;
         let (client_end, server_end) = create_endpoints::<ProvisioningMonitorMarker>()?;
         let monitor = client_end.into_proxy()?;
         device_extra
-            .join_network(&mut provision_args, server_end)
+            .join_network(&mut join_args, server_end)
             .context("Unable to send join command")?;
         loop {
             match monitor.watch_progress().await? {
