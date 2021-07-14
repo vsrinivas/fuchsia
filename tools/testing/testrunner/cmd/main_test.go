@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -16,10 +17,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
-	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
@@ -30,6 +31,10 @@ const (
 	copySinksFunc   = "EnsureSinks"
 	runSnapshotFunc = "RunSnapshot"
 )
+
+// When returned by Test(), errFatal should cause testrunner to stop running any
+// more tests.
+var errFatal = fatalError{errors.New("fatal error occurred")}
 
 type fakeTester struct {
 	testErr   error
@@ -236,16 +241,15 @@ func TestRunAndOutputTest(t *testing.T) {
 			}},
 		},
 		{
-			name: "fuchsia test ssh connection fail",
+			name: "fatal error",
 			test: build.Test{
 				Name:       "bar",
 				Path:       "/foo/bar",
 				OS:         "fuchsia",
 				PackageURL: "fuchsia-pkg://foo/bar",
 			},
-			testErr:        sshutil.ConnectionError{},
-			expectedErr:    sshutil.ConnectionError{},
-			expectedResult: nil,
+			testErr:     errFatal,
+			expectedErr: errFatal,
 		},
 		{
 			name: "multiplier test gets unique index",

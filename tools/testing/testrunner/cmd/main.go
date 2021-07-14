@@ -31,7 +31,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
 	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
@@ -381,14 +380,15 @@ func runTestOnce(
 	dataSinks, err := t.Test(ctx, test, multistdout, multistderr, outDir)
 	if err != nil {
 		if ctx.Err() != nil {
-			// testrunner is shutting down, give up running tests.
+			// testrunner is shutting down, give up running tests and don't
+			// report this test result as it may have been impacted by the
+			// context cancelation.
 			return nil, err
-		} else if sshutil.IsConnectionError(err) {
-			// TODO(olivernewman): An SSH connection error can only be produced
-			// by a fuchsiaSSHTester. Figure out a way for each tester type to
-			// expose whether a failure is "fatal" (i.e. we should just exit and
-			// not try to run any other tests) or just a regular test failure,
-			// so we don't need to have this SSH-specific logic here.
+		}
+		var errFatal fatalError
+		if errors.As(err, &errFatal) {
+			// The tester encountered a fatal condition and cannot run any more
+			// tests.
 			return nil, err
 		}
 		result = runtests.TestFailure

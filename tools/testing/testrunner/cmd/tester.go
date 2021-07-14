@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/ssh"
+
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
@@ -32,7 +34,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/serial"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
-	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -66,6 +67,18 @@ const (
 	llvmProfileExtension = ".profraw"
 	llvmProfileSinkType  = "llvm-profile"
 )
+
+// fatalError is a thin wrapper around another error. If returned by a tester's
+// Test() function, it indicates that the tester encountered a fatal error
+// condition and that testrunner should exit early with a non-zero exit code
+// rather than continuing to run tests.
+type fatalError struct {
+	error
+}
+
+func (e fatalError) Unwrap() error {
+	return e.error
+}
 
 // timeoutError should be returned by a Test() function to indicate that the
 // test timed out. It is up to each tester to enforce timeouts, since the
@@ -368,9 +381,12 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 
 	if sshutil.IsConnectionError(testErr) {
 		if err := t.serialSocket.runDiagnostics(ctx); err != nil {
-			logger.Warningf(ctx, "failed to run serial diagnostics: %v", err)
+			logger.Warningf(ctx, "failed to run serial diagnostics: %s", err)
 		}
-		return sinks, testErr
+		// If we experience a connection error then the device has likely become
+		// unresponsive and there's no use in continuing to try to run tests, so
+		// mark the error as fatal.
+		return sinks, fatalError{testErr}
 	}
 
 	if t.isTimeoutError(testErr) {
@@ -631,26 +647,26 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	lastWrite := &lastWriteSaver{}
 	startedReader := iomisc.NewMatchingReader(io.TeeReader(t.socket, lastWrite), [][]byte{[]byte(runtests.StartedSignature + test.Name)})
 	commandStarted := false
+	var readErr error
 	for i := 0; i < startSerialCommandMaxAttempts; i++ {
 		if err := serial.RunCommands(ctx, t.socket, []serial.Command{{Cmd: command}}); err != nil {
 			return sinks, fmt.Errorf("failed to write to serial socket: %w", err)
 		}
 		startedCtx, cancel := newTestStartedContext(ctx)
-		_, err := iomisc.ReadUntilMatch(startedCtx, startedReader)
+		_, readErr = iomisc.ReadUntilMatch(startedCtx, startedReader)
 		cancel()
-		if err == nil {
+		if readErr == nil {
 			commandStarted = true
 			break
-		} else if errors.Is(err, startedCtx.Err()) {
-			logger.Warningf(ctx, "test not started after timeout, retrying")
+		} else if errors.Is(readErr, startedCtx.Err()) {
+			logger.Warningf(ctx, "test not started after timeout")
 		} else {
-			logger.Errorf(ctx, "unexpected error checking for test start signature: %s", err)
+			logger.Errorf(ctx, "unexpected error checking for test start signature: %s", readErr)
 		}
 	}
 	if !commandStarted {
-		return sinks, fmt.Errorf(
-			"failed to start test within %d attempts: %w",
-			startSerialCommandMaxAttempts, err)
+		return sinks, fmt.Errorf("failed to start test within %d attempts: %w",
+			startSerialCommandMaxAttempts, readErr)
 	}
 
 	// runtests sometimes doesn't respect the --timeout flag, so we impose a
