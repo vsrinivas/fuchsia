@@ -7,11 +7,12 @@
 #include <fuchsia/hardware/power/cpp/banjo.h>
 #include <fuchsia/hardware/powerimpl/c/banjo.h>
 #include <fuchsia/hardware/powerimpl/cpp/banjo.h>
-#include <lib/fake_ddk/fake_ddk.h>
 
 #include <memory>
 
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace power {
 
@@ -106,12 +107,13 @@ class GenericPowerTest : public zxtest::Test {
   void SetUp() override {
     power_impl_ = std::make_unique<FakePowerImpl>();
     parent_power_ = std::make_unique<FakePower>();
-    dut_ = std::make_unique<PowerDevice>(fake_ddk::kFakeParent, 0, power_impl_->GetClient(),
+    dut_ = std::make_unique<PowerDevice>(fake_parent_.get(), 0, power_impl_->GetClient(),
                                          parent_power_->GetClient(), 10, 1000, false);
     dut_->DdkOpenProtocolSessionMultibindable(ZX_PROTOCOL_POWER, &proto_ctx_);
   }
 
  protected:
+  std::shared_ptr<MockDevice> fake_parent_ = MockDevice::FakeRootParent();
   std::unique_ptr<PowerDevice> dut_;
   power_protocol_t proto_ctx_;
   std::unique_ptr<FakePower> parent_power_;
@@ -237,7 +239,7 @@ TEST_F(GenericPowerTest, RequestVoltage_Unregistered) {
 }
 
 TEST_F(GenericPowerTest, FixedVoltageDomain) {
-  auto dut_fixed = std::make_unique<PowerDevice>(fake_ddk::kFakeParent, 1, power_impl_->GetClient(),
+  auto dut_fixed = std::make_unique<PowerDevice>(fake_parent_.get(), 1, power_impl_->GetClient(),
                                                  parent_power_->GetClient(), 1000, 1000, true);
   power_protocol_t proto_ctx_2;
   dut_fixed->DdkOpenProtocolSessionMultibindable(ZX_PROTOCOL_POWER, &proto_ctx_2);
