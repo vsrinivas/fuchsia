@@ -137,7 +137,11 @@ impl DataController for ComponentsUrlListController {
     fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
         let mut components = model.get::<Components>()?.entries.clone();
         components.sort_by(|a, b| a.url.partial_cmp(&b.url).unwrap());
-        let component_urls: Vec<String> = components.iter().map(|e| e.url.clone()).collect();
+        let component_urls: Vec<String> = components
+            .iter()
+            .map(|e| e.url.clone())
+            .filter(|e| !e.starts_with("fuchsia-pkg://inferred"))
+            .collect();
         Ok(serde_json::to_value(component_urls)?)
     }
 
