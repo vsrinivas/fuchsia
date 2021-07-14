@@ -338,21 +338,11 @@ go_library("github.com/kr/text") {
     "wrap.go",
   ]
 }
-go_library("github.com/pkg/errors") {
-  name = "github.com/pkg/errors/..."
-  source_dir = "vendor/github.com/pkg/errors"
-  sources = [
-    "errors.go",
-    "go113.go",
-    "stack.go",
-  ]
-}
 go_library("github.com/pkg/sftp") {
   name = "github.com/pkg/sftp/..."
   source_dir = "vendor/github.com/pkg/sftp"
   deps = [
     ":github.com/kr/fs",
-    ":github.com/pkg/errors",
     ":golang.org/x/crypto",
   ]
   sources = [

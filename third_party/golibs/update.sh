@@ -73,3 +73,9 @@ $GO get -u gvisor.dev/gvisor@go
 $GO get -u
 $GO mod tidy
 $GO mod vendor
+
+"${PREBUILT_PYTHON3_DIR}/bin/python3.8" update_sources.py \
+  --build-file='BUILD.gn' \
+  --golibs-dir='.' > "${TMP}/BUILD.gn"
+mv "${TMP}/BUILD.gn" 'BUILD.gn'
+"${PREBUILT_GN}" format 'BUILD.gn'

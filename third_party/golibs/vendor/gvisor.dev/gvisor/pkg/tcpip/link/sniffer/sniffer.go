@@ -87,11 +87,7 @@ func NewWithPrefix(lower stack.LinkEndpoint, logPrefix string) stack.LinkEndpoin
 }
 
 func zoneOffset() (int32, error) {
-	loc, err := time.LoadLocation("Local")
-	if err != nil {
-		return 0, err
-	}
-	date := time.Date(0, 0, 0, 0, 0, 0, 0, loc)
+	date := time.Date(0, 0, 0, 0, 0, 0, 0, time.Local)
 	_, offset := date.Zone()
 	return int32(offset), nil
 }
@@ -117,8 +113,9 @@ func writePCAPHeader(w io.Writer, maxLen uint32) error {
 // NewWithWriter creates a new sniffer link-layer endpoint. It wraps around
 // another endpoint and logs packets as they traverse the endpoint.
 //
-// Packets are logged to writer in the pcap format. A sniffer created with this
-// function will not emit packets using the standard log package.
+// Each packet is written to writer in the pcap format in a single Write call
+// without synchronization. A sniffer created with this function will not emit
+// packets using the standard log package.
 //
 // snapLen is the maximum amount of a packet to be saved. Packets with a length
 // less than or equal to snapLen will be saved in their entirety. Longer
@@ -159,27 +156,29 @@ func (e *endpoint) dumpPacket(dir direction, protocol tcpip.NetworkProtocolNumbe
 		if max := int(e.maxPCAPLen); length > max {
 			length = max
 		}
-		if err := binary.Write(writer, binary.BigEndian, newPCAPPacketHeader(uint32(length), uint32(totalLength))); err != nil {
-			panic(err)
-		}
-		write := func(b []byte) {
-			if len(b) > length {
-				b = b[:length]
+		packetHeader := newPCAPPacketHeader(time.Now(), uint32(length), uint32(totalLength))
+		packet := make([]byte, binary.Size(packetHeader)+length)
+		{
+			writer := tcpip.SliceWriter(packet)
+			if err := binary.Write(&writer, binary.BigEndian, packetHeader); err != nil {
+				panic(err)
 			}
-			for len(b) != 0 {
+			for _, b := range pkt.Views() {
+				if length == 0 {
+					break
+				}
+				if len(b) > length {
+					b = b[:length]
+				}
 				n, err := writer.Write(b)
 				if err != nil {
 					panic(err)
 				}
-				b = b[n:]
 				length -= n
 			}
 		}
-		for _, v := range pkt.Views() {
-			if length == 0 {
-				break
-			}
-			write(v)
+		if _, err := writer.Write(packet); err != nil {
+			panic(err)
 		}
 	}
 }
