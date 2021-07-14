@@ -21,6 +21,7 @@ mod signals;
 mod syscalls;
 mod task;
 mod types;
+mod vmex_resource;
 
 #[cfg(test)]
 mod testing;

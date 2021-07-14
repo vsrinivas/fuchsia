@@ -12,6 +12,7 @@ mod fs_node;
 mod namespace;
 mod null_file;
 mod observer_list;
+mod vmo_file;
 
 pub use anon_node::*;
 pub use fd_events::*;
@@ -23,6 +24,7 @@ pub use fs_node::*;
 pub use namespace::*;
 pub use null_file::*;
 pub use observer_list::*;
+pub use vmo_file::*;
 
 pub mod devfs;
 pub mod fuchsia;

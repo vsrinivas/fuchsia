@@ -83,6 +83,7 @@ if (target_cpu == "x64") {
       "fs/pipe.rs",
       "fs/syscalls.rs",
       "fs/tmpfs.rs",
+      "fs/vmo_file.rs",
       "loader.rs",
       "logging.rs",
       "main.rs",
@@ -117,6 +118,7 @@ if (target_cpu == "x64") {
       "types/uapi.rs",
       "types/user_address.rs",
       "types/user_buffer.rs",
+      "vmex_resource.rs",
     ]
   }
 

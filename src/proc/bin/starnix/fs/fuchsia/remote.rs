@@ -2,29 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_kernel as fkernel;
-use fuchsia_component::client::connect_channel_to_protocol;
 use fuchsia_zircon::{self as zx, HandleBased};
-use lazy_static::lazy_static;
 use log::warn;
 use std::sync::Arc;
 use syncio::{zxio::zxio_get_posix_mode, zxio_node_attributes_t, Zxio};
 
+use crate::{fd_impl_seekable, not_implemented};
 use crate::devices::*;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
-use crate::{fd_impl_seekable, not_implemented};
-
-lazy_static! {
-    static ref VMEX_RESOURCE: zx::Resource = {
-        let (client_end, server_end) = zx::Channel::create().unwrap();
-        connect_channel_to_protocol::<fkernel::VmexResourceMarker>(server_end)
-            .expect("couldn't connect to fuchsia.kernel.VmexResource");
-        let service = fkernel::VmexResourceSynchronousProxy::new(client_end);
-        service.get(zx::Time::INFINITE).expect("couldn't talk to fuchsia.kernel.VmexResource")
-    };
-}
+use crate::vmex_resource::VMEX_RESOURCE;
 
 fn update_stat_from_result(node: &FsNode, attrs: zxio_node_attributes_t) -> Result<(), Errno> {
     /// st_blksize is measured in units of 512 bytes.
