@@ -232,6 +232,8 @@ void Injector::SetupInputInjection(InjectorId injector_id, uint32_t device_id) {
       config.set_target(std::move(target));
     }
   }
+
+  injector.injection_in_flight = false;
   component_context_->svc()->Connect<fuchsia::ui::pointerinjector::Registry>()->Register(
       std::move(config), injectors_.at(injector_id).touch_injector.NewRequest(), [] {});
   injector.touch_injector.set_error_handler([this, injector_id, device_id](zx_status_t error) {
@@ -248,13 +250,16 @@ void Injector::SetupInputInjection(InjectorId injector_id, uint32_t device_id) {
     injectors_[injector_id].touch_injector = {};
 
     // Try to recover.
-    injectors_[injector_id].injection_in_flight = false;
     SetupInputInjection(injector_id, device_id);
     InjectPending(injector_id);
   });
 }
 
 void Injector::MarkSceneReady() {
+  if (scene_ready_) {
+    return;
+  }
+
   scene_ready_ = true;
   for (const auto& [id, injector] : injectors_) {
     SetupInputInjection(id, injector.device_id);
