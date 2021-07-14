@@ -10,6 +10,7 @@ mod file_object;
 mod fs_context;
 mod fs_node;
 mod namespace;
+mod null_file;
 mod observer_list;
 
 pub use anon_node::*;
@@ -20,8 +21,10 @@ pub use file_object::*;
 pub use fs_context::*;
 pub use fs_node::*;
 pub use namespace::*;
+pub use null_file::*;
 pub use observer_list::*;
 
+pub mod devfs;
 pub mod fuchsia;
 pub mod path;
 pub mod pipe;

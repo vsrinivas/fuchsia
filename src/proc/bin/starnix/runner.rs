@@ -31,6 +31,7 @@ use std::mem;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
+use crate::fs::devfs::new_devfs;
 use crate::fs::fuchsia::{create_file_from_handle, new_remote_filesystem};
 use crate::fs::tmpfs::new_tmpfs;
 use crate::fs::*;
@@ -298,6 +299,7 @@ async fn start_component(
             field_iter.next().ok_or_else(|| anyhow!("fs type is missing from {:?}", mnt))?;
         let tmpfs = match fs_type {
             b"tmpfs" => Ok(new_tmpfs()),
+            b"devfs" => Ok(new_devfs()),
             _ => Err(EINVAL),
         }?;
 

@@ -99,12 +99,18 @@ resource("starnix_data_placeholder") {
   outputs = [ "root/data/.placeholder" ]
 }
 
+resource("starnix_dev_placeholder") {
+  sources = [ "placeholder" ]
+  outputs = [ "root/dev/.placeholder" ]
+}
+
 fuchsia_component("syscalls_test") {
   testonly = true
   check_references = false
   manifest = "meta/syscalls_test.cml"
   deps = [
     ":starnix_data_placeholder",
+    ":starnix_dev_placeholder",
     ":starnix_tmp_placeholder",
     ":syscalls_test_bin",
     ":system_bin",
