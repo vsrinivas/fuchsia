@@ -10,7 +10,6 @@
 
 #include <fbl/auto_lock.h>
 
-#include "connection_destroyer.h"
 #include "src/devices/lib/log/log.h"
 #include "zx_device.h"
 
@@ -98,7 +97,8 @@ zx_status_t ProxyIostate::Create(const fbl::RefPtr<zx_device_t>& dev, zx::channe
 void ProxyIostate::CancelLocked(async_dispatcher_t* dispatcher) {
   ZX_ASSERT(this->dev->proxy_ios == this);
   this->dev->proxy_ios = nullptr;
-  // TODO(teisenbe): We should probably check the return code in case the
-  // queue was full
-  ConnectionDestroyer::Get()->QueueProxyConnection(dispatcher, this);
+  async::PostTask(dispatcher, [this]() {
+    VLOGF(1, "Destroying proxy connection %p", this);
+    delete this;
+  });
 }

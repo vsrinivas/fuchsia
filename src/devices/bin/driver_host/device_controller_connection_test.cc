@@ -14,7 +14,6 @@
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
-#include "connection_destroyer.h"
 #include "driver_host_context.h"
 #include "zx_device.h"
 

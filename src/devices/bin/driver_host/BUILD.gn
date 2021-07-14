@@ -28,7 +28,6 @@ source_set("common") {
   sources = [
     "api.cc",
     "composite_device.cc",
-    "connection_destroyer.cc",
     "core.cc",
     "devfs_vnode.cc",
     "device_controller_connection.cc",

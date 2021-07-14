@@ -45,7 +45,6 @@
 
 #include "async_loop_owned_rpc_handler.h"
 #include "composite_device.h"
-#include "connection_destroyer.h"
 #include "device_controller_connection.h"
 #include "env.h"
 #include "fidl_txn.h"

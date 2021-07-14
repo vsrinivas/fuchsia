@@ -12,7 +12,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
 
-#include "connection_destroyer.h"
 #include "driver_host.h"
 #include "env.h"
 #include "fidl_txn.h"
