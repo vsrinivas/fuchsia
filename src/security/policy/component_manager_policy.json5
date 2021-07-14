@@ -3,6 +3,11 @@
         job_policy: {
             ambient_mark_vmo_exec: [
                 "/core/appmgr",
+                // We allow tests to access ambient executability in the same
+                // way that we're permissive with use of the components v1
+                // deprecated-ambient-replace-as-executable feature and
+                // VmexResource protocol on eng builds.
+                "/core/test_manager/tests:**",
             ],
             main_process_critical: [
                 "/bootstrap/archivist",
