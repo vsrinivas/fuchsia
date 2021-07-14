@@ -251,7 +251,7 @@ impl FsNode {
     // Also, the vector might have "extra" names that are in the process of
     // being looked up. If the lookup fails, they'll be removed.
     #[cfg(test)]
-    fn copy_child_names(&self) -> Vec<FsString> {
+    pub fn copy_child_names(&self) -> Vec<FsString> {
         self.state
             .read()
             .children
@@ -273,25 +273,5 @@ impl Drop for FsNode {
         if let Some(parent) = self.parent.take() {
             parent.internal_remove_child(self);
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    use crate::devices::*;
-    use crate::fs::tmpfs::TmpfsDirectory;
-
-    #[test]
-    fn test_tmpfs() {
-        let tmpfs = AnonNodeDevice::new(0);
-        let root = FsNode::new_root(TmpfsDirectory, tmpfs);
-        let usr = root.mkdir(b"usr").unwrap();
-        let _etc = root.mkdir(b"etc").unwrap();
-        let _usr_bin = usr.mkdir(b"bin").unwrap();
-        let mut names = root.copy_child_names();
-        names.sort();
-        assert!(names.iter().eq([b"etc", b"usr"].iter()));
     }
 }

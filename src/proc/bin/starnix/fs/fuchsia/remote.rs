@@ -43,7 +43,25 @@ fn update_stat_from_result(node: &FsNode, attrs: zxio_node_attributes_t) -> Resu
     Ok(())
 }
 
-pub struct RemoteNode {
+pub struct Remotefs {
+    root: FsNodeHandle,
+}
+
+impl Remotefs {
+    pub fn new(root: zx::Channel, rights: u32) -> FileSystemHandle {
+        let remotefs = AnonNodeDevice::new(0); // TODO: Get from device registry.
+        let zxio = Arc::new(Zxio::create(root.into_handle()).unwrap());
+        Arc::new(Remotefs { root: FsNode::new_root(RemoteNode { zxio, rights }, remotefs) })
+    }
+}
+
+impl FileSystem for Remotefs {
+    fn root(&self) -> &FsNodeHandle {
+        &self.root
+    }
+}
+
+struct RemoteNode {
     /// The underlying Zircon I/O object for this remote node.
     ///
     /// We delegate to the zxio library for actually doing I/O with remote
@@ -86,13 +104,7 @@ impl FsNodeOps for RemoteNode {
     }
 }
 
-pub fn new_remote_filesystem(root: zx::Channel, rights: u32) -> FsNodeHandle {
-    let remotefs = AnonNodeDevice::new(0); // TODO: Get from device registry.
-    let zxio = Arc::new(Zxio::create(root.into_handle()).unwrap());
-    FsNode::new_root(RemoteNode { zxio, rights }, remotefs)
-}
-
-pub struct RemoteFileObject {
+struct RemoteFileObject {
     /// The underlying Zircon I/O object.
     ///
     /// Shared with RemoteNode.
@@ -158,10 +170,8 @@ mod test {
     async fn test_tree() -> Result<(), anyhow::Error> {
         let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
         let root = io_util::directory::open_in_namespace("/pkg", rights)?;
-        let ns = Namespace::new(new_remote_filesystem(
-            root.into_channel().unwrap().into_zx_channel(),
-            rights,
-        ));
+        let ns =
+            Namespace::new(Remotefs::new(root.into_channel().unwrap().into_zx_channel(), rights));
         let root = ns.root();
         assert_eq!(root.lookup(b"nib").err(), Some(ENOENT));
         root.lookup(b"lib").unwrap();

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::sync::Arc;
+
 use super::*;
 use crate::devices::AnonNodeDevice;
 use crate::fd_impl_seekable;
@@ -9,7 +11,26 @@ use crate::fs::NullFile;
 use crate::task::*;
 use crate::types::*;
 
-pub struct DevfsDirectory;
+pub struct Devfs {
+    root: FsNodeHandle,
+}
+
+impl Devfs {
+    pub fn new() -> FileSystemHandle {
+        let devfs_dev = AnonNodeDevice::new(0);
+        Arc::new(Devfs {
+            root: FsNode::new_root(DevfsDirectory, devfs_dev),
+        })
+    }
+}
+
+impl FileSystem for Devfs {
+    fn root(&self) -> &FsNodeHandle {
+        &self.root
+    }
+}
+
+struct DevfsDirectory;
 
 impl FsNodeOps for DevfsDirectory {
     fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
@@ -37,10 +58,6 @@ impl FsNodeOps for DevfsDirectory {
     }
 }
 
-pub fn new_devfs() -> FsNodeHandle {
-    let devfs_dev = AnonNodeDevice::new(0);
-    FsNode::new_root(DevfsDirectory, devfs_dev)
-}
 
 /// A `DevNullFileNode` returns a new `DevNullFileObject` for `open`.
 struct DevNullFileNode;

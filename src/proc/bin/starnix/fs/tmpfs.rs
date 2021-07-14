@@ -12,7 +12,24 @@ use fuchsia_zircon::{self as zx};
 use std::sync::Arc;
 use zx::VmoOptions;
 
-pub struct TmpfsDirectory;
+pub struct Tmpfs {
+    root: FsNodeHandle,
+}
+
+impl Tmpfs {
+    pub fn new() -> FileSystemHandle {
+        let tmpfs_dev = AnonNodeDevice::new(0);
+        Arc::new(Tmpfs { root: FsNode::new_root(TmpfsDirectory, tmpfs_dev) })
+    }
+}
+
+impl FileSystem for Tmpfs {
+    fn root(&self) -> &FsNodeHandle {
+        &self.root
+    }
+}
+
+struct TmpfsDirectory;
 
 impl FsNodeOps for TmpfsDirectory {
     fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
@@ -24,11 +41,6 @@ impl FsNodeOps for TmpfsDirectory {
     fn create(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         Ok(Box::new(TmpfsFileNode::new()?))
     }
-}
-
-pub fn new_tmpfs() -> FsNodeHandle {
-    let tmpfs_dev = AnonNodeDevice::new(0);
-    FsNode::new_root(TmpfsDirectory, tmpfs_dev)
 }
 
 struct TmpfsFileNode {
@@ -127,45 +139,58 @@ mod test {
 
     use crate::testing::*;
 
+    #[test]
+    fn test_tmpfs() {
+        let tmpfs = AnonNodeDevice::new(0);
+        let root = FsNode::new_root(TmpfsDirectory, tmpfs);
+        let usr = root.mkdir(b"usr").unwrap();
+        let _etc = root.mkdir(b"etc").unwrap();
+        let _usr_bin = usr.mkdir(b"bin").unwrap();
+        let mut names = root.copy_child_names();
+        names.sort();
+        assert!(names.iter().eq([b"etc", b"usr"].iter()));
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_write_read() {
-        let fs = new_tmpfs();
-        let fs_context = FsContext::new(Namespace::new(fs.clone()));
-        let (_kernel, task_owner) = create_kernel_and_task_with_fs(fs_context);
+        let fs = FsContext::new(Namespace::new(Tmpfs::new()));
+        let (_kernel, task_owner) = create_kernel_and_task_with_fs(fs);
+        let task = &task_owner.task;
 
-        let mm = &task_owner.task.mm;
         let test_mem_size = 0x10000;
         let test_vmo = zx::Vmo::create(test_mem_size).unwrap();
 
         let path = b"test.bin";
-        let _file_node = fs.mknod(path, FileMode::IFREG | FileMode::ALLOW_ALL).unwrap();
+        let _file = task.fs.root.mknod(path, FileMode::IFREG | FileMode::ALLOW_ALL).unwrap();
 
-        let wr_file = task_owner.task.open_file(path, OpenFlags::RDWR).unwrap();
+        let wr_file = task.open_file(path, OpenFlags::RDWR).unwrap();
 
         let flags = zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE;
-        let test_addr =
-            mm.map(UserAddress::default(), test_vmo, 0, test_mem_size as usize, flags).unwrap();
+        let test_addr = task
+            .mm
+            .map(UserAddress::default(), test_vmo, 0, test_mem_size as usize, flags)
+            .unwrap();
 
         let seq_addr = UserAddress::from_ptr(test_addr.ptr() + path.len());
         let test_seq = 0..10000u16;
         let test_vec = test_seq.collect::<Vec<_>>();
         let test_bytes = test_vec.as_slice().as_bytes();
-        mm.write_memory(seq_addr, test_bytes).unwrap();
+        task.mm.write_memory(seq_addr, test_bytes).unwrap();
         let buf = [UserBuffer { address: seq_addr, length: test_bytes.len() }];
 
-        let written = wr_file.write(&task_owner.task, &buf).unwrap();
+        let written = wr_file.write(task, &buf).unwrap();
         assert_eq!(written, test_bytes.len());
 
         let mut read_vec = vec![0u8; test_bytes.len()];
-        mm.read_memory(seq_addr, read_vec.as_bytes_mut()).unwrap();
+        task.mm.read_memory(seq_addr, read_vec.as_bytes_mut()).unwrap();
 
         assert_eq!(test_bytes, &*read_vec);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_permissions() {
-        let fs_context = FsContext::new(Namespace::new(new_tmpfs()));
-        let (_kernel, task_owner) = create_kernel_and_task_with_fs(fs_context);
+        let fs = FsContext::new(Namespace::new(Tmpfs::new()));
+        let (_kernel, task_owner) = create_kernel_and_task_with_fs(fs);
         let task = &task_owner.task;
 
         let path = b"test.bin";

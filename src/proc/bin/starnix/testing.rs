@@ -9,7 +9,7 @@ use std::ffi::CString;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
-use crate::fs::fuchsia::new_remote_filesystem;
+use crate::fs::fuchsia::Remotefs;
 use crate::fs::*;
 use crate::mm::syscalls::sys_mmap;
 use crate::syscalls::SyscallContext;
@@ -24,7 +24,7 @@ pub fn create_test_file_system() -> Arc<FsContext> {
     let root =
         directory::open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE)
             .expect("failed to open /pkg");
-    return FsContext::new(Namespace::new(new_remote_filesystem(
+    return FsContext::new(Namespace::new(Remotefs::new(
         root.into_channel().unwrap().into_zx_channel(),
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     )));
@@ -34,14 +34,13 @@ pub fn create_test_file_system() -> Arc<FsContext> {
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
 pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
-    let fs_context = create_test_file_system();
-    create_kernel_and_task_with_fs(fs_context)
+    create_kernel_and_task_with_fs(create_test_file_system())
 }
 
 /// Creates a `Kernel` and `Task` for testing purposes.
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
-pub fn create_kernel_and_task_with_fs(fs_context: Arc<FsContext>) -> (Arc<Kernel>, TaskOwner) {
+pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, TaskOwner) {
     let kernel =
         Kernel::new(&CString::new("test-kernel").unwrap()).expect("failed to create kernel");
 
@@ -50,7 +49,7 @@ pub fn create_kernel_and_task_with_fs(fs_context: Arc<FsContext>) -> (Arc<Kernel
         &CString::new("test-task").unwrap(),
         0,
         FdTable::new(),
-        fs_context,
+        fs,
         Credentials::default(),
         None,
     )

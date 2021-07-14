@@ -13,6 +13,13 @@ use parking_lot::RwLock;
 use super::{FileHandle, FileObject, FsNodeHandle, FsStr, FsString};
 use crate::types::*;
 
+/// A file system that can be mounted in a namespace.
+pub trait FileSystem {
+    fn root(&self) -> &FsNodeHandle;
+}
+
+pub type FileSystemHandle = Arc<dyn FileSystem + Sync + Send>;
+
 /// A mount namespace.
 ///
 /// The namespace records at which entries filesystems are mounted.
@@ -22,7 +29,7 @@ pub struct Namespace {
 }
 
 impl Namespace {
-    pub fn new(root: FsNodeHandle) -> Arc<Namespace> {
+    pub fn new(fs: FileSystemHandle) -> Arc<Namespace> {
         // TODO(tbodt): We can avoid this RwLock<Option thing by using Arc::new_cyclic, but that's
         // unstable.
         let namespace = Arc::new(Self {
@@ -30,7 +37,7 @@ impl Namespace {
             mount_points: RwLock::new(HashMap::new()),
         });
         *namespace.root_mount.write() =
-            Some(Arc::new(Mount { namespace: Arc::downgrade(&namespace), mountpoint: None, root }));
+            Some(Arc::new(Mount { namespace: Arc::downgrade(&namespace), mountpoint: None, fs }));
         namespace
     }
     pub fn root(&self) -> NamespaceNode {
@@ -46,13 +53,13 @@ impl Namespace {
 struct Mount {
     namespace: Weak<Namespace>,
     mountpoint: Option<(Weak<Mount>, FsNodeHandle)>,
-    root: FsNodeHandle,
+    fs: FileSystemHandle,
 }
 type MountHandle = Arc<Mount>;
 
 impl Mount {
     pub fn root(self: &MountHandle) -> NamespaceNode {
-        NamespaceNode { mount: Some(Arc::clone(self)), node: Arc::clone(&self.root) }
+        NamespaceNode { mount: Some(Arc::clone(self)), node: Arc::clone(self.fs.root()) }
     }
 
     fn mountpoint(&self) -> Option<NamespaceNode> {
@@ -142,7 +149,7 @@ impl NamespaceNode {
     /// at which this node is mounted. Otherwise, returns None.
     fn mountpoint(&self) -> Option<NamespaceNode> {
         if let Some(mount) = &self.mount {
-            if Arc::ptr_eq(&self.node, &mount.root) {
+            if Arc::ptr_eq(&self.node, mount.fs.root()) {
                 return mount.mountpoint();
             }
         }
@@ -168,7 +175,7 @@ impl NamespaceNode {
         components.join(&b'/')
     }
 
-    pub fn mount(&self, node: &FsNodeHandle) -> Result<(), Errno> {
+    pub fn mount(&self, fs: FileSystemHandle) -> Result<(), Errno> {
         if let Some(namespace) = self.namespace() {
             match namespace.mount_points.write().entry(self.clone()) {
                 Entry::Occupied(_) => {
@@ -180,7 +187,7 @@ impl NamespaceNode {
                     v.insert(Arc::new(Mount {
                         namespace: mount.namespace.clone(),
                         mountpoint: Some((Arc::downgrade(&mount), self.node.clone())),
-                        root: node.clone(),
+                        fs,
                     }));
                     Ok(())
                 }
@@ -225,18 +232,20 @@ impl Hash for NamespaceNode {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::fs::tmpfs::new_tmpfs;
+    use crate::fs::tmpfs::Tmpfs;
 
     #[test]
     fn test_namespace() -> anyhow::Result<()> {
-        let root_node = new_tmpfs();
+        let root_fs = Tmpfs::new();
+        let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
-        let dev_root_node = new_tmpfs();
+        let dev_fs = Tmpfs::new();
+        let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
 
-        let ns = Namespace::new(root_node);
+        let ns = Namespace::new(root_fs);
         let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
-        dev.mount(&dev_root_node).expect("failed to mount dev root node");
+        dev.mount(dev_fs).expect("failed to mount dev root node");
 
         let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
         let pts = dev.lookup(b"pts").expect("failed to lookup pts");
@@ -250,14 +259,16 @@ mod test {
 
     #[test]
     fn test_mount_does_not_upgrade() -> anyhow::Result<()> {
-        let root_node = new_tmpfs();
+        let root_fs = Tmpfs::new();
+        let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
-        let dev_root_node = new_tmpfs();
+        let dev_fs = Tmpfs::new();
+        let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
 
-        let ns = Namespace::new(root_node);
+        let ns = Namespace::new(root_fs);
         let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
-        dev.mount(&dev_root_node).expect("failed to mount dev root node");
+        dev.mount(dev_fs).expect("failed to mount dev root node");
         let new_dev = ns.root().lookup(b"dev").expect("failed to lookup dev again");
         assert!(!Arc::ptr_eq(&dev.node, &new_dev.node));
         assert_ne!(&dev, &new_dev);
@@ -270,35 +281,16 @@ mod test {
 
     #[test]
     fn test_path() -> anyhow::Result<()> {
-        let root_node = new_tmpfs();
+        let root_fs = Tmpfs::new();
+        let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
-        let dev_root_node = new_tmpfs();
+        let dev_fs = Tmpfs::new();
+        let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
 
-        let ns = Namespace::new(root_node);
+        let ns = Namespace::new(root_fs);
         let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
-        dev.mount(&dev_root_node).expect("failed to mount dev root node");
-
-        let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
-        let pts = dev.lookup(b"pts").expect("failed to lookup pts");
-
-        assert_eq!(b"/".to_vec(), ns.root().path());
-        assert_eq!(b"/dev".to_vec(), dev.path());
-        assert_eq!(b"/dev/pts".to_vec(), pts.path());
-        Ok(())
-    }
-
-    #[test]
-    fn test_nested_path() -> anyhow::Result<()> {
-        let root_node = new_tmpfs();
-        let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
-        let dev_root_node = new_tmpfs();
-        let parent_node = dev_root_node.mkdir(b"parent").expect("failed to mkdir parent");
-        let _dev_pts_node = parent_node.mkdir(b"pts").expect("failed to mkdir pts");
-
-        let ns = Namespace::new(root_node);
-        let dev = ns.root().lookup(b"dev").expect("failed to find dev");
-        dev.mount(&parent_node).expect("failed to mount parent");
+        dev.mount(dev_fs).expect("failed to mount dev root node");
 
         let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
         let pts = dev.lookup(b"pts").expect("failed to lookup pts");
@@ -306,7 +298,6 @@ mod test {
         assert_eq!(b"/".to_vec(), ns.root().path());
         assert_eq!(b"/dev".to_vec(), dev.path());
         assert_eq!(b"/dev/pts".to_vec(), pts.path());
-
         Ok(())
     }
 }
