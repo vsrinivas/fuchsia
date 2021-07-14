@@ -1761,8 +1761,6 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 	}), nil
 }
 
-// NB: Due to another soft transition that happened, SendMsg is the "final
-// state" we want to get at, while SendMsg2 is the "old" one.
 func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.SendControlData, _ socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
 	var writeOpts tcpip.WriteOptions
 	if addr != nil {
