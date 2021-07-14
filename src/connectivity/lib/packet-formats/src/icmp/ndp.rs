@@ -373,7 +373,7 @@ pub mod options {
     use core::time::Duration;
 
     use byteorder::{ByteOrder, NetworkEndian};
-    use net_types::ip::{AddrSubnet, AddrSubnetError, Ipv6Addr};
+    use net_types::ip::{AddrSubnet, AddrSubnetError, IpAddress as _, Ipv6Addr, Subnet};
     use net_types::{UnicastAddr, UnicastAddress};
     use packet::records::options::{
         LengthEncoding, OptionsImpl, OptionsImplLayout, OptionsSerializerImpl,
@@ -459,6 +459,130 @@ pub mod options {
         /// Returns the recursive DNS server addresses.
         pub fn iter_addresses(&self) -> &'a [Ipv6Addr] {
             self.addresses
+        }
+    }
+
+    /// The first 6 bytes of the Route Information option following the Type and
+    /// Length fields.
+    ///
+    /// As per [RFC 4191 section 2.3],
+    ///
+    /// ```text
+    ///   Route Information Option
+    ///
+    ///      0                   1                   2                   3
+    ///       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    ///      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    ///      |     Type      |    Length     | Prefix Length |Resvd|Prf|Resvd|
+    ///      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    ///      |                        Route Lifetime                         |
+    ///      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    ///      |                   Prefix (Variable Length)                    |
+    ///      .                                                               .
+    ///      .                                                               .
+    ///      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    /// ```
+    ///
+    /// [RFC 4191 section 2.3]: https://datatracker.ietf.org/doc/html/rfc4191#section-2.3
+    #[derive(FromBytes, AsBytes, Unaligned)]
+    #[repr(C)]
+    struct RouteInformationHeader {
+        prefix_length: u8,
+        flags: u8,
+        route_lifetime: U32,
+    }
+
+    impl RouteInformationHeader {
+        // As per RFC 4191 section 2.3,
+        //
+        //   Route Information Option
+        //
+        //      0                   1                   2                   3
+        //       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+        //      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //      |     Type      |    Length     | Prefix Length |Resvd|Prf|Resvd|
+        //      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //      |                        Route Lifetime                         |
+        //      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //      |                   Prefix (Variable Length)                    |
+        //      .                                                               .
+        //      .                                                               .
+        //      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        const PREFERENCE_SHIFT: u8 = 3;
+        const PREFERENCE_MASK: u8 = 0b11 << Self::PREFERENCE_SHIFT;
+
+        fn set_preference(&mut self, preference: super::RoutePreference) {
+            let preference: u8 = preference.into();
+
+            self.flags &= !Self::PREFERENCE_MASK;
+            self.flags |= (preference << Self::PREFERENCE_SHIFT) & Self::PREFERENCE_MASK;
+        }
+    }
+
+    /// Builder for a Route Information option.
+    ///
+    /// See [RFC 4191 section 2.3].
+    ///
+    /// [RFC 4191 section 2.3]: https://datatracker.ietf.org/doc/html/rfc4191#section-2.3
+    #[derive(Debug)]
+    pub struct RouteInformationBuilder {
+        prefix: Subnet<Ipv6Addr>,
+        route_lifetime_seconds: u32,
+        preference: super::RoutePreference,
+    }
+
+    impl RouteInformationBuilder {
+        /// Returns a new Route Information option builder.
+        pub fn new(
+            prefix: Subnet<Ipv6Addr>,
+            route_lifetime_seconds: u32,
+            preference: super::RoutePreference,
+        ) -> Self {
+            Self { prefix, route_lifetime_seconds, preference }
+        }
+
+        fn prefix_bytes_len(&self) -> usize {
+            let RouteInformationBuilder { prefix, route_lifetime_seconds: _, preference: _ } = self;
+
+            let prefix_length = prefix.prefix();
+            // As per RFC 4191 section 2.3,
+            //
+            //    Length     8-bit unsigned integer.  The length of the option
+            //               (including the Type and Length fields) in units of 8
+            //               octets.  The Length field is 1, 2, or 3 depending on the
+            //               Prefix Length.  If Prefix Length is greater than 64, then
+            //               Length must be 3.  If Prefix Length is greater than 0,
+            //               then Length must be 2 or 3.  If Prefix Length is zero,
+            //               then Length must be 1, 2, or 3.
+            //
+            // This function only returns the length of the prefix bytes in units of
+            // 1 octet.
+            if prefix_length == 0 {
+                0
+            } else if prefix_length <= 64 {
+                core::mem::size_of::<Ipv6Addr>() / 2
+            } else {
+                core::mem::size_of::<Ipv6Addr>()
+            }
+        }
+
+        fn serialized_length(&self) -> usize {
+            core::mem::size_of::<RouteInformationHeader>() + self.prefix_bytes_len()
+        }
+
+        fn serialize(&self, buffer: &mut [u8]) {
+            let (mut hdr, buffer) =
+                LayoutVerified::<_, RouteInformationHeader>::new_from_prefix(buffer)
+                    .expect("expected buffer to hold enough bytes for serialization");
+
+            let prefix_bytes_len = self.prefix_bytes_len();
+            let RouteInformationBuilder { prefix, route_lifetime_seconds, preference } = self;
+
+            hdr.prefix_length = prefix.prefix();
+            hdr.set_preference(*preference);
+            hdr.route_lifetime.set(*route_lifetime_seconds);
+            buffer[..prefix_bytes_len]
+                .copy_from_slice(&prefix.network().bytes()[..prefix_bytes_len])
         }
     }
 
@@ -594,6 +718,7 @@ pub mod options {
             PrefixInformation, 3, "Prefix Information";
             RedirectedHeader, 4, "Redirected Header";
             Mtu, 5, "MTU";
+            RouteInformation, 24, "Route Information";
             RecursiveDnsServer, 25, "Recursive DNS Server";
         }
     );
@@ -635,63 +760,63 @@ pub mod options {
         type Option = NdpOption<'a>;
 
         fn parse(kind: u8, data: &'a [u8]) -> Result<Option<NdpOption<'a>>, ()> {
-            NdpOptionType::try_from(kind)
-                .ok()
-                .map(|typ| {
-                    Ok(match typ {
-                        NdpOptionType::SourceLinkLayerAddress => {
-                            NdpOption::SourceLinkLayerAddress(data)
-                        }
-                        NdpOptionType::TargetLinkLayerAddress => {
-                            NdpOption::TargetLinkLayerAddress(data)
-                        }
-                        NdpOptionType::PrefixInformation => {
-                            let data =
-                                LayoutVerified::<_, PrefixInformation>::new(data).ok_or(())?;
-                            NdpOption::PrefixInformation(data.into_ref())
-                        }
-                        NdpOptionType::RedirectedHeader => NdpOption::RedirectedHeader {
-                            original_packet: &data
-                                [REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH..],
-                        },
-                        NdpOptionType::Mtu => NdpOption::Mtu(NetworkEndian::read_u32(
-                            &data[MTU_OPTION_RESERVED_BYTES_LENGTH..],
-                        )),
-                        NdpOptionType::RecursiveDnsServer => {
-                            if data.len() < MIN_RECURSIVE_DNS_SERVER_OPTION_LENGTH {
-                                return Err(());
-                            }
+            let kind = if let Ok(k) = NdpOptionType::try_from(kind) {
+                k
+            } else {
+                return Ok(None);
+            };
 
-                            // Skip the reserved bytes which immediately follow the kind and length
-                            // bytes.
-                            let (_, data) =
-                                data.split_at(RECURSIVE_DNS_SERVER_OPTION_RESERVED_BYTES_LENGTH);
+            let opt = match kind {
+                NdpOptionType::SourceLinkLayerAddress => NdpOption::SourceLinkLayerAddress(data),
+                NdpOptionType::TargetLinkLayerAddress => NdpOption::TargetLinkLayerAddress(data),
+                NdpOptionType::PrefixInformation => {
+                    let data = LayoutVerified::<_, PrefixInformation>::new(data).ok_or(())?;
+                    NdpOption::PrefixInformation(data.into_ref())
+                }
+                NdpOptionType::RedirectedHeader => NdpOption::RedirectedHeader {
+                    original_packet: &data[REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH..],
+                },
+                NdpOptionType::Mtu => NdpOption::Mtu(NetworkEndian::read_u32(
+                    &data[MTU_OPTION_RESERVED_BYTES_LENGTH..],
+                )),
+                NdpOptionType::RecursiveDnsServer => {
+                    if data.len() < MIN_RECURSIVE_DNS_SERVER_OPTION_LENGTH {
+                        return Err(());
+                    }
 
-                            // As per RFC 8106 section 5.1, the 32 bit lifetime field immediately
-                            // follows the reserved field.
-                            let (lifetime, data) =
-                                LayoutVerified::<_, U32>::new_from_prefix(data).ok_or(())?;
+                    // Skip the reserved bytes which immediately follow the kind and length
+                    // bytes.
+                    let (_, data) =
+                        data.split_at(RECURSIVE_DNS_SERVER_OPTION_RESERVED_BYTES_LENGTH);
 
-                            // As per RFC 8106 section 5.1, the list of addresses immediately
-                            // follows the lifetime field.
-                            let addresses =
-                                LayoutVerified::<_, [Ipv6Addr]>::new_slice_unaligned(data)
-                                    .ok_or(())?
-                                    .into_slice();
+                    // As per RFC 8106 section 5.1, the 32 bit lifetime field immediately
+                    // follows the reserved field.
+                    let (lifetime, data) =
+                        LayoutVerified::<_, U32>::new_from_prefix(data).ok_or(())?;
 
-                            // As per RFC 8106 section 5.3.1, the addresses should all be unicast.
-                            if !addresses.iter().all(UnicastAddress::is_unicast) {
-                                return Err(());
-                            }
+                    // As per RFC 8106 section 5.1, the list of addresses immediately
+                    // follows the lifetime field.
+                    let addresses = LayoutVerified::<_, [Ipv6Addr]>::new_slice_unaligned(data)
+                        .ok_or(())?
+                        .into_slice();
 
-                            NdpOption::RecursiveDnsServer(RecursiveDnsServer::new(
-                                lifetime.get(),
-                                addresses,
-                            ))
-                        }
-                    })
-                })
-                .transpose()
+                    // As per RFC 8106 section 5.3.1, the addresses should all be unicast.
+                    if !addresses.iter().all(UnicastAddress::is_unicast) {
+                        return Err(());
+                    }
+
+                    NdpOption::RecursiveDnsServer(RecursiveDnsServer::new(
+                        lifetime.get(),
+                        addresses,
+                    ))
+                }
+                NdpOptionType::RouteInformation => {
+                    // TODO(https://fxbug.dev/80646): Parse Route Information option.
+                    return Ok(None);
+                }
+            };
+
+            Ok(Some(opt))
         }
     }
 
@@ -707,6 +832,7 @@ pub mod options {
 
         Mtu(u32),
 
+        RouteInformation(RouteInformationBuilder),
         RecursiveDnsServer(RecursiveDnsServer<'a>),
     }
 
@@ -722,6 +848,7 @@ pub mod options {
                 NdpOptionBuilder::PrefixInformation(_) => NdpOptionType::PrefixInformation,
                 NdpOptionBuilder::RedirectedHeader { .. } => NdpOptionType::RedirectedHeader,
                 NdpOptionBuilder::Mtu { .. } => NdpOptionType::Mtu,
+                NdpOptionBuilder::RouteInformation(_) => NdpOptionType::RouteInformation,
                 NdpOptionBuilder::RecursiveDnsServer(_) => NdpOptionType::RecursiveDnsServer,
             }
         }
@@ -739,6 +866,7 @@ pub mod options {
                     REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH + original_packet.len()
                 }
                 NdpOptionBuilder::Mtu(_) => MTU_OPTION_LENGTH,
+                NdpOptionBuilder::RouteInformation(o) => o.serialized_length(),
                 NdpOptionBuilder::RecursiveDnsServer(RecursiveDnsServer {
                     lifetime,
                     addresses,
@@ -779,6 +907,7 @@ pub mod options {
                     reserved_bytes.copy_from_slice(&[0; MTU_OPTION_RESERVED_BYTES_LENGTH]);
                     mtu_bytes.copy_from_slice(U32::new(*mtu).as_bytes());
                 }
+                NdpOptionBuilder::RouteInformation(p) => p.serialize(buffer),
                 NdpOptionBuilder::RecursiveDnsServer(RecursiveDnsServer {
                     lifetime,
                     addresses,
@@ -808,7 +937,7 @@ mod tests {
     use core::convert::TryFrom;
 
     use byteorder::{ByteOrder, NetworkEndian};
-    use net_types::ip::{Ip, IpAddress};
+    use net_types::ip::{Ip, IpAddress, Subnet};
     use packet::serialize::Serializer;
     use packet::{InnerPacketBuilder, ParseBuffer};
     use test_case::test_case;
@@ -1254,5 +1383,122 @@ mod tests {
         expected[2..4].copy_from_slice(&c.checksum()[..]);
 
         assert_eq!(serialized.as_ref(), &expected[..]);
+    }
+
+    struct SerializeRioTest {
+        prefix_length: u8,
+        route_lifetime_seconds: u32,
+        preference: RoutePreference,
+        expected_option_length: u8,
+    }
+
+    // As per RFC 4191 section 2.3,
+    //
+    //    Length     8-bit unsigned integer.  The length of the option
+    //               (including the Type and Length fields) in units of 8
+    //               octets.  The Length field is 1, 2, or 3 depending on the
+    //               Prefix Length.  If Prefix Length is greater than 64, then
+    //               Length must be 3.  If Prefix Length is greater than 0,
+    //               then Length must be 2 or 3.  If Prefix Length is zero,
+    //               then Length must be 1, 2, or 3.
+    #[test_case(
+        SerializeRioTest{
+            prefix_length: 0,
+            route_lifetime_seconds: 1,
+            preference: RoutePreference::High,
+            expected_option_length: 8,
+        }; "prefix_length_0")]
+    #[test_case(
+        SerializeRioTest{
+            prefix_length: 1,
+            route_lifetime_seconds: 1000,
+            preference: RoutePreference::Medium,
+            expected_option_length: 16,
+        }; "prefix_length_1")]
+    #[test_case(
+        SerializeRioTest{
+            prefix_length: 64,
+            route_lifetime_seconds: 100000,
+            preference: RoutePreference::Low,
+            expected_option_length: 16,
+        }; "prefix_length_64")]
+    #[test_case(
+        SerializeRioTest{
+            prefix_length: 65,
+            route_lifetime_seconds: 1000000,
+            preference: RoutePreference::Reserved,
+            expected_option_length: 24,
+        }; "prefix_length_65")]
+    #[test_case(
+        SerializeRioTest{
+            prefix_length: 128,
+            route_lifetime_seconds: 10000000,
+            preference: RoutePreference::Reserved,
+            expected_option_length: 24,
+        }; "prefix_length_128")]
+    fn serialize_route_information_option(test: SerializeRioTest) {
+        const IPV6ADDR: Ipv6Addr = Ipv6Addr::new([
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff,
+        ]);
+
+        let SerializeRioTest {
+            prefix_length,
+            route_lifetime_seconds,
+            preference,
+            expected_option_length,
+        } = test;
+        let prefix = IPV6ADDR.mask(prefix_length);
+
+        let option_builders =
+            [options::NdpOptionBuilder::RouteInformation(options::RouteInformationBuilder::new(
+                Subnet::new(prefix, prefix_length).unwrap(),
+                route_lifetime_seconds,
+                preference,
+            ))];
+
+        let serialized = OptionsSerializer::<_>::new(option_builders.iter())
+            .into_serializer()
+            .serialize_vec_outer()
+            .unwrap();
+
+        // As per RFC 4191 section 2.3,
+        //
+        //   Route Information Option
+        //
+        //      0                   1                   2                   3
+        //       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+        //      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //      |     Type      |    Length     | Prefix Length |Resvd|Prf|Resvd|
+        //      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //      |                        Route Lifetime                         |
+        //      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //      |                   Prefix (Variable Length)                    |
+        //      .                                                               .
+        //      .                                                               .
+        //      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //
+        //   Fields:
+        //
+        //   Type        24
+        //
+        //   Length      8-bit unsigned integer.  The length of the option
+        //               (including the Type and Length fields) in units of 8
+        //               octets.  The Length field is 1, 2, or 3 depending on the
+        //               Prefix Length.  If Prefix Length is greater than 64, then
+        //               Length must be 3.  If Prefix Length is greater than 0,
+        //               then Length must be 2 or 3.  If Prefix Length is zero,
+        //               then Length must be 1, 2, or 3.
+        let mut expected = [0; 24];
+        expected[0] = 24;
+        expected[1] = expected_option_length / 8;
+        expected[2] = prefix_length;
+        expected[3] = u8::from(preference) << 3;
+        let (mut lifetime_seconds, _rest) =
+            LayoutVerified::<_, U32>::new_from_prefix(&mut expected[4..]).unwrap();
+        lifetime_seconds.set(route_lifetime_seconds);
+        expected[8..].copy_from_slice(prefix.bytes());
+
+        assert_eq!(serialized.as_ref(), &expected[..expected_option_length.into()]);
     }
 }
