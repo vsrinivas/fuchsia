@@ -13,7 +13,7 @@ use {crate::input_device, async_trait::async_trait};
 /// produce multiple events as an outcome. If the [`InputHandler`] sends an InputEvent to a service
 /// that consumes the event, then the [`InputHandler`] doesn't return any events.
 #[async_trait]
-pub trait InputHandler: Send {
+pub trait InputHandler {
     /// Returns a vector of InputEvents after handling `input_event`.
     ///
     /// # Parameters

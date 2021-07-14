@@ -97,7 +97,7 @@ impl InputPipeline {
         let device_types = input_pipeline.input_device_types.clone();
         let input_event_sender = input_pipeline.input_event_sender.clone();
         let device_bindings = bindings.clone();
-        fasync::Task::spawn(async move {
+        fasync::Task::local(async move {
             // Watches the input device directory for new input devices. Creates new InputDeviceBindings
             // that send InputEvents to `input_event_receiver`.
             let device_watcher = Self::get_device_watcher().await;
@@ -411,7 +411,7 @@ mod tests {
         let second_device_event = send_input_event(second_device_binding.input_event_sender());
 
         // Run the pipeline.
-        fasync::Task::spawn(async {
+        fasync::Task::local(async {
             input_pipeline.handle_input_events().await;
         })
         .detach();
@@ -456,7 +456,7 @@ mod tests {
         let input_event = send_input_event(input_device_binding.input_event_sender());
 
         // Run the pipeline.
-        fasync::Task::spawn(async {
+        fasync::Task::local(async {
             input_pipeline.handle_input_events().await;
         })
         .detach();
@@ -642,7 +642,7 @@ mod tests {
 
         // Handle input device requests.
         let mut count: i8 = 0;
-        fasync::Task::spawn(async move {
+        fasync::Task::local(async move {
             // Register a device.
             let _ = input_device_registry_proxy.register(input_device_client_end);
 
