@@ -24,6 +24,7 @@ class GuestImpl : public fuchsia::virtualization::Guest {
 
   // |fuchsia::virtualization::Guest|
   void GetSerial(GetSerialCallback callback) override;
+  void GetConsole(GetConsoleCallback callback) override;
 
  private:
   fidl::BindingSet<fuchsia::virtualization::Guest> bindings_;

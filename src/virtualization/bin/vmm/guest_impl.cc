@@ -25,3 +25,7 @@ zx_status_t GuestImpl::AddPublicService(sys::ComponentContext* context) {
 zx::socket GuestImpl::SerialSocket() { return duplicate(socket_); }
 
 void GuestImpl::GetSerial(GetSerialCallback callback) { callback(duplicate(remote_socket_)); }
+
+void GuestImpl::GetConsole(GetConsoleCallback callback) {
+  callback(fuchsia::virtualization::Guest_GetConsole_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+}
