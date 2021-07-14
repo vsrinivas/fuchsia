@@ -1002,6 +1002,15 @@ Linter::Linter()
               if (as_lit_const->literal->kind == raw::Literal::Kind::kNumeric) {
                 has_size = true;
               }
+            } else if (first_constraint->kind == raw::Constant::Kind::kIdentifier && first_constraint->span().data() != "optional") {
+              // TODO(fxbug.dev/77561): This check currently fails to recognize a shadowing const
+              //  named optional, like:
+              //
+              //    const optional uint16 = 1234;
+              //    type MyStruct = struct {
+              //      this_will_trigger_incorrect_linter_warning string:optional;
+              //    };
+              has_size = true;
             }
           }
 

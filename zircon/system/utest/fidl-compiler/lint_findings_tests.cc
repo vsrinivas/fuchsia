@@ -2065,6 +2065,9 @@ struct SomeStruct {
   test.substitute("TEST", SubstitutionWithRandom{"string:64", ""});
   ASSERT_NO_FINDINGS(test);
 
+  test.substitute("TEST", SubstitutionWithRandom{"string:MAX", ""});
+  ASSERT_NO_FINDINGS(test);
+
   test.substitute("TEST", SubstitutionWithRandom{"vector<string:64>:64", ""});
   ASSERT_NO_FINDINGS(test);
 
@@ -2092,6 +2095,9 @@ struct SomeStruct {
   test.substitute("TEST", SubstitutionWithRandom{"string:64", ""});
   ASSERT_NO_FINDINGS(test);
 
+  test.substitute("TEST", SubstitutionWithRandom{"string:MAX", ""});
+  ASSERT_NO_FINDINGS(test);
+
   test.substitute("TEST", SubstitutionWithRandom{"string", ""});
   ASSERT_FINDINGS(test);
 
@@ -2109,6 +2115,26 @@ struct SomeStruct {
   ASSERT_FINDINGS(test);
 
   test.substitute("TEST", SubstitutionWithRandom{"string:64", ""});
+  ASSERT_NO_FINDINGS(test);
+
+  test.substitute("TEST", SubstitutionWithRandom{"string:MAX", ""});
+  ASSERT_NO_FINDINGS(test);
+
+  test.that("'optional' constraint is not mistaken for size")
+      .source_template(R"FIDL(
+library fidl.a;
+
+struct SomeStruct {
+  ${TEST}? test_str;
+};
+)FIDL")
+      .substitute("TEST", SubstitutionWithRandom{"string", ""});
+  ASSERT_FINDINGS(test);
+
+  test.substitute("TEST", SubstitutionWithRandom{"string:64", ""});
+  ASSERT_NO_FINDINGS(test);
+
+  test.substitute("TEST", SubstitutionWithRandom{"string:MAX", ""});
   ASSERT_NO_FINDINGS(test);
 }
 
@@ -2314,6 +2340,9 @@ struct SomeStruct {
   test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:64", ""});
   ASSERT_NO_FINDINGS(test);
 
+  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:MAX", ""});
+  ASSERT_NO_FINDINGS(test);
+
   test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>", ""});
   ASSERT_FINDINGS(test);
 
@@ -2330,6 +2359,9 @@ struct SomeStruct {
 )FIDL");
 
   test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:64", ""});
+  ASSERT_NO_FINDINGS(test);
+
+  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:MAX", ""});
   ASSERT_NO_FINDINGS(test);
 
   test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>", ""});
@@ -2350,6 +2382,26 @@ struct SomeStruct {
   ASSERT_FINDINGS(test);
 
   test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:64", ""});
+  ASSERT_NO_FINDINGS(test);
+
+  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:MAX", ""});
+  ASSERT_NO_FINDINGS(test);
+
+  test.that("'optional' constraint is not mistaken for size")
+      .source_template(R"FIDL(
+library fidl.a;
+
+struct SomeStruct {
+  ${TEST}? test_vector;
+};
+)FIDL")
+      .substitute("TEST", SubstitutionWithRandom{"vector<uint8>", ""});
+  ASSERT_FINDINGS(test);
+
+  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:64", ""});
+  ASSERT_NO_FINDINGS(test);
+
+  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:MAX", ""});
   ASSERT_NO_FINDINGS(test);
 }
 
