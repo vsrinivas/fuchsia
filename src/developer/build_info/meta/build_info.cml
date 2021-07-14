@@ -1,0 +1,23 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/build_info",
+    },
+    capabilities: [
+        { protocol: "fuchsia.buildinfo.Provider" },
+    ],
+    use: [
+        {
+            directory: "build-info",
+            rights: [ "r*" ],
+            path: "/config/build-info",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.buildinfo.Provider",
+            from: "self",
+        },
+    ],
+}

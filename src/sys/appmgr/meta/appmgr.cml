@@ -38,7 +38,6 @@
         {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.buildinfo.Provider",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.exception.Handler",
@@ -439,6 +438,12 @@
             path: "/svc_for_sys/fuchsia.logger.Log",
         },
 
+        // From build-info
+        {
+            protocol: "fuchsia.buildinfo.Provider",
+            path: "/svc_for_sys/fuchsia.buildinfo.Provider",
+        },
+
         // From diagnostics-persistence
         {
             protocol: "fuchsia.diagnostics.persist.DataPersistence-wlan",
@@ -554,7 +559,6 @@
         {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.buildinfo.Provider",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.exception.Handler",
