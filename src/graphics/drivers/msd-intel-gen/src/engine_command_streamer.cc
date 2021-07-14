@@ -92,28 +92,13 @@ void EngineCommandStreamer::InitHardware() {
                                  registers::GraphicsMode::kExeclistEnable,
                                  registers::GraphicsMode::kExeclistEnable);
 
-  registers::HardwareStatusMask::write(
-      register_io(), mmio_base_, registers::InterruptRegisterBase::RENDER_ENGINE,
-      registers::InterruptRegisterBase::USER, registers::InterruptRegisterBase::UNMASK);
-  registers::GtInterruptMask0::write(register_io(), registers::InterruptRegisterBase::RENDER_ENGINE,
-                                     registers::InterruptRegisterBase::USER,
-                                     registers::InterruptRegisterBase::UNMASK);
-  registers::GtInterruptEnable0::write(register_io(),
-                                       registers::InterruptRegisterBase::RENDER_ENGINE,
-                                       registers::InterruptRegisterBase::USER, true);
+  registers::HardwareStatusMask::write(register_io(), mmio_base_,
+                                       registers::InterruptRegisterBase::USER,
+                                       registers::InterruptRegisterBase::UNMASK);
 
-  registers::HardwareStatusMask::write(
-      register_io(), mmio_base_, registers::InterruptRegisterBase::RENDER_ENGINE,
-      registers::InterruptRegisterBase::CONTEXT_SWITCH, registers::InterruptRegisterBase::UNMASK);
-  registers::GtInterruptMask0::write(register_io(), registers::InterruptRegisterBase::RENDER_ENGINE,
-                                     registers::InterruptRegisterBase::CONTEXT_SWITCH,
-                                     registers::InterruptRegisterBase::UNMASK);
-  registers::GtInterruptEnable0::write(register_io(),
-                                       registers::InterruptRegisterBase::RENDER_ENGINE,
-                                       registers::InterruptRegisterBase::CONTEXT_SWITCH, true);
-
-  // WaEnableGapsTsvCreditFix
-  registers::ArbiterControl::workaround(register_io());
+  registers::HardwareStatusMask::write(register_io(), mmio_base_,
+                                       registers::InterruptRegisterBase::CONTEXT_SWITCH,
+                                       registers::InterruptRegisterBase::UNMASK);
 }
 
 void EngineCommandStreamer::InvalidateTlbs() {

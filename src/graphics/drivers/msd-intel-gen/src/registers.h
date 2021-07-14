@@ -333,7 +333,6 @@ class MasterInterruptControl {
 
 class InterruptRegisterBase {
  public:
-  enum Engine { RENDER_ENGINE };
   enum Source { PAGE_FAULT, CONTEXT_SWITCH, USER };
   enum MaskOp { MASK, UNMASK };
 
@@ -364,28 +363,22 @@ class InterruptRegisterBase {
 
 class HardwareStatusMask : public InterruptRegisterBase {
  public:
-  static constexpr uint32_t kRenderOffset = 0x98;
+  static constexpr uint32_t kOffset = 0x98;
 
-  static void write(magma::RegisterIo* register_io, uint32_t mmio_base, Engine engine,
-                    Source source, MaskOp op) {
-    switch (engine) {
-      case RENDER_ENGINE:
-        InterruptRegisterBase::write(register_io, mmio_base + kRenderOffset, source, op == MASK);
-        break;
-    }
+  static void write(magma::RegisterIo* register_io, uint32_t mmio_base, Source source, MaskOp op) {
+    InterruptRegisterBase::write(register_io, mmio_base + kOffset, source, op == MASK);
   }
 };
 
+// For GtInterrupt0 series the source bits correspond to RenderCS
+// (BlitterCS in the upper 16 bits).
+// intel-gfx-prm-osrc-kbl-vol02c-commandreference-registers-part1.pdf p.924
 class GtInterruptMask0 : public InterruptRegisterBase {
  public:
   static constexpr uint32_t kOffset = 0x44304;
 
-  static void write(magma::RegisterIo* register_io, Engine engine, Source source, MaskOp op) {
-    switch (engine) {
-      case RENDER_ENGINE:
-        InterruptRegisterBase::write(register_io, kOffset, source, op == MASK);
-        break;
-    }
+  static void write(magma::RegisterIo* register_io, Source source, MaskOp op) {
+    InterruptRegisterBase::write(register_io, kOffset, source, op == MASK);
   }
 };
 
@@ -393,18 +386,9 @@ class GtInterruptIdentity0 : public InterruptRegisterBase {
  public:
   static constexpr uint32_t kOffset = 0x44308;
 
-  static uint32_t read(magma::RegisterIo* register_io, Engine engine) {
-    switch (engine) {
-      case RENDER_ENGINE:
-        return register_io->Read32(kOffset);
-    }
-  }
-  static void clear(magma::RegisterIo* register_io, Engine engine, Source source) {
-    switch (engine) {
-      case RENDER_ENGINE:
-        register_io->Write32(kOffset, source_bit(source));
-        break;
-    }
+  static uint32_t read(magma::RegisterIo* register_io) { return register_io->Read32(kOffset); }
+  static void clear(magma::RegisterIo* register_io, Source source) {
+    register_io->Write32(kOffset, source_bit(source));
   }
 };
 
@@ -412,12 +396,8 @@ class GtInterruptEnable0 : public InterruptRegisterBase {
  public:
   static constexpr uint32_t kOffset = 0x4430C;
 
-  static void write(magma::RegisterIo* register_io, Engine engine, Source source, bool enable) {
-    switch (engine) {
-      case RENDER_ENGINE:
-        InterruptRegisterBase::write(register_io, kOffset, source, enable);
-        break;
-    }
+  static void write(magma::RegisterIo* register_io, Source source, bool enable) {
+    InterruptRegisterBase::write(register_io, kOffset, source, enable);
   }
 };
 

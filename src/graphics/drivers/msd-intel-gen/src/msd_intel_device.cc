@@ -226,6 +226,20 @@ bool MsdIntelDevice::RenderEngineInit(bool execute_init_batch) {
 
   render_engine_cs_->InitHardware();
 
+  // Enable render command streamer interrupts.
+  registers::GtInterruptMask0::write(register_io(), registers::InterruptRegisterBase::USER,
+                                     registers::InterruptRegisterBase::UNMASK);
+  registers::GtInterruptEnable0::write(register_io(), registers::InterruptRegisterBase::USER, true);
+
+  registers::GtInterruptMask0::write(register_io(),
+                                     registers::InterruptRegisterBase::CONTEXT_SWITCH,
+                                     registers::InterruptRegisterBase::UNMASK);
+  registers::GtInterruptEnable0::write(register_io(),
+                                       registers::InterruptRegisterBase::CONTEXT_SWITCH, true);
+
+  // WaEnableGapsTsvCreditFix
+  registers::ArbiterControl::workaround(register_io());
+
   if (execute_init_batch) {
     auto init_batch = render_engine_cs_->CreateRenderInitBatch(device_id_);
     if (!init_batch)
@@ -287,18 +301,14 @@ void MsdIntelDevice::InterruptCallback(void* data, uint32_t master_interrupt_con
 
   if (master_interrupt_control &
       registers::MasterInterruptControl::kRenderInterruptsPendingBitMask) {
-    render_interrupt_status = registers::GtInterruptIdentity0::read(
-        register_io, registers::InterruptRegisterBase::RENDER_ENGINE);
+    render_interrupt_status = registers::GtInterruptIdentity0::read(register_io);
     DLOG("gt IIR0 0x%08x", render_interrupt_status);
 
     if (render_interrupt_status & registers::InterruptRegisterBase::kUserInterruptBit) {
-      registers::GtInterruptIdentity0::clear(register_io,
-                                             registers::InterruptRegisterBase::RENDER_ENGINE,
-                                             registers::InterruptRegisterBase::USER);
+      registers::GtInterruptIdentity0::clear(register_io, registers::InterruptRegisterBase::USER);
     }
     if (render_interrupt_status & registers::InterruptRegisterBase::kContextSwitchBit) {
       registers::GtInterruptIdentity0::clear(register_io,
-                                             registers::InterruptRegisterBase::RENDER_ENGINE,
                                              registers::InterruptRegisterBase::CONTEXT_SWITCH);
     }
 
