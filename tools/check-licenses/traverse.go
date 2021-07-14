@@ -182,7 +182,7 @@ func Run(ctx context.Context, config *Config) error {
 			}
 		}
 	}
-	metrics.print()
+	log.Print(metrics.string())
 	return nil
 }
 

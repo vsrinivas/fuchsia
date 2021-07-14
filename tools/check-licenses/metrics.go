@@ -6,6 +6,7 @@ package checklicenses
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -45,9 +46,11 @@ func (metrics *Metrics) increment(key string) {
 	metrics.Unlock()
 }
 
-func (metrics *Metrics) print() {
-	fmt.Println("Metrics:")
+func (metrics *Metrics) string() string {
+	b := &strings.Builder{}
+	fmt.Fprintln(b, "Metrics:")
 	for _, value := range metrics.order {
-		fmt.Printf("%s: %d\n", value, metrics.values[value])
+		fmt.Fprintf(b, "%s: %d\n", value, metrics.values[value])
 	}
+	return b.String()
 }
