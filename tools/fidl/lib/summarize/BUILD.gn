@@ -51,7 +51,6 @@ if (is_host) {
 }  # is_host
 
 group("summarize") {
-  testonly = true
   deps = [ ":gopkg($host_toolchain)" ]
 }
 

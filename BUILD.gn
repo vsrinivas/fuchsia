@@ -991,6 +991,7 @@ group("additional_universe_packages") {
 }
 
 group("host") {
+  # TODO(fxbug.dev/80548) investigate removing testonly here
   testonly = true
   public_deps = []
   foreach(label, host_labels) {

@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 group("lib") {
-  testonly = true
-
   deps = [
     "apidiff",
     "fidlgen",

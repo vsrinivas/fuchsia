@@ -6,12 +6,10 @@ import("//scripts/sdk/gn/test/build/host_script_test.gni")
 
 if (!is_host) {
   group("fx") {
-    testonly = true
     deps = []
   }
 } else {
   group("fx") {
-    testonly = true
     deps = [
       "//src/developer/ffx:host",
       "//src/sys/pkg/bin/pm:host",

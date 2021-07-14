@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 group("fidl") {
-  testonly = true
-
   public_deps = [
     ":fidl-lint",
     ":fidlfmt",

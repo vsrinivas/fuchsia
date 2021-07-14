@@ -50,7 +50,6 @@ if (is_host) {
 }  # is_host
 
 group("apidiff") {
-  testonly = true
   deps = [ ":gopkg($host_toolchain)" ]
 }
 
