@@ -9,6 +9,7 @@
 #include <debug.h>
 #include <lib/arch/intrin.h>
 #include <lib/boot-options/boot-options.h>
+#include <lib/boot-options/types.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/debuglog.h>
@@ -18,6 +19,7 @@
 #include <mexec.h>
 #include <platform.h>
 #include <reg.h>
+#include <string-file.h>
 #include <trace.h>
 
 #include <arch/arch_ops.h>
@@ -53,6 +55,7 @@
 #include <vm/physmap.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
+
 #if WITH_PANIC_BACKTRACE
 #include <kernel/thread.h>
 #endif
@@ -527,8 +530,12 @@ void platform_early_init(void) {
   // Serial port should be active now
 
   // Check if serial should be enabled
-  const char* serial_mode = gCmdline.GetString(kernel_option::kSerial);
-  uart_disabled = (serial_mode != NULL && !strcmp(serial_mode, "none"));
+  if (gBootOptions->serial_source == OptionSource::kCmdLine) {
+    SmallString serial_mode = {};
+    StringFile string_file(serial_mode);
+    BootOptions::PrintValue(gBootOptions->serial, string_file.file());
+    uart_disabled = (strcmp(ktl::move(string_file).take().data(), "none") == 0);
+  }
 
   // Initialize the PmmChecker now that the cmdline has been parsed.
   pmm_checker_init_from_cmdline();
