@@ -114,7 +114,10 @@ sdk_documentation("musl_license") {
 sdk("cts") {
   testonly = true
   category = "cts"
-  deps = [ "cts:cts_tests" ]
+  deps = [
+    ":license",
+    "cts:cts_tests",
+  ]
 }
 
 # License/copyright files for the SDK.
