@@ -665,8 +665,11 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 		}
 	}
 	if !commandStarted {
-		return sinks, fmt.Errorf("failed to start test within %d attempts: %w",
-			startSerialCommandMaxAttempts, readErr)
+		err = fmt.Errorf("%s within %d attempts: %w",
+			constants.FailedToStartSerialTestMsg, startSerialCommandMaxAttempts, readErr)
+		// In practice, repeated failure to run a test means that the device has
+		// become unresponsive and we won't have any luck running later tests.
+		return sinks, fatalError{err}
 	}
 
 	// runtests sometimes doesn't respect the --timeout flag, so we impose a

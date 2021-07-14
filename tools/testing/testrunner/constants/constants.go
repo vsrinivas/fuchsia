@@ -9,4 +9,7 @@ const (
 	FailedToReconnectMsg = "failed to reconnect over SSH"
 	// FailedToRunSnapshotMsg is logged if testrunner fails to run snapshot over ssh.
 	FailedToRunSnapshotMsg = "failed to run snapshot over ssh"
+	// FailedToStartSerialTestMsg is logged if testrunner repeatedly fails to run a
+	// test over serial and gives up.
+	FailedToStartSerialTestMsg = "failed to start test over serial"
 )
