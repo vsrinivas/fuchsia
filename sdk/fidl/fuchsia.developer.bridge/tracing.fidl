@@ -5,6 +5,8 @@
 //! Covers the FFX tracing service, which is for running trace readouts
 //! on a Fuchsia target.
 //! For more information/usage examples, see the FFX trace plugin.
+deprecated_syntax;
+
 library fuchsia.developer.bridge;
 
 using fuchsia.device;

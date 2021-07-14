@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.process.init;
 
 using fuchsia.ldsvc;
 using fuchsia.mem;
 using fuchsia.process;
+using zx;
 
 /// The protocol used to initialize processes.
 protocol Bootstrap {
@@ -53,7 +53,7 @@ protocol Bootstrap {
     Start(uint32 argc, uint32 environc, fuchsia.mem.Data data);
 };
 
-struct RuntimeInfo {
+resource struct RuntimeInfo {
     /// The process being bootstrapped.
     zx.handle:PROCESS process;
 
@@ -71,7 +71,7 @@ bits InterpreterFlags : uint64 {
 };
 
 /// Information need by the interpreter to initialize a process.
-struct InterpreterInfo {
+resource struct InterpreterInfo {
     /// Flags to modulate the behavior of the interpreter.
     /// REVIEW: Can this be removed?
     InterpreterFlags flags;

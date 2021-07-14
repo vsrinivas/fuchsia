@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.metricbroker;
 
 using fuchsia.mem;
@@ -27,14 +26,14 @@ protocol Provider {
 };
 
 // Describes a collection of Inspect metrics, both where to read them from, and how to export them.
-struct InspectCollectionConfig {
+resource struct InspectCollectionConfig {
     InspectConfig inspect_config;
     InspectSource inspect_source;
 };
 
 // Information for identifying a metric provider and how should it be
 // handled by the broker.
-struct ProviderInfo {
+resource struct ProviderInfo {
     // Configuration data for connecting to the Cobalt service.
     // If empty, defaults are used from the calling program *somehow*.
     // TODO(gevalentino): fxbug.dev/4556
@@ -46,7 +45,7 @@ struct ProviderInfo {
 };
 
 // Data needed for forwarding cobalt metrics.
-struct CobaltProjectConfig {
+resource struct CobaltProjectConfig {
     // Serialized cobalt project configuration.
     // If this is set, it will override the usage of project name.
     fuchsia.mem.Buffer? cobalt_configuration;
@@ -55,14 +54,14 @@ struct CobaltProjectConfig {
     string:100? project_name;
 };
 
-struct InspectSource {
+resource struct InspectSource {
     // Inspection data served over a VMO.
     zx.handle:VMO vmo;
 };
 
 // The configuration that actually describes where to find data in the InspectSource and turn it
 // into Cobalt metrics
-flexible union InspectConfig {
+resource flexible union InspectConfig {
     // Inline configuration information.
     1: fuchsia.mem.Buffer buffer;
 

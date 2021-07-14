@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file
 deprecated_syntax;
-
 library fidl.difl.test;
 
 using zx;
@@ -126,17 +125,17 @@ struct StructMemberStringFromOptionalString {
     string field;
 };
 
-struct StructMemberHandleToOptionalHandle {
+resource struct StructMemberHandleToOptionalHandle {
     //!StructMemberTypeChanged
     zx.handle? field;
 };
 
-struct StructMemberHandleFromOptionalHandle {
+resource struct StructMemberHandleFromOptionalHandle {
     //!StructMemberTypeChanged
     zx.handle field;
 };
 
-struct StructMemberHandleTypeChanged {
+resource struct StructMemberHandleTypeChanged {
     //!StructMemberTypeChanged
     zx.handle:SOCKET field;
 };

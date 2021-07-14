@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.ui.scenic;
 
 using zx;
@@ -164,9 +163,10 @@ protocol Session {
     /// Note: `acquire_fences` and `release_fences` are only necessary to synchronize
     /// access to memory (and other external resources).  Any modification to
     /// resources made via the Session API are automatically synchronized.
-    [Transitional]Present(uint64 presentation_time,
-              vector<zx.handle:EVENT> acquire_fences, vector<zx.handle:EVENT> release_fences)
-          -> (fuchsia.images.PresentationInfo presentation_info);
+    [Transitional]
+    Present(uint64 presentation_time,
+            vector<zx.handle:EVENT> acquire_fences, vector<zx.handle:EVENT> release_fences)
+        -> (fuchsia.images.PresentationInfo presentation_info);
 
     /// Present all previously enqueued operations. In order to pipeline the
     /// preparation of the resources required to render the scene, two lists of
