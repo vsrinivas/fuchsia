@@ -886,7 +886,10 @@ func (c *Client) send(
 
 	_ = syslog.InfoTf(
 		tag,
-		"%s: send %s from %s:%d to %s:%d on NIC:%d (bcast=%t ciaddr=%t)",
+		// Note: `broadcast_flag` here records the value of a directive to the DHCP
+		// server (see RFC 2131, section 4.1) and does NOT imply that the `to`
+		// address is itself a broadcast address.
+		"%s: send %s from %s:%d to %s:%d on NIC:%d (broadcast_flag=%t ciaddr=%t)",
 		nicName,
 		typ,
 		info.Assigned.Address,
