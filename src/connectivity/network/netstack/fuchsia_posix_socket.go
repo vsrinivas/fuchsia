@@ -509,12 +509,36 @@ func (ep *endpoint) GetError(fidl.Context) (socket.BaseSocketGetErrorResult, err
 	return socket.BaseSocketGetErrorResultWithResponse(socket.BaseSocketGetErrorResponse{}), nil
 }
 
-func (ep *endpoint) SetSendBuffer(_ fidl.Context, size uint64) (socket.BaseSocketSetSendBufferResult, error) {
-	// Guard against overflow.
+func setBufferSize(size uint64, set func(int64, bool), limits func() (min, max int64)) {
 	if size > math.MaxInt64 {
 		size = math.MaxInt64
 	}
-	ep.ep.SocketOptions().SetSendBufferSize(int64(size), true)
+
+	{
+		size := int64(size)
+		min, max := limits()
+		if size > max {
+			size = max
+		}
+		if size < min {
+			size = min
+		}
+
+		// packetOverheadFactor is used to multiply the value provided by the user on
+		// a setsockopt(2) for setting the send/receive buffer sizes sockets.
+		const packetOverheadFactor = 2
+		if size > math.MaxInt64/packetOverheadFactor {
+			size = math.MaxInt64
+		} else {
+			size *= packetOverheadFactor
+		}
+		set(size, true /* notify */)
+	}
+}
+
+func (ep *endpoint) SetSendBuffer(_ fidl.Context, size uint64) (socket.BaseSocketSetSendBufferResult, error) {
+	opts := ep.ep.SocketOptions()
+	setBufferSize(size, opts.SetSendBufferSize, opts.SendBufferLimits)
 	return socket.BaseSocketSetSendBufferResultWithResponse(socket.BaseSocketSetSendBufferResponse{}), nil
 }
 
@@ -524,11 +548,8 @@ func (ep *endpoint) GetSendBuffer(fidl.Context) (socket.BaseSocketGetSendBufferR
 }
 
 func (ep *endpoint) SetReceiveBuffer(_ fidl.Context, size uint64) (socket.BaseSocketSetReceiveBufferResult, error) {
-	// Guard against overflow.
-	if size > math.MaxInt64 {
-		size = math.MaxInt64
-	}
-	ep.ep.SocketOptions().SetReceiveBufferSize(int64(size), true)
+	opts := ep.ep.SocketOptions()
+	setBufferSize(size, opts.SetReceiveBufferSize, opts.ReceiveBufferLimits)
 	return socket.BaseSocketSetReceiveBufferResultWithResponse(socket.BaseSocketSetReceiveBufferResponse{}), nil
 }
 
