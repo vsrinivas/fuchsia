@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library conformance;
 
 union UnionWithBoundString {
@@ -51,4 +50,14 @@ union MutualRecursionUnion {
 [BindingsDenylist = "dart"]
 struct MutualRecursionUnionStruct {
     MutualRecursionUnion? u;
+};
+
+resource union EnvelopeInliningTestUnion {
+    1: uint32 small;
+    2: uint64 large;
+    3: handle handle;
+};
+
+resource struct EnvelopeInliningTestUnionStruct {
+    EnvelopeInliningTestUnion u;
 };

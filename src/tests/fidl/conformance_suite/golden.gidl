@@ -134,6 +134,7 @@ success("GoldenTableStruct") {
     },
 }
 success("GoldenUnionStruct") {
+    bindings_denylist = [transformer],
     value = GoldenUnionStruct {
         v: GoldenUnion{
             v: 1,
@@ -142,13 +143,18 @@ success("GoldenUnionStruct") {
     bytes = {
         v1 = [
             num(1):8,
-            num(8):4, padding:4,
+            num(8):4, num(0):4,
             repeat(0xff):8,
-            num(1):4, padding:4,
+            num(1):2, padding:6,
+        ],
+        v2 = [
+            num(1):8,
+            num(1):4, num(0):2, num(1):2,
         ],
     },
 }
 success("GoldenNullableUnionStructNonNull") {
+    bindings_denylist = [transformer],
     value = GoldenNullableUnionStruct {
         v: GoldenUnion{
             v: 1,
@@ -157,21 +163,30 @@ success("GoldenNullableUnionStructNonNull") {
     bytes = {
         v1 = [
             num(1):8,
-            num(8):4, padding:4,
+            num(8):4, num(0):4,
             repeat(0xff):8,
             num(1):4, padding:4,
+        ],
+        v2 = [
+            num(1):8,
+            num(1):4, num(0):2, num(1):2,
         ],
     },
 }
 success("GoldenNullableUnionStructNull") {
+    bindings_denylist = [transformer],
     value = GoldenNullableUnionStruct {
         v: null,
     },
     bytes = {
         v1 = [
             num(0):8,
-            padding:8,
+            num(0):4, num(0):4,
             repeat(0x00):8,
+        ],
+        v2 = [
+            num(0):8,
+            num(0):4, num(0):2, num(0):2,
         ],
     },
 }

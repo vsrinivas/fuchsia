@@ -1329,6 +1329,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects7Byte") {
 }
 
 success("CorrectPaddedUnionStruct") {
+    bindings_denylist = [transformer],
     value = PaddedUnionStruct {
         u: PaddedUnion {
             field: 0x01,
@@ -1337,12 +1338,19 @@ success("CorrectPaddedUnionStruct") {
     bytes = {
         v1 = [
             num(1):8,
-            num(8):8,
+            num(8):4, num(0):4,
             repeat(0xff):8,
 
             0x01,
             padding:7,
-        ]
+        ],
+        v2 = [
+            num(1):8,
+            num(8):4, num(0):2, num(0):2,
+
+            0x01,
+            padding:7,
+        ],
     }
 }
 
@@ -1352,8 +1360,15 @@ decode_failure("BadPaddedUnionStructLowerByte") {
     bytes = {
         v1 = [
             num(1):8,
-            num(8):8,
+            num(8):4, num(0):4,
             repeat(0xff):8,
+
+            0x01,
+            0xee, padding:6, // should be padding:7
+        ],
+        v2 = [
+            num(1):8,
+            num(8):4, num(0):2, num(0):2,
 
             0x01,
             0xee, padding:6, // should be padding:7
@@ -1367,9 +1382,16 @@ decode_failure("BadPaddedUnionStructUpperByte") {
     type = PaddedUnionStruct,
     bytes = {
         v1 = [
-            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            num(1):8,
+            num(8):4, num(0):4,
+            repeat(0xff):8,
+
+            0x01,
+            padding:6, 0xee, // should be padding:7
+        ],
+        v2 = [
+            num(1):8,
+            num(8):4, num(0):2, num(0):2,
 
             0x01,
             padding:6, 0xee, // should be padding:7

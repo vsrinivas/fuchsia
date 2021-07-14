@@ -1039,6 +1039,40 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 
 	{
 		decodeSuccessCase{
+			name:    "GoldenUnionStruct_v2",
+			context: fidl.MarshalerContext{UseV2WireFormat: true},
+			input: &conformance.GoldenUnionStruct{
+				V: conformance.GoldenUnion{
+					I_goldenUnionTag: conformance.GoldenUnionV,
+					V:                0x1,
+				},
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenUnionStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := f1.V
+				ignore_unused_warning(f2)
+				if f2.Which() != conformance.GoldenUnionV {
+					t.Fatalf("unexpectedly unequal: %s and %s", "f2.Which()", "conformance.GoldenUnionV")
+				}
+				f3 := f2.V
+				ignore_unused_warning(f3)
+				if f3 != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f3", "1")
+				}
+
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
 			name:    "GoldenNullableUnionStructNonNull_v1",
 			context: fidl.MarshalerContext{UseV2WireFormat: false},
 			input: &conformance.GoldenNullableUnionStruct{
@@ -1075,6 +1109,40 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 
 	{
 		decodeSuccessCase{
+			name:    "GoldenNullableUnionStructNonNull_v2",
+			context: fidl.MarshalerContext{UseV2WireFormat: true},
+			input: &conformance.GoldenNullableUnionStruct{
+				V: &conformance.GoldenUnion{
+					I_goldenUnionTag: conformance.GoldenUnionV,
+					V:                0x1,
+				},
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenNullableUnionStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := f1.V
+				ignore_unused_warning(f2)
+				if f2.Which() != conformance.GoldenUnionV {
+					t.Fatalf("unexpectedly unequal: %s and %s", "f2.Which()", "conformance.GoldenUnionV")
+				}
+				f3 := f2.V
+				ignore_unused_warning(f3)
+				if f3 != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f3", "1")
+				}
+
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
 			name:    "GoldenNullableUnionStructNull_v1",
 			context: fidl.MarshalerContext{UseV2WireFormat: false},
 			input: &conformance.GoldenNullableUnionStruct{
@@ -1082,6 +1150,30 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			},
 			bytes: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenNullableUnionStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != nil {
+					t.Errorf("expected nil but was non-nil: %s", "f1.V")
+				}
+
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
+			name:    "GoldenNullableUnionStructNull_v2",
+			context: fidl.MarshalerContext{UseV2WireFormat: true},
+			input: &conformance.GoldenNullableUnionStruct{
+				V: nil,
+			},
+			bytes: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			},
