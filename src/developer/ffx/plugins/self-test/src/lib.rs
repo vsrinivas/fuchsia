@@ -13,6 +13,8 @@ mod test;
 pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
     let default_tests = tests![
         test_isolated,
+        test_experiment_not_enabled,
+        test_experiment_enabled,
         test_daemon_echo,
         test_daemon_config_flag,
         test_daemon_stop,
@@ -36,6 +38,46 @@ async fn test_isolated() -> Result<()> {
 
     let out = isolate.ffx(&["config", "get", "test.is-isolated"]).output()?;
     assert_eq!(String::from_utf8(out.stdout)?, "true\n");
+
+    Ok(())
+}
+
+async fn test_experiment_not_enabled() -> Result<()> {
+    let isolate = Isolate::new("experiment-not-enabled")?;
+
+    let mut cmd = isolate.ffx(&["self-test", "experiment"]);
+    let (status, stdout, stderr) = fuchsia_async::unblock(move || {
+        let out = cmd.output().context("failed to execute")?;
+        let stdout = String::from_utf8(out.stdout).context("convert from utf8")?;
+        let stderr = String::from_utf8(out.stderr).context("convert from utf8")?;
+        Ok::<_, anyhow::Error>((out.status, stdout, stderr))
+    })
+    .await?;
+
+    ensure!(stdout.lines().count() == 0);
+    ensure!(!status.success());
+    ensure!(stderr.contains("experimental subcommand"));
+    ensure!(stderr.contains("selftest.experiment"));
+
+    Ok(())
+}
+
+async fn test_experiment_enabled() -> Result<()> {
+    let isolate = Isolate::new("experiment-enabled")?;
+
+    let mut cmd = isolate.ffx(&["config", "set", "selftest.experiment", "true"]);
+    let _ = fuchsia_async::unblock(move || cmd.output()).await;
+
+    let mut cmd = isolate.ffx(&["self-test", "experiment"]);
+    let (status, stderr) = fuchsia_async::unblock(move || {
+        let out = cmd.output().context("failed to execute")?;
+        let stderr = String::from_utf8(out.stderr).context("convert from utf8")?;
+        Ok::<_, anyhow::Error>((out.status, stderr))
+    })
+    .await?;
+
+    ensure!(stderr.lines().count() == 0);
+    ensure!(status.success());
 
     Ok(())
 }
