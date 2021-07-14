@@ -23,13 +23,12 @@ manifest sources, and component declarations.
 
 ### Component manifest source {#component-manifest-source}
 
-A [component manifest source][glossary.component manifest source]
-is a file that encodes part of a component manifest.
-Component manifest sources are written in component manifest language (CML),
-which is the developer-facing source format for component manifests.
-CML files are JSON5 files that end with a `.cml` extension. Descriptions and
-examples of the CML syntax are contained in this document: see
-[Syntax](#syntax).
+A [component manifest source][glossary.component manifest source] is a file that
+encodes part of a component manifest. Component manifest sources are written in
+component manifest language (CML), which is the developer-facing source format
+for component manifests. CML files are JSON5 files that end with a `.cml`
+extension. Descriptions and examples of the CML syntax are contained in this
+document: see [Syntax](#syntax).
 
 Component manifest sources are compiled to
 [component manifests](#component-manifest) by the [`cmc`][src-cmc] tool.
@@ -38,8 +37,8 @@ Component manifest sources are compiled to
 
 A [component manifest][glossary.component manifest] is a file that encodes a
 [component declaration](#component-declaration), usually distributed as part of
-a [package][glossary.package]. The binary format is a persisted FIDL file mapping
-one-to-one onto the component declaration, typically ending in a `.cm`
+a [package][glossary.package]. The binary format is a persisted FIDL file
+mapping one-to-one onto the component declaration, typically ending in a `.cm`
 extension.
 
 A [fuchsia-pkg URL][doc-package-url] with a component manifest resource path
@@ -154,8 +153,8 @@ Because the component framework itself is the provider of the directory, any
 component may `use` it without an explicit `offer`. Fuchsia supports the
 following framework directories:
 
--   [hub][glossary.hub]: Allows a component to perform runtime introspection
-    of itself and its children.
+-   [hub][glossary.hub]: Allows a component to perform runtime introspection of
+    itself and its children.
 
 #### Capability names {#capability-names}
 
@@ -340,8 +339,8 @@ properties:
 -   `startup` _(optional)_: The component instance's startup mode.
     -   `lazy` _(default)_: Start the component instance only if another
         component instance binds to it.
-    -   [`eager`][doc-eager]: Start the component instance as
-        soon as its parent starts.
+    -   [`eager`][doc-eager]: Start the component instance as soon as its parent
+        starts.
 -   `environment` _(optional)_: If present, the name of the environment to be
     assigned to the child component instance, one of
     [`environments`](#environments). If omitted, the child will inherit the same
@@ -653,7 +652,7 @@ explained in [Routing terminology](#routing-terminology).
     -   `#<child-name>`: A [reference](#references) to a child component
         instance. This source can only be used when offering protocol,
         directory, or runner capabilities.
--   `to`: An array of capability targets, each of which is a
+-   `to`: A capability target or array of targets, each of which is a
     [reference](#references) to the child or collection to which the capability
     is being offered, of the form `#<target-name>`.
 -   `as` _(optional)_: An explicit [name](#capability-names) for the capability
