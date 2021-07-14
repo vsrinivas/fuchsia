@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdarg.h>
 #include <stdio.h>
-#include <string.h>
 #include <sys/stat.h>
 
 #include <vector>
@@ -20,51 +18,7 @@ namespace {
 using ::chunked_compression::ChunkedCompressor;
 using ::chunked_compression::CompressionParams;
 using ::chunked_compression::ToZxStatus;
-
-constexpr const char kAnsiUpLine[] = "\33[A";
-constexpr const char kAnsiClearLine[] = "\33[2K\r";
 }  // namespace
-
-// ProgressWriter writes live a progress indicator to stdout. Updates are written in-place
-// (using ANSI control codes to rewrite the current line).
-class ProgressWriter {
- public:
-  explicit ProgressWriter(int refresh_hz = 60) : refresh_hz_(refresh_hz) {
-    last_report_ = std::chrono::steady_clock::time_point::min();
-    printf("\n");
-  }
-
-  void Update(const char* fmt, ...) {
-    auto now = std::chrono::steady_clock::now();
-    if (now < last_report_ + refresh_duration()) {
-      return;
-    }
-    last_report_ = now;
-    printf("%s%s", kAnsiUpLine, kAnsiClearLine);
-    va_list args;
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-    fflush(stdout);
-  }
-
-  void Final(const char* fmt, ...) {
-    printf("%s%s", kAnsiUpLine, kAnsiClearLine);
-    va_list args;
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-    fflush(stdout);
-  }
-
-  std::chrono::steady_clock::duration refresh_duration() const {
-    return std::chrono::seconds(1) / refresh_hz_;
-  }
-
- private:
-  std::chrono::steady_clock::time_point last_report_;
-  int refresh_hz_;
-};
 
 // Validate command line |options| used for compressing.
 zx_status_t ValidateCliOptions(const CompressionCliOptionStruct& options) {
@@ -113,13 +67,6 @@ zx_status_t BlobfsCompress(const uint8_t* src, const size_t src_sz, uint8_t* des
                            const CompressionCliOptionStruct& cli_options) {
   ChunkedCompressor compressor(params);
 
-  ProgressWriter progress;
-  compressor.SetProgressCallback([&](size_t bytes_read, size_t bytes_total, size_t bytes_written) {
-    progress.Update("%2.0f%% (%lu bytes written)\n",
-                    static_cast<double>(bytes_read) / static_cast<double>(bytes_total) * 100,
-                    bytes_written);
-  });
-
   // Using non-compact merkle tree size by default because it's bigger than compact merkle tree.
   const size_t merkle_tree_size =
       digest::CalculateMerkleTreeSize(src_sz, digest::kDefaultNodeSize, false);
@@ -155,8 +102,7 @@ zx_status_t BlobfsCompress(const uint8_t* src, const size_t src_sz, uint8_t* des
   } else {
     saving_ratio = 0;
   }
-  progress.Final("Wrote %lu bytes (%.2f%% space saved).\n", aligned_compressed_size,
-                 saving_ratio * 100);
+  printf("Wrote %lu bytes (%.2f%% space saved).\n", aligned_compressed_size, saving_ratio * 100);
 
   // By default, filling 0x00 at the end of compressed buffer to match |aligned_compressed_size|.
   *out_compressed_size = aligned_compressed_size;
