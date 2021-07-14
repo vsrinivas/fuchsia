@@ -69,7 +69,6 @@ rustc_binary("bin") {
   sources = [
     "src/main.rs",
     "src/peer/mod.rs",
-    "src/peer/rfcomm.rs",
     "src/peer/search.rs",
     "src/peer/service.rs",
     "src/profile.rs",

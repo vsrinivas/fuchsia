@@ -5,7 +5,8 @@ The Mock Piconet Server component is used in integration tests for the Bluetooth
 
 The server manages a fake piconet of peers, and simulates the behavior of the
 [Profile Server](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/bluetooth/core/bt-host/fidl/profile_server.h). The component implements the [ProfileTest](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.bluetooth.bredr/profile_test.fidl) protocol, which can be used to
-register mock peers in the piconet, launch profiles to test, and drive peer behavior. The server supports establishing L2CAP and RFCOMM connections.
+register mock peers in the piconet, launch profiles to test, and drive peer behavior. The server supports establishing L2CAP connections.
+For RFCOMM connections, test writers should use the [RFCOMM component](../../profiles/bt-rfcomm) as an intermediary.
 
 The Mock Piconet Server currently supports integration tests written in both CFv1 and CFv2 frameworks.
 

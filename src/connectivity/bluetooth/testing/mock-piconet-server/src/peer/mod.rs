@@ -4,7 +4,6 @@
 
 use {
     anyhow::{format_err, Error},
-    bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_sys::ComponentControllerEvent,
     fuchsia_bluetooth::{
@@ -21,17 +20,15 @@ use {
     parking_lot::RwLock,
     std::{
         collections::{HashMap, HashSet},
-        convert::{TryFrom, TryInto},
+        convert::TryInto,
         sync::Arc,
     },
 };
 
-mod rfcomm;
 mod search;
 pub mod service;
 
 use self::{
-    rfcomm::RfcommChannelSet,
     search::SearchSet,
     service::{RegistrationHandle, ServiceSet},
 };
@@ -80,9 +77,6 @@ pub struct MockPeer {
     /// Information about the profiles that have been launched by this peer.
     launched_profiles: DetachableMap<ProfileHandle, (String, App)>,
 
-    /// Manages the allocated RFCOMM channels for this peer.
-    rfcomm_mgr: Arc<RwLock<RfcommChannelSet>>,
-
     /// Manages the active searches for this peer.
     search_mgr: Arc<RwLock<SearchSet>>,
 
@@ -107,7 +101,6 @@ impl MockPeer {
             observer,
             next_profile_handle: ProfileHandle(1),
             launched_profiles: DetachableMap::new(),
-            rfcomm_mgr: Arc::new(RwLock::new(RfcommChannelSet::new())),
             search_mgr: Arc::new(RwLock::new(SearchSet::new())),
             service_mgr: Arc::new(RwLock::new(ServiceSet::new(id))),
             services: DetachableMap::new(),
@@ -262,26 +255,6 @@ impl MockPeer {
         }
     }
 
-    /// Updates the `service_records` with assigned RFCOMM channels. Returns an error if channel
-    /// allocation fails or if there is an insufficient number of free RFCOMM channels.
-    fn update_records_with_rfcomm(
-        &self,
-        service_records: &mut Vec<ServiceRecord>,
-    ) -> Result<(), Error> {
-        let mut rfcomm = self.rfcomm_mgr.write();
-        let required = service_records.iter().filter(|record| record.requests_rfcomm()).count();
-        if required > rfcomm.available_space() {
-            return Err(format_err!("Not enough available RFCOMM channels"));
-        }
-
-        service_records.iter_mut().filter(|record| record.requests_rfcomm()).for_each(|record| {
-            if let Some(channel_number) = rfcomm.reserve_channel() {
-                record.set_rfcomm_channel(channel_number).expect("Just checked compatibility");
-            }
-        });
-        Ok(())
-    }
-
     /// Attempts to register the services, as a group, specified by `services`.
     ///
     /// Returns 1) The ServiceClassProfileIds of the registered services and 2) A future that should
@@ -294,16 +267,13 @@ impl MockPeer {
         proxy: bredr::ConnectionReceiverProxy,
     ) -> Result<(HashSet<bredr::ServiceClassProfileIdentifier>, impl Future<Output = ()>), Error>
     {
-        let mut service_records = parse_service_definitions(services)?;
-        self.update_records_with_rfcomm(&mut service_records)?;
-
+        let service_records = parse_service_definitions(services)?;
         let registration_handle = self
             .service_mgr
             .write()
             .register_service(service_records)
             .ok_or(format_err!("Registration of services failed"))?;
 
-        // Take the ConnectionReceiver event stream to monitor the channel for closure.
         let service_event_stream = proxy.take_event_stream();
 
         self.services.insert(registration_handle, proxy);
@@ -318,17 +288,11 @@ impl MockPeer {
         let reg_handle_clone = registration_handle.clone();
         let detached_service = self.services.get(&registration_handle).expect("just added");
         let service_mgr_clone = self.service_mgr.clone();
-        let rfcomm_mgr_clone = self.rfcomm_mgr.clone();
         let closed_fut = async move {
             let _ = service_event_stream.map(|_| ()).collect::<()>().await;
-            info!("Peer {} unregistering service advertisement", peer_id);
             detached_service.detach();
-            // Unregister the advertisement.
             let removed = service_mgr_clone.write().unregister_service(&reg_handle_clone);
-            // Remove any allocated RFCOMM channels.
-            let server_channels =
-                removed.iter().map(|record| record.rfcomm_channels()).flatten().collect();
-            rfcomm_mgr_clone.write().remove_channels(&server_channels);
+            info!("Peer {} unregistered service advertisement: {:?}", peer_id, removed);
         };
 
         Ok((ids, closed_fut))
@@ -336,68 +300,11 @@ impl MockPeer {
 
     /// Creates a new connection between this peer and the `other` peer.
     ///
-    /// `connection` specifies the connection type and parameters.
     /// `other` specifies the PeerId of the peer initiating the connection.
-    ///
-    /// Returns one end of the created connection on success, Error otherwise.
-    pub fn new_connection(
-        &self,
-        other: PeerId,
-        connection: bredr::ConnectParameters,
-    ) -> Result<bredr::Channel, Error> {
-        match connection {
-            bredr::ConnectParameters::L2cap(params) => {
-                let psm = params.psm.ok_or(format_err!("No PSM provided"))?;
-                self.new_l2cap_connection(other, Psm::new(psm))
-            }
-            bredr::ConnectParameters::Rfcomm(params) => {
-                let server_channel =
-                    params.channel.ok_or(format_err!("No Server Channel number provided"))?;
-                let server_channel = ServerChannel::try_from(server_channel)
-                    .map_err(|_| format_err!("Invalid server channel number"))?;
-                self.new_rfcomm_connection(other, server_channel)
-            }
-        }
-    }
-
-    /// Creates a new connection if the requested `server_channel` number
-    /// is registered by this peer.
-    ///
-    /// `other` is the PeerID of remote peer that is requesting the connection.
-    fn new_rfcomm_connection(
-        &self,
-        other: PeerId,
-        server_channel: ServerChannel,
-    ) -> Result<bredr::Channel, Error> {
-        let reg_handle = self
-            .service_mgr
-            .read()
-            .rfcomm_channel_registered(server_channel)
-            .ok_or(format_err!("ServerChannel {:?} not registered", server_channel))?;
-        let proxy = self
-            .services
-            .get(&reg_handle)
-            .and_then(|p| p.upgrade())
-            .ok_or(format_err!("Connection receiver doesn't exist"))?;
-        // Build the RFCOMM descriptor and notify the receiver.
-        let mut protocol: Vec<bredr::ProtocolDescriptor> = build_rfcomm_protocol(server_channel)
-            .iter()
-            .map(bredr::ProtocolDescriptor::from)
-            .collect();
-        let (local, remote) = Channel::create_with_max_tx(DEFAULT_TX_SDU_SIZE);
-        proxy.connected(&mut other.into(), remote.try_into()?, &mut protocol.iter_mut())?;
-
-        // Notify observer relay of the connection.
-        self.observer.as_ref().map(|o| Self::relay_connected(o, other, protocol));
-        local.try_into()
-    }
-
-    /// Creates a new connection if the requested `psm` is registered by this peer.
-    ///
-    /// `other` is the PeerID of remote peer that is requesting the connection.
+    /// `psm` is the L2CAP PSM number of the connection.
     ///
     /// Returns the created Channel if the provided `psm` is valid.
-    fn new_l2cap_connection(&self, other: PeerId, psm: Psm) -> Result<bredr::Channel, Error> {
+    pub fn new_connection(&self, other: PeerId, psm: Psm) -> Result<bredr::Channel, Error> {
         let reg_handle = self
             .service_mgr
             .read()
@@ -454,16 +361,18 @@ impl MockPeer {
 mod tests {
     use super::*;
     use {
+        bt_rfcomm::ServerChannel,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_sys::EnvironmentOptions,
         fuchsia_async as fasync,
         fuchsia_component::{fuchsia_single_component_package_url, server::ServiceFs},
         futures::{lock::Mutex, pin_mut, task::Poll},
         matches::assert_matches,
+        std::convert::TryFrom,
     };
 
     use crate::{
-        profile::tests::{build_a2dp_service_definition, build_rfcomm_service_definition},
+        profile::tests::{a2dp_service_definition, rfcomm_service_definition},
         types::RegisteredServiceId,
     };
 
@@ -609,17 +518,14 @@ mod tests {
         HashSet<bredr::ServiceClassProfileIdentifier>,
     ) {
         // Build the A2DP Sink Service Definition.
-        let (a2dp_def, _) = build_a2dp_service_definition(Psm::new(bredr::PSM_AVDTP));
-        let mut expected_ids = HashSet::new();
-        expected_ids.insert(bredr::ServiceClassProfileIdentifier::AudioSink);
+        let (a2dp_def, expected_record) = a2dp_service_definition(Psm::new(bredr::PSM_AVDTP));
 
         // Register the service.
         let (receiver, stream) =
             create_proxy_and_stream::<bredr::ConnectionReceiverMarker>().unwrap();
-        let res = mock_peer.new_advertisement(vec![a2dp_def], receiver);
-        assert!(res.is_ok());
-        let (svc_ids, adv_fut) = res.unwrap();
-        assert_eq!(expected_ids, svc_ids);
+        let (svc_ids, adv_fut) =
+            mock_peer.new_advertisement(vec![a2dp_def], receiver).expect("advertisement is ok");
+        assert_eq!(expected_record.service_ids().clone(), svc_ids);
 
         (stream, adv_fut, svc_ids)
     }
@@ -804,19 +710,11 @@ mod tests {
         // An incoming connection request for PSM_AVCTP is invalid because PSM_AVCTP has not
         // been registered as a service.
         let remote_peer = PeerId(987);
-        let avctp_params = bredr::ConnectParameters::L2cap(bredr::L2capParameters {
-            psm: Some(bredr::PSM_AVCTP),
-            ..bredr::L2capParameters::EMPTY
-        });
-        assert_matches!(mock_peer.new_connection(remote_peer, avctp_params), Err(_));
+        assert_matches!(mock_peer.new_connection(remote_peer, Psm::AVCTP), Err(_));
 
         // An incoming connection request for PSM_AVDTP is valid, since it was registered
         // in `a2dp_def`. There should be a new connection request on the stream.
-        let avdtp_params = bredr::ConnectParameters::L2cap(bredr::L2capParameters {
-            psm: Some(bredr::PSM_AVDTP),
-            ..bredr::L2capParameters::EMPTY
-        });
-        assert_matches!(mock_peer.new_connection(remote_peer, avdtp_params), Ok(_));
+        assert_matches!(mock_peer.new_connection(remote_peer, Psm::AVDTP), Ok(_));
         match exec.run_until_stalled(&mut stream.next()) {
             Poll::Ready(Some(Ok(bredr::ConnectionReceiverRequest::Connected {
                 peer_id,
@@ -842,73 +740,6 @@ mod tests {
             x => panic!("Expected Ready but got: {:?}", x),
         }
 
-        Ok(())
-    }
-
-    #[test]
-    fn register_rfcomm_service_with_connection_is_ok() -> Result<(), Error> {
-        let mut exec = fasync::TestExecutor::new().unwrap();
-
-        let id = PeerId(2523);
-        let (mut mock_peer, mut observer_stream, _env_vars) = create_mock_peer(id)?;
-
-        // Register the service.
-        let (rfcomm_def, _) = build_rfcomm_service_definition(None);
-        let (receiver, mut stream) =
-            create_proxy_and_stream::<bredr::ConnectionReceiverMarker>().unwrap();
-        let (_, _adv_fut) = mock_peer.new_advertisement(vec![rfcomm_def], receiver)?;
-
-        // There should be no connection updates yet.
-        assert_matches!(exec.run_until_stalled(&mut stream.next()), Poll::Pending);
-
-        // An incoming connection request over ServerChannel(1).
-        // NOTE: This takes advantage of internal knowledge that RFCOMM channels are assigned
-        // sequentially in the test server. In reality, one should not rely on this information
-        // and instead should look at the search results to find the advertised server channel.
-        let remote_peer = PeerId(8354);
-        let rfcomm_params = bredr::ConnectParameters::Rfcomm(bredr::RfcommParameters {
-            channel: Some(1),
-            ..bredr::RfcommParameters::EMPTY
-        });
-        assert_matches!(mock_peer.new_connection(remote_peer, rfcomm_params), Ok(_));
-        // The mock peer should be notified of the connection.
-        match exec.run_until_stalled(&mut stream.next()) {
-            Poll::Ready(Some(Ok(bredr::ConnectionReceiverRequest::Connected {
-                peer_id, ..
-            }))) => {
-                assert_eq!(remote_peer, peer_id.into());
-            }
-            x => panic!("Expected Connected but got: {:?}", x),
-        }
-        // The observer should also be notified of the connection.
-        match exec.run_until_stalled(&mut observer_stream.next()) {
-            Poll::Ready(Some(Ok(bredr::PeerObserverRequest::PeerConnected {
-                peer_id,
-                responder,
-                ..
-            }))) => {
-                assert_eq!(remote_peer, peer_id.into());
-                let _ = responder.send();
-            }
-            x => panic!("Expected PeerConnected but got: {:?}", x),
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn incoming_rfcomm_connection_over_unregistered_channel_is_err() -> Result<(), Error> {
-        let _exec = fasync::TestExecutor::new().unwrap();
-
-        let id = PeerId(092);
-        let (mock_peer, _observer_stream, _env_vars) = create_mock_peer(id)?;
-
-        // ServerChannel(10) has not been registered, so this connection request should fail.
-        let remote_peer = PeerId(456);
-        let rfcomm_params = bredr::ConnectParameters::Rfcomm(bredr::RfcommParameters {
-            channel: Some(10),
-            ..bredr::RfcommParameters::EMPTY
-        });
-        assert_matches!(mock_peer.new_connection(remote_peer, rfcomm_params), Err(_));
         Ok(())
     }
 
@@ -955,7 +786,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut search3).is_pending());
 
         // Build a fake service as a registered record and notify any A2DP Sink searches.
-        let (_, mut record) = build_a2dp_service_definition(Psm::new(19));
+        let (_, mut record) = a2dp_service_definition(Psm::new(19));
         record.register_service_record(RegisteredServiceId::new(PeerId(999), 789)); // random
         let services = vec![record];
         mock_peer.notify_searches(&bredr::ServiceClassProfileIdentifier::AudioSink, services);
@@ -1023,7 +854,7 @@ mod tests {
         // Build a fake A2DP Sink service for some remote.
         let remote_peer = PeerId(2324);
         let random_handle = 889;
-        let (_, mut record) = build_a2dp_service_definition(Psm::new(19));
+        let (_, mut record) = a2dp_service_definition(Psm::new(19));
         let mut record_clone = record.clone();
 
         // Register the record and notify the mock peer who's searching for it.
@@ -1043,5 +874,66 @@ mod tests {
         expect_search_service_found(&mut exec, &mut stream);
 
         Ok(())
+    }
+
+    #[test]
+    fn rfcomm_connection_with_no_advertisement_returns_error() {
+        let _exec = fasync::TestExecutor::new().unwrap();
+
+        // New mock peer with no RFCOMM advertisement.
+        let id = PeerId(71);
+        let (mock_peer, _observer_stream, _env_vars) =
+            create_mock_peer(id).expect("valid mock peer");
+
+        let other = PeerId(72);
+        assert_matches!(mock_peer.new_connection(other, Psm::RFCOMM), Err(_));
+    }
+
+    #[test]
+    fn rfcomm_connection_relayed_to_peer() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let id = PeerId(80);
+        let (mut mock_peer, mut observer_stream, _env_vars) =
+            create_mock_peer(id).expect("valid mock peer");
+
+        // Register some RFCOMM service with a random channel number.
+        let (rfcomm_def, _) =
+            rfcomm_service_definition(ServerChannel::try_from(4).expect("valid channel"));
+        let (receiver, mut stream) =
+            create_proxy_and_stream::<bredr::ConnectionReceiverMarker>().unwrap();
+        let (_, _adv_fut) =
+            mock_peer.new_advertisement(vec![rfcomm_def], receiver).expect("valid advertisement");
+
+        // Some other peer wants to connect to the RFCOMM service.
+        let other_peer = PeerId(81);
+        let _other_channel =
+            mock_peer.new_connection(other_peer, Psm::RFCOMM).expect("connection should work");
+
+        // `mock_peer` should receive connection request.
+        let _mock_peer_channel = match exec.run_until_stalled(&mut stream.next()) {
+            Poll::Ready(Some(Ok(bredr::ConnectionReceiverRequest::Connected {
+                peer_id,
+                channel,
+                ..
+            }))) => {
+                assert_eq!(other_peer, peer_id.into());
+                channel
+            }
+            x => panic!("Expected Connected but got: {:?}", x),
+        };
+
+        // Should be echoed on the observer.
+        match exec.run_until_stalled(&mut observer_stream.next()) {
+            Poll::Ready(Some(Ok(bredr::PeerObserverRequest::PeerConnected {
+                peer_id,
+                responder,
+                ..
+            }))) => {
+                assert_eq!(other_peer, peer_id.into());
+                let _ = responder.send();
+            }
+            x => panic!("Expected PeerConnected but got: {:?}", x),
+        }
     }
 }

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    bt_rfcomm::ServerChannel,
     fidl_fuchsia_bluetooth_bredr::ServiceClassProfileIdentifier,
     fuchsia_bluetooth::{profile::Psm, types::PeerId},
     log::warn,
@@ -42,10 +41,6 @@ pub struct ServiceSet {
     /// RegistrationHandle.
     psm_to_handle: HashMap<Psm, RegistrationHandle>,
 
-    /// A single RFCOMM Server Channel can only be specified by a single service and therefore
-    /// a RegistrationHandle.
-    rfcomm_channel_to_handle: HashMap<ServerChannel, RegistrationHandle>,
-
     /// The ServiceClassIds supported by each registration. This is used to speed
     /// up the matching to a service search.
     reg_to_svc_ids: HashMap<RegistrationHandle, HashSet<ServiceClassProfileIdentifier>>,
@@ -58,7 +53,6 @@ impl ServiceSet {
             reg_to_service: HashMap::new(),
             records: Slab::new(),
             psm_to_handle: HashMap::new(),
-            rfcomm_channel_to_handle: HashMap::new(),
             reg_to_svc_ids: HashMap::new(),
         }
     }
@@ -76,12 +70,6 @@ impl ServiceSet {
     /// None if not registered.
     pub fn psm_registered(&self, psm: Psm) -> Option<RegistrationHandle> {
         self.psm_to_handle.get(&psm).cloned()
-    }
-
-    /// Returns the RegistrationHandle of the service specifying the RFCOMM `channel` number, or
-    /// None if not registered.
-    pub fn rfcomm_channel_registered(&self, channel: ServerChannel) -> Option<RegistrationHandle> {
-        self.rfcomm_channel_to_handle.get(&channel).cloned()
     }
 
     /// Returns a map of ServiceRecords (if any), that conform to the provided Service Class `ids`.
@@ -117,19 +105,11 @@ impl ServiceSet {
             return None;
         }
 
-        // Any new service must not request an already allocated L2CAP PSM / RFCOMM channel.
+        // Any new service must not request an already allocated L2CAP PSM.
         let existing_psms: HashSet<Psm> = self.psm_to_handle.keys().cloned().collect();
         let new_psms = records.iter().map(|record| record.psms()).flatten().collect();
         if !existing_psms.is_disjoint(&new_psms) {
             warn!("PSM already registered");
-            return None;
-        }
-        let existing_rfcomm_channels: HashSet<ServerChannel> =
-            self.rfcomm_channel_to_handle.keys().cloned().collect();
-        let new_rfcomm_channels =
-            records.iter().map(|record| record.rfcomm_channels()).flatten().collect();
-        if !existing_rfcomm_channels.is_disjoint(&new_rfcomm_channels) {
-            warn!("RFCOMM channel already registered");
             return None;
         }
 
@@ -159,9 +139,6 @@ impl ServiceSet {
         new_psms.iter().for_each(|psm| {
             self.psm_to_handle.insert(*psm, registration_handle);
         });
-        new_rfcomm_channels.iter().for_each(|sc| {
-            self.rfcomm_channel_to_handle.insert(*sc, registration_handle);
-        });
 
         Some(registration_handle)
     }
@@ -184,12 +161,9 @@ impl ServiceSet {
             if self.records.contains(svc_handle) {
                 // Remove the entry for the service record.
                 let removed = self.records.remove(svc_handle);
-                // Update the PSM and RFCOMM channel caches.
+                // Update the PSM caches.
                 removed.psms().iter().for_each(|psm| {
                     self.psm_to_handle.remove(psm);
-                });
-                removed.rfcomm_channels().iter().for_each(|channel| {
-                    self.rfcomm_channel_to_handle.remove(channel);
                 });
                 removed_services.push(removed);
             }
@@ -201,25 +175,15 @@ impl ServiceSet {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use {matches::assert_matches, std::convert::TryFrom};
 
-    use crate::{
-        profile::tests::{build_a2dp_service_definition, build_rfcomm_service_definition},
-        types::Connection,
-    };
+    use crate::profile::tests::a2dp_service_definition;
 
-    fn build_avrcp_service_record(psm: Psm) -> ServiceRecord {
+    fn avrcp_service_record(psm: Psm) -> ServiceRecord {
         let mut service_ids = HashSet::new();
         service_ids.insert(ServiceClassProfileIdentifier::AvRemoteControl);
         service_ids.insert(ServiceClassProfileIdentifier::AvRemoteControlController);
 
-        ServiceRecord::new(
-            service_ids,
-            Some(Connection::L2cap(psm)),
-            HashSet::new(),
-            vec![],
-            vec![],
-        )
+        ServiceRecord::new(service_ids, Some(psm), HashSet::new(), vec![], vec![])
     }
 
     #[test]
@@ -229,7 +193,7 @@ pub(crate) mod tests {
 
         // Single, valid record, is successful.
         let psm0 = Psm::new(19);
-        let (_, single_record) = build_a2dp_service_definition(psm0);
+        let (_, single_record) = a2dp_service_definition(psm0);
         let reg_handle = manager.register_service(vec![single_record]);
         assert!(reg_handle.is_some());
         assert_eq!(reg_handle, manager.psm_registered(psm0));
@@ -244,8 +208,8 @@ pub(crate) mod tests {
         // Multiple, valid records, is successful.
         let psm1 = Psm::new(20);
         let psm2 = Psm::new(21);
-        let (_, record1) = build_a2dp_service_definition(psm1);
-        let (_, record2) = build_a2dp_service_definition(psm2);
+        let (_, record1) = a2dp_service_definition(psm1);
+        let (_, record2) = a2dp_service_definition(psm2);
         let reg_handle2 = manager.register_service(vec![record1, record2]);
         assert!(reg_handle2.is_some());
         assert_eq!(reg_handle2, manager.psm_registered(psm1));
@@ -253,9 +217,8 @@ pub(crate) mod tests {
 
         // Multiple records with overlapping PSMs is successful since they are registered together.
         let (psm3, psm4) = (Psm::new(22), Psm::new(23));
-        let (_, record4) = build_a2dp_service_definition(psm4);
-        let overlapping =
-            vec![build_avrcp_service_record(psm3), build_avrcp_service_record(psm3), record4];
+        let (_, record4) = a2dp_service_definition(psm4);
+        let overlapping = vec![avrcp_service_record(psm3), avrcp_service_record(psm3), record4];
         let reg_handle3 = manager.register_service(overlapping);
         assert!(reg_handle3.is_some());
         assert_eq!(reg_handle3, manager.psm_registered(psm3));
@@ -293,34 +256,9 @@ pub(crate) mod tests {
         let mut manager = ServiceSet::new(id);
 
         let psm = Psm::new(19);
-        let (_, single_record) = build_a2dp_service_definition(psm);
+        let (_, single_record) = a2dp_service_definition(psm);
         assert!(manager.register_service(vec![single_record.clone()]).is_some());
         // Attempting to register the same PSM fails the second time.
         assert_eq!(manager.register_service(vec![single_record]), None);
-    }
-
-    #[test]
-    fn register_rfcomm_service_is_ok() {
-        let id = PeerId(123);
-        let mut manager = ServiceSet::new(id);
-
-        let random_channel = ServerChannel::try_from(3).unwrap();
-        assert_matches!(manager.rfcomm_channel_registered(random_channel), None);
-
-        // Build an RFCOMM record and assign it a server channel.
-        let example_channel = ServerChannel::try_from(17).unwrap();
-        let (_, mut rfcomm_record) = build_rfcomm_service_definition(None);
-        assert_matches!(rfcomm_record.set_rfcomm_channel(example_channel), Ok(_));
-
-        let handle1 =
-            manager.register_service(vec![rfcomm_record.clone()]).expect("should register");
-        assert_matches!(manager.rfcomm_channel_registered(example_channel), Some(_));
-
-        // Registering an RFCOMM service with the same channel number should fail.
-        assert_matches!(manager.register_service(vec![rfcomm_record]), None);
-
-        // Unregistering services should work - should remove the service.
-        assert_matches!(manager.unregister_service(&handle1).len(), 1usize);
-        assert_matches!(manager.rfcomm_channel_registered(example_channel), None);
     }
 }

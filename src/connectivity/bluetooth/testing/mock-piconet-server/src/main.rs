@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_sys::EnvironmentOptions,
     fuchsia_async as fasync,
-    fuchsia_bluetooth::types::PeerId,
+    fuchsia_bluetooth::{profile::Psm, types::PeerId},
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::{self, channel::mpsc, future::FutureExt, select, sink::SinkExt, stream::StreamExt},
@@ -407,10 +407,20 @@ impl MockPiconetServerInner {
             return Err(format_err!("Cannot establish connection to oneself"));
         }
 
+        // Similar to the bt-host Profile Server, only L2CAP connections can be made.
+        // Clients that require RFCOMM channels should register through the `bt-rfcomm` component.
+        let psm = match connection {
+            bredr::ConnectParameters::L2cap(params) => {
+                let psm = params.psm.ok_or(format_err!("No PSM provided in connection"))?;
+                Psm::new(psm)
+            }
+            bredr::ConnectParameters::Rfcomm(_) => return Err(format_err!("RFCOMM not supported")),
+        };
+
         // Attempt to establish a connection between the peers.
         self.peers
             .get(&other)
-            .map(|peer| peer.new_connection(initiator, connection))
+            .map(|peer| peer.new_connection(initiator, psm))
             .unwrap_or(Err(format_err!("Peer {} is not registered", other)))
     }
 

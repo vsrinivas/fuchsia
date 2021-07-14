@@ -178,7 +178,7 @@ mod tests {
         futures::{pin_mut, stream::StreamExt, task::Poll},
     };
 
-    use crate::profile::tests::build_a2dp_service_definition;
+    use crate::profile::tests::a2dp_service_definition;
 
     /// Tests the basic case of adding a search and removing the search.
     #[fasync::run_singlethreaded(test)]
@@ -256,7 +256,7 @@ mod tests {
         pin_mut!(server_fut);
         assert!(exec.run_until_stalled(&mut server_fut).is_pending());
 
-        let (_, mut fake_record) = build_a2dp_service_definition(Psm::new(25));
+        let (_, mut fake_record) = a2dp_service_definition(Psm::new(25));
         let handle = RegisteredServiceId::new(PeerId(123), 99);
         fake_record.register_service_record(handle);
 
