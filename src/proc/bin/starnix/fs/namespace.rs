@@ -10,7 +10,7 @@ use std::sync::{Arc, Weak};
 
 use parking_lot::RwLock;
 
-use super::{FileHandle, FileObject, FsNodeHandle, FsStr, FsString};
+use super::{FileHandle, FileObject, FsNodeHandle, FsStr, FsString, UnlinkKind};
 use crate::types::*;
 
 /// A file system that can be mounted in a namespace.
@@ -109,6 +109,31 @@ impl NamespaceNode {
             return Err(EEXIST);
         }
         Ok(self.with_new_node(self.node.mknod(name, mode)?))
+    }
+
+    pub fn unlink(&self, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
+        if name.is_empty() || name == b"." || name == b".." {
+            return Err(EINVAL);
+        }
+        let child = self.lookup(name)?;
+
+        let unlink = || {
+            if child.mountpoint().is_some() {
+                return Err(EBUSY);
+            }
+            self.node.unlink(name, kind)
+        };
+
+        // If this node is mounted in a namespace, we grab a read lock on the
+        // mount points for the namespace to prevent a time-of-check to
+        // time-of-use race between checking whether the child is a mount point
+        // and removing the child.
+        if let Some(ns) = self.namespace() {
+            let _guard = ns.mount_points.read();
+            unlink()
+        } else {
+            unlink()
+        }
     }
 
     /// Traverse down a parent-to-child link in the namespace.

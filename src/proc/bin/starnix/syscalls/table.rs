@@ -185,6 +185,7 @@ pub fn dispatch_syscall(
         truncate[2],
         umask[1],
         uname[1],
+        unlinkat[3],
         wait4[4],
         write[3],
         writev[3],

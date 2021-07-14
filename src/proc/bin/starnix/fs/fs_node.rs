@@ -51,6 +51,15 @@ pub struct FsNodeState {
     pub time_modify: Time,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum UnlinkKind {
+    /// Unlink a directory.
+    Directory,
+
+    /// Unlink a non-directory.
+    NonDirectory,
+}
+
 pub trait FsNodeOps: Send + Sync {
     fn open(&self, node: &FsNode) -> Result<Box<dyn FileOps>, Errno>;
 
@@ -66,7 +75,19 @@ pub trait FsNodeOps: Send + Sync {
         Err(ENOTDIR)
     }
 
+    fn unlink(&self, _node: &FsNode, _name: &FsStr, _kind: UnlinkKind) -> Result<(), Errno> {
+        Err(ENOTDIR)
+    }
+
+    /// This node was added to the FsNode cache.
+    ///
+    /// The callee should perform any initialization needed.
     fn initialize(&self, _node: &FsNodeHandle) {}
+
+    /// This node was unlinked from its parent.
+    ///
+    /// The node might still be referenced by open FileObjects.
+    fn unlinked(&self, _node: &FsNodeHandle) {}
 
     /// Change the length of the file.
     fn truncate(&self, _node: &FsNode, _length: u64) -> Result<(), Errno> {
@@ -169,6 +190,24 @@ impl FsNode {
         Ok(node)
     }
 
+    pub fn unlink(self: &FsNodeHandle, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
+        let child = {
+            let mut state = self.state.write();
+            let child = state.children.remove(name).ok_or(ENOENT)?.upgrade().unwrap();
+            // TODO: Check _kind against the child's mode.
+            self.ops().unlink(self, name, kind).map_err(|e| {
+                state.children.insert(name.to_owned(), Arc::downgrade(&child));
+                e
+            })?;
+            child
+        };
+        // We hold a reference to child until we have released the state lock
+        // so that we do not trigger a deadlock in the Drop trait for Fsnode,
+        // which attempts to remove the FsNode from its parent's child list.
+        child.ops().unlinked(&child);
+        Ok(())
+    }
+
     pub fn truncate(&self, length: u64) -> Result<(), Errno> {
         self.ops().truncate(self, length)
     }
@@ -265,8 +304,7 @@ impl FsNode {
     fn internal_remove_child(&self, child: &mut FsNode) {
         // possible deadlock? this is called from Drop, so we need to be careful about dropping any
         // FsNodeHandle while locking the state.
-        let removed = self.state.write().children.remove(child.local_name());
-        assert!(removed.is_some(), "a node should always be in its parent's set of children!");
+        self.state.write().children.remove(child.local_name());
     }
 }
 

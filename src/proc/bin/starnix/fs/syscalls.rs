@@ -381,6 +381,23 @@ pub fn sys_mknodat(
     Ok(SUCCESS)
 }
 
+pub fn sys_unlinkat(
+    ctx: &SyscallContext<'_>,
+    dir_fd: FdNumber,
+    user_path: UserCString,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    if flags & !AT_REMOVEDIR != 0 {
+        return Err(EINVAL);
+    }
+    let kind =
+        if flags & AT_REMOVEDIR != 0 { UnlinkKind::Directory } else { UnlinkKind::NonDirectory };
+    lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
+        parent.unlink(basename, kind)
+    })?;
+    Ok(SUCCESS)
+}
+
 pub fn sys_getcwd(
     ctx: &SyscallContext<'_>,
     buf: UserAddress,
