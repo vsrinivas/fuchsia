@@ -1878,15 +1878,11 @@ In your test driver, consume the events routed by the test root:
 
 ### Build Info {#build-info}
 
-When migrating the `build-info` feature, consider moving from using a v1,
-read-only config directory, to the `fuchsia.buildinfo.Provider` [protocol][build-info-fidl].
-This protocol is the preferred method of retrieving build information. To use
-this protocol, add it [while declaring required services](#required-services).
-
-If migrating to using the protocol is not possible, then an alternative method
-is to use the `build-info` directory capability. To use this directory,
-follow the instructions for [migrating directory features](#directory-features),
-using the directory capability `build-info` and path `/config/build-info`.
+When migrating the `build-info` feature, instead use the
+`fuchsia.buildinfo.Provider` [protocol][build-info-fidl].
+This protocol is the only supported method of retrieving build information
+moving forward. To use this protocol, add it
+[while declaring required services](#required-services).
 
 [glossary.component-manifest]: /docs/glossary/README.md#component-manifest
 [glossary.components-v1]: /docs/glossary/README.md#components-v1
