@@ -79,7 +79,9 @@ std::string targeted_diff(const char* expected, const char* actual, size_t size)
 // reconstruct its original contents.
 TEST(VisitorTests, ReadAndWriteDirectTest) {
   for (auto element : Examples::map()) {
-    TestLibrary library(element.first, element.second);
+    fidl::ExperimentalFlags experimental_flags;
+    experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kOldSyntaxOnly);
+    TestLibrary library(element.first, element.second, experimental_flags);
     std::unique_ptr<fidl::raw::File> ast;
     bool is_parse_success = library.Parse(&ast);
     EXPECT_TRUE(is_parse_success);
