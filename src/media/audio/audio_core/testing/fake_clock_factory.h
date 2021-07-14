@@ -11,14 +11,14 @@
 #include <unordered_map>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/audio_clock_manager.h"
+#include "src/media/audio/audio_core/audio_clock_factory.h"
 
 namespace media::audio::testing {
 
-class FakeClockManager : public AudioClockManager,
-                         public std::enable_shared_from_this<FakeClockManager> {
+class FakeClockFactory : public AudioClockFactory,
+                         public std::enable_shared_from_this<FakeClockFactory> {
  public:
-  FakeClockManager() = default;
+  FakeClockFactory() = default;
 
   std::unique_ptr<AudioClock> CreateClientAdjustable(zx::clock clock) override;
   std::unique_ptr<AudioClock> CreateClientFixed(zx::clock clock) override;

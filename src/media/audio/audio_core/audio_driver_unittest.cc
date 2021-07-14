@@ -43,7 +43,7 @@ class AudioDriverTest : public testing::ThreadingModelFixture {
 
   std::shared_ptr<testing::FakeAudioOutput> device_{
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager())};
+                                       &context().link_matrix(), context().clock_factory())};
   std::unique_ptr<AudioDriver> driver_;
   // While |driver_| is the object under test, this object simulates the channel messages that
   // normally come from the actual driver instance.

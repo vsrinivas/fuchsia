@@ -84,7 +84,7 @@ class MixStageTest : public testing::ThreadingModelFixture {
 
   std::shared_ptr<MixStage> mix_stage_;
 
-  std::unique_ptr<AudioClock> device_clock_ = context().clock_manager()->CreateDeviceFixed(
+  std::unique_ptr<AudioClock> device_clock_ = context().clock_factory()->CreateDeviceFixed(
       clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 };
 
@@ -112,24 +112,24 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
   auto tl_different = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(Fixed(kDiffFrameRate.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
-  auto adjustable_device_clock = context().clock_manager()->CreateDeviceAdjustable(
+  auto adjustable_device_clock = context().clock_factory()->CreateDeviceAdjustable(
       clock::AdjustableCloneOfMonotonic(), AudioClock::kMonotonicDomain + 1);
   auto adjustable_device_mix_stage = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames,
                                                                 timeline, *adjustable_device_clock);
-  auto fixed_device_clock = context().clock_manager()->CreateDeviceFixed(
+  auto fixed_device_clock = context().clock_factory()->CreateDeviceFixed(
       clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
   auto fixed_device_mix_stage =
       std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline, *fixed_device_clock);
 
   auto adjustable_client_same_rate = std::make_shared<PacketQueue>(
       kSameFrameRate, tl_same,
-      context().clock_manager()->CreateClientAdjustable(clock::AdjustableCloneOfMonotonic()));
+      context().clock_factory()->CreateClientAdjustable(clock::AdjustableCloneOfMonotonic()));
   auto adjustable_client_diff_rate = std::make_shared<PacketQueue>(
       kDiffFrameRate, tl_different,
-      context().clock_manager()->CreateClientAdjustable(clock::AdjustableCloneOfMonotonic()));
+      context().clock_factory()->CreateClientAdjustable(clock::AdjustableCloneOfMonotonic()));
   auto custom_same_rate = std::make_shared<PacketQueue>(
       kSameFrameRate, tl_same,
-      context().clock_manager()->CreateClientFixed(clock::CloneOfMonotonic()));
+      context().clock_factory()->CreateClientFixed(clock::CloneOfMonotonic()));
 
   // client adjustable should lead to Point, if same rate
   ValidateIsPointSampler(adjustable_device_mix_stage->AddInput(adjustable_client_same_rate));
@@ -194,7 +194,7 @@ std::unique_ptr<AudioClock> MixStageTest::SetPacketFactoryWithOffsetAudioClock(
       static_cast<double>(kDefaultFormat.frames_per_second() * actual_offset.get()) / ZX_SEC(1));
   factory.SeekToFrame(seek_frame);
 
-  return context().clock_manager()->CreateClientFixed(std::move(custom_clock));
+  return context().clock_factory()->CreateClientFixed(std::move(custom_clock));
 }
 
 void MixStageTest::TestMixStageTrim(ClockMode clock_mode) {
@@ -208,7 +208,7 @@ void MixStageTest::TestMixStageTrim(ClockMode clock_mode) {
   if (clock_mode == ClockMode::SAME) {
     packet_queue = std::make_shared<PacketQueue>(
         kDefaultFormat, timeline_function,
-        context().clock_manager()->CreateClientFixed(clock::CloneOfMonotonic()));
+        context().clock_factory()->CreateClientFixed(clock::CloneOfMonotonic()));
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
     auto custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(-2), packet_factory);
 
@@ -273,13 +273,13 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
 
   auto packet_queue1 = std::make_shared<PacketQueue>(
       kDefaultFormat, timeline_function,
-      context().clock_manager()->CreateClientFixed(clock::CloneOfMonotonic()));
+      context().clock_factory()->CreateClientFixed(clock::CloneOfMonotonic()));
   std::shared_ptr<PacketQueue> packet_queue2;
 
   if (clock_mode == ClockMode::SAME) {
     packet_queue2 = std::make_shared<PacketQueue>(
         kDefaultFormat, timeline_function,
-        context().clock_manager()->CreateClientFixed(clock::CloneOfMonotonic()));
+        context().clock_factory()->CreateClientFixed(clock::CloneOfMonotonic()));
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
     auto custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(10), packet_factory2);
 
@@ -449,7 +449,7 @@ TEST_F(MixStageTest, MixNoInputs) {
 
 TEST_F(MixStageTest, MixSilentInput) {
   // Add a silent input.
-  auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager());
+  auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory());
   stream->set_usage_mask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
   stream->set_gain_db(fuchsia::media::audio::MUTED_GAIN_DB);
   // Set timeline rate to match our format.
@@ -467,7 +467,7 @@ TEST_F(MixStageTest, MixSilentInput) {
 TEST_F(MixStageTest, MixSilentInputWithNonSilentInput) {
   // Add a silent input.
   auto silent_stream =
-      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager());
+      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory());
   silent_stream->set_usage_mask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
   silent_stream->set_gain_db(fuchsia::media::audio::MUTED_GAIN_DB);
   // Set timeline rate to match our format.
@@ -477,7 +477,7 @@ TEST_F(MixStageTest, MixSilentInputWithNonSilentInput) {
 
   // Add a non-silent input.
   auto non_silent_stream =
-      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager());
+      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory());
   non_silent_stream->set_usage_mask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
   non_silent_stream->set_gain_db(0.0);
   // Set timeline rate to match our format.
@@ -504,7 +504,7 @@ void MixStageTest::TestMixStageSingleInput(ClockMode clock_mode) {
   if (clock_mode == ClockMode::SAME) {
     packet_queue = std::make_shared<PacketQueue>(
         kDefaultFormat, timeline_function,
-        context().clock_manager()->CreateClientFixed(clock::CloneOfMonotonic()));
+        context().clock_factory()->CreateClientFixed(clock::CloneOfMonotonic()));
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
     auto custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(5), packet_factory);
 
@@ -541,10 +541,10 @@ TEST_F(MixStageTest, MixMultipleInputs) {
   auto timeline_function = TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
-  auto input1 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+  auto input1 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory(),
                                                       zx_system_get_page_size());
   input1->timeline_function()->Update(timeline_function);
-  auto input2 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+  auto input2 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory(),
                                                       zx_system_get_page_size());
   input2->timeline_function()->Update(timeline_function);
   mix_stage_->AddInput(input1);
@@ -579,10 +579,10 @@ TEST_F(MixStageTest, BufferGainDbIncludesSourceGain) {
   auto timeline_function = TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
-  auto input1 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+  auto input1 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory(),
                                                       zx_system_get_page_size());
   input1->timeline_function()->Update(timeline_function);
-  auto input2 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+  auto input2 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory(),
                                                       zx_system_get_page_size());
   input2->timeline_function()->Update(timeline_function);
   auto mixer1 = mix_stage_->AddInput(input1);
@@ -616,10 +616,10 @@ TEST_F(MixStageTest, BufferMaxAmplitudeIncludesDestGain) {
   auto timeline_function = TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
-  auto input1 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+  auto input1 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory(),
                                                       zx_system_get_page_size());
   input1->timeline_function()->Update(timeline_function);
-  auto input2 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+  auto input2 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory(),
                                                       zx_system_get_page_size());
   input2->timeline_function()->Update(timeline_function);
   auto mixer1 = mix_stage_->AddInput(input1);
@@ -651,7 +651,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
   // Create a packet queue to use as our source stream.
   auto stream = std::make_shared<PacketQueue>(
       kDefaultFormat, timeline_function_,
-      context().clock_manager()->CreateClientFixed(clock::CloneOfMonotonic()));
+      context().clock_factory()->CreateClientFixed(clock::CloneOfMonotonic()));
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, zx_system_get_page_size());
@@ -715,7 +715,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
 // adjustment occurs and denominator changes, then source_pos_modulo and next_source_pos_modulo are
 // scaled from the old denominator to the new one.
 TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
-  auto audio_clock = context().clock_manager()->CreateClientFixed(clock::CloneOfMonotonic());
+  auto audio_clock = context().clock_factory()->CreateClientFixed(clock::CloneOfMonotonic());
   constexpr int32_t dest_frames_per_mix = 12;
 
   // We set our timeline slow by 1 frac-frame per nsec.
@@ -780,7 +780,7 @@ TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
 // This is a regression test for fxbug.dev/67996.
 TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
   // Unused, but MixStage::ProcessMix needs this argument.
-  auto input = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+  auto input = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory(),
                                                      zx_system_get_page_size());
 
   // As summarized in the calculations at the link below, the following hard-coded source_info

@@ -13,7 +13,7 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "src/media/audio/audio_core/audio_clock_manager.h"
+#include "src/media/audio/audio_core/audio_clock_factory.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
@@ -28,17 +28,17 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   static std::shared_ptr<FakeAudioRenderer> Create(
       async_dispatcher_t* dispatcher, std::optional<Format> format,
       fuchsia::media::AudioRenderUsage usage, LinkMatrix* link_matrix,
-      std::shared_ptr<AudioClockManager> clock_manager) {
+      std::shared_ptr<AudioClockFactory> clock_factory) {
     return std::make_shared<FakeAudioRenderer>(dispatcher, std::move(format), usage, link_matrix,
-                                               clock_manager);
+                                               clock_factory);
   }
   static std::shared_ptr<FakeAudioRenderer> CreateWithDefaultFormatInfo(
       async_dispatcher_t* dispatcher, LinkMatrix* link_matrix,
-      std::shared_ptr<AudioClockManager> clock_manager);
+      std::shared_ptr<AudioClockFactory> clock_factory);
 
   FakeAudioRenderer(async_dispatcher_t* dispatcher, std::optional<Format> format,
                     fuchsia::media::AudioRenderUsage usage, LinkMatrix* link_matrix,
-                    std::shared_ptr<AudioClockManager> clock_manager);
+                    std::shared_ptr<AudioClockFactory> clock_factory);
 
   // Enqueues a packet that has all samples initialized to |sample| and lasts for |duration|.
   void EnqueueAudioPacket(float sample, zx::duration duration = zx::msec(1),
@@ -88,7 +88,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
   LinkMatrix& link_matrix_;
-  std::shared_ptr<AudioClockManager> clock_manager_;
+  std::shared_ptr<AudioClockFactory> clock_factory_;
 };
 
 }  // namespace media::audio::testing

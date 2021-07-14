@@ -115,10 +115,10 @@ void AudioCapturer::SetReferenceClock(zx::clock raw_clock) {
       FX_PLOGS(WARNING, status) << "Could not set rights on client-submitted reference clock";
       return;
     }
-    SetClock(context().clock_manager()->CreateClientFixed(std::move(raw_clock)));
+    SetClock(context().clock_factory()->CreateClientFixed(std::move(raw_clock)));
   } else {
     // To achieve "no-SRC", we will rate-adjust this clock to match the device clock.
-    SetClock(context().clock_manager()->CreateClientAdjustable(
+    SetClock(context().clock_factory()->CreateClientAdjustable(
         audio::clock::AdjustableCloneOfMonotonic()));
   }
 

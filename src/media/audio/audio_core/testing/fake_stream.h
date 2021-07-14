@@ -7,7 +7,7 @@
 
 #include <lib/zx/clock.h>
 
-#include "src/media/audio/audio_core/audio_clock_manager.h"
+#include "src/media/audio/audio_core/audio_clock_factory.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
@@ -17,7 +17,7 @@ namespace media::audio::testing {
 
 class FakeStream : public ReadableStream {
  public:
-  FakeStream(const Format& format, std::shared_ptr<AudioClockManager> clock_manager,
+  FakeStream(const Format& format, std::shared_ptr<AudioClockFactory> clock_factory,
              size_t max_buffer_size = 0, zx::clock clock = audio::clock::CloneOfMonotonic());
 
   void set_usage_mask(StreamUsageMask mask) { usage_mask_ = mask; }

@@ -106,7 +106,7 @@ constexpr int64_t kInvalidLeadTimeNs = -1;
 TEST_F(AudioRendererTest, MinLeadTimePadding) {
   auto fake_output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
 
   // We must set our output's delay, before linking it, before calling SetPcmStreamType().
   fake_output->SetPresentationDelay(kMinLeadTime);
@@ -134,7 +134,7 @@ TEST_F(AudioRendererTest, MinLeadTimePadding) {
 TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
   auto fake_output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
 
   context().route_graph().AddRenderer(std::move(renderer_));
   context().route_graph().AddDevice(fake_output.get());
@@ -171,7 +171,7 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
 TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   auto fake_output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
 
   context().route_graph().AddRenderer(std::move(renderer_));
   context().route_graph().AddDevice(fake_output.get());
@@ -211,7 +211,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   // Send another set of packets after lead time + padding to ensure these packets cannot be played
   // continuously with the last set of packets. Now we use FLAG_DISCONTINUITY which means they
   // will not be continuous with the previous packets.
-  context().clock_manager()->AdvanceMonoTimeBy(stream->GetPresentationDelay() + zx::msec(30));
+  context().clock_factory()->AdvanceMonoTimeBy(stream->GetPresentationDelay() + zx::msec(30));
   packet.flags |= fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY;
   fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
   fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
@@ -251,7 +251,7 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
 
   auto output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -275,7 +275,7 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
 TEST_F(AudioRendererTest, DoublePlay) {
   auto output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -304,7 +304,7 @@ TEST_F(AudioRendererTest, DoublePlay) {
 TEST_F(AudioRendererTest, DoublePause) {
   auto output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -347,7 +347,7 @@ TEST_F(AudioRendererTest, DoublePause) {
 TEST_F(AudioRendererTest, PauseBeforePlay) {
   auto output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -368,7 +368,7 @@ TEST_F(AudioRendererTest, PauseBeforePlay) {
 TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
   auto output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -409,7 +409,7 @@ TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
 TEST_F(AudioRendererTest, RemoveRendererDuringPlay) {
   auto output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -433,7 +433,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPlay) {
 TEST_F(AudioRendererTest, RemoveRendererDuringPlayNoReply) {
   auto output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -452,7 +452,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPlayNoReply) {
 TEST_F(AudioRendererTest, RemoveRendererDuringPause) {
   auto output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -476,7 +476,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPause) {
 TEST_F(AudioRendererTest, RemoveRendererDuringPauseNoReply) {
   auto output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -496,7 +496,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPauseNoReply) {
 TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
   auto output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -537,7 +537,7 @@ TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
 TEST_F(AudioRendererTest, ReferenceClockIsAdvancing) {
   auto fidl_clock = GetReferenceClock();
   clock::testing::VerifyAdvances(fidl_clock);
-  audio_clock_helper::VerifyAdvances(renderer_->reference_clock(), context().clock_manager());
+  audio_clock_helper::VerifyAdvances(renderer_->reference_clock(), context().clock_factory());
 }
 
 TEST_F(AudioRendererTest, ReferenceClockIsReadOnly) {
@@ -568,7 +568,7 @@ TEST_F(AudioRendererTest, ReferenceClockIsCorrectAfterDeviceChange) {
 
   auto output =
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager());
+                                       &context().link_matrix(), context().clock_factory());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 

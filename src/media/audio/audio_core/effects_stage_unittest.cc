@@ -56,7 +56,7 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
 
   auto stream = std::make_shared<PacketQueue>(
       k48k2ChanFloatFormat, timeline_function,
-      context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
+      context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create an effect we can load.
   test_effects_.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
@@ -95,7 +95,7 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
 TEST_F(EffectsStageTest, BlockAlignRequests) {
   // Create a source stream.
   auto stream =
-      std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_manager());
+      std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_factory());
 
   // Create an effect we can load.
   const uint32_t kBlockSize = 128;
@@ -153,7 +153,7 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
 TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
   // Create a source stream.
   auto stream =
-      std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_manager());
+      std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_factory());
 
   const uint32_t kBlockSize = 128;
   const uint32_t kMaxBufferSize = 300;
@@ -182,7 +182,7 @@ TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
 
 TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
   auto stream =
-      std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_manager());
+      std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_factory());
 
   // Setup the timeline function so that time 0 alignes to frame 0 with a rate corresponding to the
   // streams format.
@@ -223,7 +223,7 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
 
 TEST_F(EffectsStageTest, AddDelayFramesIntoMinLeadTime) {
   auto stream =
-      std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_manager());
+      std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_factory());
 
   // Setup the timeline function so that time 0 alignes to frame 0 with a rate corresponding to the
   // streams format.
@@ -273,7 +273,7 @@ TEST_F(EffectsStageTest, UpdateEffect) {
 
   auto stream = std::make_shared<PacketQueue>(
       k48k2ChanFloatFormat, timeline_function,
-      context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
+      context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create an effect we can load.
   test_effects_.AddEffect("assign_config_size")
@@ -320,7 +320,7 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
   auto stream = std::make_shared<PacketQueue>(
       k48k2ChanFloatFormat, timeline_function,
-      context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
+      context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create the effects stage.
   //
@@ -382,7 +382,7 @@ TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
   auto stream = std::make_shared<PacketQueue>(
       k48k2ChanFloatFormat, timeline_function,
-      context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
+      context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create a simple effects stage.
   std::vector<PipelineConfig::Effect> effects;
@@ -425,7 +425,7 @@ TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
   auto stream = std::make_shared<PacketQueue>(
       k48k2ChanFloatFormat, timeline_function,
-      context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
+      context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create a simple effects stage.
   std::vector<PipelineConfig::Effect> effects;
@@ -472,7 +472,7 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
       Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
   auto input = std::make_shared<testing::FakeStream>(
-      k48k2ChanFloatFormat, context().clock_manager(), zx_system_get_page_size());
+      k48k2ChanFloatFormat, context().clock_factory(), zx_system_get_page_size());
   input->timeline_function()->Update(timeline_function);
 
   // Create a simple effects stage.
@@ -549,7 +549,7 @@ TEST_F(EffectsStageTest, SkipRingoutIfDiscontinuous) {
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
   auto stream = std::make_shared<PacketQueue>(
       k48k2ChanFloatFormat, timeline_function,
-      context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
+      context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   static const uint32_t kBlockSize = 48;
   static const uint32_t kRingOutBlocks = 4;
@@ -622,7 +622,7 @@ class EffectsStageRingoutTest : public EffectsStageTest,
             Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
     stream_ = std::make_shared<PacketQueue>(
         k48k2ChanFloatFormat, timeline_function,
-        context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
+        context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
   }
 
   testing::PacketFactory packet_factory_{dispatcher(), k48k2ChanFloatFormat,

@@ -23,8 +23,8 @@ namespace {
 class FakeAudioDevice : public AudioDevice {
  public:
   FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
-                  LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager)
-      : AudioDevice(type, "", threading_model, registry, link_matrix, clock_manager,
+                  LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
+      : AudioDevice(type, "", threading_model, registry, link_matrix, clock_factory,
                     std::make_unique<AudioDriver>(this)) {}
 
   // Needed because AudioDevice is an abstract class
@@ -46,7 +46,7 @@ class AudioDeviceTest : public testing::ThreadingModelFixture {
   void SetUp() override {
     device_ = std::make_shared<FakeAudioDevice>(
         AudioObject::Type::Input, &threading_model(), &context().device_manager(),
-        &context().link_matrix(), context().clock_manager());
+        &context().link_matrix(), context().clock_factory());
 
     zx::channel c1, c2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
@@ -96,7 +96,7 @@ TEST_F(AudioDeviceTest, ReferenceClockIsAdvancing) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(device_->driver_info_fetched_);
-  audio_clock_helper::VerifyAdvances(device_->reference_clock(), context().clock_manager());
+  audio_clock_helper::VerifyAdvances(device_->reference_clock(), context().clock_factory());
 }
 
 TEST_F(AudioDeviceTest, DefaultClockIsClockMono) {

@@ -81,7 +81,7 @@ class AudioDriverClockTest : public testing::ThreadingModelFixture {
   void ValidateClockAdvancesAtClockMonotonicRate(uint32_t clock_domain) {
     CreateDrivers(clock_domain);
 
-    audio_clock_helper::VerifyAdvances(driver_->reference_clock(), context().clock_manager());
+    audio_clock_helper::VerifyAdvances(driver_->reference_clock(), context().clock_factory());
     audio_clock_helper::VerifyIsSystemMonotonic(driver_->reference_clock());
   }
 
@@ -115,7 +115,7 @@ class AudioDriverClockTest : public testing::ThreadingModelFixture {
 
   std::shared_ptr<testing::FakeAudioOutput> device_{
       testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                       &context().link_matrix(), context().clock_manager())};
+                                       &context().link_matrix(), context().clock_factory())};
 
   fzl::VmoMapper mapped_ring_buffer_;
 

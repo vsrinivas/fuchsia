@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include "src/media/audio/audio_core/audio_clock_manager.h"
+#include "src/media/audio/audio_core/audio_clock_factory.h"
 
 namespace media::audio {
 class AudioClock;
@@ -20,7 +20,7 @@ namespace media::audio::audio_clock_helper {
 void VerifyReadOnlyRights(const AudioClock& audio_clock);
 
 void VerifyAdvances(const AudioClock& audio_clock,
-                    std::shared_ptr<AudioClockManager> clock_manager);
+                    std::shared_ptr<AudioClockFactory> clock_factory);
 
 void VerifyCannotBeRateAdjusted(const AudioClock& audio_clock);
 void VerifyCanBeRateAdjusted(const AudioClock& audio_clock);

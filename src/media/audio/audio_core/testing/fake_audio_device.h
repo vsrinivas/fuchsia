@@ -16,8 +16,8 @@ namespace media::audio::testing {
 class FakeAudioDevice : public AudioDevice {
  public:
   FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
-                  LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager)
-      : AudioDevice(type, "", threading_model, registry, link_matrix, clock_manager,
+                  LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
+      : AudioDevice(type, "", threading_model, registry, link_matrix, std::move(clock_factory),
                     std::make_unique<AudioDriver>(this)),
         mix_domain_(threading_model->AcquireMixDomain("fake-audio-device")) {}
 
@@ -58,26 +58,30 @@ class FakeAudioInput : public FakeAudioDevice {
  public:
   static std::shared_ptr<FakeAudioInput> Create(ThreadingModel* threading_model,
                                                 DeviceRegistry* registry, LinkMatrix* link_matrix,
-                                                std::shared_ptr<AudioClockManager> clock_manager) {
-    return std::make_shared<FakeAudioInput>(threading_model, registry, link_matrix, clock_manager);
+                                                std::shared_ptr<AudioClockFactory> clock_factory) {
+    return std::make_shared<FakeAudioInput>(threading_model, registry, link_matrix,
+                                            std::move(clock_factory));
   }
 
   FakeAudioInput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
-                 std::shared_ptr<AudioClockManager> clock_manager)
-      : FakeAudioDevice(Type::Input, threading_model, registry, link_matrix, clock_manager) {}
+                 std::shared_ptr<AudioClockFactory> clock_factory)
+      : FakeAudioDevice(Type::Input, threading_model, registry, link_matrix,
+                        std::move(clock_factory)) {}
 };
 
 class FakeAudioOutput : public FakeAudioDevice {
  public:
   static std::shared_ptr<FakeAudioOutput> Create(ThreadingModel* threading_model,
                                                  DeviceRegistry* registry, LinkMatrix* link_matrix,
-                                                 std::shared_ptr<AudioClockManager> clock_manager) {
-    return std::make_shared<FakeAudioOutput>(threading_model, registry, link_matrix, clock_manager);
+                                                 std::shared_ptr<AudioClockFactory> clock_factory) {
+    return std::make_shared<FakeAudioOutput>(threading_model, registry, link_matrix,
+                                             std::move(clock_factory));
   }
 
   FakeAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-                  LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager)
-      : FakeAudioDevice(Type::Output, threading_model, registry, link_matrix, clock_manager) {}
+                  LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
+      : FakeAudioDevice(Type::Output, threading_model, registry, link_matrix,
+                        std::move(clock_factory)) {}
 
   fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
   InitializeSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) override {

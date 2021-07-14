@@ -29,17 +29,17 @@ class ThrottleOutput : public AudioOutput {
  public:
   static std::shared_ptr<AudioOutput> Create(ThreadingModel* threading_model,
                                              DeviceRegistry* registry, LinkMatrix* link_matrix,
-                                             std::shared_ptr<AudioClockManager> clock_manager) {
-    return std::make_shared<ThrottleOutput>(threading_model, registry, link_matrix, clock_manager);
+                                             std::shared_ptr<AudioClockFactory> clock_factory) {
+    return std::make_shared<ThrottleOutput>(threading_model, registry, link_matrix, clock_factory);
   }
 
   // Establish an audio clock (clone of monotonic) and override the default reference_clock()
   // implementation that calls into the AudioDriver, because we don't have an associated driver.
   ThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
-                 std::shared_ptr<AudioClockManager> clock_manager)
-      : AudioOutput("throttle", threading_model, registry, link_matrix, clock_manager,
+                 std::shared_ptr<AudioClockFactory> clock_factory)
+      : AudioOutput("throttle", threading_model, registry, link_matrix, clock_factory,
                     std::make_unique<AudioDriver>(this)),
-        audio_clock_(clock_manager->CreateDeviceFixed(audio::clock::CloneOfMonotonic(),
+        audio_clock_(clock_factory->CreateDeviceFixed(audio::clock::CloneOfMonotonic(),
                                                       AudioClock::kMonotonicDomain)) {
     const auto ref_now = reference_clock().Read();
     const auto fps = PipelineConfig::kDefaultMixGroupRate;

@@ -13,10 +13,10 @@ void VerifyReadOnlyRights(const AudioClock& audio_clock) {
 }
 
 void VerifyAdvances(const AudioClock& audio_clock,
-                    std::shared_ptr<AudioClockManager> clock_manager) {
+                    std::shared_ptr<AudioClockFactory> clock_factory) {
   constexpr zx::duration kWaitInterval = zx::usec(50);
   zx::time before = audio_clock.Read();
-  clock_manager->AdvanceMonoTimeBy(kWaitInterval);
+  clock_factory->AdvanceMonoTimeBy(kWaitInterval);
   zx::time after = audio_clock.Read();
 
   // Due to lack of precision, verify that we have advanced in general, rather than by the specific

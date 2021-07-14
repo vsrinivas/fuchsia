@@ -39,7 +39,7 @@ class AudioInputTestDriver : public testing::ThreadingModelFixture,
     stream_config.set_channel(std::move(c2));
     input_ = AudioInput::Create("", std::move(stream_config), &threading_model(),
                                 &context().device_manager(), &context().link_matrix(),
-                                context().clock_manager());
+                                context().clock_factory());
     ASSERT_NE(input_, nullptr);
 
     ring_buffer_mapper_ =

@@ -12,14 +12,14 @@ namespace media::audio::testing {
 
 class FakeAudioClockTest : public ::testing::Test {
  protected:
-  void SetUp() override { clock_manager_ = std::make_shared<FakeClockManager>(); }
+  void SetUp() override { clock_factory_ = std::make_shared<FakeClockFactory>(); }
 
-  std::shared_ptr<FakeClockManager> clock_manager_;
+  std::shared_ptr<FakeClockFactory> clock_factory_;
 };
 
 TEST_F(FakeAudioClockTest, InitTransform) {
   auto under_test =
-      clock_manager_->CreateClientAdjustable(audio::clock::AdjustableCloneOfMonotonic());
+      clock_factory_->CreateClientAdjustable(audio::clock::AdjustableCloneOfMonotonic());
 
   auto ref_to_mono = under_test->ref_clock_to_clock_mono();
   EXPECT_EQ(ref_to_mono.subject_time(), 0);
@@ -30,7 +30,7 @@ TEST_F(FakeAudioClockTest, InitTransform) {
 
 TEST_F(FakeAudioClockTest, InitTransform_Custom) {
   auto under_test =
-      clock_manager_->CreateClientAdjustable(clock_manager_->mono_time() + zx::sec(5), 1000);
+      clock_factory_->CreateClientAdjustable(clock_factory_->mono_time() + zx::sec(5), 1000);
 
   auto ref_to_mono = under_test->ref_clock_to_clock_mono();
   EXPECT_EQ(ref_to_mono.subject_time(), 0);
@@ -50,10 +50,10 @@ TEST_F(FakeAudioClockTest, InitTransform_Custom) {
 TEST_F(FakeAudioClockTest, UpdateClockRate) {
   auto clock = audio::clock::AdjustableCloneOfMonotonic();
   auto clock_id = audio::clock::GetKoid(clock);
-  auto under_test = clock_manager_->CreateClientAdjustable(std::move(clock));
+  auto under_test = clock_factory_->CreateClientAdjustable(std::move(clock));
 
-  clock_manager_->AdvanceMonoTimeBy(zx::sec(10));
-  clock_manager_->UpdateClockRate(clock_id, /*rate_adjust_ppm=*/1000);
+  clock_factory_->AdvanceMonoTimeBy(zx::sec(10));
+  clock_factory_->UpdateClockRate(clock_id, /*rate_adjust_ppm=*/1000);
 
   auto ref_to_mono = under_test->ref_clock_to_clock_mono();
   EXPECT_EQ(ref_to_mono.subject_time(), zx::sec(10).get());
@@ -61,8 +61,8 @@ TEST_F(FakeAudioClockTest, UpdateClockRate) {
   EXPECT_EQ(ref_to_mono.subject_delta(), 1000u);
   EXPECT_EQ(ref_to_mono.reference_delta(), 1001u);
 
-  clock_manager_->AdvanceMonoTimeBy(zx::sec(10));
-  clock_manager_->UpdateClockRate(clock_id, /*rate_adjust_ppm=*/1);
+  clock_factory_->AdvanceMonoTimeBy(zx::sec(10));
+  clock_factory_->UpdateClockRate(clock_id, /*rate_adjust_ppm=*/1);
 
   ref_to_mono = under_test->ref_clock_to_clock_mono();
   EXPECT_EQ(ref_to_mono.subject_time(), zx::sec(20).get());
@@ -72,7 +72,7 @@ TEST_F(FakeAudioClockTest, UpdateClockRate) {
 }
 
 TEST_F(FakeAudioClockTest, UpdateRateAndAdvanceMono_CustomOffset) {
-  auto under_test = clock_manager_->CreateClientFixed(clock_manager_->mono_time() + zx::sec(5), 0);
+  auto under_test = clock_factory_->CreateClientFixed(clock_factory_->mono_time() + zx::sec(5), 0);
   auto clock_result = under_test->DuplicateClock();
   ASSERT_TRUE(clock_result.is_ok());
   auto clock_id = audio::clock::GetKoid(clock_result.take_value());
@@ -83,8 +83,8 @@ TEST_F(FakeAudioClockTest, UpdateRateAndAdvanceMono_CustomOffset) {
   EXPECT_EQ(ref_to_mono.subject_delta(), 1u);
   EXPECT_EQ(ref_to_mono.reference_delta(), 1u);
 
-  clock_manager_->AdvanceMonoTimeBy(zx::sec(10));
-  clock_manager_->UpdateClockRate(clock_id, /*rate_adjust_ppm=*/1000);
+  clock_factory_->AdvanceMonoTimeBy(zx::sec(10));
+  clock_factory_->UpdateClockRate(clock_id, /*rate_adjust_ppm=*/1000);
 
   ref_to_mono = under_test->ref_clock_to_clock_mono();
   EXPECT_EQ(ref_to_mono.subject_time(), zx::sec(10).get());
@@ -92,8 +92,8 @@ TEST_F(FakeAudioClockTest, UpdateRateAndAdvanceMono_CustomOffset) {
   EXPECT_EQ(ref_to_mono.subject_delta(), 1000u);
   EXPECT_EQ(ref_to_mono.reference_delta(), 1001u);
 
-  clock_manager_->AdvanceMonoTimeBy(zx::sec(10));
-  clock_manager_->UpdateClockRate(clock_id, /*rate_adjust_ppm=*/100);
+  clock_factory_->AdvanceMonoTimeBy(zx::sec(10));
+  clock_factory_->UpdateClockRate(clock_id, /*rate_adjust_ppm=*/100);
 
   ref_to_mono = under_test->ref_clock_to_clock_mono();
   EXPECT_EQ(ref_to_mono.subject_time(), zx::sec(20).get());
@@ -105,11 +105,11 @@ TEST_F(FakeAudioClockTest, UpdateRateAndAdvanceMono_CustomOffset) {
 TEST_F(FakeAudioClockTest, DupClockUpdates) {
   auto adjustable_clock = audio::clock::AdjustableCloneOfMonotonic();
   auto clock_id = audio::clock::GetKoid(adjustable_clock);
-  auto adjustable_under_test = clock_manager_->CreateClientAdjustable(std::move(adjustable_clock));
+  auto adjustable_under_test = clock_factory_->CreateClientAdjustable(std::move(adjustable_clock));
 
   auto dup_result = adjustable_under_test->DuplicateClockReadOnly();
   ASSERT_TRUE(dup_result.is_ok());
-  auto ref_under_test = clock_manager_->CreateClientFixed(dup_result.take_value());
+  auto ref_under_test = clock_factory_->CreateClientFixed(dup_result.take_value());
 
   auto adjustable_tf = adjustable_under_test->ref_clock_to_clock_mono();
   auto ref_tf = ref_under_test->ref_clock_to_clock_mono();
@@ -118,8 +118,8 @@ TEST_F(FakeAudioClockTest, DupClockUpdates) {
   EXPECT_EQ(adjustable_tf.subject_delta(), ref_tf.subject_delta());
   EXPECT_EQ(adjustable_tf.reference_delta(), ref_tf.reference_delta());
 
-  clock_manager_->AdvanceMonoTimeBy(zx::sec(10));
-  clock_manager_->UpdateClockRate(clock_id, /*rate_adjust_ppm=*/-1000);
+  clock_factory_->AdvanceMonoTimeBy(zx::sec(10));
+  clock_factory_->UpdateClockRate(clock_id, /*rate_adjust_ppm=*/-1000);
 
   adjustable_tf = adjustable_under_test->ref_clock_to_clock_mono();
   ref_tf = ref_under_test->ref_clock_to_clock_mono();
@@ -132,8 +132,8 @@ TEST_F(FakeAudioClockTest, DupClockUpdates) {
   EXPECT_EQ(ref_tf.subject_delta(), 1000u);
   EXPECT_EQ(ref_tf.reference_delta(), 999u);
 
-  clock_manager_->AdvanceMonoTimeBy(zx::sec(10));
-  clock_manager_->UpdateClockRate(clock_id, /*rate_adjust_ppm=*/-10);
+  clock_factory_->AdvanceMonoTimeBy(zx::sec(10));
+  clock_factory_->UpdateClockRate(clock_id, /*rate_adjust_ppm=*/-10);
 
   adjustable_tf = adjustable_under_test->ref_clock_to_clock_mono();
   ref_tf = ref_under_test->ref_clock_to_clock_mono();

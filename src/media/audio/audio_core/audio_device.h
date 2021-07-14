@@ -15,7 +15,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/audio_clock_manager.h"
+#include "src/media/audio/audio_core/audio_clock_factory.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/device_config.h"
@@ -132,7 +132,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
  protected:
   AudioDevice(Type type, const std::string& name, ThreadingModel* threading_model,
               DeviceRegistry* registry, LinkMatrix* link_matrix,
-              std::shared_ptr<AudioClockManager> clock_manager,
+              std::shared_ptr<AudioClockFactory> clock_factory,
               std::unique_ptr<AudioDriver> driver);
 
   //////////////////////////////////////////////////////////////////////////////
@@ -271,13 +271,13 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
 
   ExecutionDomain& mix_domain() const { return *mix_domain_; }
   ThreadingModel& threading_model() { return threading_model_; }
-  std::shared_ptr<AudioClockManager> clock_manager() { return clock_manager_; }
+  std::shared_ptr<AudioClockFactory> clock_factory() { return clock_factory_; }
   DeviceRegistry& device_registry() { return device_registry_; }
   const fbl::RefPtr<AudioDeviceSettings>& device_settings() const { return device_settings_; }
 
  private:
   const std::string name_;
-  std::shared_ptr<AudioClockManager> clock_manager_;
+  std::shared_ptr<AudioClockFactory> clock_factory_;
   DeviceRegistry& device_registry_;
   ThreadingModel& threading_model_;
   ThreadingModel::OwnedDomainPtr mix_domain_;

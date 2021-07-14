@@ -41,9 +41,9 @@ DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_mo
                            DeviceRegistry* registry,
                            fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                            LinkMatrix* link_matrix,
-                           std::shared_ptr<AudioClockManager> clock_manager,
+                           std::shared_ptr<AudioClockFactory> clock_factory,
                            VolumeCurve volume_curve)
-    : AudioOutput(name, threading_model, registry, link_matrix, clock_manager,
+    : AudioOutput(name, threading_model, registry, link_matrix, clock_factory,
                   std::make_unique<AudioDriver>(this)),
       initial_stream_channel_(channel.TakeChannel()),
       volume_curve_(volume_curve) {}

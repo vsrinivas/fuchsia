@@ -8,7 +8,7 @@
 #include <lib/trace-provider/provider.h>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/media/audio/audio_core/audio_clock_manager.h"
+#include "src/media/audio/audio_core/audio_clock_factory.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/base_capturer.h"
 #include "src/media/audio/audio_core/pin_executable_memory.h"
@@ -53,7 +53,7 @@ static int StartAudioCore(const fxl::CommandLine& cl) {
 
   auto context = Context::Create(std::move(threading_model), std::move(component_context),
                                  PlugDetector::Create(), process_config.take_value(),
-                                 std::make_shared<AudioClockManager>());
+                                 std::make_shared<AudioClockFactory>());
   context->PublishOutgoingServices();
 
   AudioCoreImpl audio_core(context.get());

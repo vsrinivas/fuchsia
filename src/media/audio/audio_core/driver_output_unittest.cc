@@ -88,7 +88,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     stream_config.set_channel(std::move(c2));
     output_ = std::make_shared<DriverOutput>("", &threading_model(), &context().device_manager(),
                                              std::move(stream_config), &context().link_matrix(),
-                                             context().clock_manager(),
+                                             context().clock_factory(),
                                              context().process_config().default_volume_curve());
     ASSERT_NE(output_, nullptr);
 
@@ -194,7 +194,7 @@ TEST_F(DriverOutputTest, RendererOutput) {
   EXPECT_TRUE(driver_->is_running());
 
   auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(
-      dispatcher(), &context().link_matrix(), context().clock_manager());
+      dispatcher(), &context().link_matrix(), context().clock_factory());
   context().link_matrix().LinkObjects(renderer, output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
   renderer->EnqueueAudioPacket(-0.5, zx::msec(5));
@@ -257,7 +257,7 @@ TEST_F(DriverOutputTest, MixAtExpectedInterval) {
   EXPECT_TRUE(driver_->is_running());
 
   auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(
-      dispatcher(), &context().link_matrix(), context().clock_manager());
+      dispatcher(), &context().link_matrix(), context().clock_factory());
   context().link_matrix().LinkObjects(renderer, output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
   renderer->EnqueueAudioPacket(0.75, kExpectedMixInterval);
@@ -342,7 +342,7 @@ TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
   // Create an add a renderer. We enqueue some audio in this renderer, however we'll expect the
   // ring to only contain silence since the output is muted.
   auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(
-      dispatcher(), &context().link_matrix(), context().clock_manager());
+      dispatcher(), &context().link_matrix(), context().clock_factory());
   context().link_matrix().LinkObjects(renderer, output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
   bool packet1_released = false;

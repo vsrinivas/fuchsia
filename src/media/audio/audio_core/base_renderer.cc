@@ -77,7 +77,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
     FX_DCHECK(adjustable_duplicate_result.value().is_valid());
 
     clock_for_packet_queue =
-        context_.clock_manager()->CreateClientAdjustable(adjustable_duplicate_result.take_value());
+        context_.clock_factory()->CreateClientAdjustable(adjustable_duplicate_result.take_value());
     adjustable_clock_is_allocated_ = true;
   } else {
     // This strips off WRITE rights, which is appropriate for a non-adjustable clock.
@@ -87,7 +87,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
     }
 
     clock_for_packet_queue =
-        context_.clock_manager()->CreateClientFixed(readable_clock_result.take_value());
+        context_.clock_factory()->CreateClientFixed(readable_clock_result.take_value());
   }
 
   auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_,
@@ -764,7 +764,7 @@ void BaseRenderer::ReportNewMinLeadTime() {
 zx_status_t BaseRenderer::SetAdjustableReferenceClock() {
   TRACE_DURATION("audio", "BaseRenderer::SetAdjustableReferenceClock");
   clock_ =
-      context_.clock_manager()->CreateClientAdjustable(audio::clock::AdjustableCloneOfMonotonic());
+      context_.clock_factory()->CreateClientAdjustable(audio::clock::AdjustableCloneOfMonotonic());
   client_allows_clock_adjustment_ = true;
   return ZX_OK;
 }
@@ -777,7 +777,7 @@ zx_status_t BaseRenderer::SetCustomReferenceClock(zx::clock ref_clock) {
     FX_PLOGS(WARNING, status) << "Could not set rights on client-submitted reference clock";
     return ZX_ERR_INVALID_ARGS;
   }
-  clock_ = context_.clock_manager()->CreateClientFixed(std::move(ref_clock));
+  clock_ = context_.clock_factory()->CreateClientFixed(std::move(ref_clock));
 
   client_allows_clock_adjustment_ = false;
   return ZX_OK;

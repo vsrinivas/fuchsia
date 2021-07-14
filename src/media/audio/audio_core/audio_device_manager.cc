@@ -24,13 +24,13 @@ AudioDeviceManager::AudioDeviceManager(ThreadingModel& threading_model,
                                        std::unique_ptr<PlugDetector> plug_detector,
                                        RouteGraph& route_graph, LinkMatrix& link_matrix,
                                        ProcessConfig& process_config,
-                                       std::shared_ptr<AudioClockManager> clock_manager)
+                                       std::shared_ptr<AudioClockFactory> clock_factory)
     : threading_model_(threading_model),
       route_graph_(route_graph),
       plug_detector_(std::move(plug_detector)),
       link_matrix_(link_matrix),
       process_config_(process_config),
-      clock_manager_(clock_manager) {}
+      clock_factory_(clock_factory) {}
 
 AudioDeviceManager::~AudioDeviceManager() {
   Shutdown();
@@ -454,11 +454,11 @@ void AudioDeviceManager::AddDeviceByChannel(
   std::shared_ptr<AudioDevice> new_device;
   if (is_input) {
     new_device = AudioInput::Create(device_name, std::move(stream_config), &threading_model(), this,
-                                    &link_matrix_, clock_manager_);
+                                    &link_matrix_, clock_factory_);
   } else {
     new_device = std::make_shared<DriverOutput>(
         device_name, &threading_model(), this, std::move(stream_config), &link_matrix_,
-        clock_manager_, process_config_.default_volume_curve());
+        clock_factory_, process_config_.default_volume_curve());
   }
 
   if (new_device == nullptr) {

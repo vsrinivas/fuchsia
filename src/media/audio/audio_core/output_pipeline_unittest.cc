@@ -106,11 +106,11 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
   std::unique_ptr<AudioClock> SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
                                                                    testing::PacketFactory& factory);
   std::unique_ptr<AudioClock> CreateClientClock() {
-    return context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic());
+    return context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic());
   }
 
   std::shared_ptr<testing::FakeStream> CreateFakeStream(StreamUsage stream_usage) {
-    auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager());
+    auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory());
     stream->set_usage_mask({stream_usage});
     stream->set_gain_db(0.0);
     stream->timeline_function()->Update(kDefaultTransform);
@@ -151,7 +151,7 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
   void TestOutputPipelineTrim(ClockMode clock_mode);
   void TestDifferentMixRates(ClockMode clock_mode);
 
-  std::unique_ptr<AudioClock> device_clock_ = context().clock_manager()->CreateDeviceFixed(
+  std::unique_ptr<AudioClock> device_clock_ = context().clock_factory()->CreateDeviceFixed(
       clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 };
 
@@ -169,7 +169,7 @@ std::unique_ptr<AudioClock> OutputPipelineTest::SetPacketFactoryWithOffsetAudioC
       static_cast<double>(kDefaultFormat.frames_per_second() * actual_offset.get()) / ZX_SEC(1));
   factory.SeekToFrame(seek_frame);
 
-  return context().clock_manager()->CreateClientFixed(std::move(custom_clock));
+  return context().clock_factory()->CreateClientFixed(std::move(custom_clock));
 }
 
 void OutputPipelineTest::TestOutputPipelineTrim(ClockMode clock_mode) {
@@ -330,7 +330,7 @@ TEST_F(OutputPipelineTest, Loopback) {
   CheckBuffer(buf->payload(), 2.0, 96);
 
   // Advance time to our safe_read_frame past the above mix, which includes 1ms of output.
-  context().clock_manager()->AdvanceMonoTimeBy(zx::msec(1));
+  context().clock_factory()->AdvanceMonoTimeBy(zx::msec(1));
 
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
@@ -423,7 +423,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   CheckBuffer(buf->payload(), 2.0, 192);
 
   // Advance time to our safe_read_frame past the above mix, which includes 1ms of output.
-  context().clock_manager()->AdvanceMonoTimeBy(zx::msec(1));
+  context().clock_factory()->AdvanceMonoTimeBy(zx::msec(1));
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
   auto loopback_buf = pipeline->loopback()->ReadLock(Fixed(loopback_frame), 48);
@@ -570,14 +570,14 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
   // Add 2 streams, one with a MEDIA usage and one with COMMUNICATION usage. These should receive
   // different lead times since they have different effects (with different latencies) applied.
   auto default_stream =
-      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager());
+      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory());
   auto default_mixer =
       pipeline->AddInput(default_stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
                          std::nullopt, Mixer::Resampler::SampleAndHold);
   const int64_t kMixLeadTimeFrames = default_mixer->pos_filter_width().Ceiling();
 
   auto communications_stream =
-      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager());
+      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory());
   pipeline->AddInput(communications_stream,
                      StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION), std::nullopt,
                      Mixer::Resampler::SampleAndHold);
@@ -840,12 +840,12 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
                                                        kDefaultTransform, *device_clock_);
 
   audio_clock_helper::VerifyReadOnlyRights(pipeline->reference_clock());
-  audio_clock_helper::VerifyAdvances(pipeline->reference_clock(), context().clock_manager());
+  audio_clock_helper::VerifyAdvances(pipeline->reference_clock(), context().clock_factory());
   audio_clock_helper::VerifyCannotBeRateAdjusted(pipeline->reference_clock());
 
   auto& loopback_clock = pipeline->loopback()->reference_clock();
   audio_clock_helper::VerifyReadOnlyRights(loopback_clock);
-  audio_clock_helper::VerifyAdvances(loopback_clock, context().clock_manager());
+  audio_clock_helper::VerifyAdvances(loopback_clock, context().clock_factory());
   audio_clock_helper::VerifyCannotBeRateAdjusted(loopback_clock);
   ASSERT_TRUE(pipeline->reference_clock() == loopback_clock);
 }

@@ -52,7 +52,7 @@ source_set("audio_core_lib") {
     "audio_clock.cc",
     "audio_clock.h",
     "audio_clock_coefficients.h",
-    "audio_clock_manager.h",
+    "audio_clock_factory.h",
     "audio_core_impl.cc",
     "audio_core_impl.h",
     "audio_device.cc",

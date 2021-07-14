@@ -7,7 +7,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/audio_core/audio_clock_manager.h"
+#include "src/media/audio/audio_core/audio_clock_factory.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
@@ -77,7 +77,7 @@ class TestDevice : public AudioOutput {
  public:
   TestDevice(std::unique_ptr<Context>& context)
       : AudioOutput("", &context->threading_model(), &context->device_manager(),
-                    &context->link_matrix(), context->clock_manager(),
+                    &context->link_matrix(), context->clock_factory(),
                     std::make_unique<AudioDriver>(this)) {
     zx::channel c1, c2;
     ZX_ASSERT(ZX_OK == zx::channel::create(0, &c1, &c2));
@@ -157,7 +157,7 @@ class AudioTunerTest : public gtest::TestLoopFixture {
     auto plug_detector = std::make_unique<testing::FakePlugDetector>();
     return Context::Create(std::move(threading_model), component_context_provider_.TakeContext(),
                            std::move(plug_detector), process_config,
-                           std::make_shared<AudioClockManager>());
+                           std::make_shared<AudioClockFactory>());
   }
 
   std::unique_ptr<Context> CreateContext() { return CreateContext(kDefaultProcessConfig); }

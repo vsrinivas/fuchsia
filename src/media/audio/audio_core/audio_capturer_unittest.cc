@@ -108,7 +108,7 @@ TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffersD
   stream_config.set_channel(zx::channel());
   auto input = AudioInput::Create("", std::move(stream_config), &threading_model(),
                                   &context().device_manager(), &context().link_matrix(),
-                                  context().clock_manager());
+                                  context().clock_factory());
   auto fake_driver =
       testing::FakeAudioDriver(std::move(c1), threading_model().FidlDomain().dispatcher());
 
@@ -144,7 +144,7 @@ TEST_F(AudioCapturerTest, ReferenceClockIsAdvancing) {
   auto fidl_clock = GetReferenceClock();
 
   clock::testing::VerifyAdvances(fidl_clock);
-  audio_clock_helper::VerifyAdvances(capturer_->reference_clock(), context().clock_manager());
+  audio_clock_helper::VerifyAdvances(capturer_->reference_clock(), context().clock_factory());
 }
 
 TEST_F(AudioCapturerTest, DefaultReferenceClockIsReadOnly) {

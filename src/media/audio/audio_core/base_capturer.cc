@@ -57,7 +57,7 @@ BaseCapturer::BaseCapturer(
       mix_domain_(context_.threading_model().AcquireMixDomain("capturer")),
       state_(State::WaitingForVmo),
       reporter_(Reporter::Singleton().CreateCapturer(mix_domain_->name())),
-      audio_clock_(context_.clock_manager()->CreateClientAdjustable(
+      audio_clock_(context_.clock_factory()->CreateClientAdjustable(
           audio::clock::AdjustableCloneOfMonotonic())) {
   FX_DCHECK(mix_domain_);
 

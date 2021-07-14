@@ -36,7 +36,7 @@ class DriverOutput : public AudioOutput {
 
   DriverOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
                fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
-               LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager,
+               LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
                VolumeCurve volume_curve);
 
   ~DriverOutput();

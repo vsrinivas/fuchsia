@@ -2,26 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_MANAGER_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_MANAGER_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_FACTORY_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_FACTORY_H_
 
 #include "src/media/audio/audio_core/audio_clock.h"
 
 namespace media::audio {
 
 //
-// AudioClockManager provides a mechanism for relating all clocks created under a single manager
+// AudioClockFactory provides a mechanism for relating all clocks created under a single factory
 // instance.
 //
-// In AudioCore, an AudioClockManager instance is provided per-Context and facilitates creation of
-// AudioClocks across AudioCore. Overriding the AudioClockManager class takes advantage of the
+// In AudioCore, an AudioClockFactory instance is provided per-Context and facilitates creation of
+// AudioClocks across AudioCore. Overriding the AudioClockFactory class takes advantage of the
 // single point-of-entry for clock creation, enabling sweeping AudioClock modifications and/or
 // stubbing for tests.
 //
 
-class AudioClockManager {
+class AudioClockFactory {
  public:
-  virtual ~AudioClockManager() = default;
+  virtual ~AudioClockFactory() = default;
 
   virtual std::unique_ptr<AudioClock> CreateClientAdjustable(zx::clock clock) {
     return std::make_unique<AudioClock>(AudioClock::ClientAdjustable(std::move(clock)));
@@ -40,7 +40,7 @@ class AudioClockManager {
   }
 
   //
-  // The following are intended to be test-only and overridden in FakeClockManager.
+  // The following are intended to be test-only and overridden in FakeClockFactory.
   //
 
   virtual std::unique_ptr<AudioClock> CreateClientAdjustable(zx::time start_time,
@@ -77,4 +77,4 @@ class AudioClockManager {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_MANAGER_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_FACTORY_H_

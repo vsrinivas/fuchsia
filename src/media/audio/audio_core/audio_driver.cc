@@ -728,7 +728,7 @@ zx_status_t AudioDriver::OnDriverInfoFetched(uint32_t info) {
 void AudioDriver::SetUpClocks() {
   if (clock_domain_ == AudioClock::kMonotonicDomain) {
     // If in the monotonic domain, we'll fall back to a non-adjustable clone of CLOCK_MONOTONIC.
-    audio_clock_ = owner_->clock_manager()->CreateDeviceFixed(audio::clock::CloneOfMonotonic(),
+    audio_clock_ = owner_->clock_factory()->CreateDeviceFixed(audio::clock::CloneOfMonotonic(),
                                                               AudioClock::kMonotonicDomain);
     return;
   }
@@ -739,7 +739,7 @@ void AudioDriver::SetUpClocks() {
   // TODO(fxbug.dev/60027): Recovered clocks should be per-domain not per-driver.
   auto adjustable_clock = audio::clock::AdjustableCloneOfMonotonic();
   recovered_clock_ =
-      owner_->clock_manager()->CreateDeviceAdjustable(std::move(adjustable_clock), clock_domain_);
+      owner_->clock_factory()->CreateDeviceAdjustable(std::move(adjustable_clock), clock_domain_);
 
   auto read_only_clock_result = recovered_clock_->DuplicateClockReadOnly();
   if (read_only_clock_result.is_error()) {
@@ -749,7 +749,7 @@ void AudioDriver::SetUpClocks() {
 
   // TODO(fxbug.dev/46648): If this clock domain is discovered to be hardware-tunable, this should
   // be DeviceAdjustable, not DeviceFixed, to articulate that it has hardware controls.
-  auto clone = owner_->clock_manager()->CreateDeviceFixed(read_only_clock_result.take_value(),
+  auto clone = owner_->clock_factory()->CreateDeviceFixed(read_only_clock_result.take_value(),
                                                           clock_domain_);
 
   audio_clock_ = std::move(clone);
