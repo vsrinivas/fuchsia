@@ -12,6 +12,9 @@
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <zircon/status.h>
 
+#include "lib/async/cpp/time.h"
+#include "lib/async/default.h"
+
 namespace input {
 namespace {
 
@@ -24,19 +27,98 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   return (((uint64_t)ia) << 32) | ib;
 }
 
+uint64_t GetCurrentMinute() {
+  return async::Now(async_get_default_dispatcher()).get() / zx::min(1).get();
+}
+
 }  // namespace
+
+InjectorInspector::InjectorInspector(inspect::Node node)
+    : node_(std::move(node)),
+      history_stats_node_(node_.CreateLazyValues("Injection history",
+                                                 [this] {
+                                                   inspect::Inspector insp;
+                                                   ReportStats(insp);
+                                                   return fpromise::make_ok_promise(
+                                                       std::move(insp));
+                                                 })),
+      cancelled_injections_node_(node_.CreateChild("cancelled_injections")),
+      total_cancelled_injections_(
+          cancelled_injections_node_.CreateUint("total_cancelled_injections", 0)),
+      injection_in_flight_count_(
+          cancelled_injections_node_.CreateUint("injection_in_flight_count", 0)),
+      pending_events_empty_count_(
+          cancelled_injections_node_.CreateUint("pending_events_empty_count", 0)),
+      scene_not_ready_count_(cancelled_injections_node_.CreateUint("scene_not_ready_count", 0)) {}
+
+void InjectorInspector::OnInjectedEvents(uint64_t num_events) {
+  const uint64_t current_minute = GetCurrentMinute();
+
+  // Add elements to the front and pop from the back so that the newest element will be read out
+  // first when we later iterate over the deque.
+  if (history_.empty() || history_.front().minute_key != current_minute) {
+    history_.push_front({
+        .minute_key = current_minute,
+    });
+  }
+  history_.front().num_injected_events += num_events;
+
+  // Pop off everything older than |kNumMinutesOfHistory|.
+  while (history_.size() > 1 &&
+         history_.back().minute_key + kNumMinutesOfHistory <= current_minute) {
+    history_.pop_back();
+  }
+}
+
+void InjectorInspector::OnInjectPendingCancelled(bool injection_in_flight,
+                                                 bool pending_events_empty, bool scene_not_ready) {
+  FX_DCHECK(injection_in_flight || pending_events_empty || scene_not_ready)
+      << "Should only cancel an inject with one or more valid reasons";
+
+  total_cancelled_injections_.Add(1);
+
+  if (injection_in_flight) {
+    injection_in_flight_count_.Add(1);
+  }
+  if (pending_events_empty) {
+    pending_events_empty_count_.Add(1);
+  }
+  if (scene_not_ready) {
+    scene_not_ready_count_.Add(1);
+  }
+}
+
+void InjectorInspector::ReportStats(inspect::Inspector& inspector) const {
+  inspect::Node node = inspector.GetRoot().CreateChild(
+      "Last " + std::to_string(kNumMinutesOfHistory) + " minutes of injected events");
+
+  uint64_t sum = 0;
+  const uint64_t current_minute = GetCurrentMinute();
+  for (const auto& [minute, num_injected_events] : history_) {
+    if (minute + kNumMinutesOfHistory <= current_minute) {
+      break;
+    }
+
+    node.CreateUint("Events at minute " + std::to_string(minute), num_injected_events, &inspector);
+
+    sum += num_injected_events;
+  }
+  node.CreateUint("Sum", sum, &inspector);
+  inspector.emplace(std::move(node));
+}
 
 Injector::Injector(sys::ComponentContext* component_context, fuchsia::ui::views::ViewRef context,
                    fuchsia::ui::views::ViewRef target,
-                   fuchsia::ui::pointerinjector::DispatchPolicy policy)
+                   fuchsia::ui::pointerinjector::DispatchPolicy policy, inspect::Node inspect_node)
     : component_context_(component_context),
       context_view_ref_(std::move(context)),
       target_view_ref_(std::move(target)),
-      policy_(policy) {
+      policy_(policy),
+      injector_inspector_(std::move(inspect_node)) {
   FX_DCHECK(component_context_);
 }
 
-Injector::Injector() : component_context_(nullptr) {}
+Injector::Injector() : component_context_(nullptr), injector_inspector_(inspect::Node()) {}
 
 void Injector::SetViewport(Viewport viewport) {
   FX_VLOGS(2) << "SetViewport: width=" << viewport.width << " height=" << viewport.height
@@ -86,6 +168,8 @@ void Injector::InjectPending(InjectorId injector_id) {
   FX_DCHECK(injectors_.count(injector_id));
   auto& injector = injectors_.at(injector_id);
   if (injector.injection_in_flight || injector.pending_events.empty() || !scene_ready_) {
+    injector_inspector_.OnInjectPendingCancelled(injector.injection_in_flight,
+                                                 injector.pending_events.empty(), !scene_ready_);
     return;
   }
 
@@ -104,6 +188,7 @@ void Injector::InjectPending(InjectorId injector_id) {
     TRACE_FLOW_BEGIN("input", "dispatch_event_to_scenic", event.trace_flow_id());
   }
 
+  injector_inspector_.OnInjectedEvents(events_to_inject.size());
   injector.touch_injector->Inject(std::move(events_to_inject), [this, injector_id] {
     if (num_failed_injection_attempts_ > 0) {
       FX_LOGS(INFO) << "Injection successful after " << num_failed_injection_attempts_
@@ -232,6 +317,8 @@ void Injector::SetupInputInjection(InjectorId injector_id, uint32_t device_id) {
       config.set_target(std::move(target));
     }
   }
+
+  injector.injection_in_flight = false;
   component_context_->svc()->Connect<fuchsia::ui::pointerinjector::Registry>()->Register(
       std::move(config), injectors_.at(injector_id).touch_injector.NewRequest(), [] {});
   injector.touch_injector.set_error_handler([this, injector_id, device_id](zx_status_t error) {
@@ -248,13 +335,16 @@ void Injector::SetupInputInjection(InjectorId injector_id, uint32_t device_id) {
     injectors_[injector_id].touch_injector = {};
 
     // Try to recover.
-    injectors_[injector_id].injection_in_flight = false;
     SetupInputInjection(injector_id, device_id);
     InjectPending(injector_id);
   });
 }
 
 void Injector::MarkSceneReady() {
+  if (scene_ready_) {
+    return;
+  }
+
   scene_ready_ = true;
   for (const auto& [id, injector] : injectors_) {
     SetupInputInjection(id, injector.device_id);

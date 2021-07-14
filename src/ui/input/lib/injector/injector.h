@@ -8,12 +8,51 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <deque>
 #include <unordered_map>
 
+#include "src/lib/fxl/macros.h"
+
 namespace input {
+
+// Utility that Injectors use to send diagnostics to Inspect.
+class InjectorInspector {
+ public:
+  explicit InjectorInspector(inspect::Node inspect_node);
+
+  void OnInjectedEvents(uint64_t num_events);
+  void OnInjectPendingCancelled(bool injection_in_flight, bool pending_events_empty,
+                                bool scene_not_ready);
+
+  // How long to track injection history.
+  static constexpr uint64_t kNumMinutesOfHistory = 10;
+
+ private:
+  struct InspectHistory {
+    // The minute this was recorded during. Used as the key for appending new values.
+    uint64_t minute_key = 0;
+    // Number of injected events during |minute_key|.
+    uint64_t num_injected_events = 0;
+  };
+
+  void ReportStats(inspect::Inspector& inspector) const;
+
+  inspect::Node node_;
+  inspect::LazyNode history_stats_node_;
+  inspect::Node cancelled_injections_node_;
+
+  inspect::UintProperty total_cancelled_injections_;
+  inspect::UintProperty injection_in_flight_count_;
+  inspect::UintProperty pending_events_empty_count_;
+  inspect::UintProperty scene_not_ready_count_;
+
+  std::deque<InspectHistory> history_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(InjectorInspector);
+};
 
 // Class for handling input injection into Scenic.
 //
@@ -47,7 +86,8 @@ class Injector {
   Injector(sys::ComponentContext* component_context, fuchsia::ui::views::ViewRef context,
            fuchsia::ui::views::ViewRef target,
            fuchsia::ui::pointerinjector::DispatchPolicy policy =
-               fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
+               fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET,
+           inspect::Node inspect_node = inspect::Node());
   virtual ~Injector() = default;
 
   // Not copyable or movable. Since internal closures capture |this| it's not safe.
@@ -114,6 +154,8 @@ class Injector {
   // We show one log for every |kLogFrequency| failed attempts, and one for every successful
   // recovery.
   uint64_t num_failed_injection_attempts_ = 0u;
+
+  InjectorInspector injector_inspector_;
 };
 
 }  // namespace input

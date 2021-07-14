@@ -22,9 +22,9 @@
 #include "src/ui/a11y/lib/view/a11y_view.h"
 #include "src/ui/bin/root_presenter/app.h"
 #include "src/ui/bin/root_presenter/presentation.h"
-#include "src/ui/bin/root_presenter/tests/fakes/fake_injector_registry.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_keyboard_focus_controller.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_view.h"
+#include "src/ui/input/lib/injector/tests/mocks/mock_injector_registry.h"
 
 namespace root_presenter {
 namespace {
@@ -78,7 +78,7 @@ class RootPresenterTest : public gtest::RealLoopFixture,
 
   void ConnectInjectorRegistry(bool use_fake = true) {
     if (use_fake) {
-      injector_registry_ = std::make_unique<testing::FakeInjectorRegistry>(context_provider_);
+      injector_registry_ = std::make_unique<input::test::MockInjectorRegistry>(context_provider_);
     } else {
       ASSERT_EQ(
           ZX_OK,
@@ -94,8 +94,8 @@ class RootPresenterTest : public gtest::RealLoopFixture,
     input_device_registry_ptr_.set_error_handler([](auto...) { FAIL(); });
   }
 
-  void SetUpInputTest(bool use_fake_injector_registry = true) {
-    ConnectInjectorRegistry(use_fake_injector_registry);
+  void SetUpInputTest(bool use_mock_injector_registry = true) {
+    ConnectInjectorRegistry(use_mock_injector_registry);
 
     // Present a fake view.
     fuchsia::ui::scenic::ScenicPtr scenic =
@@ -187,7 +187,7 @@ class RootPresenterTest : public gtest::RealLoopFixture,
     return histogram->GetBuckets();
   }
 
-  std::unique_ptr<testing::FakeInjectorRegistry> injector_registry_;
+  std::unique_ptr<input::test::MockInjectorRegistry> injector_registry_;
   std::unique_ptr<testing::FakeKeyboardFocusController> keyboard_focus_ctl_;
   fuchsia::ui::input::InputDeviceRegistryPtr input_device_registry_ptr_;
   sys::testing::ComponentContextProvider context_provider_;

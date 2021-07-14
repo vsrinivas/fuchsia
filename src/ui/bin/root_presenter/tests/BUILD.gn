@@ -89,6 +89,7 @@ executable("root_presenter_unittests_bin") {
     "//src/ui/bin/root_presenter:safe_presenter",
     "//src/ui/bin/root_presenter:virtual_keyboard",
     "//src/ui/bin/root_presenter/tests/fakes",
+    "//src/ui/input/lib/injector/tests/mocks",
     "//src/ui/lib/key_util",
     "//src/ui/testing:mock_input_device",
     "//third_party/googletest:gmock",

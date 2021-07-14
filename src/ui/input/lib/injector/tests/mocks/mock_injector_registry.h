@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_BIN_ROOT_PRESENTER_TESTS_FAKES_FAKE_INJECTOR_REGISTRY_H_
-#define SRC_UI_BIN_ROOT_PRESENTER_TESTS_FAKES_FAKE_INJECTOR_REGISTRY_H_
+#ifndef SRC_UI_INPUT_LIB_INJECTOR_TESTS_MOCKS_MOCK_INJECTOR_REGISTRY_H_
+#define SRC_UI_INPUT_LIB_INJECTOR_TESTS_MOCKS_MOCK_INJECTOR_REGISTRY_H_
 
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -11,12 +11,12 @@
 
 #include <unordered_map>
 
-namespace root_presenter::testing {
+namespace input::test {
 
-class FakeInjectorRegistry : public fuchsia::ui::pointerinjector::Registry,
+class MockInjectorRegistry : public fuchsia::ui::pointerinjector::Registry,
                              public fuchsia::ui::pointerinjector::Device {
  public:
-  explicit FakeInjectorRegistry(sys::testing::ComponentContextProvider& context_provider);
+  explicit MockInjectorRegistry(sys::testing::ComponentContextProvider& context_provider);
 
   // |fuchsia.ui.pointerinjector.Registry|
   void Register(fuchsia::ui::pointerinjector::Config config,
@@ -31,12 +31,14 @@ class FakeInjectorRegistry : public fuchsia::ui::pointerinjector::Registry,
 
   void KillAllBindings();
 
-  uint32_t num_registered() { return bindings_.size(); }
+  uint32_t num_register_calls() { return num_register_calls_; }
+  size_t num_registered() { return bindings_.size(); }
   uint32_t num_events_received() const { return num_events_received_; }
 
  private:
   uint32_t next_id_ = 0;
   uint32_t num_events_received_ = 0;
+  uint32_t num_register_calls_ = 0;
 
   fidl::BindingSet<fuchsia::ui::pointerinjector::Registry> registry_;
 
@@ -44,6 +46,6 @@ class FakeInjectorRegistry : public fuchsia::ui::pointerinjector::Registry,
   std::unordered_map<uint32_t, fidl::Binding<fuchsia::ui::pointerinjector::Device>> bindings_;
 };
 
-}  // namespace root_presenter::testing
+}  // namespace input::test
 
-#endif  // SRC_UI_BIN_ROOT_PRESENTER_TESTS_FAKES_FAKE_INJECTOR_REGISTRY_H_
+#endif  // SRC_UI_INPUT_LIB_INJECTOR_TESTS_MOCKS_MOCK_INJECTOR_REGISTRY_H_

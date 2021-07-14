@@ -5,9 +5,19 @@
 source_set("mocks") {
   testonly = true
 
-  public = [ "mock_injector.h" ]
+  public = [
+    "mock_injector.h",
+    "mock_injector_registry.h",
+  ]
 
-  sources = [ "mock_injector.cc" ]
+  sources = [
+    "mock_injector.cc",
+    "mock_injector_registry.cc",
+  ]
 
-  deps = [ "//src/ui/input/lib/injector" ]
+  deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp:cpp-macros",
+    "//src/ui/input/lib/injector",
+  ]
 }

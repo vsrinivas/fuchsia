@@ -8,8 +8,6 @@ source_set("fakes") {
   sources = [
     "fake_focuser.cc",
     "fake_focuser.h",
-    "fake_injector_registry.cc",
-    "fake_injector_registry.h",
     "fake_keyboard_focus_controller.cc",
     "fake_keyboard_focus_controller.h",
     "fake_scenic.cc",

@@ -11,7 +11,10 @@ group("tests") {
 
 executable("injector_tests") {
   testonly = true
-  sources = [ "injector_config_setup_unittest.cc" ]
+  sources = [
+    "injector_config_setup_unittest.cc",
+    "injector_unittest.cc",
+  ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -23,6 +26,7 @@ executable("injector_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/ui/input/lib/injector",
+    "//src/ui/input/lib/injector/tests/mocks:mocks",
     "//third_party/googletest:gmock",
   ]
 }

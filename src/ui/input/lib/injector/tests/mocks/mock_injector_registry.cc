@@ -4,21 +4,21 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include <src/ui/bin/root_presenter/tests/fakes/fake_injector_registry.h>
+#include <src/ui/input/lib/injector/tests/mocks/mock_injector_registry.h>
 
-namespace root_presenter {
-namespace testing {
+namespace input::test {
 
-FakeInjectorRegistry::FakeInjectorRegistry(
+MockInjectorRegistry::MockInjectorRegistry(
     sys::testing::ComponentContextProvider& context_provider) {
   context_provider.service_directory_provider()->AddService<fuchsia::ui::pointerinjector::Registry>(
       registry_.GetHandler(this));
 }
 
-void FakeInjectorRegistry::Register(
+void MockInjectorRegistry::Register(
     fuchsia::ui::pointerinjector::Config config,
     fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> injector,
     RegisterCallback callback) {
+  num_register_calls_++;
   const uint32_t id = next_id_++;
   auto [it, success] = bindings_.try_emplace(id, this, std::move(injector));
   FX_CHECK(success);
@@ -26,20 +26,19 @@ void FakeInjectorRegistry::Register(
   callback();
 }
 
-void FakeInjectorRegistry::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
+void MockInjectorRegistry::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
                                   InjectCallback callback) {
   num_events_received_ += events.size();
   pending_callbacks_.emplace_back(std::move(callback));
 }
 
-void FakeInjectorRegistry::FirePendingCallbacks() {
+void MockInjectorRegistry::FirePendingCallbacks() {
   for (auto& callback : pending_callbacks_) {
     callback();
   }
   pending_callbacks_.clear();
 }
 
-void FakeInjectorRegistry::KillAllBindings() { bindings_.clear(); }
+void MockInjectorRegistry::KillAllBindings() { bindings_.clear(); }
 
-}  // namespace testing
-}  // namespace root_presenter
+}  // namespace input::test

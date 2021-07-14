@@ -160,8 +160,11 @@ Presentation::Presentation(inspect::Node inspect_node, sys::ComponentContext* co
       safe_presenter_proxy_.QueuePresent([] {});
     }
 
-    injector_.emplace(component_context, /*context*/ fidl::Clone(root_view_ref),
-                      /*target*/ fidl::Clone(injector_view_ref));
+    injector_.emplace(component_context,
+                      /*context=*/fidl::Clone(root_view_ref),
+                      /*target=*/fidl::Clone(injector_view_ref),
+                      fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET,
+                      inspect_node_.CreateChild("Injector"));
 
     // Sets up InjectorConfigSetup for input pipeline to receive view refs and viewport updates.
     injector_config_setup_.emplace(component_context, /*context*/ std::move(root_view_ref),
