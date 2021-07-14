@@ -33,7 +33,7 @@ use packet::serialize::{InnerPacketBuilder as _, Serializer as _};
 use packet::ParsablePacket as _;
 use packet_formats::ethernet::{EtherType, EthernetFrameBuilder};
 use packet_formats::icmp::ndp::{
-    options::{NdpOption, RecursiveDnsServer},
+    options::{NdpOptionBuilder, RecursiveDnsServer},
     RouterAdvertisement,
 };
 use packet_formats::ip::IpProto;
@@ -188,7 +188,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
     );
     let addresses = [NDP_DNS_SERVER.addr.into()];
     let rdnss = RecursiveDnsServer::new(9999, &addresses);
-    let options = [NdpOption::RecursiveDnsServer(rdnss)];
+    let options = [NdpOptionBuilder::RecursiveDnsServer(rdnss)];
     let () = write_ndp_message::<&[u8], _>(
         eth_consts::MAC_ADDR,
         Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),

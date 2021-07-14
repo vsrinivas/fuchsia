@@ -37,7 +37,7 @@ use packet::ParsablePacket as _;
 use packet_formats::ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck};
 use packet_formats::icmp::mld::MldPacket;
 use packet_formats::icmp::ndp::{
-    options::{NdpOption, PrefixInformation},
+    options::{NdpOption, NdpOptionBuilder, PrefixInformation},
     NeighborAdvertisement, NeighborSolicitation, RouterAdvertisement, RouterSolicitation,
 };
 use packet_formats::icmp::{IcmpParseArgs, Icmpv6Packet};
@@ -371,7 +371,7 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
         99999,                         /* preferred_lifetime */
         ipv6_consts::PREFIX.network(), /* prefix */
     );
-    let options = [NdpOption::PrefixInformation(&pi)];
+    let options = [NdpOptionBuilder::PrefixInformation(pi)];
     let () = write_ndp_message::<&[u8], _>(
         eth_consts::MAC_ADDR,
         Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
@@ -512,7 +512,7 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
                 false, /* override_flag */
                 ipv6_consts::LINK_LOCAL_ADDR,
             ),
-            &[NdpOption::TargetLinkLayerAddress(&eth_consts::MAC_ADDR.bytes())],
+            &[NdpOptionBuilder::TargetLinkLayerAddress(&eth_consts::MAC_ADDR.bytes())],
             fake_ep,
         )
         .await
@@ -698,7 +698,7 @@ async fn router_and_prefix_discovery<E: netemul::Endpoint>(
         0,                             /* preferred_lifetime */
         ipv6_consts::PREFIX.network(), /* prefix */
     );
-    let options = [NdpOption::PrefixInformation(&pi)];
+    let options = [NdpOptionBuilder::PrefixInformation(pi)];
     let () = send_ra_with_router_lifetime(&fake_ep, 1000, &options)
         .await
         .expect("failed to send router advertisement");
@@ -815,7 +815,7 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
         99999,                         /* preferred_lifetime */
         ipv6_consts::PREFIX.network(), /* prefix */
     );
-    let options = [NdpOption::PrefixInformation(&pi)];
+    let options = [NdpOptionBuilder::PrefixInformation(pi)];
     let () = write_ndp_message::<&[u8], _>(
         eth_consts::MAC_ADDR,
         Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),

@@ -33,7 +33,9 @@ use net_types::{
     SpecifiedAddress, UnicastAddr, Witness,
 };
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
-use packet_formats::icmp::ndp::options::{NdpOption, PrefixInformation, INFINITE_LIFETIME};
+use packet_formats::icmp::ndp::options::{
+    NdpOption, NdpOptionBuilder, PrefixInformation, INFINITE_LIFETIME,
+};
 use packet_formats::icmp::ndp::{
     self, NeighborAdvertisement, NeighborSolicitation, Options, RouterAdvertisement,
     RouterSolicitation,
@@ -2308,7 +2310,7 @@ fn send_router_solicitation<D: LinkDevice, C: NdpContext<D>>(
             src_ip,
             Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
             RouterSolicitation::default(),
-            &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
+            &[NdpOptionBuilder::SourceLinkLayerAddress(src_ll.bytes())],
         );
     }
 }
@@ -2390,7 +2392,7 @@ fn do_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
         Ipv6::UNSPECIFIED_ADDRESS,
         tentative_addr.to_solicited_node_address().into_specified(),
         NeighborSolicitation::new(tentative_addr.into_addr()),
-        &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
+        &[NdpOptionBuilder::SourceLinkLayerAddress(src_ll.bytes())],
     );
 
     ctx.schedule_timer(
@@ -2421,7 +2423,7 @@ fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
             src_ip,
             dst_ip.into_specified(),
             NeighborSolicitation::new(lookup_addr.into_addr()),
-            &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
+            &[NdpOptionBuilder::SourceLinkLayerAddress(src_ll.bytes())],
         );
     } else {
         // Nothing can be done if we don't have any ipv6 addresses to send
@@ -2453,7 +2455,6 @@ fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
     // trying to send this advertisement will end up triggering a neighbor
     // solicitation to be sent.
     let src_ll = ctx.get_link_layer_addr(device_id);
-    let options = [NdpOption::TargetLinkLayerAddress(src_ll.bytes())];
     // TODO(rheacock): Do something if this returns an error?
     let device_addr = device_addr.into_addr();
     let _ = send_ndp_packet::<_, _, &[u8], _>(
@@ -2462,7 +2463,7 @@ fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
         device_addr,
         dst_ip,
         NeighborAdvertisement::new(ctx.is_router(device_id), solicited, false, device_addr),
-        &options[..],
+        &[NdpOptionBuilder::TargetLinkLayerAddress(src_ll.bytes())],
     );
 }
 
@@ -2515,7 +2516,7 @@ fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     );
 
     let src_ll = ctx.get_link_layer_addr(device_id);
-    let mut options = alloc::vec![NdpOption::SourceLinkLayerAddress(src_ll.bytes())];
+    let mut options = alloc::vec![NdpOptionBuilder::SourceLinkLayerAddress(src_ll.bytes())];
 
     let ndp_state = ctx.get_state_mut_with(device_id);
 
@@ -2525,17 +2526,17 @@ fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     //
     // See AdvLinkMtu in RFC 4861 section 6.2.1 for more information.
     if let Some(mtu) = router_configurations.get_advertised_link_mtu() {
-        options.push(NdpOption::Mtu(mtu.get()));
+        options.push(NdpOptionBuilder::Mtu(mtu.get()));
     }
 
     let prefix_list = router_configurations.get_advertised_prefix_list().clone();
-    for p in &prefix_list {
+    for p in prefix_list.into_iter() {
         // We know that `unwrap` will not panic because `new_unaligned` checks
         // to make sure that the byte slice we give it has exactly the number of
         // bytes required for a `PrefixInformation`. Here, we pass it the byte
         // slice representation of a `PrefixInformation`, so we know that
         // `new_unaligned` will not return `None`.
-        options.push(NdpOption::PrefixInformation(&p));
+        options.push(NdpOptionBuilder::PrefixInformation(p));
     }
 
     let message = router_configurations.new_router_advertisement(is_final_ra_batch);
@@ -2582,7 +2583,7 @@ fn send_ndp_packet<D: LinkDevice, C: NdpContext<D>, B: ByteSlice, M>(
     src_ip: Ipv6Addr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
     message: M,
-    options: &[NdpOption],
+    options: &[NdpOptionBuilder],
 ) -> Result<(), ()>
 where
     M: IcmpMessage<Ipv6, B, Code = IcmpUnusedCode>,
@@ -3738,7 +3739,7 @@ mod tests {
         let mut options = Vec::new();
 
         if let Some(ref mac) = mac {
-            options.push(NdpOption::TargetLinkLayerAddress(mac));
+            options.push(NdpOptionBuilder::TargetLinkLayerAddress(mac));
         }
 
         OptionsSerializer::new(options.iter())
@@ -4920,7 +4921,7 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let src_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
         let src_mac = [10, 11, 12, 13, 14, 15];
-        let options = vec![NdpOption::SourceLinkLayerAddress(&src_mac[..])];
+        let options = vec![NdpOptionBuilder::SourceLinkLayerAddress(&src_mac[..])];
 
         // Test receiving NDP RS when not a router (should not receive)
 
@@ -5439,7 +5440,7 @@ mod tests {
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
         let src_ip = src_mac.to_ipv6_link_local().addr();
         let src_mac_bytes = src_mac.bytes();
-        let options = vec![NdpOption::SourceLinkLayerAddress(&src_mac_bytes[..])];
+        let options = vec![NdpOptionBuilder::SourceLinkLayerAddress(&src_mac_bytes[..])];
 
         // First receive a Router Advertisement without the source link layer
         // and make sure no new neighbor gets added.
@@ -5539,7 +5540,7 @@ mod tests {
     #[test]
     fn test_receiving_router_advertisement_mtu_option() {
         fn packet_buf(src_ip: Ipv6Addr, dst_ip: Ipv6Addr, mtu: u32) -> Buf<Vec<u8>> {
-            let options = &[NdpOption::Mtu(mtu)];
+            let options = &[NdpOptionBuilder::Mtu(mtu)];
             OptionsSerializer::new(options.iter())
                 .into_serializer()
                 .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
@@ -5649,7 +5650,7 @@ mod tests {
                 preferred_lifetime,
                 prefix,
             );
-            let options = &[NdpOption::PrefixInformation(&p)];
+            let options = &[NdpOptionBuilder::PrefixInformation(p)];
             OptionsSerializer::new(options.iter())
                 .into_serializer()
                 .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
@@ -6964,7 +6965,7 @@ mod tests {
         /// Get a Router Solicitation ICMPv6 packet buffer.
         fn rs_msg(src_ip: Ipv6Addr, src_mac: Mac, dst_ip: Ipv6Addr) -> Buf<Vec<u8>> {
             let mac_bytes = src_mac.bytes();
-            let options = &[NdpOption::SourceLinkLayerAddress(&mac_bytes)];
+            let options = &[NdpOptionBuilder::SourceLinkLayerAddress(&mac_bytes)];
             OptionsSerializer::<_>::new(options.iter())
                 .into_serializer()
                 .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
@@ -7553,7 +7554,7 @@ mod tests {
             preferred_lifetime,
             prefix,
         );
-        let options = &[NdpOption::PrefixInformation(&p)];
+        let options = &[NdpOptionBuilder::PrefixInformation(p)];
         OptionsSerializer::new(options.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(

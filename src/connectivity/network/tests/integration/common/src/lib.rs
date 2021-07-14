@@ -36,7 +36,7 @@ use net_types::ip as net_types_ip;
 use net_types::Witness as _;
 use packet::serialize::{InnerPacketBuilder, Serializer};
 use packet_formats::ethernet::{EtherType, EthernetFrameBuilder};
-use packet_formats::icmp::ndp::{self, options::NdpOption, RouterAdvertisement};
+use packet_formats::icmp::ndp::{self, options::NdpOptionBuilder, RouterAdvertisement};
 use packet_formats::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
 use packet_formats::ip::Ipv6Proto;
 use packet_formats::ipv6::Ipv6PacketBuilder;
@@ -116,7 +116,7 @@ pub async fn write_ndp_message<
     src_ip: net_types_ip::Ipv6Addr,
     dst_ip: net_types_ip::Ipv6Addr,
     message: M,
-    options: &[NdpOption<'_>],
+    options: &[NdpOptionBuilder<'_>],
     ep: &netemul::TestFakeEndpoint<'_>,
 ) -> Result {
     let ser = ndp::OptionsSerializer::<_>::new(options.iter())
@@ -296,7 +296,7 @@ pub async fn get_inspect_data<'a>(
 pub async fn send_ra_with_router_lifetime<'a>(
     fake_ep: &netemul::TestFakeEndpoint<'a>,
     lifetime: u16,
-    options: &[NdpOption<'_>],
+    options: &[NdpOptionBuilder<'_>],
 ) -> Result {
     let ra = RouterAdvertisement::new(
         0,        /* current_hop_limit */

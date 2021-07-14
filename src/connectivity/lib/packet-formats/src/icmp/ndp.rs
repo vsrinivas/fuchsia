@@ -40,7 +40,7 @@ pub type Options<B> = packet::records::options::Options<B, options::NdpOptionsIm
 pub type OptionsSerializer<'a, I> = packet::records::options::OptionsSerializer<
     'a,
     options::NdpOptionsImpl,
-    options::NdpOption<'a>,
+    options::NdpOptionBuilder<'a>,
     I,
 >;
 
@@ -514,19 +514,6 @@ pub mod options {
         RecursiveDnsServer(RecursiveDnsServer<'a>),
     }
 
-    impl<'a> From<&NdpOption<'a>> for NdpOptionType {
-        fn from(v: &NdpOption<'a>) -> Self {
-            match v {
-                NdpOption::SourceLinkLayerAddress(_) => NdpOptionType::SourceLinkLayerAddress,
-                NdpOption::TargetLinkLayerAddress(_) => NdpOptionType::TargetLinkLayerAddress,
-                NdpOption::PrefixInformation(_) => NdpOptionType::PrefixInformation,
-                NdpOption::RedirectedHeader { .. } => NdpOptionType::RedirectedHeader,
-                NdpOption::Mtu { .. } => NdpOptionType::Mtu,
-                NdpOption::RecursiveDnsServer(_) => NdpOptionType::RecursiveDnsServer,
-            }
-        }
-    }
-
     /// An implementation of [`OptionsImpl`] for NDP options.
     #[derive(Debug)]
     pub struct NdpOptionsImpl;
@@ -609,19 +596,54 @@ pub mod options {
         }
     }
 
+    /// Builder for NDP options that may be found in NDP messages.
+    #[allow(missing_docs)]
+    #[derive(Debug)]
+    pub enum NdpOptionBuilder<'a> {
+        SourceLinkLayerAddress(&'a [u8]),
+        TargetLinkLayerAddress(&'a [u8]),
+        PrefixInformation(PrefixInformation),
+
+        RedirectedHeader { original_packet: &'a [u8] },
+
+        Mtu(u32),
+
+        RecursiveDnsServer(RecursiveDnsServer<'a>),
+    }
+
+    impl<'a> From<&NdpOptionBuilder<'a>> for NdpOptionType {
+        fn from(v: &NdpOptionBuilder<'a>) -> Self {
+            match v {
+                NdpOptionBuilder::SourceLinkLayerAddress(_) => {
+                    NdpOptionType::SourceLinkLayerAddress
+                }
+                NdpOptionBuilder::TargetLinkLayerAddress(_) => {
+                    NdpOptionType::TargetLinkLayerAddress
+                }
+                NdpOptionBuilder::PrefixInformation(_) => NdpOptionType::PrefixInformation,
+                NdpOptionBuilder::RedirectedHeader { .. } => NdpOptionType::RedirectedHeader,
+                NdpOptionBuilder::Mtu { .. } => NdpOptionType::Mtu,
+                NdpOptionBuilder::RecursiveDnsServer(_) => NdpOptionType::RecursiveDnsServer,
+            }
+        }
+    }
+
     impl<'a> OptionsSerializerImpl<'a> for NdpOptionsImpl {
-        type Option = NdpOption<'a>;
+        type Option = NdpOptionBuilder<'a>;
 
         fn option_length(option: &Self::Option) -> usize {
             match option {
-                NdpOption::SourceLinkLayerAddress(data)
-                | NdpOption::TargetLinkLayerAddress(data) => data.len(),
-                NdpOption::PrefixInformation(_) => PREFIX_INFORMATION_OPTION_LENGTH,
-                NdpOption::RedirectedHeader { original_packet } => {
+                NdpOptionBuilder::SourceLinkLayerAddress(data)
+                | NdpOptionBuilder::TargetLinkLayerAddress(data) => data.len(),
+                NdpOptionBuilder::PrefixInformation(_) => PREFIX_INFORMATION_OPTION_LENGTH,
+                NdpOptionBuilder::RedirectedHeader { original_packet } => {
                     REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH + original_packet.len()
                 }
-                NdpOption::Mtu(_) => MTU_OPTION_LENGTH,
-                NdpOption::RecursiveDnsServer(RecursiveDnsServer { lifetime, addresses }) => {
+                NdpOptionBuilder::Mtu(_) => MTU_OPTION_LENGTH,
+                NdpOptionBuilder::RecursiveDnsServer(RecursiveDnsServer {
+                    lifetime,
+                    addresses,
+                }) => {
                     RECURSIVE_DNS_SERVER_OPTION_RESERVED_BYTES_LENGTH
                         + core::mem::size_of_val(lifetime)
                         + core::mem::size_of_val(*addresses)
@@ -635,12 +657,12 @@ pub mod options {
 
         fn serialize(buffer: &mut [u8], option: &Self::Option) {
             match option {
-                NdpOption::SourceLinkLayerAddress(data)
-                | NdpOption::TargetLinkLayerAddress(data) => buffer.copy_from_slice(data),
-                NdpOption::PrefixInformation(pfx_info) => {
+                NdpOptionBuilder::SourceLinkLayerAddress(data)
+                | NdpOptionBuilder::TargetLinkLayerAddress(data) => buffer.copy_from_slice(data),
+                NdpOptionBuilder::PrefixInformation(pfx_info) => {
                     buffer.copy_from_slice(pfx_info.as_bytes());
                 }
-                NdpOption::RedirectedHeader { original_packet } => {
+                NdpOptionBuilder::RedirectedHeader { original_packet } => {
                     // As per RFC 4861 section 4.6.3, the first 6 bytes following the kind and length
                     // bytes are reserved so we zero them. The IP header + data field immediately
                     // follows.
@@ -650,7 +672,7 @@ pub mod options {
                         .copy_from_slice(&[0; REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH]);
                     original_packet_bytes.copy_from_slice(original_packet);
                 }
-                NdpOption::Mtu(mtu) => {
+                NdpOptionBuilder::Mtu(mtu) => {
                     // As per RFC 4861 section 4.6.4, the first 2 bytes following the kind and length
                     // bytes are reserved so we zero them. The MTU field immediately follows.
                     let (reserved_bytes, mtu_bytes) =
@@ -658,7 +680,10 @@ pub mod options {
                     reserved_bytes.copy_from_slice(&[0; MTU_OPTION_RESERVED_BYTES_LENGTH]);
                     mtu_bytes.copy_from_slice(U32::new(*mtu).as_bytes());
                 }
-                NdpOption::RecursiveDnsServer(RecursiveDnsServer { lifetime, addresses }) => {
+                NdpOptionBuilder::RecursiveDnsServer(RecursiveDnsServer {
+                    lifetime,
+                    addresses,
+                }) => {
                     // As per RFC 8106 section 5.1, the first 2 bytes following the kind and length
                     // bytes are reserved so we zero them.
                     let (reserved_bytes, buffer) =
@@ -695,7 +720,8 @@ mod tests {
     #[test]
     fn parse_serialize_redirected_header() {
         let expected_packet = [1, 2, 3, 4, 5, 6, 7, 8];
-        let options = &[options::NdpOption::RedirectedHeader { original_packet: &expected_packet }];
+        let options =
+            &[options::NdpOptionBuilder::RedirectedHeader { original_packet: &expected_packet }];
         let serialized = OptionsSerializer::<_>::new(options.iter())
             .into_serializer()
             .serialize_vec_outer()
@@ -722,7 +748,7 @@ mod tests {
     #[test]
     fn parse_serialize_mtu_option() {
         let expected_mtu = 5781;
-        let options = &[options::NdpOption::Mtu(expected_mtu)];
+        let options = &[options::NdpOptionBuilder::Mtu(expected_mtu)];
         let serialized = OptionsSerializer::<_>::new(options.iter())
             .into_serializer()
             .serialize_vec_outer()
@@ -751,7 +777,7 @@ mod tests {
             100,
             Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]),
         );
-        let options = &[options::NdpOption::PrefixInformation(&expected_prefix_info)];
+        let options = &[options::NdpOptionBuilder::PrefixInformation(expected_prefix_info.clone())];
         let serialized = OptionsSerializer::<_>::new(options.iter())
             .into_serializer()
             .serialize_vec_outer()
@@ -777,7 +803,7 @@ mod tests {
         let test = |addrs: &[Ipv6Addr]| {
             let lifetime = 120;
             let expected_rdnss = options::RecursiveDnsServer::new(lifetime, addrs);
-            let options = &[options::NdpOption::RecursiveDnsServer(expected_rdnss.clone())];
+            let options = &[options::NdpOptionBuilder::RecursiveDnsServer(expected_rdnss.clone())];
             let serialized = OptionsSerializer::<_>::new(options.iter())
                 .into_serializer()
                 .serialize_vec_outer()
@@ -885,7 +911,9 @@ mod tests {
                 o => panic!("Found unexpected option: {:?}", o),
             }
         }
-        let serialized = OptionsSerializer::<_>::new(collected.iter())
+        let option_builders =
+            [options::NdpOptionBuilder::SourceLinkLayerAddress(&SOURCE_LINK_LAYER_ADDRESS)];
+        let serialized = OptionsSerializer::<_>::new(option_builders.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
@@ -958,15 +986,42 @@ mod tests {
                     assert_eq!(address, &SOURCE_LINK_LAYER_ADDRESS);
                 }
                 options::NdpOption::PrefixInformation(info) => {
-                    assert_eq!(info.valid_lifetime(), PREFIX_INFO_VALID_LIFETIME);
-                    assert_eq!(info.preferred_lifetime(), PREFIX_INFO_PREFERRED_LIFETIME);
-                    assert_eq!(info.prefix().ipv6_bytes(), PREFIX_ADDRESS);
+                    assert_eq!(info.on_link_flag(), PREFIX_INFO_ON_LINK_FLAG);
+                    assert_eq!(
+                        info.autonomous_address_configuration_flag(),
+                        PREFIX_INFO_AUTONOMOUS_ADDRESS_CONFIGURATION_FLAG
+                    );
+                    assert_eq!(
+                        info.valid_lifetime(),
+                        NonZeroDuration::new(Duration::from_secs(
+                            PREFIX_INFO_VALID_LIFETIME_SECONDS.into()
+                        ))
+                    );
+                    assert_eq!(
+                        info.preferred_lifetime(),
+                        NonZeroDuration::new(Duration::from_secs(
+                            PREFIX_INFO_PREFERRED_LIFETIME_SECONDS.into()
+                        ))
+                    );
+                    assert_eq!(info.prefix_length(), PREFIX_INFO_PREFIX.prefix());
+                    assert_eq!(info.prefix(), &PREFIX_INFO_PREFIX.network());
                 }
                 o => panic!("Found unexpected option: {:?}", o),
             }
         }
 
-        let serialized = OptionsSerializer::<_>::new(collected.iter())
+        let option_builders = [
+            options::NdpOptionBuilder::SourceLinkLayerAddress(&SOURCE_LINK_LAYER_ADDRESS),
+            options::NdpOptionBuilder::PrefixInformation(options::PrefixInformation::new(
+                PREFIX_INFO_PREFIX.prefix(),
+                PREFIX_INFO_ON_LINK_FLAG,
+                PREFIX_INFO_AUTONOMOUS_ADDRESS_CONFIGURATION_FLAG,
+                PREFIX_INFO_VALID_LIFETIME_SECONDS,
+                PREFIX_INFO_PREFERRED_LIFETIME_SECONDS,
+                PREFIX_INFO_PREFIX.network(),
+            )),
+        ];
+        let serialized = OptionsSerializer::<_>::new(option_builders.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,

@@ -35,6 +35,8 @@ pub(crate) mod ndp_router {
     use core::num::NonZeroU8;
     use core::time::Duration;
 
+    use net_types::ip::{Ipv6Addr, Subnet};
+
     use crate::utils::NonZeroDuration;
 
     pub(crate) const ADVERTISEMENT_IP_PACKET_BYTES: &[u8] = &[
@@ -60,14 +62,19 @@ pub(crate) mod ndp_router {
     pub(crate) const SOURCE_LINK_LAYER_ADDRESS: &[u8] = &[0x00, 0x00, 0x5e, 0x00, 0x02, 0x65];
 
     /// Data from the Prefix Info option.
-    // We know this is safe because we provide a non-zero `Duration` value.
-    pub(crate) const PREFIX_INFO_VALID_LIFETIME: Option<NonZeroDuration> =
-        Some(unsafe { NonZeroDuration::new_unchecked(Duration::from_secs(2_592_000)) });
-    // We know this is safe because we provide a non-zero `Duration` value.
-    pub(crate) const PREFIX_INFO_PREFERRED_LIFETIME: Option<NonZeroDuration> =
-        Some(unsafe { NonZeroDuration::new_unchecked(Duration::from_secs(604_800)) });
-    pub(crate) const PREFIX_ADDRESS: &[u8] = &[
-        0x26, 0x20, 0x00, 0x00, 0x10, 0x00, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00,
-    ];
+    pub(crate) const PREFIX_INFO_ON_LINK_FLAG: bool = true;
+    pub(crate) const PREFIX_INFO_AUTONOMOUS_ADDRESS_CONFIGURATION_FLAG: bool = true;
+    pub(crate) const PREFIX_INFO_VALID_LIFETIME_SECONDS: u32 = 2_592_000;
+    pub(crate) const PREFIX_INFO_PREFERRED_LIFETIME_SECONDS: u32 = 604_800;
+    // We know this is safe as the none of the host-bits are set and the prefix
+    // length is valid for IPv6.
+    pub(crate) const PREFIX_INFO_PREFIX: Subnet<Ipv6Addr> = unsafe {
+        Subnet::new_unchecked(
+            Ipv6Addr::new([
+                0x26, 0x20, 0x00, 0x00, 0x10, 0x00, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00,
+            ]),
+            64,
+        )
+    };
 }
