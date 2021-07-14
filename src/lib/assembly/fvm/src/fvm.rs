@@ -33,17 +33,70 @@ pub struct FvmBuilder {
     slice_size: u64,
     /// The number of slices to reserve in the FVM.
     reserved_slices: u64,
+    /// The maximum disk size for the sparse FVM.
+    /// The build will fail if the sparse FVM is larger than this.
+    max_disk_size: Option<u64>,
+    /// The type of FVM to generate.
+    fvm_type: FvmType,
     /// A list of filesystems to add to the FVM.
     filesystems: Vec<Filesystem>,
 }
 
+/// The type of the FVM to generate and all information required to build that type.
+pub enum FvmType {
+    /// A plain, non-sparse FVM.
+    Default,
+    /// A sparse FVM that is typically used for paving.
+    Sparse {
+        /// Whether to insert an empty minfs that will be formatted on boot.
+        empty_minfs: bool,
+    },
+    /// A sparse FVM that is formatted for flashing an EMMC.
+    Emmc {
+        /// The compression algorithm to use.
+        compression: String,
+        /// The length of the FVM to generate.
+        length: u64,
+    },
+}
+
+/// A filesystem to add to the FVM.
+#[derive(Clone)]
+pub struct Filesystem {
+    /// The path to the filesystem block file on the host.
+    pub path: PathBuf,
+    /// The attributes of the filesystem to create.
+    pub attributes: FilesystemAttributes,
+}
+
+/// Attributes common to all filesystems.
+#[derive(Clone, Deserialize, Serialize)]
+pub struct FilesystemAttributes {
+    /// The name of the filesystem. Typically "blob" or "data".
+    pub name: String,
+    /// The minimum number of inodes to add to the filesystem.
+    pub minimum_inodes: Option<u64>,
+    /// The minimum number of data bytes to set for the filesystem.
+    pub minimum_data_bytes: Option<u64>,
+    /// The maximum number of bytes for the filesystem.
+    pub maximum_bytes: Option<u64>,
+}
+
 impl FvmBuilder {
     /// Construct a new FvmBuilder.
-    pub fn new(output: impl AsRef<Path>, slice_size: u64, reserved_slices: u64) -> Self {
+    pub fn new(
+        output: impl AsRef<Path>,
+        slice_size: u64,
+        reserved_slices: u64,
+        max_disk_size: Option<u64>,
+        fvm_type: FvmType,
+    ) -> Self {
         Self {
             output: output.as_ref().to_path_buf(),
             slice_size,
             reserved_slices,
+            max_disk_size,
+            fvm_type,
             filesystems: Vec::<Filesystem>::new(),
         }
     }
@@ -73,18 +126,11 @@ impl FvmBuilder {
 
     /// Build the arguments to pass to the fvm tool.
     fn build_args(&self) -> Result<Vec<String>> {
-        // Construct the initial args.
-        let mut args = vec![
-            self.output.path_to_string()?,
-            "create".to_string(),
-            "--slice".to_string(),
-            self.slice_size.to_string(),
-            "--reserve-slices".to_string(),
-            self.reserved_slices.to_string(),
-        ];
+        let mut args: Vec<String> = Vec::new();
+        args.push(self.output.path_to_string()?);
 
         // Append key and value to the `args` if the value is present.
-        fn append_arg(
+        fn maybe_append_value(
             args: &mut Vec<String>,
             key: impl AsRef<str>,
             value: Option<impl std::string::ToString>,
@@ -95,37 +141,46 @@ impl FvmBuilder {
             }
         }
 
-        // Append all the filesystem args.
+        // Append the type-specific args.
+        match &self.fvm_type {
+            FvmType::Default => {
+                args.push("create".to_string());
+            }
+            FvmType::Sparse { empty_minfs } => {
+                args.push("sparse".to_string());
+                maybe_append_value(&mut args, "compress", Some("lz4"));
+                maybe_append_value(&mut args, "max-disk-size", self.max_disk_size);
+
+                if *empty_minfs {
+                    args.push("--with-empty-minfs".to_string());
+                }
+            }
+            FvmType::Emmc { compression, length } => {
+                args.push("create".to_string());
+                args.push("--resize-image-file-to-fit".to_string());
+                maybe_append_value(&mut args, "length", Some(length));
+                let compression = match compression.as_str() {
+                    "none" => None,
+                    c => Some(c),
+                };
+                maybe_append_value(&mut args, "compress", compression);
+            }
+        }
+
+        // Append the common args.
+        maybe_append_value(&mut args, "slice", Some(self.slice_size.to_string()));
+        maybe_append_value(&mut args, "reserve-slices", Some(self.reserved_slices.to_string()));
+
+        // Append the filesystem args.
         for fs in &self.filesystems {
-            append_arg(&mut args, &fs.attributes.name, Some(&fs.path.path_to_string()?));
-            append_arg(&mut args, "minimum-inodes", fs.attributes.minimum_inodes);
-            append_arg(&mut args, "minimum-data-bytes", fs.attributes.minimum_data_bytes);
-            append_arg(&mut args, "maximum-bytes", fs.attributes.maximum_bytes);
+            maybe_append_value(&mut args, &fs.attributes.name, Some(&fs.path.path_to_string()?));
+            maybe_append_value(&mut args, "minimum-inodes", fs.attributes.minimum_inodes);
+            maybe_append_value(&mut args, "minimum-data-bytes", fs.attributes.minimum_data_bytes);
+            maybe_append_value(&mut args, "maximum-bytes", fs.attributes.maximum_bytes);
         }
 
         Ok(args)
     }
-}
-
-/// A filesystem to add to the FVM.
-pub struct Filesystem {
-    /// The path to the filesystem block file on the host.
-    pub path: PathBuf,
-    /// The attributes of the filesystem to create.
-    pub attributes: FilesystemAttributes,
-}
-
-/// Attributes common to all filesystems.
-#[derive(Clone, Deserialize, Serialize)]
-pub struct FilesystemAttributes {
-    /// The name of the filesystem. Typically "blob" or "data".
-    pub name: String,
-    /// The minimum number of inodes to add to the filesystem.
-    pub minimum_inodes: Option<u64>,
-    /// The minimum number of data bytes to set for the filesystem.
-    pub minimum_data_bytes: Option<u64>,
-    /// The maximum number of bytes for the filesystem.
-    pub maximum_bytes: Option<u64>,
 }
 
 #[cfg(test)]
@@ -133,15 +188,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn args_no_filesystem() {
-        let builder = FvmBuilder::new("mypath", 1, 2);
+    fn default_args_no_filesystem() {
+        let builder = FvmBuilder::new("mypath", 1, 2, None, FvmType::Default);
         let args = builder.build_args().unwrap();
-        assert_eq!(args, ["mypath", "create", "--slice", "1", "--reserve-slices", "2",]);
+        assert_eq!(args, ["mypath", "create", "--slice", "1", "--reserve-slices", "2"]);
     }
 
     #[test]
-    fn args_with_filesystem() {
-        let mut builder = FvmBuilder::new("mypath", 1, 2);
+    fn default_args_with_filesystem() {
+        let mut builder = FvmBuilder::new("mypath", 1, 2, None, FvmType::Default);
         builder.filesystem(Filesystem {
             path: PathBuf::from("path/to/file.blk"),
             attributes: FilesystemAttributes {
@@ -170,6 +225,86 @@ mod tests {
                 "200",
                 "--maximum-bytes",
                 "300",
+            ]
+        );
+    }
+
+    #[test]
+    fn sparse_args_no_max_size() {
+        let builder = FvmBuilder::new("mypath", 1, 2, None, FvmType::Sparse { empty_minfs: false });
+        let args = builder.build_args().unwrap();
+        assert_eq!(
+            args,
+            ["mypath", "sparse", "--compress", "lz4", "--slice", "1", "--reserve-slices", "2"]
+        );
+    }
+
+    #[test]
+    fn sparse_args_max_size() {
+        let builder =
+            FvmBuilder::new("mypath", 1, 2, Some(500), FvmType::Sparse { empty_minfs: false });
+        let args = builder.build_args().unwrap();
+        assert_eq!(
+            args,
+            [
+                "mypath",
+                "sparse",
+                "--compress",
+                "lz4",
+                "--max-disk-size",
+                "500",
+                "--slice",
+                "1",
+                "--reserve-slices",
+                "2"
+            ]
+        );
+    }
+
+    #[test]
+    fn sparse_blob_args() {
+        let builder = FvmBuilder::new("mypath", 1, 2, None, FvmType::Sparse { empty_minfs: true });
+        let args = builder.build_args().unwrap();
+        assert_eq!(
+            args,
+            [
+                "mypath",
+                "sparse",
+                "--compress",
+                "lz4",
+                "--with-empty-minfs",
+                "--slice",
+                "1",
+                "--reserve-slices",
+                "2"
+            ]
+        );
+    }
+
+    #[test]
+    fn emmc_args() {
+        let builder = FvmBuilder::new(
+            "mypath",
+            1,
+            2,
+            None,
+            FvmType::Emmc { length: 500, compression: "supercompress".to_string() },
+        );
+        let args = builder.build_args().unwrap();
+        assert_eq!(
+            args,
+            [
+                "mypath",
+                "create",
+                "--resize-image-file-to-fit",
+                "--length",
+                "500",
+                "--compress",
+                "supercompress",
+                "--slice",
+                "1",
+                "--reserve-slices",
+                "2"
             ]
         );
     }

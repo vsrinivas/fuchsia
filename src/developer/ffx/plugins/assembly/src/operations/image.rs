@@ -5,7 +5,7 @@
 use crate::base_package::{construct_base_package, BasePackage};
 use crate::blobfs::construct_blobfs;
 use crate::config::{from_reader, BoardConfig, ProductConfig};
-use crate::fvm::construct_fvm;
+use crate::fvm::{construct_fvm, Fvms};
 use crate::update_package::{construct_update, UpdatePackage};
 use crate::vbmeta::construct_vbmeta;
 use crate::zbi::{construct_zbi, vendor_sign_zbi};
@@ -84,7 +84,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         None
     };
 
-    let _fvm_path: Option<PathBuf> = if let Some(fvm_config) = &board.fvm {
+    let _fvms: Option<Fvms> = if let Some(fvm_config) = &board.fvm {
         info!("Creating the fvm");
         Some(construct_fvm(&outdir, &fvm_config, blobfs_path.as_ref())?)
     } else {

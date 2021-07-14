@@ -113,6 +113,9 @@ dep_labels = {
   prev_update_pkg = "//build/images:update.meta"
   prev_blobfs = "//build/images:blob.blk"
   prev_fvm = "//build/images:fvm.blk"
+  prev_sparse_fvm = "//build/images:fvm.sparse.blk"
+  prev_sparse_blob_fvm = "//build/images:fvm.blob.sparse.blk"
+  prev_fastboot_fvm = "//build/images:fvm.fastboot.blk"
 
   ####
   # Internal labels, in "dep" format:
@@ -201,6 +204,9 @@ files = {
 
   # The FVM output
   fvm = "${target_out_dir}/fvm.blk"
+  sparse_fvm = "${target_out_dir}/fvm.sparse.blk"
+  sparse_blob_fvm = "${target_out_dir}/fvm.blob.sparse.blk"
+  fastboot_fvm = "${target_out_dir}/fvm.fastboot.blk"
 
   #####
   # Files used for validation against external label outputs (temporary)
@@ -278,8 +284,12 @@ files = {
   # The minfs created by //build/images:data.blk
   prev_minfs = "${root_build_dir}/obj/build/images/data.blk"
 
-  # The fvm created by //build/images:fvm.blk
+  # The fvms created by the GN build.
   prev_fvm = "${root_build_dir}/obj/build/images/fvm.blk"
+  prev_sparse_fvm = "${root_build_dir}/obj/build/images/fvm.sparse.blk"
+  prev_sparse_blob_fvm =
+      "${root_build_dir}/obj/build/images/fvm.blob.sparse.blk"
+  prev_fastboot_fvm = "${root_build_dir}/obj/build/images/fvm.fastboot.blk"
 }
 
 #####
@@ -619,6 +629,25 @@ action("create_config") {
 # This is copied from //build/images/BUILD.gn
 use_esp = target_cpu != "arm64" && !use_vboot
 
+# Determine if either the EMMC or NAND FVM should be built and its parameters.
+build_emmc_fvm = false
+build_nand_fvm = false
+if (fvm_partition != "" && !bootfs_only) {
+  fvm_compression = false
+  if (fvm_fastboot_compression != "default") {
+    fvm_compression = fvm_fastboot_compression
+  }
+  if (fvm_emmc_partition_size != false) {
+    build_emmc_fvm = true
+  } else if (fvm_ftl_nand_block_count != false) {
+    build_nand_fvm = true
+  } else {
+    assert(
+        false,
+        "|fvm_partition| is specified. But failed to determine the target format.")
+  }
+}
+
 generated_file(labels.board_config) {
   testonly = true
   public_deps = [ recovery_label ]
@@ -627,6 +656,7 @@ generated_file(labels.board_config) {
   }
   outputs = [ files.board_config ]
   output_conversion = "json"
+
   contents = {
     board_name = board_name
     arch = target_cpu
@@ -673,6 +703,35 @@ generated_file(labels.board_config) {
         partition = fvm_partition
         slice_size = fvm_slice_size
         reserved_slices = fvm_reserved_slices
+
+        if (fvm_max_disk_size != false) {
+          max_disk_size = fvm_max_disk_size
+        }
+
+        # Generated a fastboot-supported FVM if needed.
+        if (build_emmc_fvm || build_nand_fvm) {
+          fastboot = {
+            # Format for EMMC.
+            if (build_emmc_fvm) {
+              Emmc = {
+                if (fvm_compression != false) {
+                  compression = fvm_compression
+                }
+                length = fvm_emmc_partition_size
+              }
+            } else {
+              Nand = {
+                if (fvm_compression != false) {
+                  compression = fvm_compression
+                }
+                page_size = fvm_ftl_nand_page_size
+                oob_size = fvm_ftl_nand_oob_size
+                pages_per_block = fvm_ftl_nand_pages_per_block
+                block_count = fvm_ftl_nand_block_count
+              }
+            }
+          }
+        }
 
         filesystems = [
           {
@@ -881,6 +940,8 @@ ffx_action("images") {
       files.base_pkg,
       files.blobfs,
       files.fvm,
+      files.sparse_fvm,
+      files.sparse_blob_fvm,
 
       # intermediate outputs that are in gendir:
       files.gen_base_static_packages,
@@ -888,6 +949,10 @@ ffx_action("images") {
       files.gen_base_meta_package,
       files.gen_update_meta_package,
     ]
+
+    if (build_emmc_fvm || build_nand_fvm) {
+      outputs += [ files.fastboot_fvm ]
+    }
   }
 
   # zbi outputs
@@ -979,10 +1044,18 @@ group("output_validation_checks") {
       # of bootfs-only).
       ":blobfs_matches",
       ":fvm_matches",
+      ":sparse_blob_fvm_matches",
+      ":sparse_fvm_matches",
       ":update_matches",
       ":update_pkg_meta_contents_matches",
       ":update_pkg_meta_package_matches",
     ]
+  }
+  if (build_emmc_fvm) {
+    deps += [ ":fastboot_fvm_matches" ]
+  }
+  if (build_nand_fvm) {
+    deps += [ ":fastboot_fvm_matches" ]
   }
   deps += [
     ":zbi_manifest_matches",
@@ -1202,5 +1275,40 @@ if (uses_base_package) {
 
     first = files.prev_fvm
     second = files.fvm
+  }
+
+  verify_files_match("sparse_fvm_matches") {
+    testonly = true
+    deps = [
+      ":images",
+      dep_labels.prev_sparse_fvm,
+    ]
+
+    first = files.prev_sparse_fvm
+    second = files.sparse_fvm
+  }
+
+  verify_files_match("sparse_blob_fvm_matches") {
+    testonly = true
+    deps = [
+      ":images",
+      dep_labels.prev_sparse_blob_fvm,
+    ]
+
+    first = files.prev_sparse_blob_fvm
+    second = files.sparse_blob_fvm
+  }
+
+  if (build_emmc_fvm || build_nand_fvm) {
+    verify_files_match("fastboot_fvm_matches") {
+      testonly = true
+      deps = [
+        ":images",
+        dep_labels.prev_fastboot_fvm,
+      ]
+
+      first = files.prev_fastboot_fvm
+      second = files.fastboot_fvm
+    }
   }
 }
