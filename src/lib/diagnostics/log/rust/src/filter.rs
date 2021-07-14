@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use diagnostics_log_encoding::{Severity, SeverityExt};
+use fidl_fuchsia_diagnostics::Interest;
 use fidl_fuchsia_diagnostics_stream::Record;
 use fidl_fuchsia_logger::{LogSinkEvent, LogSinkEventStream};
 use futures::StreamExt;
 use parking_lot::{Mutex, RwLock};
 use std::{future::Future, sync::Arc};
-use tracing::{
-    subscriber::{Interest, Subscriber},
-    Metadata,
-};
+use tracing::{subscriber::Subscriber, Metadata};
 use tracing_subscriber::layer::{Context, Layer};
 
 use crate::OnInterestChanged;
@@ -23,8 +21,8 @@ pub(crate) struct InterestFilter {
 impl InterestFilter {
     /// Constructs a new `InterestFilter` and a future which should be polled to listen
     /// to changes in the LogSink's interest.
-    pub fn new(events: LogSinkEventStream) -> (Self, impl Future<Output = ()>) {
-        let min_severity = Arc::new(RwLock::new(Severity::Info));
+    pub fn new(events: LogSinkEventStream, interest: Interest) -> (Self, impl Future<Output = ()>) {
+        let min_severity = Arc::new(RwLock::new(interest.min_severity.unwrap_or(Severity::Info)));
         let listener = Arc::new(Mutex::new(None));
         let filter = Self { min_severity: min_severity.clone(), listener: listener.clone() };
         (filter, Self::listen_to_interest_changes(listener, min_severity, events))
@@ -59,8 +57,11 @@ impl InterestFilter {
 
 impl<S: Subscriber> Layer<S> for InterestFilter {
     /// Always returns `sometimes` so that we can later change the filter on the fly.
-    fn register_callsite(&self, _metadata: &'static Metadata<'static>) -> Interest {
-        Interest::sometimes()
+    fn register_callsite(
+        &self,
+        _metadata: &'static Metadata<'static>,
+    ) -> tracing::subscriber::Interest {
+        tracing::subscriber::Interest::sometimes()
     }
 
     fn enabled(&self, metadata: &Metadata<'_>, _ctx: Context<'_, S>) -> bool {
@@ -108,7 +109,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn default_filter_is_info() {
         let (proxy, _requests) = create_proxy_and_stream::<LogSinkMarker>().unwrap();
-        let (filter, _on_changes) = InterestFilter::new(proxy.take_event_stream());
+        let (filter, _on_changes) = InterestFilter::new(proxy.take_event_stream(), Interest::EMPTY);
         let observed = Arc::new(Mutex::new(SeverityCount::default()));
         tracing::subscriber::set_global_default(
             Registry::default().with(SeverityTracker { counts: observed.clone() }).with(filter),

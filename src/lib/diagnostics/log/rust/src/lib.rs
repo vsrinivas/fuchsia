@@ -6,6 +6,7 @@
 //! Publish diagnostics as a stream of log messages.
 
 use diagnostics_log_encoding::Severity;
+use fidl_fuchsia_diagnostics::Interest;
 use fidl_fuchsia_diagnostics_stream::Record;
 use fidl_fuchsia_logger::LogSinkMarker;
 use fuchsia_component::client::connect_to_protocol;
@@ -14,7 +15,7 @@ use std::{any::TypeId, fmt::Debug, future::Future};
 use thiserror::Error;
 use tracing::{
     span::{Attributes, Id, Record as TracingRecord},
-    subscriber::{Interest, Subscriber},
+    subscriber::Subscriber,
     Event, Metadata,
 };
 use tracing_core::span::Current;
@@ -36,10 +37,17 @@ use sink::Sink;
 #[macro_export]
 macro_rules! init {
     () => {
-        fuchsia_async::Task::spawn($crate::init_publishing(None).unwrap()).detach()
+        fuchsia_async::Task::spawn($crate::init_publishing(Default::default()).unwrap()).detach()
     };
     ($tag:expr) => {
-        fuchsia_async::Task::spawn($crate::init_publishing(Some($tag)).unwrap()).detach()
+        fuchsia_async::Task::spawn(
+            $crate::init_publishing($crate::PublishOptions {
+                tag: Some($tag),
+                ..Default::default()
+            })
+            .unwrap(),
+        )
+        .detach()
     };
 }
 
@@ -49,13 +57,31 @@ pub trait OnInterestChanged {
     fn on_changed(&self, severity: &Severity);
 }
 
+/// Options to configure publishing.
+pub struct PublishOptions<'a> {
+    /// An interest filter to apply to messages published. Defaults to empty which implies `INFO`
+    /// level filtering.
+    pub interest: Interest,
+
+    /// The tag to use on all messages published. Defaults to `None` which implies component name.
+    pub tag: Option<&'a str>,
+}
+
+impl<'a> Default for PublishOptions<'a> {
+    fn default() -> Self {
+        Self { interest: Interest::EMPTY, tag: None }
+    }
+}
+
 /// Creates a publisher and installs it as the global default.
 ///
 /// Also installs a bridge to capture events from the `log` crate's macros and a panic hook to
 /// ensure panic messages are logged when stderr is not hooked up to anything.
 #[must_use = "Interest registration future must be polled."]
-pub fn init_publishing(tag: Option<&str>) -> Result<impl Future<Output = ()>, PublishError> {
-    let (publisher, on_interest) = Publisher::new(tag)?;
+pub fn init_publishing(
+    options: PublishOptions<'_>,
+) -> Result<impl Future<Output = ()>, PublishError> {
+    let (publisher, on_interest) = Publisher::new(options)?;
 
     tracing::subscriber::set_global_default(publisher)?;
     LogTracer::init()?;
@@ -79,16 +105,16 @@ pub struct Publisher {
 impl Publisher {
     /// Construct a new `Publisher` from the provided `LogSink`. Returns a `Publisher` and a future
     /// which must be polled to listen to interest/severity changes from the environment `LogSink`.
-    fn new(tag: Option<&str>) -> Result<(Self, impl Future<Output = ()>), PublishError> {
+    fn new(options: PublishOptions<'_>) -> Result<(Self, impl Future<Output = ()>), PublishError> {
         let log_sink = connect_to_protocol::<LogSinkMarker>()
             .map_err(|e| e.to_string())
             .map_err(PublishError::LogSinkConnect)?;
 
         let events = log_sink.take_event_stream();
-        let (filter, on_change) = InterestFilter::new(events);
+        let (filter, on_change) = InterestFilter::new(events, options.interest);
 
         let mut sink = Sink::new(log_sink)?;
-        if let Some(tag) = tag {
+        if let Some(tag) = options.tag {
             sink.set_tag(tag);
         }
 
@@ -137,7 +163,10 @@ impl Subscriber for Publisher {
     fn exit(&self, span: &Id) {
         self.inner.exit(span)
     }
-    fn register_callsite(&self, metadata: &'static Metadata<'static>) -> Interest {
+    fn register_callsite(
+        &self,
+        metadata: &'static Metadata<'static>,
+    ) -> tracing::subscriber::Interest {
         self.inner.register_callsite(metadata)
     }
     fn clone_span(&self, id: &Id) -> Id {

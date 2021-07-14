@@ -97,7 +97,12 @@ fn init_logging_with_threads(tag: Option<&'static str>) -> impl Drop {
     let (send, recv) = std::sync::mpsc::channel();
     let bg_thread = std::thread::spawn(move || {
         let mut exec = fuchsia_async::LocalExecutor::new().expect("Failed to create executor");
-        let on_interest_changes = diagnostics_log::init_publishing(tag).unwrap();
+        let on_interest_changes =
+            diagnostics_log::init_publishing(diagnostics_log::PublishOptions {
+                tag,
+                ..Default::default()
+            })
+            .unwrap();
         let (on_interest_changes, cancel_interest) =
             futures::future::abortable(on_interest_changes);
         send.send(cancel_interest).unwrap();
