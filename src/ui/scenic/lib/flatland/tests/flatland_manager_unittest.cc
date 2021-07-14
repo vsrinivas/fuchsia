@@ -25,7 +25,7 @@ using flatland::MockFlatlandPresenter;
 using flatland::UberStructSystem;
 using fuchsia::ui::composition::Error;
 using fuchsia::ui::composition::Flatland;
-using fuchsia::ui::composition::OnPresentProcessedValues;
+using fuchsia::ui::composition::OnNextFrameBeginValues;
 
 // These macros works like functions that check a variety of conditions, but if those conditions
 // fail, the line number for the failure will appear in-line rather than in a function.
@@ -270,13 +270,14 @@ TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
 }
 
 TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
-  // Set up a Flatland instance with an OnPresentProcessed() callback.
+  // Set up a Flatland instance with an OnNextFrameBegin() callback.
   fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens = 0;
-  flatland.events().OnPresentProcessed = [&returned_tokens](OnPresentProcessedValues values) {
-    returned_tokens = values.additional_present_credits();
+  flatland.events().OnNextFrameBegin = [&returned_tokens](OnNextFrameBeginValues values) {
+    returned_tokens += values.additional_present_credits();
+    FX_CHECK(returned_tokens > 0);
   };
 
   // Run until the instance receives the initial allotment of tokens.
@@ -286,13 +287,14 @@ TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
 }
 
 TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
-  // Setup two Flatland instances with OnPresentProcessed() callbacks.
+  // Setup two Flatland instances with OnNextFrameBegin() callbacks.
   fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland1 = CreateFlatland();
   const scheduling::SessionId id1 = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens1 = 0;
-  flatland1.events().OnPresentProcessed = [&returned_tokens1](OnPresentProcessedValues values) {
-    returned_tokens1 = values.additional_present_credits();
+  flatland1.events().OnNextFrameBegin = [&returned_tokens1](OnNextFrameBeginValues values) {
+    returned_tokens1 += values.additional_present_credits();
+    EXPECT_TRUE(returned_tokens1 > 0);
     EXPECT_FALSE(values.future_presentation_infos().empty());
   };
 
@@ -300,8 +302,9 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
   const scheduling::SessionId id2 = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens2 = 0;
-  flatland2.events().OnPresentProcessed = [&returned_tokens2](OnPresentProcessedValues values) {
-    returned_tokens2 = values.additional_present_credits();
+  flatland2.events().OnNextFrameBegin = [&returned_tokens2](OnNextFrameBeginValues values) {
+    returned_tokens2 += values.additional_present_credits();
+    EXPECT_TRUE(returned_tokens2 > 0);
     EXPECT_FALSE(values.future_presentation_infos().empty());
   };
 
@@ -380,8 +383,9 @@ TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentToken
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens = 0;
-  flatland.events().OnPresentProcessed = [&returned_tokens](OnPresentProcessedValues values) {
+  flatland.events().OnNextFrameBegin = [&returned_tokens](OnNextFrameBeginValues values) {
     returned_tokens = values.additional_present_credits();
+    EXPECT_TRUE(returned_tokens > 0);
     EXPECT_FALSE(values.future_presentation_infos().empty());
   };
 
@@ -423,7 +427,7 @@ TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentToken
 }
 
 TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
-  // Setup a Flatland instance with an OnPresentProcessed() callback.
+  // Setup a Flatland instance with an OnNextFrameBegin() callback.
   fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
@@ -431,8 +435,9 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   uint32_t tokens_remaining = 1;
   flatland.events().OnError = [&error_returned](Error error) { error_returned = error; };
 
-  flatland.events().OnPresentProcessed = [&tokens_remaining](OnPresentProcessedValues values) {
+  flatland.events().OnNextFrameBegin = [&tokens_remaining](OnNextFrameBeginValues values) {
     tokens_remaining += values.additional_present_credits();
+    EXPECT_TRUE(tokens_remaining > 0);
   };
 
   // Run until the instance receives the initial allotment of tokens.
@@ -458,7 +463,7 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
 }
 
 TEST_F(FlatlandManagerTest, ErrorClosesSession) {
-  // Setup a Flatland instance with an OnPresentProcessed() callback.
+  // Setup a Flatland instance with an OnNextFrameBegin() callback.
   fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
@@ -466,8 +471,9 @@ TEST_F(FlatlandManagerTest, ErrorClosesSession) {
   uint32_t tokens_remaining = 1;
   flatland.events().OnError = [&error_returned](Error error) { error_returned = error; };
 
-  flatland.events().OnPresentProcessed = [&tokens_remaining](OnPresentProcessedValues values) {
+  flatland.events().OnNextFrameBegin = [&tokens_remaining](OnNextFrameBeginValues values) {
     tokens_remaining += values.additional_present_credits();
+    EXPECT_TRUE(tokens_remaining > 0);
   };
 
   // Run until the instance receives the initial allotment of tokens.
@@ -487,13 +493,14 @@ TEST_F(FlatlandManagerTest, ErrorClosesSession) {
 }
 
 TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
-  // Setup a Flatland instance with an OnPresentProcessed() callback.
+  // Setup a Flatland instance with an OnNextFrameBegin() callback.
   fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t tokens_remaining = 1;
-  flatland.events().OnPresentProcessed = [&tokens_remaining](OnPresentProcessedValues values) {
+  flatland.events().OnNextFrameBegin = [&tokens_remaining](OnNextFrameBeginValues values) {
     tokens_remaining += values.additional_present_credits();
+    EXPECT_TRUE(tokens_remaining > 0);
   };
 
   // Run until the instance receives the initial allotment of tokens.

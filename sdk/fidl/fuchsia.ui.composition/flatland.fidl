@@ -8,7 +8,7 @@ using fuchsia.math;
 using fuchsia.scenic.scheduling;
 using zx;
 
-/// The set of error codes returned in [`OnPresentProcessed`]. Everything except NO_ERROR, causes
+/// The set of error codes returned in [`OnNextFrameBegin`]. Everything except NO_ERROR, causes
 /// Flatland channel to be closed.
 enum Error {
     /// Indicates that the parameters used the function calls are invalid.
@@ -199,9 +199,8 @@ resource table PresentArgs {
 alias FuturePresentationInfos = vector<fuchsia.scenic.scheduling.PresentationInfo>:8;
 
 /// Fields that a client needs in order to produce its next frame, returned in
-/// [`OnPresentProcessed`]. For a non-error case, each field is guaranteed to be
-/// set and contain valid information.  Otherwise, no field will be set.
-table OnPresentProcessedValues {
+/// [`OnNextFrameBegin`]. Each field is guaranteed to be  set and contain valid information.
+table OnNextFrameBeginValues {
     /// The number of *additional* [`Present`] calls allowed to the client so that they
     /// can call [`Present`] further times. This is a delta in the present
     /// credit budget, not the absolute number of present credits.
@@ -230,21 +229,21 @@ protocol Flatland {
     /// an [`OnError`] event is emitted. Operations that produce errors are ignored and
     /// the channel is closed.
     ///
-    /// If the execution is completed successfully, [`OnPresentProcessed`] emits NO_ERROR along
+    /// If the execution is completed successfully, [`OnNextFrameBegin`] emits NO_ERROR along
     /// with other valid fields.
     ///
     /// The client may only call [`Present`] when they have a non-zero number
     /// of present credits, which are tracked by the server. The server may
-    /// increment the number of credits when it fires the [`OnPresentProcessed`] event, which
+    /// increment the number of credits when it fires the [`OnNextFrameBegin`] event, which
     /// informs the client when it receives additional present credits. Each [`Present`]
     /// call uses one present credit and decrements the server count by one. If
     /// the client calls [`Present`] with no present credits, the server will return a
     /// `NO_PRESENTS_REMAINING` error.
     ///
-    /// The client should assume that prior to receiving any [`OnPresentProcessed`]
+    /// The client should assume that prior to receiving any [`OnNextFrameBegin`]
     /// events, they have one present credit.
     ///
-    /// Every [`Present`] call results in one [`OnPresentProcessed`] event, and one
+    /// Every [`Present`] call results in one [`OnNextFrameBegin`] event, and one
     /// [`OnFramePresented`] event, typically in that order.
     ///
     /// When the commands flushed by [`Present`] make it to display, an
@@ -262,9 +261,13 @@ protocol Flatland {
     /// rendering work, using the information returned to inform their
     /// scheduling decisions.
     ///
+    /// Importantly, OnNextFrameBegin is only fired when the client has one or
+    /// more present credits, including what is returned in this event. It is
+    /// therefore safe to present once every time this event fires.
+    ///
     /// - response `values` the table of information a client needs to produce
-    /// its next frame. See [`OnPresentProcessedValues`] for more information.
-    -> OnPresentProcessed(OnPresentProcessedValues values);
+    /// its next frame. See [`OnNextFrameBeginValues`] for more information.
+    -> OnNextFrameBegin(OnNextFrameBeginValues values);
 
     /// This event is fired whenever a set of one or more [`Present`]s are
     /// presented simultaneously, and are therefore no longer in flight.
@@ -274,7 +277,7 @@ protocol Flatland {
     ///
     /// Clients do NOT have to implement a handler for this event for basic
     /// frame scheduling, unless they explicitly want feedback on prior frame
-    /// presentation. All future frame information is given in the [`OnPresentProcessed`]
+    /// presentation. All future frame information is given in the [`OnNextFrameBegin`]
     /// event.
     ///
     /// TODO(fxbug.dev/63305): remove `num_presents_allowed` from this event.

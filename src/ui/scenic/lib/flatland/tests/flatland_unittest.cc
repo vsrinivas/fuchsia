@@ -65,7 +65,7 @@ using fuchsia::ui::composition::GraphLinkToken;
 using fuchsia::ui::composition::ImageProperties;
 using fuchsia::ui::composition::LayoutInfo;
 using fuchsia::ui::composition::LinkProperties;
-using fuchsia::ui::composition::OnPresentProcessedValues;
+using fuchsia::ui::composition::OnNextFrameBeginValues;
 using fuchsia::ui::composition::Orientation;
 using fuchsia::ui::composition::TransformId;
 
@@ -88,7 +88,7 @@ struct PresentArgs {
   bool skip_session_update_and_release_fences = false;
 
   // The number of present tokens that should be returned to the client.
-  uint32_t num_presents_returned = 1;
+  uint32_t present_credits_returned = 1;
 
   // The future presentation infos that should be returned to the client.
   flatland::Flatland::FuturePresentationInfos presentation_infos = {};
@@ -140,8 +140,8 @@ struct GlobalIdPair {
       if (!args.skip_session_update_and_release_fences) {                                      \
         ApplySessionUpdatesAndSignalFences();                                                  \
       }                                                                                        \
-      flatland->OnPresentProcessed(args.num_presents_returned,                                 \
-                                   std::move(args.presentation_infos));                        \
+      flatland->OnNextFrameBegin(args.present_credits_returned,                                \
+                                 std::move(args.presentation_infos));                          \
     } else {                                                                                   \
       RunLoopUntilIdle();                                                                      \
       EXPECT_EQ(GetPresentError(flatland->GetSessionId()), args.expected_error);               \
@@ -296,7 +296,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
         flatland_presenter_, link_system_, uber_struct_system_->AllocateQueueForSession(session_id),
         importers);
 
-    // Register OnPresentProcessed() callback to capture errors.
+    // Register OnNextFrameBegin() callback to capture errors.
     RegisterPresentError(flatlands_.back(), session_id);
     return flatland;
   }
@@ -498,7 +498,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
     return {.collection_id = koid, .image_id = global_image_id};
   }
 
-  // Returns Error code passed returned to OnPresentProcessed() for |flatland|.
+  // Returns Error code passed returned to OnNextFrameBegin() for |flatland|.
   Error GetPresentError(scheduling::SessionId session_id) { return flatland_errors_[session_id]; }
 
   void RegisterPresentError(fuchsia::ui::composition::FlatlandPtr& flatland_channel,
@@ -546,7 +546,7 @@ TEST_F(FlatlandTest, PresentErrorNoTokens) {
   // Present, but return no tokens so the client has none left.
   {
     PresentArgs args;
-    args.num_presents_returned = 0;
+    args.present_credits_returned = 0;
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
 
@@ -562,12 +562,12 @@ TEST_F(FlatlandTest, MultiplePresentTokensAvailable) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Return one extra present token, meaning the instance now has two.
-  flatland->OnPresentProcessed(1, {});
+  flatland->OnNextFrameBegin(1, {});
 
   // Present, but return no tokens so the client has only one left.
   {
     PresentArgs args;
-    args.num_presents_returned = 0;
+    args.present_credits_returned = 0;
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
 
@@ -575,7 +575,7 @@ TEST_F(FlatlandTest, MultiplePresentTokensAvailable) {
   // the previous PRESENT_WITH_ARGS returned none.
   {
     PresentArgs args;
-    args.num_presents_returned = 0;
+    args.present_credits_returned = 0;
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
 

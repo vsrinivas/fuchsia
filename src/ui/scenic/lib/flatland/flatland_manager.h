@@ -102,8 +102,8 @@ class FlatlandManager : public scheduling::SessionUpdater {
   };
 
   // Sends |additional_present_credits| to a particular Flatland |instance|.
-  void SendPresentTokens(FlatlandInstance* instance, uint32_t additional_present_credits,
-                         Flatland::FuturePresentationInfos presentation_infos);
+  void SendPresentCredits(FlatlandInstance* instance, uint32_t additional_present_credits,
+                          Flatland::FuturePresentationInfos presentation_infos);
 
   // Sends the OnFramePresented event to a particular Flatland |instance|.
   void SendFramePresented(

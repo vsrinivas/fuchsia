@@ -31,7 +31,7 @@ using fuchsia::ui::composition::GraphLink;
 using fuchsia::ui::composition::GraphLinkToken;
 using fuchsia::ui::composition::ImageProperties;
 using fuchsia::ui::composition::LinkProperties;
-using fuchsia::ui::composition::OnPresentProcessedValues;
+using fuchsia::ui::composition::OnNextFrameBeginValues;
 using fuchsia::ui::composition::Orientation;
 
 namespace flatland {
@@ -95,11 +95,11 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
   }
 
   // Close any clients that call Present() without any present tokens.
-  if (present_credits_budget_ == 0) {
+  if (present_credits_ == 0) {
     CloseConnection(Error::NO_PRESENTS_REMAINING);
     return;
   }
-  present_credits_budget_--;
+  present_credits_--;
 
   // If any fields are missing, replace them with the default values.
   if (!args.has_requested_presentation_time()) {
@@ -961,15 +961,20 @@ void Flatland::SetDebugName(std::string name) {
   error_reporter_->SetPrefix(stream.str());
 }
 
-void Flatland::OnPresentProcessed(uint32_t additional_present_credits,
-                                  FuturePresentationInfos presentation_infos) {
-  present_credits_budget_ += additional_present_credits;
-  if (binding_.is_bound()) {
-    OnPresentProcessedValues values;
+void Flatland::OnNextFrameBegin(uint32_t additional_present_credits,
+                                FuturePresentationInfos presentation_infos) {
+  present_credits_ += additional_present_credits;
+
+  // Only send an `OnNextFrameBegin` event if the client has at least one present credit. It is
+  // guaranteed that this won't stall clients because the current policy is to always return
+  // present tokens upon processing them. If and when a new policy is adopted, we should take care
+  // to ensure this guarantee is upheld.
+  if (present_credits_ > 0 && binding_.is_bound()) {
+    OnNextFrameBeginValues values;
     values.set_additional_present_credits(additional_present_credits);
     values.set_future_presentation_infos(std::move(presentation_infos));
 
-    binding_.events().OnPresentProcessed(std::move(values));
+    binding_.events().OnNextFrameBegin(std::move(values));
   }
 }
 
