@@ -1,0 +1,21 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        // Expected to fail because elf_test_runner doesn't grant ambient exec
+        runner: "elf_test_runner",
+        binary: "bin/ambient_exec_test",
+
+        // `elf_test_runner` is expected to ignore the `job_policy_ambient_mark_vmo_exec` key,
+        // so the following line does nothing.
+        job_policy_ambient_mark_vmo_exec: "true",
+    },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

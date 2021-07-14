@@ -1,0 +1,25 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/elf_test_runner",
+        job_policy_ambient_mark_vmo_exec: "true",
+    },
+    capabilities: [
+        {
+            runner: "elf_test_ambient_exec_runner",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+        },
+    ],
+    expose: [
+        {
+            runner: "elf_test_ambient_exec_runner",
+            from: "self",
+        },
+    ],
+}

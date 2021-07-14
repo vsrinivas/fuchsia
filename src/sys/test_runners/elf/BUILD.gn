@@ -46,9 +46,25 @@ fuchsia_package("elf-test-runner") {
   deps = [ ":elf-test-runner-component" ]
 }
 
+# Identical to elf-test-runner-component, just with the ambient exec job policy.
+fuchsia_component("elf-test-ambient-exec-runner-component") {
+  testonly = true
+  component_name = "elf-test-ambient-exec-runner"
+  manifest = "meta/elf_test_ambient_exec_runner.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("elf-test-ambient-exec-runner") {
+  testonly = true
+  deps = [ ":elf-test-ambient-exec-runner-component" ]
+}
+
 group("elf") {
   testonly = true
-  deps = [ ":elf-test-runner" ]
+  deps = [
+    ":elf-test-ambient-exec-runner",
+    ":elf-test-runner",
+  ]
 }
 
 group("tests") {

@@ -13,6 +13,10 @@
             url: "fuchsia-pkg://fuchsia.com/elf-test-runner#meta/elf-test-runner.cm",
         },
         {
+            name: "elf_test_ambient_exec_runner",
+            url: "fuchsia-pkg://fuchsia.com/elf-test-ambient-exec-runner#meta/elf-test-ambient-exec-runner.cm",
+        },
+        {
             name: "gtest_runner",
             url: "fuchsia-pkg://fuchsia.com/gtest-runner#meta/gtest-runner.cm",
         },
@@ -131,6 +135,7 @@
             from: "parent",
             to: [
                 "#debug_data",
+                "#elf_test_ambient_exec_runner",
                 "#elf_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",
@@ -154,6 +159,7 @@
             protocol: "fuchsia.process.Launcher",
             from: "parent",
             to: [
+                "#elf_test_ambient_exec_runner",
                 "#elf_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",

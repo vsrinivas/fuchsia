@@ -40,9 +40,31 @@ fuchsia_component("arg_test_component") {
   deps = [ ":arg_test" ]
 }
 
+executable("ambient_exec_test") {
+  testonly = true
+  sources = [ "ambient_exec_test.cc" ]
+  deps = [ "//zircon/system/ulib/zx" ]
+}
+
+fuchsia_component("ambient_exec_test_component") {
+  component_name = "ambient_exec_test"
+  testonly = true
+  manifest = "meta/ambient_exec_test.cml"
+  deps = [ ":ambient_exec_test" ]
+}
+
+fuchsia_component("ambient_exec_test_fail_component") {
+  component_name = "ambient_exec_test_fail"
+  testonly = true
+  manifest = "meta/ambient_exec_test_fail.cml"
+  deps = [ ":ambient_exec_test" ]
+}
+
 fuchsia_package("elf-test-runner-example-tests") {
   testonly = true
   deps = [
+    ":ambient_exec_test_component",
+    ":ambient_exec_test_fail_component",
     ":arg_test_component",
     ":failing_test_component",
     ":passing_test_component",

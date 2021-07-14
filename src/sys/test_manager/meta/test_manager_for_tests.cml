@@ -12,6 +12,10 @@
                     from: "#elf_test_runner",
                 },
                 {
+                    runner: "elf_test_ambient_exec_runner",
+                    from: "#elf_test_ambient_exec_runner",
+                },
+                {
                     runner: "gtest_runner",
                     from: "#gtest_runner",
                 },

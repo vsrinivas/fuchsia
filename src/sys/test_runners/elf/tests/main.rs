@@ -84,3 +84,41 @@ async fn launch_and_run_test_with_custom_args() {
     ];
     assert_eq!(expected_events, events);
 }
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_run_ambient_exec_test_without_ambient_exec_should_fail() {
+    // Ambient exec test should fail under elf-test-runner
+    let test_url =
+        "fuchsia-pkg://fuchsia.com/elf-test-runner-example-tests#meta/ambient_exec_test_fail.cm";
+
+    let events = run_test(test_url, default_options()).await.unwrap();
+
+    let expected_events = vec![
+        RunEvent::suite_started(),
+        RunEvent::case_found("main"),
+        RunEvent::case_started("main"),
+        RunEvent::case_stopped("main", CaseStatus::Failed),
+        RunEvent::case_finished("main"),
+        RunEvent::suite_stopped(SuiteStatus::Failed),
+    ];
+    assert_eq!(events, expected_events);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_run_ambient_exec_test_with_ambient_exec_runner_should_succeed() {
+    // Ambient exec test should fail under elf-test-runner
+    let test_url =
+        "fuchsia-pkg://fuchsia.com/elf-test-runner-example-tests#meta/ambient_exec_test.cm";
+
+    let events = run_test(test_url, default_options()).await.unwrap();
+
+    let expected_events = vec![
+        RunEvent::suite_started(),
+        RunEvent::case_found("main"),
+        RunEvent::case_started("main"),
+        RunEvent::case_stopped("main", CaseStatus::Passed),
+        RunEvent::case_finished("main"),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
+    ];
+    assert_eq!(events, expected_events);
+}
