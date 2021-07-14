@@ -1,0 +1,19 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/part_1",
+    },
+    capabilities: [
+        { protocol: "fuchsia.examples.inspect.Reverser" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.examples.inspect.Reverser",
+            from: "self",
+        },
+    ],
+}

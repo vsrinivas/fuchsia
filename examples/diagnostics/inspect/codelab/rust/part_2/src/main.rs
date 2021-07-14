@@ -21,7 +21,7 @@ mod reverser;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab", "part2"])?;
+    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab"])?;
     let mut fs = ServiceFs::new();
 
     info!("starting up...");

@@ -16,130 +16,52 @@ group("tests") {
   ]
 }
 
-fuchsia_component("inspect_rust_codelab_client") {
-  manifest = "client/meta/inspect_rust_codelab_client.cmx"
-  deps = [ "client:bin" ]
-}
+part_ids = [
+  1,
+  2,
+  3,
+  4,
+  5,
+]
+parts = []
+unittest_components = []
+integration_test_components = []
 
-fuchsia_component("inspect_rust_codelab_fizzbuzz") {
-  manifest = "fizzbuzz/meta/inspect_rust_codelab_fizzbuzz.cmx"
-  deps = [ "fizzbuzz:bin" ]
-}
+foreach(part_id, part_ids) {
+  part = "part_" + part_id
+  part_unittest = part + "_unittest"
+  part_integration_test = part + "_integration_test"
 
-fuchsia_component("inspect_rust_codelab_part_1") {
-  manifest = "part_1/meta/inspect_rust_codelab_part_1.cmx"
-  deps = [ "part_1:bin" ]
-}
+  fuchsia_unittest_component(part_unittest) {
+    manifest = part + "/meta/unittest.cml"
+    deps = [ part + ":bin_test" ]
+  }
 
-fuchsia_component("inspect_rust_codelab_part_2") {
-  manifest = "part_2/meta/inspect_rust_codelab_part_2.cmx"
-  deps = [ "part_2:bin" ]
-}
+  fuchsia_unittest_component(part_integration_test) {
+    manifest = part + "/meta/integration_test.cml"
+    deps = [
+      "fizzbuzz",
+      part,
+      part + ":integration_test",
+    ]
+  }
 
-fuchsia_component("inspect_rust_codelab_part_3") {
-  manifest = "part_3/meta/inspect_rust_codelab_part_3.cmx"
-  deps = [ "part_3:bin" ]
-}
-
-fuchsia_component("inspect_rust_codelab_part_4") {
-  manifest = "part_4/meta/inspect_rust_codelab_part_4.cmx"
-  deps = [ "part_4:bin" ]
-}
-
-fuchsia_component("inspect_rust_codelab_part_5") {
-  manifest = "part_5/meta/inspect_rust_codelab_part_5.cmx"
-  deps = [ "part_5:bin" ]
+  unittest_components += [ ":" + part_unittest ]
+  integration_test_components += [ ":" + part_integration_test ]
+  parts += [ part ]
 }
 
 fuchsia_package("inspect_rust_codelab") {
   deps = [
-    ":inspect_rust_codelab_client",
-    ":inspect_rust_codelab_fizzbuzz",
-    ":inspect_rust_codelab_part_1",
-    ":inspect_rust_codelab_part_2",
-    ":inspect_rust_codelab_part_3",
-    ":inspect_rust_codelab_part_4",
-    ":inspect_rust_codelab_part_5",
-  ]
-}
-
-fuchsia_unittest_component("inspect_rust_codelab_part_1_bin_test") {
-  deps = [ "part_1:bin_test" ]
-}
-
-fuchsia_unittest_component("inspect_rust_codelab_part_2_bin_test") {
-  deps = [ "part_2:bin_test" ]
-}
-
-fuchsia_unittest_component("inspect_rust_codelab_part_3_bin_test") {
-  deps = [ "part_3:bin_test" ]
-}
-
-fuchsia_unittest_component("inspect_rust_codelab_part_4_bin_test") {
-  deps = [ "part_4:bin_test" ]
-}
-
-fuchsia_unittest_component("inspect_rust_codelab_part_5_bin_test") {
-  deps = [ "part_5:bin_test" ]
+           "client:components",
+           "fizzbuzz",
+         ] + parts
 }
 
 fuchsia_test_package("inspect_rust_codelab_unittests") {
-  test_components = [
-    ":inspect_rust_codelab_part_1_bin_test",
-    ":inspect_rust_codelab_part_2_bin_test",
-    ":inspect_rust_codelab_part_3_bin_test",
-    ":inspect_rust_codelab_part_4_bin_test",
-    ":inspect_rust_codelab_part_5_bin_test",
-  ]
-}
-
-fuchsia_unittest_component("inspect_rust_codelab_part_1_integration_test") {
-  manifest = "meta/inspect_rust_codelab_part_1_integration_test.cmx"
-  deps = [
-    ":inspect_rust_codelab_part_1",
-    "part_1/tests:integration_test",
-  ]
-}
-
-fuchsia_unittest_component("inspect_rust_codelab_part_2_integration_test") {
-  manifest = "meta/inspect_rust_codelab_part_2_integration_test.cmx"
-  deps = [
-    ":inspect_rust_codelab_part_2",
-    "part_2/tests:integration_test",
-  ]
-}
-
-fuchsia_unittest_component("inspect_rust_codelab_part_3_integration_test") {
-  manifest = "meta/inspect_rust_codelab_part_3_integration_test.cmx"
-  deps = [
-    ":inspect_rust_codelab_part_3",
-    "part_3/tests:integration_test",
-  ]
-}
-
-fuchsia_unittest_component("inspect_rust_codelab_part_4_integration_test") {
-  manifest = "meta/inspect_rust_codelab_part_4_integration_test.cmx"
-  deps = [
-    ":inspect_rust_codelab_part_4",
-    "part_4/tests:integration_test",
-  ]
-}
-
-fuchsia_unittest_component("inspect_rust_codelab_part_5_integration_test") {
-  manifest = "meta/inspect_rust_codelab_part_5_integration_test.cmx"
-  deps = [
-    ":inspect_rust_codelab_fizzbuzz",
-    ":inspect_rust_codelab_part_5",
-    "part_5/tests:integration_test",
-  ]
+  test_components = unittest_components
 }
 
 fuchsia_test_package("inspect_rust_codelab_integration_tests") {
-  test_components = [
-    ":inspect_rust_codelab_part_1_integration_test",
-    ":inspect_rust_codelab_part_2_integration_test",
-    ":inspect_rust_codelab_part_3_integration_test",
-    ":inspect_rust_codelab_part_4_integration_test",
-    ":inspect_rust_codelab_part_5_integration_test",
-  ]
+  test_components = integration_test_components
 }

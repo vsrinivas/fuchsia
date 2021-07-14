@@ -19,7 +19,7 @@ mod reverser;
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // [START init_logger]
-    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab", "part5"])?;
+    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab"])?;
     // [END init_logger]
 
     // [START servicefs_init]

@@ -8,7 +8,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{self as inspect, component, HistogramProperty, NumericProperty},
-    fuchsia_syslog,
     fuchsia_zircon::{self as zx},
     futures::{StreamExt, TryStreamExt},
     std::sync::Arc,
@@ -93,7 +92,7 @@ fn fizzbuzz(n: u32) -> String {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab", "fizzbuzz"])?;
+    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab"])?;
     let mut fs = ServiceFs::new();
 
     info!("starting up...");

@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  name = "inspect_rust_codelab_fizzbuzz"
+  name = "fizzbuzz"
   edition = "2018"
 
   deps = [
@@ -13,6 +14,7 @@ rustc_binary("bin") {
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -23,4 +25,9 @@ rustc_binary("bin") {
   ]
 
   sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("fizzbuzz") {
+  manifest = "meta/inspect_rust_codelab_fizzbuzz.cml"
+  deps = [ ":bin" ]
 }

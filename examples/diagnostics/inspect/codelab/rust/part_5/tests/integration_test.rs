@@ -4,92 +4,41 @@
 
 use {
     anyhow::Error,
-    fidl_fuchsia_examples_inspect::ReverserProxy,
-    fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
-    futures::StreamExt,
-    inspect_codelab_shared::CodelabEnvironment,
-    lazy_static::lazy_static,
-    std::sync::atomic::{AtomicUsize, Ordering},
+    inspect_codelab_testing::{IntegrationTest, TestOptions},
 };
 
 // [START include_test_stuff]
 use {
     anyhow::format_err,
-    diagnostics_reader::{ArchiveReader, ComponentSelector, DiagnosticsHierarchy, Inspect},
-    fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
+    diagnostics_reader::{
+        assert_data_tree, AnyProperty, ArchiveReader, DiagnosticsHierarchy, Inspect,
+    },
 };
 // [END include_test_stuff]
 
-lazy_static! {
-    static ref SUFFIX: AtomicUsize = AtomicUsize::new(0);
+// [START get_inspect]
+async fn get_inspect_hierarchy(test: &IntegrationTest) -> Result<DiagnosticsHierarchy, Error> {
+    let moniker = test.reverser_moniker_for_selectors();
+    ArchiveReader::new()
+        .add_selector(format!("{}:root", moniker))
+        .snapshot::<Inspect>()
+        .await?
+        .into_iter()
+        .next()
+        .and_then(|result| result.payload)
+        .ok_or(format_err!("expected one inspect hierarchy"))
 }
+// [END get_inspect]
 
-struct TestOptions {
-    include_fizzbuzz: bool,
-}
-
-impl Default for TestOptions {
-    fn default() -> Self {
-        TestOptions { include_fizzbuzz: true }
-    }
-}
-
-struct IntegrationTest {
-    env: CodelabEnvironment,
-    environment_label: String,
-}
-
-impl IntegrationTest {
-    fn start() -> Result<Self, Error> {
-        let mut fs = ServiceFs::new();
-        let suffix = SUFFIX.fetch_add(1, Ordering::SeqCst);
-        let environment_label = format!("{}_{}", "test", suffix);
-        let env = CodelabEnvironment::new(
-            fs.create_nested_environment(&environment_label)?,
-            "inspect_rust_codelab_integration_tests",
-            5,
-        );
-        fasync::Task::spawn(fs.collect::<()>()).detach();
-        Ok(Self { env, environment_label })
-    }
-
-    fn start_component_and_connect(
-        &mut self,
-        options: TestOptions,
-    ) -> Result<ReverserProxy, Error> {
-        if options.include_fizzbuzz {
-            self.env.launch_fizzbuzz()?;
-        }
-        self.env.launch_reverser()
-    }
-
-    // [START get_inspect]
-    async fn get_inspect_hierarchy(&self) -> Result<DiagnosticsHierarchy, Error> {
-        ArchiveReader::new()
-            .add_selector(ComponentSelector::new(vec![
-                self.environment_label.clone(),
-                "inspect_rust_codelab_part_5.cmx".to_string(),
-            ]))
-            .snapshot::<Inspect>()
-            .await?
-            .into_iter()
-            .next()
-            .and_then(|result| result.payload)
-            .ok_or(format_err!("expected one inspect hierarchy"))
-    }
-    // [END get_inspect]
-}
-
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn start_with_fizzbuzz() -> Result<(), Error> {
-    let mut test = IntegrationTest::start()?;
-    let reverser = test.start_component_and_connect(TestOptions::default())?;
+    let test = IntegrationTest::start(5, TestOptions::default()).await?;
+    let reverser = test.connect_to_reverser()?;
     let result = reverser.reverse("hello").await?;
     assert_eq!(result, "olleh");
 
     // [START result_hierarchy]
-    let hierarchy = test.get_inspect_hierarchy().await?;
+    let hierarchy = get_inspect_hierarchy(&test).await?;
     // [END result_hierarchy]
     assert_data_tree!(hierarchy, root: contains {
         "fuchsia.inspect.Health": contains {
@@ -103,14 +52,14 @@ async fn start_with_fizzbuzz() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn start_without_fizzbuzz() -> Result<(), Error> {
-    let mut test = IntegrationTest::start()?;
-    let reverser = test.start_component_and_connect(TestOptions { include_fizzbuzz: false })?;
+    let test = IntegrationTest::start(5, TestOptions { include_fizzbuzz: false }).await?;
+    let reverser = test.connect_to_reverser()?;
     let result = reverser.reverse("hello").await?;
     assert_eq!(result, "olleh");
 
-    let hierarchy = test.get_inspect_hierarchy().await?;
+    let hierarchy = get_inspect_hierarchy(&test).await?;
     assert_data_tree!(hierarchy, root: contains {
         "fuchsia.inspect.Health": contains {
             status: "UNHEALTHY",

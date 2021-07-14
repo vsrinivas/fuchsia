@@ -2,11 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_binary("bin") {
-  name = "inspect_rust_codelab_part_2"
+  name = "part_2"
   edition = "2018"
   with_unit_tests = true
 
@@ -32,4 +33,23 @@ rustc_binary("bin") {
     "src/main.rs",
     "src/reverser.rs",
   ]
+}
+
+fuchsia_component("part_2") {
+  manifest = "meta/part_2.cml"
+  deps = [ ":bin" ]
+}
+
+rustc_test("integration_test") {
+  name = "part_2_integration_test"
+  source_root = "tests/integration_test.rs"
+  edition = "2018"
+
+  deps = [
+    "//examples/diagnostics/inspect/codelab/rust/inspect-codelab-testing",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "tests/integration_test.rs" ]
 }

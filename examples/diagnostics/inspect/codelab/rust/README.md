@@ -1,6 +1,6 @@
 # Inspect Rust Codelab Example
 
-Reviewed on: 2020-01-10
+Reviewed on: 2021-07-12
 
 This directory contains the example program for the Inspect Rust Codelab.
 
@@ -18,11 +18,13 @@ server and connects to it.  The codelab server implements a service called
 Each part of the codelab has its own component, and the client program
 can be configured to open a specific part.
 
-To run Part 2 of the codelab and pass the strings "Hello" and "World"
-to the service, run the following:
-``
-$ fx shell run inspect_rust_codelab_client 2 Hello World
-``
+To run Part 2 of the codelab run the following:
+```
+$ ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_2.cm
+
+//  To view the output
+$ fx log --tag inspect_rust_codelab
+```
 
 ## Testing
 
@@ -33,10 +35,10 @@ Integration tests are also available in the
 `inspect_rust_codelab_integration_tests`
 package.
 
-``
-$ fx run-test inspect_rust_codelab_unittests
-$ fx run-test inspect_rust_codelab_integration_tests
-``
+```
+$ fx test inspect_rust_codelab_unittests
+$ fx test inspect_rust_codelab_integration_tests
+```
 
 ## Source layout
 
@@ -47,5 +49,4 @@ $ fx run-test inspect_rust_codelab_integration_tests
 - `part_#/`, where # is a number, contains the source for the respective
   part of the codelab.
 - `part_#/tests` contains the source for the integration tests.
-- `inspect-codelab-shared` contains utilities for creating the environment where
-  the codelab components run and to launch them.
+- `inspect-codelab-testing` contains testing utilities used in integration tests.

@@ -9,8 +9,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
     fuchsia_inspect::{component, health::Reporter},
-    fuchsia_syslog,
-    futures::{future::try_join, FutureExt, StreamExt},
+    futures::{FutureExt, StreamExt},
     tracing::info,
 };
 
@@ -18,7 +17,7 @@ mod reverser;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab", "part5"])?;
+    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab"])?;
     let mut fs = ServiceFs::new();
 
     info!("starting up...");
@@ -44,21 +43,17 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
 
     // Send a request to the FizzBuzz service and print the response when it arrives.
-    let fizzbuzz_fut = async move {
-        let fizzbuzz = client::connect_to_protocol::<FizzBuzzMarker>()
-            .context("failed to connect to fizzbuzz")?;
-        match fizzbuzz.execute(30u32).await {
-            Ok(result) => {
-                component::health().set_ok();
-                info!(%result, "Got FizzBuzz");
-            }
-            Err(_) => {
-                component::health().set_unhealthy("FizzBuzz connection closed");
-            }
-        };
-        Ok(())
+    let fizzbuzz =
+        client::connect_to_protocol::<FizzBuzzMarker>().context("failed to connect to fizzbuzz")?;
+    match fizzbuzz.execute(30u32).await {
+        Ok(result) => {
+            component::health().set_ok();
+            info!(%result, "Got FizzBuzz");
+        }
+        Err(_) => {
+            component::health().set_unhealthy("FizzBuzz connection closed");
+        }
     };
 
-    let running_service_fs = fs.collect::<()>().map(Ok);
-    try_join(running_service_fs, fizzbuzz_fut).await.map(|((), ())| ())
+    fs.collect::<()>().map(Ok).await
 }

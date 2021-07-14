@@ -92,8 +92,13 @@ command line arguments as strings to Reverse:
 
    * {Rust}
 
+     <!-- TODO(fxbug.dev/80423): this applies to all languages once migrated to v2 -->
+     Depending on the part of the codelab you wish to run, you'd launch the
+     `client_i` component, where `i` is a number in range [1, 5]. For example, to
+     launch the client talking to the reverser from part 2 of the codelab:
+
       ```
-      fx run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/inspect_rust_codelab_client.cmx
+      ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_2.cm
       ```
 
    * {Dart}
@@ -112,8 +117,18 @@ command line arguments as strings to Reverse:
 
    * {Rust}
 
+      <!-- TODO(fxbug.dev/80423): this applies to all languages once migrated to v2 -->
+      To specify the single string "Hello" modify the `program.args` section of
+      the [client_part_1.cml][rust-part1-client-cml], build and run the following:
+
       ```
-      fx run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/inspect_rust_codelab_client.cmx 1 Hello
+      ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
+      ```
+
+      To see the command output take a look at the logs:
+
+      ```
+      fx log --tag inspect_rust_codelab
       ```
 
       This command prints some output containing errors.
@@ -137,8 +152,25 @@ command line arguments as strings to Reverse:
 
    * {Rust}
 
+      <!-- TODO(fxbug.dev/80423): this applies to all languages once migrated to v2 -->
+      Add the string "World" to the `program.args` section of the
+      the [common.shard.cml][rust-common-cml]:
+
+      ```json5
+      {
+          program: {
+              args: [
+                  "Hello",
+                  "World",
+              ],
+          },
+      }
       ```
-      fx run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/inspect_rust_codelab_client.cmx 1 Hello World
+
+      Build and run the following:
+
+      ```
+      ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
       ```
 
    * {Dart}
@@ -467,7 +499,8 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Rust}
 
       ```
-      fx run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/inspect_rust_codelab_client.cmx 1 Hello
+      ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
+      fx log --tag inspect_rust_codelab
       ```
 
    * {Dart}
@@ -478,41 +511,56 @@ Now that you have added Inspect to your component, you can read what it says:
 
    Note that these should still hang.
 
-3. Use `iquery` (Inspect query) to view your output:
+3. Use `ffx inspect` to view your output:
 
    ```
-   fx iquery
+   ffx inspect show
    ```
 
    This dumps all of the Inspect data for the entire system, which may be a lot of data.
 
-4. Since `iquery` supports regex matching, run:
+4. Since `ffx inspect` supports glob matching, run:
 
    * {C++}
 
       ```
-      $ fx iquery show 'codelab_*/inspect_cpp_codelab_part_1.cmx'
-      # or `fx iquery show --manifest inspect_cpp_codelab_part_1`
-      /hub/r/codelab/1234/c/inspect_cpp_codelab_part_1.cmx/1234/out/diagnostics/root.inspect:
-        version = part1
+      $ ffx inspect show 'codelab_*/inspect_cpp_codelab_part_1.cmx'
+      # or `ffx inspect show --manifest inspect_cpp_codelab`
+      metadata:
+        filename = fuchsia.inspect.Tree
+        component_url = fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_cpp_codelab_part_1.cmx
+        timestamp = 4728864898476
+      payload:
+        root:
+          version = part1
       ```
 
    * {Rust}
 
       ```
-      $ fx iquery show 'codelab_*/inspect_rust_codelab_part_1.cmx'
-      # or `fx iquery show --manifest inspect_rust_codelab_part_1`
-      /hub/r/codelab/1234/c/inspect_rust_codelab_part_1.cmx/1234/out/diagnostics/root.inspect:
-        version = part1
+      $ ffx inspect show 'core/ffx-laboratory\:client_part_1/reverser'
+      # or `ffx inspect show --manifest inspect_rust_codelab`
+      metadata:
+        filename = fuchsia.inspect.Tree
+        component_url = fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/part_1.cm
+        timestamp = 4728864898476
+      payload:
+        root:
+          version = part1
       ```
 
    * {Dart}
 
       ```
-      $ fx iquery show 'codelab_*/inspect_dart_codelab_part_1.cmx'
-      # or `fx iquery show --manifest inspect_dart_codelab_part_1`
-      /hub/r/codelab/1234/c/inspect_dart_codelab_part_1.cmx/1234/out/diagnostics/root.inspect:
-        version = part1
+      $ ffx inspect show 'codelab_*/inspect_dart_codelab_part_1.cmx'
+      # or `ffx inspect show --manifest inspect_dart_codelab`
+      metadata:
+        filename = fuchsia.inspect.Tree
+        component_url = fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_part_1.cmx
+        timestamp = 4728864898476
+      payload:
+        root:
+          version = part1
       ```
 
 5. You can also view the output as JSON:
@@ -520,48 +568,69 @@ Now that you have added Inspect to your component, you can read what it says:
    * {C++}
 
       ```
-      $ fx iquery -f json show 'codelab_*/inspect_cpp_codelab_part_1.cmx'
+      $ ffx inspect -f json show 'codelab_*/inspect_cpp_codelab_part_1.cmx'
       [
-          {
-              "contents": {
-                  "root": {
-                      "version": "part1"
-                  }
-              },
-              "path": "/hub/r/codelab/1234/c/inspect_cpp_codelab_part_1.cmx/1234/out/diagnostics/root.inspect"
-          }
+        {
+          "data_source": "Inspect",
+          "metadata": {
+            "errors": null,
+            "filename": "fuchsia.inspect.Tree",
+            "component_url": "fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/inspect_cpp_codelab_part_1.cmx",
+            "timestamp": 5031116776282
+          },
+          "moniker": "codelab_1234/inspect_cpp_codelab_part_1.cmx",
+          "payload": {
+            "root": {
+              "version": "part1",
+          },
+          "version": 1
+        }
       ]
       ```
 
    * {Rust}
 
       ```
-      $ fx iquery -f json show 'codelab_*/inspect_rust_codelab_part_1.cmx'
+      $ ffx inspect -f json show 'core/ffx-laboratory\:client_part_1/reverser'
       [
-          {
-              "contents": {
-                  "root": {
-                      "version": "part1"
-                  }
-              },
-              "path": "/hub/r/codelab/1234/c/inspect_rust_codelab_part_1.cmx/1234/out/diagnostics/root.inspect"
-          }
+        {
+          "data_source": "Inspect",
+          "metadata": {
+            "errors": null,
+            "filename": "fuchsia.inspect.Tree",
+            "component_url": "fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/part_1.cm",
+            "timestamp": 5031116776282
+          },
+          "moniker": "core/ffx-laboratory\\:client_part_5/reverser",
+          "payload": {
+            "root": {
+              "version": "part1",
+          },
+          "version": 1
+        }
       ]
       ```
 
    * {Dart}
 
       ```
-      $ fx iquery -f json show 'codelab_*/inspect_dart_codelab_part_1.cmx'
+      $ ffx inspect -f json show 'codelab_*/inspect_dart_codelab_part_1.cmx'
       [
-          {
-              "contents": {
-                  "root": {
-                      "version": "part1"
-                  }
-              },
-              "path": "/hub/r/codelab/1234/c/inspect_dart_codelab_part_1.cmx/1234/out/diagnostics/root.inspect"
-          }
+        {
+          "data_source": "Inspect",
+          "metadata": {
+            "errors": null,
+            "filename": "fuchsia.inspect.Tree",
+            "component_url": "fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/inspect_dart_codelab_part_1.cmx",
+            "timestamp": 5031116776282
+          },
+          "moniker": "codelab_1234/inspect_dart_codelab_part_1.cmx",
+          "payload": {
+            "root": {
+              "version": "part1",
+          },
+          "version": 1
+        }
       ]
       ```
 
@@ -668,37 +737,37 @@ is even being handled by your component.
    bit unsigned int) called `connection_count` and setting it to 0. In the handler
    (which runs for each connection), the property is incremented by 1.
 
-4. Rebuild, re-run your component and then run iquery:
+4. Rebuild, re-run your component and then run `ffx inspect`:
 
    * {C++}
 
       ```
-      $ fx iquery -f json --manifest inspect_cpp_codelab_part_1
+      $ ffx inspect -f json show --manifest inspect_cpp_codelab_part_1
       ```
 
    * {Rust}
 
       ```
-      $ fx iquery -f json --manifest inspect_rust_codelab_part_1
+      $ ffx inspect -f json show --manifest inspect_rust_codelab
       ```
 
    * {Dart}
 
       ```
-      $ fx iquery -f json --manifest inspect_dart_codelab_part_1
+      $ ffx inspect -f json show --manifest inspect_dart_codelab_part_1
       ```
 
    You should now see:
 
    ```
    ...
-   "contents": {
-       "root": {
-           "reverser_service": {
-               "connection_count": 1,
-           },
-           "version": "part1"
+   "payload": {
+     "root": {
+       "version": "part1",
+       "reverser_service": {
+         "connection_count": 1,
        }
+     }
    }
    ```
 
@@ -765,20 +834,20 @@ connections? The Reverser objects must share some state. You may find
 it helpful to refactor arguments to Reverser into a separate struct
 (See solution in [part 2](#part-2) for this approach).
 
-After completing this exercise and running iquery, you should see something like this:
+After completing this exercise and running `ffx inspect`, you should see something like this:
 
 ```
 ...
-"contents": {
-    "root": {
-        "reverser_service": {
-            "connection-0x0": {
-                "request_count": 1,
-            },
-            "connection_count": 1,
-        },
-        "version": "part1"
+"payload": {
+  "root": {
+    "version": "part1",
+    "reverser_service": {
+      "connection_count": 1,
+      "connection0": {
+        "request_count": 1,
+      }
     }
+  }
 }
 ```
 
@@ -835,10 +904,15 @@ The output above shows that the connection is still open and it received one req
    * {Rust}
 
       ```
-      fx run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/inspect_rust_codelab_client.cmx 1 hello
-      Input: hello
-      Output: olleh
-      Done. Press Ctrl+C to exit
+      ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
+      Creating component instance: client_part_1
+
+      fx log --tag inspect_rust_codelab
+      [00039.129068][39163][39165][inspect_rust_codelab, client] INFO: Input: Hello
+      [00039.194151][39163][39165][inspect_rust_codelab, client] INFO: Output: olleH
+      [00039.194170][39163][39165][inspect_rust_codelab, client] INFO: Input: World
+      [00039.194402][39163][39165][inspect_rust_codelab, client] INFO: Output: dlroW
+      [00039.194407][39163][39165][inspect_rust_codelab, client] INFO: Done reversing! Please use `ffx component stop`
       ```
 
    * {Dart}
@@ -850,8 +924,9 @@ The output above shows that the connection is still open and it received one req
       Done. Press Ctrl+C to exit
       ```
 
+   <!-- TODO(fxbug.dev/80423): this should read `ffx component stop` but is blocked on fxbug.dev/79021 -->
    The component continues running until Ctrl+C is pressed to give you
-   a chance to run iquery and observe your output.
+   a chance to run `ffx inspect` and observe your output.
 
 This concludes part 1. You may commit your changes so far:
 
@@ -925,7 +1000,7 @@ You will need to diagnose and solve this problem.
    * {Rust}
 
       ```
-      $ fx run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/inspect_rust_codelab_client.cmx 2 hello
+      ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_2.cm
       ```
 
    * {Dart}
@@ -936,10 +1011,10 @@ You will need to diagnose and solve this problem.
 
    Fortunately the FizzBuzz team instrumented their component using Inspect.
 
-2. Read the FizzBuzz Inspect data using iquery as before, you get:
+2. Read the FizzBuzz Inspect data using `ffx inspect` as before, you get:
 
    ```
-   "contents": {
+   "payload": {
        "root": {
            "fizzbuzz_service": {
                "closed_connection_count": 0,
@@ -1090,7 +1165,7 @@ look at the logs:
    ```
    $ fx log --only FizzBuzz
    ...
-   ... Component fuchsia-pkg://fuchsia.com/inspect_rust_codelab_part_2.cmx
+   ... Component fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/part_2.cm
    is not allowed to connect to fuchsia.examples.inspect.FizzBuzz...
    ```
 
@@ -1387,7 +1462,23 @@ Look at how the integration test is setup:
 
    * {Rust}
 
-     Find the component manifest (cmx) in [rust/meta][rust-part4-integration-meta]
+     Find the component manifest (cml) in [rust/meta][rust-part4-integration-meta]
+
+     ```json5
+     {
+        ...
+        use: [
+            { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+        ]
+     }
+     ```
+
+     This file uses the protocol `fuchsia.diagnostics.ArchiveAccessor` from parent. This protocol
+     is available to all tests to enable to read diagnostics about all components under the test
+     realm.
+
+      <!-- TODO(fxbug.dev/80423): remove when all languages have been migrated -->
+     **NOTE: you can ignore the rest of this point referring to cmx and injected services**
 
    * {Dart}
 
@@ -1575,15 +1666,16 @@ This section is under construction.
 [cpp-part4-integration-meta]: /examples/diagnostics/inspect/codelab/cpp/part_4/tests/integration_part_4.cmx
 
 [inspect-rust-codelab]: /examples/diagnostics/inspect/codelab/rust
+[rust-common-cml]: /examples/diagnostics/inspect/codelab/rust/client/meta/common.shard.cml
 [rust-part1]: /examples/diagnostics/inspect/codelab/rust/part_1
 [rust-part1-main]: /examples/diagnostics/inspect/codelab/rust/part_1/src/main.rs
 [rust-part1-reverser]: /examples/diagnostics/inspect/codelab/rust/part_1/src/reverser.rs
 [rust-part1-build]: /examples/diagnostics/inspect/codelab/rust/part_1/BUILD.gn
 [rust-client-main]: /examples/diagnostics/inspect/codelab/rust/client/src/main.rs#41
-[rust-part2-meta]: /examples/diagnostics/inspect/codelab/rust/part_2/meta/inspect_rust_codelab_part_2.cmx
+[rust-part2-meta]: /examples/diagnostics/inspect/codelab/rust/part_2/meta/part_2.cml
 [rust-part3-unittest]: /examples/diagnostics/inspect/codelab/rust/part_3/src/reverser.rs#99
 [rust-part4-integration]: /examples/diagnostics/inspect/codelab/rust/part_4/tests/integration_test.rs
-[rust-part4-integration-meta]: /examples/diagnostics/inspect/codelab/rust/meta/inspect_rust_codelab_part_4_integration_test.cmx
+[rust-part4-integration-meta]: /examples/diagnostics/inspect/codelab/rust/part_4/meta/integration_test.cml
 
 [inspect-dart-codelab]: /examples/diagnostics/inspect/codelab/dart
 [dart-part1]: /examples/diagnostics/inspect/codelab/dart/part_1
