@@ -2,24 +2,47 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_zircon::{self as zx, VmoOptions};
+use parking_lot::Mutex;
+use std::collections::HashMap;
+use std::sync::{Arc, Weak};
+
 use super::*;
 use crate::devices::*;
 use crate::fd_impl_seekable;
 use crate::mm::PAGE_SIZE;
 use crate::task::*;
 use crate::types::*;
-use fuchsia_zircon::{self as zx};
-use std::sync::Arc;
-use zx::VmoOptions;
+
+#[derive(Default)]
+struct TmpfsState {
+    last_inode_num: ino_t,
+    nodes: HashMap<ino_t, FsNodeHandle>,
+}
+
+impl TmpfsState {
+    fn register(&mut self, node: &FsNodeHandle) {
+        self.last_inode_num += 1;
+        let inode_num = self.last_inode_num;
+        node.state_mut().inode_num = inode_num;
+        self.nodes.insert(inode_num, Arc::clone(node));
+    }
+}
 
 pub struct Tmpfs {
     root: FsNodeHandle,
+    _state: Arc<Mutex<TmpfsState>>,
 }
 
 impl Tmpfs {
     pub fn new() -> FileSystemHandle {
         let tmpfs_dev = AnonNodeDevice::new(0);
-        Arc::new(Tmpfs { root: FsNode::new_root(TmpfsDirectory, tmpfs_dev) })
+        let state = Arc::new(Mutex::new(TmpfsState::default()));
+        let fs = Tmpfs {
+            root: FsNode::new_root(TmpfsDirectory { fs: Arc::downgrade(&state) }, tmpfs_dev),
+            _state: state,
+        };
+        Arc::new(fs)
     }
 }
 
@@ -29,28 +52,45 @@ impl FileSystem for Tmpfs {
     }
 }
 
-struct TmpfsDirectory;
+struct TmpfsDirectory {
+    /// The file system to which this directory belongs.
+    fs: Weak<Mutex<TmpfsState>>,
+}
 
 impl FsNodeOps for TmpfsDirectory {
-    fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
-        Ok(Box::new(Self))
-    }
     fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
-        Err(ENOSYS)
+        Ok(Box::new(NullFile))
     }
+
+    fn lookup(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+        Err(ENOENT)
+    }
+
+    fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+        Ok(Box::new(TmpfsDirectory { fs: self.fs.clone() }))
+    }
+
     fn create(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
-        Ok(Box::new(TmpfsFileNode::new()?))
+        Ok(Box::new(TmpfsFileNode::new(self.fs.clone())?))
+    }
+
+    fn initialize(&self, node: &FsNodeHandle) {
+        self.fs.upgrade().map(|fs| fs.lock().register(node));
     }
 }
 
 struct TmpfsFileNode {
+    /// The file system to which this file belongs.
+    fs: Weak<Mutex<TmpfsState>>,
+
+    /// The memory that backs this file.
     vmo: Arc<zx::Vmo>,
 }
 
 impl TmpfsFileNode {
-    fn new() -> Result<TmpfsFileNode, Errno> {
+    fn new(fs: Weak<Mutex<TmpfsState>>) -> Result<TmpfsFileNode, Errno> {
         let vmo = zx::Vmo::create_with_opts(VmoOptions::RESIZABLE, 0).map_err(|_| ENOMEM)?;
-        Ok(TmpfsFileNode { vmo: Arc::new(vmo) })
+        Ok(TmpfsFileNode { fs, vmo: Arc::new(vmo) })
     }
 }
 
@@ -59,8 +99,8 @@ impl FsNodeOps for TmpfsFileNode {
         Ok(Box::new(TmpfsFileObject { vmo: self.vmo.clone() }))
     }
 
-    fn create(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
-        Err(ENOTDIR)
+    fn initialize(&self, node: &FsNodeHandle) {
+        self.fs.upgrade().map(|fs| fs.lock().register(node));
     }
 }
 
@@ -141,8 +181,8 @@ mod test {
 
     #[test]
     fn test_tmpfs() {
-        let tmpfs = AnonNodeDevice::new(0);
-        let root = FsNode::new_root(TmpfsDirectory, tmpfs);
+        let fs = Tmpfs::new();
+        let root = fs.root();
         let usr = root.mkdir(b"usr").unwrap();
         let _etc = root.mkdir(b"etc").unwrap();
         let _usr_bin = usr.mkdir(b"bin").unwrap();
@@ -216,5 +256,34 @@ mod test {
             .expect("failed to open file RDWR");
         assert_eq!(0, file.read(task, &[]).expect("failed to read"));
         assert_eq!(0, file.write(task, &[]).expect("failed to write"));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_persistence() {
+        let fs = Tmpfs::new();
+        {
+            let root = fs.root();
+            let usr = root.mkdir(b"usr").expect("failed to create usr");
+            root.mkdir(b"etc").expect("failed to create usr/etc");
+            usr.mkdir(b"bin").expect("failed to create usr/bin");
+        }
+
+        // At this point, all the nodes are dropped.
+
+        let (_kernel, task_owner) =
+            create_kernel_and_task_with_fs(FsContext::new(Namespace::new(fs)));
+        let task = &task_owner.task;
+
+        task.open_file(b"/usr/bin", OpenFlags::RDONLY | OpenFlags::DIRECTORY)
+            .expect("failed to open /usr/bin");
+        assert_eq!(ENOENT, task.open_file(b"/usr/bin/test.txt", OpenFlags::RDWR).unwrap_err());
+        task.open_file_at(
+            FdNumber::AT_FDCWD,
+            b"/usr/bin/test.txt",
+            OpenFlags::RDWR | OpenFlags::CREAT,
+            FileMode::ALLOW_ALL,
+        )
+        .expect("failed to create test.txt");
+        task.open_file(b"/usr/bin/test.txt", OpenFlags::RDWR).expect("failed to open test.txt");
     }
 }

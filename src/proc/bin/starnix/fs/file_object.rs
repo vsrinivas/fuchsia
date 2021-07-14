@@ -4,6 +4,7 @@
 
 use fuchsia_zircon as zx;
 use parking_lot::Mutex;
+use std::fmt;
 use std::sync::Arc;
 
 use crate::fs::*;
@@ -381,5 +382,14 @@ impl FileObject {
 impl Drop for FileObject {
     fn drop(&mut self) {
         self.ops().close(self);
+    }
+}
+
+impl fmt::Debug for FileObject {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FileObject")
+            .field("name", &self.name)
+            .field("offset", &self.offset)
+            .finish()
     }
 }

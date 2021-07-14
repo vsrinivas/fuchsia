@@ -54,20 +54,23 @@ pub struct FsNodeState {
 pub trait FsNodeOps: Send + Sync {
     fn open(&self, node: &FsNode) -> Result<Box<dyn FileOps>, Errno>;
 
-    // The various ways of creating sub-nodes
     fn lookup(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         Err(ENOTDIR)
     }
+
+    fn create(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+        Err(ENOTDIR)
+    }
+
     fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         Err(ENOTDIR)
     }
+
+    fn initialize(&self, _node: &FsNodeHandle) {}
+
     /// Change the length of the file.
     fn truncate(&self, _node: &FsNode, _length: u64) -> Result<(), Errno> {
         Err(EINVAL)
-    }
-
-    fn create(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
-        Err(ENOSYS)
     }
 
     /// Update node.stat if needed.
@@ -147,10 +150,8 @@ impl FsNode {
         let node = self.get_or_create_empty_child(name.to_vec());
         let exists = node.initialize(|name| {
             // TODO: Record the mode.
-            // TODO: Why do create and mkdir take different first parameters?
-            // It's likely one of them is incorrect.
             if mode.is_reg() {
-                self.ops().create(&node, name)
+                self.ops().create(&self, name)
             } else if mode.is_dir() {
                 self.ops().mkdir(&self, name)
             } else {
@@ -160,6 +161,7 @@ impl FsNode {
         if exists {
             return Err(EEXIST);
         }
+        node.ops().initialize(&node);
         let now = fuchsia_runtime::utc_time();
         let mut st = self.state.write();
         st.time_access = now;
