@@ -5,18 +5,30 @@
 #include "logger.h"
 
 #include <iostream>
+#include <mutex>
 
 Logger& Logger::Get() {
   static Logger logger;
   return logger;
 }
 
-void Logger::Write(const char* s, size_t count) {
-  buffer_.append(s, count);
+void Logger::Write(std::string_view buffer) {
+  {
+    std::lock_guard<std::mutex> guard(mutex_);
+    buffer_.append(buffer);
+  }
   if (kLogAllGuestOutput) {
-    std::cout.write(s, count);
+    std::cout << buffer;
     std::cout.flush();
   }
 }
 
-void Logger::Write(const std::string& buffer) { Write(buffer.data(), buffer.size()); }
+void Logger::Reset() {
+  std::lock_guard<std::mutex> guard(mutex_);
+  buffer_.clear();
+}
+
+std::string Logger::Buffer() const {
+  std::lock_guard<std::mutex> guard(mutex_);
+  return buffer_;
+}

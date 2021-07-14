@@ -5,17 +5,28 @@
 #ifndef SRC_VIRTUALIZATION_TESTS_LOGGER_H_
 #define SRC_VIRTUALIZATION_TESTS_LOGGER_H_
 
+#include <zircon/compiler.h>
+
+#include <mutex>
 #include <string>
+#include <string_view>
 
 // Logger is a singleton class that GuestConsole uses to write the guest's logs
 // to. Then a test listener outputs the buffer if a test fails.
+//
+// Thread safe.
 class Logger {
  public:
   static Logger& Get();
-  void Reset() { buffer_.clear(); }
-  void Write(const char* s, size_t count);
-  void Write(const std::string& buffer);
-  const std::string& Buffer() { return buffer_; }
+
+  // Clear the log.
+  void Reset();
+
+  // Append the given string to the log.
+  void Write(std::string_view buffer);
+
+  // Return a copy of the current log.
+  std::string Buffer() const;
 
   // Log all guest output immediately upon being received.
   //
@@ -30,7 +41,8 @@ class Logger {
   Logger(const Logger&) = delete;
   Logger& operator=(const Logger&) = delete;
 
-  std::string buffer_;
+  mutable std::mutex mutex_;
+  std::string buffer_ __TA_GUARDED(mutex_);
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_LOGGER_H_
