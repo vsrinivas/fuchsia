@@ -25,6 +25,8 @@ namespace {
 
 uint64_t TsToNs(const timespec& ts) { return ts.tv_sec * 1000000000 + ts.tv_nsec; }
 
+}  // namespace
+
 bool PathStartsWith(const std::filesystem::path& path, const std::filesystem::path& ancestor) {
   auto path_it = path.begin();
   for (auto ancestor_it = ancestor.begin(); ancestor_it != ancestor.end(); ancestor_it++) {
@@ -36,8 +38,6 @@ bool PathStartsWith(const std::filesystem::path& path, const std::filesystem::pa
   }
   return true;
 }
-
-}  // namespace
 
 CacheDir::CacheDir(std::filesystem::path dir, uint64_t max_size_bytes)
     : cache_dir_(std::move(dir)), max_size_(max_size_bytes) {

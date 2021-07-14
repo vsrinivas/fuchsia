@@ -22,6 +22,7 @@
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/common/cache_dir.h"
 #include "src/developer/debug/zxdb/console/format_name.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
@@ -90,8 +91,9 @@ std::string FormatFrameIndexAndAddress(int frame_index, int inline_index, uint64
 
 }  // namespace
 
-SymbolizerImpl::SymbolizerImpl(Printer* printer, const CommandLineOptions& options)
-    : printer_(printer), omit_module_lines_(options.omit_module_lines) {
+SymbolizerImpl::SymbolizerImpl(Printer* printer, const CommandLineOptions& options,
+                               AnalyticsSender sender)
+    : printer_(printer), omit_module_lines_(options.omit_module_lines), sender_(std::move(sender)) {
   // Hook observers.
   session_.system().AddObserver(this);
   session_.AddDownloadObserver(this);
@@ -104,6 +106,7 @@ SymbolizerImpl::SymbolizerImpl(Printer* printer, const CommandLineOptions& optio
   // Setting symbol servers will trigger an asynchronous network request.
   SetupCommandLineOptions(options, session_.system().settings());
   if (waiting_auth_) {
+    remote_symbol_lookup_enabled_ = true;
     loop_.Run();
   }
 
@@ -139,6 +142,14 @@ void SymbolizerImpl::Reset() {
     target_->OnProcessExiting(/*return_code=*/0, /*timestamp=*/0);
   }
 
+  if (analytics_builder_.valid()) {
+    analytics_builder_.SetRemoteSymbolLookupEnabledBit(remote_symbol_lookup_enabled_);
+    if (sender_) {
+      sender_(analytics_builder_.build());
+    }
+    analytics_builder_ = {};
+  }
+
   // Support for dumpfile
   if (!dumpfile_output_.empty()) {
     ResetDumpfileCurrentObject();
@@ -162,6 +173,7 @@ void SymbolizerImpl::Module(uint64_t id, std::string_view name, std::string_view
 void SymbolizerImpl::MMap(uint64_t address, uint64_t size, uint64_t module_id,
                           std::string_view flags, uint64_t module_offset) {
   if (modules_.find(module_id) == modules_.end()) {
+    analytics_builder_.SetAtLeastOneInvalidInput();
     printer_->OutputWithContext("symbolizer: Invalid module id.");
     return;
   }
@@ -173,6 +185,7 @@ void SymbolizerImpl::MMap(uint64_t address, uint64_t size, uint64_t module_id,
     // Negative load address. This happens for zircon on x64.
     if (module.printed) {
       if (module.base != 0 || module.negative_base != module_offset - address) {
+        analytics_builder_.SetAtLeastOneInvalidInput();
         printer_->OutputWithContext("symbolizer: Inconsistent base address.");
       }
     } else {
@@ -186,6 +199,7 @@ void SymbolizerImpl::MMap(uint64_t address, uint64_t size, uint64_t module_id,
   } else {
     if (module.printed) {
       if (module.base != base) {
+        analytics_builder_.SetAtLeastOneInvalidInput();
         printer_->OutputWithContext("symbolizer: Inconsistent base address.");
       }
     } else {
@@ -218,6 +232,7 @@ void SymbolizerImpl::MMap(uint64_t address, uint64_t size, uint64_t module_id,
 void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType type,
                                std::string_view message) {
   InitProcess();
+  analytics_builder_.IncreaseNumberOfFrames();
 
   // Find the module to see if the stack might be corrupt.
   const ModuleInfo* module = nullptr;
@@ -237,6 +252,8 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
     if (!message.empty()) {
       out += " " + std::string(message);
     }
+    analytics_builder_.IncreaseNumberOfFramesInvalid();
+    analytics_builder_.TotalTimerStop();
     return printer_->OutputWithContext(out);
   }
 
@@ -255,6 +272,7 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
   zxdb::Stack& stack = target_->GetProcess()->GetThreads()[0]->GetStack();
   stack.SetFrames(debug_ipc::ThreadRecord::StackAmount::kFull, {frame});
 
+  bool symbolized = false;
   for (size_t i = 0; i < stack.size(); i++) {
     std::string out = FormatFrameIndexAndAddress(frame_index, stack.size() - i - 1, address);
 
@@ -263,6 +281,7 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
     // Function name.
     const zxdb::Location location = stack[i]->GetLocation();
     if (location.symbol().is_valid()) {
+      symbolized = true;
       auto symbol = location.symbol().Get();
       if (auto function = symbol->As<zxdb::Function>()) {
         out += " " + zxdb::FormatFunctionName(function, {}).AsString();
@@ -273,6 +292,7 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
 
     // FileLine info.
     if (location.file_line().is_valid()) {
+      symbolized = true;
       out += " " + location.file_line().file() + ":" + std::to_string(location.file_line().line());
     }
 
@@ -287,6 +307,13 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
 
     printer_->OutputWithContext(out);
   }
+
+  // One physical frame could be symbolized to multiple inlined frames. We're only counting the
+  // number of physical frames symbolized.
+  if (symbolized) {
+    analytics_builder_.IncreaseNumberOfFramesSymbolized();
+  }
+  analytics_builder_.TotalTimerStop();
 }
 
 void SymbolizerImpl::DumpFile(std::string_view type, std::string_view name) {
@@ -300,9 +327,21 @@ void SymbolizerImpl::DumpFile(std::string_view type, std::string_view name) {
   }
 }
 
-void SymbolizerImpl::OnDownloadsStarted() { is_downloading_ = true; }
+void SymbolizerImpl::OnDownloadsStarted() {
+  if (remote_symbol_lookup_enabled_) {
+    analytics_builder_.DownloadTimerStart();
+  }
+  is_downloading_ = true;
+}
 
 void SymbolizerImpl::OnDownloadsStopped(size_t num_succeeded, size_t num_failed) {
+  // Even if no symbol server is configured, this function could still be invoked but all
+  // downloadings will be failed.
+  if (remote_symbol_lookup_enabled_) {
+    analytics_builder_.SetNumberOfModulesWithDownloadedSymbols(num_succeeded);
+    analytics_builder_.SetNumberOfModulesWithDownloadingFailure(num_failed);
+    analytics_builder_.DownloadTimerStop();
+  }
   is_downloading_ = false;
   loop_.QuitNow();
 }
@@ -337,6 +376,8 @@ void SymbolizerImpl::InitProcess() {
     return;
   }
 
+  analytics_builder_.TotalTimerStart();
+
   session_.DispatchProcessStarting({});
   session_.DispatchNotifyThreadStarting({});
 
@@ -347,6 +388,23 @@ void SymbolizerImpl::InitProcess() {
     address_to_module_id_[pair.second.base] = pair.first;
   }
   target_->GetProcess()->GetSymbols()->SetModules(modules);
+
+  // Collect module info for analytics.
+  size_t num_modules_with_cached_symbols = 0;
+  size_t num_modules_with_local_symbols = 0;
+  auto cache_dir = session_.system().GetSymbols()->build_id_index().GetCacheDir();
+  // GetModuleSymbols() will only return loaded modules.
+  for (auto module_symbol : target_->GetSymbols()->GetModuleSymbols()) {
+    if (!cache_dir.empty() &&
+        zxdb::PathStartsWith(module_symbol->GetStatus().symbol_file, cache_dir)) {
+      num_modules_with_cached_symbols++;
+    } else {
+      num_modules_with_local_symbols++;
+    }
+  }
+  analytics_builder_.SetNumberOfModules(modules_.size());
+  analytics_builder_.SetNumberOfModulesWithCachedSymbols(num_modules_with_cached_symbols);
+  analytics_builder_.SetNumberOfModulesWithLocalSymbols(num_modules_with_local_symbols);
 
   // Wait until downloading completes.
   if (is_downloading_) {

@@ -59,8 +59,8 @@ BACKTRACE (up to 16 calls)
    #6.1  0xffffffff100048dc in console_run_script_etc(const char*, bool) ../../zircon/kernel/lib/console/console.cc:665 <kernel>+0xffffffff000048dc
    #6    0xffffffff100048dc in console_run_script(const char*) ../../zircon/kernel/lib/console/console.cc:672 <kernel>+0xffffffff000048dc
    #7    0xffffffff100f5abc in sys_debug_send_command(zx_handle_t, user_in_ptr<const char>, size_t) ../../zircon/kernel/lib/syscalls/debug.cc:124 <kernel>+0xffffffff000f5abc
-   #8.2  0xffffffff10107c98 in λ(const (anon class)*, ProcessDispatcher*) gen/vdso/include/lib/syscalls/kernel-wrappers.inc:164 <kernel>+0xffffffff00107c98
-   #8.1  0xffffffff10107c98 in do_syscall<(lambda at gen/vdso/include/lib/syscalls/kernel-wrappers.inc:163:97)>(uint64_t, uint64_t, (anon class), bool (*)(uintptr_t)) ../../zircon/kernel/lib/syscalls/syscalls.cc:103 <kernel>+0xffffffff00107c98
+   #8.2  0xffffffff10107c98 in λ(const wrapper_debug_send_command::(anon class)*, ProcessDispatcher*) gen/vdso/include/lib/syscalls/kernel-wrappers.inc:164 <kernel>+0xffffffff00107c98
+   #8.1  0xffffffff10107c98 in do_syscall<(lambda at gen/vdso/include/lib/syscalls/kernel-wrappers.inc:163:97)>(uint64_t, uint64_t, wrapper_debug_send_command::(anon class), bool (*)(uintptr_t)) ../../zircon/kernel/lib/syscalls/syscalls.cc:103 <kernel>+0xffffffff00107c98
    #8    0xffffffff10107c98 in wrapper_debug_send_command(zx_handle_t, const char*, size_t, uint64_t) gen/vdso/include/lib/syscalls/kernel-wrappers.inc:163 <kernel>+0xffffffff00107c98
    #9    0xffffffff100b8a28 in gen/vdso/include/lib/syscalls/kernel.inc:173 <kernel>+0xffffffff000b8a28
 

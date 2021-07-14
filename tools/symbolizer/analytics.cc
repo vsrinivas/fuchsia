@@ -6,89 +6,118 @@
 
 namespace symbolizer {
 
-namespace {
-
-constexpr int kIndexAtLeastOneInvalidInputBit = 1;
-constexpr int kIndexRemoteSymbolLookupEnabledBit = 10;
-constexpr int kIndexNumberOfModules = 2;
-constexpr int kIndexNumberOfModulesWithLocalSymbols = 3;
-constexpr int kIndexNumberOfModulesWithCachedSymbols = 4;
-constexpr int kIndexNumberOfModulesWithDownloadedSymbols = 5;
-constexpr int kIndexNumberOfModulesWithDownloadingFailure = 6;
-constexpr int kIndexNumberOfFrames = 7;
-constexpr int kIndexNumberOfFramesSymbolized = 8;
-constexpr int kIndexNumberOfFramesInvalid = 9;
-constexpr char kTimingCategory[] = "symbolization";
-constexpr char kTimingVariable[] = "";
-
-}  // namespace
-
-using ::analytics::google_analytics::Timing;
-
-void StackTraceHitBuilder::SetAtLeastOneInvalidInputBit(bool bit) {
-  parameters_.SetCustomMetric(kIndexAtLeastOneInvalidInputBit, bit);
+void SymbolizationAnalyticsBuilder::SetAtLeastOneInvalidInput() {
+  valid_ = true;
+  at_least_one_invalid_input_ = true;
 }
 
-void StackTraceHitBuilder::SetRemoteSymbolLookupEnabledBit(bool bit) {
-  parameters_.SetCustomMetric(kIndexRemoteSymbolLookupEnabledBit, bit);
+void SymbolizationAnalyticsBuilder::SetRemoteSymbolLookupEnabledBit(bool bit) {
+  valid_ = true;
+  remote_symbol_lookup_enabled_ = bit;
 }
 
-void StackTraceHitBuilder::SetNumberOfModules(int64_t count) {
-  parameters_.SetCustomMetric(kIndexNumberOfModules, count);
+void SymbolizationAnalyticsBuilder::SetNumberOfModules(uint64_t count) {
+  valid_ = true;
+  number_of_modules_ = count;
 }
 
-void StackTraceHitBuilder::SetNumberOfModulesWithLocalSymbols(int64_t count) {
-  parameters_.SetCustomMetric(kIndexNumberOfModulesWithLocalSymbols, count);
+void SymbolizationAnalyticsBuilder::SetNumberOfModulesWithLocalSymbols(uint64_t count) {
+  valid_ = true;
+  number_of_modules_with_local_symbols_ = count;
 }
 
-void StackTraceHitBuilder::SetNumberOfModulesWithCachedSymbols(int64_t count) {
-  parameters_.SetCustomMetric(kIndexNumberOfModulesWithCachedSymbols, count);
+void SymbolizationAnalyticsBuilder::SetNumberOfModulesWithCachedSymbols(uint64_t count) {
+  valid_ = true;
+  number_of_modules_with_cached_symbols_ = count;
 }
 
-void StackTraceHitBuilder::SetNumberOfModulesWithDownloadedSymbols(int64_t count) {
-  parameters_.SetCustomMetric(kIndexNumberOfModulesWithDownloadedSymbols, count);
+void SymbolizationAnalyticsBuilder::SetNumberOfModulesWithDownloadedSymbols(uint64_t count) {
+  valid_ = true;
+  number_of_modules_with_downloaded_symbols_ = count;
 }
 
-void StackTraceHitBuilder::SetNumberOfModulesWithDownloadingFailure(int64_t count) {
-  parameters_.SetCustomMetric(kIndexNumberOfModulesWithDownloadingFailure, count);
+void SymbolizationAnalyticsBuilder::SetNumberOfModulesWithDownloadingFailure(uint64_t count) {
+  valid_ = true;
+  number_of_modules_with_downloading_failure_ = count;
 }
 
-void StackTraceHitBuilder::SetNumberOfFrames(int64_t count) {
-  parameters_.SetCustomMetric(kIndexNumberOfFrames, count);
+void SymbolizationAnalyticsBuilder::IncreaseNumberOfFrames() {
+  valid_ = true;
+  number_of_frames_++;
 }
 
-void StackTraceHitBuilder::SetNumberOfFramesSymbolized(int64_t count) {
-  parameters_.SetCustomMetric(kIndexNumberOfFramesSymbolized, count);
+void SymbolizationAnalyticsBuilder::IncreaseNumberOfFramesSymbolized() {
+  valid_ = true;
+  number_of_frames_symbolized_++;
 }
 
-void StackTraceHitBuilder::SetNumberOfFramesInvalid(int64_t count) {
-  parameters_.SetCustomMetric(kIndexNumberOfFramesInvalid, count);
+void SymbolizationAnalyticsBuilder::IncreaseNumberOfFramesInvalid() {
+  valid_ = true;
+  number_of_frames_invalid_++;
 }
 
-void StackTraceHitBuilder::TotalTimerStart() {
+void SymbolizationAnalyticsBuilder::TotalTimerStart() {
   total_timer_start_ = std::chrono::steady_clock::now();
 }
 
-void StackTraceHitBuilder::TotalTimerStop() {
+void SymbolizationAnalyticsBuilder::TotalTimerStop() {
+  valid_ = true;
   total_time = std::chrono::steady_clock::now() - total_timer_start_;
 }
 
-void StackTraceHitBuilder::DownloadTimerStart() {
+void SymbolizationAnalyticsBuilder::DownloadTimerStart() {
   download_timer_start_ = std::chrono::steady_clock::now();
 }
 
-void StackTraceHitBuilder::DownloadTimerStop() {
+void SymbolizationAnalyticsBuilder::DownloadTimerStop() {
+  valid_ = true;
   download_time = std::chrono::steady_clock::now() - download_timer_start_;
 }
 
-Timing StackTraceHitBuilder::build() {
+analytics::google_analytics::Timing SymbolizationAnalyticsBuilder::build() {
+  class AnalyticsGeneralParameters : public analytics::core_dev_tools::GeneralParameters {
+   public:
+    using analytics::core_dev_tools::GeneralParameters::SetCustomMetric;
+  } parameters;
+
   auto total_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(total_time).count();
   auto download_time_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(download_time).count();
-  auto timing = Timing(kTimingCategory, kTimingVariable, total_time_ms);
+
+  // t=timing
+  // utc=symbolization
+  // utv=<empty>
+  // utt=<total wall time spent, in milliseconds>
+  auto timing = analytics::google_analytics::Timing("symbolization", "", total_time_ms);
+  // plt=<total wall time spent, in milliseconds>
   timing.SetPageLoadTime(total_time_ms);
+  // pdt=<downloading time spent, in milliseconds>
   timing.SetPageDownloadTime(download_time_ms);
-  timing.AddGeneralParameters(parameters_);
+
+  // Custom parameters.
+  // cm1=<1 if "at least one invalid input" else 0>
+  parameters.SetCustomMetric(1, at_least_one_invalid_input_);
+  // cm2=<# modules>
+  parameters.SetCustomMetric(2, static_cast<int64_t>(number_of_modules_));
+  // cm3=<# modules with local symbols>
+  parameters.SetCustomMetric(3, static_cast<int64_t>(number_of_modules_with_local_symbols_));
+  // cm4=<# modules with cached symbols>
+  parameters.SetCustomMetric(4, static_cast<int64_t>(number_of_modules_with_cached_symbols_));
+  // cm5=<# modules with downloaded symbols>
+  parameters.SetCustomMetric(5, static_cast<int64_t>(number_of_modules_with_downloaded_symbols_));
+  // cm6=<# modules with downloading failure>
+  parameters.SetCustomMetric(6, static_cast<int64_t>(number_of_modules_with_downloading_failure_));
+  // cm7=<# frames>
+  parameters.SetCustomMetric(7, static_cast<int64_t>(number_of_frames_));
+  // cm8=<# frames symbolized>
+  parameters.SetCustomMetric(8, static_cast<int64_t>(number_of_frames_symbolized_));
+  // cm9=<# frames out of valid modules>
+  parameters.SetCustomMetric(9, static_cast<int64_t>(number_of_frames_invalid_));
+  // cm10=<1 if "remote symbol lookup is enabled" else 0>
+  parameters.SetCustomMetric(10, remote_symbol_lookup_enabled_);
+
+  timing.AddGeneralParameters(parameters);
+
   return timing;
 }
 

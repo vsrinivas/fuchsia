@@ -6,6 +6,7 @@
 #define TOOLS_SYMBOLIZER_SYMBOLIZER_IMPL_H_
 
 #include <iostream>
+#include <memory>
 #include <string_view>
 #include <unordered_map>
 
@@ -16,6 +17,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/system_observer.h"
+#include "tools/symbolizer/analytics.h"
 #include "tools/symbolizer/command_line_options.h"
 #include "tools/symbolizer/printer.h"
 #include "tools/symbolizer/symbolizer.h"
@@ -28,7 +30,10 @@ class SymbolizerImpl : public Symbolizer,
                        public zxdb::DownloadObserver,
                        public zxdb::SystemObserver {
  public:
-  SymbolizerImpl(Printer* printer, const CommandLineOptions& options);
+  using AnalyticsSender = std::function<void(const analytics::google_analytics::Hit&)>;
+
+  SymbolizerImpl(Printer* printer, const CommandLineOptions& options,
+                 AnalyticsSender analytics_sender = nullptr);
   ~SymbolizerImpl() override;
 
   // |Symbolizer| implementation.
@@ -135,6 +140,12 @@ class SymbolizerImpl : public Symbolizer,
   // 1) not all mmap info is kept in ModuleInfo.
   // 2) the dumpfile feature might be removed in the future.
   rapidjson::Value dumpfile_current_object_;
+
+  // Analytics. Instead of keeping a unique_ptr, we depends on the valid() method to know if
+  // the analytics is not empty and worth sending.
+  SymbolizationAnalyticsBuilder analytics_builder_;
+  bool remote_symbol_lookup_enabled_ = false;
+  AnalyticsSender sender_;
 };
 
 }  // namespace symbolizer

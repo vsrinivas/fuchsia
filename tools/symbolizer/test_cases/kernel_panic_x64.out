@@ -11,7 +11,7 @@ dso: id=6a74871329227362 base=0xffffffff00100000 name=zircon.elf
    #8.1  0xffffffff0010347b in console_run_script_etc(const char*, bool) ../../zircon/kernel/lib/console/console.cc:665 <kernel>+0xffffffff8010347b
    #8    0xffffffff0010347b in console_run_script(const char*) ../../zircon/kernel/lib/console/console.cc:672 <kernel>+0xffffffff8010347b
    #9    0xffffffff00201681 in sys_debug_send_command(zx_handle_t, user_in_ptr<const char>, size_t) ../../zircon/kernel/lib/syscalls/debug.cc:125 <kernel>+0xffffffff80201681
-   #10.2 0xffffffff00217a52 in λ(const (anon class)*, ProcessDispatcher*) gen/vdso/include/lib/syscalls/kernel-wrappers.inc:176 <kernel>+0xffffffff80217a52
-   #10.1 0xffffffff00217a52 in do_syscall<(lambda at gen/vdso/include/lib/syscalls/kernel-wrappers.inc:175:97)>(uint64_t, uint64_t, (anon class), bool (*)(uintptr_t)) ../../zircon/kernel/lib/syscalls/syscalls.cc:104 <kernel>+0xffffffff80217a52
+   #10.2 0xffffffff00217a52 in λ(const wrapper_debug_send_command::(anon class)*, ProcessDispatcher*) gen/vdso/include/lib/syscalls/kernel-wrappers.inc:176 <kernel>+0xffffffff80217a52
+   #10.1 0xffffffff00217a52 in do_syscall<(lambda at gen/vdso/include/lib/syscalls/kernel-wrappers.inc:175:97)>(uint64_t, uint64_t, wrapper_debug_send_command::(anon class), bool (*)(uintptr_t)) ../../zircon/kernel/lib/syscalls/syscalls.cc:104 <kernel>+0xffffffff80217a52
    #10   0xffffffff00217a52 in wrapper_debug_send_command(zx_handle_t, const char*, size_t, uint64_t) gen/vdso/include/lib/syscalls/kernel-wrappers.inc:175 <kernel>+0xffffffff80217a52
    #11   0xffffffff0023921c in gen/vdso/include/lib/syscalls/kernel.inc:198 <kernel>+0xffffffff8023921c

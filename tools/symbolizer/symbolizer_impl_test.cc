@@ -7,11 +7,13 @@
 #include <fstream>
 #include <sstream>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 
 #include "src/lib/files/scoped_temp_dir.h"
+#include "tools/symbolizer/symbolizer.h"
 
 namespace symbolizer {
 
@@ -66,7 +68,7 @@ TEST_F(SymbolizerImplTest, Backtrace) {
   ASSERT_EQ(ss_.str(), "   #1    0x0000000000005000 is not covered by any module\n");
 }
 
-TEST(SymbolizerImplTestNoFixture, OmitModuleLines) {
+TEST(SymbolizerImpl, OmitModuleLines) {
   std::stringstream ss;
   Printer printer(ss);
   CommandLineOptions options;
@@ -78,7 +80,7 @@ TEST(SymbolizerImplTestNoFixture, OmitModuleLines) {
   ASSERT_EQ(ss.str(), "");
 }
 
-TEST(SymbolizerImplTestNoFixture, DumpFile) {
+TEST(SymbolizerImpl, DumpFile) {
   // Creates a temp file first.
   files::ScopedTempDir temp_dir;
   std::string temp_file;
@@ -123,6 +125,60 @@ TEST(SymbolizerImplTestNoFixture, DumpFile) {
   ASSERT_TRUE(d[0].HasMember("name"));
   ASSERT_TRUE(d[0]["name"].IsString());
   ASSERT_EQ(std::string(d[0]["name"].GetString()), "name");
+}
+
+TEST(SymbolizerImpl, Analytics) {
+  std::stringstream ss;
+  Printer printer(ss);
+  CommandLineOptions options;
+  std::map<std::string, std::string> parameters;
+  SymbolizerImpl::AnalyticsSender sender =
+      [&parameters](const analytics::google_analytics::Hit& hit) { parameters = hit.parameters(); };
+  SymbolizerImpl symbolizer(&printer, options, sender);
+
+  symbolizer.Reset();
+  symbolizer.Module(0, "some_module", "deadbeef");
+  symbolizer.MMap(0x1000, 0x2000, 0, "r", 0x0);
+  symbolizer.Backtrace(0, 0x1010, Symbolizer::AddressType::kUnknown, "");
+  symbolizer.Backtrace(1, 0x7010, Symbolizer::AddressType::kUnknown, "");
+  symbolizer.Reset();
+
+  ASSERT_EQ(parameters.size(), 16u);
+
+  // cm1=<1 if "at least one invalid input" else 0>
+  ASSERT_EQ(parameters["cm1"], "0");
+  // cm2=<# modules>
+  ASSERT_EQ(parameters["cm2"], "1");
+  // cm3=<# modules with local symbols>
+  ASSERT_EQ(parameters["cm3"], "0");
+  // cm4=<# modules with cached symbols>
+  ASSERT_EQ(parameters["cm4"], "0");
+  // cm5=<# modules with downloaded symbols>
+  ASSERT_EQ(parameters["cm5"], "0");
+  // cm6=<# modules with downloading failure>
+  ASSERT_EQ(parameters["cm6"], "0");
+  // cm7=<# frames>
+  ASSERT_EQ(parameters["cm7"], "2");
+  // cm8=<# frames symbolized>
+  ASSERT_EQ(parameters["cm8"], "0");
+  // cm9=<# frames out of valid modules>
+  ASSERT_EQ(parameters["cm9"], "1");
+  // cm10=<1 if "remote symbol lookup is enabled" else 0>
+  ASSERT_EQ(parameters["cm10"], "0");
+
+  // t=timing
+  ASSERT_EQ(parameters["t"], "timing");
+  // utc=symbolization
+  ASSERT_EQ(parameters["utc"], "symbolization");
+  // utv=<empty>
+  ASSERT_EQ(parameters["utv"], "");
+
+  // utt=<total wall time spent, in milliseconds>
+  // plt=<total wall time spent, in milliseconds>
+  ASSERT_GE(std::stoi(parameters["utt"]), 0);
+  ASSERT_GE(std::stoi(parameters["plt"]), 0);
+  // pdt=<downloading time spent, in milliseconds>
+  ASSERT_EQ(parameters["pdt"], "0");
 }
 
 }  // namespace

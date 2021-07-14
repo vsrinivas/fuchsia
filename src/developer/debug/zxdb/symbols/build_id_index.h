@@ -88,6 +88,9 @@ class BuildIDIndex {
   // also features garbage collection.
   void SetCacheDir(const std::string& cache_dir);
 
+  // Returns the path to the cache directory or an empty path if it's not set.
+  std::filesystem::path GetCacheDir() const { return cache_dir_ ? cache_dir_->path() : ""; }
+
   // Populates build_id_dirs_ and ids_txts_ with the content of symbol-index file.
   void AddSymbolIndexFile(const std::string& symbol_index);
 

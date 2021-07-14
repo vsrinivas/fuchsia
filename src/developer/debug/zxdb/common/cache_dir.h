@@ -10,6 +10,9 @@
 
 namespace zxdb {
 
+// Check if a path starts with another path.
+bool PathStartsWith(const std::filesystem::path& path, const std::filesystem::path& ancestor);
+
 // A cache directory automatically removes least recently used files when its size exceeds the
 // maximum size. More sophisticated features could be added in the future.
 class CacheDir {
@@ -21,6 +24,8 @@ class CacheDir {
   // is larger than the max_size_bytes, an LRU pruning will be triggered. A value of 0 disables the
   // cache pruning.
   explicit CacheDir(std::filesystem::path dir, uint64_t max_size_bytes = kDefaultMaxSize);
+
+  const std::filesystem::path& path() { return cache_dir_; }
 
   // The caller of this class is able to access, create files in the cache directory directly but
   // needs to notify us about the access.
