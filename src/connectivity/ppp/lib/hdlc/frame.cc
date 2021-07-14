@@ -80,7 +80,7 @@ std::vector<uint8_t> SerializeFrame(FrameView frame) {
   return buffer;
 }
 
-fit::result<Frame, DeserializationError> DeserializeFrame(fbl::Span<const uint8_t> raw_frame) {
+fpromise::result<Frame, DeserializationError> DeserializeFrame(fbl::Span<const uint8_t> raw_frame) {
   std::vector<uint8_t> buffer;
   buffer.reserve(raw_frame.size());
 
@@ -91,14 +91,14 @@ fit::result<Frame, DeserializationError> DeserializeFrame(fbl::Span<const uint8_
     switch (b) {
       case kFlagSequence:
         if (it != raw_frame.begin() && it != raw_frame.end() - 1) {
-          return fit::error(DeserializationError::FormatInvalid);
+          return fpromise::error(DeserializationError::FormatInvalid);
         }
         buffer.push_back(b);
         break;
       case kControlEscapeSequence:
         ++it;
         if (it == raw_frame.end()) {
-          return fit::error(DeserializationError::FormatInvalid);
+          return fpromise::error(DeserializationError::FormatInvalid);
         }
         buffer.push_back(*it ^ kControlEscapeComplement);
         break;
@@ -112,11 +112,11 @@ fit::result<Frame, DeserializationError> DeserializeFrame(fbl::Span<const uint8_
   }
 
   if (buffer.size() < 8) {
-    return fit::error(DeserializationError::FormatInvalid);
+    return fpromise::error(DeserializationError::FormatInvalid);
   }
 
   if (buffer.front() != kFlagSequence || buffer.back() != kFlagSequence) {
-    return fit::error(DeserializationError::FormatInvalid);
+    return fpromise::error(DeserializationError::FormatInvalid);
   }
 
   const uint8_t* begin_frame = buffer.data() + 1;
@@ -125,13 +125,13 @@ fit::result<Frame, DeserializationError> DeserializeFrame(fbl::Span<const uint8_
   const uint8_t address = begin_frame[0];
 
   if (address != kAllStationsAddress) {
-    return fit::error(DeserializationError::UnrecognizedAddress);
+    return fpromise::error(DeserializationError::UnrecognizedAddress);
   }
 
   const uint8_t control = begin_frame[1];
 
   if (control != kControlField) {
-    return fit::error(DeserializationError::UnrecognizedControl);
+    return fpromise::error(DeserializationError::UnrecognizedControl);
   }
 
   const uint8_t protocol_upper = begin_frame[2];
@@ -141,14 +141,14 @@ fit::result<Frame, DeserializationError> DeserializeFrame(fbl::Span<const uint8_
   const uint16_t fcs =
       Fcs(kFrameCheckSequenceInit, fbl::Span<const uint8_t>(begin_frame, frame_size));
   if (fcs != kFrameCheckSequence) {
-    return fit::error(DeserializationError::FailedFrameCheckSequence);
+    return fpromise::error(DeserializationError::FailedFrameCheckSequence);
   }
 
   // Erase everything but the information from the buffer.
   const auto information_end = std::rotate(buffer.begin(), buffer.begin() + 5, buffer.end() - 3);
   buffer.erase(information_end, buffer.end());
 
-  return fit::ok(Frame(protocol, std::move(buffer)));
+  return fpromise::ok(Frame(protocol, std::move(buffer)));
 }
 
 }  // namespace ppp

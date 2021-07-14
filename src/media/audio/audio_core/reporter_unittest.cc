@@ -3,7 +3,7 @@
 
 #include "src/media/audio/audio_core/reporter.h"
 
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
@@ -59,11 +59,11 @@ class ReporterTest : public testing::ThreadingModelFixture {
   }
 
   inspect::Hierarchy GetHierarchyLazyValues() {
-    fit::result<inspect::Hierarchy> result;
-    fit::single_threaded_executor exec;
+    fpromise::result<inspect::Hierarchy> result;
+    fpromise::single_threaded_executor exec;
     exec.schedule_task(
         inspect::ReadFromInspector(under_test_.inspector())
-            .then([&](fit::result<inspect::Hierarchy>& res) { result = std::move(res); }));
+            .then([&](fpromise::result<inspect::Hierarchy>& res) { result = std::move(res); }));
     exec.run();
     EXPECT_TRUE(result.is_ok());
     return result.take_value();

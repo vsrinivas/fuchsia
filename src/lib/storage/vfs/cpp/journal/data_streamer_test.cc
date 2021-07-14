@@ -271,12 +271,12 @@ TEST_F(DataStreamerTest, StreamFailedOperationFailsFlush) {
                                        }};
 
     streamer.StreamData(std::move(op));
-    journal->schedule_task(
-        streamer.Flush().then([&](fit::context& context, fit::result<void, zx_status_t>& result) {
+    journal->schedule_task(streamer.Flush().then(
+        [&](fpromise::context& context, fpromise::result<void, zx_status_t>& result) {
           EXPECT_TRUE(result.is_error());
           EXPECT_EQ(result.error(), ZX_ERR_INTERNAL);
           failed_promise_observed = true;
-          return fit::ok();
+          return fpromise::ok();
         }));
   }
   EXPECT_TRUE(failed_promise_observed);

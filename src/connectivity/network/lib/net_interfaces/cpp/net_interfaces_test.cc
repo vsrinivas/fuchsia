@@ -335,7 +335,7 @@ class ReachabilityWatcherTest : public gtest::TestLoopFixture {
   }
 
  protected:
-  std::optional<fit::result<bool, ReachabilityWatcher::ErrorVariant>> reachable_;
+  std::optional<fpromise::result<bool, ReachabilityWatcher::ErrorVariant>> reachable_;
 
   FakeWatcherImpl fake_watcher_impl_;
   std::unique_ptr<fidl::Binding<fuchsia::net::interfaces::Watcher>> watcher_binding_;

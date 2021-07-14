@@ -113,14 +113,14 @@ void SoundPlayerImpl::StopPlayingSound(uint32_t id) {
   iter->second->StopPlayingSound();
 }
 
-fit::result<Sound, zx_status_t> SoundPlayerImpl::SoundFromFile(
+fpromise::result<Sound, zx_status_t> SoundPlayerImpl::SoundFromFile(
     fidl::InterfaceHandle<fuchsia::io::File> file) {
   FX_DCHECK(file);
 
   fbl::unique_fd fd;
   zx_status_t status = fdio_fd_create(file.TakeChannel().release(), fd.reset_and_get_address());
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   OggDemux demux;

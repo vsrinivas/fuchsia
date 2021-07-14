@@ -10,8 +10,8 @@
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fit/result.h>
-#include <lib/fit/scope.h>
+#include <lib/fpromise/result.h>
+#include <lib/fpromise/scope.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -48,7 +48,7 @@ class StreamImpl {
   void CloseAllClients(zx_status_t status);
 
   void SetMuteState(MuteState mute_state);
-  fit::scope& Scope();
+  fpromise::scope& Scope();
 
  private:
   // Called when a client calls Rebind.
@@ -157,7 +157,7 @@ class StreamImpl {
   fuchsia::math::Size current_resolution_;
   MuteState mute_state_;
   std::unique_ptr<fuchsia::math::RectF> current_crop_region_;
-  fit::scope scope_;
+  fpromise::scope scope_;
   friend class Client;
 };
 

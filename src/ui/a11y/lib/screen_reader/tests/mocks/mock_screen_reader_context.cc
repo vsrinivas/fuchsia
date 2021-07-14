@@ -8,40 +8,40 @@
 
 namespace accessibility_test {
 
-fit::promise<> MockScreenReaderContext::MockSpeaker::SpeakNodePromise(
+fpromise::promise<> MockScreenReaderContext::MockSpeaker::SpeakNodePromise(
     const fuchsia::accessibility::semantics::Node* node, Options options) {
   received_speak_ = true;
   node_ids_.push_back(node->node_id());
-  return fit::make_ok_promise();
+  return fpromise::make_ok_promise();
 }
 
-fit::promise<> MockScreenReaderContext::MockSpeaker::SpeakNodeCanonicalizedLabelPromise(
+fpromise::promise<> MockScreenReaderContext::MockSpeaker::SpeakNodeCanonicalizedLabelPromise(
     const fuchsia::accessibility::semantics::Node* node, Options options) {
   received_speak_label_ = true;
   node_ids_.push_back(node->node_id());
-  return fit::make_ok_promise();
+  return fpromise::make_ok_promise();
 }
 
-fit::promise<> MockScreenReaderContext::MockSpeaker::SpeakMessagePromise(
+fpromise::promise<> MockScreenReaderContext::MockSpeaker::SpeakMessagePromise(
     fuchsia::accessibility::tts::Utterance utterance, Options options) {
   received_speak_ = true;
   if (utterance.has_message()) {
     messages_.push_back(utterance.message());
   }
-  return fit::make_ok_promise();
+  return fpromise::make_ok_promise();
 }
 
-fit::promise<> MockScreenReaderContext::MockSpeaker::SpeakMessageByIdPromise(
+fpromise::promise<> MockScreenReaderContext::MockSpeaker::SpeakMessageByIdPromise(
     fuchsia::intl::l10n::MessageIds message_id, Options options) {
   received_speak_ = true;
   message_ids_.push_back(message_id);
-  return fit::make_ok_promise();
+  return fpromise::make_ok_promise();
 }
 
-fit::promise<> MockScreenReaderContext::MockSpeaker::CancelTts() {
+fpromise::promise<> MockScreenReaderContext::MockSpeaker::CancelTts() {
   received_cancel_ = true;
   messages_.clear();
-  return fit::make_ok_promise();
+  return fpromise::make_ok_promise();
 }
 
 MockScreenReaderContext::MockScreenReaderContext() : ScreenReaderContext() {

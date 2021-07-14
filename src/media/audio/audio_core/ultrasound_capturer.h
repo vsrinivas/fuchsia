@@ -33,7 +33,7 @@ class UltrasoundCapturer : public BaseCapturer {
   std::optional<StreamUsage> usage() const override {
     return {StreamUsage::WithCaptureUsage(CaptureUsage::ULTRASOUND)};
   }
-  fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+  fpromise::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
   InitializeSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) override;
   void CleanupSourceLink(const AudioObject& source,
                          std::shared_ptr<ReadableStream> stream) override;

@@ -36,7 +36,7 @@ namespace fidl {
 //
 // The returned |ServerBindingRef| is a reference to the binding; it does not
 // own the binding. In particular, the binding is kept alive by the dispatcher
-// even if the returned |fit::result<ServerBindingRef>| is dropped. If the
+// even if the returned |fpromise::result<ServerBindingRef>| is dropped. If the
 // binding reference is ignored, the server operates in a "self-managed" mode,
 // where it will continue listening for messages until an error occurs or if the
 // user tears down the connection using a |Completer|.

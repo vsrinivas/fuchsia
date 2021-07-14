@@ -62,7 +62,7 @@ class MetricsUnitTest : public gtest::RealLoopFixture {
 
  protected:
   // Run a promise to completion on the default async executor.
-  void RunPromiseToCompletion(fit::promise<> promise) {
+  void RunPromiseToCompletion(fpromise::promise<> promise) {
     bool done = false;
     executor_.schedule_task(std::move(promise).and_then([&]() { done = true; }));
     RunLoopUntilIdle();
@@ -148,10 +148,11 @@ TEST_F(MetricsUnitTest, Inspect) {
   RunLoopUntil([&cs] { return cs.empty(); });
 
   // [START get_hierarchy]
-  fit::result<inspect::Hierarchy> hierarchy;
-  RunPromiseToCompletion(
-      inspect::ReadFromInspector(*inspector.inspector())
-          .then([&](fit::result<inspect::Hierarchy>& result) { hierarchy = std::move(result); }));
+  fpromise::result<inspect::Hierarchy> hierarchy;
+  RunPromiseToCompletion(inspect::ReadFromInspector(*inspector.inspector())
+                             .then([&](fpromise::result<inspect::Hierarchy>& result) {
+                               hierarchy = std::move(result);
+                             }));
   ASSERT_TRUE(hierarchy.is_ok());
   // [END get_hierarchy]
 

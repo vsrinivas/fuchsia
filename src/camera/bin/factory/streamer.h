@@ -23,7 +23,7 @@ class Streamer {
   ~Streamer();
 
   // Make a streamer and start its thread
-  static fit::result<std::unique_ptr<Streamer>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<Streamer>, zx_status_t> Create(
       fuchsia::sysmem::AllocatorHandle allocator, fuchsia::camera3::DeviceWatcherHandle watcher,
       fit::closure stop_callback = nullptr);
 

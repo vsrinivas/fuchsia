@@ -6,7 +6,7 @@
 #define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_JOURNAL_WRITER_H_
 
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -60,7 +60,7 @@ class JournalWriter {
   JournalWriter& operator=(JournalWriter&& other) = delete;
 
   // Writes |work| to disk immediately.
-  fit::result<void, zx_status_t> WriteData(JournalWorkItem work);
+  fpromise::result<void, zx_status_t> WriteData(JournalWorkItem work);
 
   // Writes |work| to disk immediately (possibly also to the journal)
   //
@@ -71,24 +71,24 @@ class JournalWriter {
   //
   // This method currently blocks, completing all three phases before returning, but in the future,
   // could be more fine grained, returning a promise that represents the completion of all phases.
-  fit::result<void, zx_status_t> WriteMetadata(JournalWorkItem work,
-                                               std::optional<JournalWorkItem> trim_work);
+  fpromise::result<void, zx_status_t> WriteMetadata(JournalWorkItem work,
+                                                    std::optional<JournalWorkItem> trim_work);
 
   // Trims |operations| immediately.
-  fit::result<void, zx_status_t> TrimData(std::vector<storage::BufferedOperation> operations);
+  fpromise::result<void, zx_status_t> TrimData(std::vector<storage::BufferedOperation> operations);
 
   // Synchronizes the most up-to-date info block back to disk.
   //
   // Returns ZX_ERR_IO_REFUSED if writeback is disabled.
   // Returns an error from the block device if the info block cannot be written. In all other cases,
   // returns ZX_OK.
-  fit::result<void, zx_status_t> Sync();
+  fpromise::result<void, zx_status_t> Sync();
 
   // Returns true if all writeback is "off", and no further data will be written to the
   // device.
   [[nodiscard]] bool IsWritebackEnabled() const { return transaction_handler_; }
 
-  fit::result<void, zx_status_t> Flush();
+  fpromise::result<void, zx_status_t> Flush();
 
   bool HavePendingWork() const { return !pending_work_items_.empty(); }
 

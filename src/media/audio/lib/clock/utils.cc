@@ -21,20 +21,20 @@ zx_status_t GetAndDisplayClockDetails(const zx::clock& ref_clock) {
   return ZX_OK;
 }
 
-fit::result<zx_clock_details_v1_t, zx_status_t> GetClockDetails(const zx::clock& ref_clock) {
+fpromise::result<zx_clock_details_v1_t, zx_status_t> GetClockDetails(const zx::clock& ref_clock) {
   if (!ref_clock.is_valid()) {
     FX_LOGS(INFO) << "Clock is invalid";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   zx_clock_details_v1_t clock_details;
   zx_status_t status = ref_clock.get_details(&clock_details);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Error calling zx::clock::get_details";
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
-  return fit::ok(clock_details);
+  return fpromise::ok(clock_details);
 }
 
 // Only called by custom code when debugging, so can remain at INFO severity.
@@ -88,25 +88,25 @@ zx_koid_t GetKoid(const zx::clock& clock) {
   return basic_info.koid;
 }
 
-fit::result<zx::clock, zx_status_t> DuplicateClock(const zx::clock& original_clock) {
+fpromise::result<zx::clock, zx_status_t> DuplicateClock(const zx::clock& original_clock) {
   constexpr auto rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
 
   zx::clock dupe_clock;
   auto status = original_clock.duplicate(rights, &dupe_clock);
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
-  return fit::ok(std::move(dupe_clock));
+  return fpromise::ok(std::move(dupe_clock));
 }
 
-fit::result<ClockSnapshot, zx_status_t> SnapshotClock(const zx::clock& ref_clock) {
+fpromise::result<ClockSnapshot, zx_status_t> SnapshotClock(const zx::clock& ref_clock) {
   ClockSnapshot snapshot;
   zx_clock_details_v1_t clock_details;
   zx_status_t status = ref_clock.get_details(&clock_details);
 
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   // The inverse of the clock_details.mono_to_synthetic affine transform.
@@ -117,7 +117,7 @@ fit::result<ClockSnapshot, zx_status_t> SnapshotClock(const zx::clock& ref_clock
                        clock_details.mono_to_synthetic.rate.synthetic_ticks);
   snapshot.generation = clock_details.generation_counter;
 
-  return fit::ok(snapshot);
+  return fpromise::ok(snapshot);
 }
 
 // Naming is confusing here. zx::clock transforms/structs call the underlying baseline clock (ticks
@@ -129,15 +129,15 @@ fit::result<ClockSnapshot, zx_status_t> SnapshotClock(const zx::clock& ref_clock
 // Thus in these util functions that convert between clocks, a conversion that we usually call "from
 // monotonic to reference" is (in zx::clock terms) a conversion "from reference to synthetic", where
 // the baseline reference here is the monotonic clock.
-fit::result<zx::time, zx_status_t> ReferenceTimeFromMonotonicTime(const zx::clock& ref_clock,
-                                                                  zx::time mono_time) {
+fpromise::result<zx::time, zx_status_t> ReferenceTimeFromMonotonicTime(const zx::clock& ref_clock,
+                                                                       zx::time mono_time) {
   zx_clock_details_v1_t clock_details;
   zx_status_t status = ref_clock.get_details(&clock_details);
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
-  return fit::ok(zx::time(
+  return fpromise::ok(zx::time(
       affine::Transform::Apply(clock_details.mono_to_synthetic.reference_offset,
                                clock_details.mono_to_synthetic.synthetic_offset,
                                affine::Ratio(clock_details.mono_to_synthetic.rate.synthetic_ticks,
@@ -145,15 +145,15 @@ fit::result<zx::time, zx_status_t> ReferenceTimeFromMonotonicTime(const zx::cloc
                                mono_time.get())));
 }
 
-fit::result<zx::time, zx_status_t> MonotonicTimeFromReferenceTime(const zx::clock& ref_clock,
-                                                                  zx::time ref_time) {
+fpromise::result<zx::time, zx_status_t> MonotonicTimeFromReferenceTime(const zx::clock& ref_clock,
+                                                                       zx::time ref_time) {
   zx_clock_details_v1_t clock_details;
   zx_status_t status = ref_clock.get_details(&clock_details);
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
-  return fit::ok(zx::time(affine::Transform::ApplyInverse(
+  return fpromise::ok(zx::time(affine::Transform::ApplyInverse(
       clock_details.mono_to_synthetic.reference_offset,
       clock_details.mono_to_synthetic.synthetic_offset,
       affine::Ratio(clock_details.mono_to_synthetic.rate.synthetic_ticks,
@@ -161,9 +161,8 @@ fit::result<zx::time, zx_status_t> MonotonicTimeFromReferenceTime(const zx::cloc
       ref_time.get())));
 }
 
-fit::result<zx::time, zx_status_t> ReferenceTimeFromReferenceTime(const zx::clock& ref_clock_a,
-                                                                  zx::time ref_time_a,
-                                                                  const zx::clock& ref_clock_b) {
+fpromise::result<zx::time, zx_status_t> ReferenceTimeFromReferenceTime(
+    const zx::clock& ref_clock_a, zx::time ref_time_a, const zx::clock& ref_clock_b) {
   zx_clock_details_v1_t clock_details_a, clock_details_b;
 
   auto status = ref_clock_a.get_details(&clock_details_a);
@@ -171,7 +170,7 @@ fit::result<zx::time, zx_status_t> ReferenceTimeFromReferenceTime(const zx::cloc
     status = ref_clock_b.get_details(&clock_details_b);
   }
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   auto mono_to_ref_a = clock_details_a.mono_to_synthetic;
@@ -187,7 +186,7 @@ fit::result<zx::time, zx_status_t> ReferenceTimeFromReferenceTime(const zx::cloc
       affine::Ratio(mono_to_ref_b.rate.synthetic_ticks, mono_to_ref_b.rate.reference_ticks),
       mono_time);
 
-  return fit::ok(zx::time(ref_time_b));
+  return fpromise::ok(zx::time(ref_time_b));
 }
 
 affine::Transform ToAffineTransform(TimelineFunction& tl_function) {

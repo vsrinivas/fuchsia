@@ -9,7 +9,7 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <gtest/gtest_prod.h>
 
@@ -24,7 +24,7 @@ namespace camera {
 class StreamCycler {
  public:
   ~StreamCycler();
-  static fit::result<std::unique_ptr<StreamCycler>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<StreamCycler>, zx_status_t> Create(
       fuchsia::camera3::DeviceWatcherHandle watcher, fuchsia::sysmem::AllocatorHandle allocator,
       async_dispatcher_t* dispatcher, bool manual_mode);
   using AddCollectionHandler = fit::function<uint32_t(fuchsia::sysmem::BufferCollectionTokenHandle,

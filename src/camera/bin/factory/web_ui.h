@@ -8,7 +8,7 @@
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/sys/cpp/component_context.h>
 #include <stdio.h>
 
@@ -27,7 +27,7 @@ class WebUIControl {
 class WebUI {
  public:
   // create a new WebUI.
-  static fit::result<std::unique_ptr<WebUI>, zx_status_t> Create(WebUIControl* control);
+  static fpromise::result<std::unique_ptr<WebUI>, zx_status_t> Create(WebUIControl* control);
 
   WebUI();
   ~WebUI();

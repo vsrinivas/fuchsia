@@ -7,8 +7,8 @@
 
 #include <fuchsia/device/mock/cpp/fidl.h>
 #include <lib/ddk/binding.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 
 #include <string>
 #include <vector>
@@ -23,7 +23,7 @@ class MockDeviceThread;
 class ActionList {
  public:
   using Action = fuchsia::device::mock::Action;
-  using CompleterMap = std::map<uint64_t, fit::completer<void, std::string>>;
+  using CompleterMap = std::map<uint64_t, fpromise::completer<void, std::string>>;
 
   ActionList();
   ~ActionList();
@@ -41,13 +41,14 @@ class ActionList {
   void AppendAddMockDevice(async_dispatcher_t* dispatcher, const std::string& parent_path,
                            std::string name, std::vector<zx_device_prop_t> props,
                            zx_status_t expect_status, std::unique_ptr<MockDevice>* new_device_out,
-                           fit::promise<void, std::string>* add_done_out);
+                           fpromise::promise<void, std::string>* add_done_out);
   void AppendAddMockDevice(async_dispatcher_t* dispatcher, const std::string& parent_path,
                            std::string name, std::vector<zx_device_prop_t> props,
-                           zx_status_t expect_status, fit::completer<void, std::string> add_done,
+                           zx_status_t expect_status,
+                           fpromise::completer<void, std::string> add_done,
                            std::unique_ptr<MockDevice>* new_device_out);
-  void AppendUnbindReply(fit::promise<void, std::string>* unbind_reply_done_out);
-  void AppendUnbindReply(fit::completer<void, std::string> unbind_reply_done);
+  void AppendUnbindReply(fpromise::promise<void, std::string>* unbind_reply_done_out);
+  void AppendUnbindReply(fpromise::completer<void, std::string> unbind_reply_done);
   void AppendAsyncRemoveDevice();
   void AppendCreateThread(async_dispatcher_t* dispatcher, std::unique_ptr<MockDeviceThread>* out);
   void AppendReturnStatus(zx_status_t status);

@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_LIB_SYNCHRONOUS_EXECUTOR_INCLUDE_LIB_SYNCHRONOUS_EXECUTOR_EXECUTOR_H_
 #define SRC_DEVICES_LIB_SYNCHRONOUS_EXECUTOR_INCLUDE_LIB_SYNCHRONOUS_EXECUTOR_EXECUTOR_H_
 
-#include <lib/fit/promise.h>
-#include <lib/fit/scheduler.h>
 #include <lib/fit/thread_safety.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/scheduler.h>
 
 #include <mutex>
 #include <utility>
@@ -19,8 +19,8 @@ namespace synchronous_executor {
 // once its queue is empty. It is also re-entrant (may safely call run
 // from inside a task on the executor).
 //
-// See documentation of |fit::promise| for more information.
-class synchronous_executor final : public fit::executor {
+// See documentation of |fpromise::promise| for more information.
+class synchronous_executor final : public fpromise::executor {
  public:
   synchronous_executor() : resolver_(this) {}
 
@@ -31,7 +31,7 @@ class synchronous_executor final : public fit::executor {
   // Schedules a task for eventual execution by the executor.
   //
   // This method is thread-safe.
-  void schedule_task(fit::pending_task task) override;
+  void schedule_task(fpromise::pending_task task) override;
 
   // Runs all scheduled tasks (including additional tasks scheduled while
   // they run) until none remain. Tasks executed from run may safely call run
@@ -44,38 +44,39 @@ class synchronous_executor final : public fit::executor {
   synchronous_executor& operator=(synchronous_executor&&) = delete;
 
  private:
-  class resolver_impl : public fit::suspended_task::resolver {
+  class resolver_impl : public fpromise::suspended_task::resolver {
    public:
     explicit resolver_impl(synchronous_executor* executor) : executor_(executor) {}
 
-    fit::suspended_task::ticket duplicate_ticket(fit::suspended_task::ticket ticket) override;
+    fpromise::suspended_task::ticket duplicate_ticket(
+        fpromise::suspended_task::ticket ticket) override;
 
     // Consumes the provided ticket, optionally resuming its associated task.
     // The provided ticket must not be used again.
-    void resolve_ticket(fit::suspended_task::ticket ticket, bool resume_task) override;
+    void resolve_ticket(fpromise::suspended_task::ticket ticket, bool resume_task) override;
 
    private:
     synchronous_executor* const executor_;
   };
   // The task context for tasks run by the executor.
-  class context_impl final : public fit::context {
+  class context_impl final : public fpromise::context {
    public:
     explicit context_impl(synchronous_executor* executor) : executor_(executor) {}
     ~context_impl() override = default;
 
     synchronous_executor* executor() const override;
-    fit::suspended_task suspend_task() override;
-    std::optional<fit::suspended_task::ticket> take_ticket() {
+    fpromise::suspended_task suspend_task() override;
+    std::optional<fpromise::suspended_task::ticket> take_ticket() {
       auto ticket = ticket_;
       ticket_.reset();
       return ticket;
     }
 
    private:
-    std::optional<fit::suspended_task::ticket> ticket_;
+    std::optional<fpromise::suspended_task::ticket> ticket_;
     synchronous_executor* const executor_;
   };
-  fit::subtle::scheduler scheduler_ FIT_GUARDED(mutex_);
+  fpromise::subtle::scheduler scheduler_ FIT_GUARDED(mutex_);
   resolver_impl resolver_;
   std::mutex mutex_;
 };

@@ -23,16 +23,16 @@ class MockObject : public AudioObject {
  public:
   explicit MockObject(AudioObject::Type object_type) : AudioObject(object_type) {}
 
-  fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+  fpromise::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
   InitializeSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) override {
     source_ = &source;
     stream_ = stream;
-    return fit::ok(std::make_pair(mixer_, nullptr));
+    return fpromise::ok(std::make_pair(mixer_, nullptr));
   }
-  fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
+  fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override {
     dest_ = &dest;
-    return fit::ok(stream_);
+    return fpromise::ok(stream_);
   }
 
   void CleanupSourceLink(const AudioObject& source,

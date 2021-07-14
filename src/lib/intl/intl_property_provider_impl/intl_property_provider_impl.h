@@ -10,7 +10,7 @@
 #include <fuchsia/settings/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <queue>
 
@@ -68,7 +68,7 @@ class IntlPropertyProviderImpl final : fuchsia::intl::PropertyProvider {
   // initialized, returns `ZX_ERR_SHOULD_WAIT`. Other errors are also possible, e.g.
   // `ZX_ERR_INVALID_ARGS` if the raw data is invalid or `ZX_ERR_INTERNAL` if various internal
   // problems arise.
-  fit::result<fuchsia::intl::Profile, zx_status_t> GetProfileInternal();
+  fpromise::result<fuchsia::intl::Profile, zx_status_t> GetProfileInternal();
 
   // Return true if the initial raw data has been set and is ready to be transformed into a
   // `Profile`.

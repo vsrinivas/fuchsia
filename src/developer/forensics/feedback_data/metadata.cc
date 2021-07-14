@@ -49,7 +49,7 @@ std::string ToString(const enum AttachmentValue::State state) {
 
 // Create a complete list set of annotations from the collected annotations and the allowlist.
 Annotations AllAnnotations(const AnnotationKeys& allowlist,
-                           const ::fit::result<Annotations>& annotations_result) {
+                           const ::fpromise::result<Annotations>& annotations_result) {
   Annotations all_annotations;
   if (annotations_result.is_ok()) {
     all_annotations.insert(annotations_result.value().cbegin(), annotations_result.value().cend());
@@ -68,7 +68,7 @@ Annotations AllAnnotations(const AnnotationKeys& allowlist,
 
 // Create a complete list set of attachments from the collected attachments and the allowlist.
 Attachments AllAttachments(const AttachmentKeys& allowlist,
-                           const ::fit::result<Attachments>& attachments_result) {
+                           const ::fpromise::result<Attachments>& attachments_result) {
   Attachments all_attachments;
   if (attachments_result.is_ok()) {
     // Because attachments can contain large blobs of text and we only care about the state of the
@@ -134,7 +134,8 @@ void AddUtcMonotonicDifferences(
 }
 
 void AddAttachments(const AttachmentKeys& attachment_allowlist,
-                    const ::fit::result<Attachments>& attachments_result, Document* metadata_json) {
+                    const ::fpromise::result<Attachments>& attachments_result,
+                    Document* metadata_json) {
   if (attachment_allowlist.empty()) {
     return;
   }
@@ -155,7 +156,7 @@ void AddAttachments(const AttachmentKeys& attachment_allowlist,
 }
 
 void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
-                        const ::fit::result<Annotations>& annotations_result,
+                        const ::fpromise::result<Annotations>& annotations_result,
                         const bool missing_non_platform_annotations, Document* metadata_json) {
   const Annotations all_annotations = AllAnnotations(annotation_allowlist, annotations_result);
 
@@ -224,8 +225,8 @@ Metadata::Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
       utc_provider_(dispatcher, zx::unowned_clock(zx_utc_reference_get()), clock,
                     PreviousBootFile::FromCache(is_first_instance, kUtcMonotonicDifferenceFile)) {}
 
-std::string Metadata::MakeMetadata(const ::fit::result<Annotations>& annotations_result,
-                                   const ::fit::result<Attachments>& attachments_result,
+std::string Metadata::MakeMetadata(const ::fpromise::result<Annotations>& annotations_result,
+                                   const ::fpromise::result<Attachments>& attachments_result,
                                    bool missing_non_platform_annotations) {
   Document metadata_json(kObjectType);
   auto& allocator = metadata_json.GetAllocator();

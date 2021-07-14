@@ -107,22 +107,22 @@ TEST(VerificationMetricsTest, MerkleVerifyMultithreaded) {
   EXPECT_EQ(stats.verification_time, static_cast<zx_ticks_t>(kDuration * kNumThreads));
 }
 
-fit::result<inspect::Hierarchy> TakeSnapshot(fuchsia::inspect::TreePtr tree,
-                                             async::Executor* executor) {
+fpromise::result<inspect::Hierarchy> TakeSnapshot(fuchsia::inspect::TreePtr tree,
+                                                  async::Executor* executor) {
   std::condition_variable cv;
   std::mutex m;
   bool done = false;
-  fit::result<inspect::Hierarchy> hierarchy_or_error;
+  fpromise::result<inspect::Hierarchy> hierarchy_or_error;
 
-  auto promise =
-      inspect::ReadFromTree(std::move(tree)).then([&](fit::result<inspect::Hierarchy>& result) {
-        {
-          std::unique_lock<std::mutex> lock(m);
-          hierarchy_or_error = std::move(result);
-          done = true;
-        }
-        cv.notify_all();
-      });
+  auto promise = inspect::ReadFromTree(std::move(tree))
+                     .then([&](fpromise::result<inspect::Hierarchy>& result) {
+                       {
+                         std::unique_lock<std::mutex> lock(m);
+                         hierarchy_or_error = std::move(result);
+                         done = true;
+                       }
+                       cv.notify_all();
+                     });
 
   executor->schedule_task(std::move(promise));
 
@@ -151,7 +151,7 @@ TEST(MetricsTest, PageInMetrics) {
   connector(std::move(request));
 
   // Take a snapshot of the tree and verify the hierarchy
-  fit::result<inspect::Hierarchy> result = TakeSnapshot(std::move(tree), &executor);
+  fpromise::result<inspect::Hierarchy> result = TakeSnapshot(std::move(tree), &executor);
   EXPECT_TRUE(result.is_ok());
 
   inspect::Hierarchy hierarchy = result.take_value();

@@ -17,7 +17,7 @@
 // GDC driver.
 namespace camera {
 
-fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
+fpromise::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
     zx_device_t* device, ProductConfig& product_config, const camera::GdcConfig& config_type);
 
 // Invoked by GDC driver when a new frame is available.
@@ -51,7 +51,7 @@ class GdcNode : public ProcessNode {
   // |info| : StreamCreationData for the requested stream.
   // |parent_node| : pointer to the node to which we need to append this |OutputNode|.
   // |internal_output_node| : InternalConfigNode corresponding to this node.
-  static fit::result<ProcessNode*, zx_status_t> CreateGdcNode(
+  static fpromise::result<ProcessNode*, zx_status_t> CreateGdcNode(
       const ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
       zx_device_t* device, const ddk::GdcProtocolClient& gdc, StreamCreationData* info,
       ProcessNode* parent_node, const InternalConfigNode& internal_gdc_node);

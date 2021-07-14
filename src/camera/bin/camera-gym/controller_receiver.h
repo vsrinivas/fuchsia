@@ -7,7 +7,7 @@
 
 #include <fuchsia/camera/gym/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/types.h>  // zx_status_t
 

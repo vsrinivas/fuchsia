@@ -32,10 +32,10 @@ void GuestDiscoveryServiceImpl::GetGuest(
     fidl::StringPtr realm_name, std::string guest_name,
     fidl::InterfaceRequest<fuchsia::netemul::guest::GuestInteraction> request) {
   executor_.schedule_task(
-      fit::make_promise(
-          [this, realm_name = std::move(realm_name), guest_name]() -> fit::promise<GuestInfo> {
+      fpromise::make_promise(
+          [this, realm_name = std::move(realm_name), guest_name]() -> fpromise::promise<GuestInfo> {
             // Find the realm ID and guest instance ID associated with the caller's labels.
-            fit::bridge<GuestInfo, void> bridge;
+            fpromise::bridge<GuestInfo, void> bridge;
             manager_->List(
                 [completer = std::move(bridge.completer), realm_name = std::move(realm_name),
                  guest_name](
@@ -51,13 +51,13 @@ void GuestDiscoveryServiceImpl::GetGuest(
             return bridge.consumer.promise();
           })
           .and_then([this, request = std::move(request)](
-                        const GuestInfo& guest_info) mutable -> fit::promise<void> {
+                        const GuestInfo& guest_info) mutable -> fpromise::promise<void> {
             // If this is not the first time this guest has been requested, add a binding to the
             // existing interaction service.
             auto gis = guests_.find(guest_info);
             if (gis != guests_.end()) {
               gis->second->AddBinding(std::move(request));
-              return fit::make_ok_promise();
+              return fpromise::make_ok_promise();
             }
 
             // If this is the first time that the requested guest has been discovered, connect to
@@ -72,10 +72,10 @@ void GuestDiscoveryServiceImpl::GetGuest(
             zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
 
             if (status != ZX_OK) {
-              return fit::make_error_promise();
+              return fpromise::make_error_promise();
             }
 
-            fit::bridge<void> bridge;
+            fpromise::bridge<void> bridge;
             ep->Connect(guest_info.guest_cid, GUEST_INTERACTION_PORT, std::move(remote_socket),
                         [this, socket = std::move(socket), guest_info, request = std::move(request),
                          completer = std::move(bridge.completer),

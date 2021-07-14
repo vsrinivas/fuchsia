@@ -4,7 +4,7 @@
 
 #include "src/storage/volume_image/ftl/ftl_image_internal.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <cstdint>
 #include <iterator>
@@ -103,9 +103,10 @@ class PageWriter final : public Writer {
   explicit PageWriter(uint64_t block_start, const RawNandOptions& options)
       : block_start_(block_start) {}
 
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     if (offset < block_start_) {
-      return fit::error("PageWriter write failed: Bad offset.");
+      return fpromise::error("PageWriter write failed: Bad offset.");
     }
 
     uint8_t delta = offset - block_start_ - pages_.size();
@@ -114,7 +115,7 @@ class PageWriter final : public Writer {
     }
 
     pages_.insert(pages_.end(), buffer.begin(), buffer.end());
-    return fit::ok();
+    return fpromise::ok();
   }
 
   fbl::Span<const uint8_t> pages() const { return pages_; }

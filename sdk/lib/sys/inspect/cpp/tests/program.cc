@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
       [] {
         inspect::Inspector insp;
         insp.GetRoot().CreateInt("val", 0, &insp);
-        return fit::make_ok_promise(std::move(insp));
+        return fpromise::make_ok_promise(std::move(insp));
       },
       inspector->inspector());
   inspector->root().CreateLazyValues(
@@ -29,7 +29,7 @@ int main(int argc, const char** argv) {
       [] {
         inspect::Inspector insp;
         insp.GetRoot().CreateInt("val4", 4, &insp);
-        return fit::make_ok_promise(std::move(insp));
+        return fpromise::make_ok_promise(std::move(insp));
       },
       inspector->inspector());
 

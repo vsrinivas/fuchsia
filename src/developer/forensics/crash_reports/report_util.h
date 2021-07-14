@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_REPORT_UTIL_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <optional>
 #include <string>
@@ -44,7 +44,7 @@ std::string Logname(std::string name);
 std::optional<Report> MakeReport(fuchsia::feedback::CrashReport input_report, ReportId report_id,
                                  const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
                                  const std::optional<zx::time_utc>& current_time,
-                                 const ::fit::result<std::string, Error>& device_id,
+                                 const ::fpromise::result<std::string, Error>& device_id,
                                  const AnnotationMap& default_annotations, const Product& product,
                                  bool is_hourly_report);
 

@@ -158,32 +158,34 @@ void StorageMetrics::UsageMap::AddForKey(const std::string& name, const Usage& u
   }
 }
 
-fit::promise<inspect::Inspector> StorageMetrics::InspectByteUsage(const std::string& path) const {
+fpromise::promise<inspect::Inspector> StorageMetrics::InspectByteUsage(
+    const std::string& path) const {
   inspect::Inspector inspector;
   std::lock_guard<std::mutex> lock(usage_lock_);
   auto entry = usage_.find(path);
   if (entry == usage_.end()) {
     // No data populated yet for this path.
-    return fit::make_ok_promise(inspector);
+    return fpromise::make_ok_promise(inspector);
   }
   for (const auto& it : entry->second.map()) {
     inspector.GetRoot().CreateUint(it.first, it.second.bytes, &inspector);
   }
-  return fit::make_ok_promise(inspector);
+  return fpromise::make_ok_promise(inspector);
 }
 
-fit::promise<inspect::Inspector> StorageMetrics::InspectInodeUsage(const std::string& path) const {
+fpromise::promise<inspect::Inspector> StorageMetrics::InspectInodeUsage(
+    const std::string& path) const {
   inspect::Inspector inspector;
   std::lock_guard<std::mutex> lock(usage_lock_);
   auto entry = usage_.find(path);
   if (entry == usage_.end()) {
     // No data populated yet for this path.
-    return fit::make_ok_promise(inspector);
+    return fpromise::make_ok_promise(inspector);
   }
   for (const auto& it : entry->second.map()) {
     inspector.GetRoot().CreateUint(it.first, it.second.inodes, &inspector);
   }
-  return fit::make_ok_promise(inspector);
+  return fpromise::make_ok_promise(inspector);
 }
 
 StorageMetrics::StorageMetrics(std::vector<std::string> paths_to_watch, inspect::Node inspect_node)

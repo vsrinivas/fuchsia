@@ -128,19 +128,19 @@ bool Vnode::Supports(VnodeProtocolSet protocols) const {
 bool Vnode::ValidateRights([[maybe_unused]] Rights rights) { return true; }
 
 auto Vnode::ValidateOptions(VnodeConnectionOptions options)
-    -> fit::result<ValidatedOptions, zx_status_t> {
+    -> fpromise::result<ValidatedOptions, zx_status_t> {
   auto protocols = options.protocols();
   if (!Supports(protocols)) {
     if (protocols == VnodeProtocol::kDirectory) {
-      return fit::error(ZX_ERR_NOT_DIR);
+      return fpromise::error(ZX_ERR_NOT_DIR);
     } else {
-      return fit::error(ZX_ERR_NOT_FILE);
+      return fpromise::error(ZX_ERR_NOT_FILE);
     }
   }
   if (!ValidateRights(options.rights)) {
-    return fit::error(ZX_ERR_ACCESS_DENIED);
+    return fpromise::error(ZX_ERR_ACCESS_DENIED);
   }
-  return fit::ok(Validated(options));
+  return fpromise::ok(Validated(options));
 }
 
 VnodeProtocol Vnode::Negotiate(VnodeProtocolSet protocols) const {

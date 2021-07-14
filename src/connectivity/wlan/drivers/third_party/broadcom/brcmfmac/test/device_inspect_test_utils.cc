@@ -16,15 +16,15 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/device_inspect_test_utils.h"
 
-#include <lib/fit/promise.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/cpp/reader.h>
 
 namespace wlan {
 namespace brcmfmac {
 
-fit::result<inspect::Hierarchy> FetchHierarchy(inspect::Inspector inspector) {
-  return fit::run_single_threaded(inspect::ReadFromInspector(inspector));
+fpromise::result<inspect::Hierarchy> FetchHierarchy(inspect::Inspector inspector) {
+  return fpromise::run_single_threaded(inspect::ReadFromInspector(inspector));
 }
 
 }  // namespace brcmfmac

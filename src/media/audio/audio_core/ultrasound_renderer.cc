@@ -32,10 +32,10 @@ UltrasoundRenderer::UltrasoundRenderer(
   reporter().SetUsage(RenderUsage::ULTRASOUND);
 }
 
-fit::result<std::shared_ptr<ReadableStream>, zx_status_t> UltrasoundRenderer::InitializeDestLink(
-    const AudioObject& dest) {
+fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t>
+UltrasoundRenderer::InitializeDestLink(const AudioObject& dest) {
   if (!create_callback_) {
-    return fit::error(ZX_ERR_BAD_STATE);
+    return fpromise::error(ZX_ERR_BAD_STATE);
   }
 
   uint32_t channels;
@@ -48,14 +48,14 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> UltrasoundRenderer::In
     auto group = FindUltrasoundGroup(pipeline_config->root());
     if (!group) {
       FX_LOGS(ERROR) << "PipelineConfig missing ULTRASOUND group";
-      return fit::error(ZX_ERR_BAD_STATE);
+      return fpromise::error(ZX_ERR_BAD_STATE);
     }
     channels = group->output_channels;
     frames_per_second = group->output_rate;
   } else {
     auto format = dest.format();
     if (!format) {
-      return fit::error(ZX_ERR_BAD_STATE);
+      return fpromise::error(ZX_ERR_BAD_STATE);
     }
     channels = format->channels();
     frames_per_second = format->frames_per_second();
@@ -70,7 +70,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> UltrasoundRenderer::In
 
   auto reference_clock_result = reference_clock().DuplicateClockReadOnly();
   if (reference_clock_result.is_error()) {
-    return fit::error(reference_clock_result.error());
+    return fpromise::error(reference_clock_result.error());
   }
 
   reporter().SetFormat(*format_);

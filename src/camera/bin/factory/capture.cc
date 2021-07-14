@@ -11,16 +11,16 @@
 
 namespace camera {
 
-fit::result<std::unique_ptr<Capture>, zx_status_t> Capture::Create(uint32_t stream,
-                                                                   const std::string path,
-                                                                   bool want_image,
-                                                                   CaptureResponse callback) {
+fpromise::result<std::unique_ptr<Capture>, zx_status_t> Capture::Create(uint32_t stream,
+                                                                        const std::string path,
+                                                                        bool want_image,
+                                                                        CaptureResponse callback) {
   auto capture = std::make_unique<Capture>();
   capture->stream_ = stream;
   capture->want_image_ = want_image;
   capture->image_ = std::make_unique<std::basic_string<uint8_t>>();
   capture->callback_ = std::move(callback);
-  return fit::ok(std::move(capture));
+  return fpromise::ok(std::move(capture));
 }
 
 Capture::Capture() {}

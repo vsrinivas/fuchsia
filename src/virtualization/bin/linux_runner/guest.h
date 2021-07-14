@@ -8,8 +8,8 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace/event.h>
 #include <lib/virtualization/scenic_wayland_dispatcher.h>
@@ -62,8 +62,8 @@ class Guest : public vm_tools::StartupListener::Service,
   void Launch(AppLaunchRequest request);
 
  private:
-  fit::promise<> Start();
-  fit::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> StartGrpcServer();
+  fpromise::promise<> Start();
+  fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> StartGrpcServer();
   void StartGuest();
   void MountExtrasPartition();
   void MountVmTools();

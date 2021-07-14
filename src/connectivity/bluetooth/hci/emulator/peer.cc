@@ -46,7 +46,7 @@ Peer::Result Peer::NewLowEnergy(ftest::LowEnergyPeerParameters parameters,
 
   if (!parameters.has_address()) {
     logf(ERROR, "A fake peer address is mandatory!\n");
-    return fit::error(ftest::EmulatorPeerError::PARAMETERS_INVALID);
+    return fpromise::error(ftest::EmulatorPeerError::PARAMETERS_INVALID);
   }
 
   bt::BufferView adv, scan_response;
@@ -72,10 +72,11 @@ Peer::Result Peer::NewLowEnergy(ftest::LowEnergyPeerParameters parameters,
   if (!fake_controller->AddPeer(std::move(peer))) {
     logf(ERROR, "A fake LE peer with given address already exists: %s\n",
          address.ToString().c_str());
-    return fit::error(ftest::EmulatorPeerError::ADDRESS_REPEATED);
+    return fpromise::error(ftest::EmulatorPeerError::ADDRESS_REPEATED);
   }
 
-  return fit::ok(std::unique_ptr<Peer>(new Peer(address, std::move(request), fake_controller)));
+  return fpromise::ok(
+      std::unique_ptr<Peer>(new Peer(address, std::move(request), fake_controller)));
 }
 
 // static
@@ -87,7 +88,7 @@ Peer::Result Peer::NewBredr(ftest::BredrPeerParameters parameters,
 
   if (!parameters.has_address()) {
     logf(ERROR, "A fake peer address is mandatory!\n");
-    return fit::error(ftest::EmulatorPeerError::PARAMETERS_INVALID);
+    return fpromise::error(ftest::EmulatorPeerError::PARAMETERS_INVALID);
   }
 
   auto address = bt::DeviceAddress(bt::DeviceAddress::Type::kBREDR, parameters.address().bytes);
@@ -115,10 +116,11 @@ Peer::Result Peer::NewBredr(ftest::BredrPeerParameters parameters,
   if (!fake_controller->AddPeer(std::move(peer))) {
     logf(ERROR, "A fake BR/EDR peer with given address already exists: %s\n",
          address.ToString().c_str());
-    return fit::error(ftest::EmulatorPeerError::ADDRESS_REPEATED);
+    return fpromise::error(ftest::EmulatorPeerError::ADDRESS_REPEATED);
   }
 
-  return fit::ok(std::unique_ptr<Peer>(new Peer(address, std::move(request), fake_controller)));
+  return fpromise::ok(
+      std::unique_ptr<Peer>(new Peer(address, std::move(request), fake_controller)));
 }
 
 Peer::Peer(bt::DeviceAddress address, fidl::InterfaceRequest<ftest::Peer> request,

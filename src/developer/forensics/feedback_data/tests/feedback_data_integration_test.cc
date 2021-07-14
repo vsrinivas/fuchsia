@@ -9,7 +9,7 @@
 #include <fuchsia/update/channelcontrol/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -162,8 +162,8 @@ class FeedbackDataIntegrationTest : public sys::testing::TestWithEnvironment {
     bool done = false;
     executor.schedule_task(
         reader.SnapshotInspectUntilPresent({"inspect_test_app.cmx"})
-            .then([&](::fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>&
-                          unused) { done = true; }));
+            .then([&](::fpromise::result<std::vector<inspect::contrib::DiagnosticsData>,
+                                         std::string>& unused) { done = true; }));
     RunLoopUntil([&done] { return done; });
   }
 

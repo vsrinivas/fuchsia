@@ -14,8 +14,7 @@ FakeSettingsIntl::~FakeSettingsIntl() = default;
 // static
 std::unique_ptr<FakeSettingsIntl> FakeSettingsIntl::CreateWithDefaultOptions() {
   return std::make_unique<FakeSettingsIntl>(modular_testing::FakeComponent::Args{
-      .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
-      .sandbox_services = {}});
+      .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(), .sandbox_services = {}});
 }
 
 fidl::InterfaceRequestHandler<fuchsia::settings::Intl> FakeSettingsIntl::GetHandler() {
@@ -26,14 +25,10 @@ void FakeSettingsIntl::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   component_context()->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
-void FakeSettingsIntl::OnDestroy() {
-  
-}
+void FakeSettingsIntl::OnDestroy() {}
 
 // |fuchsia::settings::Intl|
-void FakeSettingsIntl::Watch(WatchCallback callback) {
-  watch_callback_ = std::move(callback);
-}
+void FakeSettingsIntl::Watch(WatchCallback callback) { watch_callback_ = std::move(callback); }
 
 // |fuchsia::settings::Intl|
 void FakeSettingsIntl::Set(fuchsia::settings::IntlSettings settings, SetCallback callback) {
@@ -41,11 +36,11 @@ void FakeSettingsIntl::Set(fuchsia::settings::IntlSettings settings, SetCallback
   zx_status_t status = settings.Clone(settings_.get());
 
   if (status == ZX_OK) {
-    callback(fuchsia::settings::Intl_Set_Result{fit::ok()});
+    callback(fuchsia::settings::Intl_Set_Result{fpromise::ok()});
   } else {
-    callback(fuchsia::settings::Intl_Set_Result{fit::error(fuchsia::settings::Error::FAILED)});
+    callback(fuchsia::settings::Intl_Set_Result{fpromise::error(fuchsia::settings::Error::FAILED)});
   }
-  
+
   if (watch_callback_) {
     watch_callback_(std::move(settings));
   }

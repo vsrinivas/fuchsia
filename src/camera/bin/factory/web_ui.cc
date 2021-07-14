@@ -21,15 +21,15 @@
 
 namespace camera {
 
-fit::result<std::unique_ptr<WebUI>, zx_status_t> WebUI::Create(WebUIControl* control) {
+fpromise::result<std::unique_ptr<WebUI>, zx_status_t> WebUI::Create(WebUIControl* control) {
   auto webui = std::make_unique<WebUI>();
   webui->control_ = control;
   zx_status_t status = webui->loop_.StartThread("WebUI Thread");
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
-  return fit::ok(std::move(webui));
+  return fpromise::ok(std::move(webui));
 }
 
 WebUI::WebUI() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), listen_sock_(-1) {}

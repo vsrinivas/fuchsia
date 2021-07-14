@@ -8,7 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/memfs/memfs.h>
 #include <sys/stat.h>
@@ -54,11 +54,11 @@ class InspectManagerTest : public zxtest::Test {
     return fbl::MakeRefCounted<fs::RemoteDir>(std::move(client));
   }
 
-  fit::result<inspect::Hierarchy> ReadInspect(const inspect::Inspector& inspector) {
-    fit::result<inspect::Hierarchy> hierarchy;
-    fit::single_threaded_executor exec;
+  fpromise::result<inspect::Hierarchy> ReadInspect(const inspect::Inspector& inspector) {
+    fpromise::result<inspect::Hierarchy> hierarchy;
+    fpromise::single_threaded_executor exec;
     exec.schedule_task(inspect::ReadFromInspector(inspector).then(
-        [&](fit::result<inspect::Hierarchy>& result) { hierarchy = std::move(result); }));
+        [&](fpromise::result<inspect::Hierarchy>& result) { hierarchy = std::move(result); }));
     exec.run();
     return hierarchy;
   }

@@ -7,7 +7,7 @@
 
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 
@@ -31,7 +31,7 @@ class ReachabilityWatcher final {
   using ErrorVariant = std::variant<PropertiesMap::UpdateErrorVariant, Error>;
 
   ReachabilityWatcher(fuchsia::net::interfaces::WatcherPtr watcher,
-                      ::fit::function<void(fit::result<bool, ErrorVariant>)> callback);
+                      ::fit::function<void(fpromise::result<bool, ErrorVariant>)> callback);
 
   static std::string error_get_string(ErrorVariant variant);
 
@@ -39,7 +39,7 @@ class ReachabilityWatcher final {
   void HandleEvent(fuchsia::net::interfaces::Event event);
 
   fuchsia::net::interfaces::WatcherPtr watcher_;
-  ::fit::function<void(fit::result<bool, ErrorVariant>)> callback_;
+  ::fit::function<void(fpromise::result<bool, ErrorVariant>)> callback_;
 
   net::interfaces::PropertiesMap interface_properties_;
   std::optional<bool> reachable_;

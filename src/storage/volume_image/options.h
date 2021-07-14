@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_OPTIONS_H_
 #define SRC_STORAGE_VOLUME_IMAGE_OPTIONS_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 #include <unordered_map>
@@ -50,7 +50,7 @@ template <typename OptionEnum>
 std::string EnumAsString(OptionEnum option);
 
 template <typename OptionEnum>
-fit::result<OptionEnum, std::string> StringAsEnum(std::string_view option);
+fpromise::result<OptionEnum, std::string> StringAsEnum(std::string_view option);
 
 }  // namespace storage::volume_image
 

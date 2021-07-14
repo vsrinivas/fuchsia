@@ -5,7 +5,7 @@
 #include "src/camera/bin/camera-gym/controller_error/controller_error.h"
 
 #include <fuchsia/camera/gym/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <gtest/gtest.h>
 

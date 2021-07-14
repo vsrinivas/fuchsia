@@ -109,9 +109,9 @@ std::unique_ptr<ThermalAgent> ThermalAgent::CreateAndServe(Context* context) {
       [context](const std::string& target_name, const std::string& config) {
         auto promise =
             context->device_manager().UpdateEffect(target_name, config, true /* persist */);
-        context->threading_model().FidlDomain().executor()->schedule_task(
-            promise.then([target_name, config](
-                             fit::result<void, fuchsia::media::audio::UpdateEffectError>& result) {
+        context->threading_model().FidlDomain().executor()->schedule_task(promise.then(
+            [target_name,
+             config](fpromise::result<void, fuchsia::media::audio::UpdateEffectError>& result) {
               if (result.is_error()) {
                 std::ostringstream err;
                 if (result.error() == fuchsia::media::audio::UpdateEffectError::NOT_FOUND) {

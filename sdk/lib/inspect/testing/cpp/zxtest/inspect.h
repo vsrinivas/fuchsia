@@ -65,7 +65,7 @@ class InspectTestHelper {
   static void PrintAllProperties(const inspect::NodeValue& node);
 
  private:
-  fit::result<inspect::Hierarchy> hierarchy_;
+  fpromise::result<inspect::Hierarchy> hierarchy_;
 };
 }  // namespace inspect
 

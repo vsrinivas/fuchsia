@@ -163,11 +163,11 @@ zx_status_t CheckSlices(const Superblock* info, size_t blocks_per_slice,
 zx_status_t BlockingSync(fs::Journal* journal) {
   zx_status_t sync_status = ZX_OK;
   sync_completion_t sync_completion = {};
-  journal->schedule_task(
-      journal->Sync().then([&sync_status, &sync_completion](fit::result<void, zx_status_t>& a) {
+  journal->schedule_task(journal->Sync().then(
+      [&sync_status, &sync_completion](fpromise::result<void, zx_status_t>& a) {
         sync_status = a.is_ok() ? ZX_OK : a.error();
         sync_completion_signal(&sync_completion);
-        return fit::ok();
+        return fpromise::ok();
       }));
   zx_status_t status = sync_completion_wait(&sync_completion, ZX_TIME_INFINITE);
   if (status != ZX_OK) {
@@ -530,14 +530,14 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
 void Minfs::EnqueueCallback(SyncCallback callback) {
   if (callback) {
     journal_->schedule_task(journal_->Sync().then(
-        [closure = std::move(callback)](
-            fit::result<void, zx_status_t>& result) mutable -> fit::result<void, zx_status_t> {
+        [closure = std::move(callback)](fpromise::result<void, zx_status_t>& result) mutable
+        -> fpromise::result<void, zx_status_t> {
           if (result.is_ok()) {
             closure(ZX_OK);
           } else {
             closure(result.error());
           }
-          return fit::ok();
+          return fpromise::ok();
         }));
   } else {
     journal_->schedule_task(journal_->Sync());
@@ -553,7 +553,7 @@ class ReleaseObject {
  public:
   explicit ReleaseObject(T object) : object_(std::move(object)) {}
 
-  void operator()([[maybe_unused]] const fit::result<void, zx_status_t>& dont_care) {
+  void operator()([[maybe_unused]] const fpromise::result<void, zx_status_t>& dont_care) {
     object_.reset();
   }
 

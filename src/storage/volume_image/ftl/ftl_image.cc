@@ -4,7 +4,7 @@
 
 #include "src/storage/volume_image/ftl/ftl_image.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <cassert>
 #include <cstdint>
@@ -35,12 +35,12 @@ class FtlPageWriter {
  public:
   explicit FtlPageWriter(const RawNandOptions& ftl_options) : options_(ftl_options) {}
 
-  // Returns |fit::ok| on success, when a new |RawNandPage| has been written with |page_content| in
-  // the data section and the appropiate FTL metadata in the spare area section for a volume page,
-  // into |writer|.
-  fit::result<void, std::string> WriteVolumePage(uint64_t logical_page,
-                                                 fbl::Span<const uint8_t> page_content,
-                                                 Writer* writer) {
+  // Returns |fpromise::ok| on success, when a new |RawNandPage| has been written with
+  // |page_content| in the data section and the appropiate FTL metadata in the spare area section
+  // for a volume page, into |writer|.
+  fpromise::result<void, std::string> WriteVolumePage(uint64_t logical_page,
+                                                      fbl::Span<const uint8_t> page_content,
+                                                      Writer* writer) {
     std::vector<uint8_t> oob_byte_buffer(options_.oob_bytes_size, 0xFF);
     ftl_image_internal::WriteOutOfBandBytes<ftl_image_internal::PageType::kVolumePage>(
         safemath::checked_cast<uint32_t>(logical_page), oob_byte_buffer);
@@ -52,19 +52,19 @@ class FtlPageWriter {
     }
     if (logical_to_physical_map_.find(safemath::checked_cast<uint32_t>(logical_page)) !=
         logical_to_physical_map_.end()) {
-      return fit::error("FTL Image: |Partition::address().mappings| may not share pages.");
+      return fpromise::error("FTL Image: |Partition::address().mappings| may not share pages.");
     }
 
     logical_to_physical_map_[safemath::checked_cast<uint32_t>(logical_page)] =
         safemath::checked_cast<uint32_t>(physical_page_count_);
     physical_page_count_++;
-    return fit::ok();
+    return fpromise::ok();
   }
 
-  // Returns |fit::ok| on success, writing all map pages required to support the written volume
+  // Returns |fpromise::ok| on success, writing all map pages required to support the written volume
   // pages, in the next available block, since the FTL does not share blocks between volume and map
   // pages.
-  fit::result<void, std::string> WriteMapBlock(Writer* writer) {
+  fpromise::result<void, std::string> WriteMapBlock(Writer* writer) {
     uint64_t next_free_page_offset = RawNandImageGetPageOffset(physical_page_count_, options_);
     uint64_t start_of_block_offset =
         RawNandImageGetNextEraseBlockOffset(next_free_page_offset, options_);
@@ -83,13 +83,13 @@ class FtlPageWriter {
 
 }  // namespace
 
-fit::result<void, std::string> FtlImageWrite(const RawNandOptions& options,
-                                             const Partition& partition, Writer* writer) {
+fpromise::result<void, std::string> FtlImageWrite(const RawNandOptions& options,
+                                                  const Partition& partition, Writer* writer) {
   if (options.oob_bytes_size < ftl_image_internal::kFtlMinOobByteSize) {
-    return fit::error("FTL requires at least " +
-                      std::to_string(ftl_image_internal::kFtlMinOobByteSize) +
-                      " bytes in OOB bytes. Requested OOB bytes size is " +
-                      std::to_string(options.oob_bytes_size) + ".");
+    return fpromise::error("FTL requires at least " +
+                           std::to_string(ftl_image_internal::kFtlMinOobByteSize) +
+                           " bytes in OOB bytes. Requested OOB bytes size is " +
+                           std::to_string(options.oob_bytes_size) + ".");
   }
 
   FtlPageWriter ftl_writer(options);

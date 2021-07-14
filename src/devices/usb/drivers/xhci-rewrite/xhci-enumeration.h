@@ -16,5 +16,5 @@ class UsbXhci;
 TRBPromise EnumerateDevice(UsbXhci* hci, uint8_t port, std::optional<HubInfo> hub_info);
 
 // Retrieves the bMaxPacketSize0 field in the USB device descriptor
-fit::promise<uint8_t, zx_status_t> GetMaxPacketSize(UsbXhci* hci, uint8_t slot_id);
+fpromise::promise<uint8_t, zx_status_t> GetMaxPacketSize(UsbXhci* hci, uint8_t slot_id);
 }  // namespace usb_xhci

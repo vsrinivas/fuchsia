@@ -109,7 +109,7 @@ TEST_F(WeaveInspectorTest, NotifyInit) {
   auto& weave_inspector = GetTestWeaveInspector();
   weave_inspector.NotifyInit();
 
-  fit::result<inspect::Hierarchy> hierarchy =
+  fpromise::result<inspect::Hierarchy> hierarchy =
       RunPromise(inspect::ReadFromInspector(*GetInspector()));
   ASSERT_TRUE(hierarchy.is_ok());
 
@@ -151,7 +151,7 @@ TEST_F(WeaveInspectorTest, NotifyWeaveStatusChanges) {
   weave_inspector.NotifyFailSafeStateChange(WeaveInspector::kFailSafeState_Armed,
                                             WeaveInspector::kFailSafeReason_FailsafeDisarmFailed);
 
-  fit::result<inspect::Hierarchy> hierarchy =
+  fpromise::result<inspect::Hierarchy> hierarchy =
       RunPromise(inspect::ReadFromInspector(*GetInspector()));
   ASSERT_TRUE(hierarchy.is_ok());
 
@@ -202,7 +202,7 @@ TEST_F(WeaveInspectorTest, NotifyTunnelStatusChanges) {
   {
     weave_inspector.NotifyTunnelStateChange(WeaveInspector::kTunnelState_PrimaryTunMode,
                                             WeaveInspector::kTunnelType_Primary, true);
-    fit::result<inspect::Hierarchy> hierarchy =
+    fpromise::result<inspect::Hierarchy> hierarchy =
         RunPromise(inspect::ReadFromInspector(*GetInspector()));
     ASSERT_TRUE(hierarchy.is_ok());
     auto* tunnel_status = hierarchy.value().GetByPath({kNode_TunnelStatus});
@@ -217,7 +217,7 @@ TEST_F(WeaveInspectorTest, NotifyTunnelStatusChanges) {
   {
     weave_inspector.NotifyTunnelStateChange(WeaveInspector::kTunnelState_PrimaryTunMode,
                                             WeaveInspector::kTunnelType_Primary, false);
-    fit::result<inspect::Hierarchy> hierarchy =
+    fpromise::result<inspect::Hierarchy> hierarchy =
         RunPromise(inspect::ReadFromInspector(*GetInspector()));
     ASSERT_TRUE(hierarchy.is_ok());
     auto* tunnel_status = hierarchy.value().GetByPath({kNode_TunnelStatus});
@@ -232,7 +232,7 @@ TEST_F(WeaveInspectorTest, NotifyTunnelStatusChanges) {
     weave_inspector.NotifyTunnelStateChange(WeaveInspector::kTunnelState_NoTunnel,
                                             WeaveInspector::kTunnelType_None, false);
 
-    fit::result<inspect::Hierarchy> hierarchy =
+    fpromise::result<inspect::Hierarchy> hierarchy =
         RunPromise(inspect::ReadFromInspector(*GetInspector()));
     ASSERT_TRUE(hierarchy.is_ok());
     auto* tunnel_status = hierarchy.value().GetByPath({kNode_TunnelStatus});

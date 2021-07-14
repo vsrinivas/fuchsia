@@ -21,7 +21,7 @@ void EffectsControllerImpl::UpdateEffect(std::string effect_name, std::string me
 
   context_.threading_model().FidlDomain().executor()->schedule_task(
       promise.then([callback = std::move(callback)](
-                       fit::result<void, fuchsia::media::audio::UpdateEffectError>& result) {
+                       fpromise::result<void, fuchsia::media::audio::UpdateEffectError>& result) {
         if (result.is_ok()) {
           callback(fuchsia::media::audio::EffectsController_UpdateEffect_Result::WithResponse(
               fuchsia::media::audio::EffectsController_UpdateEffect_Response()));

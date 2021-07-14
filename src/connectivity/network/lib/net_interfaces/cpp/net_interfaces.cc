@@ -168,76 +168,76 @@ std::string PropertiesMap::update_error_get_string(UpdateErrorVariant variant) {
   return std::visit(visitor, variant);
 }
 
-fit::result<void, PropertiesMap::UpdateErrorVariant> PropertiesMap::Update(
+fpromise::result<void, PropertiesMap::UpdateErrorVariant> PropertiesMap::Update(
     fuchsia::net::interfaces::Event event) {
   switch (event.Which()) {
     case fuchsia::net::interfaces::Event::kExisting: {
       auto validated_properties = Properties::VerifyAndCreate(std::move(event.existing()));
       if (!validated_properties.has_value()) {
-        return fit::error(
+        return fpromise::error(
             PropertiesMap::UpdateErrorVariant(PropertiesMap::UpdateError::kInvalidExisting));
       }
 
       const auto& [iter, inserted] =
           properties_map_.emplace(validated_properties->id(), std::move(*validated_properties));
       if (!inserted) {
-        return fit::error(PropertiesMap::UpdateErrorVariant(
+        return fpromise::error(PropertiesMap::UpdateErrorVariant(
             PropertiesMap::UpdateErrorWithId<
                 PropertiesMap::UpdateErrorWithIdKind::kDuplicateExisting>{
                 .id = validated_properties->id()}));
       }
-      return fit::ok();
+      return fpromise::ok();
     }
     case fuchsia::net::interfaces::Event::kAdded: {
       auto validated_properties = Properties::VerifyAndCreate(std::move(event.added()));
       if (!validated_properties.has_value()) {
-        return fit::error(
+        return fpromise::error(
             PropertiesMap::UpdateErrorVariant(PropertiesMap::UpdateError::kInvalidAdded));
       }
 
       const auto& [iter, inserted] =
           properties_map_.emplace(validated_properties->id(), std::move(*validated_properties));
       if (!inserted) {
-        return fit::error(PropertiesMap::UpdateErrorVariant(
+        return fpromise::error(PropertiesMap::UpdateErrorVariant(
             PropertiesMap::UpdateErrorWithId<PropertiesMap::UpdateErrorWithIdKind::kDuplicateAdded>{
                 .id = validated_properties->id()}));
       }
-      return fit::ok();
+      return fpromise::ok();
     }
     case fuchsia::net::interfaces::Event::kChanged: {
       fuchsia::net::interfaces::Properties& change = event.changed();
       if (!change.has_id()) {
-        return fit::error(
+        return fpromise::error(
             PropertiesMap::UpdateErrorVariant(PropertiesMap::UpdateError::kMissingId));
       }
       auto it = properties_map_.find(change.id());
       if (it == properties_map_.end()) {
-        return fit::error(PropertiesMap::UpdateErrorVariant(
+        return fpromise::error(PropertiesMap::UpdateErrorVariant(
             PropertiesMap::UpdateErrorWithId<PropertiesMap::UpdateErrorWithIdKind::kUnknownChanged>{
                 .id = change.id()}));
       }
 
       auto& properties = it->second;
       if (!properties.Update(&change)) {
-        return fit::error(
+        return fpromise::error(
             PropertiesMap::UpdateErrorVariant(PropertiesMap::UpdateError::kInvalidChanged));
       }
-      return fit::ok();
+      return fpromise::ok();
     }
     case fuchsia::net::interfaces::Event::kRemoved: {
       const auto nh = properties_map_.extract(event.removed());
       if (nh.empty()) {
-        return fit::error(PropertiesMap::UpdateErrorVariant(
+        return fpromise::error(PropertiesMap::UpdateErrorVariant(
             PropertiesMap::UpdateErrorWithId<PropertiesMap::UpdateErrorWithIdKind::kUnknownRemoved>{
                 .id = event.removed()}));
       }
-      return fit::ok();
+      return fpromise::ok();
     }
     case fuchsia::net::interfaces::Event::kIdle: {
-      return fit::ok();
+      return fpromise::ok();
     }
     case fuchsia::net::interfaces::Event::Invalid: {
-      return fit::error(
+      return fpromise::error(
           PropertiesMap::UpdateErrorVariant(PropertiesMap::UpdateError::kInvalidEvent));
     }
   }

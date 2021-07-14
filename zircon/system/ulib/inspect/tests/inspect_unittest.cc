@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
@@ -100,7 +100,7 @@ TEST(Inspect, GetLinks) {
       [] {
         Inspector insp;
         insp.GetRoot().CreateInt("val", 10, &insp);
-        return fit::make_ok_promise(insp);
+        return fpromise::make_ok_promise(insp);
       },
       &inspector);
 
@@ -111,10 +111,10 @@ TEST(Inspect, GetLinks) {
   auto stats = inspector.GetStats();
   EXPECT_EQ(1u, stats.dynamic_child_count);
 
-  fit::result<Inspector> result;
-  fit::single_threaded_executor exec;
+  fpromise::result<Inspector> result;
+  fpromise::single_threaded_executor exec;
   exec.schedule_task(inspector.OpenChild("lazy-0").then(
-      [&](fit::result<Inspector>& res) { result = std::move(res); }));
+      [&](fpromise::result<Inspector>& res) { result = std::move(res); }));
   exec.run();
   EXPECT_TRUE(result.is_ok());
 }

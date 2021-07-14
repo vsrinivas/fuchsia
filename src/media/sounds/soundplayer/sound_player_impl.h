@@ -60,7 +60,7 @@ class SoundPlayerImpl : public fuchsia::media::sounds::Player {
     PlaySoundCallback play_sound_callback_;
   };
 
-  fit::result<Sound, zx_status_t> SoundFromFile(fidl::InterfaceHandle<fuchsia::io::File> file);
+  fpromise::result<Sound, zx_status_t> SoundFromFile(fidl::InterfaceHandle<fuchsia::io::File> file);
 
   fidl::Binding<fuchsia::media::sounds::Player> binding_;
   fuchsia::media::AudioPtr audio_service_;

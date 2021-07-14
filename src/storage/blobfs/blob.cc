@@ -521,7 +521,7 @@ zx_status_t Blob::Commit() {
   auto data_written_finished = fit::defer([&] { sync_completion_signal(&data_written); });
   auto write_all_data = streamer.Flush().then(
       [&data_status, data_written_finished = std::move(data_written_finished)](
-          const fit::result<void, zx_status_t>& result) {
+          const fpromise::result<void, zx_status_t>& result) {
         data_status = result.is_ok() ? ZX_OK : result.error();
         return result;
       });

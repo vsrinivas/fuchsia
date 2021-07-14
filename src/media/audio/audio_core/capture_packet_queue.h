@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_CAPTURE_PACKET_QUEUE_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_CAPTURE_PACKET_QUEUE_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -99,7 +99,7 @@ class CapturePacketQueue {
   // Create a packet queue where all available packets are preallocated. To use payload_buffer
   // as a ring buffer, ensure that packets are recycled in the same order they are popped.
   // It is illegal to call Push on the returned packet queue.
-  static fit::result<std::shared_ptr<CapturePacketQueue>, std::string> CreatePreallocated(
+  static fpromise::result<std::shared_ptr<CapturePacketQueue>, std::string> CreatePreallocated(
       const fzl::VmoMapper& payload_buffer, const Format& format, size_t frames_per_packet);
 
   // Create a packet queue where all packets will be dynamically allocated by Push.
@@ -169,13 +169,13 @@ class CapturePacketQueue {
   // Push a packet onto the the end of the pending queue.
   // The queue must have been created with CreateDynamicallyAllocated.
   // Returns an error if the packet is malformed.
-  fit::result<void, std::string> PushPending(size_t offset_frames, size_t num_frames,
-                                             CaptureAtCallback callback);
+  fpromise::result<void, std::string> PushPending(size_t offset_frames, size_t num_frames,
+                                                  CaptureAtCallback callback);
 
   // Recycle a packet back onto the queue. The packet must have been previously
   // returned by Pop and the queue must have been created with CreatePreallocated.
   // Returns an error if stream_packet was not in flight.
-  fit::result<void, std::string> Recycle(const StreamPacket& stream_packet);
+  fpromise::result<void, std::string> Recycle(const StreamPacket& stream_packet);
 
   // Stop accepting packets. All further calls to PushPending and Recycle will be
   // ignored, and NextMixerJob will return nullopt.

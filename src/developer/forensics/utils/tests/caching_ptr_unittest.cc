@@ -23,7 +23,7 @@ class CachingChannelPtr {
   CachingChannelPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
       : connection_(dispatcher, services, [this] { GetChannel(); }) {}
 
-  ::fit::promise<std::string, Error> GetChannel(zx::duration timeout) {
+  ::fpromise::promise<std::string, Error> GetChannel(zx::duration timeout) {
     return connection_.GetValue(fit::Timeout(timeout));
   }
 
@@ -52,10 +52,10 @@ class CachingPtrTest : public UnitTestFixture {
 
  protected:
   template <typename V, typename E>
-  ::fit::result<V, E> ExecutePromise(::fit::promise<V, E> promise) {
-    ::fit::result<V, E> out_result;
+  ::fpromise::result<V, E> ExecutePromise(::fpromise::promise<V, E> promise) {
+    ::fpromise::result<V, E> out_result;
     executor_.schedule_task(std::move(promise).then(
-        [&](::fit::result<V, E>& result) { out_result = std::move(result); }));
+        [&](::fpromise::result<V, E>& result) { out_result = std::move(result); }));
     RunLoopFor(kTimeout);
     return out_result;
   }

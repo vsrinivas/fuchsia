@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/heap.h>
 #include <lib/inspect/cpp/vmo/state.h>
@@ -99,7 +99,7 @@ Node& Inspector::GetRoot() const { return *root_; }
 
 std::vector<std::string> Inspector::GetChildNames() const { return state_->GetLinkNames(); }
 
-fit::promise<Inspector> Inspector::OpenChild(const std::string& child_name) const {
+fpromise::promise<Inspector> Inspector::OpenChild(const std::string& child_name) const {
   return state_->CallLinkCallback(child_name);
 }
 

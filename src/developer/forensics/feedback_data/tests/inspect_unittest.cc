@@ -6,7 +6,7 @@
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
@@ -44,12 +44,13 @@ class CollectInspectDataTest : public UnitTestFixture {
     }
   }
 
-  ::fit::result<AttachmentValue> CollectInspectData(const zx::duration timeout = zx::sec(1)) {
-    ::fit::result<AttachmentValue> result;
+  ::fpromise::result<AttachmentValue> CollectInspectData(const zx::duration timeout = zx::sec(1)) {
+    ::fpromise::result<AttachmentValue> result;
     executor_.schedule_task(
         feedback_data::CollectInspectData(dispatcher(), services(),
                                           fit::Timeout(timeout, /*action=*/[] {}), {})
-            .then([&result](::fit::result<AttachmentValue>& res) { result = std::move(res); }));
+            .then(
+                [&result](::fpromise::result<AttachmentValue>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
   }
@@ -68,7 +69,7 @@ TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {
           {},
       }))));
 
-  ::fit::result<AttachmentValue> result = CollectInspectData();
+  ::fpromise::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_ok());
 
   const AttachmentValue& inspect = result.value();
@@ -85,7 +86,7 @@ TEST_F(CollectInspectDataTest, Succeed_PartialInspectData) {
       std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
           std::vector<std::string>({"foo1", "foo2"}))));
 
-  ::fit::result<AttachmentValue> result = CollectInspectData();
+  ::fpromise::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_ok());
 
   const AttachmentValue& inspect = result.value();

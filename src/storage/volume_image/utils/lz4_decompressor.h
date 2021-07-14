@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_LZ4_DECOMPRESSOR_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_LZ4_DECOMPRESSOR_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 #include <vector>
@@ -29,7 +29,7 @@ class Lz4Decompressor final : public Decompressor {
   // Returns a |Lz4Decompressor| on success.
   //
   // On failure, returns a string describing the error.
-  static fit::result<Lz4Decompressor, std::string> Create(
+  static fpromise::result<Lz4Decompressor, std::string> Create(
       const CompressionOptions& options,
       uint64_t decompression_buffer_size = kDecompressionBufferSize);
 
@@ -42,24 +42,24 @@ class Lz4Decompressor final : public Decompressor {
   Lz4Decompressor& operator=(Lz4Decompressor&&) = delete;
   ~Lz4Decompressor() final;
 
-  // Returns |fit::ok| on success. Setting |handler| for consuming symbols emitted during
+  // Returns |fpromise::ok| on success. Setting |handler| for consuming symbols emitted during
   // decompression.
   //
   // On failure, returns a string decribing the error condition.
-  fit::result<void, std::string> Prepare(Handler handler) final;
+  fpromise::result<void, std::string> Prepare(Handler handler) final;
 
-  // Returns |fit::ok| on success. When data has been fully decompressed, will return |true|,
+  // Returns |fpromise::ok| on success. When data has been fully decompressed, will return |true|,
   // otherwise will return |false|.
   //
   // On failure, returns a string decribing the error condition.
-  fit::result<DecompressResult, std::string> Decompress(
+  fpromise::result<DecompressResult, std::string> Decompress(
       fbl::Span<const uint8_t> compressed_data) final;
 
-  // Returns |fit::ok| on success. At this point all remaining symbols for the decompressed
+  // Returns |fpromise::ok| on success. At this point all remaining symbols for the decompressed
   // representation will be emitted.
   //
   // On failure, returns a string describing the error condition.
-  fit::result<void, std::string> Finalize() final;
+  fpromise::result<void, std::string> Finalize() final;
 
   // Provide size hint of the expected compressed content size.
   void ProvideSizeHint(size_t size_hint);

@@ -19,7 +19,7 @@ namespace camera {
 
 constexpr auto kTag = "camera_controller_input_node";
 
-fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
+fpromise::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
     StreamCreationData* info, const ControllerMemoryAllocator& memory_allocator,
     async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp) {
   uint8_t isp_stream_type;
@@ -29,13 +29,13 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION) {
     isp_stream_type = STREAM_TYPE_DOWNSCALED;
   } else {
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   auto result = camera::GetBuffers(memory_allocator, info->node, info, kTag);
   if (result.is_error()) {
     FX_PLOGST(ERROR, kTag, result.error()) << "Failed to get buffers";
-    return fit::error(result.error());
+    return fpromise::error(result.error());
   }
   auto buffers = std::move(result.value());
 
@@ -50,14 +50,14 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
       std::make_unique<camera::InputNode>(info, std::move(buffers), dispatcher, isp);
   if (!processing_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create Input node";
-    return fit::error(ZX_ERR_NO_MEMORY);
+    return fpromise::error(ZX_ERR_NO_MEMORY);
   }
 
   // Create stream with ISP
   auto isp_stream_protocol = std::make_unique<camera::IspStreamProtocol>();
   if (!isp_stream_protocol) {
     FX_LOGST(ERROR, kTag) << "Failed to create ISP stream protocol";
-    return fit::error(ZX_ERR_INTERNAL);
+    return fpromise::error(ZX_ERR_INTERNAL);
   }
 
   buffer_collection_info_2 temp_buffer_collection;
@@ -71,12 +71,12 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
       processing_node->isp_frame_callback(), isp_stream_protocol->protocol());
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Failed to create output stream on ISP";
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   // Update the input node with the ISP stream protocol
   processing_node->set_isp_stream_protocol(std::move(isp_stream_protocol));
-  return fit::ok(std::move(processing_node));
+  return fpromise::ok(std::move(processing_node));
 }
 
 void InputNode::OnReadyToProcess(const frame_available_info_t* info) {

@@ -20,7 +20,7 @@ namespace {
 
 constexpr std::array<uint8_t, 4096> kData = {0};
 
-fit::result<std::vector<uint8_t>, std::string> GetCompressedData() {
+fpromise::result<std::vector<uint8_t>, std::string> GetCompressedData() {
   size_t max_size = LZ4F_compressFrameBound(kData.size(), nullptr);
 
   std::vector<uint8_t> compressed_data(max_size, 0);
@@ -28,11 +28,11 @@ fit::result<std::vector<uint8_t>, std::string> GetCompressedData() {
   Lz4Result result = LZ4F_compressFrame(compressed_data.data(), compressed_data.size(),
                                         kData.data(), kData.size(), nullptr);
   if (result.is_error()) {
-    return fit::error("Failed to compress |kData|. LZ4 Error: " + std::string(result.error()));
+    return fpromise::error("Failed to compress |kData|. LZ4 Error: " + std::string(result.error()));
   }
   compressed_data.resize(result.byte_count());
 
-  return fit::ok(std::move(compressed_data));
+  return fpromise::ok(std::move(compressed_data));
 }
 
 TEST(Lz4DecompressorTest, CreateWithWrongSchemaIsError) {
@@ -57,7 +57,7 @@ TEST(Lz4DecompressorTest, PrepareAfterConstructionIsOk) {
   auto decompressor = decompressor_or.take_value();
 
   EXPECT_TRUE(
-      decompressor.Prepare([](fbl::Span<const uint8_t> buffer) { return fit::ok(); }).is_ok());
+      decompressor.Prepare([](fbl::Span<const uint8_t> buffer) { return fpromise::ok(); }).is_ok());
 }
 
 TEST(Lz4DecompressorTest, DecompressWithoutPrepareIsError) {
@@ -93,7 +93,7 @@ TEST(Lz4DecompressorTest, DecompressWithPrepareAndSizeHintIsOk) {
   ASSERT_TRUE(decompressor
                   .Prepare([](fbl::Span<const uint8_t> buffer) {
                     EXPECT_THAT(buffer, testing::ElementsAreArray(kData));
-                    return fit::ok();
+                    return fpromise::ok();
                   })
                   .is_ok());
 
@@ -125,7 +125,7 @@ TEST(Lz4DecompressorTest, DecompressOnMultipleStepsIsOk) {
                                 testing::ElementsAreArray(fbl::Span<const uint8_t>(kData).subspan(
                                     decompressed_data_offset, buffer.size())));
                     decompressed_data_offset += buffer.size();
-                    return fit::ok();
+                    return fpromise::ok();
                   })
                   .is_ok());
 
@@ -152,7 +152,7 @@ TEST(Lz4DecompressorTest, FinalizeWithPrepareIsOk) {
   ASSERT_TRUE(decompressor_or.is_ok()) << decompressor_or.error();
   auto decompressor = decompressor_or.take_value();
   ASSERT_TRUE(
-      decompressor.Prepare([](fbl::Span<const uint8_t> buffer) { return fit::ok(); }).is_ok());
+      decompressor.Prepare([](fbl::Span<const uint8_t> buffer) { return fpromise::ok(); }).is_ok());
 
   EXPECT_TRUE(decompressor.Finalize().is_ok());
 }
@@ -164,12 +164,12 @@ TEST(Lz4DecompressorTest, PrepareAfterFinalizeIsOk) {
   ASSERT_TRUE(decompressor_or.is_ok()) << decompressor_or.error();
   auto decompressor = decompressor_or.take_value();
   ASSERT_TRUE(
-      decompressor.Prepare([](fbl::Span<const uint8_t> buffer) { return fit::ok(); }).is_ok());
+      decompressor.Prepare([](fbl::Span<const uint8_t> buffer) { return fpromise::ok(); }).is_ok());
 
   EXPECT_TRUE(decompressor.Finalize().is_ok());
 
   ASSERT_TRUE(
-      decompressor.Prepare([](fbl::Span<const uint8_t> buffer) { return fit::ok(); }).is_ok());
+      decompressor.Prepare([](fbl::Span<const uint8_t> buffer) { return fpromise::ok(); }).is_ok());
 }
 
 }  // namespace

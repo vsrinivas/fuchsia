@@ -93,9 +93,9 @@ class AudioClock {
   virtual zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time) const;
   virtual zx::time MonotonicTimeFromReferenceTime(zx::time ref_time) const;
 
-  fit::result<zx::clock, zx_status_t> DuplicateClock(
+  fpromise::result<zx::clock, zx_status_t> DuplicateClock(
       zx_rights_t rights = ZX_RIGHT_SAME_RIGHTS) const;
-  fit::result<zx::clock, zx_status_t> DuplicateClockReadOnly() const;
+  fpromise::result<zx::clock, zx_status_t> DuplicateClockReadOnly() const;
   virtual zx::time Read() const;
 
   // We synchronize audio clocks so that positions (not just rates) align, reconciling differences

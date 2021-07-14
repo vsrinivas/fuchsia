@@ -31,7 +31,7 @@ void FakeArchive::FakeIterator::GetNext(GetNextCallback callback) {
     contents.emplace_back(std::move(content));
     sent = true;
   }
-  callback(fit::ok(std::move(contents)));
+  callback(fpromise::ok(std::move(contents)));
 }
 
 }  // namespace cobalt

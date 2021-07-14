@@ -21,30 +21,30 @@ class FakeLogSink : public fuchsia::logger::LogSink {
   FakeLogSink(fidl::InterfaceRequest<fuchsia::logger::LogSink> request)
       : binding_(this, std::move(request)) {}
   void Connect(zx::socket socket) override { socket_ = std::move(socket); }
-  fit::result<std::tuple<zx_time_t, std::string, std::string>, zx_status_t> ReadPacket() {
+  fpromise::result<std::tuple<zx_time_t, std::string, std::string>, zx_status_t> ReadPacket() {
     static_assert(FX_LOG_MAX_DATAGRAM_LEN == sizeof(fx_log_packet_t));
     std::vector<char> packet(FX_LOG_MAX_DATAGRAM_LEN);
     size_t actual = 0;
     zx_status_t status = socket_.read(0, packet.data(), packet.size(), &actual);
     if (status != ZX_OK) {
-      return fit::error(status);
+      return fpromise::error(status);
     }
     if (actual != packet.size()) {
       // Packet should be exactly one log packet.
-      return fit::error(ZX_ERR_BAD_STATE);
+      return fpromise::error(ZX_ERR_BAD_STATE);
     }
     if (*packet.rbegin() != 0) {
       // Non-zero final byte indicates an improperly terminated message string.
-      return fit::error(ZX_ERR_BAD_STATE);
+      return fpromise::error(ZX_ERR_BAD_STATE);
     }
     auto log_packet = reinterpret_cast<const fx_log_packet_t*>(packet.data());
     if (log_packet->data[0] == 0 || log_packet->data[1 + log_packet->data[0]] != 0) {
       // This fake assumes messages have exactly one tag.
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
+      return fpromise::error(ZX_ERR_NOT_SUPPORTED);
     }
     std::string tag(&log_packet->data[1]);
     std::string msg(&log_packet->data[1 + tag.length() + 1]);
-    return fit::ok(std::make_tuple(log_packet->metadata.time, tag, msg));
+    return fpromise::ok(std::make_tuple(log_packet->metadata.time, tag, msg));
   }
 
  private:

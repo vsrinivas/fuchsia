@@ -43,10 +43,10 @@ static int StartAudioCore(const fxl::CommandLine& cl) {
   if (process_config.is_error()) {
     FX_LOGS(WARNING) << "Failed to load " << kProcessConfigPath << ": " << process_config.error()
                      << ". Falling back to default configuration.";
-    process_config = fit::ok(ProcessConfig::Builder()
-                                 .SetDefaultVolumeCurve(VolumeCurve::DefaultForMinGain(
-                                     VolumeCurve::kDefaultGainForMinVolume))
-                                 .Build());
+    process_config = fpromise::ok(ProcessConfig::Builder()
+                                      .SetDefaultVolumeCurve(VolumeCurve::DefaultForMinGain(
+                                          VolumeCurve::kDefaultGainForMinVolume))
+                                      .Build());
   }
   FX_CHECK(process_config);
   auto config_handle = ProcessConfig::set_instance(process_config.value());

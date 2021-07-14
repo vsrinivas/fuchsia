@@ -450,7 +450,8 @@ void BufferCollection::FailSync(Location location, Completer& completer, zx_stat
   async_failure_result_ = status;
 }
 
-fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo> BufferCollection::CloneResultForSendingV2(
+fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo>
+BufferCollection::CloneResultForSendingV2(
     const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto clone_result =
       sysmem::V2CloneBufferCollectionInfo(table_set_.allocator(), buffer_collection_info,
@@ -459,7 +460,7 @@ fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo> BufferCollection::Clone
     FailAsync(FROM_HERE, clone_result.error(),
               "CloneResultForSendingV1() V2CloneBufferCollectionInfo() failed - status: %d",
               clone_result.error());
-    return fit::error();
+    return fpromise::error();
   }
   auto v2_b = clone_result.take_value();
   ZX_DEBUG_ASSERT(has_constraints());
@@ -477,40 +478,41 @@ fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo> BufferCollection::Clone
       }
     }
   }
-  return fit::ok(std::move(v2_b));
+  return fpromise::ok(std::move(v2_b));
 }
 
-fit::result<fuchsia_sysmem::wire::BufferCollectionInfo2> BufferCollection::CloneResultForSendingV1(
+fpromise::result<fuchsia_sysmem::wire::BufferCollectionInfo2>
+BufferCollection::CloneResultForSendingV1(
     const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto v2_result = CloneResultForSendingV2(buffer_collection_info);
   if (!v2_result.is_ok()) {
     // FailAsync() already called.
-    return fit::error();
+    return fpromise::error();
   }
   auto v1_result = sysmem::V1MoveFromV2BufferCollectionInfo(v2_result.take_value());
   if (!v1_result.is_ok()) {
     FailAsync(FROM_HERE, ZX_ERR_INVALID_ARGS,
               "CloneResultForSendingV1() V1MoveFromV2BufferCollectionInfo() failed");
-    return fit::error();
+    return fpromise::error();
   }
   return v1_result;
 }
 
-fit::result<fuchsia_sysmem::wire::BufferCollectionInfo2>
+fpromise::result<fuchsia_sysmem::wire::BufferCollectionInfo2>
 BufferCollection::CloneAuxBuffersResultForSendingV1(
     const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto v2_result = CloneResultForSendingV2(buffer_collection_info);
   if (!v2_result.is_ok()) {
     // FailAsync() already called.
-    return fit::error();
+    return fpromise::error();
   }
   auto v1_result = sysmem::V1AuxBuffersMoveFromV2BufferCollectionInfo(v2_result.take_value());
   if (!v1_result.is_ok()) {
     FailAsync(FROM_HERE, ZX_ERR_INVALID_ARGS,
               "CloneResultForSendingV1() V1MoveFromV2BufferCollectionInfo() failed");
-    return fit::error();
+    return fpromise::error();
   }
-  return fit::ok(v1_result.take_value());
+  return fpromise::ok(v1_result.take_value());
 }
 
 void BufferCollection::OnBuffersAllocated(const AllocationResult& allocation_result) {

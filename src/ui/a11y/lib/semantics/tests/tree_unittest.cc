@@ -73,7 +73,7 @@ class SemanticTreeTest : public gtest::RealLoopFixture {
   }
 
   // Helper function to ensure that a promise completes.
-  void RunPromiseToCompletion(fit::promise<> promise) {
+  void RunPromiseToCompletion(fpromise::promise<> promise) {
     bool done = false;
     executor_.schedule_task(std::move(promise).and_then([&]() { done = true; }));
     RunLoopUntil([&] { return done; });
@@ -494,12 +494,12 @@ TEST_F(SemanticTreeTest, InspectOutput) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_->Update(std::move(updates)));
 
-  fit::result<inspect::Hierarchy> hierarchy;
+  fpromise::result<inspect::Hierarchy> hierarchy;
   ASSERT_FALSE(hierarchy.is_ok());
-  RunPromiseToCompletion(
-      inspect::ReadFromInspector(*inspector_).then([&](fit::result<inspect::Hierarchy>& result) {
-        hierarchy = std::move(result);
-      }));
+  RunPromiseToCompletion(inspect::ReadFromInspector(*inspector_)
+                             .then([&](fpromise::result<inspect::Hierarchy>& result) {
+                               hierarchy = std::move(result);
+                             }));
   ASSERT_TRUE(hierarchy.is_ok());
 
   using namespace inspect::testing;

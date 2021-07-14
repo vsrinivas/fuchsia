@@ -14,13 +14,13 @@
 
 namespace camera {
 
-fit::result<std::unique_ptr<FakeCamera>, zx_status_t> FakeCamera::Create(
+fpromise::result<std::unique_ptr<FakeCamera>, zx_status_t> FakeCamera::Create(
     std::string identifier, std::vector<FakeConfiguration> configurations) {
   auto result = FakeCameraImpl::Create(std::move(identifier), std::move(configurations));
   if (result.is_error()) {
-    return fit::error(result.error());
+    return fpromise::error(result.error());
   }
-  return fit::ok(result.take_value());
+  return fpromise::ok(result.take_value());
 }
 
 FakeCameraImpl::FakeCameraImpl() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
@@ -55,14 +55,14 @@ static zx_status_t Validate(const std::vector<FakeConfiguration>& configurations
   return status;
 }
 
-fit::result<std::unique_ptr<FakeCameraImpl>, zx_status_t> FakeCameraImpl::Create(
+fpromise::result<std::unique_ptr<FakeCameraImpl>, zx_status_t> FakeCameraImpl::Create(
     std::string identifier, std::vector<FakeConfiguration> configurations) {
   auto camera = std::make_unique<FakeCameraImpl>();
 
   zx_status_t status = Validate(configurations);
   if (status != ZX_OK) {
     FX_PLOGS(DEBUG, status) << "Configurations failed validation.";
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   camera->identifier_ = std::move(identifier);
@@ -79,7 +79,7 @@ fit::result<std::unique_ptr<FakeCameraImpl>, zx_status_t> FakeCameraImpl::Create
 
   ZX_ASSERT(camera->loop_.StartThread("Fake Camera Loop") == ZX_OK);
 
-  return fit::ok(std::move(camera));
+  return fpromise::ok(std::move(camera));
 }
 
 fidl::InterfaceRequestHandler<fuchsia::camera3::Device> FakeCameraImpl::GetHandler() {

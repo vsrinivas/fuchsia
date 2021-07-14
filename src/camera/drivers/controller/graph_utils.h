@@ -23,7 +23,7 @@ const InternalConfigNode* GetNextNodeInPipeline(const fuchsia::camera2::CameraSt
 // |producer| - Internal node for the producer.
 // |info| - Info about the stream to be created & the client buffer collection.
 // |buffer_tag| - Name for the VMOs.
-fit::result<BufferCollection, zx_status_t> GetBuffers(
+fpromise::result<BufferCollection, zx_status_t> GetBuffers(
     const ControllerMemoryAllocator& memory_allocator, const InternalConfigNode& producer,
     StreamCreationData* info, const std::string& buffer_tag);
 

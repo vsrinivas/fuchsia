@@ -86,11 +86,11 @@ class SysInspectTest : public sys::testing::TestWithEnvironment {
 
 TEST_F(SysInspectTest, ReadHierarchy) {
   bool done = false;
-  fit::result<inspect::Hierarchy> result;
+  fpromise::result<inspect::Hierarchy> result;
   fuchsia::inspect::TreePtr ptr;
   ASSERT_EQ(ZX_OK, GetInspectTree(&ptr));
   executor_.schedule_task(
-      inspect::ReadFromTree(std::move(ptr)).then([&](fit::result<inspect::Hierarchy>& res) {
+      inspect::ReadFromTree(std::move(ptr)).then([&](fpromise::result<inspect::Hierarchy>& res) {
         result = std::move(res);
         done = true;
       }));
@@ -108,11 +108,11 @@ TEST_F(SysInspectTest, ReadHierarchy) {
 
 TEST_F(SysInspectTest, ReadHealth) {
   bool done = false;
-  fit::result<inspect::Hierarchy> result;
+  fpromise::result<inspect::Hierarchy> result;
   fuchsia::inspect::TreePtr ptr;
   ASSERT_EQ(ZX_OK, GetInspectTree(&ptr));
   executor_.schedule_task(
-      inspect::ReadFromTree(std::move(ptr)).then([&](fit::result<inspect::Hierarchy>& res) {
+      inspect::ReadFromTree(std::move(ptr)).then([&](fpromise::result<inspect::Hierarchy>& res) {
         result = std::move(res);
         done = true;
       }));

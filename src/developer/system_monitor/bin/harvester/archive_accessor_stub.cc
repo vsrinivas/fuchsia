@@ -34,11 +34,11 @@ void ArchiveAccessorStub::StreamDiagnostics(
 }
 
 void BatchIteratorStub::GetNext(GetNextCallback callback) {
-  callback(::fit::ok(ToVmo(*next_json_batch_++)));
+  callback(::fpromise::ok(ToVmo(*next_json_batch_++)));
 }
 
 void BatchIteratorReturnsErrorStub::GetNext(GetNextCallback callback) {
-  callback(::fit::error(fuchsia::diagnostics::ReaderError::IO));
+  callback(::fpromise::error(fuchsia::diagnostics::ReaderError::IO));
 }
 
 }  // namespace harvester

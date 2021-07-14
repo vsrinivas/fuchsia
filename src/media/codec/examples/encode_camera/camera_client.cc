@@ -29,7 +29,7 @@ CameraClient::CameraClient(bool list_configs, uint32_t config_index, uint32_t st
 
 CameraClient::~CameraClient() {}
 
-fit::result<std::unique_ptr<CameraClient>, zx_status_t> CameraClient::Create(
+fpromise::result<std::unique_ptr<CameraClient>, zx_status_t> CameraClient::Create(
     fuchsia::camera3::DeviceWatcherHandle watcher, fuchsia::sysmem::AllocatorHandle allocator,
     bool list_configs, uint32_t config_index, uint32_t stream_index) {
   auto cycler =
@@ -37,18 +37,18 @@ fit::result<std::unique_ptr<CameraClient>, zx_status_t> CameraClient::Create(
 
   zx_status_t status = cycler->watcher_.Bind(std::move(watcher));
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   status = cycler->allocator_.Bind(std::move(allocator));
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   cycler->watcher_->WatchDevices(
       fit::bind_member(cycler.get(), &CameraClient::WatchDevicesCallback));
 
-  return fit::ok(std::move(cycler));
+  return fpromise::ok(std::move(cycler));
 }
 
 void CameraClient::SetHandlers(CameraClient::AddCollectionHandler on_add_collection,

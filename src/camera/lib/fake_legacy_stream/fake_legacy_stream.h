@@ -6,7 +6,7 @@
 #define SRC_CAMERA_LIB_FAKE_LEGACY_STREAM_FAKE_LEGACY_STREAM_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <memory>
 #include <string>
@@ -21,7 +21,7 @@ class FakeLegacyStream {
  public:
   // Creates a fake stream using the given request, processing events using an optionally provided
   // dispatcher. If dispatcher is omitted or null, uses the current thread's default dispatcher.
-  static fit::result<std::unique_ptr<FakeLegacyStream>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<FakeLegacyStream>, zx_status_t> Create(
       fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
       fuchsia::sysmem::AllocatorPtr& allocator, uint32_t format_index = 0,
 
@@ -30,7 +30,7 @@ class FakeLegacyStream {
   virtual ~FakeLegacyStream() = default;
 
   // Returns OK if the client is behaving conformantly, or a descriptive error string if it is not.
-  virtual fit::result<void, std::string> StreamClientStatus() = 0;
+  virtual fpromise::result<void, std::string> StreamClientStatus() = 0;
 
   // Sends the OnFrameAvailable event to the client. Returns ZX_ERR_BAD_STATE if it is currently
   // invalid to send a frame, otherwise returns ZX_OK.

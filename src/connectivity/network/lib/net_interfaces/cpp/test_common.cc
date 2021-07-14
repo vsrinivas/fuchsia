@@ -6,7 +6,7 @@
 
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/testing/predicates/status.h"

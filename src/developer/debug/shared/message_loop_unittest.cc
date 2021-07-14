@@ -49,13 +49,13 @@ TEST(MessageLoop, PostQuit) {
   loop.Cleanup();
 }
 
-// Like the above but expresses the task as a fit::promise.
+// Like the above but expresses the task as a fpromise::promise.
 TEST(MessageLoop, PostPendingTaskQuit) {
   PlatformMessageLoop loop;
   std::string error_message;
   ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
-  loop.PostTask(FROM_HERE, fit::make_promise([&loop]() { loop.QuitNow(); }));
+  loop.PostTask(FROM_HERE, fpromise::make_promise([&loop]() { loop.QuitNow(); }));
   loop.Run();
 
   loop.Cleanup();
@@ -98,20 +98,20 @@ TEST(MessageLoop, SuspendPromise) {
 
   bool lambda_destructed = false;
 
-  fit::suspended_task suspended;
+  fpromise::suspended_task suspended;
   int run_count = 0;
   bool should_complete = false;
-  loop.PostTask(FROM_HERE, fit::make_promise(
+  loop.PostTask(FROM_HERE, fpromise::make_promise(
                                [&should_complete, &run_count, &suspended,
                                 destructed = std::make_shared<SetOnDestruct>(&lambda_destructed)](
-                                   fit::context& context) -> fit::result<> {
+                                   fpromise::context& context) -> fpromise::result<> {
                                  run_count++;
 
                                  if (should_complete)
-                                   return fit::ok();
+                                   return fpromise::ok();
 
                                  suspended = context.suspend_task();  // So we can signal later.
-                                 return fit::pending();
+                                 return fpromise::pending();
                                }));
 
   // Should not have run yet.
@@ -158,20 +158,20 @@ TEST(MessageLoop, DuplicateSuspendedPromise) {
 
   bool lambda_destructed = false;
 
-  fit::suspended_task suspended;
+  fpromise::suspended_task suspended;
   int run_count = 0;
   bool should_complete = false;
-  loop.PostTask(FROM_HERE, fit::make_promise(
+  loop.PostTask(FROM_HERE, fpromise::make_promise(
                                [&should_complete, &run_count, &suspended,
                                 destructed = std::make_shared<SetOnDestruct>(&lambda_destructed)](
-                                   fit::context& context) -> fit::result<> {
+                                   fpromise::context& context) -> fpromise::result<> {
                                  run_count++;
 
                                  if (should_complete)
-                                   return fit::ok();
+                                   return fpromise::ok();
 
                                  suspended = context.suspend_task();  // So we can signal later.
-                                 return fit::pending();
+                                 return fpromise::pending();
                                }));
 
   // Should not have run yet.
@@ -185,7 +185,7 @@ TEST(MessageLoop, DuplicateSuspendedPromise) {
   EXPECT_TRUE(suspended);
 
   // Duplicate the suspended task handle.
-  fit::suspended_task suspended2 = suspended;
+  fpromise::suspended_task suspended2 = suspended;
   should_complete = true;
   suspended.resume_task();  // Should run synchronously.
   EXPECT_EQ(2, run_count);
@@ -210,15 +210,15 @@ TEST(MessageLoop, AbandonPromise) {
 
   bool lambda_destructed = false;
 
-  fit::suspended_task suspended;
+  fpromise::suspended_task suspended;
   int run_count = 0;
-  loop.PostTask(FROM_HERE, fit::make_promise(
+  loop.PostTask(FROM_HERE, fpromise::make_promise(
                                [&run_count, &suspended,
                                 destructed = std::make_shared<SetOnDestruct>(&lambda_destructed)](
-                                   fit::context& context) -> fit::result<> {
+                                   fpromise::context& context) -> fpromise::result<> {
                                  run_count++;
                                  suspended = context.suspend_task();  // So we can signal later.
-                                 return fit::pending();
+                                 return fpromise::pending();
                                }));
 
   // Should not have run yet.
@@ -232,7 +232,7 @@ TEST(MessageLoop, AbandonPromise) {
   EXPECT_TRUE(suspended);
 
   // Free the suspended task. This should free the lambda and not run it.
-  suspended = fit::suspended_task();
+  suspended = fpromise::suspended_task();
   EXPECT_EQ(1, run_count);
   EXPECT_TRUE(lambda_destructed);
 
@@ -247,21 +247,21 @@ TEST(MessageLoop, RunPromiseSync) {
 
   bool lambda_destructed = false;
 
-  fit::suspended_task suspended;
+  fpromise::suspended_task suspended;
   int run_count = 0;
   bool should_complete = false;
-  loop.RunTask(FROM_HERE,
-               fit::make_promise([&run_count, &suspended, &should_complete,
-                                  destructed = std::make_shared<SetOnDestruct>(&lambda_destructed)](
-                                     fit::context& context) -> fit::result<> {
-                 run_count++;
+  loop.RunTask(FROM_HERE, fpromise::make_promise(
+                              [&run_count, &suspended, &should_complete,
+                               destructed = std::make_shared<SetOnDestruct>(&lambda_destructed)](
+                                  fpromise::context& context) -> fpromise::result<> {
+                                run_count++;
 
-                 if (should_complete)
-                   return fit::ok();
+                                if (should_complete)
+                                  return fpromise::ok();
 
-                 suspended = context.suspend_task();  // So we can signal later.
-                 return fit::pending();
-               }));
+                                suspended = context.suspend_task();  // So we can signal later.
+                                return fpromise::pending();
+                              }));
 
   // Should have run but not completed.
   EXPECT_EQ(1, run_count);
@@ -291,36 +291,37 @@ TEST(MessageLoop, RunNestedPromiseSync) {
   std::string error_message;
   ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
-  fit::suspended_task inner_suspended;
+  fpromise::suspended_task inner_suspended;
   int inner_run_count = 0;
   bool inner_should_complete = false;
 
-  fit::suspended_task outer_suspended;
+  fpromise::suspended_task outer_suspended;
   int outer_run_count = 0;
   bool outer_should_complete = false;
 
-  loop.PostTask(FROM_HERE, fit::make_promise([&](fit::context& context) -> fit::result<> {
-                  outer_run_count++;
+  loop.PostTask(
+      FROM_HERE, fpromise::make_promise([&](fpromise::context& context) -> fpromise::result<> {
+        outer_run_count++;
 
-                  if (outer_should_complete)
-                    return fit::ok();
+        if (outer_should_complete)
+          return fpromise::ok();
 
-                  int old_inner_run_count = inner_run_count;
-                  loop.RunTask(FROM_HERE,
-                               fit::make_promise([&](fit::context& context) -> fit::result<> {
-                                 inner_run_count++;
+        int old_inner_run_count = inner_run_count;
+        loop.RunTask(FROM_HERE,
+                     fpromise::make_promise([&](fpromise::context& context) -> fpromise::result<> {
+                       inner_run_count++;
 
-                                 if (inner_should_complete)
-                                   return fit::ok();
+                       if (inner_should_complete)
+                         return fpromise::ok();
 
-                                 inner_suspended = context.suspend_task();
-                                 return fit::pending();
-                               }));
-                  EXPECT_EQ(inner_run_count, old_inner_run_count + 1);  // Should have run once.
+                       inner_suspended = context.suspend_task();
+                       return fpromise::pending();
+                     }));
+        EXPECT_EQ(inner_run_count, old_inner_run_count + 1);  // Should have run once.
 
-                  outer_suspended = context.suspend_task();  // So we can signal later.
-                  return fit::pending();
-                }));
+        outer_suspended = context.suspend_task();  // So we can signal later.
+        return fpromise::pending();
+      }));
 
   // Nothing should have happened yet.
   EXPECT_EQ(0, inner_run_count);
@@ -342,7 +343,7 @@ TEST(MessageLoop, RunNestedPromiseSync) {
 
   // Run the outer one again but it will still return async. This will queue up another inner loop
   // but this time the inner loop should exit right away and not set the inner suspended.
-  inner_suspended = fit::suspended_task();
+  inner_suspended = fpromise::suspended_task();
   outer_suspended.resume_task();
   loop.PostTask(FROM_HERE, [&loop]() { loop.QuitNow(); });
   loop.Run();

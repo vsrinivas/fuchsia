@@ -18,7 +18,7 @@ Streamer::~Streamer() {
   loop_.JoinThreads();
 }
 
-fit::result<std::unique_ptr<Streamer>, zx_status_t> Streamer::Create(
+fpromise::result<std::unique_ptr<Streamer>, zx_status_t> Streamer::Create(
     fuchsia::sysmem::AllocatorHandle allocator, fuchsia::camera3::DeviceWatcherHandle watcher,
     fit::closure stop_callback) {
   auto streamer = std::make_unique<Streamer>();
@@ -31,7 +31,7 @@ fit::result<std::unique_ptr<Streamer>, zx_status_t> Streamer::Create(
       streamer->allocator_.Bind(std::move(allocator), streamer->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   streamer->watcher_.set_error_handler(
@@ -39,7 +39,7 @@ fit::result<std::unique_ptr<Streamer>, zx_status_t> Streamer::Create(
   status = streamer->watcher_.Bind(std::move(watcher), streamer->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   streamer->watcher_->WatchDevices(
@@ -47,10 +47,10 @@ fit::result<std::unique_ptr<Streamer>, zx_status_t> Streamer::Create(
 
   status = streamer->Start();
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
-  return fit::ok(std::move(streamer));
+  return fpromise::ok(std::move(streamer));
 }
 
 zx_status_t Streamer::Start() {

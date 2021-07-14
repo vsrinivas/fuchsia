@@ -5,7 +5,7 @@
 #include "reachability.h"
 
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 
@@ -32,10 +32,10 @@ std::string ReachabilityWatcher::error_get_string(ErrorVariant variant) {
 
 ReachabilityWatcher::ReachabilityWatcher(
     fuchsia::net::interfaces::WatcherPtr watcher,
-    fit::function<void(fit::result<bool, ReachabilityWatcher::ErrorVariant>)> callback)
+    fit::function<void(fpromise::result<bool, ReachabilityWatcher::ErrorVariant>)> callback)
     : watcher_(std::move(watcher)), callback_(std::move(callback)) {
   watcher_.set_error_handler([this](const zx_status_t status) {
-    callback_(fit::error(ReachabilityWatcher::Error::kChannelClosed));
+    callback_(fpromise::error(ReachabilityWatcher::Error::kChannelClosed));
   });
 
   watcher_->Watch(fit::bind_member(this, &ReachabilityWatcher::HandleEvent));
@@ -44,7 +44,7 @@ ReachabilityWatcher::ReachabilityWatcher(
 void ReachabilityWatcher::HandleEvent(fuchsia::net::interfaces::Event event) {
   auto update_result = interface_properties_.Update(std::move(event));
   if (update_result.is_error()) {
-    return callback_(fit::error(update_result.error()));
+    return callback_(fpromise::error(update_result.error()));
   }
 
   watcher_->Watch(fit::bind_member(this, &ReachabilityWatcher::HandleEvent));
@@ -53,7 +53,7 @@ void ReachabilityWatcher::HandleEvent(fuchsia::net::interfaces::Event event) {
                                [](const auto& it) { return it.second.IsGloballyRoutable(); });
   if (!reachable_.has_value() || (reachable_.value() != reachable)) {
     reachable_ = reachable;
-    callback_(fit::ok(reachable));
+    callback_(fpromise::ok(reachable));
   }
 }
 

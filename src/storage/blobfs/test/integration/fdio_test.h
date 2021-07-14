@@ -43,7 +43,7 @@ class FdioTest : public testing::Test {
   void set_vmex_resource(zx::resource resource) { vmex_resource_ = std::move(resource); }
 
   // Fetches a fresh Inspect snapshot from the running blobfs instance.
-  fit::result<inspect::Hierarchy> TakeSnapshot();
+  fpromise::result<inspect::Hierarchy> TakeSnapshot();
 
   // Takes an inspect snapshot `hierarchy` and navigates through the nodes using
   // the `path` given and fetches the `property` there to be stored in `value`.

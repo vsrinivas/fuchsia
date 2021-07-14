@@ -104,7 +104,7 @@ void DisplayInfoDelegate::GetDisplayOwnershipEvent(
 }
 
 App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspect_node,
-         fit::promise<ui_display::DisplayControllerHandles> dc_handles_promise,
+         fpromise::promise<ui_display::DisplayControllerHandles> dc_handles_promise,
          fit::closure quit_callback)
     : executor_(async_get_default_dispatcher()),
       app_context_(std::move(app_context)),
@@ -130,8 +130,8 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
                                  std::weak_ptr<ShutdownManager>(shutdown_manager_)) {
   FX_DCHECK(!device_watcher_);
 
-  fit::bridge<escher::EscherUniquePtr> escher_bridge;
-  fit::bridge<std::shared_ptr<display::Display>> display_bridge;
+  fpromise::bridge<escher::EscherUniquePtr> escher_bridge;
+  fpromise::bridge<std::shared_ptr<display::Display>> display_bridge;
 
   auto vulkan_loader = app_context_->svc()->Connect<fuchsia::vulkan::loader::Loader>();
   fidl::InterfaceHandle<fuchsia::io::Directory> dir;
@@ -171,8 +171,8 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
       [this, completer = std::move(display_bridge.completer)]() mutable {
         completer.complete_ok(display_manager_->default_display_shared());
       });
-  executor_.schedule_task(
-      dc_handles_promise.then([this](fit::result<ui_display::DisplayControllerHandles>& handles) {
+  executor_.schedule_task(dc_handles_promise.then(
+      [this](fpromise::result<ui_display::DisplayControllerHandles>& handles) {
         display_manager_->BindDefaultDisplayController(std::move(handles.value().controller),
                                                        std::move(handles.value().dc_device));
       }));
@@ -180,14 +180,15 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
   // Schedule a task to finish initialization once all promises have been completed.
   // This closure is placed on |executor_|, which is owned by App, so it is safe to use |this|.
   auto p =
-      fit::join_promises(escher_bridge.consumer.promise(), display_bridge.consumer.promise())
-          .and_then([this](std::tuple<fit::result<escher::EscherUniquePtr>,
-                                      fit::result<std::shared_ptr<display::Display>>>& results) {
-            InitializeServices(std::move(std::get<0>(results).value()),
-                               std::move(std::get<1>(results).value()));
-            // Should be run after all outgoing services are published.
-            app_context_->outgoing()->ServeFromStartupInfo();
-          });
+      fpromise::join_promises(escher_bridge.consumer.promise(), display_bridge.consumer.promise())
+          .and_then(
+              [this](std::tuple<fpromise::result<escher::EscherUniquePtr>,
+                                fpromise::result<std::shared_ptr<display::Display>>>& results) {
+                InitializeServices(std::move(std::get<0>(results).value()),
+                                   std::move(std::get<1>(results).value()));
+                // Should be run after all outgoing services are published.
+                app_context_->outgoing()->ServeFromStartupInfo();
+              });
 
   executor_.schedule_task(std::move(p));
 

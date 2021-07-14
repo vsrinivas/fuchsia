@@ -20,11 +20,11 @@ class VirtualCameraImpl : public VirtualCamera {
  public:
   VirtualCameraImpl();
   ~VirtualCameraImpl() override;
-  static fit::result<std::unique_ptr<VirtualCamera>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<VirtualCamera>, zx_status_t> Create(
       fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator);
   fidl::InterfaceRequestHandler<fuchsia::camera3::Device> GetHandler() override;
-  fit::result<void, std::string> CheckFrame(const void* data, size_t size,
-                                            const fuchsia::camera3::FrameInfo& info) override;
+  fpromise::result<void, std::string> CheckFrame(const void* data, size_t size,
+                                                 const fuchsia::camera3::FrameInfo& info) override;
 
  private:
   void OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Device> request);

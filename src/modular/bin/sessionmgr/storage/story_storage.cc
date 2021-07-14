@@ -7,7 +7,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 

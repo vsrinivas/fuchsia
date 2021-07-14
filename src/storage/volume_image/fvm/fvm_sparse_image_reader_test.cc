@@ -173,8 +173,8 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
 
 class NullWriter : public Writer {
  public:
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) {
-    return fit::ok();
+  fpromise::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) {
+    return fpromise::ok();
   }
 };
 

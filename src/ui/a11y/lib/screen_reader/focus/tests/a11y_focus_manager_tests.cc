@@ -47,7 +47,7 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
   }
 
   // Helper function to ensure that a promise completes.
-  void RunPromiseToCompletion(fit::promise<> promise) {
+  void RunPromiseToCompletion(fpromise::promise<> promise) {
     bool done = false;
     executor_.schedule_task(std::move(promise).and_then([&]() { done = true; }));
     RunLoopUntil([&] { return done; });
@@ -101,11 +101,11 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAnInspectUpdate) {
   ViewRefHelper view_ref_helper_2;
   a11y_focus_manager_->SetA11yFocus(view_ref_helper_2.koid(), 1u, [](bool result) {});
 
-  fit::result<inspect::Hierarchy> hierarchy;
-  RunPromiseToCompletion(
-      inspect::ReadFromInspector(*inspector_).then([&](fit::result<inspect::Hierarchy>& result) {
-        hierarchy = std::move(result);
-      }));
+  fpromise::result<inspect::Hierarchy> hierarchy;
+  RunPromiseToCompletion(inspect::ReadFromInspector(*inspector_)
+                             .then([&](fpromise::result<inspect::Hierarchy>& result) {
+                               hierarchy = std::move(result);
+                             }));
   ASSERT_TRUE(hierarchy.is_ok());
 
   auto* test_inspect_hierarchy = hierarchy.value().GetByPath({kInspectNodeName});

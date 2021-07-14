@@ -5,7 +5,7 @@
 #include "src/ui/lib/display/get_hardware_display_controller.h"
 
 #include <lib/fdio/directory.h>
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <zircon/status.h>
@@ -17,26 +17,26 @@
 
 namespace ui_display {
 
-fit::promise<DisplayControllerHandles> GetHardwareDisplayController(
+fpromise::promise<DisplayControllerHandles> GetHardwareDisplayController(
     std::shared_ptr<fuchsia::hardware::display::ProviderPtr> provider) {
   // Create the device and interface channels.
   zx::channel device_server, device_client;
   zx_status_t status = zx::channel::create(0, &device_server, &device_client);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create device channel: " << zx_status_get_string(status);
-    return fit::make_ok_promise(DisplayControllerHandles{});
+    return fpromise::make_ok_promise(DisplayControllerHandles{});
   }
 
   zx::channel ctrl_server, ctrl_client;
   status = zx::channel::create(0, &ctrl_server, &ctrl_client);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create controller channel: " << zx_status_get_string(status);
-    return fit::make_ok_promise(DisplayControllerHandles{});
+    return fpromise::make_ok_promise(DisplayControllerHandles{});
   }
 
   // A reference to |provider| is retained in the closure, to keep the connection open until the
   // response is received.
-  fit::bridge<DisplayControllerHandles> dc_handles_bridge;
+  fpromise::bridge<DisplayControllerHandles> dc_handles_bridge;
   (*provider)->OpenController(
       std::move(device_server),
       ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller>(std::move(ctrl_server)),
@@ -59,7 +59,7 @@ fit::promise<DisplayControllerHandles> GetHardwareDisplayController(
   return dc_handles_bridge.consumer.promise();
 }
 
-fit::promise<DisplayControllerHandles> GetHardwareDisplayController(
+fpromise::promise<DisplayControllerHandles> GetHardwareDisplayController(
     ui_display::HardwareDisplayControllerProviderImpl* hdcp_service_impl) {
   TRACE_DURATION("gfx", "GetHardwareDisplayController");
 
@@ -82,13 +82,13 @@ fit::promise<DisplayControllerHandles> GetHardwareDisplayController(
       FX_LOGS(ERROR) << "GetHardwareDisplayController() failed to connect to " << kSvcPath
                      << " with status: " << zx_status_get_string(status)
                      << ". Something went wrong in fake-display injection routing.";
-      return fit::make_result_promise<DisplayControllerHandles>(fit::error());
+      return fpromise::make_result_promise<DisplayControllerHandles>(fpromise::error());
     }
   } else if (hdcp_service_impl) {
     hdcp_service_impl->BindDisplayProvider(provider->NewRequest());
   } else {
     FX_LOGS(ERROR) << "No display provider given.";
-    return fit::make_result_promise<DisplayControllerHandles>(fit::error());
+    return fpromise::make_result_promise<DisplayControllerHandles>(fpromise::error());
   }
   return GetHardwareDisplayController(std::move(provider));
 }

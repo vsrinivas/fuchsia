@@ -57,9 +57,9 @@ class TestOutputPipeline : public OutputPipeline {
     return nullptr;
   }
   void RemoveInput(const ReadableStream& stream) override {}
-  fit::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+  fpromise::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config) override {
-    return fit::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+    return fpromise::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
   }
 
  private:
@@ -458,7 +458,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   bool updated_device_profile = false;
   auto promise = audio_output_->UpdateDeviceProfile(profile_params);
   context().threading_model().FidlDomain().executor()->schedule_task(
-      promise.then([&updated_device_profile](fit::result<void, zx_status_t>& result) {
+      promise.then([&updated_device_profile](fpromise::result<void, zx_status_t>& result) {
         updated_device_profile = true;
       }));
   RunLoopUntilIdle();

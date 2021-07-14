@@ -4,7 +4,7 @@
 #include "netstack_intermediary.h"
 
 #include <lib/async/default.h>
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/device/ethernet.h>
@@ -57,10 +57,10 @@ void NetstackIntermediary::AddEthernetDevice(
   // as an interface between the guest's ethernet device and the FakeEndpoint
   // which is linked into the netemul virtual network.
   executor_.schedule_task(
-      fit::make_promise([this, index]() mutable {
+      fpromise::make_promise([this, index]() mutable {
         // Get the MAC address from the ethernet device and determine which ethertap network it
         // should be connected to.
-        fit::bridge<std::string> bridge;
+        fpromise::bridge<std::string> bridge;
         auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
         eth_client->device()->GetInfo([this, completer = std::move(bridge.completer)](
                                           fuchsia::hardware::ethernet::Info info) mutable {
@@ -118,9 +118,9 @@ void NetstackIntermediary::AddEthernetDevice(
           .wrap_with(scope_));
 }
 
-fit::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>>
+fpromise::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>>
 NetstackIntermediary::GetNetwork(std::string network_name) {
-  fit::bridge<fidl::InterfaceHandle<fuchsia::netemul::network::Network>> bridge;
+  fpromise::bridge<fidl::InterfaceHandle<fuchsia::netemul::network::Network>> bridge;
 
   auto netc = std::make_shared<fidl::InterfacePtr<fuchsia::netemul::network::NetworkContext>>();
   auto net_mgr = std::make_shared<fuchsia::netemul::network::NetworkManagerPtr>();
@@ -142,9 +142,9 @@ NetstackIntermediary::GetNetwork(std::string network_name) {
   return bridge.consumer.promise();
 }
 
-fit::promise<> NetstackIntermediary::SetupEthClient(
+fpromise::promise<> NetstackIntermediary::SetupEthClient(
     const std::unique_ptr<netemul::EthernetClient>& eth_client) {
-  fit::bridge<> bridge;
+  fpromise::bridge<> bridge;
   eth_client->Setup(eth_config,
                     [completer = std::move(bridge.completer)](zx_status_t status) mutable {
                       if (status == ZX_OK) {

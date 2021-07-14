@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_FD_WRITER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_FD_WRITER_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 #include <string_view>
@@ -22,7 +22,7 @@ class FdWriter final : public Writer {
  public:
   // On success returns a |FdWriter| from a file descriptor pointing to |path|, and whose name is
   // |path|.
-  static fit::result<FdWriter, std::string> Create(std::string_view path);
+  static fpromise::result<FdWriter, std::string> Create(std::string_view path);
 
   explicit FdWriter(fbl::unique_fd fd) : FdWriter(std::move(fd), std::string_view()) {}
   FdWriter(fbl::unique_fd fd, std::string_view name) : fd_(std::move(fd)), name_(name) {}
@@ -35,7 +35,7 @@ class FdWriter final : public Writer {
   // |buffer.size()|] to |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final;
+  fpromise::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final;
 
   // Returns a unique identifier for this |FdWriter|.
   std::string_view name() const { return name_; }

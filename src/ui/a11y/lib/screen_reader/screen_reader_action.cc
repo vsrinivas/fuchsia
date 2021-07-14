@@ -4,7 +4,7 @@
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
 
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <string>
@@ -37,9 +37,9 @@ void ScreenReaderAction::ExecuteHitTesting(
       std::move(callback));
 }
 
-fit::promise<> ScreenReaderAction::ExecuteAccessibilityActionPromise(
+fpromise::promise<> ScreenReaderAction::ExecuteAccessibilityActionPromise(
     zx_koid_t view_ref_koid, uint32_t node_id, fuchsia::accessibility::semantics::Action action) {
-  fit::bridge<> bridge;
+  fpromise::bridge<> bridge;
   action_context_->semantics_source->PerformAccessibilityAction(
       view_ref_koid, node_id, action,
       [completer = std::move(bridge.completer)](bool handled) mutable {
@@ -48,12 +48,12 @@ fit::promise<> ScreenReaderAction::ExecuteAccessibilityActionPromise(
         }
         completer.complete_ok();
       });
-  return bridge.consumer.promise_or(fit::error());
+  return bridge.consumer.promise_or(fpromise::error());
 }
 
-fit::promise<> ScreenReaderAction::SetA11yFocusPromise(const uint32_t node_id,
-                                                       zx_koid_t view_koid) {
-  fit::bridge<> bridge;
+fpromise::promise<> ScreenReaderAction::SetA11yFocusPromise(const uint32_t node_id,
+                                                            zx_koid_t view_koid) {
+  fpromise::bridge<> bridge;
   auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
   a11y_focus_manager->SetA11yFocus(view_koid, node_id,
                                    [completer = std::move(bridge.completer)](bool success) mutable {
@@ -62,16 +62,16 @@ fit::promise<> ScreenReaderAction::SetA11yFocusPromise(const uint32_t node_id,
                                      }
                                      completer.complete_ok();
                                    });
-  return bridge.consumer.promise_or(fit::error());
+  return bridge.consumer.promise_or(fpromise::error());
 }
 
-fit::promise<> ScreenReaderAction::BuildSpeechTaskFromNodePromise(zx_koid_t view_koid,
-                                                                  uint32_t node_id) {
-  return fit::make_promise([this, node_id, view_koid]() mutable -> fit::promise<> {
+fpromise::promise<> ScreenReaderAction::BuildSpeechTaskFromNodePromise(zx_koid_t view_koid,
+                                                                       uint32_t node_id) {
+  return fpromise::make_promise([this, node_id, view_koid]() mutable -> fpromise::promise<> {
     const auto* node = action_context_->semantics_source->GetSemanticNode(view_koid, node_id);
     if (!node) {
       FX_LOGS(INFO) << "ScreenReaderAction: No node found for node id:" << node_id;
-      return fit::make_error_promise();
+      return fpromise::make_error_promise();
     }
 
     auto* speaker = screen_reader_context_->speaker();
@@ -86,19 +86,19 @@ fit::promise<> ScreenReaderAction::BuildSpeechTaskFromNodePromise(zx_koid_t view
   });
 }
 
-fit::promise<> ScreenReaderAction::BuildSpeechTaskForRangeValuePromise(zx_koid_t view_koid,
-                                                                       uint32_t node_id) {
-  return fit::make_promise([this, node_id, view_koid]() mutable -> fit::promise<> {
+fpromise::promise<> ScreenReaderAction::BuildSpeechTaskForRangeValuePromise(zx_koid_t view_koid,
+                                                                            uint32_t node_id) {
+  return fpromise::make_promise([this, node_id, view_koid]() mutable -> fpromise::promise<> {
     const auto* node = action_context_->semantics_source->GetSemanticNode(view_koid, node_id);
     if (!node) {
       FX_LOGS(INFO) << "ScreenReaderAction: No node found for node id:" << node_id;
-      return fit::make_error_promise();
+      return fpromise::make_error_promise();
     }
 
     if (!node->has_states() || !node->states().has_range_value()) {
       FX_LOGS(INFO)
           << "ScreenReaderAction: Slider node is missing |range_value|. Nothing to send to TTS.";
-      return fit::make_error_promise();
+      return fpromise::make_error_promise();
     }
 
     auto* speaker = screen_reader_context_->speaker();

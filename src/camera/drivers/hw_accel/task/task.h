@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/camerahwaccel/cpp/banjo.h>
 #include <fuchsia/sysmem/c/banjo.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-pool.h>
 #include <zircon/fidl.h>
@@ -42,15 +42,15 @@ class GenericTask {
 
   // Returns the physical address for the output buffer which is
   // picked from the pool of free buffers.
-  fit::result<uint32_t, zx_status_t> GetOutputBufferPhysAddr() {
+  fpromise::result<uint32_t, zx_status_t> GetOutputBufferPhysAddr() {
     fbl::AutoLock lock(&output_vmo_pool_lock_);
     auto buffer = output_buffers_.LockBufferForWrite();
     if (!buffer) {
-      return fit::error(ZX_ERR_NO_MEMORY);
+      return fpromise::error(ZX_ERR_NO_MEMORY);
     }
     auto addr = static_cast<uint32_t>(buffer->physical_address());
     write_locked_buffers_.push_front(std::move(*buffer));
-    return fit::ok(addr);
+    return fpromise::ok(addr);
   }
 
   std::optional<fzl::VmoPool::Buffer> WriteLockOutputBuffer() {

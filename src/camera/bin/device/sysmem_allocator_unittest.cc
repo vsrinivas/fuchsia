@@ -93,10 +93,10 @@ class SysmemAllocatorTest : public gtest::TestLoopFixture {
 TEST_F(SysmemAllocatorTest, BindSharedCollection) {
   fuchsia::sysmem::BufferCollectionTokenHandle token;
   auto request = token.NewRequest();
-  fit::result<BufferCollectionWithLifetime, zx_status_t> result;
+  fpromise::result<BufferCollectionWithLifetime, zx_status_t> result;
   executor_.schedule_task(
       allocator_.BindSharedCollection(std::move(token), {}, "CollectionName")
-          .then([&result](fit::result<BufferCollectionWithLifetime, zx_status_t>& r) mutable {
+          .then([&result](fpromise::result<BufferCollectionWithLifetime, zx_status_t>& r) mutable {
             result = std::move(r);
           }));
   RunLoopUntilIdle();

@@ -40,18 +40,18 @@ fs::Journal::Promise DataStreamer::Flush() {
   IssueOperations();
 
   // Return the joined result of all data operations that have been issued.
-  return fit::join_promise_vector(std::move(promises_))
-      .then([](fit::context& context,
-               fit::result<std::vector<fit::result<void, zx_status_t>>>& result) mutable
-            -> fit::result<void, zx_status_t> {
+  return fpromise::join_promise_vector(std::move(promises_))
+      .then([](fpromise::context& context,
+               fpromise::result<std::vector<fpromise::result<void, zx_status_t>>>& result) mutable
+            -> fpromise::result<void, zx_status_t> {
         ZX_ASSERT_MSG(result.is_ok(), "join_promise_vector should only return success type");
         // If any of the intermediate promises fail, return the first seen error status.
         for (const auto& intermediate_result : result.value()) {
           if (intermediate_result.is_error()) {
-            return fit::error(intermediate_result.error());
+            return fpromise::error(intermediate_result.error());
           }
         }
-        return fit::ok();
+        return fpromise::ok();
       });
 }
 
@@ -63,7 +63,7 @@ void DataStreamer::IssueOperations() {
   // Reserve space within the writeback buffer.
   fs::Journal::Promise work = journal_->WriteData(std::move(operations));
   // Initiate the writeback operation, tracking the completion of the write.
-  promises_.push_back(fit::schedule_for_consumer(journal_, std::move(work)).promise());
+  promises_.push_back(fpromise::schedule_for_consumer(journal_, std::move(work)).promise());
 }
 
 }  // namespace fs

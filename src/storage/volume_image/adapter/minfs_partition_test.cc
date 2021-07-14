@@ -42,12 +42,12 @@ class FakeReader final : public Reader {
  public:
   uint64_t length() const final { return 0; }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     memset(buffer.data(), 0, buffer.size());
     if (offset == 0) {
       memcpy(buffer.data(), &superblock_, std::min(sizeof(superblock_), buffer.size()));
     }
-    return fit::ok();
+    return fpromise::ok();
   }
 
   minfs::Superblock& superblock() { return superblock_; }

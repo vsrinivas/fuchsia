@@ -41,9 +41,9 @@ RouteGraph::~RouteGraph() {
 
 void RouteGraph::SetThrottleOutput(ThreadingModel* threading_model,
                                    std::shared_ptr<AudioOutput> throttle_output) {
-  fit::bridge<void, void> bridge;
+  fpromise::bridge<void, void> bridge;
   threading_model->FidlDomain().ScheduleTask(bridge.consumer.promise().then(
-      [throttle_output](fit::result<void, void>& _) { return throttle_output->Shutdown(); }));
+      [throttle_output](fpromise::result<void, void>& _) { return throttle_output->Shutdown(); }));
 
   threading_model->FidlDomain().executor()->schedule_task(
       throttle_output->Startup().or_else([throttle_output](zx_status_t& error) {

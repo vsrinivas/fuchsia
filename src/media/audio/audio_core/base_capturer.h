@@ -148,7 +148,7 @@ class BaseCapturer : public AudioObject,
   }
 
   // |media::audio::AudioObject|
-  fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+  fpromise::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
   InitializeSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) override;
   void CleanupSourceLink(const AudioObject& source,
                          std::shared_ptr<ReadableStream> stream) override;
@@ -193,7 +193,7 @@ class BaseCapturer : public AudioObject,
   // Helper function used to return a set of ready packets to a user.
   void FinishBuffers() FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
-  fit::promise<> Cleanup() FXL_LOCKS_EXCLUDED(mix_domain_->token());
+  fpromise::promise<> Cleanup() FXL_LOCKS_EXCLUDED(mix_domain_->token());
   void CleanupFromMixThread() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   void MixTimerThunk() {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);

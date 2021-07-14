@@ -40,7 +40,7 @@ class TestContainer : public OperationContainer {
 
   void Cont() override { ++cont_count; }
 
-  void ScheduleTask(fit::pending_task task) override {}
+  void ScheduleTask(fpromise::pending_task task) override {}
 
   void PretendToDie() { weak_ptr_factory_.InvalidateWeakPtrs(); }
 
@@ -283,22 +283,22 @@ TEST_F(OperationTest, OperationQueue) {
   auto op3 = std::make_unique<TestOperation<>>([&op3_ran]() { op3_ran = true; },
                                                [&op3_done]() { op3_done = true; });
 
-  // We'll queue |op1|, then a fit::promise ("op2") and another Operation,
+  // We'll queue |op1|, then a fpromise::promise ("op2") and another Operation,
   // |op3|.
   auto weak_op1 = op1->GetWeakPtr();
   container.Add(std::move(op1));
 
   bool op2_ran = false;
   bool op2_done = false;
-  fit::suspended_task suspended_op2;
-  container.ScheduleTask(fit::make_promise([&](fit::context& c) -> fit::result<> {
+  fpromise::suspended_task suspended_op2;
+  container.ScheduleTask(fpromise::make_promise([&](fpromise::context& c) -> fpromise::result<> {
     if (op2_ran == true) {
       op2_done = true;
-      return fit::ok();
+      return fpromise::ok();
     }
     op2_ran = true;
     suspended_op2 = c.suspend_task();
-    return fit::pending();
+    return fpromise::pending();
   }));
 
   container.Add(std::move(op3));
@@ -376,7 +376,7 @@ TEST_F(OperationTest, OperationCollection) {
   container.Add(std::move(op1));
   container.Add(std::move(op2));
   bool op3_ran = false;
-  container.ScheduleTask(fit::make_promise([&] { op3_ran = true; }));
+  container.ScheduleTask(fpromise::make_promise([&] { op3_ran = true; }));
 
   // Nothing has run yet because we haven't run the async loop.
   EXPECT_FALSE(op1_ran);
@@ -386,7 +386,7 @@ TEST_F(OperationTest, OperationCollection) {
   EXPECT_FALSE(op3_ran);
 
   // Running the loop we expect all ops to have run. TestOperations won't have
-  // completed because they require us to call SayDone(). The fit::promise,
+  // completed because they require us to call SayDone(). The fpromise::promise,
   // however, will have completed (it doesn't suspend).
   RunLoopUntilIdle();
   EXPECT_TRUE(op1_ran);

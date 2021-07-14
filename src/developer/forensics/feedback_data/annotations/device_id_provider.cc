@@ -23,15 +23,15 @@ DeviceIdProviderClient::DeviceIdProviderClient(async_dispatcher_t* dispatcher,
                                                std::shared_ptr<sys::ServiceDirectory> services)
     : device_id_provider_ptr_(dispatcher, services) {}
 
-::fit::promise<Annotations> DeviceIdProviderClient::GetAnnotations(
+::fpromise::promise<Annotations> DeviceIdProviderClient::GetAnnotations(
     zx::duration timeout, const AnnotationKeys& allowlist) {
   const AnnotationKeys annotations_to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
   if (annotations_to_get.empty()) {
-    return ::fit::make_result_promise<Annotations>(::fit::ok<Annotations>({}));
+    return ::fpromise::make_result_promise<Annotations>(::fpromise::ok<Annotations>({}));
   }
 
   return device_id_provider_ptr_.GetId(timeout).then(
-      [=](::fit::result<std::string, Error>& result) {
+      [=](::fpromise::result<std::string, Error>& result) {
         Annotations annotations;
         if (result.is_error()) {
           annotations.insert({kAnnotationDeviceFeedbackId, AnnotationOr(result.error())});
@@ -39,7 +39,7 @@ DeviceIdProviderClient::DeviceIdProviderClient(async_dispatcher_t* dispatcher,
           annotations.insert({kAnnotationDeviceFeedbackId, AnnotationOr(result.take_value())});
         }
 
-        return ::fit::ok(std::move(annotations));
+        return ::fpromise::ok(std::move(annotations));
       });
 }
 

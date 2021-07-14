@@ -58,14 +58,14 @@ void JournalHeaderView::Encode(uint64_t payload_blocks, uint64_t sequence_number
   header_->payload_blocks = payload_blocks;
 }
 
-fit::result<JournalHeaderView, zx_status_t> JournalHeaderView::Create(fbl::Span<uint8_t> block,
-                                                                      uint64_t sequence_number) {
+fpromise::result<JournalHeaderView, zx_status_t> JournalHeaderView::Create(
+    fbl::Span<uint8_t> block, uint64_t sequence_number) {
   if (block.size_bytes() < kJournalBlockSize) {
-    return fit::error(ZX_ERR_BUFFER_TOO_SMALL);
+    return fpromise::error(ZX_ERR_BUFFER_TOO_SMALL);
   }
   if (!IsHeader(reinterpret_cast<const JournalHeaderBlock*>(block.data()), sequence_number)) {
-    return fit::error(ZX_ERR_BAD_STATE);
+    return fpromise::error(ZX_ERR_BAD_STATE);
   }
-  return fit::ok(JournalHeaderView(block));
+  return fpromise::ok(JournalHeaderView(block));
 }
 }  // namespace fs

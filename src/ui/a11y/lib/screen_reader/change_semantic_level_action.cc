@@ -81,7 +81,7 @@ void ChangeSemanticLevelAction::Run(GestureContext gesture_context) {
   screen_reader_context_->executor()->schedule_task(std::move(promise));
 }
 
-fit::promise<> ChangeSemanticLevelAction::SpeakSemanticLevelPromise(
+fpromise::promise<> ChangeSemanticLevelAction::SpeakSemanticLevelPromise(
     ScreenReaderContext::SemanticLevel semantic_level) {
   fuchsia::intl::l10n::MessageIds message_id;
   switch (semantic_level) {
@@ -98,7 +98,7 @@ fit::promise<> ChangeSemanticLevelAction::SpeakSemanticLevelPromise(
       message_id = fuchsia::intl::l10n::MessageIds::WORD_GRANULARITY;
       break;
     default:
-      return fit::make_error_promise();
+      return fpromise::make_error_promise();
   }
   auto* speaker = screen_reader_context_->speaker();
   return speaker->SpeakMessageByIdPromise(message_id, {.interrupt = true, .save_utterance = false});

@@ -159,16 +159,17 @@ class SyntheticHarness : public zxtest::Test {
 
   usb_hub::UsbHubDevice* device() { return device_->device(); }
 
-  zx_status_t RunSynchronously(fit::promise<void, zx_status_t> promise) {
+  zx_status_t RunSynchronously(fpromise::promise<void, zx_status_t> promise) {
     bool ran = false;
     zx_status_t status = ZX_OK;
-    executor_->schedule_task(std::move(promise).then([&](fit::result<void, zx_status_t>& result) {
-      ran = true;
-      if (result.is_error()) {
-        status = result.error();
-      }
-      return result;
-    }));
+    executor_->schedule_task(
+        std::move(promise).then([&](fpromise::result<void, zx_status_t>& result) {
+          ran = true;
+          if (result.is_error()) {
+            status = result.error();
+          }
+          return result;
+        }));
     RunLoop();
     if (!ran) {
       status = ZX_ERR_INTERNAL;
@@ -444,7 +445,7 @@ TEST_F(SyntheticHarness, BadDescriptorTest) {
   ASSERT_EQ(
       RunSynchronously(dev->GetVariableLengthDescriptor<usb_device_descriptor_t>(0, 0, 0).and_then(
           [=](usb_hub::VariableLengthDescriptor<usb_device_descriptor_t>& descriptor) {
-            return fit::ok();
+            return fpromise::ok();
           })),
       ZX_ERR_BAD_STATE);
 }

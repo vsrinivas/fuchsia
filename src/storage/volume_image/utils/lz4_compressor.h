@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_LZ4_COMPRESSOR_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_LZ4_COMPRESSOR_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 #include <vector>
@@ -27,7 +27,7 @@ class Lz4Compressor final : public Compressor {
   // Returns a |Lz4Compressor| on success.
   //
   // On failure, returns a string describing the error.
-  static fit::result<Lz4Compressor, std::string> Create(const CompressionOptions& options);
+  static fpromise::result<Lz4Compressor, std::string> Create(const CompressionOptions& options);
 
   Lz4Compressor();
   explicit Lz4Compressor(const Preferences& preferences) : preferences_(preferences) {}
@@ -37,13 +37,13 @@ class Lz4Compressor final : public Compressor {
   Lz4Compressor& operator=(Lz4Compressor&&) = delete;
   ~Lz4Compressor() final;
 
-  // Returns |fit::ok| on success, allocating the necessary structures for repeated |Compress|
+  // Returns |fpromise::ok| on success, allocating the necessary structures for repeated |Compress|
   // calls, and returning a buffer containing the header for the compressed data.
   //
   // On failure, returns a string decribing the error condition.
-  fit::result<void, std::string> Prepare(Handler handler) final;
+  fpromise::result<void, std::string> Prepare(Handler handler) final;
 
-  // Returns |fit::ok| on success, returning a buffer with the compressed data of
+  // Returns |fpromise::ok| on success, returning a buffer with the compressed data of
   // |uncompressed_data|. The returned buffer, is only valid until the next call to |Compress|,
   // since contents may be overwritten.
   //
@@ -51,14 +51,14 @@ class Lz4Compressor final : public Compressor {
   // emitted as next call to |Compress|, or when |Finalize| is called.
   //
   // On failure, returns a string decribing the error condition.
-  fit::result<void, std::string> Compress(fbl::Span<const uint8_t> uncompressed_data) final;
+  fpromise::result<void, std::string> Compress(fbl::Span<const uint8_t> uncompressed_data) final;
 
-  // Returns |fit::ok| on success, returning a buffer containing the symbols of any buffered data
-  // not emitted on last |Compress| call, and set of symbols marking the end of the compression.
-  // This call will free any allocated resources.
+  // Returns |fpromise::ok| on success, returning a buffer containing the symbols of any buffered
+  // data not emitted on last |Compress| call, and set of symbols marking the end of the
+  // compression. This call will free any allocated resources.
   //
   // On failure, returns a string describing the error condition.
-  fit::result<void, std::string> Finalize() final;
+  fpromise::result<void, std::string> Finalize() final;
 
   // Returns the set of preferences used for the underlying LZ4 compression.
   const Preferences& GetPreferences() const { return preferences_; }

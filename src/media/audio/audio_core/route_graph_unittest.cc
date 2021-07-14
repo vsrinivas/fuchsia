@@ -88,9 +88,9 @@ class FakeAudioOutput : public AudioOutput {
   void FinishMixJob(const AudioOutput::FrameSpan& span, const float* buffer) override {}
   zx::duration MixDeadline() const override { return zx::msec(10); }
 
-  fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
+  fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override {
-    return fit::ok(nullptr);
+    return fpromise::ok(nullptr);
   }
 
   void set_format(Format format) { format_ = format; }

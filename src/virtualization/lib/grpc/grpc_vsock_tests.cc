@@ -68,9 +68,9 @@ TEST_F(GrpcVsockTest, Echo) {
   TestEchoServer server_impl;
   server_builder.AddListenPort(kTestServicePort);
   server_builder.RegisterService(&server_impl);
-  fit::result<std::unique_ptr<GrpcVsockServer>, zx_status_t> result;
+  fpromise::result<std::unique_ptr<GrpcVsockServer>, zx_status_t> result;
   auto p = server_builder.Build().then(
-      [&result](fit::result<std::unique_ptr<GrpcVsockServer>, zx_status_t>& r) mutable {
+      [&result](fpromise::result<std::unique_ptr<GrpcVsockServer>, zx_status_t>& r) mutable {
         result = std::move(r);
       });
   executor()->schedule_task(std::move(p));

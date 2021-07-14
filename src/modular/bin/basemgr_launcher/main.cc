@@ -6,7 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <zircon/errors.h>
@@ -26,7 +26,7 @@ constexpr char kDeleteConfigCommandString[] = "delete_config";
 constexpr char kDisableRestartAgentOnCrashFlagString[] = "disable_agent_restart_on_crash";
 
 // Reads and parses a |ModularConfig| from stdin.
-fit::result<fuchsia::modular::session::ModularConfig, zx_status_t> ReadConfig() {
+fpromise::result<fuchsia::modular::session::ModularConfig, zx_status_t> ReadConfig() {
   // Read the configuration in from stdin.
   std::string config_str;
   std::string line;
@@ -35,13 +35,13 @@ fit::result<fuchsia::modular::session::ModularConfig, zx_status_t> ReadConfig() 
   }
 
   if (config_str.empty()) {
-    return fit::ok(modular::DefaultConfig());
+    return fpromise::ok(modular::DefaultConfig());
   }
 
   auto parse_result = modular::ParseConfig(config_str);
   if (parse_result.is_error()) {
     std::cerr << "Could not parse ModularConfig: " << parse_result.error();
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
   return parse_result.take_ok_result();
 }
@@ -85,7 +85,7 @@ This configuration can be deleted by running (from host machine)
 }
 
 // Returns result's error value, or ZX_OK if result is OK.
-zx_status_t ToStatus(fit::result<void, zx_status_t> result) {
+zx_status_t ToStatus(fpromise::result<void, zx_status_t> result) {
   if (result.is_error()) {
     return result.error();
   }

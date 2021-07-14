@@ -40,13 +40,13 @@ class TakeScreenshotTest : public UnitTestFixture {
     }
   }
 
-  ::fit::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
-    ::fit::result<ScreenshotData> result;
+  ::fpromise::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
+    ::fpromise::result<ScreenshotData> result;
     executor_.schedule_task(
         feedback_data::TakeScreenshot(
             dispatcher(), services(),
             fit::Timeout(timeout, /*actions=*/[this] { did_timeout_ = true; }))
-            .then([&result](::fit::result<ScreenshotData>& res) { result = std::move(res); }));
+            .then([&result](::fpromise::result<ScreenshotData>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
   }
@@ -67,7 +67,7 @@ TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
   scenic->set_take_screenshot_responses(std::move(scenic_server_responses));
   SetUpScenicServer(std::move(scenic));
 
-  ::fit::result<ScreenshotData> result = TakeScreenshot();
+  ::fpromise::result<ScreenshotData> result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_ok());
   ScreenshotData screenshot = result.take_value();
@@ -81,7 +81,7 @@ TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
 TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
   SetUpScenicServer(std::make_unique<stubs::ScenicAlwaysReturnsFalse>());
 
-  ::fit::result<ScreenshotData> result = TakeScreenshot();
+  ::fpromise::result<ScreenshotData> result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_error());
 }

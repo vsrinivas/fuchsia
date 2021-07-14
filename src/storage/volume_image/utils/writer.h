@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_WRITER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_WRITER_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 
@@ -26,8 +26,8 @@ class Writer {
   // |buffer.size()|] to |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  virtual fit::result<void, std::string> Write(uint64_t offset,
-                                               fbl::Span<const uint8_t> buffer) = 0;
+  virtual fpromise::result<void, std::string> Write(uint64_t offset,
+                                                    fbl::Span<const uint8_t> buffer) = 0;
 };
 
 }  // namespace storage::volume_image

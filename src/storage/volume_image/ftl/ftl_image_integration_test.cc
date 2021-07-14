@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/ftl/ndm-driver.h>
 #include <lib/ftl/volume.h>
 
@@ -78,7 +78,7 @@ class FakeContentReader final : public Reader {
  public:
   uint64_t length() const override { return 0; }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     // Calculate the block the offset is in.
     uint32_t first_block = GetBlockFromBytes(offset, kBlockSize);
     uint64_t offset_from_first_block = GetOffsetFromBlockStart(offset, kBlockSize);
@@ -98,7 +98,7 @@ class FakeContentReader final : public Reader {
       read_bytes += block_view.size();
     }
 
-    return fit::ok();
+    return fpromise::ok();
   }
 };
 
@@ -106,7 +106,8 @@ class InMemoryWriter final : public Writer {
  public:
   explicit InMemoryWriter(InMemoryRawNand* raw_nand) : raw_nand_(raw_nand) {}
 
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     // Calculate page number based on adjusted offset.
     uint64_t adjusted_page_size = RawNandImageGetAdjustedPageSize(raw_nand_->options);
     uint64_t page_number = offset / adjusted_page_size;
@@ -118,10 +119,10 @@ class InMemoryWriter final : public Writer {
       auto oob_view = buffer.subspan(0, raw_nand_->options.oob_bytes_size);
       raw_nand_->page_oob[page_number] = std::vector<uint8_t>(oob_view.begin(), oob_view.end());
     } else {
-      return fit::error("Invalid Offset.");
+      return fpromise::error("Invalid Offset.");
     }
 
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:
@@ -245,13 +246,14 @@ class InMemoryWriterWithHeader : public Writer {
  public:
   explicit InMemoryWriterWithHeader(InMemoryWriter* writer) : writer_(writer) {}
 
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     if (offset < sizeof(RawNandImageHeader)) {
       uint32_t leading_header_bytes =
           std::min(static_cast<size_t>(sizeof(RawNandImageHeader) - offset), buffer.size());
       memcpy(reinterpret_cast<uint8_t*>(&header_) + offset, buffer.data(), leading_header_bytes);
       if (leading_header_bytes == buffer.size()) {
-        return fit::ok();
+        return fpromise::ok();
       }
       buffer.subspan(leading_header_bytes);
       offset = sizeof(RawNandImageHeader);

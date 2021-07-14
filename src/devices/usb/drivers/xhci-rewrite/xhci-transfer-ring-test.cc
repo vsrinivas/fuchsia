@@ -5,8 +5,8 @@
 #include "xhci-transfer-ring.h"
 
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 
 #include <atomic>
 #include <thread>
@@ -176,11 +176,11 @@ void UsbXhci::Shutdown(zx_status_t status) {}
 void EventRing::RemovePressure() {}
 
 TRBPromise UsbXhci::DeviceOffline(uint32_t slot, TRB* continuation) {
-  return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
+  return fpromise::make_error_promise(ZX_ERR_NOT_SUPPORTED);
 }
 
 TRBPromise EnumerateDevice(UsbXhci* hci, uint8_t port, std::optional<HubInfo> hub_info) {
-  return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
+  return fpromise::make_error_promise(ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(TransferRingHarness, EmptyShortTransferTest) {

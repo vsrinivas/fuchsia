@@ -7,9 +7,9 @@
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/scope.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/scope.h>
 
 #include <rapidjson/document.h>
 
@@ -75,18 +75,18 @@ class ArchiveReader {
   // Get a snapshot of the Inspect data at the current point in time.
   //
   // Returns an error if the ArchiveAccessorPtr is not bound.
-  fit::promise<std::vector<DiagnosticsData>, std::string> GetInspectSnapshot();
+  fpromise::promise<std::vector<DiagnosticsData>, std::string> GetInspectSnapshot();
 
   // Gets a snapshot of the Inspect data at the point in time in which all listed component
   // names are present.
   //
   // Returns an error if the ArchiveAccessorPtr is not bound.
-  fit::promise<std::vector<DiagnosticsData>, std::string> SnapshotInspectUntilPresent(
+  fpromise::promise<std::vector<DiagnosticsData>, std::string> SnapshotInspectUntilPresent(
       std::vector<std::string> component_names);
 
  private:
   void InnerSnapshotInspectUntilPresent(
-      fit::completer<std::vector<DiagnosticsData>, std::string> bridge,
+      fpromise::completer<std::vector<DiagnosticsData>, std::string> bridge,
       std::vector<std::string> component_names);
 
   // The pointer to the archive this object is connected to.
@@ -99,7 +99,7 @@ class ArchiveReader {
   std::vector<std::string> selectors_;
 
   // The scope to tie async task lifetimes to this object.
-  fit::scope scope_;
+  fpromise::scope scope_;
 };
 
 void EmplaceDiagnostics(rapidjson::Document document, std::vector<DiagnosticsData>* out);

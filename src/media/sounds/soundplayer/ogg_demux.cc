@@ -20,11 +20,11 @@ OggDemux::OggDemux() {}
 
 OggDemux::~OggDemux() { ogg_sync_clear(&sync_state_); }
 
-fit::result<Sound, zx_status_t> OggDemux::Process(int fd) {
+fpromise::result<Sound, zx_status_t> OggDemux::Process(int fd) {
   int ogg_result = ogg_sync_init(&sync_state_);
   if (ogg_result != 0) {
     FX_LOGS(WARNING) << "ogg_sync_init failed, result " << ogg_result;
-    return fit::error(ZX_ERR_INTERNAL);
+    return fpromise::error(ZX_ERR_INTERNAL);
   }
 
   while (ReadPage(fd)) {
@@ -38,7 +38,7 @@ fit::result<Sound, zx_status_t> OggDemux::Process(int fd) {
     ogg_result = ogg_stream_pagein(&stream->state(), &page_);
     if (ogg_result != 0) {
       FX_LOGS(WARNING) << "ogg_stream_pagein failed, result " << ogg_result;
-      return fit::error(ZX_ERR_IO_INVALID);
+      return fpromise::error(ZX_ERR_IO_INVALID);
     }
 
     while (true) {
@@ -49,23 +49,23 @@ fit::result<Sound, zx_status_t> OggDemux::Process(int fd) {
         break;
       } else if (ogg_result == -1) {
         FX_LOGS(WARNING) << "ogg_stream_packetout failed, result " << ogg_result;
-        return fit::error(ZX_ERR_IO_INVALID);
+        return fpromise::error(ZX_ERR_IO_INVALID);
       }
 
       if (!OnPacket(packet, serial_number)) {
-        return fit::error(ZX_ERR_IO_INVALID);
+        return fpromise::error(ZX_ERR_IO_INVALID);
       }
     }
   }
 
   if (!end_of_file_ || !stream_ || !stream_->decoder()) {
-    return fit::error(ZX_ERR_IO_INVALID);
+    return fpromise::error(ZX_ERR_IO_INVALID);
   }
 
   auto sound = stream_->decoder()->TakeSound();
   stream_ = nullptr;
 
-  return fit::ok(std::move(sound));
+  return fpromise::ok(std::move(sound));
 }
 
 bool OggDemux::ReadPage(int fd) {

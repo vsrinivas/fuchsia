@@ -49,7 +49,7 @@ StreamCycler::StreamCycler(async_dispatcher_t* dispatcher, bool manual_mode)
 
 StreamCycler::~StreamCycler() = default;
 
-fit::result<std::unique_ptr<StreamCycler>, zx_status_t> StreamCycler::Create(
+fpromise::result<std::unique_ptr<StreamCycler>, zx_status_t> StreamCycler::Create(
     fuchsia::camera3::DeviceWatcherHandle watcher, fuchsia::sysmem::AllocatorHandle allocator,
     async_dispatcher_t* dispatcher, bool manual_mode) {
   auto cycler = std::unique_ptr<StreamCycler>(new StreamCycler(dispatcher, manual_mode));
@@ -57,19 +57,19 @@ fit::result<std::unique_ptr<StreamCycler>, zx_status_t> StreamCycler::Create(
   zx_status_t status = cycler->watcher_.Bind(std::move(watcher), dispatcher);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   status = cycler->allocator_.Bind(std::move(allocator), dispatcher);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   cycler->watcher_->WatchDevices(
       fit::bind_member(cycler.get(), &StreamCycler::WatchDevicesCallback));
 
-  return fit::ok(std::move(cycler));
+  return fpromise::ok(std::move(cycler));
 }
 
 void StreamCycler::SetHandlers(StreamCycler::AddCollectionHandler on_add_collection,

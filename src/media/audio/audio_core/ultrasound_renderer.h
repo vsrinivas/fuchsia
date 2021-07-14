@@ -33,7 +33,7 @@ class UltrasoundRenderer : public BaseRenderer {
   std::optional<StreamUsage> usage() const override {
     return {StreamUsage::WithRenderUsage(RenderUsage::ULTRASOUND)};
   }
-  fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
+  fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;
 

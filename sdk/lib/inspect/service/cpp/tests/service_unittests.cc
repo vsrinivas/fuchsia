@@ -75,10 +75,10 @@ TEST_F(InspectServiceTest, SingleTreeGetContent) {
   ptr.set_error_handler(
       [](zx_status_t status) { ASSERT_TRUE(false) << "Error detected on connection"; });
 
-  fit::result<fuchsia::inspect::TreeContent> content;
+  fpromise::result<fuchsia::inspect::TreeContent> content;
 
   ptr->GetContent([&](fuchsia::inspect::TreeContent returned_content) {
-    content = fit::ok(std::move(returned_content));
+    content = fpromise::ok(std::move(returned_content));
   });
 
   RunLoopUntil([&] { return !!content; });
@@ -102,10 +102,10 @@ TEST_F(InspectServiceTest, SingleTreeGetContentPrivate) {
   ptr.set_error_handler(
       [](zx_status_t status) { ASSERT_TRUE(false) << "Error detected on connection"; });
 
-  fit::result<fuchsia::inspect::TreeContent> content;
+  fpromise::result<fuchsia::inspect::TreeContent> content;
 
   ptr->GetContent([&](fuchsia::inspect::TreeContent returned_content) {
-    content = fit::ok(std::move(returned_content));
+    content = fpromise::ok(std::move(returned_content));
   });
 
   RunLoopUntil([&] { return !!content; });
@@ -124,9 +124,9 @@ TEST_F(InspectServiceTest, SingleTreeGetContentPrivate) {
 TEST_F(InspectServiceTest, ListChildNames) {
   inspect::ValueList values;
   root().CreateLazyNode(
-      "a", []() { return fit::make_result_promise<Inspector>(fit::error()); }, &values);
+      "a", []() { return fpromise::make_result_promise<Inspector>(fpromise::error()); }, &values);
   root().CreateLazyNode(
-      "b", []() { return fit::make_result_promise<Inspector>(fit::error()); }, &values);
+      "b", []() { return fpromise::make_result_promise<Inspector>(fpromise::error()); }, &values);
 
   auto ptr = Connect();
   ptr.set_error_handler(
@@ -156,12 +156,13 @@ TEST_F(InspectServiceTest, OpenChild) {
       []() {
         Inspector insp;
         insp.GetRoot().CreateInt("val", 10, &insp);
-        return fit::make_ok_promise(insp);
+        return fpromise::make_ok_promise(insp);
       },
       &values);
 
   root().CreateLazyNode(
-      "invalid", [] { return fit::make_result_promise<Inspector>(fit::error()); }, &values);
+      "invalid", [] { return fpromise::make_result_promise<Inspector>(fpromise::error()); },
+      &values);
 
   auto ptr = Connect();
   ptr.set_error_handler(
@@ -170,7 +171,7 @@ TEST_F(InspectServiceTest, OpenChild) {
   std::vector<std::string> names;
   bool list_done = false;
   fuchsia::inspect::TreeNameIteratorPtr name_iter;
-  fit::result<fuchsia::inspect::TreeContent> root, child;
+  fpromise::result<fuchsia::inspect::TreeContent> root, child;
   ptr->ListChildNames(name_iter.NewRequest());
 
   executor_.schedule_task(inspect::ReadAllChildNames(std::move(name_iter))
@@ -180,11 +181,11 @@ TEST_F(InspectServiceTest, OpenChild) {
                               }));
 
   ptr->GetContent(
-      [&](fuchsia::inspect::TreeContent content) { root = fit::ok(std::move(content)); });
+      [&](fuchsia::inspect::TreeContent content) { root = fpromise::ok(std::move(content)); });
   fuchsia::inspect::TreePtr child_ptr;
   ptr->OpenChild("valid-0", child_ptr.NewRequest());
   child_ptr->GetContent(
-      [&](fuchsia::inspect::TreeContent content) { child = fit::ok(std::move(content)); });
+      [&](fuchsia::inspect::TreeContent content) { child = fpromise::ok(std::move(content)); });
 
   bool read_error_done = false;
   bool missing_error_done = false;

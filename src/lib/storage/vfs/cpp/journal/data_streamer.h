@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_DATA_STREAMER_H_
 #define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_DATA_STREAMER_H_
 
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include <utility>
 
@@ -71,7 +71,7 @@ class DataStreamer {
   storage::UnbufferedOperationsBuilder operations_;
 
   // Operations which have been sent to the executor.
-  std::vector<fit::promise<void, zx_status_t>> promises_;
+  std::vector<fpromise::promise<void, zx_status_t>> promises_;
 };
 
 }  // namespace fs

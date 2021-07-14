@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_EXTRACTOR_CPP_EXTRACTOR_H_
 #define SRC_STORAGE_EXTRACTOR_CPP_EXTRACTOR_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/status.h>
 #include <zircon/errors.h>
 

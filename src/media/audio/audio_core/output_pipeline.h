@@ -45,7 +45,7 @@ class OutputPipeline : public ReadableStream {
   virtual void RemoveInput(const ReadableStream& stream) = 0;
 
   // Sets the configuration of all effects with the given instance name.
-  virtual fit::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+  virtual fpromise::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config) = 0;
 };
 
@@ -78,7 +78,7 @@ class OutputPipelineImpl : public OutputPipeline {
       std::optional<float> initial_dest_gain_db = std::nullopt,
       Mixer::Resampler sampler_hint = Mixer::Resampler::Default) override;
   void RemoveInput(const ReadableStream& stream) override;
-  fit::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+  fpromise::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config) override;
 
   // |media::audio::ReadableStream|

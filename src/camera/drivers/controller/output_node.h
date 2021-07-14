@@ -32,7 +32,7 @@ class OutputNode : public ProcessNode {
   // |info| : StreamCreationData for the requested stream.
   // |parent_node| : pointer to the node to which we need to append this |OutputNode|.
   // |internal_output_node| : InternalConfigNode corresponding to this node.
-  static fit::result<OutputNode*, zx_status_t> CreateOutputNode(
+  static fpromise::result<OutputNode*, zx_status_t> CreateOutputNode(
       async_dispatcher_t* dispatcher, StreamCreationData* info, ProcessNode* parent_node,
       const InternalConfigNode& internal_output_node);
 

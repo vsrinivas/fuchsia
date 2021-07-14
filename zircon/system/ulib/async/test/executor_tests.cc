@@ -21,14 +21,14 @@ TEST(ExecutorTests, running_tasks) {
   uint64_t run_count[3] = {};
 
   // Schedule a task that runs once and increments a counter.
-  executor.schedule_task(fit::make_promise([&] { run_count[0]++; }));
+  executor.schedule_task(fpromise::make_promise([&] { run_count[0]++; }));
 
   // Schedule a task that runs once, increments a counter,
   // and scheduled another task.
-  executor.schedule_task(fit::make_promise([&](fit::context& context) {
+  executor.schedule_task(fpromise::make_promise([&](fpromise::context& context) {
     run_count[1]++;
     assert(context.executor() == &executor);
-    context.executor()->schedule_task(fit::make_promise([&] { run_count[2]++; }));
+    context.executor()->schedule_task(fpromise::make_promise([&] { run_count[2]++; }));
   }));
   EXPECT_EQ(0, run_count[0]);
   EXPECT_EQ(0, run_count[1]);
@@ -51,60 +51,66 @@ TEST(ExecutorTests, suspending_and_resuming_tasks) {
   uint64_t resume_count4b = 0;
 
   // Schedule a task that suspends itself and immediately resumes.
-  executor.schedule_task(fit::make_promise([&](fit::context& context) -> fit::result<> {
-    if (++run_count[0] == 100)
-      return fit::ok();
-    resume_count[0]++;
-    context.suspend_task().resume_task();
-    return fit::pending();
-  }));
+  executor.schedule_task(
+      fpromise::make_promise([&](fpromise::context& context) -> fpromise::result<> {
+        if (++run_count[0] == 100)
+          return fpromise::ok();
+        resume_count[0]++;
+        context.suspend_task().resume_task();
+        return fpromise::pending();
+      }));
 
   // Schedule a task that requires several iterations to complete, each
   // time scheduling another task to resume itself after suspension.
-  executor.schedule_task(fit::make_promise([&](fit::context& context) -> fit::result<> {
-    if (++run_count[1] == 100)
-      return fit::ok();
-    context.executor()->schedule_task(fit::make_promise([&, s = context.suspend_task()]() mutable {
-      resume_count[1]++;
-      s.resume_task();
-    }));
-    return fit::pending();
-  }));
+  executor.schedule_task(
+      fpromise::make_promise([&](fpromise::context& context) -> fpromise::result<> {
+        if (++run_count[1] == 100)
+          return fpromise::ok();
+        context.executor()->schedule_task(
+            fpromise::make_promise([&, s = context.suspend_task()]() mutable {
+              resume_count[1]++;
+              s.resume_task();
+            }));
+        return fpromise::pending();
+      }));
 
   // Same as the above but use another thread to resume.
-  executor.schedule_task(fit::make_promise([&](fit::context& context) -> fit::result<> {
-    if (++run_count[2] == 100)
-      return fit::ok();
-    std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
-      resume_count[2]++;
-      s.resume_task();
-    });
-    return fit::pending();
-  }));
+  executor.schedule_task(
+      fpromise::make_promise([&](fpromise::context& context) -> fpromise::result<> {
+        if (++run_count[2] == 100)
+          return fpromise::ok();
+        std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
+          resume_count[2]++;
+          s.resume_task();
+        });
+        return fpromise::pending();
+      }));
 
   // Schedule a task that suspends itself but doesn't actually return pending
   // so it only runs once.
-  executor.schedule_task(fit::make_promise([&](fit::context& context) -> fit::result<> {
-    run_count[3]++;
-    context.suspend_task();
-    return fit::ok();
-  }));
+  executor.schedule_task(
+      fpromise::make_promise([&](fpromise::context& context) -> fpromise::result<> {
+        run_count[3]++;
+        context.suspend_task();
+        return fpromise::ok();
+      }));
 
   // Schedule a task that suspends itself and arranges to be resumed on
   // one of two other threads, whichever gets there first.
-  executor.schedule_task(fit::make_promise([&](fit::context& context) -> fit::result<> {
-    if (++run_count[4] == 100)
-      return fit::ok();
-    std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
-      resume_count[4]++;
-      s.resume_task();
-    });
-    std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
-      resume_count4b++;  // use a different variable to avoid data races
-      s.resume_task();
-    });
-    return fit::pending();
-  }));
+  executor.schedule_task(
+      fpromise::make_promise([&](fpromise::context& context) -> fpromise::result<> {
+        if (++run_count[4] == 100)
+          return fpromise::ok();
+        std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
+          resume_count[4]++;
+          s.resume_task();
+        });
+        std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
+          resume_count4b++;  // use a different variable to avoid data races
+          s.resume_task();
+        });
+        return fpromise::pending();
+      }));
 
   // We expect the tasks to have been completed after being resumed several times.
   loop.RunUntilIdle();
@@ -129,39 +135,42 @@ TEST(ExecutorTests, abandoning_tasks) {
 
   // Schedule a task that returns pending without suspending itself
   // so it is immediately abandoned.
-  executor.schedule_task(
-      fit::make_promise([&, d = fit::defer([&] { destruction[0]++; })]() -> fit::result<> {
+  executor.schedule_task(fpromise::make_promise(
+      [&, d = fit::defer([&] { destruction[0]++; })]() -> fpromise::result<> {
         run_count[0]++;
-        return fit::pending();
+        return fpromise::pending();
       }));
 
   // Schedule a task that suspends itself but drops the |suspended_task|
   // object before returning so it is immediately abandoned.
-  executor.schedule_task(fit::make_promise(
-      [&, d = fit::defer([&] { destruction[1]++; })](fit::context& context) -> fit::result<> {
+  executor.schedule_task(
+      fpromise::make_promise([&, d = fit::defer([&] { destruction[1]++; })](
+                                 fpromise::context& context) -> fpromise::result<> {
         run_count[1]++;
         context.suspend_task();  // ignore result
-        return fit::pending();
+        return fpromise::pending();
       }));
 
   // Schedule a task that suspends itself and drops the |suspended_task|
   // object from a different thread so it is abandoned concurrently.
-  executor.schedule_task(fit::make_promise(
-      [&, d = fit::defer([&] { destruction[2]++; })](fit::context& context) -> fit::result<> {
+  executor.schedule_task(
+      fpromise::make_promise([&, d = fit::defer([&] { destruction[2]++; })](
+                                 fpromise::context& context) -> fpromise::result<> {
         run_count[2]++;
         std::async(std::launch::async, [s = context.suspend_task()] {});
-        return fit::pending();
+        return fpromise::pending();
       }));
 
   // Schedule a task that creates several suspended task handles and drops
   // them all on the floor.
-  executor.schedule_task(fit::make_promise(
-      [&, d = fit::defer([&] { destruction[3]++; })](fit::context& context) -> fit::result<> {
+  executor.schedule_task(
+      fpromise::make_promise([&, d = fit::defer([&] { destruction[3]++; })](
+                                 fpromise::context& context) -> fpromise::result<> {
         run_count[3]++;
-        fit::suspended_task s[3];
+        fpromise::suspended_task s[3];
         for (size_t i = 0; i < 3; i++)
           s[i] = context.suspend_task();
-        return fit::pending();
+        return fpromise::pending();
       }));
 
   // We expect the tasks to have been executed but to have been abandoned.
@@ -184,7 +193,7 @@ TEST(ExecutorTests, dispatcher_property) {
   // Just check that the task receives a context that exposes the dispatcher
   // property.
   async_dispatcher_t* received_dispatcher = nullptr;
-  executor.schedule_task(fit::make_promise([&](fit::context& context) {
+  executor.schedule_task(fpromise::make_promise([&](fpromise::context& context) {
     received_dispatcher = context.as<async::Context>().dispatcher();
   }));
   EXPECT_NULL(received_dispatcher);
@@ -202,7 +211,8 @@ TEST(ExecutorTests, tasks_scheduled_after_loop_shutdown_are_immediately_destroye
   // The task should be immediately destroyed.
   loop.Shutdown();
   bool was_destroyed = false;
-  executor.schedule_task(fit::make_promise([d = fit::defer([&] { was_destroyed = true; })] {}));
+  executor.schedule_task(
+      fpromise::make_promise([d = fit::defer([&] { was_destroyed = true; })] {}));
   EXPECT_TRUE(was_destroyed);
 }
 
@@ -211,19 +221,20 @@ TEST(ExecutorTests, when_loop_is_shutdown_all_remaining_tasks_are_immediately_de
   async::Executor executor(loop.dispatcher());
 
   // Schedule a task and let it be suspended.
-  fit::suspended_task suspend;
+  fpromise::suspended_task suspend;
   bool was_destroyed[2] = {};
-  executor.schedule_task(fit::make_promise(
-      [&, d = fit::defer([&] { was_destroyed[0] = true; })](fit::context& context) {
+  executor.schedule_task(fpromise::make_promise(
+      [&, d = fit::defer([&] { was_destroyed[0] = true; })](fpromise::context& context) {
         suspend = context.suspend_task();
-        return fit::pending();
+        return fpromise::pending();
       }));
   loop.RunUntilIdle();
   EXPECT_TRUE(suspend);
   EXPECT_FALSE(was_destroyed[0]);
 
   // Schedule another task that never gets a chance to run.
-  executor.schedule_task(fit::make_promise([d = fit::defer([&] { was_destroyed[1] = true; })] {}));
+  executor.schedule_task(
+      fpromise::make_promise([d = fit::defer([&] { was_destroyed[1] = true; })] {}));
   EXPECT_FALSE(was_destroyed[1]);
 
   // Shutdown the loop and ensure that everything was destroyed, including
@@ -257,10 +268,10 @@ TEST(ExecutorTests, delayed_promises) {
     LoggingExecutor(async::Executor& executor, TaskStats& stats)
         : executor_(executor), stats_(stats) {}
 
-    // This doesn't implement fit::executor because we need to chain a then to increment the
-    // counter, and we can't do that with fit::pending_task
-    void schedule_task(fit::promise<> task) {
-      executor_.schedule_task(task.then([&](fit::result<>&) { ++stats_.tasks_completed; }));
+    // This doesn't implement fpromise::executor because we need to chain a then to increment the
+    // counter, and we can't do that with fpromise::pending_task
+    void schedule_task(fpromise::promise<> task) {
+      executor_.schedule_task(task.then([&](fpromise::result<>&) { ++stats_.tasks_completed; }));
       ++stats_.tasks_scheduled;
     }
 
@@ -272,11 +283,11 @@ TEST(ExecutorTests, delayed_promises) {
   } executor(async_executor, stats);
 
   auto check = [&](zx::time begin) {
-    return [&, begin](fit::result<>&) { check_delay(begin, delay); };
+    return [&, begin](fpromise::result<>&) { check_delay(begin, delay); };
   };
 
   auto check_and_quit = [&](zx::time begin) {
-    return [&, begin](fit::result<>&) {
+    return [&, begin](fpromise::result<>&) {
       check_delay(begin, delay);
       loop.Quit();
     };
@@ -289,7 +300,7 @@ TEST(ExecutorTests, delayed_promises) {
     });
   };
 
-  auto check_single = [&](fit::promise<> promise, zx::time begin) {
+  auto check_single = [&](fpromise::promise<> promise, zx::time begin) {
     ++stats.tasks_planned;
     auto loop_thread = start_loop();
     executor.schedule_task(promise.then(check_and_quit(begin)));
@@ -321,10 +332,11 @@ TEST(ExecutorTests, delayed_promises) {
   };
 
   // The two promises still take up only |delay| when created at the same time.
-  auto check_sequential = [&](fit::promise<> first, fit::promise<> second, zx::time begin) {
+  auto check_sequential = [&](fpromise::promise<> first, fpromise::promise<> second,
+                              zx::time begin) {
     stats.tasks_planned += 2;
     auto loop_thread = start_loop();
-    executor.schedule_task(first.then([&](fit::result<>&) {
+    executor.schedule_task(first.then([&](fpromise::result<>&) {
       check_delay(begin, delay);
       executor.schedule_task(second.then(check_and_quit(begin)));
     }));
@@ -332,7 +344,8 @@ TEST(ExecutorTests, delayed_promises) {
     check_delay(begin, delay);
   };
 
-  auto check_simultaneous = [&](fit::promise<> first, fit::promise<> second, zx::time begin) {
+  auto check_simultaneous = [&](fpromise::promise<> first, fpromise::promise<> second,
+                                zx::time begin) {
     stats.tasks_planned += 2;
     auto loop_thread = start_loop();
     executor.schedule_task(first.then(check(begin)));
@@ -342,7 +355,8 @@ TEST(ExecutorTests, delayed_promises) {
   };
 
   // Even when the returned promise is scheduled late, it still finishes at the right time
-  auto check_staggered = [&](fit::promise<> first, fit::promise<> second, zx::time begin) {
+  auto check_staggered = [&](fpromise::promise<> first, fpromise::promise<> second,
+                             zx::time begin) {
     stats.tasks_planned += 2;
     auto loop_thread = start_loop();
     executor.schedule_task(first.then(check(begin)));
@@ -384,7 +398,7 @@ TEST(ExecutorTests, promise_wait_on_handle) {
   executor.schedule_task(
       executor
           .MakePromiseWaitHandle(zx::unowned_handle(event.get()), trigger, ZX_WAIT_ASYNC_TIMESTAMP)
-          .then([&](fit::result<zx_packet_signal_t, zx_status_t>& result) {
+          .then([&](fpromise::result<zx_packet_signal_t, zx_status_t>& result) {
             ASSERT_FALSE(result.is_pending());
             ASSERT_FALSE(result.is_error());
 
@@ -431,7 +445,7 @@ TEST(ExecutorTests, promise_wait_on_handle) {
 
   completed = false;
   executor.schedule_task(executor.MakePromiseWaitHandle(zx::unowned_handle(event.get()), trigger)
-                             .then([&](fit::result<zx_packet_signal_t, zx_status_t>& result) {
+                             .then([&](fpromise::result<zx_packet_signal_t, zx_status_t>& result) {
                                EXPECT_TRUE(result.is_ok());
 
                                auto packet = result.take_value();

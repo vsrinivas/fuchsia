@@ -64,13 +64,11 @@ TEST_F(InspectTest, ReadHierarchy) {
   inspect::contrib::ArchiveReader reader(
       real_services()->Connect<fuchsia::diagnostics::ArchiveAccessor>(),
       {"test/inspect_vmo_test_app.cmx:root"});
-  fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> result;
+  fpromise::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> result;
   executor.schedule_task(
       reader.SnapshotInspectUntilPresent({"inspect_vmo_test_app.cmx"})
-          .then(
-              [&](fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>& rest) {
-                result = std::move(rest);
-              }));
+          .then([&](fpromise::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>&
+                        rest) { result = std::move(rest); }));
   RunLoopUntil([&] { return result.is_ok() || result.is_error(); });
 
   ASSERT_TRUE(result.is_ok()) << "Error: " << result.error();

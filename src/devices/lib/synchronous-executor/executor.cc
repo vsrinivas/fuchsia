@@ -9,7 +9,7 @@
 
 namespace synchronous_executor {
 
-void synchronous_executor::schedule_task(fit::pending_task task) {
+void synchronous_executor::schedule_task(fpromise::pending_task task) {
   std::lock_guard<std::mutex> lock(mutex_);
   scheduler_.schedule_task(std::move(task));
 }
@@ -17,7 +17,7 @@ void synchronous_executor::schedule_task(fit::pending_task task) {
 void synchronous_executor::run_until_idle() {
   // Run until the queue is empty
   while (true) {
-    fit::subtle::scheduler::task_queue queue;
+    fpromise::subtle::scheduler::task_queue queue;
     {
       std::lock_guard<std::mutex> lock(mutex_);
       scheduler_.take_runnable_tasks(&queue);
@@ -38,8 +38,8 @@ void synchronous_executor::run_until_idle() {
   }
 }
 
-fit::suspended_task::ticket synchronous_executor::resolver_impl::duplicate_ticket(
-    fit::suspended_task::ticket ticket) {
+fpromise::suspended_task::ticket synchronous_executor::resolver_impl::duplicate_ticket(
+    fpromise::suspended_task::ticket ticket) {
   std::lock_guard<std::mutex> lock(executor_->mutex_);
   executor_->scheduler_.duplicate_ticket(ticket);
   return ticket;
@@ -47,9 +47,9 @@ fit::suspended_task::ticket synchronous_executor::resolver_impl::duplicate_ticke
 
 // Consumes the provided ticket, optionally resuming its associated task.
 // The provided ticket must not be used again.
-void synchronous_executor::resolver_impl::resolve_ticket(fit::suspended_task::ticket ticket,
+void synchronous_executor::resolver_impl::resolve_ticket(fpromise::suspended_task::ticket ticket,
                                                          bool resume_task) {
-  fit::pending_task task;
+  fpromise::pending_task task;
   {
     std::lock_guard<std::mutex> lock(executor_->mutex_);
     if (resume_task) {
@@ -62,11 +62,11 @@ void synchronous_executor::resolver_impl::resolve_ticket(fit::suspended_task::ti
 
 synchronous_executor* synchronous_executor::context_impl::executor() const { return executor_; }
 
-fit::suspended_task synchronous_executor::context_impl::suspend_task() {
+fpromise::suspended_task synchronous_executor::context_impl::suspend_task() {
   std::lock_guard<std::mutex> lock(executor_->mutex_);
   // One ref for us, another for the promise itself
   ticket_ = executor_->scheduler_.obtain_ticket(2);
-  return fit::suspended_task(&executor_->resolver_, ticket_.value());
+  return fpromise::suspended_task(&executor_->resolver_, ticket_.value());
 }
 
 }  // namespace synchronous_executor

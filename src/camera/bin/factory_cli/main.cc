@@ -53,30 +53,30 @@ constexpr std::string_view kCommand9 = "SetSensorMode";
 constexpr std::string_view kCommand10 = "SetTestPatternMode";
 constexpr std::string_view kCommand11 = "SetBypassMode";
 
-fit::result<Command, zx_status_t> StrToCommand(const std::string& str) {
+fpromise::result<Command, zx_status_t> StrToCommand(const std::string& str) {
   // Controller
   if (str == kCommand2)
-    return fit::ok(CAPTURE_FRAMES);
+    return fpromise::ok(CAPTURE_FRAMES);
   if (str == kCommand3)
-    return fit::ok(DISPLAY_TO_SCREEN);
+    return fpromise::ok(DISPLAY_TO_SCREEN);
   // ISP
   if (str == kCommand4)
-    return fit::ok(GET_OTP_DATA);
+    return fpromise::ok(GET_OTP_DATA);
   if (str == kCommand5)
-    return fit::ok(GET_SENSOR_TEMPERATURE);
+    return fpromise::ok(GET_SENSOR_TEMPERATURE);
   if (str == kCommand6)
-    return fit::ok(SET_AWB_MODE);
+    return fpromise::ok(SET_AWB_MODE);
   if (str == kCommand7)
-    return fit::ok(SET_AE_MODE);
+    return fpromise::ok(SET_AE_MODE);
   if (str == kCommand8)
-    return fit::ok(SET_EXPOSURE);
+    return fpromise::ok(SET_EXPOSURE);
   if (str == kCommand9)
-    return fit::ok(SET_SENSOR_MODE);
+    return fpromise::ok(SET_SENSOR_MODE);
   if (str == kCommand10)
-    return fit::ok(SET_TEST_PATTERN_MODE);
+    return fpromise::ok(SET_TEST_PATTERN_MODE);
   if (str == kCommand11)
-    return fit::ok(SET_BYPASS_MODE);
-  return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::ok(SET_BYPASS_MODE);
+  return fpromise::error(ZX_ERR_INVALID_ARGS);
 }
 
 // TODO(fxbug.dev/58025): The varius std::stoi() calls can fail here and cause a crash, be sure to

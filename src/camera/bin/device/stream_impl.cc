@@ -72,7 +72,7 @@ void StreamImpl::SetMuteState(MuteState mute_state) {
   }
 }
 
-fit::scope& StreamImpl::Scope() { return scope_; }
+fpromise::scope& StreamImpl::Scope() { return scope_; }
 
 void StreamImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
   TRACE_DURATION("camera", "StreamImpl::OnNewRequest");

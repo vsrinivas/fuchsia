@@ -17,41 +17,42 @@ class FtlReader final : public Reader {
 
   uint64_t length() const final { return length_; }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     if (offset % instance_->page_size() != 0) {
-      return fit::error("FtlReader requires aligned offset(" + std::to_string(offset) +
-                        ") at page boundaries(" + std::to_string(instance_->page_size()) + ").");
+      return fpromise::error("FtlReader requires aligned offset(" + std::to_string(offset) +
+                             ") at page boundaries(" + std::to_string(instance_->page_size()) +
+                             ").");
     }
     if (buffer.size() % instance_->page_size() != 0) {
-      return fit::error("FtlReader requires aligned page buffer(size " +
-                        std::to_string(buffer.size()) + ") at page boundaries(" +
-                        std::to_string(instance_->page_size()) + ").");
+      return fpromise::error("FtlReader requires aligned page buffer(size " +
+                             std::to_string(buffer.size()) + ") at page boundaries(" +
+                             std::to_string(instance_->page_size()) + ").");
     }
 
     uint32_t page_offset = static_cast<uint32_t>(offset / instance_->page_size());
     int page_count = static_cast<int>(buffer.size() / instance_->page_size());
 
     if (page_count == 0) {
-      return fit::ok();
+      return fpromise::ok();
     }
     uint64_t page_range_end = page_offset + page_count;
 
     if (page_range_end > instance_->page_count()) {
-      return fit::error("FtlReader::Read out of bounds. Offset " + std::to_string(offset) +
-                        " (Page: " + std::to_string(page_offset) + ")" + " attempting to write " +
-                        std::to_string(buffer.size()) +
-                        " bytes (Page Count: " + std::to_string(page_count) +
-                        "), exceeds maximum offset of " + std::to_string(offset) +
-                        "(Page Size: " + std::to_string(instance_->page_size()) +
-                        ", Page Count: " + std::to_string(instance_->page_count()) + ").");
+      return fpromise::error("FtlReader::Read out of bounds. Offset " + std::to_string(offset) +
+                             " (Page: " + std::to_string(page_offset) + ")" +
+                             " attempting to write " + std::to_string(buffer.size()) +
+                             " bytes (Page Count: " + std::to_string(page_count) +
+                             "), exceeds maximum offset of " + std::to_string(offset) +
+                             "(Page Size: " + std::to_string(instance_->page_size()) +
+                             ", Page Count: " + std::to_string(instance_->page_count()) + ").");
     }
     if (auto result = volume_->Read(page_offset, page_count, buffer.data()); result != ZX_OK) {
-      return fit::error("Failed to read " + std::to_string(page_count) + " pages starting at " +
-                        std::to_string(page_offset) +
-                        ". More specifically: " + std::to_string(result) + ".");
+      return fpromise::error("Failed to read " + std::to_string(page_count) +
+                             " pages starting at " + std::to_string(page_offset) +
+                             ". More specifically: " + std::to_string(result) + ".");
     }
 
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:
@@ -67,41 +68,43 @@ class FtlWriter final : public Writer {
 
   ~FtlWriter() final { volume_->Flush(); }
 
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     if (offset % instance_->page_size() != 0) {
-      return fit::error("FtlWriter requires aligned offset(" + std::to_string(offset) +
-                        ") at page boundaries(" + std::to_string(instance_->page_size()) + ").");
+      return fpromise::error("FtlWriter requires aligned offset(" + std::to_string(offset) +
+                             ") at page boundaries(" + std::to_string(instance_->page_size()) +
+                             ").");
     }
     if (buffer.size() % instance_->page_size() != 0) {
-      return fit::error("FtlWriter requires aligned page buffer(size " +
-                        std::to_string(buffer.size()) + ") at page boundaries(" +
-                        std::to_string(instance_->page_size()) + ").");
+      return fpromise::error("FtlWriter requires aligned page buffer(size " +
+                             std::to_string(buffer.size()) + ") at page boundaries(" +
+                             std::to_string(instance_->page_size()) + ").");
     }
 
     uint32_t page_offset = static_cast<uint32_t>(offset / instance_->page_size());
     int page_count = static_cast<int>(buffer.size() / instance_->page_size());
 
     if (page_count == 0) {
-      return fit::ok();
+      return fpromise::ok();
     }
     uint64_t page_range_end = page_offset + page_count;
 
     if (page_range_end > instance_->page_count()) {
-      return fit::error("FtlWriter::Write out of bounds. Offset " + std::to_string(offset) +
-                        " (Page: " + std::to_string(page_offset) + ")" + " attempting to write " +
-                        std::to_string(buffer.size()) +
-                        " bytes (Page Count: " + std::to_string(page_count) +
-                        "), exceeds maximum offset of " + std::to_string(offset) +
-                        "(Page Size: " + std::to_string(instance_->page_size()) +
-                        ", Page Count: " + std::to_string(instance_->page_count()) + ").");
+      return fpromise::error("FtlWriter::Write out of bounds. Offset " + std::to_string(offset) +
+                             " (Page: " + std::to_string(page_offset) + ")" +
+                             " attempting to write " + std::to_string(buffer.size()) +
+                             " bytes (Page Count: " + std::to_string(page_count) +
+                             "), exceeds maximum offset of " + std::to_string(offset) +
+                             "(Page Size: " + std::to_string(instance_->page_size()) +
+                             ", Page Count: " + std::to_string(instance_->page_count()) + ").");
     }
 
     if (auto result = volume_->Write(page_offset, page_count, buffer.data()); result != ZX_OK) {
-      return fit::error("Failed to write " + std::to_string(page_count) + " pages starting at " +
-                        std::to_string(page_offset) +
-                        ". More specifically: " + std::to_string(result) + ".");
+      return fpromise::error("Failed to write " + std::to_string(page_count) +
+                             " pages starting at " + std::to_string(page_offset) +
+                             ". More specifically: " + std::to_string(result) + ".");
     }
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:
@@ -109,13 +112,14 @@ class FtlWriter final : public Writer {
   std::shared_ptr<ftl::Volume> volume_;
 };
 
-fit::result<void, std::string> FtlHandle::Init(std::unique_ptr<ftl::NdmDriver> driver) {
+fpromise::result<void, std::string> FtlHandle::Init(std::unique_ptr<ftl::NdmDriver> driver) {
   auto* error = volume_->Init(std::move(driver));
   if (error != nullptr) {
-    return fit::error("FtlHandle::Init failed. More specifically: " + std::string(error) + ".");
+    return fpromise::error("FtlHandle::Init failed. More specifically: " + std::string(error) +
+                           ".");
   }
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
 std::unique_ptr<Reader> FtlHandle::MakeReader() {

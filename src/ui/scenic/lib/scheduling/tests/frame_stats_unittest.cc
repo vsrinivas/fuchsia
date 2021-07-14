@@ -7,8 +7,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/gtest/test_loop_fixture.h>
 
@@ -49,16 +49,19 @@ class FrameStatsTest : public gtest::RealLoopFixture {
     handler_ = inspect::MakeTreeHandler(&inspector_, dispatcher());
   }
 
-  void SchedulePromise(fit::pending_task promise) { executor_.schedule_task(std::move(promise)); }
+  void SchedulePromise(fpromise::pending_task promise) {
+    executor_.schedule_task(std::move(promise));
+  }
 
   // Helper function for test boiler plate.
-  fit::result<Hierarchy> ReadInspectVmo() {
+  fpromise::result<Hierarchy> ReadInspectVmo() {
     fuchsia::inspect::TreePtr ptr;
     handler_(ptr.NewRequest());
-    fit::result<Hierarchy> ret;
-    SchedulePromise(inspect::ReadFromTree(std::move(ptr)).then([&](fit::result<Hierarchy>& val) {
-      ret = std::move(val);
-    }));
+    fpromise::result<Hierarchy> ret;
+    SchedulePromise(
+        inspect::ReadFromTree(std::move(ptr)).then([&](fpromise::result<Hierarchy>& val) {
+          ret = std::move(val);
+        }));
     RunLoopUntil([&] { return ret.is_ok() || ret.is_error(); });
 
     return ret;

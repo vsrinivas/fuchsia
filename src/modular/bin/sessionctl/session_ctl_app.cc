@@ -37,7 +37,7 @@ void SessionCtlApp::ExecuteCommand(std::string cmd, const fxl::CommandLine& comm
   } else if (cmd == kRestartSessionCommandString) {
     ExecuteRestartSessionCommand(std::move(done));
   } else {
-    done(fit::error(""));
+    done(fpromise::error(""));
   }
 }
 
@@ -46,7 +46,7 @@ void SessionCtlApp::ExecuteRemoveModCommand(const fxl::CommandLine& command_line
   if (command_line.positional_args().size() == 1) {
     auto parsing_error = "Missing MOD_NAME. Ex: sessionctl remove_mod slider_mod";
     logger_.LogError(kRemoveModCommandString, parsing_error);
-    done(fit::error(parsing_error));
+    done(fpromise::error(parsing_error));
     return;
   }
 
@@ -76,7 +76,7 @@ void SessionCtlApp::ExecuteAddModCommand(const fxl::CommandLine& command_line,
   if (command_line.positional_args().size() == 1) {
     auto parsing_error = "Missing MOD_URL. Ex: sessionctl add_mod slider_mod";
     logger_.LogError(kAddModCommandString, parsing_error);
-    done(fit::error(parsing_error));
+    done(fpromise::error(parsing_error));
     return;
   }
 
@@ -92,7 +92,7 @@ void SessionCtlApp::ExecuteAddModCommand(const fxl::CommandLine& command_line,
   ModPackageExists(
       mod_url, [this, mod_url, command_line, done = std::move(done)](bool exists) mutable {
         if (!exists) {
-          done(fit::error(std::string("No package with URL " + mod_url + " was found")));
+          done(fpromise::error(std::string("No package with URL " + mod_url + " was found")));
           return;
         }
         ExecuteAddModCommandInternal(mod_url, command_line, std::move(done));
@@ -118,7 +118,7 @@ void SessionCtlApp::ExecuteAddModCommandInternal(std::string mod_url,
     if (!std::regex_search(story_name, story_name_match, story_name_regex)) {
       auto parsing_error = "Bad characters in story_name: " + story_name;
       logger_.LogError(kStoryNameFlagString, parsing_error);
-      done(fit::error(parsing_error));
+      done(fpromise::error(parsing_error));
       return;
     }
   } else {
@@ -145,7 +145,7 @@ void SessionCtlApp::ExecuteDeleteStoryCommand(const fxl::CommandLine& command_li
   if (command_line.positional_args().size() == 1) {
     auto parsing_error = "Missing STORY_NAME. Ex. sessionctl delete_story story";
     logger_.LogError(kStoryNameFlagString, parsing_error);
-    done(fit::error(parsing_error));
+    done(fpromise::error(parsing_error));
     return;
   }
 
@@ -159,10 +159,10 @@ void SessionCtlApp::ExecuteDeleteStoryCommand(const fxl::CommandLine& command_li
       auto story_exists =
           std::find(story_names.begin(), story_names.end(), story_name) != story_names.end();
       if (!story_exists) {
-        done(fit::error("Non-existent story_name " + story_name));
+        done(fpromise::error("Non-existent story_name " + story_name));
         return;
       }
-      puppet_master_->DeleteStory(story_name, [done = std::move(done)] { done(fit::ok()); });
+      puppet_master_->DeleteStory(story_name, [done = std::move(done)] { done(fpromise::ok()); });
       logger_.Log(kDeleteStoryCommandString, params);
     });
   });
@@ -183,7 +183,7 @@ void SessionCtlApp::ExecuteDeleteAllStoriesCommand(CommandDoneCallback done) {
             puppet_master_->DeleteStory(story, [shared_state] {
               --shared_state->remaining;
               if (shared_state->remaining == 0) {
-                shared_state->done(fit::ok());
+                shared_state->done(fpromise::ok());
               }
             });
           }
@@ -197,7 +197,7 @@ void SessionCtlApp::ExecuteListStoriesCommand(CommandDoneCallback done) {
     puppet_master_->GetStories(
         [this, done = std::move(done)](std::vector<std::string> story_names) {
           logger_.Log(kListStoriesCommandString, std::move(story_names));
-          done(fit::ok());
+          done(fpromise::ok());
         });
   });
 }
@@ -205,7 +205,7 @@ void SessionCtlApp::ExecuteListStoriesCommand(CommandDoneCallback done) {
 void SessionCtlApp::ExecuteRestartSessionCommand(CommandDoneCallback done) {
   basemgr_debug_->RestartSession([this, done = std::move(done)]() {
     logger_.Log(kRestartSessionCommandString, std::vector<std::string>());
-    done(fit::ok());
+    done(fpromise::ok());
   });
 }
 
@@ -252,12 +252,12 @@ void SessionCtlApp::PostTaskExecuteStoryCommand(
                                                                     std::string result) {
           if (has_error) {
             logger_.LogError(command_name, result);
-            done(fit::error(result));
+            done(fpromise::error(result));
           } else {
             auto params_copy = params;
             params_copy.emplace(kStoryIdFlagString, result);
             logger_.Log(command_name, params_copy);
-            done(fit::ok());
+            done(fpromise::ok());
           }
         });
   });

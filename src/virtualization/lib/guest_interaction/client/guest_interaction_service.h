@@ -10,9 +10,10 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
-#include <lib/fit/scope.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/scope.h>
 #include <lib/sys/cpp/component_context.h>
 #include <threads.h>
 #include <zircon/status.h>
@@ -43,13 +44,15 @@ class FuchsiaGuestInteractionService final : public fuchsia::netemul::guest::Gue
 
  private:
   int32_t GetVsockFd(std::string vm_label);
-  fit::promise<zx_status_t> InitiatePut(zx::channel local_file, const std::string& remote_path);
-  fit::promise<zx_status_t> InitiateGet(const std::string& remote_path, zx::channel local_file);
+  fpromise::promise<zx_status_t> InitiatePut(zx::channel local_file,
+                                             const std::string& remote_path);
+  fpromise::promise<zx_status_t> InitiateGet(const std::string& remote_path,
+                                             zx::channel local_file);
 
   std::unique_ptr<ClientImpl<PosixPlatform>> client_;
   fidl::BindingSet<fuchsia::netemul::guest::GuestInteraction> bindings_;
   async::Executor executor_;
-  fit::scope scope_;
+  fpromise::scope scope_;
   thrd_t guest_interaction_service_thread_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FuchsiaGuestInteractionService);

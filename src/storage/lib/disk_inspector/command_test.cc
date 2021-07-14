@@ -78,7 +78,8 @@ TEST(CommandTest, ParseCommand) {
                      "test",
                      nullptr};
   std::vector<std::string> input = {"command", "testing", "123", "42", "hello"};
-  fit::result<ParsedCommand, zx_status_t> result = disk_inspector::ParseCommand(input, command);
+  fpromise::result<ParsedCommand, zx_status_t> result =
+      disk_inspector::ParseCommand(input, command);
   ASSERT_TRUE(result.is_ok());
   ParsedCommand parsed = result.take_ok_result().value;
   ASSERT_FALSE(parsed.string_fields.find("field1") == parsed.string_fields.end());
@@ -99,7 +100,8 @@ TEST(CommandTest, ParseCommandInvalidArgumentNumberFail) {
                      "test",
                      nullptr};
   std::vector<std::string> input = {"command", "testing", "123", "42", "hello"};
-  fit::result<ParsedCommand, zx_status_t> result = disk_inspector::ParseCommand(input, command);
+  fpromise::result<ParsedCommand, zx_status_t> result =
+      disk_inspector::ParseCommand(input, command);
   ASSERT_TRUE(result.is_error());
 }
 
@@ -111,7 +113,8 @@ TEST(CommandTest, ParseCommandInvalidTypeFail) {
                      "test",
                      nullptr};
   std::vector<std::string> input = {"command", "testing"};
-  fit::result<ParsedCommand, zx_status_t> result = disk_inspector::ParseCommand(input, command);
+  fpromise::result<ParsedCommand, zx_status_t> result =
+      disk_inspector::ParseCommand(input, command);
   ASSERT_TRUE(result.is_error());
 }
 

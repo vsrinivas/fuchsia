@@ -29,14 +29,15 @@ class ComponentLookup {
   ComponentLookup(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
       : introspect_(dispatcher, services) {}
 
-  ::fit::promise<SourceIdentity> GetSourceIdentity(zx_koid_t process_koid, fit::Timeout timeout);
+  ::fpromise::promise<SourceIdentity> GetSourceIdentity(zx_koid_t process_koid,
+                                                        fit::Timeout timeout);
 
  private:
   fidl::OneShotPtr<fuchsia::sys::internal::CrashIntrospect, SourceIdentity> introspect_;
 };
 
-::fit::promise<SourceIdentity> ComponentLookup::GetSourceIdentity(zx_koid_t thread_koid,
-                                                                  fit::Timeout timeout) {
+::fpromise::promise<SourceIdentity> ComponentLookup::GetSourceIdentity(zx_koid_t thread_koid,
+                                                                       fit::Timeout timeout) {
   introspect_->FindComponentByThreadKoid(
       thread_koid, [this](CrashIntrospect_FindComponentByThreadKoid_Result result) {
         if (introspect_.IsAlreadyDone()) {
@@ -57,13 +58,13 @@ class ComponentLookup {
       });
 
   return introspect_.WaitForDone(std::move(timeout)).or_else([](const Error& error) {
-    return ::fit::error();
+    return ::fpromise::error();
   });
 }
 
 }  // namespace
 
-::fit::promise<SourceIdentity> GetComponentSourceIdentity(
+::fpromise::promise<SourceIdentity> GetComponentSourceIdentity(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     fit::Timeout timeout, zx_koid_t thread_koid) {
   auto component_lookup = std::make_unique<ComponentLookup>(dispatcher, services);

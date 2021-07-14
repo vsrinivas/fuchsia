@@ -1503,8 +1503,8 @@ void Client::AcknowledgeVsync(AcknowledgeVsyncRequestView request,
   zxlogf(TRACE, "Cookie %ld Acked\n", request->cookie);
 }
 
-fit::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_status_t> Client::Init(
-    zx::channel server_channel) {
+fpromise::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_status_t>
+Client::Init(zx::channel server_channel) {
   zx_status_t status;
 
   server_handle_ = server_channel.get();
@@ -1537,7 +1537,7 @@ fit::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_sta
         fidl::StringView::FromExternal(fsl::GetCurrentProcessName()), fsl::GetCurrentProcessKoid());
   }
 
-  return fit::ok(binding);
+  return fpromise::ok(binding);
 }
 
 Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, bool use_kernel_framebuffer,

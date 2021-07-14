@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_MOCK_DEVICE_HOOKS_H_
+#define SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_MOCK_DEVICE_HOOKS_H_
 
 #include <fuchsia/device/mock/cpp/fidl.h>
 #include <lib/fidl/coding.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/zx/channel.h>
 
 #include <string>
@@ -24,7 +25,7 @@ namespace libdriver_integration_test {
 // will return errors if invoked.
 class MockDeviceHooks : public fuchsia::device::mock::MockDevice {
  public:
-  using Completer = fit::completer<void, std::string>;
+  using Completer = fpromise::completer<void, std::string>;
   explicit MockDeviceHooks(Completer completer);
 
   using HookInvocation = fuchsia::device::mock::HookInvocation;
@@ -271,3 +272,5 @@ class IgnoreGetProtocol : public MockDeviceHooks {
 };
 
 }  // namespace libdriver_integration_test
+
+#endif  // SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_MOCK_DEVICE_HOOKS_H_

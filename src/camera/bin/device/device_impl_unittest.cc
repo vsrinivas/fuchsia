@@ -88,7 +88,7 @@ class DeviceImplTest : public gtest::RealLoopFixture {
     bool device_created = false;
     executor_.schedule_task(device_promise.then(
         [this, &device_created](
-            fit::result<std::unique_ptr<DeviceImpl>, zx_status_t>& device_result) mutable {
+            fpromise::result<std::unique_ptr<DeviceImpl>, zx_status_t>& device_result) mutable {
           device_created = true;
           ASSERT_TRUE(device_result.is_ok());
           device_ = device_result.take_value();

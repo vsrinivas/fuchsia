@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
@@ -15,11 +15,11 @@ void InspectTestHelper::ReadInspect(const zx::vmo& vmo) {
 }
 
 void InspectTestHelper::ReadInspect(const inspect::Inspector& inspector) {
-  fit::single_threaded_executor executor;
+  fpromise::single_threaded_executor executor;
   // Reset hierarchy_.
-  hierarchy_ = fit::result<inspect::Hierarchy>();
+  hierarchy_ = fpromise::result<inspect::Hierarchy>();
   executor.schedule_task(inspect::ReadFromInspector(inspector).then(
-      [&](fit::result<inspect::Hierarchy>& res) { hierarchy_ = std::move(res); }));
+      [&](fpromise::result<inspect::Hierarchy>& res) { hierarchy_ = std::move(res); }));
   executor.run();
   ASSERT_TRUE(hierarchy_.is_ok());
 }

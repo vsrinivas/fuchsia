@@ -15,7 +15,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/svc/cpp/service_namespace.h>
 
 #include <optional>
@@ -90,7 +90,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   State state() const { return state_; }
 
  private:
-  using StartSessionResult = fit::result<void, zx_status_t>;
+  using StartSessionResult = fpromise::result<void, zx_status_t>;
 
   // Shuts down the session and session launcher component, if any are running.
   void Shutdown() override;

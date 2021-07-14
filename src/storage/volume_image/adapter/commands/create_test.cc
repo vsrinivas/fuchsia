@@ -145,7 +145,7 @@ TEST(CreateCommandTest, CreateFvmBlockImageIsOk) {
   ASSERT_TRUE(fvm_checker.Validate());
 }
 
-fit::result<void, std::string> Decompress(std::string_view path) {
+fpromise::result<void, std::string> Decompress(std::string_view path) {
   auto output_file_or = TempFile::Create();
   if (output_file_or.is_error()) {
     return output_file_or.take_error_result();
@@ -166,15 +166,14 @@ fit::result<void, std::string> Decompress(std::string_view path) {
   auto writer = writer_or.take_value();
 
   uint64_t decompressed_bytes = 0;
-  if (auto result = decompressor.Prepare(
-          [&decompressed_bytes, &writer](auto decompressed_data) -> fit::result<void, std::string> {
-            if (auto result = writer.Write(decompressed_bytes, decompressed_data);
-                result.is_error()) {
-              return result;
-            }
-            decompressed_bytes += decompressed_data.size();
-            return fit::ok();
-          });
+  if (auto result = decompressor.Prepare([&decompressed_bytes, &writer](auto decompressed_data)
+                                             -> fpromise::result<void, std::string> {
+        if (auto result = writer.Write(decompressed_bytes, decompressed_data); result.is_error()) {
+          return result;
+        }
+        decompressed_bytes += decompressed_data.size();
+        return fpromise::ok();
+      });
       result.is_error()) {
     return result;
   }
@@ -218,11 +217,12 @@ fit::result<void, std::string> Decompress(std::string_view path) {
   }
 
   if (rename(output_file_or.value().path().data(), path.data()) == -1) {
-    return fit::error("Failed to move decompressed data to final destination. More specifically: " +
-                      std::string(strerror(errno)));
+    return fpromise::error(
+        "Failed to move decompressed data to final destination. More specifically: " +
+        std::string(strerror(errno)));
   }
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
 TEST(CreateCommandTest, CreateCompressedFvmBlockImageIsOk) {

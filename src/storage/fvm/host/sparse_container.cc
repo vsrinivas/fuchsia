@@ -33,15 +33,15 @@ static LZ4F_preferences_t lz4_prefs = {
     .compressionLevel = 0,
 };
 
-fit::result<CompressionContext, std::string> CompressionContext::Create() {
+fpromise::result<CompressionContext, std::string> CompressionContext::Create() {
   CompressionContext context;
   LZ4F_errorCode_t errc = LZ4F_createCompressionContext(&context.cctx_, LZ4F_VERSION);
   if (LZ4F_isError(errc)) {
     std::ostringstream stream;
     stream << "Could not create compression context: " << LZ4F_getErrorName(errc) << "\n";
-    return fit::error(stream.str());
+    return fpromise::error(stream.str());
   }
-  return fit::ok(std::move(context));
+  return fpromise::ok(std::move(context));
 }
 
 zx_status_t CompressionContext::Setup(size_t max_len) {

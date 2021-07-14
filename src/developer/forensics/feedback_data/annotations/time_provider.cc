@@ -50,11 +50,11 @@ AnnotationOr GetUtcTime(Clock* clock) {
 
 TimeProvider::TimeProvider(std::unique_ptr<Clock> clock) : clock_(std::move(clock)) {}
 
-::fit::promise<Annotations> TimeProvider::GetAnnotations(zx::duration timeout,
-                                                         const AnnotationKeys& allowlist) {
+::fpromise::promise<Annotations> TimeProvider::GetAnnotations(zx::duration timeout,
+                                                              const AnnotationKeys& allowlist) {
   const AnnotationKeys annotations_to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
   if (annotations_to_get.empty()) {
-    return ::fit::make_result_promise<Annotations>(::fit::ok<Annotations>({}));
+    return ::fpromise::make_result_promise<Annotations>(::fpromise::ok<Annotations>({}));
   }
 
   Annotations annotations;
@@ -67,7 +67,7 @@ TimeProvider::TimeProvider(std::unique_ptr<Clock> clock) : clock_(std::move(cloc
     }
   }
 
-  return ::fit::make_ok_promise(annotations);
+  return ::fpromise::make_ok_promise(annotations);
 }
 
 }  // namespace feedback_data

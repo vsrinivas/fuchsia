@@ -21,8 +21,8 @@
 #include "xhci-enumeration.h"
 
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/mmio-ptr/fake.h>
 
 #include <atomic>
@@ -81,9 +81,9 @@ struct TestState {
   }
 };
 
-void EventRing::ScheduleTask(fit::promise<TRB*, zx_status_t> promise) {
+void EventRing::ScheduleTask(fpromise::promise<TRB*, zx_status_t> promise) {
   {
-    auto continuation = promise.then([=](fit::result<TRB*, zx_status_t>& result) {
+    auto continuation = promise.then([=](fpromise::result<TRB*, zx_status_t>& result) {
       if (result.is_error()) {
         if (result.error() == ZX_ERR_BAD_STATE) {
           hci_->Shutdown(ZX_ERR_BAD_STATE);
@@ -104,7 +104,7 @@ zx_status_t Interrupter::Start(uint32_t interrupter, const RuntimeRegisterOffset
 }
 
 TRBPromise Interrupter::Timeout(zx::time deadline) {
-  fit::bridge<TRB*, zx_status_t> bridge;
+  fpromise::bridge<TRB*, zx_status_t> bridge;
   auto state = reinterpret_cast<TestState*>(hci_->parent());
   auto context = state->trb_context_allocator_.New();
   FakeTRB* trb = new FakeTRB();
@@ -170,7 +170,7 @@ void UsbXhci::Shutdown(zx_status_t status) {
 
 TRBPromise UsbXhci::AddressDeviceCommand(uint8_t slot_id, uint8_t port_id,
                                          std::optional<HubInfo> hub_info, bool bsr) {
-  fit::bridge<TRB*, zx_status_t> bridge;
+  fpromise::bridge<TRB*, zx_status_t> bridge;
   auto state = reinterpret_cast<TestState*>(parent_);
   auto context = state->trb_context_allocator_.New();
   FakeTRB* trb = new FakeTRB();
@@ -190,7 +190,7 @@ TRBPromise UsbXhci::AddressDeviceCommand(uint8_t slot_id, uint8_t port_id,
 }
 
 TRBPromise UsbXhci::AddressDeviceCommand(uint8_t slot_id) {
-  fit::bridge<TRB*, zx_status_t> bridge;
+  fpromise::bridge<TRB*, zx_status_t> bridge;
   auto state = reinterpret_cast<TestState*>(parent_);
   auto context = state->trb_context_allocator_.New();
   FakeTRB* trb = new FakeTRB();
@@ -207,7 +207,7 @@ TRBPromise UsbXhci::AddressDeviceCommand(uint8_t slot_id) {
 }
 
 TRBPromise UsbXhci::SetMaxPacketSizeCommand(uint8_t slot_id, uint8_t bMaxPacketSize0) {
-  fit::bridge<TRB*, zx_status_t> bridge;
+  fpromise::bridge<TRB*, zx_status_t> bridge;
   auto state = reinterpret_cast<TestState*>(parent_);
   auto context = state->trb_context_allocator_.New();
   FakeTRB* trb = new FakeTRB();
@@ -225,7 +225,7 @@ TRBPromise UsbXhci::SetMaxPacketSizeCommand(uint8_t slot_id, uint8_t bMaxPacketS
 }
 
 TRBPromise UsbXhci::EnableSlotCommand() {
-  fit::bridge<TRB*, zx_status_t> bridge;
+  fpromise::bridge<TRB*, zx_status_t> bridge;
   auto state = reinterpret_cast<TestState*>(parent_);
   auto context = state->trb_context_allocator_.New();
   FakeTRB* trb = new FakeTRB();
@@ -243,7 +243,7 @@ TRBPromise UsbXhci::EnableSlotCommand() {
 }
 
 TRBPromise UsbXhci::DisableSlotCommand(uint32_t slot) {
-  fit::bridge<TRB*, zx_status_t> bridge;
+  fpromise::bridge<TRB*, zx_status_t> bridge;
   auto state = reinterpret_cast<TestState*>(parent_);
   auto context = state->trb_context_allocator_.New();
   FakeTRB* trb = new FakeTRB();
@@ -329,15 +329,15 @@ int UsbXhci::InitThread() {
   return 0;
 }
 
-fit::promise<OwnedRequest, void> UsbXhci::UsbHciRequestQueue(OwnedRequest usb_request) {
-  fit::bridge<OwnedRequest, void> bridge;
+fpromise::promise<OwnedRequest, void> UsbXhci::UsbHciRequestQueue(OwnedRequest usb_request) {
+  fpromise::bridge<OwnedRequest, void> bridge;
   usb_request_complete_callback_t completion;
   completion.callback = [](void* ctx, usb_request_t* req) {
-    auto completer = static_cast<fit::completer<OwnedRequest, void>*>(ctx);
+    auto completer = static_cast<fpromise::completer<OwnedRequest, void>*>(ctx);
     completer->complete_ok(OwnedRequest(req, sizeof(usb_request_t)));
     delete completer;
   };
-  completion.ctx = new fit::completer<OwnedRequest, void>(std::move(bridge.completer));
+  completion.ctx = new fpromise::completer<OwnedRequest, void>(std::move(bridge.completer));
   UsbHciRequestQueue(usb_request.take(), &completion);
   return bridge.consumer.promise().box();
 }
@@ -436,7 +436,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandPassesThroughFailureCode) {
   zx_status_t completion_code = -1;
   TRB* completion_trb = nullptr;
   auto enumeration_task = EnumerateDevice(&controller(), kPort, std::move(hub_info))
-                              .then([&](fit::result<TRB*, zx_status_t>& result) {
+                              .then([&](fpromise::result<TRB*, zx_status_t>& result) {
                                 if (result.is_ok()) {
                                   completion_trb = result.value();
                                   completion_code = ZX_OK;
@@ -497,7 +497,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandReturnsErrorOnFailure) {
   zx_status_t completion_code = -1;
   TRB* completion_trb = nullptr;
   auto enumeration_task = EnumerateDevice(&controller(), kPort, std::move(hub_info))
-                              .then([&](fit::result<TRB*, zx_status_t>& result) {
+                              .then([&](fpromise::result<TRB*, zx_status_t>& result) {
                                 if (result.is_ok()) {
                                   completion_trb = result.value();
                                   completion_code = ZX_OK;
@@ -561,7 +561,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceUponCompletion) {
   zx_status_t completion_code = -1;
   TRB* completion_trb = nullptr;
   auto enumeration_task = EnumerateDevice(&controller(), kPort, std::move(hub_info))
-                              .then([&](fit::result<TRB*, zx_status_t>& result) {
+                              .then([&](fpromise::result<TRB*, zx_status_t>& result) {
                                 if (result.is_ok()) {
                                   completion_trb = result.value();
                                   completion_code = ZX_OK;
@@ -654,7 +654,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   zx_status_t completion_code = -1;
   TRB* completion_trb = nullptr;
   auto enumeration_task = EnumerateDevice(&controller(), kPort, std::move(hub_info))
-                              .then([&](fit::result<TRB*, zx_status_t>& result) {
+                              .then([&](fpromise::result<TRB*, zx_status_t>& result) {
                                 if (result.is_ok()) {
                                   completion_trb = result.value();
                                   completion_code = ZX_OK;

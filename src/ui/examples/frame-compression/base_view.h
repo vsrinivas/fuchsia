@@ -66,7 +66,7 @@ class BaseView : public scenic::BaseView {
   // |scenic::SessionListener|
   void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
-  fit::promise<inspect::Inspector> PopulateStats() const;
+  fpromise::promise<inspect::Inspector> PopulateStats() const;
 
   uint32_t next_color_offset_ = 0;
   uint32_t next_image_index_ = 0;

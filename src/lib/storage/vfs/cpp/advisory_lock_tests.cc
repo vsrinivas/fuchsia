@@ -9,7 +9,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/file-lock/file-lock.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/memfs/memfs.h>
 #include <sys/file.h>
 #include <sys/stat.h>

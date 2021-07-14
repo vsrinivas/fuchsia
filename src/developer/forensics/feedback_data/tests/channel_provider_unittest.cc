@@ -5,7 +5,7 @@
 #include "src/developer/forensics/feedback_data/annotations/channel_provider.h"
 
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -57,7 +57,7 @@ class ChannelProviderTest : public UnitTestFixture {
     bool was_called = false;
     Annotations channels;
     executor_.schedule_task(
-        std::move(promise).then([&was_called, &channels](::fit::result<Annotations>& res) {
+        std::move(promise).then([&was_called, &channels](::fpromise::result<Annotations>& res) {
           was_called = true;
 
           if (res.is_error()) {

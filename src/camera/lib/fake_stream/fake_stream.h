@@ -6,7 +6,7 @@
 #define SRC_CAMERA_LIB_FAKE_STREAM_FAKE_STREAM_H_
 
 #include <fuchsia/camera3/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 namespace camera {
 
@@ -16,7 +16,7 @@ class FakeStream {
   virtual ~FakeStream() = default;
 
   // Create a fake stream with the given properties.
-  static fit::result<std::unique_ptr<FakeStream>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<FakeStream>, zx_status_t> Create(
       fuchsia::camera3::StreamProperties properties,
       fit::function<void(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>)>
           on_set_buffer_collection);

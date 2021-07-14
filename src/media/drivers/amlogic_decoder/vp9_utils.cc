@@ -126,14 +126,14 @@ void SplitSuperframe(const uint8_t* data, uint32_t frame_size, std::vector<uint8
   }
 }
 
-fit::result<bool, fuchsia::media::StreamError> IsVp9KeyFrame(uint8_t frame_header_byte_0) {
+fpromise::result<bool, fuchsia::media::StreamError> IsVp9KeyFrame(uint8_t frame_header_byte_0) {
   // We could make a bit-shifter class, but ... not really parsing that much here...
   uint8_t byte_0_shifter = frame_header_byte_0;
   uint8_t frame_marker = byte_0_shifter >> 6;
   byte_0_shifter <<= 2;
   if (frame_marker != kVp9FrameMarker) {
     LOG(ERROR, "frame marker not 2");
-    return fit::error(fuchsia::media::StreamError::DECODER_DATA_PARSING);
+    return fpromise::error(fuchsia::media::StreamError::DECODER_DATA_PARSING);
   }
   uint8_t profile_low_bit = byte_0_shifter >> 7;
   byte_0_shifter <<= 1;
@@ -145,7 +145,7 @@ fit::result<bool, fuchsia::media::StreamError> IsVp9KeyFrame(uint8_t frame_heade
     byte_0_shifter <<= 1;
     if (reserved_zero != 0) {
       LOG(ERROR, "reserved_zero not zero");
-      return fit::error(fuchsia::media::StreamError::DECODER_DATA_PARSING);
+      return fpromise::error(fuchsia::media::StreamError::DECODER_DATA_PARSING);
     }
   }
 
@@ -155,7 +155,7 @@ fit::result<bool, fuchsia::media::StreamError> IsVp9KeyFrame(uint8_t frame_heade
     // without having seen a keyframe, a show_existing_frame isn't going to find the frame it
     // wants to show.
     LOG(DEBUG, "show_existing_frame");
-    return fit::ok(false);
+    return fpromise::ok(false);
   }
   ZX_DEBUG_ASSERT(!show_existing_frame);
 
@@ -165,11 +165,11 @@ fit::result<bool, fuchsia::media::StreamError> IsVp9KeyFrame(uint8_t frame_heade
     // without having seen a keyframe, a non-keyframe isn't going to be able to decode
     // properly, so skip.
     LOG(DEBUG, "frame_type != kVp9FrameTypeKeyFrame");
-    return fit::ok(false);
+    return fpromise::ok(false);
   }
   ZX_DEBUG_ASSERT(frame_type == kVp9FrameTypeKeyFrame);
 
-  return fit::ok(true);
+  return fpromise::ok(true);
 }
 
 }  // namespace amlogic_decoder

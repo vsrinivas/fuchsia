@@ -4,7 +4,7 @@
 
 #include "src/developer/forensics/crash_reports/network_watcher.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 
 namespace forensics::crash_reports {

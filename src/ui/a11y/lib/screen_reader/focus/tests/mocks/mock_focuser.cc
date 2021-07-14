@@ -5,7 +5,7 @@
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_focuser.h"
 
 #include "fuchsia/ui/views/cpp/fidl.h"
-#include "lib/fit/result.h"
+#include "lib/fpromise/result.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace accessibility_test {
@@ -15,9 +15,9 @@ void MockFocuser::RequestFocus(fuchsia::ui::views::ViewRef view_ref,
   focus_request_received_ = true;
   view_ref_ = std::move(view_ref);
   if (throw_error_) {
-    callback(fit::error(fuchsia::ui::views::Error::DENIED));
+    callback(fpromise::error(fuchsia::ui::views::Error::DENIED));
   } else {
-    callback(fit::ok());
+    callback(fpromise::ok());
   }
 }
 

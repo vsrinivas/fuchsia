@@ -5,7 +5,7 @@
 #include "src/connectivity/lib/network-device/cpp/network_device_client.h"
 
 #include <fuchsia/net/tun/llcpp/fidl.h>
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/time.h>
@@ -274,7 +274,7 @@ TEST_F(NetDeviceTest, TestEcho) {
   constexpr uint32_t kTestFrames = 128;
   fit::function<void()> write_frame;
   uint32_t frame_count = 0;
-  fit::bridge<void, zx_status_t> write_bridge;
+  fpromise::bridge<void, zx_status_t> write_bridge;
   write_frame = [this, &frame_count, &tun_device, &write_bridge, &write_frame]() {
     if (frame_count == kTestFrames) {
       write_bridge.completer.complete_ok();
@@ -319,13 +319,13 @@ TEST_F(NetDeviceTest, TestEcho) {
     }
   });
   write_frame();
-  fit::result write_result = RunPromise(write_bridge.consumer.promise());
+  fpromise::result write_result = RunPromise(write_bridge.consumer.promise());
   ASSERT_TRUE(write_result.is_ok())
       << "WriteFrame error: " << zx_status_get_string(write_result.error());
 
   uint32_t waiting = 0;
   fit::function<void()> receive_frame;
-  fit::bridge<void, zx_status_t> read_bridge;
+  fpromise::bridge<void, zx_status_t> read_bridge;
   receive_frame = [&waiting, &tun_device, &read_bridge, &receive_frame]() {
     tun_device->ReadFrame([&read_bridge, &receive_frame,
                            &waiting](fidl::WireResponse<tun::Device::ReadFrame>* response) {
@@ -355,7 +355,7 @@ TEST_F(NetDeviceTest, TestEcho) {
     });
   };
   receive_frame();
-  fit::result read_result = RunPromise(read_bridge.consumer.promise());
+  fpromise::result read_result = RunPromise(read_bridge.consumer.promise());
   ASSERT_TRUE(read_result.is_ok())
       << "ReadFrame failed " << zx_status_get_string(read_result.error());
   EXPECT_EQ(echoed, frame_count);
@@ -391,7 +391,7 @@ TEST_F(NetDeviceTest, TestEchoPair) {
   constexpr uint32_t kBufferCount = 128;
   uint32_t rx_counter = 0;
 
-  fit::bridge completed_bridge;
+  fpromise::bridge completed_bridge;
   right->SetRxCallback([&rx_counter, &completed_bridge](NetworkDeviceClient::Buffer buffer) {
     uint32_t pload;
     EXPECT_EQ(buffer.data().frame_type(), fuchsia_hardware_network::wire::FrameType::kEthernet);
@@ -405,7 +405,7 @@ TEST_F(NetDeviceTest, TestEchoPair) {
   });
 
   {
-    fit::bridge online_bridge;
+    fpromise::bridge online_bridge;
     auto status_handle =
         right->WatchStatus(kPortId, [completer = std::move(online_bridge.completer)](
                                         fuchsia_hardware_network::wire::PortStatus status) mutable {

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fit/defer.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <iostream>
 

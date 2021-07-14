@@ -11,15 +11,15 @@
 
 namespace storage::volume_image {
 
-// Returns |fit::ok| if the |source_image| has successfully been written into |target_image| with
-// the updated |options|.
+// Returns |fpromise::ok| if the |source_image| has successfully been written into |target_image|
+// with the updated |options|.
 //
 // Supported Options:
 //  - |target_volume_size| updates the metadata size and the usable slices as well.
 //
 // On error, returns a string describing the error conditions.
-fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const FvmOptions& options,
-                                              Writer& target_image);
+fpromise::result<void, std::string> FvmImageExtend(const Reader& source_image,
+                                                   const FvmOptions& options, Writer& target_image);
 
 // Returns the trimmed sized of a raw fvm image. If the resource containing the fvm image, is
 // truncated to the trimmed sized, all the trailing data on unallocated slices are removed.
@@ -28,7 +28,7 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
 // MBs(metadata and the actual data).
 //
 // An error is returned if the fvm image contains invalid metadata.
-fit::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_image);
+fpromise::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_image);
 
 }  // namespace storage::volume_image
 

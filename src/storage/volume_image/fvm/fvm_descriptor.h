@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_DESCRIPTOR_H_
 #define SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_DESCRIPTOR_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <set>
 #include <string>
@@ -51,7 +51,7 @@ class FvmDescriptor {
     //
     // This method will always consume all added partitions. On success the ownership is taken by
     // the returned descriptor, and on error the partitions are destroyed.
-    fit::result<FvmDescriptor, std::string> Build();
+    fpromise::result<FvmDescriptor, std::string> Build();
 
    private:
     std::vector<Partition> partitions_;
@@ -81,7 +81,7 @@ class FvmDescriptor {
   // both copies of the FVM metadata.
   uint64_t metadata_required_size() const { return metadata_required_size_; }
 
-  // Returns |fit::ok| if a fvm block image was successfully written into |writer|.
+  // Returns |fpromise::ok| if a fvm block image was successfully written into |writer|.
   //
   // The generated block image, will preserve partition order in the partition table, and the
   // physical slices allocated for each mapping or extent, follow the order in which the partition
@@ -91,7 +91,7 @@ class FvmDescriptor {
   // This method, will only write the required data to offset. If the resource being written to,
   // through writer, needs a specific size(e.g. fixed size image), this should be done before
   // writing to it.
-  fit::result<void, std::string> WriteBlockImage(Writer& writer) const;
+  fpromise::result<void, std::string> WriteBlockImage(Writer& writer) const;
 
  private:
   // Set of partitions that belong to the fvm.

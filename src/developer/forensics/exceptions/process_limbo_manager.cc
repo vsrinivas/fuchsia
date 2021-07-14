@@ -33,7 +33,7 @@ void PruneStaleHandlers(std::vector<fxl::WeakPtr<ProcessLimboHandler>>* handlers
 template <typename CallbackType>
 bool VerifyState(const fxl::WeakPtr<ProcessLimboManager> limbo_manager, CallbackType* cb) {
   if (!limbo_manager) {
-    (*cb)(fit::error(ZX_ERR_UNAVAILABLE));
+    (*cb)(fpromise::error(ZX_ERR_UNAVAILABLE));
     return false;
   }
   return true;
@@ -192,7 +192,7 @@ void ProcessLimboHandler::ActiveStateChanged(bool active) {
   // If there is a limbo call waiting, we tell them that it's canceled.
   if (!active) {
     if (watch_limbo_callback_) {
-      watch_limbo_callback_(fit::error(ZX_ERR_CANCELED));
+      watch_limbo_callback_(fpromise::error(ZX_ERR_CANCELED));
       watch_limbo_callback_ = {};
       watch_limbo_dirty_bit_ = false;
     } else {
@@ -208,7 +208,7 @@ void ProcessLimboHandler::LimboChanged(std::vector<ProcessExceptionMetadata> lim
     return;
   }
 
-  watch_limbo_callback_(fit::ok(std::move(limbo_list)));
+  watch_limbo_callback_(fpromise::ok(std::move(limbo_list)));
   watch_limbo_callback_ = {};
   watch_limbo_dirty_bit_ = false;
 }
@@ -232,17 +232,17 @@ void ProcessLimboHandler::WatchProcessesWaitingOnException(
     watch_limbo_dirty_bit_ = false;
 
     if (!limbo_manager_) {
-      cb(fit::error(ZX_ERR_BAD_STATE));
+      cb(fpromise::error(ZX_ERR_BAD_STATE));
       return;
     }
 
     if (!limbo_manager_->active()) {
-      cb(fit::error(ZX_ERR_UNAVAILABLE));
+      cb(fpromise::error(ZX_ERR_UNAVAILABLE));
       return;
     }
 
     auto processes = limbo_manager_->ListProcessesInLimbo();
-    cb(fit::ok(std::move(processes)));
+    cb(fpromise::ok(std::move(processes)));
     return;
   }
 
@@ -261,11 +261,11 @@ void ProcessLimboHandler::RetrieveException(zx_koid_t process_koid, RetrieveExce
   auto it = limbo.find(process_koid);
   if (it == limbo.end()) {
     FX_LOGS(WARNING) << "Could not find process " << process_koid << " in limbo.";
-    cb(fit::error(ZX_ERR_NOT_FOUND));
+    cb(fpromise::error(ZX_ERR_NOT_FOUND));
     return;
   }
 
-  auto res = fit::ok(std::move(it->second));
+  auto res = fpromise::ok(std::move(it->second));
   limbo.erase(it);
   cb(std::move(res));
 
@@ -280,11 +280,11 @@ void ProcessLimboHandler::ReleaseProcess(zx_koid_t process_koid, ReleaseProcessC
 
   auto it = limbo.find(process_koid);
   if (it == limbo.end()) {
-    return cb(fit::error(ZX_ERR_NOT_FOUND));
+    return cb(fpromise::error(ZX_ERR_NOT_FOUND));
   }
 
   limbo.erase(it);
-  cb(fit::ok());
+  cb(fpromise::ok());
 
   limbo_manager_->NotifyLimboChanged();
 }
@@ -308,13 +308,13 @@ void ProcessLimboHandler::AppendFilters(std::vector<std::string> new_filters,
   for (auto& filter : new_filters) {
     current_filters.insert(filter);
     if (current_filters.size() >= ProcessLimboManager::kMaxFilters) {
-      cb(fit::error(ZX_ERR_NO_RESOURCES));
+      cb(fpromise::error(ZX_ERR_NO_RESOURCES));
       return;
     }
   }
 
   limbo_manager_->filters_ = std::move(current_filters);
-  cb(fit::ok());
+  cb(fpromise::ok());
 }
 
 void ProcessLimboHandler::RemoveFilters(std::vector<std::string> filters,
@@ -326,7 +326,7 @@ void ProcessLimboHandler::RemoveFilters(std::vector<std::string> filters,
     limbo_manager_->filters_.erase(filter);
   }
 
-  cb(fit::ok());
+  cb(fpromise::ok());
 }
 
 }  // namespace exceptions

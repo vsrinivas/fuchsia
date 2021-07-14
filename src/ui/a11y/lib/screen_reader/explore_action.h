@@ -5,8 +5,8 @@
 #ifndef SRC_UI_A11Y_LIB_SCREEN_READER_EXPLORE_ACTION_H_
 #define SRC_UI_A11Y_LIB_SCREEN_READER_EXPLORE_ACTION_H_
 
-#include <lib/fit/promise.h>
-#include <lib/fit/scope.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/scope.h>
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
@@ -31,21 +31,21 @@ class ExploreAction : public ScreenReaderAction {
  private:
   // Returns a promise which performs hit testing. An error is thrown if the hit test result has no
   // node ID.
-  fit::promise<fuchsia::accessibility::semantics::Hit> ExecuteHitTestingPromise(
+  fpromise::promise<fuchsia::accessibility::semantics::Hit> ExecuteHitTestingPromise(
       const GestureContext& gesture_context);
 
   // Returns a promise that sets the A11y Focus. If the screen reader is in a continuous
   // exploration and the new focus determined by [|view_koid|, |node_id|], is the same as the
   // existing A11y Focus, throws an error.
-  fit::promise<> SetA11yFocusOrStopPromise(ScreenReaderContext::ScreenReaderMode mode,
-                                           zx_koid_t view_koid, uint32_t node_id);
+  fpromise::promise<> SetA11yFocusOrStopPromise(ScreenReaderContext::ScreenReaderMode mode,
+                                                zx_koid_t view_koid, uint32_t node_id);
 
   // Returns a promise that selects a describable ancestor of the node specified
   // by |hit|, if that node is not describable.
-  fit::result<uint32_t> SelectDescribableNodePromise(zx_koid_t view_koid,
-                                                     fuchsia::accessibility::semantics::Hit& hit);
+  fpromise::result<uint32_t> SelectDescribableNodePromise(
+      zx_koid_t view_koid, fuchsia::accessibility::semantics::Hit& hit);
 
-  fit::scope scope_;
+  fpromise::scope scope_;
 };
 
 }  // namespace a11y

@@ -59,10 +59,10 @@ class RealLoop {
   // Runs the message loop until idle.
   void RunLoopUntilIdle();
 
-  // Runs the loop until the given |fit::promise| completes, and returns the
-  // |fit::result| it produced.
+  // Runs the loop until the given |fpromise::promise| completes, and returns the
+  // |fpromise::result| it produced.
   //
-  // If the |fit::promise| never completes, this method will run forever.
+  // If the |fpromise::promise| never completes, this method will run forever.
   template <typename PromiseType>
   typename PromiseType::result_type RunPromise(PromiseType promise);
 

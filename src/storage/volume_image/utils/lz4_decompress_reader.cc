@@ -4,7 +4,7 @@
 
 #include "src/storage/volume_image/utils/lz4_decompress_reader.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <string.h>
 
 #include <cstdint>
@@ -14,7 +14,8 @@
 
 namespace storage::volume_image {
 
-fit::result<void, std::string> Lz4DecompressReader::Initialize(uint64_t max_buffer_size) const {
+fpromise::result<void, std::string> Lz4DecompressReader::Initialize(
+    uint64_t max_buffer_size) const {
   context_.decompressed_data.resize(max_buffer_size, 0);
   context_.decompressed_offset = offset_;
   context_.decompressed_length = 0;
@@ -29,19 +30,19 @@ fit::result<void, std::string> Lz4DecompressReader::Initialize(uint64_t max_buff
       [this](auto decompressed_data) { return this->DecompressionHandler(decompressed_data); });
 }
 
-fit::result<void, std::string> Lz4DecompressReader::DecompressionHandler(
+fpromise::result<void, std::string> Lz4DecompressReader::DecompressionHandler(
     fbl::Span<const uint8_t> decompressed_data) const {
   memcpy(context_.decompressed_data.data(), decompressed_data.data(), decompressed_data.size());
   context_.decompressed_offset += context_.decompressed_length;
   context_.decompressed_length = decompressed_data.size();
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
-fit::result<void, std::string> Lz4DecompressReader::Seek(uint64_t offset) const {
+fpromise::result<void, std::string> Lz4DecompressReader::Seek(uint64_t offset) const {
   // Offset in uncompressed area.
   if (offset < offset_) {
-    return fit::ok();
+    return fpromise::ok();
   }
 
   if (offset < context_.decompressed_offset) {
@@ -70,12 +71,12 @@ fit::result<void, std::string> Lz4DecompressReader::Seek(uint64_t offset) const 
   }
 
   if (!offset_in_range() && (end_of_frame() || end_of_compressed_data())) {
-    return fit::error("Reached end of compressed data before reaching offset.");
+    return fpromise::error("Reached end of compressed data before reaching offset.");
   };
-  return fit::ok();
+  return fpromise::ok();
 }
 
-fit::result<void, std::string> Lz4DecompressReader::NextDecompressedChunk() const {
+fpromise::result<void, std::string> Lz4DecompressReader::NextDecompressedChunk() const {
   auto read_view = fbl::Span<uint8_t>(context_.compressed_data);
   uint64_t remaining_compressed_bytes = compressed_reader_->length() - context_.compressed_offset;
 
@@ -100,14 +101,14 @@ fit::result<void, std::string> Lz4DecompressReader::NextDecompressedChunk() cons
   auto [hint, consumed_bytes] = decompress_result.value();
   context_.hint = hint;
   context_.compressed_offset += consumed_bytes;
-  return fit::ok();
+  return fpromise::ok();
 }
 
-fit::result<void, std::string> Lz4DecompressReader::Read(uint64_t offset,
-                                                         fbl::Span<uint8_t> buffer) const {
+fpromise::result<void, std::string> Lz4DecompressReader::Read(uint64_t offset,
+                                                              fbl::Span<uint8_t> buffer) const {
   // Base recursion case.
   if (buffer.empty()) {
-    return fit::ok();
+    return fpromise::ok();
   }
 
   // Attempting to read out of the uncompressed range.
@@ -124,7 +125,7 @@ fit::result<void, std::string> Lz4DecompressReader::Read(uint64_t offset,
     offset += uncompressed_bytes_to_copy;
     buffer = buffer.subspan(uncompressed_bytes_to_copy);
     if (buffer.empty()) {
-      return fit::ok();
+      return fpromise::ok();
     }
   }
 
@@ -144,7 +145,7 @@ fit::result<void, std::string> Lz4DecompressReader::Read(uint64_t offset,
     offset += decompressed_bytes_to_copy;
     buffer = buffer.subspan(decompressed_bytes_to_copy);
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
 }  // namespace storage::volume_image

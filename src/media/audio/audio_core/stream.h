@@ -6,7 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_STREAM_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/time.h>
 
 #include <optional>

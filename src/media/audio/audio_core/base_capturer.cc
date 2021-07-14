@@ -4,8 +4,8 @@
 
 #include "src/media/audio/audio_core/base_capturer.h"
 
-#include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/media/audio/cpp/types.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
@@ -98,12 +98,12 @@ void BaseCapturer::UpdateState(State new_state) {
   }
 }
 
-fit::promise<> BaseCapturer::Cleanup() {
+fpromise::promise<> BaseCapturer::Cleanup() {
   TRACE_DURATION("audio.debug", "BaseCapturer::Cleanup");
 
   // We need to stop all the async operations happening on the mix dispatcher. These components can
   // only be touched on that thread, so post a task there to run that cleanup.
-  fit::bridge<> bridge;
+  fpromise::bridge<> bridge;
   auto nonce = TRACE_NONCE();
   TRACE_FLOW_BEGIN("audio.debug", "BaseCapturer.capture_cleanup", nonce);
   async::PostTask(
@@ -119,7 +119,7 @@ fit::promise<> BaseCapturer::Cleanup() {
   // After CleanupFromMixThread is done, no more work will happen on the mix dispatch thread. We
   // need to now ensure our ready_packets signal is De-asserted.
   return bridge.consumer.promise().then(
-      [this](fit::result<>&) { ready_packets_wakeup_.Deactivate(); });
+      [this](fpromise::result<>&) { ready_packets_wakeup_.Deactivate(); });
 }
 
 void BaseCapturer::CleanupFromMixThread() {
@@ -131,8 +131,8 @@ void BaseCapturer::CleanupFromMixThread() {
 }
 
 void BaseCapturer::BeginShutdown() {
-  context_.threading_model().FidlDomain().ScheduleTask(
-      Cleanup().then([this](fit::result<>&) { context_.route_graph().RemoveCapturer(*this); }));
+  context_.threading_model().FidlDomain().ScheduleTask(Cleanup().then(
+      [this](fpromise::result<>&) { context_.route_graph().RemoveCapturer(*this); }));
 }
 
 void BaseCapturer::OnStateChanged(State old_state, State new_state) {
@@ -149,14 +149,14 @@ void BaseCapturer::OnStateChanged(State old_state, State new_state) {
   }
 }
 
-fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+fpromise::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
 BaseCapturer::InitializeSourceLink(const AudioObject& source,
                                    std::shared_ptr<ReadableStream> source_stream) {
   TRACE_DURATION("audio", "BaseCapturer::InitializeSourceLink");
 
   if (!format_.has_value()) {
     BeginShutdown();
-    return fit::error(ZX_ERR_BAD_STATE);
+    return fpromise::error(ZX_ERR_BAD_STATE);
   }
 
   switch (state_.load()) {
@@ -170,12 +170,13 @@ BaseCapturer::InitializeSourceLink(const AudioObject& source,
       // In capture, source clocks originate from devices (inputs if live, outputs if loopback).
       // For now, "loop in" (direct client-to-client) routing is unsupported.
       FX_CHECK(source_stream->reference_clock().is_device_clock());
-      return fit::ok(std::make_pair(mix_stage_->AddInput(std::move(source_stream)), &mix_domain()));
+      return fpromise::ok(
+          std::make_pair(mix_stage_->AddInput(std::move(source_stream)), &mix_domain()));
 
     // If we are shut down, then I'm not sure why new links are being added, but
     // just go ahead and reject this one. We will be going away shortly.
     case State::Shutdown:
-      return fit::error(ZX_ERR_BAD_STATE);
+      return fpromise::error(ZX_ERR_BAD_STATE);
   }
 }
 

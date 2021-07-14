@@ -64,7 +64,7 @@ BlobfsMetrics::BlobfsMetrics(
         inspect::Inspector insp;
         insp.GetRoot().CreateUint("current_size", stats.size, &insp);
         insp.GetRoot().CreateUint("maximum_size", stats.maximum_size, &insp);
-        return fit::make_result_promise(fit::ok(std::move(insp)));
+        return fpromise::make_result_promise(fpromise::ok(std::move(insp)));
       },
       &inspector_);
 }

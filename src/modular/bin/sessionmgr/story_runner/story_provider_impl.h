@@ -194,11 +194,11 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
     // The executor on which asynchronous tasks are scheduled for this story.
     //
     // TODO(thatguy): Migrate all operations under |controller_impl| to use
-    // fit::promise and |executor|. fxbug.dev/16062
-    // TODO(thatguy): Once fit::scope is complete, share one executor for the
-    // whole process and take advantage of fit::scope to auto-cancel tasks when
+    // fpromise::promise and |executor|. fxbug.dev/16062
+    // TODO(thatguy): Once fpromise::scope is complete, share one executor for the
+    // whole process and take advantage of fpromise::scope to auto-cancel tasks when
     // |this| dies.
-    std::unique_ptr<fit::executor> executor;
+    std::unique_ptr<fpromise::executor> executor;
 
     std::unique_ptr<StoryControllerImpl> controller_impl;
     std::shared_ptr<StoryStorage> storage;

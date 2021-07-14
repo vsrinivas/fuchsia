@@ -42,17 +42,17 @@ zx::status<uint64_t> CheckOperationsAndGetTotalBlockCount(const T& operations) {
   return zx::ok(total_blocks);
 }
 
-fit::result<void, zx_status_t> SignalSyncComplete(sync_completion_t* completion) {
+fpromise::result<void, zx_status_t> SignalSyncComplete(sync_completion_t* completion) {
   FX_LOGST(DEBUG, "journal") << "SignalSyncComplete";
   sync_completion_signal(completion);
-  return fit::ok();
+  return fpromise::ok();
 }
 
-fit::result<> ToVoidError(fit::result<void, zx_status_t> result) {
+fpromise::result<> ToVoidError(fpromise::result<void, zx_status_t> result) {
   if (result.is_ok()) {
-    return fit::ok();
+    return fpromise::ok();
   } else {
-    return fit::error();
+    return fpromise::error();
   }
 }
 
@@ -76,7 +76,7 @@ Journal::Journal(TransactionHandler* transaction_handler, JournalSuperblock jour
 
 Journal::~Journal() {
   sync_completion_t completion;
-  schedule_task(Sync().then([&completion](const fit::result<void, zx_status_t>& result) {
+  schedule_task(Sync().then([&completion](const fpromise::result<void, zx_status_t>& result) {
     return SignalSyncComplete(&completion);
   }));
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
@@ -95,11 +95,11 @@ void Journal::FlushPending() {
 
   // Once all the journal writes are done, we need to flush again to flush the writes to their final
   // locations.
-  schedule_task(journal_sequencer_.wrap(fit::make_promise([this]() -> fit::result<> {
+  schedule_task(journal_sequencer_.wrap(fpromise::make_promise([this]() -> fpromise::result<> {
     if (writer_.HavePendingWork()) {
       return ToVoidError(writer_.Flush());
     } else {
-      return fit::ok();
+      return fpromise::ok();
     }
   })));
 
@@ -113,11 +113,11 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
       CheckOperationsAndGetTotalBlockCount<storage::OperationType::kWrite>(operations);
   if (block_count_or.is_error()) {
     event.set_success(false);
-    return fit::make_error_promise(block_count_or.status_value());
+    return fpromise::make_error_promise(block_count_or.status_value());
   }
   if (block_count_or.value() == 0) {
     event.set_block_count(0);
-    return fit::make_result_promise<void, zx_status_t>(fit::ok());
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
   event.set_block_count(block_count_or.value());
 
@@ -127,7 +127,7 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
     FX_LOGST(ERROR, "journal") << "Failed to reserve space in writeback buffer: "
                                << zx_status_get_string(status);
     event.set_success(false);
-    return fit::make_error_promise(status);
+    return fpromise::make_error_promise(status);
   }
 
   // Once we have that space, copy the operations into the buffer.
@@ -137,12 +137,12 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
     FX_LOGST(ERROR, "journal") << "Failed to copy operations into writeback buffer: "
                                << result.status_string();
     event.set_success(false);
-    return fit::make_error_promise(result.error_value());
+    return fpromise::make_error_promise(result.error_value());
   }
   internal::JournalWorkItem work(std::move(reservation), std::move(buffered_operations));
 
   // Return the deferred action to write the data operations to the device.
-  return fit::make_promise(
+  return fpromise::make_promise(
       [this, work = std::move(work)]() mutable { return writer_.WriteData(std::move(work)); });
 }
 
@@ -228,10 +228,10 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
     trim_work = internal::JournalWorkItem({}, std::move(transaction.trim));
   }
 
-  auto promise = fit::make_promise(
+  auto promise = fpromise::make_promise(
       [this, work = std::move(work),
-       trim_work = std::move(trim_work)]() mutable -> fit::result<void, zx_status_t> {
-        fit::result<void, zx_status_t> result =
+       trim_work = std::move(trim_work)]() mutable -> fpromise::result<void, zx_status_t> {
+        fpromise::result<void, zx_status_t> result =
             writer_.WriteMetadata(std::move(work), std::move(trim_work));
         return result;
       });
@@ -241,12 +241,13 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
     // If this transaction has data, we need to block writes to the journal until the data has been
     // flushed, so to do that, we add a blocking promise that we'll post later after the data has
     // been flushed.
-    journal_data_barrier_ = journal_sequencer_.wrap(fit::make_ok_promise()).take_continuation();
+    journal_data_barrier_ =
+        journal_sequencer_.wrap(fpromise::make_ok_promise()).take_continuation();
   }
   pending_ += block_count;
   auto ordered_promise = journal_sequencer_.wrap(std::move(promise));
 
-  fit::pending_task task;
+  fpromise::pending_task task;
   if (transaction.data_promise) {
     task = data_barrier_.wrap(std::move(transaction.data_promise))
                .and_then(std::move(ordered_promise));
@@ -261,7 +262,7 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
 Journal::Promise Journal::Sync() {
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalSync);
   FlushPending();
-  return journal_sequencer_.wrap(fit::make_promise([this] { return writer_.Sync(); }));
+  return journal_sequencer_.wrap(fpromise::make_promise([this] { return writer_.Sync(); }));
 }
 
 }  // namespace fs

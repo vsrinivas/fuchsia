@@ -97,7 +97,7 @@ DriverHost::DriverHost(inspect::Inspector& inspector, async::Loop& loop,
       "drivers", [this] { return Inspect(); }, &inspector);
 }
 
-fit::promise<inspect::Inspector> DriverHost::Inspect() {
+fpromise::promise<inspect::Inspector> DriverHost::Inspect() {
   inspect::Inspector inspector;
   auto& root = inspector.GetRoot();
   size_t i = 0;
@@ -110,7 +110,7 @@ fit::promise<inspect::Inspector> DriverHost::Inspect() {
     inspector.emplace(std::move(child));
   }
 
-  return fit::make_ok_promise(std::move(inspector));
+  return fpromise::make_ok_promise(std::move(inspector));
 }
 
 zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {

@@ -8,7 +8,7 @@
 #include <fuchsia/exception/internal/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/function.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/time.h>

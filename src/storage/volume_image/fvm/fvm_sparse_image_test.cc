@@ -269,17 +269,17 @@ TEST(FvmSparseCalculateUncompressedImageSizeTest, ParitionsAndExtentsMatchesSeri
 class FakeReader : public Reader {
  public:
   explicit FakeReader(
-      fit::function<fit::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)> filler)
+      fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)> filler)
       : filler_(std::move(filler)) {}
 
   uint64_t length() const override { return 0; }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     return filler_(offset, buffer);
   }
 
  private:
-  fit::function<fit::result<void, std::string>(uint64_t offset, fbl::Span<uint8_t>)> filler_;
+  fit::function<fpromise::result<void, std::string>(uint64_t offset, fbl::Span<uint8_t>)> filler_;
 };
 
 // Fake writer implementations that writes into a provided buffer.
@@ -287,14 +287,15 @@ class BufferWriter : public Writer {
  public:
   explicit BufferWriter(fbl::Span<uint8_t> buffer) : buffer_(buffer) {}
 
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     if (offset > buffer_.size() || offset + buffer.size() > buffer_.size()) {
-      return fit::error("BufferWriter: Out of Range. Offset at " + std::to_string(offset) +
-                        " and byte count is " + std::to_string(buffer.size()) + " max size is " +
-                        std::to_string(buffer_.size()) + ".");
+      return fpromise::error("BufferWriter: Out of Range. Offset at " + std::to_string(offset) +
+                             " and byte count is " + std::to_string(buffer.size()) +
+                             " max size is " + std::to_string(buffer_.size()) + ".");
     }
     memcpy(buffer_.data() + offset, buffer.data(), buffer.size());
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:
@@ -302,11 +303,11 @@ class BufferWriter : public Writer {
 };
 
 template <int shift>
-fit::result<void, std::string> GetContents(uint64_t offset, fbl::Span<uint8_t> buffer) {
+fpromise::result<void, std::string> GetContents(uint64_t offset, fbl::Span<uint8_t> buffer) {
   for (uint64_t index = 0; index < buffer.size(); ++index) {
     buffer[index] = (offset + index + shift) % sizeof(uint64_t);
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
 class SerializedImageContainer {
@@ -581,12 +582,12 @@ class ErrorWriter final : public Writer {
       : error_(error), error_offset_(error_offset) {}
   ~ErrorWriter() final = default;
 
-  fit::result<void, std::string> Write([[maybe_unused]] uint64_t offset,
-                                       [[maybe_unused]] fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(
+      [[maybe_unused]] uint64_t offset, [[maybe_unused]] fbl::Span<const uint8_t> buffer) final {
     if (offset >= error_offset_) {
-      return fit::error(error_);
+      return fpromise::error(error_);
     }
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:
@@ -607,7 +608,7 @@ TEST(FvmSparseWriteImageTest, WithReadErrorIsError) {
       kSerializedVolumeImage1,
       std::make_unique<FakeReader>(
           []([[maybe_unused]] uint64_t offset, [[maybe_unused]] fbl::Span<uint8_t> buffer) {
-            return fit::error(std::string(kReadError));
+            return fpromise::error(std::string(kReadError));
           }));
   ASSERT_TRUE(partition_1_result.is_ok()) << partition_1_result.error();
 
@@ -662,11 +663,11 @@ class BufferReader final : public Reader {
 
   uint64_t length() const final { return length_; }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     // if no overlap zero the buffer.
     if (offset + buffer.size() < image_offset_ || offset > image_offset_ + image_buffer_.size()) {
       std::fill(buffer.begin(), buffer.end(), 0);
-      return fit::ok();
+      return fpromise::ok();
     }
 
     size_t zeroed_bytes = 0;  // Zero anything before the header start.
@@ -689,7 +690,7 @@ class BufferReader final : public Reader {
       std::fill(buffer.begin() + zeroed_bytes + copied_bytes, buffer.end(), 0);
     }
 
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:

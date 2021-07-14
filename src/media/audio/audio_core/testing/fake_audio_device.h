@@ -83,11 +83,11 @@ class FakeAudioOutput : public FakeAudioDevice {
       : FakeAudioDevice(Type::Output, threading_model, registry, link_matrix,
                         std::move(clock_factory)) {}
 
-  fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+  fpromise::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
   InitializeSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) override {
     stream->SetPresentationDelay(presentation_delay());
     stream_ = std::move(stream);
-    return fit::ok(std::make_pair(mixer_, mix_domain_.get()));
+    return fpromise::ok(std::make_pair(mixer_, mix_domain_.get()));
   }
 
   const std::shared_ptr<ReadableStream>& stream() const { return stream_; }

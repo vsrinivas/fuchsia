@@ -4,7 +4,7 @@
 
 #include "src/camera/drivers/controller/graph_utils.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -28,7 +28,7 @@ const InternalConfigNode* GetNextNodeInPipeline(const fuchsia::camera2::CameraSt
   return nullptr;
 }
 
-fit::result<BufferCollection, zx_status_t> GetBuffers(
+fpromise::result<BufferCollection, zx_status_t> GetBuffers(
     const ControllerMemoryAllocator& memory_allocator, const InternalConfigNode& producer,
     StreamCreationData* info, const std::string& buffer_tag) {
   BufferCollection collection;
@@ -37,7 +37,7 @@ fit::result<BufferCollection, zx_status_t> GetBuffers(
 
   if (!consumer) {
     FX_LOGST(ERROR, kTag) << "Failed to get next node";
-    return fit::error(ZX_ERR_INTERNAL);
+    return fpromise::error(ZX_ERR_INTERNAL);
   }
 
   // The controller might need to allocate memory using sysmem.
@@ -49,7 +49,7 @@ fit::result<BufferCollection, zx_status_t> GetBuffers(
     if (current_producer->child_nodes.size() != 1) {
       FX_LOGST(ERROR, kTag)
           << "Invalid configuration. A buffer is shared with a node which does in place operations";
-      return fit::error(ZX_ERR_BAD_STATE);
+      return fpromise::error(ZX_ERR_BAD_STATE);
     }
     constraints.push_back(consumer->input_constraints);
     current_producer = consumer;
@@ -65,12 +65,12 @@ fit::result<BufferCollection, zx_status_t> GetBuffers(
   auto status = memory_allocator.AllocateSharedMemory(constraints, collection, buffer_tag);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to allocate shared memory";
-    return fit::error(status);
+    return fpromise::error(status);
   }
   FX_LOGST(DEBUG, kTag) << "Allocated " << collection.buffers.buffer_count << " buffers for "
                         << buffer_tag;
 
-  return fit::ok(std::move(collection));
+  return fpromise::ok(std::move(collection));
 }
 
 }  // namespace camera

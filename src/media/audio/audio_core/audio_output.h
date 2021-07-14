@@ -27,11 +27,11 @@ class AudioOutput : public AudioDevice {
  public:
   ~AudioOutput() override = default;
 
-  fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+  fpromise::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config) override;
 
   // Replace the existing DeviceProfile and restart the OutputPipeline, for tuning purposes.
-  fit::promise<void, zx_status_t> UpdateDeviceProfile(
+  fpromise::promise<void, zx_status_t> UpdateDeviceProfile(
       const DeviceConfig::OutputDeviceProfile::Parameters& params) override;
 
   OutputPipeline* output_pipeline() const { return pipeline_.get(); }
@@ -53,10 +53,10 @@ class AudioOutput : public AudioDevice {
   // If we're initializing a source link, then we're connecting a renderer to this output. Else
   // if we're initializing a dest link, then we're being connected as a loopback so we should return
   // our loopback stream.
-  fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+  fpromise::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
   InitializeSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) final;
   void CleanupSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) final;
-  fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
+  fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
 
   // Mark this output as needing to be mixed at the specified future time.

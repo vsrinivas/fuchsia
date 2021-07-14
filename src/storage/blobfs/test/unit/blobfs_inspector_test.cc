@@ -80,9 +80,9 @@ class ArrayBufferFactory : public disk_inspector::BufferFactory {
   ArrayBufferFactory& operator=(const ArrayBufferFactory&) = delete;
   ArrayBufferFactory& operator=(ArrayBufferFactory&&) = default;
 
-  fit::result<std::unique_ptr<storage::BlockBuffer>, zx_status_t> CreateBuffer(
+  fpromise::result<std::unique_ptr<storage::BlockBuffer>, zx_status_t> CreateBuffer(
       size_t capacity) const final {
-    return fit::ok(std::make_unique<storage::ArrayBuffer>(capacity, block_size_));
+    return fpromise::ok(std::make_unique<storage::ArrayBuffer>(capacity, block_size_));
   }
 
  private:

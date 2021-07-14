@@ -5,7 +5,7 @@
 #define SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_SECMEM_SESSION_H_
 
 #include <fuchsia/tee/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/limits.h>
 
@@ -16,7 +16,7 @@
 
 class SecmemSession {
  public:
-  static fit::result<SecmemSession, fuchsia::tee::ApplicationSyncPtr> TryOpen(
+  static fpromise::result<SecmemSession, fuchsia::tee::ApplicationSyncPtr> TryOpen(
       fuchsia::tee::ApplicationSyncPtr tee_connection);
 
   SecmemSession(SecmemSession&&) = default;
@@ -32,8 +32,8 @@ class SecmemSession {
   static constexpr uint64_t kParameterBufferSize = ZX_PAGE_SIZE;
 
   static void PackUint32Parameter(uint32_t value, std::vector<uint8_t>* buffer);
-  static fit::result<uint32_t> UnpackUint32Parameter(const std::vector<uint8_t>& buffer,
-                                                     size_t* offset_in_out);
+  static fpromise::result<uint32_t> UnpackUint32Parameter(const std::vector<uint8_t>& buffer,
+                                                          size_t* offset_in_out);
 
   explicit SecmemSession(uint32_t session_id, fuchsia::tee::ApplicationSyncPtr tee_connection)
       : session_id_(session_id), tee_connection_(std::move(tee_connection)) {}

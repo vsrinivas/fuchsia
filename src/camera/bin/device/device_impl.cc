@@ -5,7 +5,7 @@
 #include "src/camera/bin/device/device_impl.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -25,19 +25,19 @@ constexpr uint32_t kNumControllerCampingBuffers = 5;
 
 using ConfigPtr = std::unique_ptr<fuchsia::camera2::hal::Config>;
 
-fit::promise<fuchsia::camera2::DeviceInfo> FetchDeviceInfo(
+fpromise::promise<fuchsia::camera2::DeviceInfo> FetchDeviceInfo(
     const fuchsia::camera2::hal::ControllerPtr& controller) {
-  fit::bridge<fuchsia::camera2::DeviceInfo> bridge;
+  fpromise::bridge<fuchsia::camera2::DeviceInfo> bridge;
   controller->GetDeviceInfo([completer = std::move(bridge.completer)](auto device_info) mutable {
     completer.complete_ok(std::move(device_info));
   });
   return bridge.consumer.promise();
 }
 
-fit::promise<std::vector<ConfigPtr>, zx_status_t> FetchConfigs(
+fpromise::promise<std::vector<ConfigPtr>, zx_status_t> FetchConfigs(
     const fuchsia::camera2::hal::ControllerPtr& controller,
     std::vector<ConfigPtr> configs = std::vector<ConfigPtr>()) {
-  fit::bridge<ConfigPtr, zx_status_t> bridge;
+  fpromise::bridge<ConfigPtr, zx_status_t> bridge;
   controller->GetNextConfig(
       [completer = std::move(bridge.completer)](auto config, auto status) mutable {
         if (status == ZX_OK) {
@@ -46,28 +46,29 @@ fit::promise<std::vector<ConfigPtr>, zx_status_t> FetchConfigs(
           completer.complete_error(status);
         }
       });
-  return bridge.consumer.promise().then([&controller, configs = std::move(configs)](
-                                            fit::result<ConfigPtr, zx_status_t>& result) mutable
-                                        -> fit::promise<std::vector<ConfigPtr>, zx_status_t> {
-    if (result.is_ok()) {
-      // If we received a config, we need to call FetchConfigs again to get the next config.
-      configs.push_back(result.take_value());
-      return FetchConfigs(controller, std::move(configs));
-    } else if (result.error() == ZX_ERR_STOP) {
-      // This means we've already fetched all configs successfully.
-      return fit::make_result_promise<std::vector<ConfigPtr>, zx_status_t>(
-          fit::ok(std::move(configs)));
-    } else {
-      // Unexpected zx_status_t values will be a failure.
-      return fit::make_result_promise<std::vector<ConfigPtr>, zx_status_t>(
-          fit::error(result.take_error()));
-    }
-  });
+  return bridge.consumer.promise().then(
+      [&controller,
+       configs = std::move(configs)](fpromise::result<ConfigPtr, zx_status_t>& result) mutable
+      -> fpromise::promise<std::vector<ConfigPtr>, zx_status_t> {
+        if (result.is_ok()) {
+          // If we received a config, we need to call FetchConfigs again to get the next config.
+          configs.push_back(result.take_value());
+          return FetchConfigs(controller, std::move(configs));
+        } else if (result.error() == ZX_ERR_STOP) {
+          // This means we've already fetched all configs successfully.
+          return fpromise::make_result_promise<std::vector<ConfigPtr>, zx_status_t>(
+              fpromise::ok(std::move(configs)));
+        } else {
+          // Unexpected zx_status_t values will be a failure.
+          return fpromise::make_result_promise<std::vector<ConfigPtr>, zx_status_t>(
+              fpromise::error(result.take_error()));
+        }
+      });
 }
 
 }  // namespace
 
-DeviceImpl::DeviceImpl(async_dispatcher_t* dispatcher, fit::executor& executor,
+DeviceImpl::DeviceImpl(async_dispatcher_t* dispatcher, fpromise::executor& executor,
                        fuchsia::sysmem::AllocatorHandle allocator, zx::event bad_state_event)
     : dispatcher_(dispatcher),
       executor_(executor),
@@ -77,8 +78,8 @@ DeviceImpl::DeviceImpl(async_dispatcher_t* dispatcher, fit::executor& executor,
 
 DeviceImpl::~DeviceImpl() = default;
 
-fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
-    async_dispatcher_t* dispatcher, fit::executor& executor,
+fpromise::promise<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
+    async_dispatcher_t* dispatcher, fpromise::executor& executor,
     fuchsia::camera2::hal::ControllerHandle controller, fuchsia::sysmem::AllocatorHandle allocator,
     fuchsia::ui::policy::DeviceListenerRegistryHandle registry, zx::event bad_state_event) {
   auto device = std::make_unique<DeviceImpl>(dispatcher, executor, std::move(allocator),
@@ -91,26 +92,27 @@ fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
     ZX_ASSERT(device->bad_state_event_.signal(0, ZX_EVENT_SIGNALED) == ZX_OK);
   });
 
-  using DeviceInfoResult = fit::result<>;
+  using DeviceInfoResult = fpromise::result<>;
   auto device_info_promise =
       FetchDeviceInfo(device->controller_)
           .and_then([device = device.get()](fuchsia::camera2::DeviceInfo& device_info) mutable {
             device->device_info_ = std::move(device_info);
           });
-  using FetchConfigsResult = fit::result<void, zx_status_t>;
+  using FetchConfigsResult = fpromise::result<void, zx_status_t>;
   auto configs_promise =
       FetchConfigs(device->controller_)
-          .then([device = device.get()](fit::result<std::vector<ConfigPtr>, zx_status_t>& result)
+          .then([device =
+                     device.get()](fpromise::result<std::vector<ConfigPtr>, zx_status_t>& result)
                     -> FetchConfigsResult {
             if (result.is_error()) {
-              return fit::error(result.error());
+              return fpromise::error(result.error());
             }
             for (uint32_t config_index = 0; config_index < result.value().size(); ++config_index) {
               const auto& config = result.value()[config_index];
               auto result = Convert(*config);
               if (result.is_error()) {
                 FX_PLOGS(ERROR, result.error()) << "Failed to convert config";
-                return fit::error(result.error());
+                return fpromise::error(result.error());
               }
 
               auto num_streams = result.value().streams().size();
@@ -126,17 +128,17 @@ fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
               device->configs_.push_back(std::move(*config));
             }
             device->SetConfiguration(0);
-            return fit::ok();
+            return fpromise::ok();
           });
 
   // Wait for all expected callbacks to occur.
-  return fit::join_promises(std::move(device_info_promise), std::move(configs_promise))
+  return fpromise::join_promises(std::move(device_info_promise), std::move(configs_promise))
       .then([device = std::move(device), registry = std::move(registry)](
-                fit::result<std::tuple<DeviceInfoResult, FetchConfigsResult>>& results) mutable
-            -> fit::result<std::unique_ptr<DeviceImpl>, zx_status_t> {
+                fpromise::result<std::tuple<DeviceInfoResult, FetchConfigsResult>>& results) mutable
+            -> fpromise::result<std::unique_ptr<DeviceImpl>, zx_status_t> {
         FX_CHECK(results.is_ok());
         if (std::get<1>(results.value()).is_error()) {
-          return fit::error(std::get<1>(results.value()).error());
+          return fpromise::error(std::get<1>(results.value()).error());
         }
         // Bind the registry interface and register the device as a listener.
         ZX_ASSERT(device->registry_.Bind(std::move(registry)) == ZX_OK);
@@ -145,7 +147,7 @@ fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
         // Rebind the controller error handler.
         device->controller_.set_error_handler(
             fit::bind_member(device.get(), &DeviceImpl::OnControllerDisconnected));
-        return fit::ok(std::move(device));
+        return fpromise::ok(std::move(device));
       });
 }
 
@@ -182,9 +184,9 @@ void DeviceImpl::SetConfiguration(uint32_t index) {
   current_configuration_index_ = index;
   records_[current_configuration_index_]->SetActive(true);
 
-  std::vector<fit::promise<void, zx_status_t>> deallocation_promises;
+  std::vector<fpromise::promise<void, zx_status_t>> deallocation_promises;
   for (auto& event : deallocation_events_) {
-    fit::bridge<void, zx_status_t> bridge;
+    fpromise::bridge<void, zx_status_t> bridge;
     auto wait = std::make_shared<async::WaitOnce>(event.release(), ZX_EVENTPAIR_PEER_CLOSED, 0);
     wait->Begin(dispatcher_, [wait_ref = wait, completer = std::move(bridge.completer)](
                                  async_dispatcher_t* dispatcher, async::WaitOnce* wait,
@@ -280,14 +282,15 @@ void DeviceImpl::OnStreamRequested(uint32_t index,
                                    uint32_t format_index) {
   auto connect_to_stream =
       [this, index, format_index, request = std::move(request)](
-          const fit::result<std::vector<fit::result<void, zx_status_t>>>& results) mutable {
+          const fpromise::result<std::vector<fpromise::result<void, zx_status_t>>>&
+              results) mutable {
         controller_->CreateStream(current_configuration_index_, index, format_index,
                                   std::move(request));
       };
 
   // Wait for any previous configurations buffers to finish deallocation, then connect
   // to stream.
-  executor_.schedule_task(fit::join_promise_vector(std::move(deallocation_promises_))
+  executor_.schedule_task(fpromise::join_promise_vector(std::move(deallocation_promises_))
                               .then(std::move(connect_to_stream))
                               .wrap_with(streams_[index]->Scope()));
 }
@@ -301,7 +304,7 @@ void DeviceImpl::OnBuffersRequested(uint32_t index,
 
   auto allocation_complete =
       [this, max_camping_buffers_callback = std::move(max_camping_buffers_callback)](
-          fit::result<BufferCollectionWithLifetime, zx_status_t>& result) mutable {
+          fpromise::result<BufferCollectionWithLifetime, zx_status_t>& result) mutable {
         if (result.is_error()) {
           FX_LOGS(WARNING) << "Failed to allocate buffers";
           return;

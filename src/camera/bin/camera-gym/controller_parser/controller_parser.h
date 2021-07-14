@@ -6,7 +6,7 @@
 #define SRC_CAMERA_BIN_CAMERA_GYM_CONTROLLER_PARSER_CONTROLLER_PARSER_H_
 
 #include <fuchsia/camera/gym/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 namespace camera {
 
@@ -15,25 +15,24 @@ class ControllerParser {
  public:
   ControllerParser() = default;
 
-  fit::result<std::vector<fuchsia::camera::gym::Command>> ParseArgcArgv(int argc,
-                                                                        const char** argv);
+  fpromise::result<std::vector<fuchsia::camera::gym::Command>> ParseArgcArgv(int argc,
+                                                                             const char** argv);
 
  private:
   ControllerParser(const ControllerParser&) = delete;
   ControllerParser& operator=(const ControllerParser&) = delete;
 
-  fit::result<fuchsia::camera::gym::Command> ParseOneCommand(const std::string& name,
-                                                             const std::string& value);
+  fpromise::result<fuchsia::camera::gym::Command> ParseOneCommand(const std::string& name,
+                                                                  const std::string& value);
 
   // Parsing individual commands:
-  fit::result<fuchsia::camera::gym::SetConfigCommand> ParseSetConfigCommand(
+  fpromise::result<fuchsia::camera::gym::SetConfigCommand> ParseSetConfigCommand(
       const std::string& name, const std::string& value, bool async = false);
-  fit::result<fuchsia::camera::gym::AddStreamCommand> ParseAddStreamCommand(
+  fpromise::result<fuchsia::camera::gym::AddStreamCommand> ParseAddStreamCommand(
       const std::string& name, const std::string& value, bool async = false);
-  fit::result<fuchsia::camera::gym::SetCropCommand> ParseSetCropCommand(const std::string& name,
-                                                                        const std::string& value,
-                                                                        bool async = false);
-  fit::result<fuchsia::camera::gym::SetResolutionCommand> ParseSetResolutionCommand(
+  fpromise::result<fuchsia::camera::gym::SetCropCommand> ParseSetCropCommand(
+      const std::string& name, const std::string& value, bool async = false);
+  fpromise::result<fuchsia::camera::gym::SetResolutionCommand> ParseSetResolutionCommand(
       const std::string& name, const std::string& value, bool async = false);
 
   // Maximum number of parameters returned by ParseValues.
@@ -45,8 +44,8 @@ class ControllerParser {
 
   // Parse individual numeric parameters according to types[] array passed in.
   // types[] array may be up to MAX_VALUES types + 1 terminating '\0'.
-  fit::result<camera::ControllerParser::ValuesArray> ParseValues(const std::string& args,
-                                                                 const char* types);
+  fpromise::result<camera::ControllerParser::ValuesArray> ParseValues(const std::string& args,
+                                                                      const char* types);
 };
 
 }  // namespace camera

@@ -182,7 +182,7 @@ SemanticTree::SemanticTree(inspect::Node inspect_node)
     inspect::Inspector inspector;
 
     FillInspectTree(inspector.GetRoot().CreateChild(kTreeDumpInspectPropertyName), &inspector);
-    return fit::make_ok_promise(std::move(inspector));
+    return fpromise::make_ok_promise(std::move(inspector));
   });
 }
 

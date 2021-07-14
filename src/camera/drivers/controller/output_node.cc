@@ -15,12 +15,12 @@ namespace camera {
 
 constexpr auto kTag = "camera_controller_output_node";
 
-fit::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
+fpromise::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
     async_dispatcher_t* dispatcher, StreamCreationData* info, ProcessNode* parent_node,
     const InternalConfigNode& internal_output_node) {
   if (dispatcher == nullptr || info == nullptr || parent_node == nullptr) {
     FX_LOGST(DEBUG, kTag) << "Invalid input parameters";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   BufferCollection unused_buffer_collection;
@@ -30,18 +30,18 @@ fit::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
       info->stream_type(), info->image_format_index);
   if (!output_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create output ProcessNode";
-    return fit::error(ZX_ERR_NO_MEMORY);
+    return fpromise::error(ZX_ERR_NO_MEMORY);
   }
 
   auto client_stream = std::make_unique<camera::StreamImpl>(output_node.get());
   if (!client_stream) {
     FX_LOGST(ERROR, kTag) << "Failed to create StreamImpl";
-    return fit::error(ZX_ERR_INTERNAL);
+    return fpromise::error(ZX_ERR_INTERNAL);
   }
 
   // Set the client stream.
   output_node->set_client_stream(std::move(client_stream));
-  auto result = fit::ok(output_node.get());
+  auto result = fpromise::ok(output_node.get());
 
   // Add child node.
   parent_node->AddChildNodeInfo(std::move(output_node));

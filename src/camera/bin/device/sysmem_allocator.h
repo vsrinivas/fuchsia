@@ -8,9 +8,9 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/scope.h>
-#include <lib/fit/sequencer.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/scope.h>
+#include <lib/fpromise/sequencer.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace/event.h>
 
@@ -33,13 +33,13 @@ class SysmemAllocator {
   // before allocation.
   //
   // An error is returned from the promise if the allocation is unable to complete for any reason.
-  fit::promise<BufferCollectionWithLifetime, zx_status_t> BindSharedCollection(
+  fpromise::promise<BufferCollectionWithLifetime, zx_status_t> BindSharedCollection(
       fuchsia::sysmem::BufferCollectionTokenHandle token,
       fuchsia::sysmem::BufferCollectionConstraints constraints, std::string name);
 
  private:
   fuchsia::sysmem::AllocatorPtr allocator_;
-  fit::scope scope_;
+  fpromise::scope scope_;
 };
 
 }  // namespace camera

@@ -237,7 +237,7 @@ TEST_F(VPartitionManagerTest, QueueTrimDisjointSlices) {
 }
 
 TEST_F(VPartitionManagerTest, InspectVmoPopulatedWithInitialState) {
-  fit::result<inspect::Hierarchy> hierarchy =
+  fpromise::result<inspect::Hierarchy> hierarchy =
       inspect::ReadFromVmo(device_->diagnostics().DuplicateVmo());
   ASSERT_TRUE(hierarchy.is_ok());
   const inspect::Hierarchy* mount_time = hierarchy.value().GetByPath({"fvm", "mount_time"});
@@ -254,7 +254,7 @@ TEST_F(VPartitionManagerTest, InspectVmoTracksSliceAllocations) {
   ASSERT_TRUE(partition_or.is_ok());
 
   {
-    fit::result<inspect::Hierarchy> hierarchy =
+    fpromise::result<inspect::Hierarchy> hierarchy =
         inspect::ReadFromVmo(device_->diagnostics().DuplicateVmo());
     ASSERT_TRUE(hierarchy.is_ok());
     const inspect::Hierarchy* node = hierarchy.value().GetByPath({"fvm", "partitions", "part1"});
@@ -270,7 +270,7 @@ TEST_F(VPartitionManagerTest, InspectVmoTracksSliceAllocations) {
   ASSERT_EQ(device_->AllocateSlices(partition_or.value().get(), 0x100000, 1), ZX_OK);
 
   {
-    fit::result<inspect::Hierarchy> hierarchy =
+    fpromise::result<inspect::Hierarchy> hierarchy =
         inspect::ReadFromVmo(device_->diagnostics().DuplicateVmo());
     ASSERT_TRUE(hierarchy.is_ok());
     const inspect::Hierarchy* node = hierarchy.value().GetByPath({"fvm", "partitions", "part1"});

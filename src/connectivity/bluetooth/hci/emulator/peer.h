@@ -8,7 +8,7 @@
 #include <fuchsia/bluetooth/test/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <optional>
 #include <vector>
@@ -31,7 +31,8 @@ namespace bt_hci_emulator {
 // notified. The owner of this object should act on this by destroying this Peer instance.
 class Peer : public fuchsia::bluetooth::test::Peer {
  public:
-  using Result = fit::result<std::unique_ptr<Peer>, fuchsia::bluetooth::test::EmulatorPeerError>;
+  using Result =
+      fpromise::result<std::unique_ptr<Peer>, fuchsia::bluetooth::test::EmulatorPeerError>;
 
   // Registers a peer with the FakeController using the provided LE parameters. Returns the peer on
   // success or an error reporting the failure.

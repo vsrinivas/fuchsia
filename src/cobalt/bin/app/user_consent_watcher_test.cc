@@ -49,7 +49,7 @@ class FakePrivacy : public fuchsia::settings::Privacy {
 
   void Set(fuchsia::settings::PrivacySettings settings, SetCallback callback) override {
     settings_ = std::move(settings);
-    callback(fit::ok());
+    callback(fpromise::ok());
 
     NotifyWatchers();
   }
@@ -121,10 +121,10 @@ class UserConsentWatcherTest : public gtest::TestLoopFixture,
   void CreatePrivacyProvider() { SetPrivacyProvider(std::make_unique<FakePrivacy>()); }
 
   void SetPrivacySetting(const std::optional<bool>& setting) {
-    fit::result<void, Error> set_result;
+    fpromise::result<void, Error> set_result;
     privacy_provider_->Set(
         MakePrivacySettings(setting),
-        [&set_result](fit::result<void, Error> result) { set_result = std::move(result); });
+        [&set_result](fpromise::result<void, Error> result) { set_result = std::move(result); });
     EXPECT_TRUE(set_result.is_ok());
   }
 

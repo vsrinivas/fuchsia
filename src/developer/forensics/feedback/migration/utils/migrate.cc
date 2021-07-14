@@ -9,15 +9,15 @@
 #include <memory>
 
 #include "lib/async/cpp/task.h"
-#include "lib/fit/promise.h"
+#include "lib/fpromise/promise.h"
 #include "lib/zx/time.h"
 
 namespace forensics::feedback {
 
-::fit::promise<void, Error> MigrateData(async_dispatcher_t* dispatcher,
-                                        const std::shared_ptr<sys::ServiceDirectory>& services,
-                                        const std::optional<MigrationLog>& migration_log,
-                                        const zx::duration timeout) {
+::fpromise::promise<void, Error> MigrateData(async_dispatcher_t* dispatcher,
+                                             const std::shared_ptr<sys::ServiceDirectory>& services,
+                                             const std::optional<MigrationLog>& migration_log,
+                                             const zx::duration timeout) {
   fbl::unique_fd data_fd(open("/data", O_DIRECTORY | O_RDWR, 0777));
   if (!data_fd.is_valid()) {
     FX_LOGS(ERROR) << "Unable to open /data";
@@ -28,8 +28,8 @@ namespace forensics::feedback {
     FX_LOGS(ERROR) << "Unable to open /cache";
   }
 
-  ::fit::promise<void, Error> migrate_last_reboot_data =
-      ::fit::make_result_promise<void, Error>(::fit::ok());
+  ::fpromise::promise<void, Error> migrate_last_reboot_data =
+      ::fpromise::make_result_promise<void, Error>(::fpromise::ok());
   if (data_fd.is_valid() && cache_fd.is_valid() && migration_log) {
     if (!migration_log->Contains(MigrationLog::Component::kLastReboot)) {
       migrate_last_reboot_data =
@@ -40,24 +40,24 @@ namespace forensics::feedback {
   return migrate_last_reboot_data;
 }
 
-::fit::promise<void, Error> MigrateLastRebootData(
+::fpromise::promise<void, Error> MigrateLastRebootData(
     async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
     const fbl::unique_fd& data_fd, const fbl::unique_fd& cache_fd, const zx::duration timeout) {
   auto last_reboot = std::make_shared<LastRebootDirectoryMigrator>(dispatcher);
   if (services->Connect(last_reboot->NewRequest()) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to connect to LastRebootDirectoryMigrator";
-    return ::fit::make_error_promise(Error::kConnectionError);
+    return ::fpromise::make_error_promise(Error::kConnectionError);
   }
 
   return last_reboot->GetDirectories(timeout).then(
       // Duplicate the file descriptors and capture the Directory migrator pointer.
-      [data_fd = data_fd.duplicate(), cache_fd = cache_fd.duplicate(),
-       last_reboot](const ::fit::result<LastRebootDirectoryMigrator::Directories, Error>& result)
-          -> ::fit::result<void, Error> {
+      [data_fd = data_fd.duplicate(), cache_fd = cache_fd.duplicate(), last_reboot](
+          const ::fpromise::result<LastRebootDirectoryMigrator::Directories, Error>& result)
+          -> ::fpromise::result<void, Error> {
         if (!result.is_ok()) {
           FX_LOGS(ERROR) << "Failed to get directories from last reboot for migration: "
                          << ToString(result.error());
-          return ::fit::error(result.error());
+          return ::fpromise::error(result.error());
         }
 
         const auto& [old_data_fd, old_cache_fd] = result.value();
@@ -70,7 +70,7 @@ namespace forensics::feedback {
         }
 
         FX_LOGS(INFO) << "Completed migrating last reboot";
-        return ::fit::ok();
+        return ::fpromise::ok();
       });
 }
 

@@ -7,7 +7,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/clock.h>
 #include <math.h>
 #include <string.h>
@@ -178,7 +178,7 @@ void AmlG12TdmDai::GetVmo(uint32_t min_frames, uint32_t clock_recovery_notificat
   rb_fetched_ = true;
   // This is safe because of the overflow check we made above.
   auto out_num_rb_frames = static_cast<uint32_t>(out_frames);
-  callback(fit::ok(std::make_tuple(out_num_rb_frames, std::move(buffer))));
+  callback(fpromise::ok(std::make_tuple(out_num_rb_frames, std::move(buffer))));
 }
 
 void AmlG12TdmDai::Start(StartCallback callback) {

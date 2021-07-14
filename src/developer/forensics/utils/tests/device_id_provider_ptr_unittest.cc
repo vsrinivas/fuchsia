@@ -5,7 +5,7 @@
 #include "src/developer/forensics/utils/fidl/device_id_provider_ptr.h"
 
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <optional>
 #include <string>
@@ -44,7 +44,7 @@ class DeviceIdProviderPtrTest : public UnitTestFixture {
     bool is_called = false;
     std::optional<std::string> device_id = std::nullopt;
     executor_.schedule_task(device_id_provider_ptr_.GetId(kDefaultTimeout)
-                                .then([&](::fit::result<std::string, Error>& result) {
+                                .then([&](::fpromise::result<std::string, Error>& result) {
                                   is_called = true;
 
                                   if (result.is_ok()) {

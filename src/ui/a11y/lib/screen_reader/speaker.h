@@ -8,8 +8,8 @@
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/accessibility/tts/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/zx/time.h>
 
 #include <memory>
@@ -21,7 +21,7 @@ namespace a11y {
 
 // A Speaker manages speech tasks to be executed by the Screen Reader.
 //
-// Speech tasks are represented in the form of fit::promises. A task manages the dispatch of
+// Speech tasks are represented in the form of fpromise::promises. A task manages the dispatch of
 // utterances, in the right order and at the right time,  that together make a node description.
 // Please see ScreenReaderMessageGenerator for more details. Speech tasks must run at the same
 // executor. A task can wait on another task to finish before it starts or start right away,
@@ -51,26 +51,26 @@ class Speaker {
   virtual ~Speaker();
 
   // Returns a speech task that speaks the node description.
-  virtual fit::promise<> SpeakNodePromise(const fuchsia::accessibility::semantics::Node* node,
-                                          Options options);
+  virtual fpromise::promise<> SpeakNodePromise(const fuchsia::accessibility::semantics::Node* node,
+                                               Options options);
 
   // Returns a speech task that speaks the provided |message|.
-  virtual fit::promise<> SpeakMessagePromise(fuchsia::accessibility::tts::Utterance utterance,
-                                             Options options);
+  virtual fpromise::promise<> SpeakMessagePromise(fuchsia::accessibility::tts::Utterance utterance,
+                                                  Options options);
 
   // Returns a speech task that speaks the canonical message specified by
   // |message_id|.
-  virtual fit::promise<> SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds message_id,
-                                                 Options options);
+  virtual fpromise::promise<> SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds message_id,
+                                                      Options options);
 
   // Returns a speech task that speaks the node's canonicalized label. The
   // |ScreenReaderMessageGenerator| object maintains a list of labels that are canonicalized, in
   // order to support the correct pronunciation of symbol names across different TTS services.
-  virtual fit::promise<> SpeakNodeCanonicalizedLabelPromise(
+  virtual fpromise::promise<> SpeakNodeCanonicalizedLabelPromise(
       const fuchsia::accessibility::semantics::Node* node, Options options);
 
   // Returns a promise that cancels pending or in progress tts utterances.
-  virtual fit::promise<> CancelTts();
+  virtual fpromise::promise<> CancelTts();
 
   // Returns a string with the last spoken utterance.
   virtual const std::string& last_utterance() const { return last_utterance_; }
@@ -97,34 +97,35 @@ class Speaker {
     // The current utterance in |utterances| being spoken.
     int utterance_index = 0;
     // Invoked when this task is at the front of the queue and can be executed.
-    fit::completer<> starter;
+    fpromise::completer<> starter;
   };
 
   // Prepares the task for execution. If interrupting or at the front of the queue, starts right
   // away, waits  for its turn otherwise.
-  fit::promise<> PrepareTask(std::shared_ptr<SpeechTask> task, bool interrupt, bool save_utterance);
+  fpromise::promise<> PrepareTask(std::shared_ptr<SpeechTask> task, bool interrupt,
+                                  bool save_utterance);
 
   // Dispatches all utterances of this task to be spoken, respecting their order and time spacing
   // requirements.
-  fit::promise<> DispatchUtterances(std::shared_ptr<SpeechTask> task, bool interrupt);
+  fpromise::promise<> DispatchUtterances(std::shared_ptr<SpeechTask> task, bool interrupt);
 
   // Dispatches a single utterance to the tts engine.
-  fit::promise<> DispatchSingleUtterance(std::weak_ptr<SpeechTask> weak_task);
+  fpromise::promise<> DispatchSingleUtterance(std::weak_ptr<SpeechTask> weak_task);
 
   // Ends this speech task, removing it from the queue. If the queue is not empty after removal,
   // also informs the new front of the queue task that it can start running.
-  fit::promise<> EndSpeechTask(std::weak_ptr<SpeechTask> weak_task, bool success);
+  fpromise::promise<> EndSpeechTask(std::weak_ptr<SpeechTask> weak_task, bool success);
 
   // The task waits in queue until it reaches the front of the queue.
-  fit::promise<> WaitInQueue(std::weak_ptr<SpeechTask> weak_task);
+  fpromise::promise<> WaitInQueue(std::weak_ptr<SpeechTask> weak_task);
 
   // Returns a promise that enqueues an utterance. An error is thrown if the atempt to enqueue the
   // utterance is rejected by the TTS service.
-  fit::promise<> EnqueueUtterance(fuchsia::accessibility::tts::Utterance utterance);
+  fpromise::promise<> EnqueueUtterance(fuchsia::accessibility::tts::Utterance utterance);
 
   // Returns a promise that speaks enqueued utterances. An error is thrown if the atempt to speak
   // the utterance(s) is rejected by the TTS service.
-  fit::promise<> Speak();
+  fpromise::promise<> Speak();
 
   // The async executor that these promises will be run on
   async::Executor* executor_ = nullptr;

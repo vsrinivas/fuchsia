@@ -6,7 +6,7 @@
 #define SRC_VIRTUALIZATION_LIB_VSH_CLIENT_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 #include <unordered_map>
@@ -18,7 +18,7 @@ namespace vsh {
 
 class BlockingClient {
  public:
-  static fit::result<BlockingClient, zx_status_t> Connect(
+  static fpromise::result<BlockingClient, zx_status_t> Connect(
       const fuchsia::virtualization::HostVsockEndpointSyncPtr& socket_endpoint, uint32_t cid,
       uint32_t port = 9001);
 
@@ -27,7 +27,7 @@ class BlockingClient {
   // Performs the initial connection setup flow.
   zx_status_t Setup(vm_tools::vsh::SetupConnectionRequest request);
 
-  fit::result<vm_tools::vsh::HostMessage, zx_status_t> NextMessage();
+  fpromise::result<vm_tools::vsh::HostMessage, zx_status_t> NextMessage();
 
  private:
   BlockingClient(zx::socket socket);

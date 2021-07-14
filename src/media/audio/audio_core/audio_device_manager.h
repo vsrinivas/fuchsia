@@ -66,7 +66,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   // rejects 'message'. Returns UpdateEffectError::NOT_FOUND if no effect is found across any
   // device. Returns success if at least one effect named 'instance_name' has accepted 'message'
   // without any other effects matching 'effect_name' rejecting the 'message'.
-  fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+  fpromise::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& message, bool persist = false);
 
   // Sends an update message to the effect specified by 'instance_name' for the device specified by
@@ -74,12 +74,12 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   //
   // Return values match those of 'UpdateEffect' above, with the addition of an
   // UpdateEffectError::NOT_FOUND if the device specified by 'device_id' is not found.
-  fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateDeviceEffect(
+  fpromise::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateDeviceEffect(
       const std::string device_id, const std::string& instance_name, const std::string& message);
 
-  fit::promise<void, zx_status_t> UpdatePipelineConfig(const std::string device_id,
-                                                       const PipelineConfig& config,
-                                                       const VolumeCurve& volume_curve);
+  fpromise::promise<void, zx_status_t> UpdatePipelineConfig(const std::string device_id,
+                                                            const PipelineConfig& config,
+                                                            const VolumeCurve& volume_curve);
 
   // |media::audio::DeviceRegistry|
   void AddDevice(const std::shared_ptr<AudioDevice>& device) override;

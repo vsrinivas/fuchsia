@@ -7,7 +7,7 @@
 #ifndef SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_COMMAND_H_
 #define SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_COMMAND_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <zircon/types.h>
 
 #include <sstream>
@@ -75,8 +75,8 @@ std::string PrintCommandList(const std::vector<Command>& commands);
 // - An argument type in the command is not supported for parsing.
 // Asserts the passed in |args| is not empty and that the command name in |args|
 // matches that of the |command|.
-fit::result<ParsedCommand, zx_status_t> ParseCommand(const std::vector<std::string>& args,
-                                                     const Command& command);
+fpromise::result<ParsedCommand, zx_status_t> ParseCommand(const std::vector<std::string>& args,
+                                                          const Command& command);
 
 }  // namespace disk_inspector
 

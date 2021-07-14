@@ -31,16 +31,16 @@ namespace fsys = fuchsia::sys2;
 using namespace testing;
 using namespace inspect::testing;
 
-class FakeContext : public fit::context {
+class FakeContext : public fpromise::context {
  public:
-  fit::executor* executor() const override {
+  fpromise::executor* executor() const override {
     EXPECT_TRUE(false);
     return nullptr;
   }
 
-  fit::suspended_task suspend_task() override {
+  fpromise::suspended_task suspend_task() override {
     EXPECT_TRUE(false);
-    return fit::suspended_task();
+    return fpromise::suspended_task();
   }
 };
 
@@ -79,18 +79,18 @@ class TestRealm : public fsys::testing::Realm_TestBase {
   void BindChild(fsys::ChildRef child, fidl::InterfaceRequest<fio::Directory> exposed_dir,
                  BindChildCallback callback) override {
     bind_child_handler_(std::move(child), std::move(exposed_dir));
-    callback(fsys::Realm_BindChild_Result(fit::ok()));
+    callback(fsys::Realm_BindChild_Result(fpromise::ok()));
   }
 
   void CreateChild(fsys::CollectionRef collection, fsys::ChildDecl decl, fsys::CreateChildArgs args,
                    CreateChildCallback callback) override {
     create_child_handler_(std::move(collection), std::move(decl));
-    callback(fsys::Realm_CreateChild_Result(fit::ok()));
+    callback(fsys::Realm_CreateChild_Result(fpromise::ok()));
   }
 
   void DestroyChild(fsys::ChildRef child, DestroyChildCallback callback) override {
     destroy_child_handler_(std::move(child));
-    callback(fsys::Realm_DestroyChild_Result(fit::ok()));
+    callback(fsys::Realm_DestroyChild_Result(fpromise::ok()));
   }
 
   void NotImplemented_(const std::string& name) override {

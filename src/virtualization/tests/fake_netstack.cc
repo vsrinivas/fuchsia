@@ -182,28 +182,28 @@ void Device::OnTransmit(async_dispatcher_t* dispatcher, async::WaitBase* wait, z
   }
 }
 
-fit::promise<eth_fifo_entry_t, zx_status_t> Device::GetRxEntry() {
-  fit::bridge<eth_fifo_entry_t, zx_status_t> bridge;
+fpromise::promise<eth_fifo_entry_t, zx_status_t> Device::GetRxEntry() {
+  fpromise::bridge<eth_fifo_entry_t, zx_status_t> bridge;
   std::lock_guard<std::mutex> lock(mutex_);
   rx_completers_.push_back(std::move(bridge.completer));
   return bridge.consumer.promise();
 }
 
-fit::promise<eth_fifo_entry_t, zx_status_t> Device::GetTxEntry() {
-  fit::bridge<eth_fifo_entry_t, zx_status_t> bridge;
+fpromise::promise<eth_fifo_entry_t, zx_status_t> Device::GetTxEntry() {
+  fpromise::bridge<eth_fifo_entry_t, zx_status_t> bridge;
   std::lock_guard<std::mutex> lock(mutex_);
   tx_completers_.push_back(std::move(bridge.completer));
   return bridge.consumer.promise();
 }
 
-fit::promise<std::vector<uint8_t>, zx_status_t> Device::ReadPacket() {
+fpromise::promise<std::vector<uint8_t>, zx_status_t> Device::ReadPacket() {
   return GetRxEntry().and_then(
-      [this](const eth_fifo_entry_t& entry) -> fit::result<std::vector<uint8_t>, zx_status_t> {
+      [this](const eth_fifo_entry_t& entry) -> fpromise::result<std::vector<uint8_t>, zx_status_t> {
         if (entry.flags != ETH_FIFO_RX_OK) {
-          return fit::error(ZX_ERR_IO);
+          return fpromise::error(ZX_ERR_IO);
         }
         if (entry.length > kMtu) {
-          return fit::error(ZX_ERR_INTERNAL);
+          return fpromise::error(ZX_ERR_INTERNAL);
         }
         std::vector<uint8_t> packet(entry.length);
         memcpy(packet.data(), reinterpret_cast<void*>(io_addr_ + entry.offset), packet.size());
@@ -217,14 +217,14 @@ fit::promise<std::vector<uint8_t>, zx_status_t> Device::ReadPacket() {
         zx_status_t status = rx_.write(sizeof(eth_fifo_entry_t), &new_entry, 1, nullptr);
         if (status != ZX_OK) {
           FX_LOGS(ERROR) << "Failed to write to rx fifo: " << status;
-          return fit::error(status);
+          return fpromise::error(status);
         }
 
-        return fit::ok(std::move(packet));
+        return fpromise::ok(std::move(packet));
       });
 }
 
-fit::promise<void, zx_status_t> Device::WritePacket(std::vector<uint8_t> packet) {
+fpromise::promise<void, zx_status_t> Device::WritePacket(std::vector<uint8_t> packet) {
   eth_fifo_entry_t entry;
   entry.offset = kMtu;
   entry.length = packet.size();
@@ -236,18 +236,19 @@ fit::promise<void, zx_status_t> Device::WritePacket(std::vector<uint8_t> packet)
   size_t count;
   zx_status_t status = tx_.write(sizeof(eth_fifo_entry_t), &entry, 1, &count);
   if (status != ZX_OK) {
-    return fit::make_error_promise(status);
+    return fpromise::make_error_promise(status);
   }
   if (count != 1) {
-    return fit::make_error_promise(ZX_ERR_INTERNAL);
+    return fpromise::make_error_promise(ZX_ERR_INTERNAL);
   }
 
-  return GetTxEntry().and_then([](const eth_fifo_entry_t& entry) -> fit::result<void, zx_status_t> {
-    if (entry.flags != ETH_FIFO_TX_OK) {
-      return fit::error(ZX_ERR_IO);
-    }
-    return fit::ok();
-  });
+  return GetTxEntry().and_then(
+      [](const eth_fifo_entry_t& entry) -> fpromise::result<void, zx_status_t> {
+        if (entry.flags != ETH_FIFO_TX_OK) {
+          return fpromise::error(ZX_ERR_IO);
+        }
+        return fpromise::ok();
+      });
 }
 
 void FakeNetstack::NotImplemented_(const std::string& name) {
@@ -353,7 +354,7 @@ static size_t make_ip_header(const uint8_t guest_mac[ETH_ALEN], uint8_t packet_t
   return sizeof(ethhdr) + sizeof(iphdr);
 }
 
-fit::promise<void, zx_status_t> FakeNetstack::SendUdpPacket(
+fpromise::promise<void, zx_status_t> FakeNetstack::SendUdpPacket(
     const fuchsia::hardware::ethernet::MacAddress& mac_addr, std::vector<uint8_t> packet) {
   struct udp_hdr_t {
     uint16_t src_port;
@@ -365,7 +366,7 @@ fit::promise<void, zx_status_t> FakeNetstack::SendUdpPacket(
   size_t packet_length = sizeof(udp_hdr_t) + packet.size();
   size_t total_length = sizeof(ethhdr) + sizeof(iphdr) + packet_length;
   if (total_length > kMtu) {
-    return fit::make_error_promise(ZX_ERR_BUFFER_TOO_SMALL);
+    return fpromise::make_error_promise(ZX_ERR_BUFFER_TOO_SMALL);
   }
 
   std::vector<uint8_t> udp_packet(total_length);
@@ -386,22 +387,22 @@ fit::promise<void, zx_status_t> FakeNetstack::SendUdpPacket(
   return SendPacket(mac_addr, std::move(udp_packet));
 }
 
-fit::promise<Device*> FakeNetstack::GetDevice(
+fpromise::promise<Device*> FakeNetstack::GetDevice(
     const fuchsia::hardware::ethernet::MacAddress& mac_addr) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   // If the device is already connected the the netstack then just return a pointer to it.
   auto itr = devices_.find(mac_addr);
   if (itr != devices_.end()) {
-    return fit::make_promise([device = &itr->second] { return fit::ok(device->get()); });
+    return fpromise::make_promise([device = &itr->second] { return fpromise::ok(device->get()); });
   }
 
   // Otherwise, add to the list of completers for this MAC address. The promise will complete when
   // the devices calls AddEthernetDevice.
-  fit::bridge<Device*> bridge;
+  fpromise::bridge<Device*> bridge;
   auto completers_itr = completers_.find(mac_addr);
   if (completers_itr == completers_.end()) {
-    std::vector<fit::completer<Device*>> vec;
+    std::vector<fpromise::completer<Device*>> vec;
     vec.push_back(std::move(bridge.completer));
     completers_.insert(std::make_pair(mac_addr, std::move(vec)));
   } else {
@@ -411,32 +412,32 @@ fit::promise<Device*> FakeNetstack::GetDevice(
   return bridge.consumer.promise();
 }
 
-fit::promise<void, zx_status_t> FakeNetstack::SendPacket(
+fpromise::promise<void, zx_status_t> FakeNetstack::SendPacket(
     const fuchsia::hardware::ethernet::MacAddress& mac_addr, std::vector<uint8_t> packet) {
   if (packet.size() > kMtu) {
-    return fit::make_error_promise(ZX_ERR_INVALID_ARGS);
+    return fpromise::make_error_promise(ZX_ERR_INVALID_ARGS);
   }
 
   return GetDevice(mac_addr).then(
       [packet = std::move(packet)](
-          const fit::result<Device*>& result) mutable -> fit::promise<void, zx_status_t> {
+          const fpromise::result<Device*>& result) mutable -> fpromise::promise<void, zx_status_t> {
         if (!result.is_ok()) {
-          return fit::make_error_promise(ZX_ERR_INTERNAL);
+          return fpromise::make_error_promise(ZX_ERR_INTERNAL);
         }
         Device* device = result.value();
         return device->WritePacket(std::move(packet));
       });
 }
 
-fit::promise<std::vector<uint8_t>, zx_status_t> FakeNetstack::ReceivePacket(
+fpromise::promise<std::vector<uint8_t>, zx_status_t> FakeNetstack::ReceivePacket(
     const fuchsia::hardware::ethernet::MacAddress& mac_addr) {
-  return GetDevice(mac_addr).then(
-      [](const fit::result<Device*>& result) -> fit::promise<std::vector<uint8_t>, zx_status_t> {
-        if (!result.is_ok()) {
-          return fit::make_result_promise<std::vector<uint8_t>, zx_status_t>(
-              fit::error(ZX_ERR_INTERNAL));
-        }
-        Device* device = result.value();
-        return device->ReadPacket();
-      });
+  return GetDevice(mac_addr).then([](const fpromise::result<Device*>& result)
+                                      -> fpromise::promise<std::vector<uint8_t>, zx_status_t> {
+    if (!result.is_ok()) {
+      return fpromise::make_result_promise<std::vector<uint8_t>, zx_status_t>(
+          fpromise::error(ZX_ERR_INTERNAL));
+    }
+    Device* device = result.value();
+    return device->ReadPacket();
+  });
 }

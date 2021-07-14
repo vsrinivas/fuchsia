@@ -44,7 +44,7 @@ class ControllerImpl : public fuchsia::thermal::Controller, public ::test::therm
         .points = std::move(trip_points),
     });
 
-    callback({fit::ok()});
+    callback({fpromise::ok()});
   }
 
   // For each thermal subscriber, return its type and number of supported thermal states.

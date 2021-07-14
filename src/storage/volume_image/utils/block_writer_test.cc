@@ -4,7 +4,7 @@
 
 #include "src/storage/volume_image/utils/block_writer.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <string.h>
 
 #include <array>
@@ -29,23 +29,24 @@ class FakeReader final : public Reader {
 
   uint64_t length() const final { return data_.size(); }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     if (offset % block_size_ != 0) {
-      return fit::error("Offset(" + std::to_string(offset) + ") must be block aligned(block_size:" +
-                        std::to_string(block_size_) + " ).");
+      return fpromise::error("Offset(" + std::to_string(offset) +
+                             ") must be block aligned(block_size:" + std::to_string(block_size_) +
+                             " ).");
     }
 
     if (buffer.size() % block_size_ != 0) {
-      return fit::error("Buffer size(" + std::to_string(buffer.size()) +
-                        ") must be block aligned(block_size:" + std::to_string(block_size_) +
-                        " ).");
+      return fpromise::error("Buffer size(" + std::to_string(buffer.size()) +
+                             ") must be block aligned(block_size:" + std::to_string(block_size_) +
+                             " ).");
     }
 
     if (offset + buffer.size() > length()) {
-      return fit::error("FakeReader::Read OOB read.");
+      return fpromise::error("FakeReader::Read OOB read.");
     }
     memcpy(buffer.data(), data_.data() + offset, buffer.size());
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:
@@ -58,23 +59,25 @@ class FakeWriter final : public Writer {
   explicit FakeWriter(fbl::Span<uint8_t> data, uint64_t block_size)
       : data_(data), block_size_(block_size) {}
 
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     if (offset % block_size_ != 0) {
-      return fit::error("Offset(" + std::to_string(offset) + ") must be block aligned(block_size:" +
-                        std::to_string(block_size_) + " ).");
+      return fpromise::error("Offset(" + std::to_string(offset) +
+                             ") must be block aligned(block_size:" + std::to_string(block_size_) +
+                             " ).");
     }
 
     if (buffer.size() % block_size_ != 0) {
-      return fit::error("Buffer size(" + std::to_string(buffer.size()) +
-                        ") must be block aligned(block_size:" + std::to_string(block_size_) +
-                        " ).");
+      return fpromise::error("Buffer size(" + std::to_string(buffer.size()) +
+                             ") must be block aligned(block_size:" + std::to_string(block_size_) +
+                             " ).");
     }
 
     if (offset + buffer.size() > data_.size()) {
-      return fit::error("FakeWriter::Write OOB write.");
+      return fpromise::error("FakeWriter::Write OOB write.");
     }
     memcpy(data_.data() + offset, buffer.data(), buffer.size());
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:

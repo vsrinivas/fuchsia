@@ -5,7 +5,7 @@
 #include "src/storage/volume_image/utils/fd_test_helper.h"
 
 #include <fcntl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <unistd.h>
 
 #include <array>
@@ -20,15 +20,15 @@
 
 namespace storage::volume_image {
 
-fit::result<TempFile, std::string> TempFile::Create() {
+fpromise::result<TempFile, std::string> TempFile::Create() {
   std::string base = std::filesystem::temp_directory_path().generic_string() + "/tmp_XXXXXXX";
 
   fbl::unique_fd created_file(mkstemp(base.data()));
   if (!created_file.is_valid()) {
-    return fit::error("Failed to create temporary file at " + base +
-                      ". More specifically: " + strerror(errno));
+    return fpromise::error("Failed to create temporary file at " + base +
+                           ". More specifically: " + strerror(errno));
   }
-  return fit::ok(TempFile(base));
+  return fpromise::ok(TempFile(base));
 }
 
 TempFile::~TempFile() { unlink(path_.c_str()); }

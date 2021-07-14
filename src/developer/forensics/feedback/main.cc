@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -43,7 +43,7 @@ int main() {
   executor.schedule_task(
       MigrateData(component.Dispatcher(), component.Services(), migration_log,
                   kDirectoryMigratorResponeTimeout)
-          .then([&](const ::fit::result<void, Error>& result) {
+          .then([&](const ::fpromise::result<void, Error>& result) {
             if (!result.is_ok()) {
               FX_LOGS(ERROR)
                   << "Experienced errors while migrating last reboot, continuing as normal: "

@@ -5,9 +5,9 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_JOURNAL_H_
 #define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_JOURNAL_H_
 
-#include <lib/fit/barrier.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/sequencer.h>
+#include <lib/fpromise/barrier.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/sequencer.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -55,9 +55,9 @@ namespace fs {
 //      }));
 //
 // This class is thread-safe.
-class Journal final : public fit::executor {
+class Journal final : public fpromise::executor {
  public:
-  using Promise = fit::promise<void, zx_status_t>;
+  using Promise = fpromise::promise<void, zx_status_t>;
 
   struct Options {
     // Pointer to MetricsTrait that helps journal maintain metrics. The reference to MetricsTrait is
@@ -108,7 +108,7 @@ class Journal final : public fit::executor {
   // guarantees than metadata updates.
   //
   // Multiple requests to WriteData are not ordered. If ordering is desired, it should be added
-  // using a |fit::sequencer| object, or by chaining the data writeback promise along an object
+  // using a |fpromise::sequencer| object, or by chaining the data writeback promise along an object
   // which is ordered.
   Promise WriteData(std::vector<storage::UnbufferedOperation> operations);
 
@@ -121,7 +121,7 @@ class Journal final : public fit::executor {
   Promise Sync();
 
   // Schedules a promise to the journals background thread executor.
-  void schedule_task(fit::pending_task task) final {
+  void schedule_task(fpromise::pending_task task) final {
     auto event = metrics_->NewLatencyEvent(fs_metrics::Event::kJournalScheduleTask);
     executor_.schedule_task(std::move(task));
   }
@@ -152,15 +152,15 @@ class Journal final : public fit::executor {
   size_t pending_ = 0;
 
   // Barrier for all outstanding data writes.
-  fit::barrier data_barrier_;
+  fpromise::barrier data_barrier_;
 
   // The journal must enforce the requirement that metadata operations are completed in the order
   // they are enqueued. To fulfill this requirement, a sequencer guarantees ordering of internal
   // promise structures before they are handed to |executor_|.
-  fit::sequencer journal_sequencer_;
+  fpromise::sequencer journal_sequencer_;
 
   // A promise that we use to block writes to the journal until data writes have been flushed.
-  fit::promise<> journal_data_barrier_;
+  fpromise::promise<> journal_data_barrier_;
 
   // Journal metrics. This metrics is shared with JournalWriter and potentially other threads. The
   // reference to MetricsTrait is dropped when Journal object is destroyed.

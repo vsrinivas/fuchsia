@@ -55,8 +55,8 @@ class ComputeView : public BaseView {
 
   uint32_t GetNextScratchImageIndex();
 
-  fit::promise<inspect::Inspector> PopulateStats() const;
-  fit::promise<inspect::Inspector> PopulateImageStats(const Image& image);
+  fpromise::promise<inspect::Inspector> PopulateStats() const;
+  fpromise::promise<inspect::Inspector> PopulateImageStats(const Image& image);
 
   const escher::EscherWeakPtr escher_;
   const uint64_t modifier_;

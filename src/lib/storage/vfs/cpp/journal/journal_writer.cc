@@ -38,7 +38,7 @@ JournalWriter::JournalWriter(TransactionHandler* transaction_handler,
                              std::shared_ptr<JournalMetrics> metrics)
     : transaction_handler_(transaction_handler), metrics_(metrics) {}
 
-fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
+fpromise::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteData);
   uint32_t block_count = 0;
 
@@ -60,7 +60,7 @@ fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
       zx_status_t status = WriteInfoBlock();
       if (status != ZX_OK) {
         FX_LOGST(WARNING, "journal") << "Failed to write data: " << zx_status_get_string(status);
-        return fit::error(status);
+        return fpromise::error(status);
       }
     }
     block_count += operation.op.length;
@@ -71,12 +71,12 @@ fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
   if (status != ZX_OK) {
     FX_LOGST(WARNING, "journal") << "Failed to write data: " << zx_status_get_string(status);
     event.set_success(false);
-    return fit::error(status);
+    return fpromise::error(status);
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
-fit::result<void, zx_status_t> JournalWriter::WriteMetadata(
+fpromise::result<void, zx_status_t> JournalWriter::WriteMetadata(
     JournalWorkItem work, std::optional<JournalWorkItem> trim_work) {
   const uint64_t block_count = work.reservation.length();
   FX_LOGST(DEBUG, "journal") << "WriteMetadata: Writing " << block_count
@@ -90,7 +90,7 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(
   if (status != ZX_OK) {
     FX_LOGST(WARNING, "journal") << "WriteMetadata: Failed to write info block: "
                                  << zx_status_get_string(status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   // Monitor the in-flight metadata operations.
@@ -105,7 +105,7 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(
   if (status != ZX_OK) {
     FX_LOGST(WARNING, "journal") << "WriteMetadata: Failed to write metadata to journal: "
                                  << zx_status_get_string(status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
   event.set_success(true);
   // We rely on trim going first because the callbacks need to be after the trim operations have
@@ -115,7 +115,7 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(
     pending_work_items_.push_back(*std::move(trim_work));
   }
   pending_work_items_.push_back(std::move(work));
-  return fit::ok();
+  return fpromise::ok();
 }
 
 zx_status_t JournalWriter::WriteOperationToJournal(const storage::BlockBufferView& view) {
@@ -154,24 +154,24 @@ zx_status_t JournalWriter::WriteOperationToJournal(const storage::BlockBufferVie
   return status;
 }
 
-fit::result<void, zx_status_t> JournalWriter::Sync() {
+fpromise::result<void, zx_status_t> JournalWriter::Sync() {
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterSync);
   if (!IsWritebackEnabled()) {
     event.set_success(false);
-    return fit::error(ZX_ERR_IO_REFUSED);
+    return fpromise::error(ZX_ERR_IO_REFUSED);
   }
 
   if (next_sequence_number_ == journal_superblock_.sequence_number()) {
     FX_LOGST(DEBUG, "journal") << "Sync: Skipping write to info block (no sequence update)";
-    return fit::ok();
+    return fpromise::ok();
   }
 
   zx_status_t status = WriteInfoBlock();
   if (status != ZX_OK) {
     event.set_success(false);
-    return fit::error(status);
+    return fpromise::error(status);
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
 zx_status_t JournalWriter::WriteMetadataToJournal(JournalWorkItem* work) {
@@ -306,7 +306,7 @@ zx_status_t JournalWriter::WriteOperations(
   return ZX_OK;
 }
 
-fit::result<void, zx_status_t> JournalWriter::Flush() {
+fpromise::result<void, zx_status_t> JournalWriter::Flush() {
   // In case of success or failure, we want to clear pending_work_items_ because there might be
   // cleanup that needs to run buried in the destructors of the callbacks.
   auto clean_up = fit::defer([this] { pending_work_items_.clear(); });
@@ -314,12 +314,12 @@ fit::result<void, zx_status_t> JournalWriter::Flush() {
   if (!IsWritebackEnabled()) {
     FX_LOGST(INFO, "journal")
         << "JournalWriter::Flush: Not issuing writeback because writeback is disabled";
-    return fit::error(ZX_ERR_BAD_STATE);
+    return fpromise::error(ZX_ERR_BAD_STATE);
   }
   if (zx_status_t status = transaction_handler_->Flush(); status != ZX_OK) {
     FX_LOGST(WARNING, "journal") << "JournalWriter::Flush: " << zx_status_get_string(status);
     DisableWriteback();
-    return fit::error(status);
+    return fpromise::error(status);
   }
   pending_flush_ = false;
   for (JournalWorkItem& w : pending_work_items_) {
@@ -333,7 +333,7 @@ fit::result<void, zx_status_t> JournalWriter::Flush() {
       FX_LOGST(WARNING, "journal")
           << "Flush: Failed to write metadata to final location: " << zx_status_get_string(status);
       // WriteOperations will mark things so that all subsequent writes will fail.
-      return fit::error(status);
+      return fpromise::error(status);
     }
     // Before we can write the info block, we need another flush to ensure the writes to final
     // locations will persist.
@@ -343,7 +343,7 @@ fit::result<void, zx_status_t> JournalWriter::Flush() {
       work.complete_callback();
     }
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
 }  // namespace internal

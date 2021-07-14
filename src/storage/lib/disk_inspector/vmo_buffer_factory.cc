@@ -8,14 +8,14 @@
 
 namespace disk_inspector {
 
-fit::result<std::unique_ptr<storage::BlockBuffer>, zx_status_t> VmoBufferFactory::CreateBuffer(
+fpromise::result<std::unique_ptr<storage::BlockBuffer>, zx_status_t> VmoBufferFactory::CreateBuffer(
     size_t capacity) const {
   auto buffer = std::make_unique<storage::VmoBuffer>();
   zx_status_t status = buffer->Initialize(registry_, capacity, block_size_, "factory-vmo-buffer");
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
-  return fit::ok(std::move(buffer));
+  return fpromise::ok(std::move(buffer));
 }
 
 }  // namespace disk_inspector

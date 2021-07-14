@@ -11,7 +11,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
 
@@ -121,7 +121,7 @@ IntegrationTest::Promise<void> IntegrationTest::CreateFirstChild(
 
 IntegrationTest::Promise<void> IntegrationTest::ExpectUnbindThenRelease(
     const std::unique_ptr<MockDevice>& device) {
-  fit::bridge<void, Error> bridge;
+  fpromise::bridge<void, Error> bridge;
   auto unbind = ExpectUnbind(device, [unbind_reply_completer = std::move(bridge.completer)](
                                          HookInvocation record, Completer<void> completer) mutable {
     completer.complete_ok();
@@ -129,60 +129,61 @@ IntegrationTest::Promise<void> IntegrationTest::ExpectUnbindThenRelease(
     actions.AppendUnbindReply(std::move(unbind_reply_completer));
     return actions;
   });
-  auto reply_done = bridge.consumer.promise_or(::fit::error("unbind_reply_completer abandoned"));
+  auto reply_done =
+      bridge.consumer.promise_or(::fpromise::error("unbind_reply_completer abandoned"));
   return unbind.and_then(JoinPromises(std::move(reply_done), ExpectRelease(device)));
 }
 
 IntegrationTest::Promise<void> IntegrationTest::ExpectBind(
     std::unique_ptr<RootMockDevice>* root_mock_device, BindOnce::Callback actions_callback) {
-  fit::bridge<void, Error> bridge;
+  fpromise::bridge<void, Error> bridge;
   auto bind_hook =
       std::make_unique<BindOnce>(std::move(bridge.completer), std::move(actions_callback));
   zx_status_t status = RootMockDevice::Create(devmgr_, IntegrationTest::loop_.dispatcher(),
                                               std::move(bind_hook), root_mock_device);
   PROMISE_ASSERT(ASSERT_EQ(status, ZX_OK));
-  return bridge.consumer.promise_or(::fit::error("bind abandoned"));
+  return bridge.consumer.promise_or(::fpromise::error("bind abandoned"));
 }
 
 IntegrationTest::Promise<void> IntegrationTest::ExpectUnbind(
     const std::unique_ptr<MockDevice>& device, UnbindOnce::Callback actions_callback) {
-  fit::bridge<void, Error> bridge;
+  fpromise::bridge<void, Error> bridge;
   auto unbind_hook =
       std::make_unique<UnbindOnce>(std::move(bridge.completer), std::move(actions_callback));
   // Wrap the body in a promise, since we want to defer the evaluation of
   // device->set_hooks.
-  return fit::make_promise([consumer = std::move(bridge.consumer), &device,
-                            unbind_hook = std::move(unbind_hook)]() mutable {
+  return fpromise::make_promise([consumer = std::move(bridge.consumer), &device,
+                                 unbind_hook = std::move(unbind_hook)]() mutable {
     device->set_hooks(std::move(unbind_hook));
-    return consumer.promise_or(::fit::error("unbind abandoned"));
+    return consumer.promise_or(::fpromise::error("unbind abandoned"));
   });
 }
 
 IntegrationTest::Promise<void> IntegrationTest::ExpectOpen(
     const std::unique_ptr<MockDevice>& device, OpenOnce::Callback actions_callback) {
-  fit::bridge<void, Error> bridge;
+  fpromise::bridge<void, Error> bridge;
   auto open_hook =
       std::make_unique<OpenOnce>(std::move(bridge.completer), std::move(actions_callback));
   // Wrap the body in a promise, since we want to defer the evaluation of
   // device->set_hooks.
-  return fit::make_promise(
+  return fpromise::make_promise(
       [consumer = std::move(bridge.consumer), &device, open_hook = std::move(open_hook)]() mutable {
         device->set_hooks(std::move(open_hook));
-        return consumer.promise_or(::fit::error("open abandoned"));
+        return consumer.promise_or(::fpromise::error("open abandoned"));
       });
 }
 
 IntegrationTest::Promise<void> IntegrationTest::ExpectClose(
     const std::unique_ptr<MockDevice>& device, CloseOnce::Callback actions_callback) {
-  fit::bridge<void, Error> bridge;
+  fpromise::bridge<void, Error> bridge;
   auto close_hook =
       std::make_unique<CloseOnce>(std::move(bridge.completer), std::move(actions_callback));
   // Wrap the body in a promise, since we want to defer the evaluation of
   // device->set_hooks.
-  return fit::make_promise([consumer = std::move(bridge.consumer), &device,
-                            close_hook = std::move(close_hook)]() mutable {
+  return fpromise::make_promise([consumer = std::move(bridge.consumer), &device,
+                                 close_hook = std::move(close_hook)]() mutable {
     device->set_hooks(std::move(close_hook));
-    return consumer.promise_or(::fit::error("close abandoned"));
+    return consumer.promise_or(::fpromise::error("close abandoned"));
   });
 }
 
@@ -190,14 +191,14 @@ IntegrationTest::Promise<void> IntegrationTest::ExpectRelease(
     const std::unique_ptr<MockDevice>& device) {
   // Wrap the body in a promise, since we want to defer the evaluation of
   // device->set_hooks.
-  return fit::make_promise([&device]() {
-    fit::bridge<void, Error> bridge;
+  return fpromise::make_promise([&device]() {
+    fpromise::bridge<void, Error> bridge;
     ReleaseOnce::Callback func = [](HookInvocation record, Completer<void> completer) {
       completer.complete_ok();
     };
     auto release_hook = std::make_unique<ReleaseOnce>(std::move(bridge.completer), std::move(func));
     device->set_hooks(std::move(release_hook));
-    return bridge.consumer.promise_or(::fit::error("release abandoned"));
+    return bridge.consumer.promise_or(::fpromise::error("release abandoned"));
   });
 }
 
@@ -208,7 +209,7 @@ IntegrationTest::Promise<void> IntegrationTest::DoOpen(
   PROMISE_ASSERT(ASSERT_TRUE(server.is_valid()));
 
   PROMISE_ASSERT(ASSERT_EQ(client->events().OnOpen, nullptr));
-  fit::bridge<void, Error> bridge;
+  fpromise::bridge<void, Error> bridge;
   client->events().OnOpen = [client, completer = std::move(bridge.completer)](
                                 zx_status_t status,
                                 std::unique_ptr<fuchsia::io::NodeInfo> info) mutable {
@@ -223,7 +224,7 @@ IntegrationTest::Promise<void> IntegrationTest::DoOpen(
     client->events().OnOpen = nullptr;
   };
   devfs_->Open(flags | fuchsia::io::OPEN_FLAG_DESCRIBE, 0, path, std::move(server));
-  return bridge.consumer.promise_or(::fit::error("devfs open abandoned"));
+  return bridge.consumer.promise_or(::fpromise::error("devfs open abandoned"));
 }
 
 namespace {
@@ -241,7 +242,7 @@ class AsyncWatcher {
                       const zx_packet_signal_t* signal);
 
   zx_status_t Begin(async_dispatcher_t* dispatcher,
-                    fit::completer<void, IntegrationTest::Error> completer) {
+                    fpromise::completer<void, IntegrationTest::Error> completer) {
     completer_ = std::move(completer);
     return wait_.Begin(dispatcher);
   }
@@ -261,7 +262,7 @@ class AsyncWatcher {
   Connections connections_;
 
   async::Wait wait_;
-  fit::completer<void, IntegrationTest::Error> completer_;
+  fpromise::completer<void, IntegrationTest::Error> completer_;
 };
 
 void AsyncWatcher::WatcherChanged(async_dispatcher_t* dispatcher, async::Wait* wait,
@@ -310,7 +311,7 @@ void AsyncWatcher::WatcherChanged(async_dispatcher_t* dispatcher, async::Wait* w
 
 void WaitForPath(const fidl::InterfacePtr<fuchsia::io::Directory>& dir,
                  async_dispatcher_t* dispatcher, std::string path,
-                 fit::completer<void, IntegrationTest::Error> completer) {
+                 fpromise::completer<void, IntegrationTest::Error> completer) {
   zx::channel watcher, remote;
   ASSERT_EQ(zx::channel::create(0, &watcher, &remote), ZX_OK);
 
@@ -365,9 +366,9 @@ void WaitForPath(const fidl::InterfacePtr<fuchsia::io::Directory>& dir,
 }  // namespace
 
 IntegrationTest::Promise<void> IntegrationTest::DoWaitForPath(const std::string& path) {
-  fit::bridge<void, Error> bridge;
+  fpromise::bridge<void, Error> bridge;
   WaitForPath(devfs_, IntegrationTest::loop_.dispatcher(), path, std::move(bridge.completer));
-  return bridge.consumer.promise_or(::fit::error("WaitForPath abandoned"));
+  return bridge.consumer.promise_or(::fpromise::error("WaitForPath abandoned"));
 }
 
 }  // namespace libdriver_integration_test

@@ -8,24 +8,28 @@
 
 #include "src/devices/lib/driver2/test_base.h"
 
-// Test that driver::Continue() correctly returns fit::results, and can be
+// Test that driver::Continue() correctly returns fpromise::results, and can be
 // resumed using driver::ContinueWith.
 TEST(PromiseTest, Continue) {
   driver::testing::FakeContext context;
 
-  auto success = fit::make_promise(driver::Continue(
-      [](driver::ContinueWith<fit::result<>>& with) -> fit::result<> { return fit::ok(); }));
+  auto success = fpromise::make_promise(
+      driver::Continue([](driver::ContinueWith<fpromise::result<>>& with) -> fpromise::result<> {
+        return fpromise::ok();
+      }));
   EXPECT_TRUE(success(context).is_ok());
 
-  auto failure = fit::make_promise(driver::Continue(
-      [](driver::ContinueWith<fit::result<>>& with) -> fit::result<> { return fit::error(); }));
+  auto failure = fpromise::make_promise(
+      driver::Continue([](driver::ContinueWith<fpromise::result<>>& with) -> fpromise::result<> {
+        return fpromise::error();
+      }));
   EXPECT_TRUE(failure(context).is_error());
 
   fit::function<void()> callback;
-  auto pending = fit::make_promise(
-      driver::Continue([&callback](driver::ContinueWith<fit::result<>>& with) -> fit::result<> {
-        callback = [&with] { with.Return(fit::ok()); };
-        return fit::pending();
+  auto pending = fpromise::make_promise(driver::Continue(
+      [&callback](driver::ContinueWith<fpromise::result<>>& with) -> fpromise::result<> {
+        callback = [&with] { with.Return(fpromise::ok()); };
+        return fpromise::pending();
       }));
   EXPECT_TRUE(pending(context).is_pending());
   callback();

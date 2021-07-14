@@ -336,14 +336,16 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
     zxlogf(ERROR, "%s: invalid arguments: width? %d height? %d format? %d memory property? %d\n",
            kTag, create_params.has_width(), create_params.has_height(), create_params.has_format(),
            create_params.has_memory_property());
-    return fit::ok(fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_ERR_INVALID_ARGS, -1));
+    return fpromise::ok(
+        fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_ERR_INVALID_ARGS, -1));
   }
   if ((create_params.memory_property() &
        fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible) &&
       !create_params.has_physical_address()) {
     zxlogf(ERROR, "%s: invalid arguments: memory_property %d, no physical address\n", kTag,
            create_params.memory_property());
-    return fit::ok(fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_ERR_INVALID_ARGS, -1));
+    return fpromise::ok(
+        fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_ERR_INVALID_ARGS, -1));
   }
 
   TRACE_DURATION("gfx", "Control::CreateColorBuffer2", "width", create_params.width(), "height",
@@ -353,18 +355,19 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
   zx_koid_t koid = GetKoidForVmo(vmo);
   if (koid == ZX_KOID_INVALID) {
     zxlogf(ERROR, "%s: koid of VMO handle %u is invalid", kTag, vmo.get());
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   fbl::AutoLock lock(&lock_);
 
   auto it = buffer_handles_.find(koid);
   if (it == buffer_handles_.end()) {
-    return fit::ok(fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_ERR_INVALID_ARGS, -1));
+    return fpromise::ok(
+        fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_ERR_INVALID_ARGS, -1));
   }
 
   if (it->second != kInvalidBufferHandle) {
-    return fit::ok(
+    return fpromise::ok(
         fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_ERR_ALREADY_EXISTS, -1));
   }
 
@@ -373,7 +376,7 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
                                                static_cast<uint32_t>(create_params.format()), &id);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to create color buffer: %d", kTag, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   auto close_color_buffer =
@@ -384,7 +387,7 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
       SetColorBufferVulkanMode2Locked(id, VULKAN_ONLY, create_params.memory_property(), &result);
   if (status != ZX_OK || result) {
     zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d", kTag, status, result);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   int32_t hw_address_page_offset = -1;
@@ -394,14 +397,14 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
     status = vmo.get_size(&vmo_size);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: zx_vmo_get_size error: %d", kTag, status);
-      return fit::error(status);
+      return fpromise::error(status);
     }
     uint32_t map_result = 0;
     status =
         MapGpaToBufferHandleLocked(id, create_params.physical_address(), vmo_size, &map_result);
     if (status != ZX_OK || map_result < 0) {
       zxlogf(ERROR, "%s: failed to map gpa to color buffer: %d %d", kTag, status, map_result);
-      return fit::error(status);
+      return fpromise::error(status);
     }
 
     hw_address_page_offset = map_result;
@@ -413,7 +416,7 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
       .type = fuchsia_hardware_goldfish::wire::BufferHandleType::kColorBuffer,
       .memory_property = create_params.memory_property()};
 
-  return fit::ok(
+  return fpromise::ok(
       fidl::WireResponse<ControlDevice::CreateColorBuffer2>(ZX_OK, hw_address_page_offset));
 }
 
@@ -438,14 +441,14 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
   if (!create_params.has_size() || !create_params.has_memory_property()) {
     zxlogf(ERROR, "%s: invalid arguments: size? %d memory property? %d\n", kTag,
            create_params.has_size(), create_params.has_memory_property());
-    return fit::ok(ControlDeviceCreateBuffer2Result::WithErr(allocator, ZX_ERR_INVALID_ARGS));
+    return fpromise::ok(ControlDeviceCreateBuffer2Result::WithErr(allocator, ZX_ERR_INVALID_ARGS));
   }
   if ((create_params.memory_property() &
        fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible) &&
       !create_params.has_physical_address()) {
     zxlogf(ERROR, "%s: invalid arguments: memory_property %d, no physical address\n", kTag,
            create_params.memory_property());
-    return fit::ok(ControlDeviceCreateBuffer2Result::WithErr(allocator, ZX_ERR_INVALID_ARGS));
+    return fpromise::ok(ControlDeviceCreateBuffer2Result::WithErr(allocator, ZX_ERR_INVALID_ARGS));
   }
 
   TRACE_DURATION("gfx", "Control::CreateBuffer2", "size", create_params.size(), "memory_property",
@@ -454,18 +457,19 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
   zx_koid_t koid = GetKoidForVmo(vmo);
   if (koid == ZX_KOID_INVALID) {
     zxlogf(ERROR, "%s: koid of VMO handle %u is invalid", kTag, vmo.get());
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   fbl::AutoLock lock(&lock_);
 
   auto it = buffer_handles_.find(koid);
   if (it == buffer_handles_.end()) {
-    return fit::ok(ControlDeviceCreateBuffer2Result::WithErr(allocator, ZX_ERR_INVALID_ARGS));
+    return fpromise::ok(ControlDeviceCreateBuffer2Result::WithErr(allocator, ZX_ERR_INVALID_ARGS));
   }
 
   if (it->second != kInvalidBufferHandle) {
-    return fit::ok(ControlDeviceCreateBuffer2Result::WithErr(allocator, ZX_ERR_ALREADY_EXISTS));
+    return fpromise::ok(
+        ControlDeviceCreateBuffer2Result::WithErr(allocator, ZX_ERR_ALREADY_EXISTS));
   }
 
   uint32_t id;
@@ -473,7 +477,7 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
       CreateBuffer2Locked(create_params.size(), create_params.memory_property(), &id);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to create buffer: %d", kTag, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   auto close_buffer =
@@ -486,14 +490,14 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
     status = vmo.get_size(&vmo_size);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: zx_vmo_get_size error: %d", kTag, status);
-      return fit::error(status);
+      return fpromise::error(status);
     }
     uint32_t map_result = 0;
     status =
         MapGpaToBufferHandleLocked(id, create_params.physical_address(), vmo_size, &map_result);
     if (status != ZX_OK || map_result < 0) {
       zxlogf(ERROR, "%s: failed to map gpa to buffer: %d %d", kTag, status, map_result);
-      return fit::error(status);
+      return fpromise::error(status);
     }
 
     hw_address_page_offset = map_result;
@@ -504,7 +508,7 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
   buffer_handle_info_[id] = {.type = fuchsia_hardware_goldfish::wire::BufferHandleType::kBuffer,
                              .memory_property = create_params.memory_property()};
 
-  return fit::ok(ControlDeviceCreateBuffer2Result::WithResponse(
+  return fpromise::ok(ControlDeviceCreateBuffer2Result::WithResponse(
       allocator,
       ControlDeviceCreateBuffer2Response{.hw_address_page_offset = hw_address_page_offset}));
 }

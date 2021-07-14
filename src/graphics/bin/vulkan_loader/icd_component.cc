@@ -77,7 +77,7 @@ IcdComponent::~IcdComponent() {
     child_ref.name = child_instance_name_;
     child_ref.collection = kCollectionName;
     realm_->DestroyChild(std::move(child_ref),
-                         [](fit::result<void, fuchsia::component::Error> result) {});
+                         [](fpromise::result<void, fuchsia::component::Error> result) {});
   }
 }
 
@@ -121,7 +121,7 @@ void IcdComponent::Initialize(sys::ComponentContext* context, inspect::Node* par
   realm_->CreateChild(
       collection, std::move(decl), fuchsia::sys2::CreateChildArgs(),
       [this, failure_callback = std::move(failure_callback)](
-          fit::result<void, fuchsia::component::Error> response) mutable {
+          fpromise::result<void, fuchsia::component::Error> response) mutable {
         if (response.is_error()) {
           FX_LOGS(INFO) << component_url_ << " CreateChild err "
                         << static_cast<uint32_t>(response.error());
@@ -143,7 +143,7 @@ void IcdComponent::Initialize(sys::ComponentContext* context, inspect::Node* par
             child_ref, std::move(directory_request),
             [this, directory = std::move(directory),
              failure_callback = std::move(failure_callback)](
-                fit::result<void, fuchsia::component::Error> response) mutable {
+                fpromise::result<void, fuchsia::component::Error> response) mutable {
               if (response.is_error()) {
                 FX_LOGS(INFO) << component_url_ << " BindChild failed with error "
                               << static_cast<uint32_t>(response.error());

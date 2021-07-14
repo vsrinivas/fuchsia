@@ -90,8 +90,8 @@ INSTANTIATE_TEST_SUITE_P(
                     BlockSizeParam{.block_size = 4096, .expected_id = LZ4F_max4MB},
                     BlockSizeParam{.block_size = 999999999, .expected_id = LZ4F_max4MB}));
 
-fit::result<void, std::string> HandlerReturnsOk(fbl::Span<const uint8_t> /*unused*/) {
-  return fit::ok();
+fpromise::result<void, std::string> HandlerReturnsOk(fbl::Span<const uint8_t> /*unused*/) {
+  return fpromise::ok();
 }
 
 TEST(Lz4CompressorTest, PrepareAfterConstructionIsOk) {
@@ -106,7 +106,7 @@ TEST(Lz4CompressorTest, PrepareAfterConstructionIsOk) {
   size_t compressed_data_size = 0;
   auto prepare_result = compressor.Prepare([&](auto compressed_data) {
     compressed_data_size = compressed_data.size();
-    return fit::ok();
+    return fpromise::ok();
   });
   ASSERT_TRUE(prepare_result.is_ok()) << prepare_result.error();
   // Check header size is in valid range.
@@ -152,7 +152,7 @@ TEST(Lz4CompressorTest, PrepareForwardsHandlerError) {
   Lz4Compressor compressor = compressor_result.take_value();
 
   auto prepare_result =
-      compressor.Prepare([](auto /*unused*/) { return fit::error(kHandlerError.data()); });
+      compressor.Prepare([](auto /*unused*/) { return fpromise::error(kHandlerError.data()); });
   ASSERT_TRUE(prepare_result.is_error()) << prepare_result.error();
   EXPECT_EQ(prepare_result.error(), kHandlerError);
 }
@@ -223,11 +223,11 @@ TEST(Lz4CompressorTest, CompressForwardsHandlerError) {
 
   bool should_fail = false;
   auto prepare_result =
-      compressor.Prepare([&should_fail](auto /*unused*/) -> fit::result<void, std::string> {
+      compressor.Prepare([&should_fail](auto /*unused*/) -> fpromise::result<void, std::string> {
         if (should_fail) {
-          return fit::error(kHandlerError.data());
+          return fpromise::error(kHandlerError.data());
         }
-        return fit::ok();
+        return fpromise::ok();
       });
   ASSERT_TRUE(prepare_result.is_ok()) << prepare_result.error();
   should_fail = true;
@@ -278,11 +278,11 @@ TEST(Lz4CompressorTest, FinalizeForwardsHandlerError) {
 
   bool should_fail = false;
   auto prepare_result =
-      compressor.Prepare([&should_fail](auto /*unused*/) -> fit::result<void, std::string> {
+      compressor.Prepare([&should_fail](auto /*unused*/) -> fpromise::result<void, std::string> {
         if (should_fail) {
-          return fit::error(kHandlerError.data());
+          return fpromise::error(kHandlerError.data());
         }
-        return fit::ok();
+        return fpromise::ok();
       });
   ASSERT_TRUE(prepare_result.is_ok()) << prepare_result.error();
   auto compress_result =
@@ -327,7 +327,7 @@ TEST(Lz4CompressorTest, CompressedDataMatchesUncompressedDataWhenDecompressed) {
         memcpy(compressed_data.data() + offset, compressed_output_data.data(),
                compressed_output_data.size());
         offset += compressed_output_data.size();
-        return fit::ok();
+        return fpromise::ok();
       });
 
   ASSERT_TRUE(prepare_result.is_ok()) << prepare_result.error();

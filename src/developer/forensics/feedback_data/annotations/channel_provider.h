@@ -25,8 +25,8 @@ class ChannelProvider : public AnnotationProvider {
   ChannelProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                   cobalt::Logger* cobalt);
 
-  ::fit::promise<Annotations> GetAnnotations(zx::duration timeout,
-                                             const AnnotationKeys& allowlist) override;
+  ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout,
+                                                  const AnnotationKeys& allowlist) override;
 
  private:
   async_dispatcher_t* dispatcher_;

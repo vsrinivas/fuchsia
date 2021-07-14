@@ -6,9 +6,9 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
-#include <lib/fit/scope.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/scope.h>
 #include <lib/syslog/cpp/macros.h>
 
 namespace camera {
@@ -20,14 +20,14 @@ constexpr uint32_t kNamePriority = 30;  // Higher than Scenic but below the maxi
 // BufferCollection.
 //
 // The |collection| is consumed by this operation and will be closed upon both success and failure.
-fit::promise<BufferCollectionWithLifetime, zx_status_t> WaitForBuffersAllocated(
+fpromise::promise<BufferCollectionWithLifetime, zx_status_t> WaitForBuffersAllocated(
     fuchsia::sysmem::BufferCollectionPtr collection) {
   // Move the bridge completer into a shared_ptr so that we can share the completer between the
   // FIDL error handler and the WaitForBuffersAllocated callback.
-  fit::bridge<BufferCollectionWithLifetime, zx_status_t> bridge;
-  auto completer = std::make_shared<fit::completer<BufferCollectionWithLifetime, zx_status_t>>(
+  fpromise::bridge<BufferCollectionWithLifetime, zx_status_t> bridge;
+  auto completer = std::make_shared<fpromise::completer<BufferCollectionWithLifetime, zx_status_t>>(
       std::move(bridge.completer));
-  std::weak_ptr<fit::completer<BufferCollectionWithLifetime, zx_status_t>> weak_completer(
+  std::weak_ptr<fpromise::completer<BufferCollectionWithLifetime, zx_status_t>> weak_completer(
       completer);
   collection.set_error_handler([completer](zx_status_t status) {
     // After calling SetConstraints, allocation may fail. This results in WaitForBuffersAllocated
@@ -59,7 +59,7 @@ fit::promise<BufferCollectionWithLifetime, zx_status_t> WaitForBuffersAllocated(
       });
   return bridge.consumer.promise().inspect(
       [collection = std::move(collection)](
-          const fit::result<BufferCollectionWithLifetime, zx_status_t>& result) mutable {
+          const fpromise::result<BufferCollectionWithLifetime, zx_status_t>& result) mutable {
         if (collection) {
           collection->Close();
           collection = nullptr;
@@ -72,7 +72,7 @@ fit::promise<BufferCollectionWithLifetime, zx_status_t> WaitForBuffersAllocated(
 SysmemAllocator::SysmemAllocator(fuchsia::sysmem::AllocatorHandle allocator)
     : allocator_(allocator.Bind()) {}
 
-fit::promise<BufferCollectionWithLifetime, zx_status_t> SysmemAllocator::BindSharedCollection(
+fpromise::promise<BufferCollectionWithLifetime, zx_status_t> SysmemAllocator::BindSharedCollection(
     fuchsia::sysmem::BufferCollectionTokenHandle token,
     fuchsia::sysmem::BufferCollectionConstraints constraints, std::string name) {
   TRACE_DURATION("camera", "SysmemAllocator::BindSharedCollection");

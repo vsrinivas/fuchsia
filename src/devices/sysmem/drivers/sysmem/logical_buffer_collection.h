@@ -223,7 +223,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   void BindSharedCollectionInternal(BufferCollectionToken* token,
                                     zx::channel buffer_collection_request);
 
-  fit::result<fuchsia_sysmem2::wire::BufferCollectionConstraints, void> CombineConstraints(
+  fpromise::result<fuchsia_sysmem2::wire::BufferCollectionConstraints, void> CombineConstraints(
       ConstraintsList* constraints_list);
 
   bool CheckSanitizeBufferCollectionConstraints(
@@ -266,17 +266,17 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   bool IsColorSpaceEqual(const fuchsia_sysmem2::wire::ColorSpace& a,
                          const fuchsia_sysmem2::wire::ColorSpace& b);
 
-  fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t>
+  fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t>
   GenerateUnpopulatedBufferCollectionInfo(
       const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints);
 
-  fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t> Allocate(
+  fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t> Allocate(
       const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints,
       fuchsia_sysmem2::wire::BufferCollectionInfo* buffer_collection_info);
 
-  fit::result<zx::vmo> AllocateVmo(MemoryAllocator* allocator,
-                                   const fuchsia_sysmem2::wire::SingleBufferSettings& settings,
-                                   uint32_t index);
+  fpromise::result<zx::vmo> AllocateVmo(MemoryAllocator* allocator,
+                                        const fuchsia_sysmem2::wire::SingleBufferSettings& settings,
+                                        uint32_t index);
 
   int32_t CompareImageFormatConstraintsTieBreaker(
       const fuchsia_sysmem2::wire::ImageFormatConstraints& a,

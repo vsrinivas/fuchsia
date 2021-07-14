@@ -20,21 +20,21 @@ class DummyReader final : public Reader {
  public:
   uint64_t length() const final { return std::numeric_limits<uint64_t>::max(); }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
-    return fit::ok();
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+    return fpromise::ok();
   }
 };
 
 }  // namespace
 
-fit::result<Partition, std::string> CreateEmptyFvmPartition(
+fpromise::result<Partition, std::string> CreateEmptyFvmPartition(
     const PartitionOptions& partition_options, const FvmOptions& fvm_options) {
   if (partition_options.max_bytes.value_or(0) == 0) {
-    return fit::error("Must provide a non-zero size for empty partition.");
+    return fpromise::error("Must provide a non-zero size for empty partition.");
   }
 
   if (fvm_options.slice_size == 0) {
-    return fit::error("must provide a non-zero slice size.");
+    return fpromise::error("must provide a non-zero slice size.");
   }
 
   VolumeDescriptor descriptor;
@@ -52,7 +52,7 @@ fit::result<Partition, std::string> CreateEmptyFvmPartition(
   AddressDescriptor address;
   address.mappings.push_back(mapping);
 
-  return fit::ok(Partition(descriptor, address, std::make_unique<DummyReader>()));
+  return fpromise::ok(Partition(descriptor, address, std::make_unique<DummyReader>()));
 }
 
 }  // namespace storage::volume_image

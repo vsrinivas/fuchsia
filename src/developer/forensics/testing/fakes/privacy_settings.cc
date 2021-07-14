@@ -4,7 +4,7 @@
 
 #include "src/developer/forensics/testing/fakes/privacy_settings.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -28,7 +28,7 @@ void PrivacySettings::Watch(WatchCallback callback) {
 
 void PrivacySettings::Set(fuchsia::settings::PrivacySettings settings, SetCallback callback) {
   settings_ = std::move(settings);
-  callback(::fit::ok());
+  callback(::fpromise::ok());
   dirty_bit_ = true;
 
   if (watcher_) {

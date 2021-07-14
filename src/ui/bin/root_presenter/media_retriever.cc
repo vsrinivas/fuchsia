@@ -31,10 +31,10 @@ MediaRetriever::ResetSoundResult MediaRetriever::GetResetSound() {
   }
 
   if (ZX_OK != open_status) {
-    return fit::error(open_status);
+    return fpromise::error(open_status);
   }
 
-  return fit::ok(std::move(sound_file));
+  return fpromise::ok(std::move(sound_file));
 }
 
 }  // namespace root_presenter

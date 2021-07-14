@@ -39,7 +39,7 @@ class InputNode : public ProcessNode {
   // |memory_allocator| : Memory allocator object to allocate memory using sysmem.
   // |dispatcher| : Dispatcher on which GDC tasks can be queued up.
   // |isp| : ISP protocol to talk to the driver.
-  static fit::result<std::unique_ptr<InputNode>, zx_status_t> CreateInputNode(
+  static fpromise::result<std::unique_ptr<InputNode>, zx_status_t> CreateInputNode(
       StreamCreationData* info, const ControllerMemoryAllocator& memory_allocator,
       async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp);
 

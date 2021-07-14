@@ -29,8 +29,8 @@ class AsyncAutoCall : public fbl::RefCounted<AsyncAutoCall> {
   explicit AsyncAutoCall(UsbXhci* hci) : hci_(hci) { Init(); }
   // Borrows the promise. The caller is expected to give it back by calling
   // GivebackPromise after it is done manipulating the promise.
-  fit::promise<void, void> BorrowPromise() { return promise_.box(); }
-  void GivebackPromise(fit::promise<void, void> promise) { promise_ = promise.box(); }
+  fpromise::promise<void, void> BorrowPromise() { return promise_.box(); }
+  void GivebackPromise(fpromise::promise<void, void> promise) { promise_ = promise.box(); }
 
   // Reinitializes a cancelled async auto call
   void Reinit() { Init(); }
@@ -40,23 +40,24 @@ class AsyncAutoCall : public fbl::RefCounted<AsyncAutoCall> {
       completer_->complete_ok();
       hci_->ScheduleTask(
           promise_
-              .then([=](fit::result<void, void>& result) -> fit::result<TRB*, zx_status_t> {
-                return fit::ok<TRB*>(nullptr);
-              })
+              .then(
+                  [=](fpromise::result<void, void>& result) -> fpromise::result<TRB*, zx_status_t> {
+                    return fpromise::ok<TRB*>(nullptr);
+                  })
               .box());
     }
   }
 
  private:
   void Init() {
-    fit::bridge<void, void> bridge;
+    fpromise::bridge<void, void> bridge;
     promise_ = bridge.consumer.promise()
-                   .then([=](fit::result<void, void>& result) { return result; })
+                   .then([=](fpromise::result<void, void>& result) { return result; })
                    .box();
     completer_ = std::move(bridge.completer);
   }
-  fit::promise<void, void> promise_;
-  std::optional<fit::completer<void, void>> completer_;
+  fpromise::promise<void, void> promise_;
+  std::optional<fpromise::completer<void, void>> completer_;
   UsbXhci* hci_;
 };
 }  // namespace usb_xhci

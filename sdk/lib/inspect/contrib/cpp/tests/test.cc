@@ -113,7 +113,7 @@ class ArchiveReaderTest : public sys::testing::TestWithEnvironment {
   fuchsia::sys::ComponentControllerPtr controller_;
 };
 
-using ResultType = fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>;
+using ResultType = fpromise::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>;
 
 constexpr char cmx1[] = "archive_reader_test_app.cmx";
 constexpr char cmx2[] = "archive_reader_test_app_2.cmx";

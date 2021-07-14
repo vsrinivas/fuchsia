@@ -28,7 +28,7 @@ class MinfsInspector {
  public:
   // Creates a MinfsInspector from a block device. Tries to load the
   // superblock from disk upon creation by calling ReloadSuperblock().
-  static fit::result<std::unique_ptr<MinfsInspector>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<MinfsInspector>, zx_status_t> Create(
       std::unique_ptr<fs::TransactionHandler> handler,
       std::unique_ptr<disk_inspector::BufferFactory> factory);
 
@@ -63,36 +63,36 @@ class MinfsInspector {
 
   // The following functions need to load data from disk, leading to the
   // possibility of failed loads. Since they need to return values, we have
-  // fit::results for all of the return types. In addition, they all depend
+  // fpromise::results for all of the return types. In addition, they all depend
   // on the loaded |superblock_| value to get where to start indexing.
 
   // Loads the inode table blocks for which the inodes from |start_index| inclusive
   // to |end_index| exclusive from disk and returns the Inodes in the range as
   // a vector.
-  fit::result<std::vector<Inode>, zx_status_t> InspectInodeRange(uint64_t start_index,
-                                                                 uint64_t end_index);
+  fpromise::result<std::vector<Inode>, zx_status_t> InspectInodeRange(uint64_t start_index,
+                                                                      uint64_t end_index);
 
   // Loads the inode bitmap blocks for which the inode allocation bits for inodes
   // from |start_index| inclusive to |end_index| exclusive from disk and returns
   // the inode indices for which the corresponding bits are allocated.
-  fit::result<std::vector<uint64_t>, zx_status_t> InspectInodeAllocatedInRange(uint64_t start_index,
-                                                                               uint64_t end_index);
+  fpromise::result<std::vector<uint64_t>, zx_status_t> InspectInodeAllocatedInRange(
+      uint64_t start_index, uint64_t end_index);
 
   // Loads the first journal block
-  fit::result<fs::JournalInfo, zx_status_t> InspectJournalSuperblock();
+  fpromise::result<fs::JournalInfo, zx_status_t> InspectJournalSuperblock();
 
   // Loads the |index| element journal entry block and returns it as a struct
   // of type T. Only supports casting to fs::JournalPrefix, fs::JournalHeaderBlock,
   // and fs::JournalCommitBlock.
   template <typename T>
-  fit::result<T, zx_status_t> InspectJournalEntryAs(uint64_t index);
+  fpromise::result<T, zx_status_t> InspectJournalEntryAs(uint64_t index);
 
   // Loads and returns the backup superblock.
-  fit::result<Superblock, zx_status_t> InspectBackupSuperblock();
+  fpromise::result<Superblock, zx_status_t> InspectBackupSuperblock();
 
   // Writes the |superblock| argument to disk and sets |superblock_| to |superblock|
   // if the write succeeds.
-  fit::result<void, zx_status_t> WriteSuperblock(Superblock superblock);
+  fpromise::result<void, zx_status_t> WriteSuperblock(Superblock superblock);
 
  private:
   explicit MinfsInspector(std::unique_ptr<fs::TransactionHandler> handler,

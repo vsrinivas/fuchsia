@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_HEADER_VIEW_H_
 #define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_HEADER_VIEW_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <fbl/span.h>
 
@@ -20,8 +20,8 @@ class JournalHeaderView {
   explicit JournalHeaderView(fbl::Span<uint8_t> block);
 
   // Returns HeaderView on finding a valid journal entry header in |block|.
-  static fit::result<JournalHeaderView, zx_status_t> Create(fbl::Span<uint8_t> block,
-                                                            uint64_t sequence_number);
+  static fpromise::result<JournalHeaderView, zx_status_t> Create(fbl::Span<uint8_t> block,
+                                                                 uint64_t sequence_number);
 
   // Initializes |block| with valid header and sets payload blocks and sequence number. Asserts on
   // finding |block| to be at smaller than kJournalBlockSize bytes.

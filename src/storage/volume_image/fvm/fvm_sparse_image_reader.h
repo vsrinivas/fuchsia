@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_SPARSE_IMAGE_READER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_SPARSE_IMAGE_READER_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <optional>
 #include <string>
@@ -19,8 +19,8 @@ namespace storage::volume_image {
 // device i.e. if you were to serialize it to a block device, FVM would recognise it.  At this time
 // the reader embedded within the partition can only support sequential reads (which is all we need
 // to support at this time).
-fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
-                                                    std::optional<uint64_t> max_disk_size);
+fpromise::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
+                                                         std::optional<uint64_t> max_disk_size);
 
 }  // namespace storage::volume_image
 

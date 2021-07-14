@@ -7,7 +7,7 @@
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
@@ -152,22 +152,22 @@ class DatastoreTest : public UnitTestFixture {
     FX_CHECK(files::WriteFile(filepath, content.c_str(), content.size()));
   }
 
-  ::fit::result<Annotations> GetAnnotations() {
+  ::fpromise::result<Annotations> GetAnnotations() {
     FX_CHECK(datastore_);
 
-    ::fit::result<Annotations> result;
+    ::fpromise::result<Annotations> result;
     executor_.schedule_task(datastore_->GetAnnotations(kTimeout).then(
-        [&result](::fit::result<Annotations>& res) { result = std::move(res); }));
+        [&result](::fpromise::result<Annotations>& res) { result = std::move(res); }));
     RunLoopFor(kTimeout);
     return result;
   }
 
-  ::fit::result<Attachments> GetAttachments() {
+  ::fpromise::result<Attachments> GetAttachments() {
     FX_CHECK(datastore_);
 
-    ::fit::result<Attachments> result;
+    ::fpromise::result<Attachments> result;
     executor_.schedule_task(datastore_->GetAttachments(kTimeout).then(
-        [&result](::fit::result<Attachments>& res) { result = std::move(res); }));
+        [&result](::fpromise::result<Attachments>& res) { result = std::move(res); }));
     RunLoopFor(kTimeout);
     return result;
   }
@@ -239,7 +239,7 @@ TEST_F(DatastoreTest, GetAnnotations_BoardInfo) {
       },
       kDefaultAttachmentsToAvoidSpuriousLogs);
 
-  ::fit::result<Annotations> annotations = GetAnnotations();
+  ::fpromise::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(),
               ElementsAreArray({
@@ -263,7 +263,7 @@ TEST_F(DatastoreTest, GetAnnotations_Channels) {
       },
       kDefaultAttachmentsToAvoidSpuriousLogs);
 
-  ::fit::result<Annotations> annotations = GetAnnotations();
+  ::fpromise::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(),
               ElementsAreArray({
@@ -278,7 +278,7 @@ TEST_F(DatastoreTest, GetAnnotations_DeviceId) {
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>("device-id"));
   SetUpDatastore({kAnnotationDeviceFeedbackId}, kDefaultAttachmentsToAvoidSpuriousLogs);
 
-  ::fit::result<Annotations> annotations = GetAnnotations();
+  ::fpromise::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(),
               ElementsAreArray({
@@ -304,7 +304,7 @@ TEST_F(DatastoreTest, GetAnnotations_LastRebootInfo) {
       },
       kDefaultAttachmentsToAvoidSpuriousLogs);
 
-  ::fit::result<Annotations> annotations = GetAnnotations();
+  ::fpromise::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(),
               ElementsAreArray({
@@ -346,7 +346,7 @@ TEST_F(DatastoreTest, GetAnnotations_ProductInfo) {
       },
       kDefaultAttachmentsToAvoidSpuriousLogs);
 
-  ::fit::result<Annotations> annotations = GetAnnotations();
+  ::fpromise::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(
       annotations.take_value(),
@@ -372,7 +372,7 @@ TEST_F(DatastoreTest, GetAnnotations_Time) {
       },
       kDefaultAttachmentsToAvoidSpuriousLogs);
 
-  ::fit::result<Annotations> annotations = GetAnnotations();
+  ::fpromise::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(), ElementsAreArray({
                                             Pair(kAnnotationDeviceUptime, HasValue()),
@@ -386,7 +386,7 @@ TEST_F(DatastoreTest, GetAnnotations_NonPlatformAnnotations) {
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, kDefaultAttachmentsToAvoidSpuriousLogs);
   EXPECT_TRUE(TrySetNonPlatformAnnotations({{"non-platform.k", AnnotationOr("v")}}));
 
-  ::fit::result<Annotations> annotations = GetAnnotations();
+  ::fpromise::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(), Contains(Pair("non-platform.k", AnnotationOr("v"))));
 }
@@ -408,7 +408,7 @@ TEST_F(DatastoreTest, GetAnnotations_NonPlatformAboveLimit) {
   }
   EXPECT_FALSE(TrySetNonPlatformAnnotations(non_platform_annotations));
 
-  ::fit::result<Annotations> annotations = GetAnnotations();
+  ::fpromise::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(), ElementsAreArray({
                                             Pair(kAnnotationBuildIsDebug, HasValue()),
@@ -419,7 +419,7 @@ TEST_F(DatastoreTest, GetAnnotations_NonPlatformOnEmptyAllowlist) {
   SetUpDatastore({}, kDefaultAttachmentsToAvoidSpuriousLogs);
   EXPECT_TRUE(TrySetNonPlatformAnnotations({{"non-platform.k", AnnotationOr("v")}}));
 
-  ::fit::result<Annotations> annotations = GetAnnotations();
+  ::fpromise::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(),
               ElementsAreArray({Pair("non-platform.k", AnnotationOr("v"))}));
@@ -428,7 +428,7 @@ TEST_F(DatastoreTest, GetAnnotations_NonPlatformOnEmptyAllowlist) {
 TEST_F(DatastoreTest, GetAnnotations_FailOn_EmptyAnnotationAllowlist) {
   SetUpDatastore({}, kDefaultAttachmentsToAvoidSpuriousLogs);
 
-  ::fit::result<Annotations> annotations = GetAnnotations();
+  ::fpromise::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_error());
 
   EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
@@ -437,7 +437,7 @@ TEST_F(DatastoreTest, GetAnnotations_FailOn_EmptyAnnotationAllowlist) {
 TEST_F(DatastoreTest, GetAnnotations_FailOn_OnlyUnknownAnnotationInAllowlist) {
   SetUpDatastore({"unknown.annotation"}, kDefaultAttachmentsToAvoidSpuriousLogs);
 
-  ::fit::result<Annotations> annotations = GetAnnotations();
+  ::fpromise::result<Annotations> annotations = GetAnnotations();
 
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.value(),
@@ -454,7 +454,7 @@ TEST_F(DatastoreTest, GetAttachments_Inspect) {
   SetUpDiagnosticsServer("foo");
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentInspect});
 
-  ::fit::result<Attachments> attachments = GetAttachments();
+  ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
   EXPECT_THAT(attachments.take_value(),
               ElementsAreArray({Pair(kAttachmentInspect, AttachmentValue("[\nfoo\n]"))}));
@@ -467,7 +467,7 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {
   WriteFile(kPreviousLogsFilePath, previous_log_contents);
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
 
-  ::fit::result<Attachments> attachments = GetAttachments();
+  ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
   EXPECT_THAT(attachments.take_value(),
               ElementsAreArray(
@@ -485,7 +485,7 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogIsEmpty) {
   WriteFile(kPreviousLogsFilePath, previous_log_contents);
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
 
-  ::fit::result<Attachments> attachments = GetAttachments();
+  ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
   EXPECT_THAT(attachments.take_value(),
               ElementsAreArray(
@@ -505,7 +505,7 @@ TEST_F(DatastoreTest, GetAttachments_DropPreviousSyslog) {
 
   datastore_->DropStaticAttachment(kAttachmentLogSystemPrevious, Error::kCustom);
 
-  ::fit::result<Attachments> attachments = GetAttachments();
+  ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
 
   EXPECT_THAT(
@@ -539,7 +539,7 @@ TEST_F(DatastoreTest, GetAttachments_SysLog) {
 )JSON");
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystem});
 
-  ::fit::result<Attachments> attachments = GetAttachments();
+  ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
   EXPECT_THAT(attachments.take_value(),
               ElementsAreArray(
@@ -552,7 +552,7 @@ TEST_F(DatastoreTest, GetAttachments_SysLog) {
 TEST_F(DatastoreTest, GetAttachments_FailOn_EmptyAttachmentAllowlist) {
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {});
 
-  ::fit::result<Attachments> attachments = GetAttachments();
+  ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_error());
 
   EXPECT_THAT(GetStaticAttachments(), IsEmpty());
@@ -561,7 +561,7 @@ TEST_F(DatastoreTest, GetAttachments_FailOn_EmptyAttachmentAllowlist) {
 TEST_F(DatastoreTest, GetAttachments_FailOn_OnlyUnknownAttachmentInAllowlist) {
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {"unknown.attachment"});
 
-  ::fit::result<Attachments> attachments = GetAttachments();
+  ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_error());
 
   EXPECT_THAT(GetStaticAttachments(), IsEmpty());
@@ -581,7 +581,7 @@ TEST_F(DatastoreTest, GetAttachments_CobaltLogsTimeouts) {
   SetUpDiagnosticsServer(std::make_unique<stubs::DiagnosticsArchive>(
       std::make_unique<stubs::DiagnosticsBatchIteratorNeverResponds>()));
 
-  ::fit::result<Attachments> attachments = GetAttachments();
+  ::fpromise::result<Attachments> attachments = GetAttachments();
 
   ASSERT_TRUE(attachments.is_ok());
   EXPECT_THAT(attachments.take_value(),

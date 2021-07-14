@@ -10,8 +10,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/commands.h>
@@ -42,19 +42,19 @@ constexpr float kHeartbeatDepth = -1.0f;
 // Returns an event such that when the event is signaled and the dispatcher executed, the provided
 // eventpair is closed. This can be used to bridge event- and eventpair-based fence semantics. If
 // this function returns an error, |eventpair| is closed immediately.
-fit::result<zx::event, zx_status_t> MakeEventBridge(async_dispatcher_t* dispatcher,
-                                                    zx::eventpair eventpair) {
+fpromise::result<zx::event, zx_status_t> MakeEventBridge(async_dispatcher_t* dispatcher,
+                                                         zx::eventpair eventpair) {
   zx::event caller_event;
   zx::event waiter_event;
   zx_status_t status = zx::event::create(0, &caller_event);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
   status = caller_event.duplicate(ZX_RIGHT_SAME_RIGHTS, &waiter_event);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
   // A shared_ptr is necessary in order to begin the wait after setting the wait handler.
   auto wait = std::make_shared<async::Wait>(waiter_event.get(), ZX_EVENT_SIGNALED);
@@ -68,9 +68,9 @@ fit::result<zx::event, zx_status_t> MakeEventBridge(async_dispatcher_t* dispatch
   status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
-  return fit::ok(std::move(caller_event));
+  return fpromise::ok(std::move(caller_event));
 }
 
 BufferCollage::BufferCollage()
@@ -91,7 +91,7 @@ BufferCollage::~BufferCollage() {
   loop_.JoinThreads();
 }
 
-fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
+fpromise::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
     fuchsia::ui::scenic::ScenicHandle scenic, fuchsia::sysmem::AllocatorHandle allocator,
     fuchsia::ui::policy::PresenterHandle presenter, fit::closure stop_callback) {
   auto collage = std::unique_ptr<BufferCollage>(new BufferCollage);
@@ -101,17 +101,17 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
   zx_status_t status = collage->scenic_.Bind(std::move(scenic), collage->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
   status = collage->allocator_.Bind(std::move(allocator), collage->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
   status = collage->presenter_.Bind(std::move(presenter), collage->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
   collage->stop_callback_ = std::move(stop_callback);
 
@@ -127,7 +127,7 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
   status = collage->loop_.StartThread("BufferCollage Loop");
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
 #if CAMERA_GYM_ENABLE_ROOT_PRESENTER
@@ -136,21 +136,21 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
                          zx::msec(kViewRequestTimeoutMs));
 #endif
 
-  return fit::ok(std::move(collage));
+  return fpromise::ok(std::move(collage));
 }
 
 fidl::InterfaceRequestHandler<fuchsia::ui::app::ViewProvider> BufferCollage::GetHandler() {
   return fit::bind_member(this, &BufferCollage::OnNewRequest);
 }
 
-fit::promise<uint32_t> BufferCollage::AddCollection(
+fpromise::promise<uint32_t> BufferCollage::AddCollection(
     fuchsia::sysmem::BufferCollectionTokenHandle token, fuchsia::sysmem::ImageFormat_2 image_format,
     std::string description) {
   TRACE_DURATION("camera", "BufferCollage::AddCollection");
   ZX_ASSERT(image_format.coded_width > 0);
   ZX_ASSERT(image_format.coded_height > 0);
 
-  fit::bridge<uint32_t> task_bridge;
+  fpromise::bridge<uint32_t> task_bridge;
 
   fit::closure add_collection = [this, token = std::move(token), image_format, description,
                                  result = std::move(task_bridge.completer)]() mutable {

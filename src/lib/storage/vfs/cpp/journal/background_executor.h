@@ -5,8 +5,8 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_BACKGROUND_EXECUTOR_H_
 #define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_BACKGROUND_EXECUTOR_H_
 
-#include <lib/fit/promise.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -20,7 +20,7 @@ namespace fs {
 // added to the BackgroundExecutor are executed on a single thread.
 //
 // This class is not assignable, copyable, or moveable. This class is thread-safe.
-class BackgroundExecutor final : public fit::executor {
+class BackgroundExecutor final : public fpromise::executor {
  public:
   BackgroundExecutor();
   BackgroundExecutor(const BackgroundExecutor&) = delete;
@@ -33,13 +33,15 @@ class BackgroundExecutor final : public fit::executor {
   //
   // All tasks scheduled to |BackgroundExecutor| via this method are not serialized.
   //
-  // Serialization may be enforced by wrapping incoming objects with a fit::sequencer object, if
-  // desired.
-  void schedule_task(fit::pending_task task) final { executor_.schedule_task(std::move(task)); }
+  // Serialization may be enforced by wrapping incoming objects with a fpromise::sequencer object,
+  // if desired.
+  void schedule_task(fpromise::pending_task task) final {
+    executor_.schedule_task(std::move(task));
+  }
 
  private:
   // Executor which dispatches all scheduled tasks.
-  fit::single_threaded_executor executor_;
+  fpromise::single_threaded_executor executor_;
   // Thread which periodically updates all pending data allocations.
   thrd_t thrd_;
 
@@ -50,7 +52,7 @@ class BackgroundExecutor final : public fit::executor {
 
   // An "always scheduled" suspended task, which is resumed during destruction to finish running all
   // tasks and then exit.
-  fit::suspended_task terminate_ __TA_GUARDED(lock_);
+  fpromise::suspended_task terminate_ __TA_GUARDED(lock_);
   bool should_terminate_ __TA_GUARDED(lock_) = false;
 };
 

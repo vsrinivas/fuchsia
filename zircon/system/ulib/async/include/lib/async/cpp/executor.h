@@ -7,9 +7,9 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/async/task.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/scheduler.h>
 #include <lib/fit/thread_safety.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/scheduler.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/time.h>
 
@@ -19,7 +19,7 @@ namespace async {
 
 // Execution context for an asynchronous task that runs within the scope
 // of an |async_dispatcher_t|'s dispatch loop, such as a |async::Promise|.
-class Context : public fit::context {
+class Context : public fpromise::context {
  public:
   // Gets the executor's |async_dispatcher_t|, never null.
   virtual async_dispatcher_t* dispatcher() const = 0;
@@ -32,7 +32,7 @@ class Context : public fit::context {
 //
 // This allows asynchronous tasks, such as promises, to be evaluated alongside
 // other asynchronous operations managed by the |async_dispatcher_t|.
-class Executor final : public fit::executor {
+class Executor final : public fpromise::executor {
  public:
   // Wraps the specified dispatcher.
   //
@@ -49,7 +49,7 @@ class Executor final : public fit::executor {
   // Schedules a task for eventual execution by the executor.
   //
   // This method is thread-safe.
-  void schedule_task(fit::pending_task task) override;
+  void schedule_task(fpromise::pending_task task) override;
 
   Executor(const Executor&) = delete;
   Executor(Executor&&) = delete;
@@ -59,12 +59,12 @@ class Executor final : public fit::executor {
   // Returns a promise that will complete after the specified duration.
   //
   // The countdown starts when this method is called.
-  fit::promise<> MakeDelayedPromise(zx::duration duration);
+  fpromise::promise<> MakeDelayedPromise(zx::duration duration);
 
   // Returns a promise that will complete on or after |deadline|.
   //
   // The countdown starts when this method is called.
-  fit::promise<> MakePromiseForTime(zx::time deadline);
+  fpromise::promise<> MakePromiseForTime(zx::time deadline);
 
   // Makes a promise that waits for one or more signals on a handle.
   //
@@ -73,7 +73,7 @@ class Executor final : public fit::executor {
   //
   // |object| must remain valid at least until |trigger| is sent. The returned promise will only
   // have access to the data that was sent up to the point that |object| received |trigger|.
-  fit::promise<zx_packet_signal_t, zx_status_t> MakePromiseWaitHandle(
+  fpromise::promise<zx_packet_signal_t, zx_status_t> MakePromiseWaitHandle(
       zx::unowned_handle object, zx_signals_t trigger = ZX_SIGNAL_NONE, uint32_t options = 0);
 
  private:
@@ -93,14 +93,14 @@ class Executor final : public fit::executor {
   //
   // The dispatcher deletes itself once all pointers have been released.
   // See also |PurgeTasksAndMaybeDeleteSelfLocked()|.
-  class DispatcherImpl final : public fit::suspended_task::resolver,
+  class DispatcherImpl final : public fpromise::suspended_task::resolver,
                                public async::Context,
                                public async_task_t {
    public:
     DispatcherImpl(async_dispatcher_t* dispatcher, Executor* executor);
 
     void Shutdown();
-    void ScheduleTask(fit::pending_task task);
+    void ScheduleTask(fpromise::pending_task task);
 
     // |executor()| and |dispatcher()| are presented on the |async::Context|
     // so they are only accessible while |task_running_| is true which
@@ -111,12 +111,13 @@ class Executor final : public fit::executor {
     // Suspends the currently running task.  This method is presented
     // on the |async::Context| so it can only be called while
     // |task_running_| is true as above.
-    fit::suspended_task suspend_task() override;
+    fpromise::suspended_task suspend_task() override;
 
     // These methods implement the suspended task token contract.
     // They may be called on any thread at any time.
-    fit::suspended_task::ticket duplicate_ticket(fit::suspended_task::ticket ticket) override;
-    void resolve_ticket(fit::suspended_task::ticket ticket, bool resume_task) override;
+    fpromise::suspended_task::ticket duplicate_ticket(
+        fpromise::suspended_task::ticket ticket) override;
+    void resolve_ticket(fpromise::suspended_task::ticket ticket, bool resume_task) override;
 
    private:
     ~DispatcherImpl() override;
@@ -127,7 +128,7 @@ class Executor final : public fit::executor {
     void Dispatch(zx_status_t status);
 
     // Runs the specified task.  Called by |Dispatch()|.
-    void RunTask(fit::pending_task* task);
+    void RunTask(fpromise::pending_task* task);
 
     // Attempts to schedule a call to |Dispatch()| on the async dispatcher.
     // Returns true if a dispatch is pending.
@@ -149,12 +150,12 @@ class Executor final : public fit::executor {
     // The queue of runnable tasks.
     // Only accessed by |RunTask()| and |suspend_task()| which happens
     // on the dispatch thread.
-    fit::subtle::scheduler::task_queue runnable_tasks_;
+    fpromise::subtle::scheduler::task_queue runnable_tasks_;
 
     // The current suspended task ticket or 0 if none.
     // Only accessed by |RunTask()| and |suspend_task()| which happens
     // on the dispatch thread.
-    fit::suspended_task::ticket current_task_ticket_ = 0;
+    fpromise::suspended_task::ticket current_task_ticket_ = 0;
 
     // A bunch of state that is guarded by a mutex.
     struct {
@@ -173,13 +174,13 @@ class Executor final : public fit::executor {
       bool task_running_ FIT_GUARDED(mutex_) = false;
 
       // Holds tasks that have been scheduled on this dispatcher.
-      fit::subtle::scheduler scheduler_ FIT_GUARDED(mutex_);
+      fpromise::subtle::scheduler scheduler_ FIT_GUARDED(mutex_);
 
       // Newly scheduled tasks which have yet to be added to the
       // runnable queue.  This allows the dispatch to distinguish between
       // newly scheduled tasks and resumed tasks so it can manage them
       // separately.  See comments in |Dispatch()|.
-      fit::subtle::scheduler::task_queue incoming_tasks_ FIT_GUARDED(mutex_);
+      fpromise::subtle::scheduler::task_queue incoming_tasks_ FIT_GUARDED(mutex_);
     } guarded_;
   };
 

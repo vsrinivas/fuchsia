@@ -5,7 +5,7 @@
 #include "src/developer/forensics/last_reboot/reporter.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/types.h>
@@ -82,12 +82,12 @@ fuchsia::feedback::CrashReport CreateCrashReport(const feedback::RebootLog& rebo
 
 }  // namespace
 
-::fit::promise<void> Reporter::FileCrashReport(const feedback::RebootLog& reboot_log,
-                                               const zx::duration delay) {
+::fpromise::promise<void> Reporter::FileCrashReport(const feedback::RebootLog& reboot_log,
+                                                    const zx::duration delay) {
   auto report = CreateCrashReport(reboot_log);
 
   delayed_crash_reporting_.Reset([this, report = std::move(report)]() mutable {
-    crash_reporter_->File(std::move(report), [this](::fit::result<void, zx_status_t> result) {
+    crash_reporter_->File(std::move(report), [this](::fpromise::result<void, zx_status_t> result) {
       if (crash_reporter_.IsAlreadyDone()) {
         return;
       }
@@ -106,13 +106,13 @@ fuchsia::feedback::CrashReport CreateCrashReport(const feedback::RebootLog& rebo
     crash_reporter_.CompleteError(Error::kAsyncTaskPostFailure);
   }
 
-  return crash_reporter_.WaitForDone().then([this](const ::fit::result<void, Error>& result) {
+  return crash_reporter_.WaitForDone().then([this](const ::fpromise::result<void, Error>& result) {
     delayed_crash_reporting_.Cancel();
     if (result.is_error()) {
       FX_LOGS(WARNING) << "Failed to file a crash report: " << ToString(result.error());
     }
 
-    return ::fit::ok();
+    return ::fpromise::ok();
   });
 }
 

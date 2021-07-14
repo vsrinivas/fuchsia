@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ANNOTATIONS_TIME_PROVIDER_H_
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ANNOTATIONS_TIME_PROVIDER_H_
 
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include <memory>
 
@@ -21,8 +21,8 @@ class TimeProvider : public AnnotationProvider {
  public:
   TimeProvider(std::unique_ptr<timekeeper::Clock> clock);
 
-  ::fit::promise<Annotations> GetAnnotations(zx::duration timeout,
-                                             const AnnotationKeys& allowlist) override;
+  ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout,
+                                                  const AnnotationKeys& allowlist) override;
 
  private:
   std::unique_ptr<timekeeper::Clock> clock_;

@@ -9,7 +9,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -34,7 +34,7 @@ namespace fidl {
 //  services)
 //      : connection_(dispatcher, services, [this] { GetChannel(); }) {}
 //
-//  ::fit::promise<std::string> GetChannel(zx::duration timeout) {
+//  ::fpromise::promise<std::string> GetChannel(zx::duration timeout) {
 //    return connection_.GetValue(fit::Timeout(timeout));
 //  }
 //
@@ -84,9 +84,9 @@ class CachingPtr {
 
   void SetError(Error error) { SetAsDone(error); }
 
-  ::fit::promise<V, Error> GetValue(fit::Timeout timeout) {
+  ::fpromise::promise<V, Error> GetValue(fit::Timeout timeout) {
     if (value_) {
-      return ::fit::make_result_promise(ValueToResult());
+      return ::fpromise::make_result_promise(ValueToResult());
     }
 
     const uint64_t id = pending_calls_.NewBridgeForTask(Interface::Name_);
@@ -96,26 +96,26 @@ class CachingPtr {
     // don't set an error for all pending GetValue() calls, i.e. we don't set |value_| with the
     // Error and instead only propagate the Error to the caller.
     return pending_calls_.WaitForDone(id, std::move(timeout))
-        .then([id, this](const ::fit::result<void, Error>& result) {
+        .then([id, this](const ::fpromise::result<void, Error>& result) {
           pending_calls_.Delete(id);
           return result;
         })
         .and_then([this]() { return ValueToResult(); })
-        .or_else([](const Error& error) { return ::fit::error(error); });
+        .or_else([](const Error& error) { return ::fpromise::error(error); });
   }
 
   Interface* operator->() { return connection_.get(); }
 
  private:
-  ::fit::result<V, Error> ValueToResult() const {
+  ::fpromise::result<V, Error> ValueToResult() const {
     if (!value_) {
       FX_LOGS(FATAL) << "Attempting to return a result when none has been cached";
     }
 
     if (value_->HasValue()) {
-      return ::fit::ok(value_->Value());
+      return ::fpromise::ok(value_->Value());
     } else {
-      return ::fit::error(value_->Error());
+      return ::fpromise::error(value_->Error());
     }
   }
 

@@ -19,7 +19,7 @@
 class EncoderClient {
  public:
   ~EncoderClient();
-  static fit::result<std::unique_ptr<EncoderClient>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<EncoderClient>, zx_status_t> Create(
       fuchsia::mediacodec::CodecFactoryHandle codec_factory,
       fuchsia::sysmem::AllocatorHandle allocator, uint32_t bitrate, uint32_t gop_size,
       const std::string& mime_type);
@@ -59,7 +59,7 @@ class EncoderClient {
 
   // On Ok, contains the buffer collection info and negotiated packet count.
   using BufferCollectionResult =
-      fit::result<std::pair<fuchsia::sysmem::BufferCollectionInfo_2, uint32_t>, zx_status_t>;
+      fpromise::result<std::pair<fuchsia::sysmem::BufferCollectionInfo_2, uint32_t>, zx_status_t>;
   using ConfigurePortBufferCollectionCallback = fit::callback<void(BufferCollectionResult)>;
   void ConfigurePortBufferCollection(
       fuchsia::sysmem::BufferCollectionPtr& buffer_collection,

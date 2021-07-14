@@ -6,7 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_DEVICE_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <zircon/device/audio.h>
 
 #include <memory>
@@ -36,7 +36,8 @@ class WritableRingBuffer;
 class AudioDevice : public AudioObject, public std::enable_shared_from_this<AudioDevice> {
  public:
   static std::string UniqueIdToString(const audio_stream_unique_id_t& id);
-  static fit::result<audio_stream_unique_id_t> UniqueIdFromString(const std::string& unique_id);
+  static fpromise::result<audio_stream_unique_id_t> UniqueIdFromString(
+      const std::string& unique_id);
 
   ~AudioDevice() override;
 
@@ -89,9 +90,9 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   zx::duration presentation_delay() const { return presentation_delay_; }
 
   // Sets the configuration of all effects with the given instance name.
-  virtual fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+  virtual fpromise::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config) {
-    return fit::make_error_promise(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+    return fpromise::make_error_promise(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
   }
 
   // AudioObjects with Type::Output must override this; this version should never be called.
@@ -100,10 +101,10 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // 1. It explicitly updates the OutputPipeline with a new OutputDeviceProfile configuration,
   //    restarting the new OutputPipeline with the updated configuration.
   // 2. It provides a convenient way to update the configuration outside of the mixer thread.
-  virtual fit::promise<void, zx_status_t> UpdateDeviceProfile(
+  virtual fpromise::promise<void, zx_status_t> UpdateDeviceProfile(
       const DeviceConfig::OutputDeviceProfile::Parameters& params) {
     FX_CHECK(false) << "UpdateDeviceProfile() not supported on AudioDevice";
-    return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
+    return fpromise::make_error_promise(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Accessor set gain. Limits the gain command to what the hardware allows, and
@@ -119,12 +120,12 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // Gives derived classes a chance to set up hardware, then sets up the machinery needed for
   // scheduling processing tasks and schedules the first processing callback immediately in order
   // to get the process running.
-  virtual fit::promise<void, zx_status_t> Startup();
+  virtual fpromise::promise<void, zx_status_t> Startup();
 
   // Makes certain that the shutdown process has started, synchronizes with processing tasks which
   // were executing at the time, then finishes the shutdown by unlinking from all renderers and
   // capturers and cleaning up all resources.
-  virtual fit::promise<void> Shutdown();
+  virtual fpromise::promise<void> Shutdown();
 
   // audio clock from AudioDriver
   virtual AudioClock& reference_clock();

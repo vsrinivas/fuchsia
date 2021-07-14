@@ -57,13 +57,13 @@ class AudioObject {
   // for that mixer to run in. The source object and their stream are provided.
   //
   // Returns ZX_OK if initialization succeeded, or an appropriate error code otherwise.
-  virtual fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+  virtual fpromise::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
   InitializeSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) {
-    return fit::ok(std::make_pair(std::make_shared<audio::mixer::NoOp>(), nullptr));
+    return fpromise::ok(std::make_pair(std::make_shared<audio::mixer::NoOp>(), nullptr));
   }
-  virtual fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
+  virtual fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) {
-    return fit::ok(nullptr);
+    return fpromise::ok(nullptr);
   }
 
   virtual void CleanupSourceLink(const AudioObject& source,

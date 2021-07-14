@@ -73,7 +73,7 @@ class MockDevice : public fuchsia::device::mock::MockDevice {
 
   // Completers for pending add/remove actions, so we can signal when the
   // operations are finished.
-  std::map<uint64_t, fit::completer<void, std::string>> pending_actions_;
+  std::map<uint64_t, fpromise::completer<void, std::string>> pending_actions_;
   uint64_t next_action_id_ = 0;
 };
 

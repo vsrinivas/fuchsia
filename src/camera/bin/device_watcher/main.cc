@@ -20,17 +20,17 @@
 
 constexpr auto kCameraPath = "/dev/class/camera";
 
-static fit::result<fuchsia::hardware::camera::DeviceHandle, zx_status_t> GetCamera(
+static fpromise::result<fuchsia::hardware::camera::DeviceHandle, zx_status_t> GetCamera(
     std::string path) {
   fuchsia::hardware::camera::DeviceHandle camera;
   zx_status_t status =
       fdio_service_connect(path.c_str(), camera.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
-  return fit::ok(std::move(camera));
+  return fpromise::ok(std::move(camera));
 }
 
 class DeviceWatcherTesterImpl : public fuchsia::camera::test::DeviceWatcherTester {

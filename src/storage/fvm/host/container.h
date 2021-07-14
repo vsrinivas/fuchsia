@@ -83,7 +83,7 @@ class Container {
 
 class CompressionContext {
  public:
-  static fit::result<CompressionContext, std::string> Create();
+  static fpromise::result<CompressionContext, std::string> Create();
 
   explicit CompressionContext() = default;
   CompressionContext(const CompressionContext&) = delete;

@@ -203,12 +203,12 @@ void Device::GetCountry(GetCountryCallback callback) {
   auto status = wlanphy_impl_.ops->get_country(wlanphy_impl_.ctx, &country);
   if (status != ZX_OK) {
     debugf("wlanphy: GetCountry failed with error %s\n", zx_status_get_string(status));
-    callback(fit::error(status));
+    callback(fpromise::error(status));
   } else {
     wlan_device::CountryCode resp;
     memcpy(resp.alpha2.data(), country.alpha2, WLANPHY_ALPHA2_LEN);
     debugf("wlanphy: GetCountry returning %s\n", wlan::common::Alpha2ToStr(resp.alpha2).c_str());
-    callback(fit::ok(std::move(resp)));
+    callback(fpromise::ok(std::move(resp)));
   }
 }
 

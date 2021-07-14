@@ -6,7 +6,7 @@
 #define SRC_DEVICES_BLOCK_DRIVERS_FTL_NAND_OPERATION_H_
 
 #include <fuchsia/hardware/nand/c/banjo.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/status.h>

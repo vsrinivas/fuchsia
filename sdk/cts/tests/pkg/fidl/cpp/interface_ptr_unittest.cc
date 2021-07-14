@@ -371,7 +371,7 @@ TEST(InterfacePtr, ErrorNoValues) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   bool replied = false;
-  ptr->Fail(true, [&replied](fit::result<void, uint32_t> result) {
+  ptr->Fail(true, [&replied](fpromise::result<void, uint32_t> result) {
     ASSERT_FALSE(replied);
     replied = true;
     EXPECT_TRUE(result.is_error());
@@ -382,7 +382,7 @@ TEST(InterfacePtr, ErrorNoValues) {
   EXPECT_TRUE(replied);
 
   replied = false;
-  ptr->Fail(false, [&replied](fit::result<void, uint32_t> result) {
+  ptr->Fail(false, [&replied](fpromise::result<void, uint32_t> result) {
     ASSERT_FALSE(replied);
     replied = true;
     EXPECT_TRUE(result.is_ok());
@@ -402,7 +402,7 @@ TEST(InterfacePtr, ErrorOneValue) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   bool replied = false;
-  ptr->FailHard(true, [&replied](fit::result<std::string, uint32_t> result) {
+  ptr->FailHard(true, [&replied](fpromise::result<std::string, uint32_t> result) {
     ASSERT_FALSE(replied);
     replied = true;
     EXPECT_TRUE(result.is_error());
@@ -413,7 +413,7 @@ TEST(InterfacePtr, ErrorOneValue) {
   EXPECT_TRUE(replied);
 
   replied = false;
-  ptr->FailHard(false, [&replied](fit::result<std::string, uint32_t> result) {
+  ptr->FailHard(false, [&replied](fpromise::result<std::string, uint32_t> result) {
     ASSERT_FALSE(replied);
     replied = true;
     EXPECT_TRUE(result.is_ok());
@@ -434,26 +434,26 @@ TEST(InterfacePtr, ErrorTwoValues) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   bool replied = false;
-  ptr->FailHardest(true,
-                   [&replied](fit::result<std::tuple<std::string, std::string>, uint32_t> result) {
-                     ASSERT_FALSE(replied);
-                     replied = true;
-                     EXPECT_TRUE(result.is_error());
-                     EXPECT_EQ(result.error(), 42U);
-                   });
+  ptr->FailHardest(
+      true, [&replied](fpromise::result<std::tuple<std::string, std::string>, uint32_t> result) {
+        ASSERT_FALSE(replied);
+        replied = true;
+        EXPECT_TRUE(result.is_error());
+        EXPECT_EQ(result.error(), 42U);
+      });
   EXPECT_FALSE(replied);
   loop.RunUntilIdle();
   EXPECT_TRUE(replied);
 
   replied = false;
-  ptr->FailHardest(false,
-                   [&replied](fit::result<std::tuple<std::string, std::string>, uint32_t> result) {
-                     ASSERT_FALSE(replied);
-                     replied = true;
-                     EXPECT_TRUE(result.is_ok());
-                     EXPECT_EQ(std::get<0>(result.value()), "hello");
-                     EXPECT_EQ(std::get<1>(result.value()), "world");
-                   });
+  ptr->FailHardest(
+      false, [&replied](fpromise::result<std::tuple<std::string, std::string>, uint32_t> result) {
+        ASSERT_FALSE(replied);
+        replied = true;
+        EXPECT_TRUE(result.is_ok());
+        EXPECT_EQ(std::get<0>(result.value()), "hello");
+        EXPECT_EQ(std::get<1>(result.value()), "world");
+      });
   EXPECT_FALSE(replied);
   loop.RunUntilIdle();
   EXPECT_TRUE(replied);

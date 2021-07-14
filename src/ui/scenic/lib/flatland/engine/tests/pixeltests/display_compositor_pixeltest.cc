@@ -61,7 +61,7 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
 
     auto hdc_promise = ui_display::GetHardwareDisplayController();
     executor_->schedule_task(
-        hdc_promise.then([this](fit::result<ui_display::DisplayControllerHandles>& handles) {
+        hdc_promise.then([this](fpromise::result<ui_display::DisplayControllerHandles>& handles) {
           display_manager_->BindDefaultDisplayController(std::move(handles.value().controller),
                                                          std::move(handles.value().dc_device));
         }));
@@ -106,7 +106,7 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
   // display controllers are the AMLOGIC devices, and so we hardcode some of those AMLOGIC
   // assumptions here, such as making the pixel format for the capture image BGR24, as that
   // is the only capture format that AMLOGIC supports.
-  fit::result<fuchsia::sysmem::BufferCollectionSyncPtr, zx_status_t> SetupCapture(
+  fpromise::result<fuchsia::sysmem::BufferCollectionSyncPtr, zx_status_t> SetupCapture(
       allocation::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::PixelFormatType pixel_type,
       fuchsia::sysmem::BufferCollectionInfo_2* collection_info, uint64_t* image_id) {
@@ -119,7 +119,7 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
     bool capture_supported = scenic_impl::IsCaptureSupported(*display_controller.get());
     if (!capture_supported) {
       FX_LOGS(WARNING) << "Capture is not supported on this device. Test skipped.";
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
+      return fpromise::error(ZX_ERR_NOT_SUPPORTED);
     }
 
     // Set up buffer collection and image for recording a snapshot.
@@ -193,7 +193,7 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
     *image_id = scenic_impl::ImportImageForCapture(*display_controller.get(), image_config,
                                                    collection_id, 0);
 
-    return fit::ok(std::move(collection));
+    return fpromise::ok(std::move(collection));
   }
 
   // Sets up the buffer collection information for collections that will be imported

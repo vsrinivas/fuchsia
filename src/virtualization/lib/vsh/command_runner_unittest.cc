@@ -48,7 +48,7 @@ struct FakeVshd {
 struct BlockingCommandRunnerParams {
   BlockingCommandRunner runner;
   BlockingCommandRunner::Command command;
-  fit::result<BlockingCommandRunner::CommandResult, zx_status_t> result;
+  fpromise::result<BlockingCommandRunner::CommandResult, zx_status_t> result;
 };
 
 int RunBlockingCommand(void* arg) {

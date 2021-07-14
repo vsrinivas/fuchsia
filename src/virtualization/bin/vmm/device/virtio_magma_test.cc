@@ -68,13 +68,15 @@ class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator {
                                 RegisterBufferCollectionCallback callback) override {
     if (!args.has_export_token()) {
       FX_LOGS(ERROR) << "RegisterBufferCollection called with missing export token";
-      callback(fit::error(fuchsia::ui::composition::RegisterBufferCollectionError::BAD_OPERATION));
+      callback(
+          fpromise::error(fuchsia::ui::composition::RegisterBufferCollectionError::BAD_OPERATION));
       return;
     }
 
     if (!args.has_buffer_collection_token()) {
       FX_LOGS(ERROR) << "RegisterBufferCollection called with missing buffer collection token";
-      callback(fit::error(fuchsia::ui::composition::RegisterBufferCollectionError::BAD_OPERATION));
+      callback(
+          fpromise::error(fuchsia::ui::composition::RegisterBufferCollectionError::BAD_OPERATION));
       return;
     }
 
@@ -89,7 +91,8 @@ class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator {
         std::move(*args.mutable_buffer_collection_token()), buffer_collection.NewRequest());
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "BindSharedCollection failed: " << status;
-      callback(fit::error(fuchsia::ui::composition::RegisterBufferCollectionError::BAD_OPERATION));
+      callback(
+          fpromise::error(fuchsia::ui::composition::RegisterBufferCollectionError::BAD_OPERATION));
       return;
     }
 
@@ -115,13 +118,14 @@ class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator {
     status = buffer_collection->SetConstraints(true, constraints);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "SetConstraints failed: " << status;
-      callback(fit::error(fuchsia::ui::composition::RegisterBufferCollectionError::BAD_OPERATION));
+      callback(
+          fpromise::error(fuchsia::ui::composition::RegisterBufferCollectionError::BAD_OPERATION));
       return;
     }
 
     buffer_collection->Close();
 
-    callback(fit::ok());
+    callback(fpromise::ok());
   }
 };
 

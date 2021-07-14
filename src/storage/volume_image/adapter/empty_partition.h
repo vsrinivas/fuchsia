@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_ADAPTER_EMPTY_PARTITION_H_
 #define SRC_STORAGE_VOLUME_IMAGE_ADAPTER_EMPTY_PARTITION_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 
@@ -19,7 +19,7 @@ namespace storage::volume_image {
 //
 // Note: Eventually as blobfs host tool gets cleaned up, it should generate the volume and address
 // descriptor for blobfs, in the meantime we generate them on the fly.
-fit::result<Partition, std::string> CreateEmptyFvmPartition(
+fpromise::result<Partition, std::string> CreateEmptyFvmPartition(
     const PartitionOptions& partition_options, const FvmOptions& fvm_options);
 
 }  // namespace storage::volume_image

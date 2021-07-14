@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ANNOTATIONS_ANNOTATION_PROVIDER_H_
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ANNOTATIONS_ANNOTATION_PROVIDER_H_
 
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/zx/time.h>
 
 #include "src/developer/forensics/feedback_data/annotations/types.h"
@@ -24,8 +24,8 @@ class AnnotationProvider {
  public:
   virtual ~AnnotationProvider() = default;
 
-  virtual ::fit::promise<Annotations> GetAnnotations(zx::duration timeout,
-                                                     const AnnotationKeys& allowlist) = 0;
+  virtual ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout,
+                                                          const AnnotationKeys& allowlist) = 0;
 };
 
 }  // namespace feedback_data

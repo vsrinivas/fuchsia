@@ -66,7 +66,7 @@ class DisplayCompositorSmokeTest : public DisplayCompositorTestBase {
 
     auto hdc_promise = ui_display::GetHardwareDisplayController();
     executor_->schedule_task(
-        hdc_promise.then([this](fit::result<ui_display::DisplayControllerHandles>& handles) {
+        hdc_promise.then([this](fpromise::result<ui_display::DisplayControllerHandles>& handles) {
           display_manager_->BindDefaultDisplayController(std::move(handles.value().controller),
                                                          std::move(handles.value().dc_device));
         }));

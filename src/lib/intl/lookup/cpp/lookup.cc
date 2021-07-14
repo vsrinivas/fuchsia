@@ -4,7 +4,7 @@
 
 #include "lookup.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <memory>
 #include <string>
@@ -25,7 +25,7 @@ std::vector<char*> AsCStrings(const std::vector<std::string>& strings) {
 
 }  // namespace
 
-fit::result<std::unique_ptr<Lookup>, Lookup::Status> Lookup::NewForTest(
+fpromise::result<std::unique_ptr<Lookup>, Lookup::Status> Lookup::NewForTest(
     const std::vector<std::string>& locale_ids) {
   return Lookup::NewForTest(locale_ids, intl_lookup_ops_t{
                                             .op_new = intl_lookup_new_fake_for_test,
@@ -34,21 +34,21 @@ fit::result<std::unique_ptr<Lookup>, Lookup::Status> Lookup::NewForTest(
                                         });
 }
 
-fit::result<std::unique_ptr<Lookup>, Lookup::Status> Lookup::NewForTest(
+fpromise::result<std::unique_ptr<Lookup>, Lookup::Status> Lookup::NewForTest(
     const std::vector<std::string>& locale_ids, intl_lookup_ops_t ops) {
   auto status = Lookup::Status::OK;
   std::vector<char*> cstrings = AsCStrings(locale_ids);
   auto* raw_lookup =
       ops.op_new(locale_ids.size(), &cstrings[0], reinterpret_cast<int8_t*>(&status));
   if (status != Lookup::Status::OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
   // make_unique does not work here since Lookup constructor is private.
   std::unique_ptr<Lookup> impl(new Lookup(raw_lookup, ops));
-  return fit::ok(std::move(impl));
+  return fpromise::ok(std::move(impl));
 }
 
-fit::result<std::unique_ptr<Lookup>, Lookup::Status> Lookup::New(
+fpromise::result<std::unique_ptr<Lookup>, Lookup::Status> Lookup::New(
     const std::vector<std::string>& locale_ids) {
   return Lookup::NewForTest(locale_ids, intl_lookup_ops_t{
                                             .op_new = intl_lookup_new,
@@ -65,13 +65,13 @@ Lookup::~Lookup() {
   impl_ = nullptr;
 }
 
-fit::result<std::string_view, Lookup::Status> Lookup::String(uint64_t message_id) {
+fpromise::result<std::string_view, Lookup::Status> Lookup::String(uint64_t message_id) {
   auto status = Lookup::Status::OK;
   char* result = ops_.op_string(impl_, message_id, reinterpret_cast<int8_t*>(&status));
   if (status != Lookup::Status::OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
-  return fit::ok(std::string_view(result));
+  return fpromise::ok(std::string_view(result));
 }
 
 };  // namespace intl

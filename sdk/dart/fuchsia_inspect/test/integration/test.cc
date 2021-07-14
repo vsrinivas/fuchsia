@@ -57,13 +57,13 @@ class InspectTest : public sys::testing::TestWithEnvironment {
 
   // Open the root object connection on the given sync pointer.
   // Returns ZX_OK on success.
-  fit::result<fuchsia::io::FileSyncPtr, zx_status_t> OpenInspectVmoFile(
+  fpromise::result<fuchsia::io::FileSyncPtr, zx_status_t> OpenInspectVmoFile(
       const std::string& file_name) {
     files::Glob glob(Substitute("/hub/r/test/*/c/*/*/c/$0/*/out/diagnostics/$1.inspect",
                                 kTestProcessName, file_name));
     if (glob.size() == 0) {
       printf("Size == 0\n");
-      return fit::error(ZX_ERR_NOT_FOUND);
+      return fpromise::error(ZX_ERR_NOT_FOUND);
     }
 
     fuchsia::io::FileSyncPtr file;
@@ -71,28 +71,29 @@ class InspectTest : public sys::testing::TestWithEnvironment {
                             file.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
       printf("Status bad %d\n", status);
-      return fit::error(status);
+      return fpromise::error(status);
     }
 
     EXPECT_TRUE(file.is_bound());
 
-    return fit::ok(std::move(file));
+    return fpromise::ok(std::move(file));
   }
 
-  fit::result<zx::vmo, zx_status_t> DescribeInspectVmoFile(const fuchsia::io::FileSyncPtr& file) {
+  fpromise::result<zx::vmo, zx_status_t> DescribeInspectVmoFile(
+      const fuchsia::io::FileSyncPtr& file) {
     fuchsia::io::NodeInfo info;
     auto status = file->Describe(&info);
     if (status != ZX_OK) {
       printf("get failed\n");
-      return fit::error(status);
+      return fpromise::error(status);
     }
 
     if (!info.is_vmofile()) {
       printf("not a vmofile");
-      return fit::error(ZX_ERR_NOT_FOUND);
+      return fpromise::error(ZX_ERR_NOT_FOUND);
     }
 
-    return fit::ok(std::move(info.vmofile().vmo));
+    return fpromise::ok(std::move(info.vmofile().vmo));
   }
 
  private:

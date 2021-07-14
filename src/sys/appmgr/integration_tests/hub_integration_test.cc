@@ -217,9 +217,9 @@ TEST_F(HubTest, SystemDiagnosticsData) {
   auto read = inspect::ReadFromTree(std::move(tree));
   async::Executor executor_(dispatcher());
 
-  fit::result<inspect::Hierarchy> result;
+  fpromise::result<inspect::Hierarchy> result;
   executor_.schedule_task(
-      read.then([&](fit::result<inspect::Hierarchy>& res) { result = std::move(res); }));
+      read.then([&](fpromise::result<inspect::Hierarchy>& res) { result = std::move(res); }));
 
   RunLoopUntil([&] { return !!result; });
 

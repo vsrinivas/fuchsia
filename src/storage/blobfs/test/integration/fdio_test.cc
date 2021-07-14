@@ -73,7 +73,7 @@ zx_handle_t FdioTest::export_root() {
   return export_root.release();
 }
 
-fit::result<inspect::Hierarchy> FdioTest::TakeSnapshot() {
+fpromise::result<inspect::Hierarchy> FdioTest::TakeSnapshot() {
   async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("metric-collection-thread");
   async::Executor executor(loop.dispatcher());
@@ -83,23 +83,23 @@ fit::result<inspect::Hierarchy> FdioTest::TakeSnapshot() {
   zx_status_t status = fdio_service_connect_at(export_root(), "diagnostics/fuchsia.inspect.Tree",
                                                tree.NewRequest(dispatcher).TakeChannel().release());
   if (status != ZX_OK) {
-    return fit::error();
+    return fpromise::error();
   }
 
   std::condition_variable cv;
   std::mutex m;
   bool done = false;
-  fit::result<inspect::Hierarchy> hierarchy_or_error;
+  fpromise::result<inspect::Hierarchy> hierarchy_or_error;
 
-  auto promise =
-      inspect::ReadFromTree(std::move(tree)).then([&](fit::result<inspect::Hierarchy>& result) {
-        {
-          std::unique_lock<std::mutex> lock(m);
-          hierarchy_or_error = std::move(result);
-          done = true;
-        }
-        cv.notify_all();
-      });
+  auto promise = inspect::ReadFromTree(std::move(tree))
+                     .then([&](fpromise::result<inspect::Hierarchy>& result) {
+                       {
+                         std::unique_lock<std::mutex> lock(m);
+                         hierarchy_or_error = std::move(result);
+                         done = true;
+                       }
+                       cv.notify_all();
+                     });
 
   executor.schedule_task(std::move(promise));
 
@@ -128,7 +128,7 @@ void FdioTest::GetUintMetricFromHierarchy(const inspect::Hierarchy& hierarchy,
 
 void FdioTest::GetUintMetric(const std::vector<std::string>& path, const std::string& property,
                              uint64_t* value) {
-  fit::result<inspect::Hierarchy> hierarchy_or_error = TakeSnapshot();
+  fpromise::result<inspect::Hierarchy> hierarchy_or_error = TakeSnapshot();
   ASSERT_TRUE(hierarchy_or_error.is_ok());
   GetUintMetricFromHierarchy(hierarchy_or_error.value(), path, property, value);
 }

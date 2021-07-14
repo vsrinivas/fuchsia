@@ -71,19 +71,19 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   inspect::Inspector Inspector() { return *(daemon_->inspector_.inspector()); }
 
   // Run a promise to completion on the default async executor.
-  void RunPromiseToCompletion(fit::promise<> promise) {
+  void RunPromiseToCompletion(fpromise::promise<> promise) {
     bool done = false;
     executor_.schedule_task(std::move(promise).and_then([&]() { done = true; }));
     RunLoopUntilIdle();
     ASSERT_TRUE(done);
   }
 
-  fit::result<inspect::Hierarchy> GetHierachyFromInspect() {
-    fit::result<inspect::Hierarchy> hierarchy;
-    RunPromiseToCompletion(
-        inspect::ReadFromInspector(Inspector()).then([&](fit::result<inspect::Hierarchy>& result) {
-          hierarchy = std::move(result);
-        }));
+  fpromise::result<inspect::Hierarchy> GetHierachyFromInspect() {
+    fpromise::result<inspect::Hierarchy> hierarchy;
+    RunPromiseToCompletion(inspect::ReadFromInspector(Inspector())
+                               .then([&](fpromise::result<inspect::Hierarchy>& result) {
+                                 hierarchy = std::move(result);
+                               }));
     return hierarchy;
   }
 
@@ -275,7 +275,7 @@ TEST_F(SystemMetricsDaemonTest, InspectCpuUsage) {
               DeviceState::Active, -1 /*no second position event code*/, 1);
 
   // Get hierarchy, node, and readings
-  fit::result<inspect::Hierarchy> hierarchy = GetHierachyFromInspect();
+  fpromise::result<inspect::Hierarchy> hierarchy = GetHierachyFromInspect();
   ASSERT_TRUE(hierarchy.is_ok());
 
   auto* metric_node = hierarchy.value().GetByPath({SystemMetricsDaemon::kInspecPlatformtNodeName});

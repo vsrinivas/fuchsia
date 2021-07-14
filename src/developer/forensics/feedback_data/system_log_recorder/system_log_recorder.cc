@@ -37,7 +37,7 @@ void SystemLogRecorder::Start() {
     auto log_messages =
         diagnostics::accessor2logger::ConvertFormattedContentToLogMessages(std::move(chunk));
     if (log_messages.is_error()) {
-      store_.Add(::fit::error(log_messages.take_error()));
+      store_.Add(::fpromise::error(log_messages.take_error()));
       return;
     }
 

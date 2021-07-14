@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_FTL_FTL_IO_H_
 #define SRC_STORAGE_VOLUME_IMAGE_FTL_FTL_IO_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/ftl/ndm-driver.h>
 #include <lib/ftl/volume.h>
 
@@ -47,7 +47,7 @@ class FtlHandle {
         volume_(std::make_unique<ftl::VolumeImpl>(instance_.get())) {}
   FtlHandle(const FtlHandle&) = default;
 
-  fit::result<void, std::string> Init(std::unique_ptr<ftl::NdmDriver> driver);
+  fpromise::result<void, std::string> Init(std::unique_ptr<ftl::NdmDriver> driver);
 
   ftl::Volume& volume() { return *volume_; }
 

@@ -788,7 +788,7 @@ void Blobfs::Sync(SyncCallback cb) {
   TRACE_FLOW_BEGIN("blobfs", "Blobfs.sync", trace_id);
 
   journal_->schedule_task(journal_->Sync().then(
-      [trace_id, cb = std::move(cb)](fit::result<void, zx_status_t>& result) mutable {
+      [trace_id, cb = std::move(cb)](fpromise::result<void, zx_status_t>& result) mutable {
         TRACE_DURATION("blobfs", "Blobfs::Sync::callback");
 
         if (result.is_ok()) {

@@ -35,7 +35,8 @@ InjectorInspector::InjectorInspector(inspect::Node node)
                                                  [this] {
                                                    inspect::Inspector insp;
                                                    ReportStats(insp);
-                                                   return fit::make_ok_promise(std::move(insp));
+                                                   return fpromise::make_ok_promise(
+                                                       std::move(insp));
                                                  })),
       viewport_event_latency_(node_.CreateExponentialUintHistogram(
           "viewport_event_latency", kLatencyHistogramFloor.to_nsecs(),

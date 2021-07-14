@@ -19,10 +19,11 @@ class TypedFormat;
 // a channel count, and a sample rate measured in frames/second.
 class Format {
  public:
-  static fit::result<Format> Create(fuchsia::media::AudioStreamType stream_type);
+  static fpromise::result<Format> Create(fuchsia::media::AudioStreamType stream_type);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  static fit::result<TypedFormat<SampleFormat>> Create(int32_t channels, int32_t frames_per_second);
+  static fpromise::result<TypedFormat<SampleFormat>> Create(int32_t channels,
+                                                            int32_t frames_per_second);
 
   Format(const Format&) = default;
   Format& operator=(const Format&) = default;

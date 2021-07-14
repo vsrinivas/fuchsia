@@ -123,12 +123,12 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
   void FailSync(Location location, Completer& completer, zx_status_t status, const char* format,
                 ...) __PRINTFLIKE(5, 6);
 
-  fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo> CloneResultForSendingV2(
+  fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo> CloneResultForSendingV2(
       const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
 
-  fit::result<fuchsia_sysmem::wire::BufferCollectionInfo2> CloneResultForSendingV1(
+  fpromise::result<fuchsia_sysmem::wire::BufferCollectionInfo2> CloneResultForSendingV1(
       const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
-  fit::result<fuchsia_sysmem::wire::BufferCollectionInfo2> CloneAuxBuffersResultForSendingV1(
+  fpromise::result<fuchsia_sysmem::wire::BufferCollectionInfo2> CloneAuxBuffersResultForSendingV1(
       const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
 
   static const fuchsia_sysmem_BufferCollection_ops_t kOps;

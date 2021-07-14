@@ -62,7 +62,7 @@ class BoardInfoProviderTest : public UnitTestFixture {
 
     Annotations annotations;
     executor_.schedule_task(
-        std::move(promise).then([&annotations](::fit::result<Annotations>& res) {
+        std::move(promise).then([&annotations](::fpromise::result<Annotations>& res) {
           if (res.is_ok()) {
             annotations = res.take_value();
           }

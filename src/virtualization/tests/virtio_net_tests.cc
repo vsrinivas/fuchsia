@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/socket.h>
 
@@ -51,7 +51,7 @@ static void TestThread(fuchsia::hardware::ethernet::MacAddress mac_addr, FakeNet
   // The test will time out via RunUtil in the test fixture if we fail to
   // receive the correct packet.
   while (true) {
-    auto result = fit::run_single_threaded(netstack->ReceivePacket(mac_addr));
+    auto result = fpromise::run_single_threaded(netstack->ReceivePacket(mac_addr));
     ASSERT_TRUE(result.is_ok());
     std::vector<uint8_t> packet = result.take_value();
 
@@ -73,13 +73,13 @@ static void TestThread(fuchsia::hardware::ethernet::MacAddress mac_addr, FakeNet
 
   std::vector<uint8_t> send_packet(kTestPacketSize);
   memset(send_packet.data(), send_byte, kTestPacketSize);
-  fit::promise<void, zx_status_t> promise;
+  fpromise::promise<void, zx_status_t> promise;
   if (use_raw_packets) {
     promise = netstack->SendPacket(mac_addr, std::move(send_packet));
   } else {
     promise = netstack->SendUdpPacket(mac_addr, std::move(send_packet));
   }
-  auto result = fit::run_single_threaded(std::move(promise));
+  auto result = fpromise::run_single_threaded(std::move(promise));
   ASSERT_TRUE(result.is_ok());
 }
 

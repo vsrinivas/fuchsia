@@ -5,7 +5,7 @@
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 
 #include <lib/fdio/fd.h>
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
@@ -16,7 +16,7 @@ void GrpcVsockServerBuilder::RegisterService(grpc::Service* service) {
 }
 
 void GrpcVsockServerBuilder::AddListenPort(uint32_t vsock_port) {
-  fit::bridge<void, zx_status_t> bridge;
+  fpromise::bridge<void, zx_status_t> bridge;
   (*socket_endpoint_)
       ->Listen(vsock_port, server_->NewBinding(),
                // The unused capture of |socket_endpoint_| here is important.
@@ -35,27 +35,28 @@ void GrpcVsockServerBuilder::AddListenPort(uint32_t vsock_port) {
   service_promises_.push_back(bridge.consumer.promise());
 }
 
-fit::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> GrpcVsockServerBuilder::Build() {
-  return fit::join_promise_vector(std::move(service_promises_))
-      .then([builder = std::move(builder_)](
-                const fit::result<std::vector<fit::result<void, zx_status_t>>>& results) mutable
-            -> fit::result<std::unique_ptr<grpc::Server>, zx_status_t> {
-        // join_promise_vector should never fail, but instead return a vector
-        // of results.
-        FX_CHECK(results.is_ok()) << "fit::join_promise_vector returns fit::error";
-        for (const auto& result : results.value()) {
-          if (result.is_error()) {
-            FX_CHECK(false) << "Failed to listen on vsock port: " << result.error();
-            return fit::error(result.error());
-          }
-        }
-        // All the vsock listeners have been initialized. Now start the gRPC
-        // server.
-        return fit::ok(builder->BuildAndStart());
-      })
+fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> GrpcVsockServerBuilder::Build() {
+  return fpromise::join_promise_vector(std::move(service_promises_))
+      .then(
+          [builder = std::move(builder_)](
+              const fpromise::result<std::vector<fpromise::result<void, zx_status_t>>>&
+                  results) mutable -> fpromise::result<std::unique_ptr<grpc::Server>, zx_status_t> {
+            // join_promise_vector should never fail, but instead return a vector
+            // of results.
+            FX_CHECK(results.is_ok()) << "fpromise::join_promise_vector returns fpromise::error";
+            for (const auto& result : results.value()) {
+              if (result.is_error()) {
+                FX_CHECK(false) << "Failed to listen on vsock port: " << result.error();
+                return fpromise::error(result.error());
+              }
+            }
+            // All the vsock listeners have been initialized. Now start the gRPC
+            // server.
+            return fpromise::ok(builder->BuildAndStart());
+          })
       .and_then([server = std::move(server_)](std::unique_ptr<grpc::Server>& server_impl) mutable {
         server->SetServerImpl(std::move(server_impl));
-        return fit::ok(std::move(server));
+        return fpromise::ok(std::move(server));
       });
 }
 

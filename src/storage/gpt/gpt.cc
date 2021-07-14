@@ -258,16 +258,16 @@ zx::status<> GetPartitionName(const gpt_entry_t& entry, char* name, size_t capac
   return zx::ok();
 }
 
-fit::result<gpt_header_t, zx_status_t> InitializePrimaryHeader(uint64_t block_size,
-                                                               uint64_t block_count) {
+fpromise::result<gpt_header_t, zx_status_t> InitializePrimaryHeader(uint64_t block_size,
+                                                                    uint64_t block_count) {
   gpt_header_t header = {};
 
   if (block_size < kHeaderSize) {
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   if (block_count <= MinimumBlockDeviceSize(block_size).value()) {
-    return fit::error(ZX_ERR_BUFFER_TOO_SMALL);
+    return fpromise::error(ZX_ERR_BUFFER_TOO_SMALL);
   }
 
   header.magic = kMagicNumber;
@@ -298,7 +298,7 @@ fit::result<gpt_header_t, zx_status_t> InitializePrimaryHeader(uint64_t block_si
   // Finally, calculate header checksum
   header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), kHeaderSize);
 
-  return fit::ok(header);
+  return fpromise::ok(header);
 }
 
 // Returns user friendly error message given `status`.
@@ -356,23 +356,23 @@ zx_status_t ValidateHeader(const gpt_header_t* header, uint64_t block_count) {
   return ZX_OK;
 }
 
-fit::result<uint64_t, zx_status_t> EntryBlockCount(const gpt_entry_t* entry) {
+fpromise::result<uint64_t, zx_status_t> EntryBlockCount(const gpt_entry_t* entry) {
   if (entry == nullptr) {
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
   auto result = ValidateEntry(entry);
   if (result.is_error()) {
-    return fit::error(ZX_ERR_BAD_STATE);
+    return fpromise::error(ZX_ERR_BAD_STATE);
   }
 
   if (result.value() == false) {
-    return fit::error(ZX_ERR_NOT_FOUND);
+    return fpromise::error(ZX_ERR_NOT_FOUND);
   }
 
-  return fit::ok(entry->last - entry->first + 1);
+  return fpromise::ok(entry->last - entry->first + 1);
 }
 
-fit::result<bool, zx_status_t> ValidateEntry(const gpt_entry_t* entry) {
+fpromise::result<bool, zx_status_t> ValidateEntry(const gpt_entry_t* entry) {
   uuid::Uuid zero_guid;
   bool guid_valid = (uuid::Uuid(entry->guid) != zero_guid);
   bool type_valid = (uuid::Uuid(entry->type) != zero_guid);
@@ -381,26 +381,26 @@ fit::result<bool, zx_status_t> ValidateEntry(const gpt_entry_t* entry) {
   if (!guid_valid && !type_valid && !range_valid) {
     // None of the fields are initialized. It is unused entry but this is not
     // an error case.
-    return fit::ok(false);
+    return fpromise::ok(false);
   }
 
   // Guid is one/few of the fields that is uninitialized.
   if (!guid_valid) {
-    return fit::error(ZX_ERR_BAD_STATE);
+    return fpromise::error(ZX_ERR_BAD_STATE);
   }
 
   // Type is one/few of the fields that is uninitialized.
   if (!type_valid) {
-    return fit::error(ZX_ERR_BAD_STATE);
+    return fpromise::error(ZX_ERR_BAD_STATE);
   }
 
   // The range seems to be the problem.
   if (!range_valid) {
-    return fit::error(ZX_ERR_OUT_OF_RANGE);
+    return fpromise::error(ZX_ERR_OUT_OF_RANGE);
   }
 
   // All fields are initialized and contain valid data.
-  return fit::ok(true);
+  return fpromise::ok(true);
 }
 
 bool IsPartitionVisible(const gpt_partition_t* partition) {

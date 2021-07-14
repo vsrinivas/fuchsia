@@ -7,13 +7,14 @@
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <vector>
 
 namespace diagnostics::accessor2logger {
 
-fit::result<std::vector<fit::result<fuchsia::logger::LogMessage, std::string>>, std::string>
+fpromise::result<std::vector<fpromise::result<fuchsia::logger::LogMessage, std::string>>,
+                 std::string>
 ConvertFormattedContentToLogMessages(fuchsia::diagnostics::FormattedContent content);
 
 }  // namespace diagnostics::accessor2logger

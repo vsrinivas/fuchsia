@@ -18,9 +18,9 @@ using fuchsia::ui::scenic::ScreenshotData;
 
 }  // namespace
 
-::fit::promise<ScreenshotData> TakeScreenshot(async_dispatcher_t* dispatcher,
-                                              std::shared_ptr<sys::ServiceDirectory> services,
-                                              fit::Timeout timeout) {
+::fpromise::promise<ScreenshotData> TakeScreenshot(async_dispatcher_t* dispatcher,
+                                                   std::shared_ptr<sys::ServiceDirectory> services,
+                                                   fit::Timeout timeout) {
   std::unique_ptr<Scenic> scenic = std::make_unique<Scenic>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
@@ -33,7 +33,7 @@ using fuchsia::ui::scenic::ScreenshotData;
 Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
     : scenic_(dispatcher, services) {}
 
-::fit::promise<ScreenshotData> Scenic::TakeScreenshot(fit::Timeout timeout) {
+::fpromise::promise<ScreenshotData> Scenic::TakeScreenshot(fit::Timeout timeout) {
   scenic_->TakeScreenshot([this](ScreenshotData raw_screenshot, bool success) {
     if (scenic_.IsAlreadyDone()) {
       return;
@@ -48,7 +48,7 @@ Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirec
   });
 
   return scenic_.WaitForDone(std::move(timeout)).or_else([](const Error& error) {
-    return ::fit::error();
+    return ::fpromise::error();
   });
 }
 

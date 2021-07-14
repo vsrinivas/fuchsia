@@ -101,7 +101,7 @@ class PropertiesMap final {
   ~PropertiesMap();
 
   // Updates this properties map with |event|, returning an optional error.
-  fit::result<void, UpdateErrorVariant> Update(fuchsia::net::interfaces::Event event);
+  fpromise::result<void, UpdateErrorVariant> Update(fuchsia::net::interfaces::Event event);
 
   const std::unordered_map<uint64_t, Properties>& properties_map() const { return properties_map_; }
 

@@ -146,7 +146,7 @@ class TestAllocator : public fuchsia::ui::composition::testing::Allocator_TestBa
  private:
   void RegisterBufferCollection(fuchsia::ui::composition::RegisterBufferCollectionArgs args,
                                 RegisterBufferCollectionCallback callback) override {
-    callback(fit::ok());
+    callback(fpromise::ok());
   }
 
   void NotImplemented_(const std::string& name) override {

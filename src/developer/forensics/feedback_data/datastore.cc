@@ -4,7 +4,7 @@
 
 #include "src/developer/forensics/feedback_data/datastore.h"
 
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <utility>
@@ -70,12 +70,12 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       static_attachments_({}),
       reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)) {}
 
-::fit::promise<Annotations> Datastore::GetAnnotations(const zx::duration timeout) {
+::fpromise::promise<Annotations> Datastore::GetAnnotations(const zx::duration timeout) {
   if (annotation_allowlist_.empty() && non_platform_annotations_.empty()) {
-    return ::fit::make_result_promise<Annotations>(::fit::error());
+    return ::fpromise::make_result_promise<Annotations>(::fpromise::error());
   }
 
-  std::vector<::fit::promise<Annotations>> annotations;
+  std::vector<::fpromise::promise<Annotations>> annotations;
   for (auto& provider : reusable_annotation_providers_) {
     annotations.push_back(provider->GetAnnotations(timeout, annotation_allowlist_));
   }
@@ -84,9 +84,9 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
     annotations.push_back(provider->GetAnnotations(timeout, annotation_allowlist_));
   }
 
-  return ::fit::join_promise_vector(std::move(annotations))
-      .and_then([this](std::vector<::fit::result<Annotations>>& annotations)
-                    -> ::fit::result<Annotations> {
+  return ::fpromise::join_promise_vector(std::move(annotations))
+      .and_then([this](std::vector<::fpromise::result<Annotations>>& annotations)
+                    -> ::fpromise::result<Annotations> {
         // We seed the returned annotations with the static platform annotations.
         Annotations ok_annotations(static_annotations_.begin(), static_annotations_.end());
 
@@ -114,23 +114,23 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
           }
         }
 
-        return ::fit::ok(ok_annotations);
+        return ::fpromise::ok(ok_annotations);
       });
 }
 
-::fit::promise<Attachments> Datastore::GetAttachments(const zx::duration timeout) {
+::fpromise::promise<Attachments> Datastore::GetAttachments(const zx::duration timeout) {
   if (attachment_allowlist_.empty()) {
-    return ::fit::make_result_promise<Attachments>(::fit::error());
+    return ::fpromise::make_result_promise<Attachments>(::fpromise::error());
   }
 
-  std::vector<::fit::promise<Attachment>> attachments;
+  std::vector<::fpromise::promise<Attachment>> attachments;
   for (const auto& key : attachment_allowlist_) {
     attachments.push_back(BuildAttachment(key, timeout));
   }
 
-  return ::fit::join_promise_vector(std::move(attachments))
-      .and_then([this](std::vector<::fit::result<Attachment>>& attachments)
-                    -> ::fit::result<Attachments> {
+  return ::fpromise::join_promise_vector(std::move(attachments))
+      .and_then([this](std::vector<::fpromise::result<Attachment>>& attachments)
+                    -> ::fpromise::result<Attachments> {
         // We seed the returned attachments with the static ones.
         Attachments ok_attachments(static_attachments_.begin(), static_attachments_.end());
 
@@ -143,7 +143,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
         }
 
         if (ok_attachments.empty()) {
-          return ::fit::error();
+          return ::fpromise::error();
         }
 
         // Make sure all attachments are correctly categorized. Any complete or partial attachments
@@ -160,20 +160,20 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
           }
         }
 
-        return ::fit::ok(ok_attachments);
+        return ::fpromise::ok(ok_attachments);
       });
 }
 
-::fit::promise<Attachment> Datastore::BuildAttachment(const AttachmentKey& key,
-                                                      const zx::duration timeout) {
+::fpromise::promise<Attachment> Datastore::BuildAttachment(const AttachmentKey& key,
+                                                           const zx::duration timeout) {
   return BuildAttachmentValue(key, timeout)
-      .and_then([key](AttachmentValue& value) -> ::fit::result<Attachment> {
-        return ::fit::ok(Attachment(key, value));
+      .and_then([key](AttachmentValue& value) -> ::fpromise::result<Attachment> {
+        return ::fpromise::ok(Attachment(key, value));
       });
 }
 
-::fit::promise<AttachmentValue> Datastore::BuildAttachmentValue(const AttachmentKey& key,
-                                                                const zx::duration timeout) {
+::fpromise::promise<AttachmentValue> Datastore::BuildAttachmentValue(const AttachmentKey& key,
+                                                                     const zx::duration timeout) {
   if (key == kAttachmentLogKernel) {
     return CollectKernelLog(dispatcher_, services_,
                             MakeCobaltTimeout(cobalt::TimedOutData::kKernelLog, timeout));
@@ -186,7 +186,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
                               inspect_data_budget_->SizeInBytes());
   }
   // There are static attachments in the allowlist that we just skip here.
-  return ::fit::make_result_promise<AttachmentValue>(::fit::error());
+  return ::fpromise::make_result_promise<AttachmentValue>(::fpromise::error());
 }
 
 bool Datastore::TrySetNonPlatformAnnotations(const Annotations& non_platform_annotations) {

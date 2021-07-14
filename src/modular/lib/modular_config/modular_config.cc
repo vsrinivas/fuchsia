@@ -50,7 +50,7 @@ std::string StripLeadingSlash(std::string str) {
 
 }  // namespace
 
-fit::result<fuchsia::modular::session::ModularConfig, std::string> ParseConfig(
+fpromise::result<fuchsia::modular::session::ModularConfig, std::string> ParseConfig(
     std::string_view config_json) {
   rapidjson::Document doc;
 
@@ -59,15 +59,16 @@ fit::result<fuchsia::modular::session::ModularConfig, std::string> ParseConfig(
     auto error = std::stringstream();
     error << "Failed to parse JSON: " << rapidjson::GetParseError_En(doc.GetParseError()) << " ("
           << doc.GetErrorOffset() << ")";
-    return fit::error(error.str());
+    return fpromise::error(error.str());
   }
 
   fuchsia::modular::session::ModularConfig config;
   if (!XdrRead(&doc, &config, XdrModularConfig)) {
-    return fit::error("Failed to read JSON as Modular configuration (does not follow schema?)");
+    return fpromise::error(
+        "Failed to read JSON as Modular configuration (does not follow schema?)");
   }
 
-  return fit::ok(std::move(config));
+  return fpromise::ok(std::move(config));
 }
 
 // Returns the default Modular configuration.
@@ -220,7 +221,7 @@ std::string ModularConfigReader::GetConfigAsString(
                          modular_config::kSessionmgrConfigName, sessionmgr_json);
 }
 
-fit::result<fuchsia::modular::session::ModularConfig, std::string>
+fpromise::result<fuchsia::modular::session::ModularConfig, std::string>
 ModularConfigReader::ReadAndMaybePersistConfig(ModularConfigWriter* config_writer) {
   FX_DCHECK(config_writer);
 
@@ -230,12 +231,12 @@ ModularConfigReader::ReadAndMaybePersistConfig(ModularConfigWriter* config_write
   if (modular::ModularConfigReader::PersistentConfigOverrideAllowed() &&
       modular::ModularConfigReader::OverriddenConfigExists()) {
     if (auto result = config_writer->Write(config); result.is_error()) {
-      return fit::error("Failed to persist config_override: " + result.take_error());
+      return fpromise::error("Failed to persist config_override: " + result.take_error());
     }
     FX_LOGS(INFO) << "Configuration from config_override has been persisted.";
   }
 
-  return fit::ok(std::move(config));
+  return fpromise::ok(std::move(config));
 }
 
 ModularConfigWriter::ModularConfigWriter(fbl::unique_fd root_dir) : root_dir_(std::move(root_dir)) {
@@ -246,28 +247,28 @@ ModularConfigWriter ModularConfigWriter::CreateFromNamespace() {
   return ModularConfigWriter(fbl::unique_fd(open(modular_config::kPersistentConfigDir, O_RDONLY)));
 }
 
-fit::result<void, std::string> ModularConfigWriter::Write(
+fpromise::result<void, std::string> ModularConfigWriter::Write(
     const fuchsia::modular::session::ModularConfig& config) {
   auto config_json = ConfigToJsonString(config);
   if (!files::WriteFileAt(root_dir_.get(), modular_config::kStartupConfigFilePath,
                           config_json.data(), config_json.size())) {
-    return fit::error("could not write config file");
+    return fpromise::error("could not write config file");
   }
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
-fit::result<void, std::string> ModularConfigWriter::Delete() {
+fpromise::result<void, std::string> ModularConfigWriter::Delete() {
   if (!files::IsFileAt(root_dir_.get(), modular_config::kStartupConfigFilePath)) {
-    return fit::ok();
+    return fpromise::ok();
   }
 
   if (!files::DeletePathAt(root_dir_.get(), modular_config::kStartupConfigFilePath,
                            /*recursive=*/false)) {
-    return fit::error("could not delete config file");
+    return fpromise::error("could not delete config file");
   }
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
 }  // namespace modular

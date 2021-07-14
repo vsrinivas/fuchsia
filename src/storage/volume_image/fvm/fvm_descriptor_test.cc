@@ -352,28 +352,29 @@ TEST(FvmDescriptorTest, MakeHeader) {
 }
 
 template <int shift>
-fit::result<void, std::string> GetContents(uint64_t offset, fbl::Span<uint8_t> buffer) {
+fpromise::result<void, std::string> GetContents(uint64_t offset, fbl::Span<uint8_t> buffer) {
   for (uint64_t index = 0; index < buffer.size(); ++index) {
     buffer[index] = (offset + index + shift) % std::numeric_limits<uint8_t>::max();
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
 class FakeReader final : public Reader {
  public:
-  FakeReader(
-      fit::function<fit::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)> content_provider,
-      uint64_t length)
+  FakeReader(fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)>
+                 content_provider,
+             uint64_t length)
       : content_provider_(std::move(content_provider)), length_(length) {}
   explicit FakeReader(
-      fit::function<fit::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)> content_provider)
+      fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)>
+          content_provider)
       : FakeReader(std::move(content_provider), std::numeric_limits<uint64_t>::max()) {}
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     if (buffer.size() > length_ || offset > length_ - buffer.size()) {
-      return fit::error("FakeReader::Read Out of Range. Offset: " + std::to_string(offset) +
-                        " buffer size: " + std::to_string(buffer.size()) +
-                        " length: " + std::to_string(length_));
+      return fpromise::error("FakeReader::Read Out of Range. Offset: " + std::to_string(offset) +
+                             " buffer size: " + std::to_string(buffer.size()) +
+                             " length: " + std::to_string(length_));
     }
     return content_provider_(offset, buffer);
   }
@@ -381,7 +382,8 @@ class FakeReader final : public Reader {
   uint64_t length() const final { return length_; }
 
  private:
-  fit::function<fit::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)> content_provider_;
+  fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)>
+      content_provider_;
   uint64_t length_;
 };
 
@@ -392,7 +394,8 @@ Partition MakePartitionWithNameAndInstanceGuidAndContentProvider(
     std::string_view name, const std::array<uint8_t, kGuidLength>& type_guid,
     const std::array<uint8_t, kGuidLength>& instance_guid, uint64_t block_size,
     uint64_t block_count,
-    fit::function<fit::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)> content_provider) {
+    fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)>
+        content_provider) {
   VolumeDescriptor volume = {};
   ZX_ASSERT(name.size() < kNameLength);
   volume.name = name;
@@ -416,20 +419,22 @@ Partition MakePartitionWithNameAndInstanceGuidAndContentProvider(
       std::make_unique<FakeReader>(std::move(content_provider), block_count * block_size));
 }
 class ErrorWriter final : public Writer {
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
-    return fit::error("Oops something went wrong!.");
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
+    return fpromise::error("Oops something went wrong!.");
   }
 };
 
 class FakeWriter final : public Writer {
  public:
   // Like writing into a file, the intermediate unwritten parts are zeroed,
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     if (offset + buffer.size() > data_.size()) {
       data_.resize(offset + buffer.size(), 0);
     }
     memcpy(&data_[offset], buffer.data(), buffer.size());
-    return fit::ok();
+    return fpromise::ok();
   }
 
   // So we can peek at the end result.
@@ -648,8 +653,8 @@ TEST(FvmDescriptorTest, WriteBlockImagePartitionReaderErrorIsError) {
       builder.SetOptions(options)
           .AddPartition(MakePartitionWithNameAndInstanceGuidAndContentProvider(
               "my-partition", guid_1.value(), fvm::kPlaceHolderInstanceGuid, 8192, 80,
-              [](auto offset, auto buffer) -> fit::result<void, std::string> {
-                return fit::error("Oops bad reader.");
+              [](auto offset, auto buffer) -> fpromise::result<void, std::string> {
+                return fpromise::error("Oops bad reader.");
               }))
           .Build();
 

@@ -6,7 +6,7 @@
 #define SRC_MODULAR_LIB_MODULAR_CONFIG_MODULAR_CONFIG_H_
 
 #include <fuchsia/modular/session/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <fbl/unique_fd.h>
 
@@ -15,7 +15,7 @@ namespace modular {
 // Parse Modular configuration from JSON into a FIDL table.
 //
 // Returns either the parsed configuration or an error string.
-fit::result<fuchsia::modular::session::ModularConfig, std::string> ParseConfig(
+fpromise::result<fuchsia::modular::session::ModularConfig, std::string> ParseConfig(
     std::string_view config_json);
 
 // Returns the default Modular configuration.
@@ -37,10 +37,10 @@ class ModularConfigWriter {
   static ModularConfigWriter CreateFromNamespace();
 
   // Writes the |config| to the file `startup.config`.
-  fit::result<void, std::string> Write(const fuchsia::modular::session::ModularConfig& config);
+  fpromise::result<void, std::string> Write(const fuchsia::modular::session::ModularConfig& config);
 
   // Deletes the file `startup.config` if it exists.
-  fit::result<void, std::string> Delete();
+  fpromise::result<void, std::string> Delete();
 
  private:
   fbl::unique_fd root_dir_;
@@ -105,7 +105,7 @@ class ModularConfigReader {
       fuchsia::modular::session::SessionmgrConfig* sessionmgr_config);
 
   // Reads the configuration, and if allowed, persists overriden configuration to |config_writer|.
-  fit::result<fuchsia::modular::session::ModularConfig, std::string> ReadAndMaybePersistConfig(
+  fpromise::result<fuchsia::modular::session::ModularConfig, std::string> ReadAndMaybePersistConfig(
       ModularConfigWriter* config_writer);
 
  private:

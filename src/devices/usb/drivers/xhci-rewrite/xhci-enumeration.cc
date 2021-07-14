@@ -9,7 +9,7 @@
 
 namespace usb_xhci {
 
-fit::promise<uint8_t, zx_status_t> GetMaxPacketSize(UsbXhci* hci, uint8_t slot_id) {
+fpromise::promise<uint8_t, zx_status_t> GetMaxPacketSize(UsbXhci* hci, uint8_t slot_id) {
   std::optional<OwnedRequest> request_wrapper;
   OwnedRequest::Alloc(&request_wrapper, 8, 0, hci->UsbHciGetRequestSize());
   usb_request_t* request = request_wrapper->request();
@@ -23,20 +23,21 @@ fit::promise<uint8_t, zx_status_t> GetMaxPacketSize(UsbXhci* hci, uint8_t slot_i
   request->setup.w_length = 8;
   request->direct = true;
   return hci->UsbHciRequestQueue(std::move(*request_wrapper))
-      .then([=](fit::result<OwnedRequest, void>& result) -> fit::result<uint8_t, zx_status_t> {
+      .then([=](fpromise::result<OwnedRequest, void>& result)
+                -> fpromise::result<uint8_t, zx_status_t> {
         auto request = result.value().request();
         auto status = request->response.status;
         if (status != ZX_OK) {
-          return fit::error(status);
+          return fpromise::error(status);
         }
         usb_device_descriptor_t* descriptor;
         if (usb_request_mmap(request, reinterpret_cast<void**>(&descriptor)) != ZX_OK) {
-          return fit::error(ZX_ERR_IO);
+          return fpromise::error(ZX_ERR_IO);
         }
         if (descriptor->b_descriptor_type != USB_DT_DEVICE) {
-          return fit::error(ZX_ERR_IO);
+          return fpromise::error(ZX_ERR_IO);
         }
-        return fit::ok(descriptor->b_max_packet_size0);
+        return fpromise::ok(descriptor->b_max_packet_size0);
       })
       .box();
 }
@@ -93,7 +94,7 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
           .and_then([=](TRB*& result) -> TRBPromise {
             auto completion_event = static_cast<CommandCompletionEvent*>(result);
             if (completion_event->CompletionCode() != CommandCompletionEvent::Success) {
-              return fit::make_error_promise(ZX_ERR_IO);
+              return fpromise::make_error_promise(ZX_ERR_IO);
             }
             // After successfully obtaining a device slot,
             // issue an Address Device command and enable its default control endpoint.
@@ -104,7 +105,7 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
               // On failure, ensure that the slot gets disabled.
               // If we're in a retry context, it is the caller's responsibility to clean up.
               error_handler->GivebackPromise(error_handler->BorrowPromise()
-                                                 .then([=](fit::result<void, void>& result) {
+                                                 .then([=](fpromise::result<void, void>& result) {
                                                    hci->ScheduleTask(hci->DisableSlotCommand(slot));
                                                  })
                                                  .box());
@@ -117,15 +118,15 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
             if (completion_event->CompletionCode() == CommandCompletionEvent::UsbTransactionError) {
               // Retry at most once
               if (!hci->IsDeviceConnected(state->slot) || state->retry_ctx) {
-                return fit::make_error_promise(ZX_ERR_IO);
+                return fpromise::make_error_promise(ZX_ERR_IO);
               }
               state->bsr = true;
               return RetryEnumeration(hci, port, state->slot, hub_info, state);
             }
             if (completion_event->CompletionCode() != CommandCompletionEvent::Success) {
-              return fit::make_error_promise(ZX_ERR_IO);
+              return fpromise::make_error_promise(ZX_ERR_IO);
             }
-            return fit::make_ok_promise(result);
+            return fpromise::make_ok_promise(result);
           })
           .and_then([=](TRB*& result) {
             // If retry was successful, re-initialize the error handler with the new slot
@@ -133,13 +134,13 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
               state->bsr = false;
               error_handler->Reinit();
               error_handler->GivebackPromise(error_handler->BorrowPromise()
-                                                 .then([=](fit::result<void, void>& result) {
+                                                 .then([=](fpromise::result<void, void>& result) {
                                                    hci->ScheduleTask(
                                                        hci->DisableSlotCommand(state->slot));
                                                  })
                                                  .box());
             }
-            return fit::ok(result);
+            return fpromise::ok(result);
           });
 
   // We're being invoked from a retry context. Return to the original caller.
@@ -150,7 +151,7 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
           state->retry_ctx = false;
           auto completion_event = static_cast<CommandCompletionEvent*>(result);
           if (completion_event->CompletionCode() != CommandCompletionEvent::Success) {
-            return fit::make_ok_promise(result);
+            return fpromise::make_ok_promise(result);
           }
           // Update the maximum packet size
           return UpdateMaxPacketSize(hci, state->slot);
@@ -158,18 +159,18 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
         .and_then([=](TRB*& result) -> TRBPromise {
           auto completion_event = static_cast<CommandCompletionEvent*>(result);
           if (completion_event->CompletionCode() != CommandCompletionEvent::Success) {
-            return fit::make_ok_promise(result);
+            return fpromise::make_ok_promise(result);
           }
           // Issue a SET_ADDRESS request to the device
           return hci->AddressDeviceCommand(state->slot);
         })
-        .and_then([=](TRB*& result) -> fit::result<TRB*, zx_status_t> {
+        .and_then([=](TRB*& result) -> fpromise::result<TRB*, zx_status_t> {
           auto completion_event = static_cast<CommandCompletionEvent*>(result);
           if (completion_event->CompletionCode() != CommandCompletionEvent::Success) {
-            return fit::ok(result);
+            return fpromise::ok(result);
           }
           error_handler->Cancel();
-          return fit::ok(result);
+          return fpromise::ok(result);
         })
         .box();
   }
@@ -181,9 +182,9 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
           // See USB 2.0 specification (revision 2.0) section 9.2.6
           return hci->Timeout(zx::deadline_after(zx::msec(10)));
         }
-        return fit::make_ok_promise(result);
+        return fpromise::make_ok_promise(result);
       })
-      .and_then([=](TRB*& result) -> fit::promise<uint8_t, zx_status_t> {
+      .and_then([=](TRB*& result) -> fpromise::promise<uint8_t, zx_status_t> {
         // For full-speed devices, system software should read the first 8 bytes
         // of the device descriptor to determine the max packet size of the default control
         // endpoint. Additionally, certain devices may require the controller to read this value
@@ -196,16 +197,16 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
         if (hci->GetDeviceSpeed(state->slot) == USB_SPEED_FULL) {
           return hci->SetMaxPacketSizeCommand(state->slot, result);
         }
-        return fit::make_ok_promise((TRB*)nullptr);
+        return fpromise::make_ok_promise((TRB*)nullptr);
       })
-      .and_then([=](TRB*& result) -> fit::result<TRB*, zx_status_t> {
+      .and_then([=](TRB*& result) -> fpromise::result<TRB*, zx_status_t> {
         // Online the device, making it visible to the DDK (enumeration has completed)
         zx_status_t status = hci->DeviceOnline(state->slot, port, hci->GetDeviceSpeed(state->slot));
         if (status == ZX_OK) {
           error_handler->Cancel();
-          return fit::ok(result);
+          return fpromise::ok(result);
         }
-        return fit::error(status);
+        return fpromise::error(status);
       })
       .box();
 }

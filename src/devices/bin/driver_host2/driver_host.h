@@ -49,7 +49,7 @@ class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost>
   DriverHost(inspect::Inspector& inspector, async::Loop& loop,
              async_dispatcher_t* driver_dispatcher);
 
-  fit::promise<inspect::Inspector> Inspect();
+  fpromise::promise<inspect::Inspector> Inspect();
   zx::status<> PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
 
  private:

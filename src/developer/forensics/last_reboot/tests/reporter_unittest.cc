@@ -4,7 +4,7 @@
 
 #include "src/developer/forensics/last_reboot/reporter.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 

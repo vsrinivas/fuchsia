@@ -9,14 +9,14 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 // This class discovers a camera device and connects to the first stream on the first configuration
 // and streams buffers to be shown.
 class CameraClient {
  public:
   ~CameraClient();
-  static fit::result<std::unique_ptr<CameraClient>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<CameraClient>, zx_status_t> Create(
       fuchsia::camera3::DeviceWatcherHandle watcher, fuchsia::sysmem::AllocatorHandle allocator,
       bool list_configs, uint32_t config_index, uint32_t stream_index);
   using AddCollectionHandler =

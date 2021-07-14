@@ -8,7 +8,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/zx/process.h>
 #include <lib/zx/status.h>
 #include <zircon/assert.h>
@@ -105,10 +105,10 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
   void Detach() override;
 
   // Provides a handle to the component out/diagnostics directory if one exists.
-  fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t> GetDiagnosticsDir();
+  fpromise::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t> GetDiagnosticsDir();
 
   // Provides a handle to the component out/svc directory if one exists.
-  fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t> GetServiceDir();
+  fpromise::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t> GetServiceDir();
 
  protected:
   ComponentHub* hub() { return &hub_; }
@@ -130,7 +130,8 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
 
   // This is the implementation of |GetDiagnosticsDir| and |GetServiceDir| as the only difference is
   // the name of the directory they are requesting.
-  fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t> GetDir(std::string path);
+  fpromise::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t> GetDir(
+      std::string path);
 
   async::Executor executor_;
 

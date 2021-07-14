@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_LZ4_RESULT_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_LZ4_RESULT_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 #include <vector>

@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_READER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_READER_H_
 
+#include <lib/fpromise/result.h>
+
 #include <limits>
 #include <string>
 
@@ -28,7 +30,8 @@ class Reader {
   // |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  virtual fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const = 0;
+  virtual fpromise::result<void, std::string> Read(uint64_t offset,
+                                                   fbl::Span<uint8_t> buffer) const = 0;
 };
 
 }  // namespace storage::volume_image

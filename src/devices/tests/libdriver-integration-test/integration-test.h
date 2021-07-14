@@ -10,7 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/devmgr-integration-test/fixture.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 
@@ -22,23 +22,23 @@
 #include "mock-device.h"
 #include "root-mock-device.h"
 
-// Wrapper for an assert that converts a failure to a return of a // fit::promise<void, const char*>
-// that resolves immediately to a fit::error()
-#define PROMISE_ASSERT(assertion)                                       \
-  do {                                                                  \
-    [&]() { assertion; }();                                             \
-    if (testing::Test::HasFatalFailure()) {                             \
-      return fit::make_error_promise(std::string("Assertion failure")); \
-    }                                                                   \
+// Wrapper for an assert that converts a failure to a return of a // fpromise::promise<void, const
+// char*> that resolves immediately to a fpromise::error()
+#define PROMISE_ASSERT(assertion)                                            \
+  do {                                                                       \
+    [&]() { assertion; }();                                                  \
+    if (testing::Test::HasFatalFailure()) {                                  \
+      return fpromise::make_error_promise(std::string("Assertion failure")); \
+    }                                                                        \
   } while (0)
 
-// Wrapper for an assert that converts a failure to a return of a fit::error()
-#define ERROR_ASSERT(assertion)                            \
-  do {                                                     \
-    [&]() { assertion; }();                                \
-    if (testing::Test::HasFatalFailure()) {                \
-      return fit::error(std::string("Assertion failure")); \
-    }                                                      \
+// Wrapper for an assert that converts a failure to a return of a fpromise::error()
+#define ERROR_ASSERT(assertion)                                 \
+  do {                                                          \
+    [&]() { assertion; }();                                     \
+    if (testing::Test::HasFatalFailure()) {                     \
+      return fpromise::error(std::string("Assertion failure")); \
+    }                                                           \
   } while (0)
 
 namespace libdriver_integration_test {
@@ -55,11 +55,11 @@ class IntegrationTest : public testing::Test {
 
   using Error = std::string;
   template <class T>
-  using Result = fit::result<T, Error>;
+  using Result = fpromise::result<T, Error>;
   template <class T>
-  using Promise = fit::promise<T, Error>;
+  using Promise = fpromise::promise<T, Error>;
   template <class T>
-  using Completer = fit::completer<T, Error>;
+  using Completer = fpromise::completer<T, Error>;
   using HookInvocation = fuchsia::device::mock::HookInvocation;
 
   // Convenience method on top of ExpectBind for having bind create a child
@@ -117,7 +117,7 @@ class IntegrationTest : public testing::Test {
   // the returned promise fails.
   auto JoinPromises(Promise<void> promise1, Promise<void> promise2) {
     return join_promises(std::move(promise1), std::move(promise2))
-        .then([](fit::result<std::tuple<Result<void>, Result<void>>>& wrapped_results)
+        .then([](fpromise::result<std::tuple<Result<void>, Result<void>>>& wrapped_results)
                   -> Result<void> {
           // join_promises() can't fail, so just extract the value
           auto results = wrapped_results.value();

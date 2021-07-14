@@ -8,7 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/zx/time.h>
 #include <zircon/compiler.h>
 
@@ -38,15 +38,16 @@ class __TA_SCOPED_CAPABILITY ScopedThreadToken {
 
 class ExecutionDomain {
  public:
-  ExecutionDomain(async_dispatcher_t* dispatcher, fit::executor* executor, const std::string& name)
+  ExecutionDomain(async_dispatcher_t* dispatcher, fpromise::executor* executor,
+                  const std::string& name)
       : dispatcher_(dispatcher), executor_(executor), name_(name) {}
 
   // The async_dispatcher_t* for the loop running this domain.
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
-  // The fit::executor for the loop running this domain. Useful for scheduling fit::promises for
-  // this domain.
-  fit::executor* executor() const { return executor_; }
+  // The fpromise::executor for the loop running this domain. Useful for scheduling
+  // fpromise::promises for this domain.
+  fpromise::executor* executor() const { return executor_; }
 
   // The name of this domain.
   const std::string& name() const { return name_; }
@@ -96,11 +97,13 @@ class ExecutionDomain {
   //   threading_model().FidlDomain().ScheduleTask(...);
   // Instead of:
   //   threading_model().FidlDomain().executor().schedule_task(...);
-  void ScheduleTask(fit::pending_task task) const { executor_->schedule_task(std::move(task)); }
+  void ScheduleTask(fpromise::pending_task task) const {
+    executor_->schedule_task(std::move(task));
+  }
 
  private:
   async_dispatcher_t* const dispatcher_;
-  fit::executor* executor_;
+  fpromise::executor* executor_;
   ThreadToken token_;
   std::string name_;
 };

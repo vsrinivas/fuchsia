@@ -10,7 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <zircon/device/ethernet.h>
 
 #include <algorithm>
@@ -24,8 +24,8 @@ class Device {
 
   zx_status_t Start(async_dispatcher_t* dispatcher);
 
-  fit::promise<std::vector<uint8_t>, zx_status_t> ReadPacket();
-  fit::promise<void, zx_status_t> WritePacket(std::vector<uint8_t> packet);
+  fpromise::promise<std::vector<uint8_t>, zx_status_t> ReadPacket();
+  fpromise::promise<void, zx_status_t> WritePacket(std::vector<uint8_t> packet);
 
  private:
   Device(fuchsia::hardware::ethernet::DeviceSyncPtr eth_device, zx::fifo rx, zx::fifo tx,
@@ -47,8 +47,8 @@ class Device {
   void OnTransmit(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                   const zx_packet_signal_t* signal);
 
-  fit::promise<eth_fifo_entry_t, zx_status_t> GetRxEntry();
-  fit::promise<eth_fifo_entry_t, zx_status_t> GetTxEntry();
+  fpromise::promise<eth_fifo_entry_t, zx_status_t> GetRxEntry();
+  fpromise::promise<eth_fifo_entry_t, zx_status_t> GetTxEntry();
 
   fuchsia::hardware::ethernet::DeviceSyncPtr eth_device_;
   zx::fifo rx_;
@@ -57,8 +57,10 @@ class Device {
   const uintptr_t io_addr_;
 
   std::mutex mutex_;
-  std::vector<fit::completer<eth_fifo_entry_t, zx_status_t>> rx_completers_ __TA_GUARDED(mutex_);
-  std::vector<fit::completer<eth_fifo_entry_t, zx_status_t>> tx_completers_ __TA_GUARDED(mutex_);
+  std::vector<fpromise::completer<eth_fifo_entry_t, zx_status_t>> rx_completers_
+      __TA_GUARDED(mutex_);
+  std::vector<fpromise::completer<eth_fifo_entry_t, zx_status_t>> tx_completers_
+      __TA_GUARDED(mutex_);
   async::WaitMethod<Device, &Device::OnReceive> rx_wait_{this};
   async::WaitMethod<Device, &Device::OnTransmit> tx_wait_{this};
 };
@@ -95,15 +97,15 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase {
 
   // Send a packet with UDP headers, including the ethernet and IPv6 headers, to the interface with
   // the specified MAC address.
-  fit::promise<void, zx_status_t> SendUdpPacket(
+  fpromise::promise<void, zx_status_t> SendUdpPacket(
       const fuchsia::hardware::ethernet::MacAddress& mac_addr, std::vector<uint8_t> packet);
 
   // Send a raw packet to the interface with the specified MAC address.
-  fit::promise<void, zx_status_t> SendPacket(
+  fpromise::promise<void, zx_status_t> SendPacket(
       const fuchsia::hardware::ethernet::MacAddress& mac_addr, std::vector<uint8_t> packet);
 
   // Receive a raw packet from the interface with the specified MAC address.
-  fit::promise<std::vector<uint8_t>, zx_status_t> ReceivePacket(
+  fpromise::promise<std::vector<uint8_t>, zx_status_t> ReceivePacket(
       const fuchsia::hardware::ethernet::MacAddress& mac_addr);
 
  private:
@@ -115,7 +117,7 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase {
     }
   };
 
-  fit::promise<Device*> GetDevice(const fuchsia::hardware::ethernet::MacAddress& mac_addr);
+  fpromise::promise<Device*> GetDevice(const fuchsia::hardware::ethernet::MacAddress& mac_addr);
 
   fidl::BindingSet<fuchsia::netstack::Netstack> bindings_;
   std::mutex mutex_;
@@ -123,7 +125,7 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase {
   std::map<fuchsia::hardware::ethernet::MacAddress, std::unique_ptr<Device>, CompareMacAddress>
       devices_ __TA_GUARDED(mutex_);
   // Maps MAC addresses to completers, to enable the GetDevice promises.
-  std::map<fuchsia::hardware::ethernet::MacAddress, std::vector<fit::completer<Device*>>,
+  std::map<fuchsia::hardware::ethernet::MacAddress, std::vector<fpromise::completer<Device*>>,
            CompareMacAddress>
       completers_ __TA_GUARDED(mutex_);
 

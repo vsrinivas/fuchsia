@@ -8,7 +8,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -25,7 +25,7 @@ namespace fidl {
 // For example, if we wished to fetch a device's update channel from
 // fuchsia::update::channel::Provider then we would use OneShotPtr as follows:
 //
-//  ::fit::promise<std::string> GetChannel() {
+//  ::fpromise::promise<std::string> GetChannel() {
 //    OneShotPtr<fuchsia::update::channel::Provider, std::string> channel_ptr(dispatcher,
 //    services);
 //
@@ -64,9 +64,9 @@ class OneShotPtr {
 
   void CompleteError(Error error) { bridge_.CompleteError(error); }
 
-  ::fit::promise<V, Error> WaitForDone() { return bridge_.WaitForDone(); }
+  ::fpromise::promise<V, Error> WaitForDone() { return bridge_.WaitForDone(); }
 
-  ::fit::promise<V, Error> WaitForDone(fit::Timeout timeout) {
+  ::fpromise::promise<V, Error> WaitForDone(fit::Timeout timeout) {
     return bridge_.WaitForDone(std::move(timeout));
   }
 

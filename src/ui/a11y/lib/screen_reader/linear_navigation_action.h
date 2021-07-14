@@ -5,7 +5,7 @@
 #ifndef SRC_UI_A11Y_LIB_SCREEN_READER_LINEAR_NAVIGATION_ACTION_H_
 #define SRC_UI_A11Y_LIB_SCREEN_READER_LINEAR_NAVIGATION_ACTION_H_
 
-#include <lib/fit/scope.h>
+#include <lib/fpromise/scope.h>
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
 
@@ -31,7 +31,7 @@ class LinearNavigationAction : public ScreenReaderAction {
  private:
   // Direction of the linear navigation.
   LinearNavigationDirection direction_;
-  fit::scope scope_;
+  fpromise::scope scope_;
 };
 }  // namespace a11y
 

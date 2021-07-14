@@ -42,7 +42,7 @@ class BlobTransaction {
   // within the transaction.  In the event of failure, the callback will not get called, but it will
   // get freed, so avoid any manual memory management within the callback (i.e. avoid "delete x";
   // use a captured std::unique_ptr instead).
-  void Commit(fs::Journal& journal, fit::promise<void, zx_status_t> data = {},
+  void Commit(fs::Journal& journal, fpromise::promise<void, zx_status_t> data = {},
               fit::callback<void()> callback = {});
 
  private:

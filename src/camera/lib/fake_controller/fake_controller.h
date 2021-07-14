@@ -10,7 +10,7 @@
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -23,7 +23,7 @@ class FakeController : public fuchsia::camera2::hal::Controller {
  public:
   FakeController();
   ~FakeController() override;
-  static fit::result<std::unique_ptr<FakeController>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<FakeController>, zx_status_t> Create(
       fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request,
       fuchsia::sysmem::AllocatorHandle allocator);
   static std::vector<fuchsia::camera2::hal::Config> GetDefaultConfigs();

@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_ADDRESS_DESCRIPTOR_H_
 #define SRC_STORAGE_VOLUME_IMAGE_ADDRESS_DESCRIPTOR_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <cstdint>
 #include <map>
@@ -48,11 +48,12 @@ struct AddressDescriptor {
   // Returns an |AddressDescriptor| containing the deserialized contents from |serialized|.
   //
   // On error, returns a string describing the error condition.
-  static fit::result<AddressDescriptor, std::string> Deserialize(
+  static fpromise::result<AddressDescriptor, std::string> Deserialize(
       fbl::Span<const uint8_t> serialized);
 
   // On success returns the VolumeDescriptor with the deserialized contents of |serialized|.
-  static fit::result<AddressDescriptor, std::string> Deserialize(fbl::Span<const char> serialized) {
+  static fpromise::result<AddressDescriptor, std::string> Deserialize(
+      fbl::Span<const char> serialized) {
     return Deserialize(fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(serialized.data()),
                                                 serialized.size() * sizeof(char)));
   }
@@ -60,7 +61,7 @@ struct AddressDescriptor {
   // Returns a vector containing a serialized version of |this|.
   //
   // On error, returns a string describing the error condition.
-  fit::result<std::vector<uint8_t>, std::string> Serialize() const;
+  fpromise::result<std::vector<uint8_t>, std::string> Serialize() const;
 
   // List of mappings.
   std::vector<AddressMap> mappings;

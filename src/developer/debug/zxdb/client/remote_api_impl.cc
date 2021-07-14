@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "lib/fit/bridge.h"
+#include "lib/fpromise/bridge.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"

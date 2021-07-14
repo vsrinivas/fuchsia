@@ -6,8 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
@@ -90,7 +90,7 @@ void OperationCollection::Cont() {
   // no-op for operation collection.
 }
 
-void OperationCollection::ScheduleTask(fit::pending_task task) {
+void OperationCollection::ScheduleTask(fpromise::pending_task task) {
   executor_.schedule_task(std::move(task));
 }
 
@@ -146,7 +146,7 @@ void OperationQueue::Cont() {
 namespace {
 class PromiseWrapperCall : public Operation<> {
  public:
-  PromiseWrapperCall(fit::completer<> completer)
+  PromiseWrapperCall(fpromise::completer<> completer)
       : Operation("PromiseDoneCall", [] {}), completer_(std::move(completer)) {}
 
   void Run() {
@@ -160,12 +160,12 @@ class PromiseWrapperCall : public Operation<> {
   }
 
  private:
-  fit::completer<> completer_;
+  fpromise::completer<> completer_;
   bool running_{false};
 };
 }  // namespace
 
-void OperationQueue::ScheduleTask(fit::pending_task task) {
+void OperationQueue::ScheduleTask(fpromise::pending_task task) {
   // We need to block the execution of this task on tasks in |operations_|, and
   // then also block further execution of |operations_| on this task finishing.
   // We do this by "wrapping" the promise in a PromiseWrapperCall.
@@ -175,10 +175,10 @@ void OperationQueue::ScheduleTask(fit::pending_task task) {
   // |wrapper->SayDone()| when |task| is destroyed. It is destroyed when either
   // a) it is abandoned or b) it is completed successfully or with an error. In
   // either case we want to unblock the next operation in the queue.
-  fit::bridge start;
+  fpromise::bridge start;
   auto wrapper = std::make_unique<PromiseWrapperCall>(std::move(start.completer));
   executor_.schedule_task(start.consumer.promise().then(
-      [p = task.take_promise(), weak_wrapper = wrapper->GetWeakPtr()](fit::result<>&) mutable {
+      [p = task.take_promise(), weak_wrapper = wrapper->GetWeakPtr()](fpromise::result<>&) mutable {
         // It is safe to call SayDone() on |wrapper| because we know that
         // |wrapper| will be alive so long as this promise is being executed.
         //
@@ -186,7 +186,7 @@ void OperationQueue::ScheduleTask(fit::pending_task task) {
         // abandoned, we still unblock the queue.
         return p.then([defer = fit::defer([weak_wrapper] {
                          static_cast<PromiseWrapperCall*>(weak_wrapper.get())->SayDone();
-                       })](fit::result<>&) {});
+                       })](fpromise::result<>&) {});
       }));
 
   Add(std::move(wrapper));

@@ -5,7 +5,7 @@
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
@@ -157,7 +157,7 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
   return Snapshot(data->annotations, data->archive);
 }
 
-::fit::promise<SnapshotUuid> SnapshotManager::GetSnapshotUuid(zx::duration timeout) {
+::fpromise::promise<SnapshotUuid> SnapshotManager::GetSnapshotUuid(zx::duration timeout) {
   const zx::time current_time{clock_->Now()};
 
   SnapshotUuid uuid;
@@ -179,10 +179,10 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
   // needs to be wrapped in an asynchronous task that can be re-executed when the conditions for
   // returning a UUID are met, e.g., the snapshot for |uuid| is received from |data_provider_| or
   // the call to GetSnapshotUuid times out.
-  return ::fit::make_promise(
-      [this, uuid, deadline](::fit::context& context) -> ::fit::result<SnapshotUuid> {
+  return ::fpromise::make_promise(
+      [this, uuid, deadline](::fpromise::context& context) -> ::fpromise::result<SnapshotUuid> {
         if (shutdown_) {
-          return ::fit::ok(shutdown_snapshot_.uuid);
+          return ::fpromise::ok(shutdown_snapshot_.uuid);
         }
 
         auto request = FindSnapshotRequest(uuid);
@@ -191,19 +191,19 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
         // if a snapshot is dropped immediately after it is received because its annotations and
         // archive are too large and it is one of the oldest in the FIFO.
         if (!request) {
-          return ::fit::ok(garbage_collected_snapshot_.uuid);
+          return ::fpromise::ok(garbage_collected_snapshot_.uuid);
         }
 
         if (!request->is_pending) {
-          return ::fit::ok(request->uuid);
+          return ::fpromise::ok(request->uuid);
         }
 
         if (clock_->Now() >= deadline) {
-          return ::fit::ok(timed_out_snapshot_.uuid);
+          return ::fpromise::ok(timed_out_snapshot_.uuid);
         }
 
         WaitForSnapshot(uuid, deadline, context.suspend_task());
-        return ::fit::pending();
+        return ::fpromise::pending();
       });
 }
 
@@ -301,7 +301,7 @@ SnapshotUuid SnapshotManager::MakeNewSnapshotRequest(const zx::time start_time,
 }
 
 void SnapshotManager::WaitForSnapshot(const SnapshotUuid& uuid, zx::time deadline,
-                                      ::fit::suspended_task get_uuid_promise) {
+                                      ::fpromise::suspended_task get_uuid_promise) {
   auto* request = FindSnapshotRequest(uuid);
   if (!request) {
     get_uuid_promise.resume_task();

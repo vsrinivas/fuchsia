@@ -22,7 +22,7 @@ constexpr auto kCameraPublishedServiceName = "PublishedCameraService";
 
 DeviceInstance::DeviceInstance() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
-fit::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create(
+fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create(
     const fuchsia::sys::LauncherPtr& launcher,
     fidl::InterfaceHandle<fuchsia::hardware::camera::Device> camera,
     fit::closure on_component_unavailable) {
@@ -32,7 +32,7 @@ fit::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create
   zx_status_t status = instance->camera_.Bind(std::move(camera), instance->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   // Add the camera controller as an injected service.
@@ -42,7 +42,7 @@ fit::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create
       fuchsia::camera2::hal::Controller::Name_, std::make_unique<vfs::Service>(std::move(handler)));
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
   auto additional_services = fuchsia::sys::ServiceList::New();
   additional_services->names.push_back(fuchsia::camera2::hal::Controller::Name_);
@@ -54,7 +54,7 @@ fit::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create
       injected_services_dir_channel.NewRequest().TakeChannel());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   // Create a service directory into which the component will publish services.
@@ -97,7 +97,7 @@ fit::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create
   // Start the loop.
   ZX_ASSERT(instance->loop_.StartThread("Camera Device Instance") == ZX_OK);
 
-  return fit::ok(std::move(instance));
+  return fpromise::ok(std::move(instance));
 }
 
 void DeviceInstance::OnCameraRequested(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {

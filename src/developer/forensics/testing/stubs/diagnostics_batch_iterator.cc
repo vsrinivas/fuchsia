@@ -5,7 +5,7 @@
 #include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "lib/async/cpp/task.h"
@@ -46,7 +46,7 @@ void DiagnosticsBatchIterator::GetNext(GetNextCallback callback) {
       "No more calls to GetNext() expected (%lu/%lu calls made)",
       std::distance(json_batches_.cbegin(), next_json_batch_), json_batches_.size());
 
-  callback(::fit::ok(ToVmo(*next_json_batch_++)));
+  callback(::fpromise::ok(ToVmo(*next_json_batch_++)));
 }
 
 void DiagnosticsBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback callback) {
@@ -54,12 +54,12 @@ void DiagnosticsBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback
     return;
   }
 
-  callback(::fit::ok(ToVmo(json_batch_)));
+  callback(::fpromise::ok(ToVmo(json_batch_)));
   has_returned_batch_ = true;
 }
 
 void DiagnosticsBatchIteratorReturnsError::GetNext(GetNextCallback callback) {
-  callback(::fit::error(fuchsia::diagnostics::ReaderError::IO));
+  callback(::fpromise::error(fuchsia::diagnostics::ReaderError::IO));
 }
 
 void DiagnosticsBatchIteratorDelayedBatches::GetNext(GetNextCallback callback) {
@@ -70,7 +70,7 @@ void DiagnosticsBatchIteratorDelayedBatches::GetNext(GetNextCallback callback) {
             "No more calls to GetNext() expected (%lu/%lu calls made)",
             std::distance(json_batches_.cbegin(), next_json_batch_), json_batches_.size());
 
-        callback(::fit::ok(ToVmo(*next_json_batch_++)));
+        callback(::fpromise::ok(ToVmo(*next_json_batch_++)));
       },
       is_initial_delay_ ? initial_delay_ : delay_between_batches_);
   is_initial_delay_ = false;

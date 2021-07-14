@@ -78,13 +78,13 @@ zx_status_t NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       sandbox, hub_directory_factory,
       [] {
         FX_NOTREACHED() << "IsolatedDataPathFactory unexpectedly used";
-        return fit::ok("");
+        return fpromise::ok("");
       },
       [] {
         FX_NOTREACHED() << "IsolatedCachePathFactory unexpectedly used";
-        return fit::ok("");
+        return fpromise::ok("");
       },
-      [] { return fit::ok("/tmp"); });
+      [] { return fpromise::ok("/tmp"); });
 }
 
 zx_status_t NamespaceBuilder::AddSandbox(

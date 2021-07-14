@@ -7,7 +7,7 @@
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <functional>
@@ -42,7 +42,7 @@ class ArchiveAccessor {
 
   void StopCollect();
 
-  ::fit::promise<void, Error> WaitForDone(fit::Timeout timeout);
+  ::fpromise::promise<void, Error> WaitForDone(fit::Timeout timeout);
 
  private:
   void AppendNextBatch(

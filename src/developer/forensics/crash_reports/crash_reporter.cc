@@ -7,8 +7,8 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
@@ -131,14 +131,14 @@ void CrashReporter::PersistAllCrashReports() {
 void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   if (!report.has_program_name()) {
     FX_LOGS(ERROR) << "Input report missing required program name. Won't file.";
-    callback(::fit::error(ZX_ERR_INVALID_ARGS));
+    callback(::fpromise::error(ZX_ERR_INVALID_ARGS));
     info_.LogCrashState(cobalt::CrashState::kDropped);
     return;
   }
 
   // Execute the callback informing the client the report has been filed. The rest of the async flow
   // can take quite some time and blocking clients would defeat the purpose of sharing the snapshot.
-  callback(::fit::ok());
+  callback(::fpromise::ok());
 
   File(std::move(report), /*is_hourly_snapshot=*/false);
 };
@@ -154,21 +154,22 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
 
   tags_->Register(report_id, {Logname(program_name)});
 
-  using promise_tuple_t = std::tuple<::fit::result<SnapshotUuid>, ::fit::result<std::string, Error>,
-                                     ::fit::result<Product>>;
+  using promise_tuple_t =
+      std::tuple<::fpromise::result<SnapshotUuid>, ::fpromise::result<std::string, Error>,
+                 ::fpromise::result<Product>>;
 
   auto promise =
       crash_register_->GetProduct(program_name, fit::Timeout(kChannelOrDeviceIdTimeout))
-          .or_else([]() -> ::fit::result<Product, CrashReporterError> {
-            return ::fit::error(
+          .or_else([]() -> ::fpromise::result<Product, CrashReporterError> {
+            return ::fpromise::error(
                 CrashReporterError{cobalt::CrashState::kDropped, "failed GetProduct"});
           })
-          .and_then([this, report_id, is_hourly_snapshot](
-                        Product& product) -> ::fit::promise<promise_tuple_t, CrashReporterError> {
+          .and_then([this, report_id, is_hourly_snapshot](Product& product)
+                        -> ::fpromise::promise<promise_tuple_t, CrashReporterError> {
             if (!product_quotas_.HasQuotaRemaining(product)) {
               FX_LOGST(INFO, tags_->Get(report_id)) << "Daily report quota reached, won't retry";
-              return ::fit::make_result_promise<promise_tuple_t, CrashReporterError>(
-                  ::fit::error(CrashReporterError{
+              return ::fpromise::make_result_promise<promise_tuple_t, CrashReporterError>(
+                  ::fpromise::error(CrashReporterError{
                       cobalt::CrashState::kOnDeviceQuotaReached,
                       nullptr,
                   }));
@@ -178,47 +179,48 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
 
             auto snapshot_uuid_promise = snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout);
             auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
-            auto product_promise = ::fit::make_ok_promise(std::move(product));
+            auto product_promise = ::fpromise::make_ok_promise(std::move(product));
 
             FX_LOGST(INFO, tags_->Get(report_id))
                 << ((is_hourly_snapshot) ? "Generating hourly snapshot" : "Generating report");
 
-            return ::fit::join_promises(std::move(snapshot_uuid_promise),
-                                        std::move(device_id_promise), std::move(product_promise))
-                .or_else([]() -> ::fit::result<promise_tuple_t, CrashReporterError> {
-                  return ::fit::error(CrashReporterError{
+            return ::fpromise::join_promises(std::move(snapshot_uuid_promise),
+                                             std::move(device_id_promise),
+                                             std::move(product_promise))
+                .or_else([]() -> ::fpromise::result<promise_tuple_t, CrashReporterError> {
+                  return ::fpromise::error(CrashReporterError{
                       cobalt::CrashState::kDropped,
                       "Failed join_promises()",
                   });
                 });
           })
-          .and_then(
-              [this, report = std::move(report), report_id, is_hourly_snapshot](
-                  promise_tuple_t& results) mutable -> ::fit::result<void, CrashReporterError> {
-                auto snapshot_uuid = std::get<0>(results).take_value();
-                auto device_id = std::move(std::get<1>(results));
-                auto product = std::get<2>(results).take_value();
+          .and_then([this, report = std::move(report), report_id,
+                     is_hourly_snapshot](promise_tuple_t& results) mutable
+                    -> ::fpromise::result<void, CrashReporterError> {
+            auto snapshot_uuid = std::get<0>(results).take_value();
+            auto device_id = std::move(std::get<1>(results));
+            auto product = std::get<2>(results).take_value();
 
-                std::optional<Report> final_report = MakeReport(
-                    std::move(report), report_id, snapshot_uuid,
-                    snapshot_manager_->GetSnapshot(snapshot_uuid), utc_provider_.CurrentTime(),
-                    device_id, default_annotations_, product, is_hourly_snapshot);
-                if (!final_report.has_value()) {
-                  return ::fit::error(
-                      CrashReporterError{cobalt::CrashState::kDropped, "failed MakeReport()"});
-                }
+            std::optional<Report> final_report = MakeReport(
+                std::move(report), report_id, snapshot_uuid,
+                snapshot_manager_->GetSnapshot(snapshot_uuid), utc_provider_.CurrentTime(),
+                device_id, default_annotations_, product, is_hourly_snapshot);
+            if (!final_report.has_value()) {
+              return ::fpromise::error(
+                  CrashReporterError{cobalt::CrashState::kDropped, "failed MakeReport()"});
+            }
 
-                FX_LOGST(INFO, tags_->Get(report_id))
-                    << ((is_hourly_snapshot) ? "Generated hourly snapshot" : "Generated report");
+            FX_LOGST(INFO, tags_->Get(report_id))
+                << ((is_hourly_snapshot) ? "Generated hourly snapshot" : "Generated report");
 
-                if (!queue_.Add(std::move(final_report.value()))) {
-                  return ::fit::error(
-                      CrashReporterError{cobalt::CrashState::kDropped, "failed Queue::Add()"});
-                }
+            if (!queue_.Add(std::move(final_report.value()))) {
+              return ::fpromise::error(
+                  CrashReporterError{cobalt::CrashState::kDropped, "failed Queue::Add()"});
+            }
 
-                return ::fit::ok();
-              })
-          .then([this, report_id](::fit::result<void, CrashReporterError>& result) {
+            return ::fpromise::ok();
+          })
+          .then([this, report_id](::fpromise::result<void, CrashReporterError>& result) {
             if (result.is_error()) {
               if (result.error().log_message) {
                 FX_LOGST(ERROR, tags_->Get(report_id))

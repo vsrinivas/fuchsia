@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_VOLUME_DESCRIPTOR_H_
 #define SRC_STORAGE_VOLUME_IMAGE_VOLUME_DESCRIPTOR_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <array>
 #include <cstdint>
@@ -24,11 +24,12 @@ struct VolumeDescriptor {
   static constexpr uint64_t kMagic = 0xB10C14;
 
   // On success returns the VolumeDescriptor with the deserialized contents of |serialized|.
-  static fit::result<VolumeDescriptor, std::string> Deserialize(
+  static fpromise::result<VolumeDescriptor, std::string> Deserialize(
       fbl::Span<const uint8_t> serialized);
 
   // On success returns the VolumeDescriptor with the deserialized contents of |serialized|.
-  static fit::result<VolumeDescriptor, std::string> Deserialize(fbl::Span<const char> serialized) {
+  static fpromise::result<VolumeDescriptor, std::string> Deserialize(
+      fbl::Span<const char> serialized) {
     return Deserialize(fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(serialized.data()),
                                                 serialized.size() * sizeof(char)));
   }
@@ -37,7 +38,7 @@ struct VolumeDescriptor {
 
   // Returns a byte vector containing the serialized version data.
   // The serialization is meant to be human readable.
-  fit::result<std::vector<uint8_t>, std::string> Serialize() const;
+  fpromise::result<std::vector<uint8_t>, std::string> Serialize() const;
 
   // Instance Guid expected for the partition.
   std::array<uint8_t, kGuidLength> instance = {};

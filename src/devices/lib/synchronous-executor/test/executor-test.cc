@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/synchronous-executor/executor.h>
 
 #include <atomic>
@@ -16,13 +16,14 @@ namespace synchronous_executor {
 TEST(SynchronousExecutorTests, OnlyRunRunnableTasks) {
   synchronous_executor executor;
   int run_count = 0;
-  fit::suspended_task task_handle;
+  fpromise::suspended_task task_handle;
 
-  executor.schedule_task(fit::make_promise([&run_count, &task_handle](fit::context& context) {
-    run_count++;
-    task_handle = context.suspend_task();
-    return fit::pending();
-  }));
+  executor.schedule_task(
+      fpromise::make_promise([&run_count, &task_handle](fpromise::context& context) {
+        run_count++;
+        task_handle = context.suspend_task();
+        return fpromise::pending();
+      }));
 
   executor.run_until_idle();
   executor.run_until_idle();
@@ -35,13 +36,14 @@ TEST(SynchronousExecutorTests, OnlyRunRunnableTasks) {
 TEST(SynchronousExecutorTests, SuspendResumeTest) {
   synchronous_executor executor;
   int run_count = 0;
-  fit::suspended_task task_handle;
+  fpromise::suspended_task task_handle;
 
-  executor.schedule_task(fit::make_promise([&run_count, &task_handle](fit::context& context) {
-    run_count++;
-    task_handle = context.suspend_task();
-    return fit::pending();
-  }));
+  executor.schedule_task(
+      fpromise::make_promise([&run_count, &task_handle](fpromise::context& context) {
+        run_count++;
+        task_handle = context.suspend_task();
+        return fpromise::pending();
+      }));
 
   executor.run_until_idle();
   ASSERT_EQ(run_count, 1);
@@ -54,17 +56,17 @@ TEST(SynchronousExecutorTests, ExecutorIsReentrantSafe) {
   synchronous_executor executor;
   int run_count = 0;
   bool reentered = false;
-  fit::suspended_task task_handle;
+  fpromise::suspended_task task_handle;
 
   executor.schedule_task(
-      fit::make_promise([&run_count, &executor, &reentered](fit::context& context) {
+      fpromise::make_promise([&run_count, &executor, &reentered](fpromise::context& context) {
         run_count++;
         bool set_var = false;
-        executor.schedule_task(fit::make_promise([&set_var]() { set_var = true; }));
+        executor.schedule_task(fpromise::make_promise([&set_var]() { set_var = true; }));
         EXPECT_FALSE(set_var);
         executor.run_until_idle();
         reentered = set_var;
-        return fit::ok();
+        return fpromise::ok();
       }));
 
   executor.run_until_idle();
@@ -77,18 +79,18 @@ TEST(SynchronousExecutorTests, ExecutorIsThreadSafe) {
   std::atomic_size_t run_count = 0;
   std::thread thread([&]() {
     for (size_t i = 0; i < 1000; i++) {
-      executor.schedule_task(fit::make_promise([&run_count](fit::context& context) {
+      executor.schedule_task(fpromise::make_promise([&run_count](fpromise::context& context) {
         run_count++;
-        return fit::ok();
+        return fpromise::ok();
       }));
       executor.run_until_idle();
     }
   });
 
   for (size_t i = 0; i < 1000; i++) {
-    executor.schedule_task(fit::make_promise([&run_count](fit::context& context) {
+    executor.schedule_task(fpromise::make_promise([&run_count](fpromise::context& context) {
       run_count++;
-      return fit::ok();
+      return fpromise::ok();
     }));
     executor.run_until_idle();
   }
@@ -100,7 +102,7 @@ TEST(SynchronousExecutorTests, ExecutorIsThreadSafe) {
 TEST(SynchronousExecutorTests, AbandonedTasksGetProperlyCleanedUp) {
   synchronous_executor executor;
   int run_count = 0;
-  fit::suspended_task task_handle;
+  fpromise::suspended_task task_handle;
   int cleanup_count = 0;
   class AutoCleanup {
    public:
@@ -111,11 +113,11 @@ TEST(SynchronousExecutorTests, AbandonedTasksGetProperlyCleanedUp) {
     int* counter_;
   };
   auto cleanup = std::make_unique<AutoCleanup>(&cleanup_count);
-  executor.schedule_task(fit::make_promise(
-      [&run_count, &task_handle, cleaner = std::move(cleanup)](fit::context& context) {
+  executor.schedule_task(fpromise::make_promise(
+      [&run_count, &task_handle, cleaner = std::move(cleanup)](fpromise::context& context) {
         run_count++;
         task_handle = context.suspend_task();
-        return fit::pending();
+        return fpromise::pending();
       }));
 
   executor.run_until_idle();

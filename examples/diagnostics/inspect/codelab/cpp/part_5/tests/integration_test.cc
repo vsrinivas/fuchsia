@@ -86,7 +86,8 @@ class CodelabTest : public sys::testing::TestWithEnvironment {
 
       bool done = false;
       iterator->GetNext([&](auto result) {
-        auto res = fit::result<ContentVector, fuchsia::diagnostics::ReaderError>(std::move(result));
+        auto res =
+            fpromise::result<ContentVector, fuchsia::diagnostics::ReaderError>(std::move(result));
         if (res.is_ok()) {
           current_entries = res.take_value();
         }

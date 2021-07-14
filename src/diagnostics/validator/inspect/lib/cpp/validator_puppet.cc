@@ -5,7 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/stdcompat/variant.h>
@@ -538,7 +538,7 @@ class Actor {
       actor.Act(action);
     }
     actor.Freeze();
-    auto cb = [clone = std::move(actor.inspector())]() { return fit::make_ok_promise(clone); };
+    auto cb = [clone = std::move(actor.inspector())]() { return fpromise::make_ok_promise(clone); };
 
     if (lazy_action.disposition == LinkDisposition::CHILD) {
       lazy_children_map_.emplace(lazy_action.id, parent->CreateLazyNode(lazy_action.name, cb));

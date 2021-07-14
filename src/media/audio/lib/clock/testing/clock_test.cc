@@ -12,14 +12,14 @@
 
 namespace media::audio::clock::testing {
 
-fit::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props) {
+fpromise::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props) {
   zx::clock clock;
   zx_status_t status;
 
   if (props.start_val.has_value()) {
     status = zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr, &clock);
     if (status != ZX_OK) {
-      return fit::error(status);
+      return fpromise::error(status);
     }
 
     zx::clock::update_args args;
@@ -27,7 +27,7 @@ fit::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props) {
 
     status = clock.update(args);
     if (status != ZX_OK) {
-      return fit::error(status);
+      return fpromise::error(status);
     }
   } else {
     clock = props.rate_adjust_ppm.has_value() ? clock::AdjustableCloneOfMonotonic()
@@ -40,29 +40,29 @@ fit::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props) {
 
     status = clock.update(args);
     if (status != ZX_OK) {
-      return fit::error(status);
+      return fpromise::error(status);
     }
 
-    return fit::ok(std::move(clock));
+    return fpromise::ok(std::move(clock));
   }
 
   status = clock.replace(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ, &clock);
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
-  return fit::ok(std::move(clock));
+  return fpromise::ok(std::move(clock));
 }
 
-fit::result<zx::duration, zx_status_t> GetOffsetFromMonotonic(const zx::clock& clock) {
+fpromise::result<zx::duration, zx_status_t> GetOffsetFromMonotonic(const zx::clock& clock) {
   if (!clock.is_valid()) {
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   zx_clock_details_v1_t clock_details;
   zx_status_t status = clock.get_details(&clock_details);
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   auto synthetic_per_mono = affine::Ratio(clock_details.mono_to_synthetic.rate.synthetic_ticks,
@@ -71,7 +71,7 @@ fit::result<zx::duration, zx_status_t> GetOffsetFromMonotonic(const zx::clock& c
       clock_details.mono_to_synthetic.reference_offset,
       clock_details.mono_to_synthetic.synthetic_offset, synthetic_per_mono, 0);
 
-  return fit::ok(zx::duration(synthetic_offset_from_mono));
+  return fpromise::ok(zx::duration(synthetic_offset_from_mono));
 }
 
 // Ensure this reference clock's handle has expected rights: DUPLICATE, TRANSFER, READ, not WRITE.

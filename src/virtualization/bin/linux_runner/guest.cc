@@ -154,22 +154,22 @@ Guest::~Guest() {
   }
 }
 
-fit::promise<> Guest::Start() {
+fpromise::promise<> Guest::Start() {
   TRACE_DURATION("linux_runner", "Guest::Start");
   return StartGrpcServer()
       .and_then([this](std::unique_ptr<GrpcVsockServer>& server) mutable
-                -> fit::result<void, zx_status_t> {
+                -> fpromise::result<void, zx_status_t> {
         grpc_server_ = std::move(server);
         StartGuest();
-        return fit::ok();
+        return fpromise::ok();
       })
       .or_else([](const zx_status_t& status) {
         FX_LOGS(ERROR) << "Failed to start guest: " << status;
-        return fit::ok();
+        return fpromise::ok();
       });
 }
 
-fit::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> Guest::StartGrpcServer() {
+fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> Guest::StartGrpcServer() {
   TRACE_DURATION("linux_runner", "Guest::StartGrpcServer");
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint;
   guest_env_->GetHostVsockEndpoint(socket_endpoint.NewRequest());
@@ -511,7 +511,7 @@ grpc::Status Guest::VmReady(grpc::ServerContext* context, const vm_tools::EmptyM
   FX_LOGS(INFO) << "VM Ready -- Connecting to Maitre'd...";
   std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
   auto p = NewGrpcVsockStub<vm_tools::Maitred>(socket_endpoint_, guest_cid_, kMaitredPort)
-               .then([this](fit::result<std::unique_ptr<vm_tools::Maitred::Stub>, zx_status_t>&
+               .then([this](fpromise::result<std::unique_ptr<vm_tools::Maitred::Stub>, zx_status_t>&
                                 result) mutable {
                  if (result.is_ok()) {
                    this->maitred_ = std::move(result.value());
@@ -534,15 +534,15 @@ grpc::Status Guest::TremplinReady(grpc::ServerContext* context,
   FX_LOGS(INFO) << "Tremplin Ready.";
   auto p =
       NewGrpcVsockStub<vm_tools::tremplin::Tremplin>(socket_endpoint_, guest_cid_, kTremplinPort)
-          .then([this](fit::result<std::unique_ptr<vm_tools::tremplin::Tremplin::Stub>,
-                                   zx_status_t>& result) mutable -> fit::result<> {
+          .then([this](fpromise::result<std::unique_ptr<vm_tools::tremplin::Tremplin::Stub>,
+                                        zx_status_t>& result) mutable -> fpromise::result<> {
             if (result.is_ok()) {
               tremplin_ = std::move(result.value());
               CreateContainer();
             } else {
               FX_LOGS(ERROR) << "Failed to connect to tremplin";
             }
-            return fit::ok();
+            return fpromise::ok();
           });
   executor_.schedule_task(std::move(p));
   return grpc::Status::OK;
@@ -631,24 +631,23 @@ grpc::Status Guest::ContainerReady(grpc::ServerContext* context,
   // TODO(tjdetwiler): validate token.
   auto garcon_port = request->garcon_port();
   FX_LOGS(INFO) << "Container Ready; Garcon listening on port " << garcon_port;
-  auto p =
-      NewGrpcVsockStub<vm_tools::container::Garcon>(socket_endpoint_, guest_cid_, garcon_port)
-          .then([this](fit::result<std::unique_ptr<vm_tools::container::Garcon::Stub>, zx_status_t>&
-                           result) mutable -> fit::result<> {
-            if (result.is_ok()) {
-              garcon_ = std::move(result.value());
+  auto p = NewGrpcVsockStub<vm_tools::container::Garcon>(socket_endpoint_, guest_cid_, garcon_port)
+               .then([this](fpromise::result<std::unique_ptr<vm_tools::container::Garcon::Stub>,
+                                             zx_status_t>& result) mutable -> fpromise::result<> {
+                 if (result.is_ok()) {
+                   garcon_ = std::move(result.value());
 
-              DumpContainerDebugInfo();
+                   DumpContainerDebugInfo();
 
-              for (auto it = pending_requests_.begin(); it != pending_requests_.end();
-                   it = pending_requests_.erase(it)) {
-                LaunchApplication(std::move(*it));
-              }
-            } else {
-              FX_LOGS(ERROR) << "Failed to connect to garcon";
-            }
-            return fit::ok();
-          });
+                   for (auto it = pending_requests_.begin(); it != pending_requests_.end();
+                        it = pending_requests_.erase(it)) {
+                     LaunchApplication(std::move(*it));
+                   }
+                 } else {
+                   FX_LOGS(ERROR) << "Failed to connect to garcon";
+                 }
+                 return fpromise::ok();
+               });
   executor_.schedule_task(std::move(p));
 
   return grpc::Status::OK;

@@ -9,8 +9,8 @@
 #include <mutex>
 #include <thread>
 
-#include "lib/fit/promise.h"
-#include "lib/fit/scope.h"
+#include "lib/fpromise/promise.h"
+#include "lib/fpromise/scope.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 
 namespace analytics::core_dev_tools {
@@ -21,7 +21,7 @@ namespace analytics::core_dev_tools {
 //   - If all the tasks are finished, quit the loop immediately
 //   - Otherwise, quit the loop after all tasks are finished or reaching a timeout, whichever
 //     happens earlier.
-class AnalyticsExecutor : public fit::executor {
+class AnalyticsExecutor : public fpromise::executor {
  public:
   AnalyticsExecutor();
 
@@ -30,7 +30,7 @@ class AnalyticsExecutor : public fit::executor {
   AnalyticsExecutor& operator=(const AnalyticsExecutor&) = delete;
 
   ~AnalyticsExecutor() override;
-  void schedule_task(fit::pending_task task) override;
+  void schedule_task(fpromise::pending_task task) override;
 
  private:
   void RunLoop();
@@ -43,7 +43,7 @@ class AnalyticsExecutor : public fit::executor {
   // scope_ must be declared after loop_ so that it will be destructed before loop_.
   // This is to make sure promises that are not fulfilled before timeout are abandoned before
   // destruction of the message loop.
-  fit::scope scope_;
+  fpromise::scope scope_;
   std::thread thread_;
 };
 

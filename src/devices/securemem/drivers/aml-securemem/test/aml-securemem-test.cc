@@ -8,7 +8,7 @@
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/resource.h>
 #include <zircon/limits.h>

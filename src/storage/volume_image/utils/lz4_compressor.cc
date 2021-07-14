@@ -59,29 +59,31 @@ Lz4Compressor::~Lz4Compressor() {
   }
 }
 
-fit::result<Lz4Compressor, std::string> Lz4Compressor::Create(const CompressionOptions& options) {
+fpromise::result<Lz4Compressor, std::string> Lz4Compressor::Create(
+    const CompressionOptions& options) {
   if (options.schema != CompressionSchema::kLz4) {
-    return fit::error("Lz4Compressor requires" + EnumAsString(CompressionSchema::kLz4) +
-                      ". Provided: " + EnumAsString(options.schema) + ".");
+    return fpromise::error("Lz4Compressor requires" + EnumAsString(CompressionSchema::kLz4) +
+                           ". Provided: " + EnumAsString(options.schema) + ".");
   }
   Preferences preferences = ConvertOptionsToPreferences(options);
-  return fit::ok(Lz4Compressor(preferences));
+  return fpromise::ok(Lz4Compressor(preferences));
 }
 
-fit::result<void, std::string> Lz4Compressor::Prepare(Handler handler) {
+fpromise::result<void, std::string> Lz4Compressor::Prepare(Handler handler) {
   if (state_ != State::kInitalized && state_ != State::kFinalized) {
-    return fit::error("Lz4Compressor::Prepare must be in |kInitialized| or |kFinalized| state.");
+    return fpromise::error(
+        "Lz4Compressor::Prepare must be in |kInitialized| or |kFinalized| state.");
   }
 
   if (handler == nullptr) {
-    return fit::error("Lz4Compressor::Prepare requires a valid |handler|.");
+    return fpromise::error("Lz4Compressor::Prepare requires a valid |handler|.");
   }
 
   Lz4Result result = LZ4F_createCompressionContext(&context_, LZ4F_VERSION);
   if (result.is_error()) {
     std::string error = "Failed to create LZ4 Compression Context. LZ4 Error: ";
     error.append(result.error()).append(".");
-    return fit::error(error);
+    return fpromise::error(error);
   }
 
   // Adjust buffer so it fits the header.
@@ -95,16 +97,18 @@ fit::result<void, std::string> Lz4Compressor::Prepare(Handler handler) {
   if (result.is_error()) {
     std::string error = "Failed to emit LZ4 Frame header. LZ4 Error: ";
     error.append(result.error()).append(".");
-    return fit::error(error);
+    return fpromise::error(error);
   }
   state_ = State::kPrepared;
 
   return handler_(fbl::Span(compression_buffer_.data(), result.byte_count()));
 }
 
-fit::result<void, std::string> Lz4Compressor::Compress(fbl::Span<const uint8_t> uncompressed_data) {
+fpromise::result<void, std::string> Lz4Compressor::Compress(
+    fbl::Span<const uint8_t> uncompressed_data) {
   if (state_ != State::kPrepared && state_ != State::kCompressed) {
-    return fit::error("Lz4Compressor::Compress must be in |kPrepared| or |kCompressed| state.");
+    return fpromise::error(
+        "Lz4Compressor::Compress must be in |kPrepared| or |kCompressed| state.");
   }
 
   size_t max_compressed_size = LZ4F_compressBound(uncompressed_data.size(), &preferences_);
@@ -118,15 +122,15 @@ fit::result<void, std::string> Lz4Compressor::Compress(fbl::Span<const uint8_t> 
   if (result.is_error()) {
     std::string error = "Failed to compress data with LZ4 compressor. LZ4 Error: ";
     error.append(result.error()).append(".");
-    return fit::error(error);
+    return fpromise::error(error);
   }
   state_ = State::kCompressed;
   return handler_(fbl::Span(compression_buffer_.data(), result.byte_count()));
 }
 
-fit::result<void, std::string> Lz4Compressor::Finalize() {
+fpromise::result<void, std::string> Lz4Compressor::Finalize() {
   if (state_ != State::kCompressed) {
-    return fit::error("Lz4Compressor::Finalize must be in |kCompressed| state.");
+    return fpromise::error("Lz4Compressor::Finalize must be in |kCompressed| state.");
   }
 
   size_t max_compressed_size = LZ4F_compressBound(0, &preferences_);
@@ -139,7 +143,7 @@ fit::result<void, std::string> Lz4Compressor::Finalize() {
   if (result.is_error()) {
     std::string error = "Failed to finalize compression with LZ4 Compressor. LZ4 Error: ";
     error.append(result.error()).append(".");
-    return fit::error(error);
+    return fpromise::error(error);
   }
   auto handler_result = handler_(fbl::Span(compression_buffer_.data(), result.byte_count()));
 
@@ -150,7 +154,7 @@ fit::result<void, std::string> Lz4Compressor::Finalize() {
   if (result.is_error()) {
     std::string error = "Failed to free compression contrext in LZ4 Compressor. LZ4 Error: ";
     error.append(result.error()).append(".");
-    return fit::error(error);
+    return fpromise::error(error);
   }
 
   state_ = State::kFinalized;

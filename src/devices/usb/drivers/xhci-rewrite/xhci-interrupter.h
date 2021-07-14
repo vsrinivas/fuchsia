@@ -31,8 +31,8 @@ class Interrupter {
 
   void Stop() {
     if (async_executor_.has_value()) {
-      async_executor_.value().schedule_task(fit::make_ok_promise().then(
-          [=](fit::result<void, void>& result) { async_loop_->Quit(); }));
+      async_executor_.value().schedule_task(fpromise::make_ok_promise().then(
+          [=](fpromise::result<void, void>& result) { async_loop_->Quit(); }));
     }
   }
 

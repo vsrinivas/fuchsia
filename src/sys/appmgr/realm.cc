@@ -1196,7 +1196,7 @@ zx_status_t Realm::BindFirstNestedRealmSvc(zx::channel channel) {
 //
 // If a component is assigned an instance ID while it already has a storage
 // directory under (b), its storage directory is moved to (a).
-fit::result<std::string, zx_status_t> Realm::InitIsolatedPathForComponentInstance(
+fpromise::result<std::string, zx_status_t> Realm::InitIsolatedPathForComponentInstance(
     const FuchsiaPkgUrl& fp, internal::StorageType storage_type) {
   // The subdirectory of the root data directory to use persistent storage
   // This applies only to components with an instance ID.
@@ -1256,7 +1256,7 @@ fit::result<std::string, zx_status_t> Realm::InitIsolatedPathForComponentInstanc
       FX_LOGS(ERROR) << "Component " << fp.ToString()
                      << " cannot be created because it is using isolated-persistent-storage, but "
                         "is not listed in the component instance ID index.";
-      return fit::error(ZX_ERR_ACCESS_DENIED);
+      return fpromise::error(ZX_ERR_ACCESS_DENIED);
     } else {
       FX_LOGS(WARNING) << "Component " << fp.ToString()
                        << " is using isolated-persistent-storage, but is not listed in the "
@@ -1267,10 +1267,10 @@ fit::result<std::string, zx_status_t> Realm::InitIsolatedPathForComponentInstanc
   // Ensure directory path exists.
   if (!files::IsDirectory(path) && !files::CreateDirectory(path)) {
     FX_LOGS(ERROR) << "Failed to create data directory " << path;
-    return fit::ok("");
+    return fpromise::ok("");
   }
 
-  return fit::ok(path);
+  return fpromise::ok(path);
 }
 
 void Realm::NotifyComponentStarted(const std::string& component_url,

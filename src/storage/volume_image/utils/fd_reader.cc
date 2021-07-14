@@ -5,7 +5,7 @@
 #include "src/storage/volume_image/utils/fd_reader.h"
 
 #include <fcntl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <sys/stat.h>
 
 #include <cstdio>
@@ -18,9 +18,9 @@
 
 namespace storage::volume_image {
 
-fit::result<FdReader, std::string> FdReader::Create(std::string_view path) {
+fpromise::result<FdReader, std::string> FdReader::Create(std::string_view path) {
   if (path.empty()) {
-    return fit::error("Cannot obtain file descriptor from empty path.");
+    return fpromise::error("Cannot obtain file descriptor from empty path.");
   }
 
   std::string pathname(path);
@@ -28,18 +28,19 @@ fit::result<FdReader, std::string> FdReader::Create(std::string_view path) {
   if (!fd.is_valid()) {
     std::string error = "Failed to obtain file descriptor from ";
     error.append(pathname).append(". More specifically ").append(strerror(errno));
-    return fit::error(error);
+    return fpromise::error(error);
   }
   struct stat file_stats = {};
   if (fstat(fd.get(), &file_stats) != 0) {
-    return fit::error("Failed to obtain size for file descriptor at " + std::string(path) +
-                      ". More specifically: " + strerror(errno));
+    return fpromise::error("Failed to obtain size for file descriptor at " + std::string(path) +
+                           ". More specifically: " + strerror(errno));
   }
 
-  return fit::ok(FdReader(std::move(fd), path, file_stats.st_size));
+  return fpromise::ok(FdReader(std::move(fd), path, file_stats.st_size));
 }
 
-fit::result<void, std::string> FdReader::Read(uint64_t offset, fbl::Span<uint8_t> buffer) const {
+fpromise::result<void, std::string> FdReader::Read(uint64_t offset,
+                                                   fbl::Span<uint8_t> buffer) const {
   size_t bytes_read = 0;
   while (bytes_read < buffer.size()) {
     uint8_t* destination = buffer.data() + bytes_read;
@@ -51,18 +52,18 @@ fit::result<void, std::string> FdReader::Read(uint64_t offset, fbl::Span<uint8_t
       std::string_view error_description(strerror(errno));
       std::string error = "Read failed from ";
       error.append(name_).append(". More specifically ").append(error_description);
-      return fit::error(error);
+      return fpromise::error(error);
     }
     if (result == 0) {
       std::string_view error_description(strerror(errno));
       std::string error = "Read failed from  ";
       error.append(name_).append(". End of file reached before reading requested bytes.");
-      return fit::error(error);
+      return fpromise::error(error);
     }
 
     bytes_read += result;
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
 }  // namespace storage::volume_image

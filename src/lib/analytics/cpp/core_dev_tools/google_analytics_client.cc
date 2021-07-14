@@ -4,7 +4,7 @@
 
 #include "src/lib/analytics/cpp/core_dev_tools/google_analytics_client.h"
 
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/shared/curl.h"
@@ -29,10 +29,10 @@ bool IsResponseCodeSuccess(long response_code) {
   return response_code >= 200 && response_code < 300;
 }
 
-fit::promise<> CurlPerformAsync(const fxl::RefPtr<Curl>& curl) {
+fpromise::promise<> CurlPerformAsync(const fxl::RefPtr<Curl>& curl) {
   FX_DCHECK(curl);
 
-  fit::bridge bridge;
+  fpromise::bridge bridge;
   curl->Perform([completer = std::move(bridge.completer)](Curl* curl, Curl::Error result) mutable {
     auto response_code = curl->ResponseCode();
     if (!result && IsResponseCodeSuccess(response_code)) {
@@ -48,7 +48,7 @@ fit::promise<> CurlPerformAsync(const fxl::RefPtr<Curl>& curl) {
 
 void GoogleAnalyticsClient::SendData(std::string_view user_agent,
                                      std::map<std::string, std::string> parameters) {
-  executor_.schedule_task(fit::make_promise([user_agent, parameters{std::move(parameters)}] {
+  executor_.schedule_task(fpromise::make_promise([user_agent, parameters{std::move(parameters)}] {
     auto curl = PrepareCurl(user_agent);
     curl->set_post_data(parameters);
     return CurlPerformAsync(curl);

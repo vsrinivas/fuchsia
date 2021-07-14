@@ -16,12 +16,13 @@ namespace {
 
 class FakeWriter final : public Writer {
  public:
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     if (offset + buffer.size() > data_.size()) {
       data_.resize(offset + buffer.size(), 0);
     }
     memcpy(data_.data() + offset, buffer.data(), buffer.size());
-    return fit::ok();
+    return fpromise::ok();
   }
 
   auto& data() { return data_; }

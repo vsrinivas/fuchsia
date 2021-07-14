@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_MOCK_DEVICE_THREAD_H_
+#define SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_MOCK_DEVICE_THREAD_H_
+
+#include <fuchsia/device/mock/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/message.h>
+#include <lib/zx/channel.h>
 
 #include <memory>
 #include <utility>
-
-#include <fuchsia/device/mock/cpp/fidl.h>
-#include <lib/zx/channel.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/message.h>
 
 #include "action-list.h"
 #include "mock-device-hooks.h"
@@ -38,8 +39,10 @@ class MockDeviceThread {
 
   // Completers for pending add/remove actions, so we can signal when the
   // operations are finished.
-  std::map<uint64_t, fit::completer<void, std::string>> pending_actions_;
+  std::map<uint64_t, fpromise::completer<void, std::string>> pending_actions_;
   uint64_t next_action_id_ = 0;
 };
 
 }  // namespace libdriver_integration_test
+
+#endif  // SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_MOCK_DEVICE_THREAD_H_

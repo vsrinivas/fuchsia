@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sync/completion.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -38,9 +38,9 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
          .data_promise =
              journal.WriteData(fuzz_utils.FuzzOperation(ReservedVmoid::kWritebackVmoid))});
     sync_completion_t sync_completion;
-    journal.schedule_task(journal.Sync().then(
-        [&sync_completion](
-            fit::result<void, zx_status_t>& result) mutable -> fit::result<void, zx_status_t> {
+    journal.schedule_task(
+        journal.Sync().then([&sync_completion](fpromise::result<void, zx_status_t>& result) mutable
+                            -> fpromise::result<void, zx_status_t> {
           sync_completion_signal(&sync_completion);
           return result;
         }));

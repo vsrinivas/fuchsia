@@ -36,7 +36,7 @@ class GuestDiscoveryServiceImpl final : public fuchsia::netemul::guest::GuestDis
   std::map<GuestInfo, std::unique_ptr<FuchsiaGuestInteractionService>> guests_;
   std::unique_ptr<sys::ComponentContext> context_;
   async::Executor executor_;
-  fit::scope scope_;
+  fpromise::scope scope_;
   fuchsia::virtualization::ManagerPtr manager_;
   fidl::BindingSet<fuchsia::netemul::guest::GuestDiscovery> bindings_;
 

@@ -55,7 +55,7 @@ class Ge2dNode : public ProcessNode {
   // |info|   : StreamCreationData for the requested stream.
   // |parent_node| : pointer to the node to which we need to append this |OutputNode|.
   // |internal_output_node| : InternalConfigNode corresponding to this node.
-  static fit::result<ProcessNode*, zx_status_t> CreateGe2dNode(
+  static fpromise::result<ProcessNode*, zx_status_t> CreateGe2dNode(
       const ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
       zx_device_t* device, const ddk::Ge2dProtocolClient& ge2d, StreamCreationData* info,
       ProcessNode* parent_node, const InternalConfigNode& internal_ge2d_node);

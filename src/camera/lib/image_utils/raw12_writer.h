@@ -5,7 +5,7 @@
 #ifndef SRC_CAMERA_LIB_IMAGE_UTILS_RAW12_WRITER_H_
 #define SRC_CAMERA_LIB_IMAGE_UTILS_RAW12_WRITER_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include "src/camera/lib/image_utils/image_writer.h"
 
@@ -51,8 +51,8 @@ class Raw12Writer : public ImageWriter {
   //  |pixel_format| Intended byte representation for each pixel in the images to be written.
   // Returns:
   //  A Raw12Writer object that writes images to vmos.
-  static fit::result<std::unique_ptr<Raw12Writer>, zx_status_t> Create(uint32_t width,
-                                                                       uint32_t height);
+  static fpromise::result<std::unique_ptr<Raw12Writer>, zx_status_t> Create(uint32_t width,
+                                                                            uint32_t height);
 
   // Fills a provided vmo with default data in the RAW12 image format. Only a RGGB layout is used at
   // the moment.

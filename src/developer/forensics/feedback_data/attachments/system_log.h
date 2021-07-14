@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_SYSTEM_LOG_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
@@ -20,9 +20,9 @@ namespace feedback_data {
 // Collects the system log.
 //
 // fuchsia.diagnostics.FeedbackArchiveAccessor is expected to be in |services|.
-::fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
-                                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                                 fit::Timeout timeout);
+::fpromise::promise<AttachmentValue> CollectSystemLog(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    fit::Timeout timeout);
 
 }  // namespace feedback_data
 }  // namespace forensics

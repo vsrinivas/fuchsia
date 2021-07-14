@@ -42,7 +42,7 @@ class MetadataBufferView final : public fvm::MetadataBuffer {
   mutable std::variant<fbl::Span<uint8_t>, std::vector<uint8_t>> data_;
 };
 
-fit::result<fvm::Metadata, std::string> GetMetadata(
+fpromise::result<fvm::Metadata, std::string> GetMetadata(
     const Reader& source_image, std::vector<uint8_t>& primary_metadata_buffer,
     std::vector<uint8_t>& secondary_metadata_buffer) {
   fvm::Header header = {};
@@ -53,8 +53,9 @@ fit::result<fvm::Metadata, std::string> GetMetadata(
   }
 
   if (header.magic != fvm::kMagic) {
-    return fit::error("|source_image| must be a valid FVM block image. FVM Magic mismatch, found " +
-                      std::to_string(header.magic) + " expected " + std::to_string(fvm::kMagic));
+    return fpromise::error(
+        "|source_image| must be a valid FVM block image. FVM Magic mismatch, found " +
+        std::to_string(header.magic) + " expected " + std::to_string(fvm::kMagic));
   }
 
   primary_metadata_buffer.resize(header.GetMetadataAllocatedBytes());
@@ -75,16 +76,17 @@ fit::result<fvm::Metadata, std::string> GetMetadata(
 
   auto metadata = fvm::Metadata::Create(std::move(primary_metadata), std::move(secondary_metadata));
   if (metadata.is_error()) {
-    return fit::error("Failed to create FVM Metadata from image. Error Code: " +
-                      std::to_string(metadata.error_value()));
+    return fpromise::error("Failed to create FVM Metadata from image. Error Code: " +
+                           std::to_string(metadata.error_value()));
   }
-  return fit::ok(std::move(metadata.value()));
+  return fpromise::ok(std::move(metadata.value()));
 }
 
 }  // namespace
 
-fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const FvmOptions& options,
-                                              Writer& target_image) {
+fpromise::result<void, std::string> FvmImageExtend(const Reader& source_image,
+                                                   const FvmOptions& options,
+                                                   Writer& target_image) {
   std::vector<uint8_t> primary_metadata_buffer;
   std::vector<uint8_t> secondary_metadata_buffer;
 
@@ -99,11 +101,11 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
 
   // Calculate the minimum size for the metadata if target disk size is set.
   if (!options.target_volume_size.has_value()) {
-    return fit::error("Must provide a target size to extend to.");
+    return fpromise::error("Must provide a target size to extend to.");
   }
 
   if (options.target_volume_size.value() < source_image.length()) {
-    return fit::error("Cannot extend a source image to a smaller image size.");
+    return fpromise::error("Cannot extend a source image to a smaller image size.");
   }
 
   // If someone chose to do the extend 'in-place' then, which is the usual case, we need to be
@@ -154,8 +156,8 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
   // done by recreating the metadata.
   auto new_metadata = metadata_or.value().CopyWithNewDimensions(new_header);
   if (new_metadata.is_error()) {
-    return fit::error("Failed to synthesize metadata for extended FVM. Error code: " +
-                      std::to_string(new_metadata.error_value()));
+    return fpromise::error("Failed to synthesize metadata for extended FVM. Error code: " +
+                           std::to_string(new_metadata.error_value()));
   }
 
   // Now write both copies into the new place.
@@ -175,10 +177,10 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
     return write_secondary_metadata_result.take_error_result();
   }
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
-fit::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_image) {
+fpromise::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_image) {
   std::vector<uint8_t> primary_metadata_buffer;
   std::vector<uint8_t> secondary_metadata_buffer;
 
@@ -214,7 +216,7 @@ fit::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_i
                   header.GetMetadataAllocatedBytes();
   }
 
-  return fit::ok(last_offset);
+  return fpromise::ok(last_offset);
 }
 
 }  // namespace storage::volume_image

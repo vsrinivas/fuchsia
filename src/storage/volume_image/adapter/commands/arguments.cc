@@ -33,33 +33,33 @@ std::optional<size_t> FindArgumentByName(fbl::Span<std::string_view> arguments,
 // Expecting a value, of an argument, and such value not being present is considered a malformed
 // argument.
 // If presence is required, then |FindArgumentByName| should be called instead.
-fit::result<std::optional<size_t>, std::string> FindArgumentValueByName(
+fpromise::result<std::optional<size_t>, std::string> FindArgumentValueByName(
     fbl::Span<std::string_view> arguments, std::string_view name) {
   auto argument_index = FindArgumentByName(arguments, name);
 
   if (!argument_index.has_value()) {
-    return fit::ok(std::nullopt);
+    return fpromise::ok(std::nullopt);
   }
 
   size_t maybe_value_index = argument_index.value() + 1;
   if (maybe_value_index >= arguments.size()) {
-    return fit::error("No value for argument " + std::string(name));
+    return fpromise::error("No value for argument " + std::string(name));
   }
   auto arg = arguments[maybe_value_index];
   if (arg.substr(0, 2) == "--") {
-    return fit::error("No value for argument " + std::string(name));
+    return fpromise::error("No value for argument " + std::string(name));
   }
 
-  return fit::ok(maybe_value_index);
+  return fpromise::ok(maybe_value_index);
 }
 
 // Parses a size string, to the appropiate unit.
-fit::result<uint64_t, std::string> ParseSize(std::string_view size_str) {
+fpromise::result<uint64_t, std::string> ParseSize(std::string_view size_str) {
   // Maybe it has a special size.
   uint64_t result = 0;
   auto [p, ec] = std::from_chars(size_str.begin(), size_str.end(), result);
   if (ec != std::errc{}) {
-    return fit::error("Failed to parse " + std::string(size_str) + " as size.");
+    return fpromise::error("Failed to parse " + std::string(size_str) + " as size.");
   }
 
   if (static_cast<size_t>(p - size_str.data()) != size_str.size()) {
@@ -80,18 +80,19 @@ fit::result<uint64_t, std::string> ParseSize(std::string_view size_str) {
         break;
 
       default:
-        return fit::error("Failed to parse value" + std::string(size_str) + " as size but unit " +
-                          std::string(size_unit) + " is not recognized.");
+        return fpromise::error("Failed to parse value" + std::string(size_str) +
+                               " as size but unit " + std::string(size_unit) +
+                               " is not recognized.");
     }
   }
-  return fit::ok(result);
+  return fpromise::ok(result);
 }
 
 // If |arguments| contains |argument| and |argument| has a value, then |target| is updated to the
 // converted value.
 template <typename T>
-fit::result<void, std::string> GetArgumentValue(fbl::Span<std::string_view> arguments,
-                                                std::string_view argument, T& target) {
+fpromise::result<void, std::string> GetArgumentValue(fbl::Span<std::string_view> arguments,
+                                                     std::string_view argument, T& target) {
   auto index_or = FindArgumentValueByName(arguments, argument);
   if (index_or.is_error()) {
     return index_or.take_error_result();
@@ -101,15 +102,15 @@ fit::result<void, std::string> GetArgumentValue(fbl::Span<std::string_view> argu
     target = arguments[index.value()];
   }
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
 // Templated so optionals can be passed as well.
 // If |arguments| contains |argument| and |argument|'s value is a valid representation of a size
 // value, then |target| is updated to the converted value.
 template <typename T>
-fit::result<void, std::string> GetSizeArgumentValue(fbl::Span<std::string_view> arguments,
-                                                    std::string_view argument, T& target) {
+fpromise::result<void, std::string> GetSizeArgumentValue(fbl::Span<std::string_view> arguments,
+                                                         std::string_view argument, T& target) {
   std::optional<std::string> size_str;
   if (auto result = GetArgumentValue(arguments, argument, size_str); result.is_error()) {
     return result.take_error_result();
@@ -123,12 +124,12 @@ fit::result<void, std::string> GetSizeArgumentValue(fbl::Span<std::string_view> 
     target = size_or.value();
   }
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
 }  // namespace
 
-fit::result<std::vector<PartitionParams>, std::string> PartitionParams::FromArguments(
+fpromise::result<std::vector<PartitionParams>, std::string> PartitionParams::FromArguments(
     fbl::Span<std::string_view> arguments, const FvmOptions& options) {
   constexpr std::array<std::string_view, 5> kPartitionArgs = {"--blob", "--data", "--data-unsafe",
                                                               "--system", "--default"};
@@ -213,15 +214,15 @@ fit::result<std::vector<PartitionParams>, std::string> PartitionParams::FromArgu
     partitions.push_back(empty_metadata_partition);
   }
 
-  return fit::ok(partitions);
+  return fpromise::ok(partitions);
 }
 
-fit::result<CreateParams, std::string> CreateParams::FromArguments(
+fpromise::result<CreateParams, std::string> CreateParams::FromArguments(
     fbl::Span<std::string_view> arguments) {
   // Create takes an output path, and is of the form:
   // bin output_path create/sparse args
   if (arguments.size() < 3) {
-    return fit::error("Not enough arguments for 'create' or 'sparse' command.");
+    return fpromise::error("Not enough arguments for 'create' or 'sparse' command.");
   }
 
   CreateParams params;
@@ -234,8 +235,8 @@ fit::result<CreateParams, std::string> CreateParams::FromArguments(
       params.format = FvmImageFormat::kSparseImage;
       break;
     default:
-      return fit::error("Malformed 'create' command. Found " + std::string(arguments[2]) +
-                        " and expected 'create' or 'sparse'.");
+      return fpromise::error("Malformed 'create' command. Found " + std::string(arguments[2]) +
+                             " and expected 'create' or 'sparse'.");
   }
   params.output_path = arguments[1];
 
@@ -272,8 +273,8 @@ fit::result<CreateParams, std::string> CreateParams::FromArguments(
 
   if (compression_type.has_value()) {
     if (compression_type.value() != "lz4") {
-      return fit::error("Unsupported compression type'" + compression_type.value() +
-                        "'. Currently only 'lz4' compression type is supported.");
+      return fpromise::error("Unsupported compression type'" + compression_type.value() +
+                             "'. Currently only 'lz4' compression type is supported.");
     }
     params.fvm_options.compression.schema = CompressionSchema::kLz4;
   }
@@ -291,18 +292,18 @@ fit::result<CreateParams, std::string> CreateParams::FromArguments(
     }
   }
 
-  return fit::ok(params);
+  return fpromise::ok(params);
 }
 
-fit::result<PaveParams, std::string> PaveParams::FromArguments(
+fpromise::result<PaveParams, std::string> PaveParams::FromArguments(
     fbl::Span<std::string_view> arguments) {
   PaveParams params;
   if (arguments.size() < 3) {
-    return fit::error("Not enough arguments for 'pave' command.");
+    return fpromise::error("Not enough arguments for 'pave' command.");
   }
   auto command = CommandFromString(arguments[2]);
   if (command != Command::kPave) {
-    return fit::error("Pave must be invoked with comman 'pave'.");
+    return fpromise::error("Pave must be invoked with comman 'pave'.");
   }
 
   params.output_path = arguments[1];
@@ -346,7 +347,7 @@ fit::result<PaveParams, std::string> PaveParams::FromArguments(
     params.type = TargetType::kBlockDevice;
   }
 
-  return fit::ok(params);
+  return fpromise::ok(params);
 }
 
 Command CommandFromString(std::string_view command_str) {

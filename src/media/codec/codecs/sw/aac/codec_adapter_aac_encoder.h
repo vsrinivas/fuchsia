@@ -7,7 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/zx/bti.h>
 
@@ -108,26 +108,26 @@ class CodecAdapterAacEncoder : public CodecAdapter {
 
   void ProcessInput(CodecInputItem input_item);
 
-  fit::result<void, CodecAdapterAacEncoder::Error> BuildStreamFromFormatDetails(
+  fpromise::result<void, CodecAdapterAacEncoder::Error> BuildStreamFromFormatDetails(
       const fuchsia::media::FormatDetails& format_details);
 
-  fit::result<fuchsia::media::PcmFormat, InputError> ValidateInputFormat(
+  fpromise::result<fuchsia::media::PcmFormat, InputError> ValidateInputFormat(
       const fuchsia::media::FormatDetails& format_details);
 
-  fit::result<Encoder, Error> CreateEncoder(
+  fpromise::result<Encoder, Error> CreateEncoder(
       const fuchsia::media::PcmFormat& pcm_format,
       const fuchsia::media::AacEncoderSettings& encoder_settings);
 
   ChunkInputStream::ControlFlow ProcessInputBlock(ChunkInputStream::InputBlock input_block);
 
-  fit::result<EncodeResult, AACENC_ERROR> Encode(ChunkInputStream::InputBlock input_block,
-                                                 OutputSink::OutputBlock output_block);
-
-  fit::result<EncodeResult, AACENC_ERROR> Flush(OutputSink::OutputBlock output_block);
-
-  fit::result<EncodeResult, AACENC_ERROR> CallEncoder(AACENC_InArgs* in_args,
-                                                      AACENC_BufDesc* in_buffer,
+  fpromise::result<EncodeResult, AACENC_ERROR> Encode(ChunkInputStream::InputBlock input_block,
                                                       OutputSink::OutputBlock output_block);
+
+  fpromise::result<EncodeResult, AACENC_ERROR> Flush(OutputSink::OutputBlock output_block);
+
+  fpromise::result<EncodeResult, AACENC_ERROR> CallEncoder(AACENC_InArgs* in_args,
+                                                           AACENC_BufDesc* in_buffer,
+                                                           OutputSink::OutputBlock output_block);
 
   void ReportError(Error error);
 

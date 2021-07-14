@@ -4,7 +4,7 @@
 
 #include "src/developer/forensics/testing/stubs/data_provider.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 

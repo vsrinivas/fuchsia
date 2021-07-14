@@ -65,31 +65,31 @@ class InspectTest : public sys::testing::TestWithEnvironment {
 
   // Open the root object connection on the given sync pointer.
   // Returns ZX_OK on success.
-  fit::result<DiagnosticsData> GetInspect() {
+  fpromise::result<DiagnosticsData> GetInspect() {
     auto archive = real_services()->Connect<fuchsia::diagnostics::ArchiveAccessor>();
     std::stringstream selector;
     selector << test_case_ << "/" << kTestProcessName << ":root";
     inspect::contrib::ArchiveReader reader(std::move(archive), {selector.str()});
-    fit::result<std::vector<DiagnosticsData>, std::string> result;
+    fpromise::result<std::vector<DiagnosticsData>, std::string> result;
     async::Executor executor(dispatcher());
     executor.schedule_task(
         reader.SnapshotInspectUntilPresent({kTestProcessName})
-            .then([&](fit::result<std::vector<DiagnosticsData>, std::string>& rest) {
+            .then([&](fpromise::result<std::vector<DiagnosticsData>, std::string>& rest) {
               result = std::move(rest);
             }));
     RunLoopUntil([&] { return result.is_ok() || result.is_error(); });
 
     if (result.is_error()) {
       EXPECT_FALSE(result.is_error()) << "Error was " << result.error();
-      return fit::error();
+      return fpromise::error();
     }
 
     if (result.value().size() != 1) {
       EXPECT_EQ(1u, result.value().size()) << "Expected only one component";
-      return fit::error();
+      return fpromise::error();
     }
 
-    return fit::ok(std::move(result.value()[0]));
+    return fpromise::ok(std::move(result.value()[0]));
   }
 
  private:

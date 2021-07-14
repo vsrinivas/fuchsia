@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 
@@ -10,10 +10,10 @@
 
 namespace {
 namespace example1 {
-fit::result<int, std::string> divide(int dividend, int divisor) {
+fpromise::result<int, std::string> divide(int dividend, int divisor) {
   if (divisor == 0)
-    return fit::error<std::string>("divide by zero");
-  return fit::ok(dividend / divisor);
+    return fpromise::error<std::string>("divide by zero");
+  return fpromise::ok(dividend / divisor);
 }
 
 int try_divide(int dividend, int divisor) {
@@ -26,14 +26,14 @@ int try_divide(int dividend, int divisor) {
   return -999;
 }
 
-fit::result<> open(std::string secret) {
+fpromise::result<> open(std::string secret) {
   printf("guessing \"%s\"\n", secret.c_str());
   if (secret == "sesame") {
     puts("yes!");
-    return fit::ok();
+    return fpromise::ok();
   }
   puts("no.");
-  return fit::error();
+  return fpromise::error();
 }
 
 bool guess_combination() { return open("friend") || open("sesame") || open("I give up"); }

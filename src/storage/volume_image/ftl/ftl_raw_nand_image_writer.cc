@@ -4,7 +4,7 @@
 
 #include "ftl_raw_nand_image_writer.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <cstdint>
 #include <iostream>
@@ -21,17 +21,17 @@
 
 namespace storage::volume_image {
 
-fit::result<std::tuple<FtlRawNandImageWriter, RawNandOptions>, std::string>
+fpromise::result<std::tuple<FtlRawNandImageWriter, RawNandOptions>, std::string>
 FtlRawNandImageWriter::Create(const RawNandOptions& device_options,
                               fbl::Span<const RawNandImageFlag> flags, ImageFormat format,
                               Writer* writer) {
   if (writer == nullptr) {
-    return fit::error(
+    return fpromise::error(
         "Failed to created |FtlRawNandImageWriter|. Argument |writer| must be a non null.");
   }
 
   if (device_options.oob_bytes_size == 0 || device_options.pages_per_block == 0) {
-    return fit::error(
+    return fpromise::error(
         "Failed to create |FtlRawNandImageWriter|. Arguments |device_options| must have non zero "
         "|oob_bytes_size| and non-zero |pages_per_block|.");
   }
@@ -49,7 +49,7 @@ FtlRawNandImageWriter::Create(const RawNandOptions& device_options,
              multiplier <= device_options.pages_per_block);
 
     if (static_cast<uint32_t>(multiplier) > device_options.pages_per_block) {
-      return fit::error(
+      return fpromise::error(
           "FtlRawNandImageWriter failed to create. Not enough spare bytes in block for the FTL.");
     }
 
@@ -75,12 +75,12 @@ FtlRawNandImageWriter::Create(const RawNandOptions& device_options,
     return write_result.take_error_result();
   }
 
-  return fit::ok(
+  return fpromise::ok(
       std::make_tuple(FtlRawNandImageWriter(device_options, multiplier, writer), ftl_options));
 }
 
-fit::result<void, std::string> FtlRawNandImageWriter::Write(uint64_t offset,
-                                                            fbl::Span<const uint8_t> data) {
+fpromise::result<void, std::string> FtlRawNandImageWriter::Write(uint64_t offset,
+                                                                 fbl::Span<const uint8_t> data) {
   uint64_t device_adjusted_page_size = RawNandImageGetAdjustedPageSize(options_);
   uint64_t adjusted_page_size = scale_factor_ * device_adjusted_page_size;
   uint64_t page_offset = offset % adjusted_page_size;
@@ -92,7 +92,7 @@ fit::result<void, std::string> FtlRawNandImageWriter::Write(uint64_t offset,
   // It is a page write.
   if (page_offset == 0) {
     if (data.size() != physical_page_per_logical * options_.page_size) {
-      return fit::error(
+      return fpromise::error(
           "FtlRawNandImageWriter requires buffer size match the number of physical pages per "
           "logical page.");
     }
@@ -110,13 +110,13 @@ fit::result<void, std::string> FtlRawNandImageWriter::Write(uint64_t offset,
         return write_result;
       }
     }
-    return fit::ok();
+    return fpromise::ok();
   }
 
   // Write each oob area.
   if (page_offset == physical_page_per_logical * options_.page_size) {
     if (data.size() != physical_page_per_logical * options_.oob_bytes_size) {
-      return fit::error(
+      return fpromise::error(
           "FtlRawNandImageWriter requires buffer size match the number of physical oob area per "
           "logical oob area per logical page.");
     }
@@ -137,10 +137,10 @@ fit::result<void, std::string> FtlRawNandImageWriter::Write(uint64_t offset,
       }
     }
 
-    return fit::ok();
+    return fpromise::ok();
   }
 
-  return fit::error(
+  return fpromise::error(
       "FtlRawNandImageWriter write failed. Unaligned page or unaligned oob write. Actual "
       "offset " +
       std::to_string(page_offset));

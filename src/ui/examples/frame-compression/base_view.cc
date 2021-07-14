@@ -121,13 +121,13 @@ void BaseView::Animate(fuchsia::images::PresentationInfo presentation_info) {
                        kHalfHeight * (1.f + .1f * sin(seconds * 0.6f)), -kDisplayHeight);
 }
 
-fit::promise<inspect::Inspector> BaseView::PopulateStats() const {
+fpromise::promise<inspect::Inspector> BaseView::PopulateStats() const {
   inspect::Inspector inspector;
 
   inspector.GetRoot().CreateUint(kWidth, width_, &inspector);
   inspector.GetRoot().CreateUint(kHeight, height_, &inspector);
 
-  return fit::make_ok_promise(std::move(inspector));
+  return fpromise::make_ok_promise(std::move(inspector));
 }
 
 }  // namespace frame_compression

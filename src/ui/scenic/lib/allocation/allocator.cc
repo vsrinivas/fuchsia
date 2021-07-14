@@ -52,7 +52,7 @@ void Allocator::RegisterBufferCollection(
   // DEFAULT.
   if (!args.has_buffer_collection_token() || !args.has_export_token()) {
     FX_LOGS(ERROR) << "RegisterBufferCollection called with missing arguments";
-    callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
+    callback(fpromise::error(RegisterBufferCollectionError::BAD_OPERATION));
     return;
   }
 
@@ -63,20 +63,20 @@ void Allocator::RegisterBufferCollection(
 
   if (!buffer_collection_token.is_valid()) {
     FX_LOGS(ERROR) << "RegisterBufferCollection called with invalid buffer collection token";
-    callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
+    callback(fpromise::error(RegisterBufferCollectionError::BAD_OPERATION));
     return;
   }
 
   if (!export_token.value.is_valid()) {
     FX_LOGS(ERROR) << "RegisterBufferCollection called with invalid export token";
-    callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
+    callback(fpromise::error(RegisterBufferCollectionError::BAD_OPERATION));
     return;
   }
 
   // Check if there is a valid peer.
   if (fsl::GetRelatedKoid(export_token.value.get()) == ZX_KOID_INVALID) {
     FX_LOGS(ERROR) << "RegisterBufferCollection called with no valid import tokens";
-    callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
+    callback(fpromise::error(RegisterBufferCollectionError::BAD_OPERATION));
     return;
   }
 
@@ -87,7 +87,7 @@ void Allocator::RegisterBufferCollection(
   // Check if this export token has already been used.
   if (buffer_collections_.find(koid) != buffer_collections_.end()) {
     FX_LOGS(ERROR) << "RegisterBufferCollection called with pre-registered export token";
-    callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
+    callback(fpromise::error(RegisterBufferCollectionError::BAD_OPERATION));
     return;
   }
 
@@ -108,7 +108,7 @@ void Allocator::RegisterBufferCollection(
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "RegisterBufferCollection called with a buffer collection token where "
                         "Duplicate() failed";
-      callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
+      callback(fpromise::error(RegisterBufferCollectionError::BAD_OPERATION));
       return;
     }
     tokens.push_back(std::move(extra_token));
@@ -120,21 +120,21 @@ void Allocator::RegisterBufferCollection(
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "RegisterBufferCollection called with a buffer collection token where "
                       "BindSharedCollection() failed";
-    callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
+    callback(fpromise::error(RegisterBufferCollectionError::BAD_OPERATION));
     return;
   }
   status = buffer_collection->Sync();
   if (status != ZX_OK) {
     FX_LOGS(ERROR)
         << "RegisterBufferCollection called with a buffer collection token where Sync() failed";
-    callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
+    callback(fpromise::error(RegisterBufferCollectionError::BAD_OPERATION));
     return;
   }
   status = buffer_collection->Close();
   if (status != ZX_OK) {
     FX_LOGS(ERROR)
         << "RegisterBufferCollection called with a buffer collection token where Close() failed";
-    callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
+    callback(fpromise::error(RegisterBufferCollectionError::BAD_OPERATION));
     return;
   }
 
@@ -161,7 +161,7 @@ void Allocator::RegisterBufferCollection(
       (*importers)[j]->ReleaseBufferCollection(koid);
     }
     FX_LOGS(ERROR) << "Failed to import the buffer collection to the BufferCollectionimporter.";
-    callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
+    callback(fpromise::error(RegisterBufferCollectionError::BAD_OPERATION));
     return;
   }
 
@@ -186,7 +186,7 @@ void Allocator::RegisterBufferCollection(
                        });
   FX_DCHECK(status == ZX_OK);
 
-  callback(fit::ok());
+  callback(fpromise::ok());
 }
 
 void Allocator::ReleaseBufferCollection(GlobalBufferCollectionId collection_id) {

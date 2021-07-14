@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_INSPECT_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
@@ -20,10 +20,9 @@ namespace feedback_data {
 // Collects the Inspect data.
 //
 // fuchsia.diagnostics.Archive is expected to be in |services|.
-::fit::promise<AttachmentValue> CollectInspectData(async_dispatcher_t* dispatcher,
-                                                   std::shared_ptr<sys::ServiceDirectory> services,
-                                                   fit::Timeout timeout,
-                                                   std::optional<size_t> data_budget);
+::fpromise::promise<AttachmentValue> CollectInspectData(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    fit::Timeout timeout, std::optional<size_t> data_budget);
 
 }  // namespace feedback_data
 }  // namespace forensics

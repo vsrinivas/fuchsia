@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <cstdint>
 #include <memory>
@@ -21,12 +21,13 @@ class BoundedWriter final : public Writer {
   BoundedWriter(std::unique_ptr<Writer> writer, uint64_t offset, uint64_t length)
       : offset_(offset), length_(length), writer_(std::move(writer)) {}
 
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     if (offset + buffer.size() > length_) {
-      return fit::error("BoundedWriter::Write out of bounds. offset: " + std::to_string(offset) +
-                        " byte_cout: " + std::to_string(buffer.size()) +
-                        " min_offset: " + std::to_string(offset_) +
-                        " max_offset: " + std::to_string(offset_ + length_ - 1) + ".");
+      return fpromise::error(
+          "BoundedWriter::Write out of bounds. offset: " + std::to_string(offset) + " byte_cout: " +
+          std::to_string(buffer.size()) + " min_offset: " + std::to_string(offset_) +
+          " max_offset: " + std::to_string(offset_ + length_ - 1) + ".");
     }
     return writer_->Write(offset_ + offset, buffer);
   }

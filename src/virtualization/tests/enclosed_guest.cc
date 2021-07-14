@@ -10,8 +10,8 @@
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fit/single_threaded_executor.h>
 #include <lib/fitx/result.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <string.h>
@@ -359,7 +359,7 @@ zx_status_t TerminaEnclosedGuest::SetupVsockServices(zx::time deadline) {
   executor_.schedule_task(
       builder.Build().and_then([this](std::unique_ptr<GrpcVsockServer>& result) mutable {
         server_ = std::move(result);
-        return fit::ok();
+        return fpromise::ok();
       }));
   if (!RunLoopUntil(
           GetLoop(), [this] { return server_ != nullptr; }, deadline)) {
@@ -373,7 +373,7 @@ grpc::Status TerminaEnclosedGuest::VmReady(grpc::ServerContext* context,
                                            const vm_tools::EmptyMessage* request,
                                            vm_tools::EmptyMessage* response) {
   auto p = NewGrpcVsockStub<vm_tools::Maitred>(vsock_, GetGuestCid(), kTerminaMaitredPort);
-  auto result = fit::run_single_threaded(std::move(p));
+  auto result = fpromise::run_single_threaded(std::move(p));
   if (result.is_ok()) {
     maitred_ = std::move(result.value());
   } else {

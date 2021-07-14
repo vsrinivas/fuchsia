@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_LOG_MESSAGE_STORE_H_
 
 #include <fuchsia/logger/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <deque>
 #include <mutex>
@@ -41,7 +41,7 @@ class LogMessageStore {
   // May add the encoded log message to the store:
   // * The message is dropped if the store has reached its maximum capacity, returning false.
   // * The message is omitted if it is the same one as the previous one in the store.
-  bool Add(::fit::result<fuchsia::logger::LogMessage, std::string> log);
+  bool Add(::fpromise::result<fuchsia::logger::LogMessage, std::string> log);
 
   // |str| will be the final message in the consumed buffer, after the dropped and repeated
   // messages.

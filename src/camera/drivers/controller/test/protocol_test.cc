@@ -5,7 +5,7 @@
 #include <fuchsia/hardware/camerahwaccel/c/banjo.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/errors.h>
@@ -85,7 +85,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   // This helper API does the basic validation of an Input Node.
-  fit::result<std::unique_ptr<camera::InputNode>, zx_status_t> GetInputNode(
+  fpromise::result<std::unique_ptr<camera::InputNode>, zx_status_t> GetInputNode(
       const ControllerMemoryAllocator& allocator, StreamCreationData* info) {
     EXPECT_NE(nullptr, info);
 

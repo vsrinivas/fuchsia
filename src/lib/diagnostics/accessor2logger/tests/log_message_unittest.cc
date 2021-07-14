@@ -205,7 +205,7 @@ TEST(LogMessage, Valid) {
   ASSERT_TRUE(one_message_result.is_ok());
   ASSERT_TRUE(two_message_result.is_ok());
 
-  std::vector<fit::result<LogMessage, std::string>> messages;
+  std::vector<fpromise::result<LogMessage, std::string>> messages;
   messages.insert(messages.end(), one_message_result.value().begin(),
                   one_message_result.value().end());
   messages.insert(messages.end(), two_message_result.value().begin(),

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
@@ -20,14 +20,14 @@ using inspect::internal::State;
 
 namespace {
 
-fit::function<fit::promise<Inspector>(Inspector&)> OpenChild(std::string next) {
+fit::function<fpromise::promise<Inspector>(Inspector&)> OpenChild(std::string next) {
   return [next = std::move(next)](Inspector& insp) { return insp.OpenChild(next); };
 }
 
-fit::function<fit::result<>(Inspector&)> TakeInspector(fit::result<Inspector>* out) {
-  return [out](Inspector& result) -> fit::result<> {
-    *out = fit::ok(std::move(result));
-    return fit::ok();
+fit::function<fpromise::result<>(Inspector&)> TakeInspector(fpromise::result<Inspector>* out) {
+  return [out](Inspector& result) -> fpromise::result<> {
+    *out = fpromise::ok(std::move(result));
+    return fpromise::ok();
   };
 }
 
@@ -38,7 +38,7 @@ TEST(LazyNode, SimpleLazy) {
       []() {
         auto content = inspect::Inspector();
         content.GetRoot().CreateInt("a", 1234, &content);
-        return fit::make_ok_promise(content);
+        return fpromise::make_ok_promise(content);
       },
       &inspector);
   inspector.GetRoot().CreateLazyNode(
@@ -46,13 +46,13 @@ TEST(LazyNode, SimpleLazy) {
       []() {
         auto content = inspect::Inspector();
         content.GetRoot().CreateInt("b", 1234, &content);
-        return fit::make_ok_promise(content);
+        return fpromise::make_ok_promise(content);
       },
       &inspector);
 
-  fit::result<Inspector> test0, next1;
+  fpromise::result<Inspector> test0, next1;
 
-  fit::single_threaded_executor exec;
+  fpromise::single_threaded_executor exec;
   exec.schedule_task(inspector.OpenChild("test-0").and_then(TakeInspector(&test0)));
   exec.schedule_task(inspector.OpenChild("next-1").and_then(TakeInspector(&next1)));
   exec.run();
@@ -104,7 +104,7 @@ TEST(LazyNode, LazyRemoval) {
     auto lazy = inspector.GetRoot().CreateLazyNode("test", []() {
       auto content = inspect::Inspector();
       content.GetRoot().CreateInt("a", 1234, &content);
-      return fit::make_ok_promise(content);
+      return fpromise::make_ok_promise(content);
     });
   }
 
@@ -126,15 +126,15 @@ TEST(LazyNode, NestedLazy) {
             []() {
               Inspector content;
               content.GetRoot().CreateInt("b", 12345, &content);
-              return fit::make_ok_promise(content);
+              return fpromise::make_ok_promise(content);
             },
             &content);
-        return fit::make_ok_promise(content);
+        return fpromise::make_ok_promise(content);
       },
       &inspector);
 
-  fit::result<Inspector> test0, sub0;
-  fit::single_threaded_executor exec;
+  fpromise::result<Inspector> test0, sub0;
+  fpromise::single_threaded_executor exec;
   exec.schedule_task(inspector.OpenChild("test-0").and_then(TakeInspector(&test0)));
   exec.schedule_task(
       inspector.OpenChild("test-0").and_then(OpenChild("sub-0")).and_then(TakeInspector(&sub0)));
@@ -194,7 +194,7 @@ TEST(LazyNode, AsyncLazy) {
   inspector.GetRoot().CreateLazyNode(
       "test",
       [&]() {
-        fit::bridge<Inspector> bridge;
+        fpromise::bridge<Inspector> bridge;
         {
           std::lock_guard<std::mutex> lock(mutex);
           cb = std::make_unique<fit::function<void(const Inspector&)>>(
@@ -203,12 +203,12 @@ TEST(LazyNode, AsyncLazy) {
               });
         }
         cv.notify_one();
-        return bridge.consumer.promise_or(fit::error());
+        return bridge.consumer.promise_or(fpromise::error());
       },
       &inspector);
 
-  fit::result<Inspector> test0;
-  fit::single_threaded_executor exec;
+  fpromise::result<Inspector> test0;
+  fpromise::single_threaded_executor exec;
   exec.schedule_task(inspector.OpenChild("test-0").and_then(TakeInspector(&test0)));
   exec.run();
 
@@ -242,7 +242,7 @@ class DeleteThisClass {
     lazy_ = node_.CreateLazyValues("values", [this] {
       inspect::Inspector insp;
       insp.GetRoot().CreateInt("val", *ptr_, &insp);
-      return fit::make_ok_promise(std::move(insp));
+      return fpromise::make_ok_promise(std::move(insp));
     });
   }
 
@@ -259,10 +259,10 @@ TEST(LazyNode, LazyLivenessRace) {
   auto value_promise = inspector.OpenChild("values-0");
   obj.reset();
 
-  fit::result<Inspector> result;
-  fit::single_threaded_executor exec;
+  fpromise::result<Inspector> result;
+  fpromise::single_threaded_executor exec;
   exec.schedule_task(
-      value_promise.then([&](fit::result<Inspector>& res) { result = std::move(res); }));
+      value_promise.then([&](fpromise::result<Inspector>& res) { result = std::move(res); }));
   exec.run();
 
   EXPECT_TRUE(result.is_ok());

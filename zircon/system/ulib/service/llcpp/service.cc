@@ -6,7 +6,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/device/vfs.h>
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <sys/stat.h>
 
 #include <cstdint>
@@ -27,65 +27,65 @@
 namespace storage::volume_image {
 namespace {
 
-fit::result<struct stat, std::string> GetBlockInfo(std::string_view path) {
+fpromise::result<struct stat, std::string> GetBlockInfo(std::string_view path) {
   std::string str_path(path);
   fbl::unique_fd device(open(str_path.c_str(), O_RDONLY));
 
   if (!device.is_valid()) {
     auto err = std::string(strerror(errno));
-    return fit::error("Failed to obtain FD for device at " + str_path +
-                      ". More specifically: " + err + ".");
+    return fpromise::error("Failed to obtain FD for device at " + str_path +
+                           ". More specifically: " + err + ".");
   }
 
   struct stat st = {};
   if (fstat(device.get(), &st) != 0) {
     auto err = std::string(strerror(errno));
-    return fit::error("Failed to perform fstat on device. More specifically: " + err + ".");
+    return fpromise::error("Failed to perform fstat on device. More specifically: " + err + ".");
   }
 
-  return fit::ok(st);
+  return fpromise::ok(st);
 }
 
-fit::result<uint64_t, std::string> GetSize(std::string_view path) {
+fpromise::result<uint64_t, std::string> GetSize(std::string_view path) {
   std::string str_path(path);
   fbl::unique_fd device(open(str_path.c_str(), O_RDONLY));
 
   if (!device.is_valid()) {
     auto err = std::string(strerror(errno));
-    return fit::error("Failed to obtain FD for device at " + str_path +
-                      ". More specifically: " + err + ".");
+    return fpromise::error("Failed to obtain FD for device at " + str_path +
+                           ". More specifically: " + err + ".");
   }
 
   off_t ret = lseek(device.get(), 0, SEEK_END);
   if (ret < 0) {
     auto err = std::string(strerror(errno));
-    return fit::error("Failed to seek to end of stream at " + str_path +
-                      ". More specifically: " + err + ".");
+    return fpromise::error("Failed to seek to end of stream at " + str_path +
+                           ". More specifically: " + err + ".");
   }
 
-  return fit::ok(static_cast<uint64_t>(ret));
+  return fpromise::ok(static_cast<uint64_t>(ret));
 }
 
 }  // namespace
 
-fit::result<void, std::string> Pave(const PaveParams& params) {
+fpromise::result<void, std::string> Pave(const PaveParams& params) {
   if (params.output_path.empty()) {
-    return fit::error("No image output path provided for Pave.");
+    return fpromise::error("No image output path provided for Pave.");
   }
 
   if (params.input_path.empty()) {
-    return fit::error(
+    return fpromise::error(
         "No image input path provided for Pave. Must provide path to sparse fvm image.");
   }
 
   if (params.is_output_embedded) {
     if (!params.offset.has_value()) {
-      return fit::error("Must provide offset for embedding fvm image.");
+      return fpromise::error("Must provide offset for embedding fvm image.");
     }
 
     // For block devices we use remaining space.
     if (!params.length.has_value() && params.type == TargetType::kFile) {
-      return fit::error("Must provide length for embedding fvm image.");
+      return fpromise::error("Must provide length for embedding fvm image.");
     }
   }
 
@@ -113,7 +113,8 @@ fit::result<void, std::string> Pave(const PaveParams& params) {
 
       if (params.offset.has_value() &&
           params.offset.value() % block_info_or.value().st_blksize != 0) {
-        return fit::error("Offset must be aligned to block boundary for paving a block device.");
+        return fpromise::error(
+            "Offset must be aligned to block boundary for paving a block device.");
       }
 
       auto size_or = GetSize(params.output_path);
@@ -133,7 +134,7 @@ fit::result<void, std::string> Pave(const PaveParams& params) {
       mtd_params.offset = params.offset.value_or(0);
       mtd_params.format = true;
       if (!params.max_bad_blocks.has_value()) {
-        return fit::error("Pave to |kMtd| target, requires |max_bad_blocks| to be set.");
+        return fpromise::error("Pave to |kMtd| target, requires |max_bad_blocks| to be set.");
       }
       mtd_params.max_bad_blocks = params.max_bad_blocks.value();
       FtlHandle handle;
@@ -200,7 +201,7 @@ fit::result<void, std::string> Pave(const PaveParams& params) {
     return pave_result.take_error_result();
   }
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
 }  // namespace storage::volume_image

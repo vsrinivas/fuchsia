@@ -5,7 +5,7 @@
 #include "src/sys/appmgr/storage_metrics.h"
 
 #include <lib/fdio/namespace.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspector.h>
@@ -60,10 +60,10 @@ class StorageMetricsTest : public ::testing::Test {
 
   // Grabs a new Hierarchy snapshot from Inspect.
   void GetHierarchy(inspect::Hierarchy* hierarchy_ptr) {
-    fit::single_threaded_executor executor;
-    fit::result<inspect::Hierarchy> hierarchy;
+    fpromise::single_threaded_executor executor;
+    fpromise::result<inspect::Hierarchy> hierarchy;
     executor.schedule_task(
-        inspect::ReadFromInspector(inspector_).then([&](fit::result<inspect::Hierarchy>& res) {
+        inspect::ReadFromInspector(inspector_).then([&](fpromise::result<inspect::Hierarchy>& res) {
           hierarchy = std::move(res);
         }));
     executor.run();

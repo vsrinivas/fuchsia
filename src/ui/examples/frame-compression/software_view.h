@@ -68,8 +68,8 @@ class SoftwareView : public BaseView {
   void SetAfbcPixelsFromPng(Image& image, png_structp png);
   void SetLinearPixelsFromPng(Image& image, png_structp png);
 
-  fit::promise<inspect::Inspector> PopulateStats() const;
-  fit::promise<inspect::Inspector> PopulateImageStats(const Image& image) const;
+  fpromise::promise<inspect::Inspector> PopulateStats() const;
+  fpromise::promise<inspect::Inspector> PopulateImageStats(const Image& image) const;
 
   const uint64_t modifier_;
   const uint32_t paint_count_;

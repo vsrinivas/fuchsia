@@ -5,7 +5,7 @@
 #include "src/storage/volume_image/fvm/fvm_image_extend.h"
 
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <cstdint>
 #include <iostream>
@@ -55,37 +55,39 @@ class MetadataBufferView final : public fvm::MetadataBuffer {
 
 class DelegateReader final : public Reader {
  public:
-  DelegateReader(
-      fit::function<fit::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)> delegate_reader,
-      uint64_t length)
+  DelegateReader(fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)>
+                     delegate_reader,
+                 uint64_t length)
       : delegate_(std::move(delegate_reader)), length_(length) {}
 
   uint64_t length() const final { return length_; }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     if (offset + buffer.size() > length_) {
-      return fit::error("DelegateReader::Read attempting to read out of bounds.");
+      return fpromise::error("DelegateReader::Read attempting to read out of bounds.");
     }
     return delegate_(offset, buffer);
   }
 
  private:
-  fit::function<fit::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)> delegate_;
+  fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)> delegate_;
   uint64_t length_ = 0;
 };
 
 class DelegateWriter final : public Writer {
  public:
-  DelegateWriter(fit::function<fit::result<void, std::string>(uint64_t, fbl::Span<const uint8_t>)>
-                     delegate_reader)
+  DelegateWriter(
+      fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<const uint8_t>)>
+          delegate_reader)
       : delegate_(std::move(delegate_reader)) {}
 
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     return delegate_(offset, buffer);
   }
 
  private:
-  fit::function<fit::result<void, std::string>(uint64_t, fbl::Span<const uint8_t>)> delegate_;
+  fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<const uint8_t>)> delegate_;
 };
 
 FvmOptions MakeOptions() {
@@ -123,10 +125,10 @@ TEST(FvmImageExtendTest, BadFvmSuperblockIsError) {
   DelegateReader reader(
       [](auto offset, auto buffer) {
         memset(buffer.data(), 0, buffer.size());
-        return fit::ok();
+        return fpromise::ok();
       },
       20u << 20);
-  DelegateWriter writer([](auto offset, auto buffer) { return fit::ok(); });
+  DelegateWriter writer([](auto offset, auto buffer) { return fpromise::ok(); });
 
   ASSERT_TRUE(FvmImageExtend(reader, MakeOptions(), writer).is_error());
 }
@@ -144,10 +146,10 @@ TEST(FvmImageExtendTest, ValidHeaderWithBadMetadataIsError) {
             offset,
             fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(&header), sizeof(header)),
             buffer);
-        return fit::ok();
+        return fpromise::ok();
       },
       kDefaultImageSize);
-  DelegateWriter writer([](auto offset, auto buffer) { return fit::ok(); });
+  DelegateWriter writer([](auto offset, auto buffer) { return fpromise::ok(); });
 
   ASSERT_TRUE(FvmImageExtend(reader, options, writer).is_error());
 }
@@ -178,16 +180,16 @@ TEST(FvmImageExtendTest, ValidHeaderAndMetadataWithMissingAllocatedSlicesIsError
   // out of bounds, this should reveal if there are any errors on reading, that they are handled
   // properly, and not silently continue.
   DelegateReader reader(
-      [&metadata_or](auto offset, auto buffer) -> fit::result<void, std::string> {
+      [&metadata_or](auto offset, auto buffer) -> fpromise::result<void, std::string> {
         if (offset + buffer.size() > metadata_or->GetHeader().GetSliceDataOffset(2)) {
-          return fit::error("Oops no more slices for you!.");
+          return fpromise::error("Oops no more slices for you!.");
         }
         // Copy whatever chunk of metadata is requested
         StreamContents(offset, AsSpan(metadata_or.value()), buffer);
-        return fit::ok();
+        return fpromise::ok();
       },
       kDefaultImageSize);
-  DelegateWriter writer([](auto offset, auto buffer) { return fit::ok(); });
+  DelegateWriter writer([](auto offset, auto buffer) { return fpromise::ok(); });
 
   ASSERT_TRUE(FvmImageExtend(reader, options, writer).is_error());
 }
@@ -207,25 +209,25 @@ TEST(FvmImageExtendTest, ValidHeaderAndMetadataAndWriterErrorIsError) {
   ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error_value();
 
   DelegateReader reader(
-      [&metadata_or](auto offset, auto buffer) -> fit::result<void, std::string> {
+      [&metadata_or](auto offset, auto buffer) -> fpromise::result<void, std::string> {
         StreamContents(offset, AsSpan(metadata_or.value()), buffer);
-        return fit::ok();
+        return fpromise::ok();
       },
       kDefaultImageSize);
   DelegateWriter writer(
-      [](auto offset, auto buffer) { return fit::error("Oops I did it again!"); });
+      [](auto offset, auto buffer) { return fpromise::error("Oops I did it again!"); });
 
   ASSERT_TRUE(FvmImageExtend(reader, options, writer).is_error());
 }
 
-fit::result<void, std::string> ValidFvmRead(const fvm::Metadata& metadata,
-                                            const FvmOptions& options, uint64_t image_size,
-                                            uint64_t offset, fbl::Span<uint8_t> read_buffer) {
+fpromise::result<void, std::string> ValidFvmRead(const fvm::Metadata& metadata,
+                                                 const FvmOptions& options, uint64_t image_size,
+                                                 uint64_t offset, fbl::Span<uint8_t> read_buffer) {
   const auto& header = metadata.GetHeader();
   if (offset + read_buffer.size() > image_size) {
-    return fit::error("ValidFvmRead out of bounds. Offset " + std::to_string(offset) +
-                      " Size: " + std::to_string(read_buffer.size()) +
-                      " Image Size: " + std::to_string(image_size));
+    return fpromise::error("ValidFvmRead out of bounds. Offset " + std::to_string(offset) +
+                           " Size: " + std::to_string(read_buffer.size()) +
+                           " Image Size: " + std::to_string(image_size));
   }
 
   auto primary_metadata_offset = header.GetSuperblockOffset(fvm::SuperblockType::kPrimary);
@@ -237,7 +239,7 @@ fit::result<void, std::string> ValidFvmRead(const fvm::Metadata& metadata,
       buffer_offset = primary_metadata_offset - offset;
     }
     StreamContents(offset, AsSpan(metadata), read_buffer.subspan(buffer_offset));
-    return fit::ok();
+    return fpromise::ok();
   }
 
   auto secondary_metadata_offset = header.GetSuperblockOffset(fvm::SuperblockType::kPrimary);
@@ -249,7 +251,7 @@ fit::result<void, std::string> ValidFvmRead(const fvm::Metadata& metadata,
       buffer_offset = secondary_metadata_offset - offset;
     }
     StreamContents(offset, AsSpan(metadata), read_buffer.subspan(buffer_offset));
-    return fit::ok();
+    return fpromise::ok();
   }
 
   // Assumes that physical slices are contiguous on disk. Reads data chunks into the
@@ -261,12 +263,12 @@ fit::result<void, std::string> ValidFvmRead(const fvm::Metadata& metadata,
     uint64_t slice_begin = (offset - data_offset) / options.slice_size + 1;
     uint8_t byte_value = static_cast<uint8_t>(slice_begin % std::numeric_limits<uint8_t>::max());
     memset(read_buffer.data(), byte_value, read_buffer.size());
-    return fit::ok();
+    return fpromise::ok();
   }
 
-  return fit::error("ValidFvmRead reading unknown region. Offset " + std::to_string(offset) +
-                    " Size: " + std::to_string(read_buffer.size()) +
-                    " Image Size: " + std::to_string(image_size));
+  return fpromise::error("ValidFvmRead reading unknown region. Offset " + std::to_string(offset) +
+                         " Size: " + std::to_string(read_buffer.size()) +
+                         " Image Size: " + std::to_string(image_size));
 }
 
 void CheckMetadata(fbl::Span<const fvm::VPartitionEntry> partitions,
@@ -384,7 +386,7 @@ TEST(FvmImageExtendTest, ValidFvmImageIsExtendedCorrectly) {
       fvm_image.resize(offset + buffer.size(), 0);
     }
     memcpy(&fvm_image[offset], buffer.data(), buffer.size());
-    return fit::ok();
+    return fpromise::ok();
   });
 
   auto extend_result = FvmImageExtend(reader, options, writer);
@@ -438,7 +440,7 @@ TEST(FvmImageExtendTest, ValidFvmImageWithBigSlicesIsExtendedCorrectly) {
       fvm_image.resize(offset + buffer.size(), 0);
     }
     memcpy(&fvm_image[offset], buffer.data(), buffer.size());
-    return fit::ok();
+    return fpromise::ok();
   });
 
   auto extend_result = FvmImageExtend(reader, options, writer);
@@ -455,7 +457,7 @@ TEST(FvmImageGetTrimmedSizeTest, BadFvmHeaderIsError) {
   DelegateReader reader(
       [](auto offset, auto buffer) {
         memset(buffer.data(), 0, buffer.size());
-        return fit::ok();
+        return fpromise::ok();
       },
       20u << 20);
 
@@ -475,7 +477,7 @@ TEST(FvmImageGetTrimmedSizeTest, ValidHeaderWithBadMetadataIsError) {
             offset,
             fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(&header), sizeof(header)),
             buffer);
-        return fit::ok();
+        return fpromise::ok();
       },
       kDefaultImageSize);
 

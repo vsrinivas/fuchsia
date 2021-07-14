@@ -46,7 +46,7 @@ void OnGe2dTaskRemoved(void* ctx, task_remove_status_t status) {
   static_cast<Ge2dNode*>(ctx)->OnTaskRemoved(status);
 }
 
-fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
+fpromise::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
     const ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
     zx_device_t* device, const ddk::Ge2dProtocolClient& ge2d, StreamCreationData* info,
     ProcessNode* parent_node, const InternalConfigNode& internal_ge2d_node) {
@@ -62,7 +62,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
     auto result = GetBuffers(memory_allocator, internal_ge2d_node, info, kTag);
     if (result.is_error()) {
       FX_LOGST(ERROR, kTag) << "Failed to get buffers";
-      return fit::error(result.error());
+      return fpromise::error(result.error());
     }
     output_buffers = std::move(result.value());
   }
@@ -93,7 +93,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
       info->stream_type(), info->image_format_index, internal_ge2d_node.in_place);
   if (!ge2d_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create GE2D node";
-    return fit::error(ZX_ERR_NO_MEMORY);
+    return fpromise::error(ZX_ERR_NO_MEMORY);
   }
 
   // Initialize the GE2D to get a unique task index.
@@ -112,7 +112,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
           ge2d_node->res_callback(), ge2d_node->remove_task_callback(), &ge2d_task_index);
       if (status != ZX_OK) {
         FX_PLOGST(ERROR, kTag, status) << "Failed to initialize GE2D resize task";
-        return fit::error(status);
+        return fpromise::error(status);
       }
       break;
     }
@@ -124,7 +124,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
         auto status = load_firmware(device, watermark.filename, vmo.reset_and_get_address(), &size);
         if (status != ZX_OK || size == 0) {
           FX_PLOGST(ERROR, kTag, status) << "Failed to load the watermark image";
-          return fit::error(status);
+          return fpromise::error(status);
         }
         watermark_vmos.push_back(std::move(vmo));
       }
@@ -165,19 +165,19 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
       }
       if (status != ZX_OK) {
         FX_PLOGST(ERROR, kTag, status) << "Failed to initialize GE2D watermark task";
-        return fit::error(status);
+        return fpromise::error(status);
       }
       break;
     }
     default: {
       FX_LOGST(ERROR, kTag) << "Unkwon config type";
-      return fit::error(ZX_ERR_INVALID_ARGS);
+      return fpromise::error(ZX_ERR_INVALID_ARGS);
     }
   }
 
   ge2d_node->set_task_index(ge2d_task_index);
 
-  auto return_value = fit::ok(ge2d_node.get());
+  auto return_value = fpromise::ok(ge2d_node.get());
   parent_node->AddChildNodeInfo(std::move(ge2d_node));
   return return_value;
 }

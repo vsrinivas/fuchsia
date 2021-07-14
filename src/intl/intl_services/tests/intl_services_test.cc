@@ -65,13 +65,9 @@ TEST_F(IntlServicesTest, AsyncSetThenGet) {
   // if the first OnChange event is sent out to the server before a binding
   // exists, causing this test to miss the OnChange notification.
   bool dummy_get_completed{};
-  auto dummy_get_callback = [&](fuchsia::intl::Profile res) {
-    dummy_get_completed = true;
-  };
+  auto dummy_get_callback = [&](fuchsia::intl::Profile res) { dummy_get_completed = true; };
   intl_property_provider_->GetProfile(dummy_get_callback);
-  RunLoopUntil([&] {
-    return dummy_get_completed || FIDLError() || Timeout();
-  });
+  RunLoopUntil([&] { return dummy_get_completed || FIDLError() || Timeout(); });
   ASSERT_FALSE(FIDLError());
   ASSERT_FALSE(Timeout());
 
@@ -90,9 +86,9 @@ TEST_F(IntlServicesTest, AsyncSetThenGet) {
     on_change_completed = true;
   };
 
-  fit::result<void, Error> set_result;
+  fpromise::result<void, Error> set_result;
   bool set_completed{};
-  auto set_callback = [&](fit::result<void, Error> res) {
+  auto set_callback = [&](fpromise::result<void, Error> res) {
     set_result = std::move(res);
     set_completed = true;
   };

@@ -20,7 +20,7 @@ DeviceWatcherImpl::DeviceWatcherImpl() : loop_(&kAsyncLoopConfigNoAttachToCurren
 
 DeviceWatcherImpl::~DeviceWatcherImpl() { loop_.Shutdown(); }
 
-fit::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> DeviceWatcherImpl::Create(
+fpromise::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> DeviceWatcherImpl::Create(
     fuchsia::sys::LauncherHandle launcher) {
   auto server = std::make_unique<DeviceWatcherImpl>();
 
@@ -29,13 +29,13 @@ fit::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> DeviceWatcherImpl::
   zx_status_t status = server->loop_.StartThread("DeviceWatcherImpl");
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
-  return fit::ok(std::move(server));
+  return fpromise::ok(std::move(server));
 }
 
-fit::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
+fpromise::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
     fuchsia::hardware::camera::DeviceHandle camera) {
   FX_LOGS(DEBUG) << "AddDevice(...)";
   fuchsia::hardware::camera::DeviceSyncPtr dev;
@@ -68,19 +68,19 @@ fit::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
   zx_status_t status = event.wait_one(kErrorSignal | kInfoSignal, zx::time::infinite(), &signaled);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   if (signaled & kErrorSignal) {
     FX_PLOGS(WARNING, status_return);
-    return fit::error(status_return);
+    return fpromise::error(status_return);
   }
 
   ZX_ASSERT(signaled & kInfoSignal);
 
   if (!info_return.has_vendor_id() || !info_return.has_product_id()) {
     FX_LOGS(INFO) << "Controller missing vendor or product ID.";
-    return fit::error(ZX_ERR_NOT_SUPPORTED);
+    return fpromise::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // TODO(fxbug.dev/43565): This generates the same ID for multiple instances of the same device. It
@@ -96,7 +96,7 @@ fit::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
   });
   if (result.is_error()) {
     FX_PLOGS(ERROR, result.error()) << "Failed to launch device instance.";
-    return fit::error(result.error());
+    return fpromise::error(result.error());
   }
   auto instance = result.take_value();
 
@@ -107,7 +107,7 @@ fit::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
         ++device_id_next_;
       });
 
-  return fit::ok(persistent_id);
+  return fpromise::ok(persistent_id);
 }
 
 void DeviceWatcherImpl::UpdateClients() {
@@ -151,7 +151,7 @@ void DeviceWatcherImpl::OnNewRequest(
 
 DeviceWatcherImpl::Client::Client(DeviceWatcherImpl& watcher) : watcher_(watcher), binding_(this) {}
 
-fit::result<std::unique_ptr<DeviceWatcherImpl::Client>, zx_status_t>
+fpromise::result<std::unique_ptr<DeviceWatcherImpl::Client>, zx_status_t>
 DeviceWatcherImpl::Client::Create(DeviceWatcherImpl& watcher, ClientId id,
                                   fidl::InterfaceRequest<fuchsia::camera3::DeviceWatcher> request,
                                   async_dispatcher_t* dispatcher) {
@@ -163,7 +163,7 @@ DeviceWatcherImpl::Client::Create(DeviceWatcherImpl& watcher, ClientId id,
   zx_status_t status = client->binding_.Bind(request.TakeChannel(), dispatcher);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   client->binding_.set_error_handler([client = client.get()](zx_status_t status) {
@@ -173,7 +173,7 @@ DeviceWatcherImpl::Client::Create(DeviceWatcherImpl& watcher, ClientId id,
     ZX_ASSERT(status == ZX_OK);
   });
 
-  return fit::ok(std::move(client));
+  return fpromise::ok(std::move(client));
 }
 
 void DeviceWatcherImpl::Client::UpdateDevices(const DevicesMap& devices) {

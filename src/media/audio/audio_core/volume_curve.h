@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_VOLUME_CURVE_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_VOLUME_CURVE_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <optional>
 #include <vector>
@@ -34,7 +34,8 @@ class VolumeCurve {
   // Attempts to construct a curve from a mapping from volume domain to gain in dbfs. Mappings must
   // represent a continuous increasing function from volume to gain in dbfs over the volume domain
   // [0.0, 1.0]. The gain range must start with a negative value and end exactly at 0.0.
-  static fit::result<VolumeCurve, std::string> FromMappings(std::vector<VolumeMapping> mappings);
+  static fpromise::result<VolumeCurve, std::string> FromMappings(
+      std::vector<VolumeMapping> mappings);
 
   // Samples the gain curve for the dbfs value at `volume`. Outside of [0.0, 1.0], the volume is
   // clamped before sampling.

@@ -151,7 +151,7 @@ cpp17::optional<CpuWatcher::Measurement> CpuWatcher::Task::Measure(const zx::tim
   }
 }
 
-fit::promise<inspect::Inspector> CpuWatcher::PopulateInspector() const {
+fpromise::promise<inspect::Inspector> CpuWatcher::PopulateInspector() const {
   TRACE_DURATION("appmgr", "CpuWatcher::PopulateInspector");
   std::lock_guard<std::mutex> lock(mutex_);
 
@@ -208,10 +208,10 @@ fit::promise<inspect::Inspector> CpuWatcher::PopulateInspector() const {
   inspector.emplace(std::move(max_size));
   inspector.emplace(std::move(dynamic_links));
 
-  return fit::make_ok_promise(std::move(inspector));
+  return fpromise::make_ok_promise(std::move(inspector));
 }
 
-fit::promise<inspect::Inspector> CpuWatcher::PopulateRecentUsage() const {
+fpromise::promise<inspect::Inspector> CpuWatcher::PopulateRecentUsage() const {
   TRACE_DURATION("appmgr", "CpuWatcher::PopulateRecentUsage");
   std::lock_guard<std::mutex> lock(mutex_);
 
@@ -227,7 +227,7 @@ fit::promise<inspect::Inspector> CpuWatcher::PopulateRecentUsage() const {
   inspector.GetRoot().CreateInt(kRecentQueueTime, most_recent_total_.queue_time, &inspector);
   inspector.GetRoot().CreateInt(kRecentTimestamp, most_recent_total_.timestamp, &inspector);
 
-  return fit::make_ok_promise(std::move(inspector));
+  return fpromise::make_ok_promise(std::move(inspector));
 }
 
 }  // namespace component

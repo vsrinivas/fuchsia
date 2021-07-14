@@ -61,7 +61,7 @@ struct ConfigValues {
 class App {
  public:
   explicit App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspect_node,
-               fit::promise<ui_display::DisplayControllerHandles> dc_handles_promise,
+               fpromise::promise<ui_display::DisplayControllerHandles> dc_handles_promise,
                fit::closure quit_callback);
 
   ~App();

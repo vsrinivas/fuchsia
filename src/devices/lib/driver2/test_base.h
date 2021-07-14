@@ -6,7 +6,7 @@
 #define SRC_DEVICES_LIB_DRIVER2_TEST_BASE_H_
 
 #include <fuchsia/io/cpp/fidl_test_base.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include "src/devices/lib/driver2/namespace.h"
 

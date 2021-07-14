@@ -936,7 +936,7 @@ void LogicalBufferCollection::TryAllocate(std::vector<NodeProperties*> nodes) {
   linearized_buffer_collection_info_before_population_.emplace(
       &tmp_buffer_collection_info_before_population);
 
-  fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t> result =
+  fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t> result =
       Allocate(combined_constraints, &buffer_collection_info);
   if (!result.is_ok()) {
     ZX_DEBUG_ASSERT(result.error() != ZX_OK);
@@ -1446,7 +1446,7 @@ void LogicalBufferCollection::LogTreeForDebugOnly(NodeProperties* node) {
   }
 }
 
-fit::result<fuchsia_sysmem2::wire::BufferCollectionConstraints, void>
+fpromise::result<fuchsia_sysmem2::wire::BufferCollectionConstraints, void>
 LogicalBufferCollection::CombineConstraints(ConstraintsList* constraints_list) {
   // This doesn't necessarily mean that any of the clients have
   // set non-empty constraints though.  We do require that at least one
@@ -1468,7 +1468,7 @@ LogicalBufferCollection::CombineConstraints(ConstraintsList* constraints_list) {
     LogError(FROM_HERE,
              "At least one participant must specify buffer_memory_constraints or "
              "image_format_constraints that implies non-zero min buffer size.");
-    return fit::error();
+    return fpromise::error();
   }
 
   // Start with empty constraints / unconstrained.
@@ -1485,24 +1485,24 @@ LogicalBufferCollection::CombineConstraints(ConstraintsList* constraints_list) {
     auto defer_reset = fit::defer([this] { current_node_properties_ = nullptr; });
     if (!CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kNotAggregated,
                                                   constraints_entry.mutate_constraints())) {
-      return fit::error();
+      return fpromise::error();
     }
     if (!AccumulateConstraintBufferCollection(&acc,
                                               std::move(constraints_entry.mutate_constraints()))) {
       // This is a failure.  The space of permitted settings contains no
       // points.
-      return fit::error();
+      return fpromise::error();
     }
   }
 
   if (!CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kAggregated, acc)) {
-    return fit::error();
+    return fpromise::error();
   }
 
   LogInfo(FROM_HERE, "After combining constraints:");
   LogConstraints(FROM_HERE, nullptr, acc);
 
-  return fit::ok(std::move(acc));
+  return fpromise::ok(std::move(acc));
 }
 
 // TODO(dustingreen): Consider rejecting secure_required + any non-secure heaps, including the
@@ -2228,7 +2228,7 @@ bool LogicalBufferCollection::IsColorSpaceEqual(const fuchsia_sysmem2::wire::Col
   return a.type() == b.type();
 }
 
-static fit::result<fuchsia_sysmem2::wire::HeapType, zx_status_t> GetHeap(
+static fpromise::result<fuchsia_sysmem2::wire::HeapType, zx_status_t> GetHeap(
     const fuchsia_sysmem2::wire::BufferMemoryConstraints& constraints, Device* device) {
   if (constraints.secure_required()) {
     // TODO(fxbug.dev/37452): Generalize this.
@@ -2236,15 +2236,15 @@ static fit::result<fuchsia_sysmem2::wire::HeapType, zx_status_t> GetHeap(
     // checked previously
     ZX_DEBUG_ASSERT(!constraints.secure_required() || IsSecurePermitted(constraints));
     if (IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::kAmlogicSecure)) {
-      return fit::ok(fuchsia_sysmem2::wire::HeapType::kAmlogicSecure);
+      return fpromise::ok(fuchsia_sysmem2::wire::HeapType::kAmlogicSecure);
     } else {
       ZX_DEBUG_ASSERT(
           IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::kAmlogicSecureVdec));
-      return fit::ok(fuchsia_sysmem2::wire::HeapType::kAmlogicSecureVdec);
+      return fpromise::ok(fuchsia_sysmem2::wire::HeapType::kAmlogicSecureVdec);
     }
   }
   if (IsHeapPermitted(constraints, fuchsia_sysmem2::wire::HeapType::kSystemRam)) {
-    return fit::ok(fuchsia_sysmem2::wire::HeapType::kSystemRam);
+    return fpromise::ok(fuchsia_sysmem2::wire::HeapType::kSystemRam);
   }
 
   for (size_t i = 0; i < constraints.heap_permitted().count(); ++i) {
@@ -2257,13 +2257,13 @@ static fit::result<fuchsia_sysmem2::wire::HeapType, zx_status_t> GetHeap(
           constraints.ram_domain_supported()) ||
          (heap_properties.coherency_domain_support().inaccessible_supported() &&
           constraints.inaccessible_domain_supported()))) {
-      return fit::ok(heap);
+      return fpromise::ok(heap);
     }
   }
-  return fit::error(ZX_ERR_NOT_FOUND);
+  return fpromise::error(ZX_ERR_NOT_FOUND);
 }
 
-static fit::result<fuchsia_sysmem2::wire::CoherencyDomain> GetCoherencyDomain(
+static fpromise::result<fuchsia_sysmem2::wire::CoherencyDomain> GetCoherencyDomain(
     const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints,
     MemoryAllocator* memory_allocator) {
   ZX_DEBUG_ASSERT(constraints.has_buffer_memory_constraints());
@@ -2279,18 +2279,18 @@ static fit::result<fuchsia_sysmem2::wire::CoherencyDomain> GetCoherencyDomain(
       // RAM coherency domain.
       //
       // TODO - base on the system in use.
-      return fit::ok(fuchsia_sysmem2::wire::CoherencyDomain::kRam);
+      return fpromise::ok(fuchsia_sysmem2::wire::CoherencyDomain::kRam);
     }
   }
 
   if (heap_properties.coherency_domain_support().cpu_supported() &&
       constraints.buffer_memory_constraints().cpu_domain_supported()) {
-    return fit::ok(CoherencyDomain::kCpu);
+    return fpromise::ok(CoherencyDomain::kCpu);
   }
 
   if (heap_properties.coherency_domain_support().ram_supported() &&
       constraints.buffer_memory_constraints().ram_domain_supported()) {
-    return fit::ok(CoherencyDomain::kRam);
+    return fpromise::ok(CoherencyDomain::kRam);
   }
 
   if (heap_properties.coherency_domain_support().inaccessible_supported() &&
@@ -2298,13 +2298,13 @@ static fit::result<fuchsia_sysmem2::wire::CoherencyDomain> GetCoherencyDomain(
     // Intentionally permit treating as Inaccessible if we reach here, even
     // if the heap permits CPU access.  Only domain in common among
     // participants is Inaccessible.
-    return fit::ok(fuchsia_sysmem2::wire::CoherencyDomain::kInaccessible);
+    return fpromise::ok(fuchsia_sysmem2::wire::CoherencyDomain::kInaccessible);
   }
 
-  return fit::error();
+  return fpromise::error();
 }
 
-fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t>
+fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t>
 LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
     const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints) {
   TRACE_DURATION("gfx", "LogicalBufferCollection:GenerateUnpopulatedBufferCollectionInfo", "this",
@@ -2324,13 +2324,13 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
              "aggregate min_buffer_count > aggregate max_buffer_count - "
              "min: %u max: %u",
              min_buffer_count, max_buffer_count);
-    return fit::error(ZX_ERR_NOT_SUPPORTED);
+    return fpromise::error(ZX_ERR_NOT_SUPPORTED);
   }
   if (min_buffer_count > fuchsia_sysmem::wire::kMaxCountBufferCollectionInfoBuffers) {
     LogError(FROM_HERE,
              "aggregate min_buffer_count (%d) > MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS (%d)",
              min_buffer_count, fuchsia_sysmem::wire::kMaxCountBufferCollectionInfoBuffers);
-    return fit::error(ZX_ERR_NOT_SUPPORTED);
+    return fpromise::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   result.set_buffers(fidl_allocator, fidl_allocator, min_buffer_count);
@@ -2359,7 +2359,7 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
       LogError(
           FROM_HERE,
           "is_secure && need_clear_aux_buffers_for_secure && !allow_clear_aux_buffers_for_secure");
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
+      return fpromise::error(ZX_ERR_NOT_SUPPORTED);
     }
   }
 
@@ -2367,7 +2367,7 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
   if (!result_get_heap.is_ok()) {
     LogError(FROM_HERE, "Can not find a heap permitted by buffer constraints, error %d",
              result_get_heap.error());
-    return fit::error(result_get_heap.error());
+    return fpromise::error(result_get_heap.error());
   }
   buffer_settings.set_heap(fidl_allocator, result_get_heap.value());
 
@@ -2380,13 +2380,13 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
   MemoryAllocator* allocator = parent_device_->GetAllocator(buffer_settings);
   if (!allocator) {
     LogError(FROM_HERE, "No memory allocator for buffer settings");
-    return fit::error(ZX_ERR_NO_MEMORY);
+    return fpromise::error(ZX_ERR_NO_MEMORY);
   }
 
   auto coherency_domain_result = GetCoherencyDomain(constraints, allocator);
   if (!coherency_domain_result.is_ok()) {
     LogError(FROM_HERE, "No coherency domain found for buffer constraints");
-    return fit::error(ZX_ERR_NOT_SUPPORTED);
+    return fpromise::error(ZX_ERR_NOT_SUPPORTED);
   }
   buffer_settings.set_coherency_domain(fidl_allocator, coherency_domain_result.value());
 
@@ -2419,7 +2419,7 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
     if (best_index == UINT32_MAX) {
       ZX_DEBUG_ASSERT(found_unsupported_when_protected);
       LogError(FROM_HERE, "No formats were compatible with protected memory.");
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
+      return fpromise::error(ZX_ERR_NOT_SUPPORTED);
     }
     // clone from constraints to settings.
     settings.set_image_format_constraints(
@@ -2445,7 +2445,7 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
                                       image_format_constraints.coded_width_divisor()));
     if (min_image.coded_width() > image_format_constraints.max_coded_width()) {
       LogError(FROM_HERE, "coded_width_divisor caused coded_width > max_coded_width");
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
+      return fpromise::error(ZX_ERR_NOT_SUPPORTED);
     }
     // We use required_max_coded_height because that's the max height that the producer (or
     // initiator) wants these buffers to be able to hold.
@@ -2455,7 +2455,7 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
                                 image_format_constraints.coded_height_divisor()));
     if (min_image.coded_height() > image_format_constraints.max_coded_height()) {
       LogError(FROM_HERE, "coded_height_divisor caused coded_height > max_coded_height");
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
+      return fpromise::error(ZX_ERR_NOT_SUPPORTED);
     }
     min_image.set_bytes_per_row(
         fidl_allocator,
@@ -2468,7 +2468,7 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
       LogError(FROM_HERE,
                "bytes_per_row_divisor caused bytes_per_row > "
                "max_bytes_per_row");
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
+      return fpromise::error(ZX_ERR_NOT_SUPPORTED);
     }
 
     if (min_image.coded_width() * min_image.coded_height() >
@@ -2476,7 +2476,7 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
       LogError(FROM_HERE,
                "coded_width * coded_height > "
                "max_coded_width_times_coded_height");
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
+      return fpromise::error(ZX_ERR_NOT_SUPPORTED);
     }
 
     // These don't matter for computing size in bytes.
@@ -2497,7 +2497,7 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
     if (image_min_size_bytes > min_size_bytes) {
       if (image_min_size_bytes > max_size_bytes) {
         LogError(FROM_HERE, "image_min_size_bytes > max_size_bytes");
-        return fit::error(ZX_ERR_NOT_SUPPORTED);
+        return fpromise::error(ZX_ERR_NOT_SUPPORTED);
       }
       min_size_bytes = image_min_size_bytes;
       ZX_DEBUG_ASSERT(min_size_bytes <= max_size_bytes);
@@ -2507,7 +2507,7 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
   // Currently redundant with earlier checks, but just in case...
   if (min_size_bytes == 0) {
     LogError(FROM_HERE, "min_size_bytes == 0");
-    return fit::error(ZX_ERR_NOT_SUPPORTED);
+    return fpromise::error(ZX_ERR_NOT_SUPPORTED);
   }
   ZX_DEBUG_ASSERT(min_size_bytes != 0);
 
@@ -2517,12 +2517,12 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
   uint64_t total_size_bytes = min_size_bytes * result.buffers().count();
   if (total_size_bytes > kMaxTotalSizeBytesPerCollection) {
     LogError(FROM_HERE, "total_size_bytes > kMaxTotalSizeBytesPerCollection");
-    return fit::error(ZX_ERR_NO_MEMORY);
+    return fpromise::error(ZX_ERR_NO_MEMORY);
   }
 
   if (min_size_bytes > kMaxSizeBytesPerBuffer) {
     LogError(FROM_HERE, "min_size_bytes > kMaxSizeBytesPerBuffer");
-    return fit::error(ZX_ERR_NO_MEMORY);
+    return fpromise::error(ZX_ERR_NO_MEMORY);
   }
   ZX_DEBUG_ASSERT(min_size_bytes <= std::numeric_limits<uint32_t>::max());
 
@@ -2543,7 +2543,7 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
              "GenerateUnpopulatedBufferCollectionInfo() failed because size %u > "
              "max_allocation_size %ld",
              buffer_settings.size_bytes(), parent_device_->settings().max_allocation_size);
-    return fit::error(ZX_ERR_NO_MEMORY);
+    return fpromise::error(ZX_ERR_NO_MEMORY);
   }
 
   // We initially set vmo_usable_start to bit-fields indicating whether vmo and aux_vmo fields will
@@ -2561,10 +2561,10 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
     result.buffers()[i] = std::move(vmo_buffer);
   }
 
-  return fit::ok(std::move(result));
+  return fpromise::ok(std::move(result));
 }
 
-fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t>
+fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t>
 LogicalBufferCollection::Allocate(
     const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints,
     fuchsia_sysmem2::wire::BufferCollectionInfo* builder) {
@@ -2579,7 +2579,7 @@ LogicalBufferCollection::Allocate(
   MemoryAllocator* allocator = parent_device_->GetAllocator(buffer_settings);
   if (!allocator) {
     LogError(FROM_HERE, "No memory allocator for buffer settings");
-    return fit::error(ZX_ERR_NO_MEMORY);
+    return fpromise::error(ZX_ERR_NO_MEMORY);
   }
 
   if (settings.has_image_format_constraints()) {
@@ -2645,7 +2645,7 @@ LogicalBufferCollection::Allocate(
     auto allocate_result = AllocateVmo(allocator, settings, i);
     if (!allocate_result.is_ok()) {
       LogError(FROM_HERE, "AllocateVmo() failed");
-      return fit::error(ZX_ERR_NO_MEMORY);
+      return fpromise::error(ZX_ERR_NO_MEMORY);
     }
     zx::vmo vmo = allocate_result.take_value();
     auto& vmo_buffer = result.buffers()[i];
@@ -2655,7 +2655,7 @@ LogicalBufferCollection::Allocate(
       auto aux_allocate_result = AllocateVmo(maybe_aux_allocator, maybe_aux_settings.value(), i);
       if (!aux_allocate_result.is_ok()) {
         LogError(FROM_HERE, "AllocateVmo() failed (aux)");
-        return fit::error(ZX_ERR_NO_MEMORY);
+        return fpromise::error(ZX_ERR_NO_MEMORY);
       }
       zx::vmo aux_vmo = aux_allocate_result.take_value();
       vmo_buffer.set_aux_vmo(table_set_.allocator(), std::move(aux_vmo));
@@ -2676,10 +2676,10 @@ LogicalBufferCollection::Allocate(
   });
   memory_allocator_ = allocator;
 
-  return fit::ok(std::move(result));
+  return fpromise::ok(std::move(result));
 }
 
-fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
+fpromise::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
     MemoryAllocator* allocator, const fuchsia_sysmem2::wire::SingleBufferSettings& settings,
     uint32_t index) {
   TRACE_DURATION("gfx", "LogicalBufferCollection::AllocateVmo", "size_bytes",
@@ -2691,7 +2691,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
       fbl::round_up(settings.buffer_settings().size_bytes(), zx_system_get_page_size());
   if (rounded_size_bytes < settings.buffer_settings().size_bytes()) {
     LogError(FROM_HERE, "size_bytes overflows when rounding to multiple of page_size");
-    return fit::error();
+    return fpromise::error();
   }
 
   // raw_vmo may itself be a child VMO of an allocator's overall contig VMO,
@@ -2711,14 +2711,14 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
              "allocator.Allocate failed - size_bytes: %zu "
              "status: %d",
              rounded_size_bytes, status);
-    return fit::error();
+    return fpromise::error();
   }
 
   zx_info_vmo_t info;
   status = raw_parent_vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     LogError(FROM_HERE, "raw_parent_vmo.get_info(ZX_INFO_VMO) failed - status %d", status);
-    return fit::error();
+    return fpromise::error();
   }
 
   auto node = inspect_node_.CreateChild(fbl::StringPrintf("vmo-%ld", info.koid).c_str());
@@ -2749,7 +2749,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
       status = raw_parent_vmo.write(kZeroes, offset, bytes_to_write);
       if (status != ZX_OK) {
         LogError(FROM_HERE, "raw_parent_vmo.write() failed - status: %d", status);
-        return fit::error();
+        return fpromise::error();
       }
       offset += bytes_to_write;
     }
@@ -2764,7 +2764,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
     if (status != ZX_OK) {
       LogError(FROM_HERE, "raw_parent_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN) failed - status: %d",
                status);
-      return fit::error();
+      return fpromise::error();
     }
   }
 
@@ -2798,7 +2798,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   status = tracked_parent_vmo->vmo().duplicate(kSysmemVmoRights, &cooked_parent_vmo);
   if (status != ZX_OK) {
     LogError(FROM_HERE, "zx::object::duplicate() failed - status: %d", status);
-    return fit::error();
+    return fpromise::error();
   }
 
   zx::vmo local_child_vmo;
@@ -2806,7 +2806,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
       cooked_parent_vmo.create_child(ZX_VMO_CHILD_SLICE, 0, rounded_size_bytes, &local_child_vmo);
   if (status != ZX_OK) {
     LogError(FROM_HERE, "zx::vmo::create_child() failed - status: %d", status);
-    return fit::error();
+    return fpromise::error();
   }
 
   zx_info_handle_basic_t child_info{};
@@ -2821,7 +2821,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   if (status != ZX_OK) {
     LogError(FROM_HERE, "tracked_parent->StartWait() failed - status: %d", status);
     // ~tracked_parent_vmo calls allocator.Delete().
-    return fit::error();
+    return fpromise::error();
   }
   zx_handle_t raw_parent_vmo_handle = tracked_parent_vmo->vmo().get();
   TrackedParentVmo& parent_vmo_ref = *tracked_parent_vmo;
@@ -2837,7 +2837,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
     // In this path, the ~local_child_vmo will async trigger parent_vmo_ref::OnZeroChildren()
     // which will call allocator.Delete() via above do_delete lambda passed to
     // ParentVmo::ParentVmo().
-    return fit::error();
+    return fpromise::error();
   }
   if (name) {
     local_child_vmo.set_property(ZX_PROP_NAME, name->c_str(), name->size());
@@ -2845,7 +2845,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
 
   // ~cooked_parent_vmo is fine, since local_child_vmo counts as a child of raw_parent_vmo for
   // ZX_VMO_ZERO_CHILDREN purposes.
-  return fit::ok(std::move(local_child_vmo));
+  return fpromise::ok(std::move(local_child_vmo));
 }
 
 void LogicalBufferCollection::CreationTimedOut(async_dispatcher_t* dispatcher,

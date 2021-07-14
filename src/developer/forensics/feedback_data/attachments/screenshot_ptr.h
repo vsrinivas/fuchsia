@@ -7,7 +7,7 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
@@ -21,7 +21,7 @@ namespace feedback_data {
 // Asks Scenic to take the screenshot of the current view and return it.
 //
 // fuchsia.ui.scenic.Scenic is expected to be in |services|.
-::fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
+::fpromise::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     fit::Timeout timeout);
 
@@ -33,7 +33,7 @@ class Scenic {
  public:
   Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(fit::Timeout timeout);
+  ::fpromise::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(fit::Timeout timeout);
 
  private:
   fidl::OneShotPtr<fuchsia::ui::scenic::Scenic, fuchsia::ui::scenic::ScreenshotData> scenic_;

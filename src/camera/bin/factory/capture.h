@@ -7,7 +7,7 @@
 
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <png.h>
 #include <stdio.h>
 
@@ -79,10 +79,10 @@ using ConversionMethod = void (Capture::*)(ImageIter[2], Crop&, std::vector<uint
 
 class Capture {
  public:
-  static fit::result<std::unique_ptr<Capture>, zx_status_t> Create(uint32_t stream,
-                                                                   const std::string path,
-                                                                   bool want_image,
-                                                                   CaptureResponse callback);
+  static fpromise::result<std::unique_ptr<Capture>, zx_status_t> Create(uint32_t stream,
+                                                                        const std::string path,
+                                                                        bool want_image,
+                                                                        CaptureResponse callback);
   Capture();
   ~Capture() = default;
 

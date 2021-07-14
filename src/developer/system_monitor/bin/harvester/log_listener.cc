@@ -6,9 +6,9 @@
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/result.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
@@ -23,10 +23,10 @@ namespace harvester {
 LogListener::LogListener(const std::shared_ptr<sys::ServiceDirectory>& services)
     : services_(services) {}
 
-fit::promise<> LogListener::Listen(
+fpromise::promise<> LogListener::Listen(
     std::function<void(std::vector<const std::string>)> content_callback) {
   // Manages a completer/consumer for notifiying callers when listener closes.
-  fit::bridge<> bridge;
+  fpromise::bridge<> bridge;
 
   fuchsia::diagnostics::ArchiveAccessorPtr archive;
   services_->Connect(archive.NewRequest());
@@ -41,12 +41,12 @@ fit::promise<> LogListener::Listen(
                              iterator_.NewRequest());
 
   GetLogData(content_callback, std::move(bridge.completer));
-  return bridge.consumer.promise_or(fit::error());
+  return bridge.consumer.promise_or(fpromise::error());
 }
 
 void LogListener::GetLogData(
     std::function<void(std::vector<const std::string>)> content_callback,
-    fit::completer<>&& completer) {
+    fpromise::completer<>&& completer) {
   iterator_->GetNext(
       [this, content_callback = std::move(content_callback),
        completer = std::move(completer)](auto result) mutable {

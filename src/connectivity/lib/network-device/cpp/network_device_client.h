@@ -346,7 +346,8 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
   void RxSignal(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                 const zx_packet_signal_t* signal);
   void ErrorTeardown(zx_status_t);
-  void ScheduleCallbackPromise(fit::promise<void, zx_status_t> promise, ErrorCallback callback);
+  void ScheduleCallbackPromise(fpromise::promise<void, zx_status_t> promise,
+                               ErrorCallback callback);
 
   bool session_running_ = false;
   RxCallback rx_callback_;

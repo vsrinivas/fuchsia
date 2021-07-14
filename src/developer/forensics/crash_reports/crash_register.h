@@ -7,7 +7,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <map>
@@ -38,7 +38,7 @@ class CrashRegister : public fuchsia::feedback::CrashReportingProductRegister {
 
   // Returns the Product registered by clients for a given component URL, otherwise the default
   // Product for the platform.
-  ::fit::promise<Product> GetProduct(const std::string& program_name, fit::Timeout timeout);
+  ::fpromise::promise<Product> GetProduct(const std::string& program_name, fit::Timeout timeout);
 
  private:
   void RestoreFromJson();

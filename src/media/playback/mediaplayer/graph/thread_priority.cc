@@ -6,7 +6,7 @@
 
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 
@@ -17,7 +17,7 @@ constexpr uint32_t kHighPriority = 23;
 constexpr char kServicePathPrefix[] = "/svc/";
 constexpr char kProfileName[] = "src/media/playback/mediaplayer";
 
-fit::result<zx::unowned_profile, zx_status_t> GetHighPriorityProfile() {
+fpromise::result<zx::unowned_profile, zx_status_t> GetHighPriorityProfile() {
   static zx::profile profile;
   static zx_status_t status = []() {
     zx::channel server_channel, client_channel;
@@ -54,10 +54,10 @@ fit::result<zx::unowned_profile, zx_status_t> GetHighPriorityProfile() {
   }();
 
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
-  return fit::ok<zx::unowned_profile>(zx::unowned_profile{profile});
+  return fpromise::ok<zx::unowned_profile>(zx::unowned_profile{profile});
 }
 
 }  // namespace

@@ -21,11 +21,11 @@ namespace camera {
 
 constexpr auto kTag = "camera_controller_gdc_node";
 
-fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
+fpromise::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
     zx_device_t* device, ProductConfig& product_config, const camera::GdcConfig& config_type) {
   if (config_type == GdcConfig::INVALID) {
     FX_LOGST(DEBUG, kTag) << "Invalid GDC configuration type";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   gdc_config_info info;
@@ -34,10 +34,10 @@ fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
       load_firmware(device, product_config.GetGdcConfigFile(config_type), &info.config_vmo, &size);
   if (status != ZX_OK || size == 0) {
     FX_PLOGST(ERROR, kTag, status) << "Failed to load the GDC firmware";
-    return fit::error(status);
+    return fpromise::error(status);
   }
   info.size = safemath::checked_cast<uint32_t>(size);
-  return fit::ok(info);
+  return fpromise::ok(info);
 }
 
 void OnGdcFrameAvailable(void* ctx, const frame_available_info_t* info) {
@@ -59,7 +59,7 @@ void OnGdcResChange(void* ctx, const frame_available_info_t* info) {
   static_cast<camera::ProcessNode*>(ctx)->OnResolutionChanged(info);
 }
 
-fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
+fpromise::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
     const ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
     zx_device_t* device, const ddk::GdcProtocolClient& gdc, StreamCreationData* info,
     ProcessNode* parent_node, const InternalConfigNode& internal_gdc_node) {
@@ -67,7 +67,7 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
   auto result = GetBuffers(memory_allocator, internal_gdc_node, info, kTag);
   if (result.is_error()) {
     FX_LOGST(ERROR, kTag) << "Failed to get buffers";
-    return fit::error(result.error());
+    return fpromise::error(result.error());
   }
 
   auto output_buffers_hlcpp = std::move(result.value());
@@ -110,7 +110,7 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
     auto gdc_config = LoadGdcConfiguration(device, *product_config, config);
     if (gdc_config.is_error()) {
       FX_LOGST(ERROR, kTag) << "Failed to load GDC configuration";
-      return fit::error(gdc_config.error());
+      return fpromise::error(gdc_config.error());
     }
     config_vmos_info.push_back(gdc_config.value());
   }
@@ -127,7 +127,7 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
                                                     info->stream_type(), output_format_index);
   if (!gdc_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create GDC node";
-    return fit::error(ZX_ERR_NO_MEMORY);
+    return fpromise::error(ZX_ERR_NO_MEMORY);
   }
 
   // Initialize the GDC to get a unique task index
@@ -146,13 +146,13 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
                              gdc_node->remove_task_callback(), &gdc_task_index);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Failed to initialize GDC";
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   gdc_node->set_task_index(gdc_task_index);
 
   // Add child node.
-  auto return_value = fit::ok(gdc_node.get());
+  auto return_value = fpromise::ok(gdc_node.get());
   parent_node->AddChildNodeInfo(std::move(gdc_node));
   return return_value;
 }

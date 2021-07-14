@@ -71,15 +71,15 @@ void ShutdownManager::Shutdown(zx::duration timeout) {
     return;
   }
 
-  std::vector<fit::promise<>> promises;
+  std::vector<fpromise::promise<>> promises;
   for (auto& callback : clients_) {
     promises.push_back(callback());
   }
   clients_.clear();
 
   // NOTE: It's OK to capture |this| because the closure won't run if |exectutor_| is destroyed.
-  auto joined_promise = fit::join_promise_vector(std::move(promises))
-                            .and_then([this](std::vector<fit::result<>>& results) {
+  auto joined_promise = fpromise::join_promise_vector(std::move(promises))
+                            .and_then([this](std::vector<fpromise::result<>>& results) {
                               bool was_set = shared_bool_->exchange(true);
                               if (!was_set) {
                                 FX_DCHECK(state_ == State::kShuttingDown);

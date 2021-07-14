@@ -545,7 +545,7 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Nod
 
   // Send an |fuchsia.io/OnOpen| event if requested.
   if (options->flags.describe) {
-    fit::result<VnodeRepresentation, zx_status_t> result =
+    fpromise::result<VnodeRepresentation, zx_status_t> result =
         internal::Describe(vnode, protocol, *options);
     if (result.is_error()) {
       fidl::WireEventSender<fio::Node>(std::move(server_end))

@@ -8,7 +8,7 @@
 
 namespace blobfs {
 
-void BlobTransaction::Commit(fs::Journal& journal, fit::promise<void, zx_status_t> data,
+void BlobTransaction::Commit(fs::Journal& journal, fpromise::promise<void, zx_status_t> data,
                              fit::callback<void()> callback) {
   zx_status_t status = journal.CommitTransaction({
       .metadata_operations = operations_.TakeOperations(),

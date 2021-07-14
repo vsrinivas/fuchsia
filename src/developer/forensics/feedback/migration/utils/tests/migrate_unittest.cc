@@ -37,12 +37,12 @@ class MigrateTest : public UnitTestFixture {
     FX_CHECK(to_cache_fd_.is_valid());
   }
 
-  ::fit::result<void, Error> Migrate(const zx::duration timeout = zx::duration::infinite()) {
-    std::optional<::fit::result<void, Error>> result;
+  ::fpromise::result<void, Error> Migrate(const zx::duration timeout = zx::duration::infinite()) {
+    std::optional<::fpromise::result<void, Error>> result;
 
     executor_.schedule_task(
         MigrateLastRebootData(dispatcher(), services(), to_data_fd_, to_cache_fd_, timeout)
-            .then([&](::fit::result<void, Error>& r) { result = std::move(r); }));
+            .then([&](::fpromise::result<void, Error>& r) { result = std::move(r); }));
     RunLoopUntilIdle();
 
     FX_CHECK(result);

@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_SOUNDS_SOUNDPLAYER_WAV_READER_H_
 #define SRC_MEDIA_SOUNDS_SOUNDPLAYER_WAV_READER_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <vector>
 
@@ -21,10 +21,10 @@ class WavReader {
 
   // Processes the file. |fd| must be positioned at the beginning of the file. This method does
   // not close |fd| regardless of the result, but will leave |fd| at an arbitrary position.
-  fit::result<Sound, zx_status_t> Process(int fd);
+  fpromise::result<Sound, zx_status_t> Process(int fd);
 
   // Processes the buffer.
-  fit::result<Sound, zx_status_t> Process(const uint8_t* data, size_t size);
+  fpromise::result<Sound, zx_status_t> Process(const uint8_t* data, size_t size);
 
  private:
   struct FourCc {

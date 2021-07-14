@@ -4,7 +4,7 @@
 
 #include "src/storage/volume_image/adapter/blobfs_partition.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <zircon/hw/gpt.h>
 
 #include <algorithm>
@@ -44,7 +44,7 @@ class BackupSuperblockReader final : public Reader {
 
   uint64_t length() const final { return reader_->length() + blobfs::kBlobfsBlockSize; }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     if (offset + buffer.size() > blobfs::kBlobfsBlockSize) {
       // Read the first part with the original offset if it crosses the boundary.
       if (offset < blobfs::kBlobfsBlockSize) {
@@ -75,7 +75,7 @@ class PatchedSuperblockReader final : public Reader {
 
   uint64_t length() const final { return reader_->length(); }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     if (auto read_result = reader_->Read(offset, buffer); read_result.is_error()) {
       return read_result.take_error_result();
     }
@@ -91,7 +91,7 @@ class PatchedSuperblockReader final : public Reader {
                remaining_bytes);
       }
     }
-    return fit::ok();
+    return fpromise::ok();
   };
 
   blobfs::Superblock& superblock() { return superblock_; }
@@ -103,18 +103,18 @@ class PatchedSuperblockReader final : public Reader {
 
 }  // namespace
 
-fit::result<Partition, std::string> CreateBlobfsFvmPartition(
+fpromise::result<Partition, std::string> CreateBlobfsFvmPartition(
     std::unique_ptr<Reader> source_image, const PartitionOptions& partition_options,
     const FvmOptions& fvm_options) {
   if (fvm_options.slice_size % blobfs::kBlobfsBlockSize != 0) {
-    return fit::error(
+    return fpromise::error(
         "Fvm slice size must be a multiple of blobfs block size. Expected blobfs_block_size: " +
         std::to_string(blobfs::kBlobfsBlockSize) +
         " fvm_slice_size: " + std::to_string(fvm_options.slice_size) + ".");
   }
 
   if (2 * blobfs::kBlobfsBlockSize > fvm_options.slice_size) {
-    return fit::error(
+    return fpromise::error(
         "Blobfs Superblock and Backup Superblock must fit within the first slice. Expected slice "
         "size of at least " +
         std::to_string(2 * blobfs::kBlobfsBlockSize) + ", but found " +
@@ -132,13 +132,13 @@ fit::result<Partition, std::string> CreateBlobfsFvmPartition(
 
   // Minor validation that we are actually dealing with a blobfs superblock.
   if (superblock.magic0 != blobfs::kBlobfsMagic0) {
-    return fit::error(
+    return fpromise::error(
         "Found bad magic0(" + std::to_string(superblock.magic0) +
         ") value in blobfs superblock(Expected: " + std::to_string(blobfs::kBlobfsMagic0) + ").");
   }
 
   if (superblock.magic1 != blobfs::kBlobfsMagic1) {
-    return fit::error(
+    return fpromise::error(
         "Found bad magic1(" + std::to_string(superblock.magic1) +
         ") value in blobfs superblock(Expected: " + std::to_string(blobfs::kBlobfsMagic1) + ").");
   }
@@ -241,10 +241,10 @@ fit::result<Partition, std::string> CreateBlobfsFvmPartition(
 
   if (partition_options.max_bytes.has_value() &&
       accumulated_bytes > partition_options.max_bytes.value()) {
-    return fit::error("Blobfs FVM Partition allocated " + std::to_string(accumulated_slices) + "(" +
-                      std::to_string(accumulated_bytes) +
-                      " bytes) exceeding provided upperbound |max_bytes|(" +
-                      std::to_string(partition_options.max_bytes.value()) + ").");
+    return fpromise::error("Blobfs FVM Partition allocated " + std::to_string(accumulated_slices) +
+                           "(" + std::to_string(accumulated_bytes) +
+                           " bytes) exceeding provided upperbound |max_bytes|(" +
+                           std::to_string(partition_options.max_bytes.value()) + ").");
   }
 
   auto patched_superblock_reader =
@@ -267,7 +267,7 @@ fit::result<Partition, std::string> CreateBlobfsFvmPartition(
 
   auto reader_with_backup_superblock =
       std::make_unique<BackupSuperblockReader>(std::move(patched_superblock_reader));
-  return fit::ok(Partition(volume, address, std::move(reader_with_backup_superblock)));
+  return fpromise::ok(Partition(volume, address, std::move(reader_with_backup_superblock)));
 }
 
 }  // namespace storage::volume_image

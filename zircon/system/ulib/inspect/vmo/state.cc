@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/bridge.h>
-#include <lib/fit/sequencer.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/sequencer.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/state.h>
@@ -806,14 +806,14 @@ std::vector<std::string> State::GetLinkNames() const {
   return ret;
 }
 
-fit::promise<Inspector> State::CallLinkCallback(const std::string& name) {
+fpromise::promise<Inspector> State::CallLinkCallback(const std::string& name) {
   LazyNodeCallbackHolder holder;
 
   {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = link_callbacks_.find(name);
     if (it == link_callbacks_.end()) {
-      return fit::make_result_promise<Inspector>(fit::error());
+      return fpromise::make_result_promise<Inspector>(fpromise::error());
     }
     // Copy out the holder.
     holder = it->second;

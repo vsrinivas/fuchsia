@@ -4,7 +4,7 @@
 
 #include "src/storage/volume_image/adapter/minfs_partition.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <zircon/hw/gpt.h>
 
 #include <cstdint>
@@ -38,14 +38,14 @@ class PatchedSuperblockReader final : public Reader {
 
   uint64_t length() const final { return reader_->length(); }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     if (auto read_result = reader_->Read(offset, buffer); read_result.is_error()) {
       return read_result.take_error_result();
     }
 
     if (!(offset + buffer.size() > superblock_offset_) ||
         !(offset <= superblock_offset_ + minfs::kMinfsBlockSize)) {
-      return fit::ok();
+      return fpromise::ok();
     }
 
     uint64_t bytes_before_superblock =
@@ -69,7 +69,7 @@ class PatchedSuperblockReader final : public Reader {
              bytes_to_read);
     }
 
-    return fit::ok();
+    return fpromise::ok();
   };
 
   minfs::Superblock& superblock() { return superblock_; }
@@ -82,11 +82,11 @@ class PatchedSuperblockReader final : public Reader {
 
 }  // namespace
 
-fit::result<Partition, std::string> CreateMinfsFvmPartition(
+fpromise::result<Partition, std::string> CreateMinfsFvmPartition(
     std::unique_ptr<Reader> source_image, const PartitionOptions& partition_options,
     const FvmOptions& fvm_options) {
   if (fvm_options.slice_size % minfs::kMinfsBlockSize != 0) {
-    return fit::error(
+    return fpromise::error(
         "Fvm slice size must be a multiple of minfs block size. Expected minfs_block_size: " +
         std::to_string(minfs::kMinfsBlockSize) +
         " fvm_slice_size: " + std::to_string(fvm_options.slice_size) + ".");
@@ -103,13 +103,13 @@ fit::result<Partition, std::string> CreateMinfsFvmPartition(
 
   // Minor validation that we are actually dealing with a blobfs superblock.
   if (superblock.magic0 != minfs::kMinfsMagic0) {
-    return fit::error(
+    return fpromise::error(
         "Found bad magic0(" + std::to_string(superblock.magic0) +
         ") value in minfs superblock(Expected: " + std::to_string(minfs::kMinfsMagic0) + ").");
   }
 
   if (superblock.magic1 != minfs::kMinfsMagic1) {
-    return fit::error(
+    return fpromise::error(
         "Found bad magic1(" + std::to_string(superblock.magic1) +
         ") value in minfs superblock(Expected: " + std::to_string(minfs::kMinfsMagic1) + ").");
   }
@@ -241,13 +241,13 @@ fit::result<Partition, std::string> CreateMinfsFvmPartition(
 
   if (partition_options.max_bytes.has_value() &&
       accumulated_bytes > partition_options.max_bytes.value()) {
-    return fit::error("Minfs FVM Partition allocated " + std::to_string(accumulated_slices) + "(" +
-                      std::to_string(accumulated_bytes) +
-                      " bytes) exceeding provided upperbound |max_bytes|(" +
-                      std::to_string(partition_options.max_bytes.value()) + ").");
+    return fpromise::error("Minfs FVM Partition allocated " + std::to_string(accumulated_slices) +
+                           "(" + std::to_string(accumulated_bytes) +
+                           " bytes) exceeding provided upperbound |max_bytes|(" +
+                           std::to_string(partition_options.max_bytes.value()) + ").");
   }
 
-  return fit::ok(
+  return fpromise::ok(
       Partition(volume, address, std::move(patched_superblock_and_backup_superblock_reader)));
 }
 

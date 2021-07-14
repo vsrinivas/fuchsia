@@ -1432,7 +1432,7 @@ class BlobfsMetricIntegrationTest : public FdioTest {
   void GetReadBytes(uint64_t* total_read_bytes) {
     const std::array<std::string, 2> algorithms = {"uncompressed", "chunked"};
     const std::array<std::string, 2> read_methods = {"paged_read_stats", "unpaged_read_stats"};
-    fit::result<inspect::Hierarchy> hierarchy_or_error = TakeSnapshot();
+    fpromise::result<inspect::Hierarchy> hierarchy_or_error = TakeSnapshot();
     ASSERT_TRUE(hierarchy_or_error.is_ok());
     inspect::Hierarchy hierarchy = std::move(hierarchy_or_error.value());
     *total_read_bytes = 0;

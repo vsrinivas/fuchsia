@@ -6,7 +6,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -80,9 +80,9 @@ class CrashRegisterTest : public UnitTestFixture {
     auto promise = crash_register_->GetProduct(program_name, fit::Timeout(timeout));
 
     bool was_called = false;
-    ::fit::result<Product> product;
+    ::fpromise::result<Product> product;
     executor_.schedule_task(
-        std::move(promise).then([&was_called, &product](::fit::result<Product>& result) {
+        std::move(promise).then([&was_called, &product](::fpromise::result<Product>& result) {
           was_called = true;
           product = std::move(result);
         }));

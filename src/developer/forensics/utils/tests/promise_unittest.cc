@@ -5,7 +5,7 @@
 #include "src/developer/forensics/utils/fit/promise.h"
 
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -31,14 +31,14 @@ class PromiseTest : public gtest::TestLoopFixture {
 class StringCombiner {
  public:
   StringCombiner(const std::vector<std::string>& strings) : strings_(strings) {}
-  ::fit::promise<> Combine(std::function<void(std::string*)> callback) {
-    return ::fit::make_promise([this, cb = callback]() -> ::fit::result<> {
+  ::fpromise::promise<> Combine(std::function<void(std::string*)> callback) {
+    return ::fpromise::make_promise([this, cb = callback]() -> ::fpromise::result<> {
       std::string str;
       for (const auto& string : strings_) {
         str += string;
       }
       cb(&str);
-      return ::fit::ok();
+      return ::fpromise::ok();
     });
   }
 
@@ -49,7 +49,7 @@ class StringCombiner {
 // This example will not compile.
 //
 // TEST_F(PromiseTest, Wont_Compile) {
-//  ::fit::promise<> promise;
+//  ::fpromise::promise<> promise;
 //  std::string result;
 //  auto combiner = std::make_unique<StringCombiner>(std::vector<std::string>({
 //      "s1, ",
@@ -67,7 +67,7 @@ class StringCombiner {
 // TEST_F(PromiseTest, Check_WillDieIfNotKeptAlive) {
 //  ASSERT_DEATH(
 //      {
-//        ::fit::promise<> promise;
+//        ::fpromise::promise<> promise;
 //        std::string result;
 //        {
 //          auto combiner = std::make_unique<StringCombiner>(std::vector<std::string>({
@@ -86,7 +86,7 @@ class StringCombiner {
 //}
 
 TEST_F(PromiseTest, Check_UniquePtrStaysAlive) {
-  ::fit::promise<> promise;
+  ::fpromise::promise<> promise;
   std::string result;
   {
     auto combiner = std::make_unique<StringCombiner>(std::vector<std::string>({
@@ -107,7 +107,7 @@ TEST_F(PromiseTest, Check_UniquePtrStaysAlive) {
 }
 
 TEST_F(PromiseTest, Check_SharedPtrStaysAlive) {
-  ::fit::promise<> promise;
+  ::fpromise::promise<> promise;
   std::string result;
   {
     auto combiner = std::make_shared<StringCombiner>(std::vector<std::string>({
@@ -128,7 +128,7 @@ TEST_F(PromiseTest, Check_SharedPtrStaysAlive) {
 }
 
 TEST_F(PromiseTest, Check_TwoPtrsStaysAlive) {
-  ::fit::promise<> promise;
+  ::fpromise::promise<> promise;
   std::string result;
   {
     auto combiner = std::make_unique<StringCombiner>(std::vector<std::string>({

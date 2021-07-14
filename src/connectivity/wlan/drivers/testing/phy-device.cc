@@ -210,7 +210,7 @@ void PhyDevice::SetCountry(wlan_device::CountryCode req, SetCountryCallback call
 
 void PhyDevice::GetCountry(GetCountryCallback callback) {
   zxlogf(INFO, "testing/PHY: GetCountry");
-  callback(fit::error(ZX_ERR_NOT_SUPPORTED));
+  callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
 }
 
 void PhyDevice::ClearCountry(ClearCountryCallback callback) {

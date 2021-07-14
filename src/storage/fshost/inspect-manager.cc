@@ -55,14 +55,14 @@ void InspectManager::ServeStats(const std::string& name, fbl::RefPtr<fs::Vnode> 
         fidl::ClientEnd<fio::Node> root_chan;
         zx_status_t status = OpenNode(root->GetRemote(), "/", S_IFDIR, &root_chan);
         if (status != ZX_OK) {
-          return fit::make_result_promise(fit::ok(std::move(insp)));
+          return fpromise::make_result_promise(fpromise::ok(std::move(insp)));
         }
         // Note: we are unsafely assuming that |root_chan| is a directory
         // i.e. speaks |fuchsia.io/Directory|.
         fidl::ClientEnd<fio::Directory> root_dir(root_chan.TakeChannel());
         FillFileTreeSizes(std::move(root_dir), insp.GetRoot().CreateChild(name), &insp);
         FillStats(root->GetRemote(), &insp);
-        return fit::make_result_promise(fit::ok(std::move(insp)));
+        return fpromise::make_result_promise(fpromise::ok(std::move(insp)));
       },
       &inspector_);
 }

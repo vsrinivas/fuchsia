@@ -103,7 +103,7 @@ void Engine::InitializeInspectObjects() {
       insp.emplace(std::move(view_names));
       insp.emplace(std::move(view_holder_names));
     }
-    return fit::make_ok_promise(std::move(insp));
+    return fpromise::make_ok_promise(std::move(insp));
   });
 }
 

@@ -18,9 +18,9 @@ namespace {
 inspect::Hierarchy GetHierarchy(const inspect::Inspector& inspector) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async::Executor executor(loop.dispatcher());
-  fit::result<inspect::Hierarchy> hierarchy;
+  fpromise::result<inspect::Hierarchy> hierarchy;
   executor.schedule_task(inspect::ReadFromInspector(inspector).then(
-      [&](fit::result<inspect::Hierarchy>& res) { hierarchy = std::move(res); }));
+      [&](fpromise::result<inspect::Hierarchy>& res) { hierarchy = std::move(res); }));
   while (!hierarchy) {
     loop.Run(zx::deadline_after(zx::sec(1)), true);
   }

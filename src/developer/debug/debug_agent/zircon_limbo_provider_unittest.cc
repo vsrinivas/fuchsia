@@ -44,7 +44,7 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
       return;
     }
 
-    callback(fit::ok(CreateExceptionList()));
+    callback(fpromise::ok(CreateExceptionList()));
     reply_watch_processes_ = false;
   }
 
@@ -52,26 +52,26 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
                          ProcessLimbo::RetrieveExceptionCallback callback) override {
     auto it = processes_.find(process_koid);
     if (it == processes_.end())
-      return callback(fit::error(ZX_ERR_NOT_FOUND));
+      return callback(fpromise::error(ZX_ERR_NOT_FOUND));
 
     // We cannot set any fake handles, as they will fail on the channel write.
     ProcessException exception;
     exception.set_info(it->second.info());
 
     processes_.erase(it);
-    callback(fit::ok(std::move(exception)));
+    callback(fpromise::ok(std::move(exception)));
   }
 
   void ReleaseProcess(zx_koid_t process_koid, ProcessLimbo::ReleaseProcessCallback cb) override {
     auto it = processes_.find(process_koid);
     if (it == processes_.end())
-      return cb(fit::error(ZX_ERR_NOT_FOUND));
+      return cb(fpromise::error(ZX_ERR_NOT_FOUND));
 
     processes_.erase(it);
-    cb(fit::ok());
+    cb(fpromise::ok());
 
     if (reply_watch_processes_ && watch_processes_callback_) {
-      watch_processes_callback_(fit::ok(CreateExceptionList()));
+      watch_processes_callback_(fpromise::ok(CreateExceptionList()));
       reply_watch_processes_ = false;
       return;
     }
@@ -96,7 +96,7 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
 
     // If there is a callback, only send the new exceptions over.
     if (watch_processes_callback_) {
-      watch_processes_callback_(fit::ok(CreateExceptionList()));
+      watch_processes_callback_(fpromise::ok(CreateExceptionList()));
       watch_processes_callback_ = {};
       reply_watch_processes_ = false;
     }

@@ -301,7 +301,7 @@ void FlatlandManager::DestroyInstanceFunction(scheduling::SessionId session_id) 
   // This function is called on the Flatland instance thread, but the instance removal must be
   // triggered from the main thread since it accesses and modifies the |flatland_instances_| map.
   executor_.schedule_task(
-      fit::make_promise([this, session_id] { this->RemoveFlatlandInstance(session_id); }));
+      fpromise::make_promise([this, session_id] { this->RemoveFlatlandInstance(session_id); }));
 }
 
 std::shared_ptr<FlatlandDisplay> FlatlandManager::GetPrimaryFlatlandDisplayForRendering() {

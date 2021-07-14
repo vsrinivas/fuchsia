@@ -657,11 +657,11 @@ TEST_F(ClearDecryptorAdapterTest, InspectValues) {
   AssertNoChannelErrors();
 
   async::Executor executor(dispatcher());
-  fit::result<inspect::Hierarchy> hierarchy;
-  executor.schedule_task(
-      inspect::ReadFromInspector(inspector_).then([&](fit::result<inspect::Hierarchy>& result) {
-        hierarchy = std::move(result);
-      }));
+  fpromise::result<inspect::Hierarchy> hierarchy;
+  executor.schedule_task(inspect::ReadFromInspector(inspector_)
+                             .then([&](fpromise::result<inspect::Hierarchy>& result) {
+                               hierarchy = std::move(result);
+                             }));
   RunLoopUntil([&]() { return !hierarchy.is_pending(); });
   ASSERT_TRUE(hierarchy.is_ok());
 

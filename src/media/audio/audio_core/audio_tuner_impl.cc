@@ -72,7 +72,7 @@ void AudioTunerImpl::SetAudioDeviceProfile(std::string device_id,
 
   context_.threading_model().FidlDomain().executor()->schedule_task(
       promise.then([this, device_id, config, volume_curve,
-                    callback = std::move(callback)](fit::result<void, zx_status_t>& result) {
+                    callback = std::move(callback)](fpromise::result<void, zx_status_t>& result) {
         if (result.is_ok()) {
           auto tuned_device_it = tuned_device_specifications_.find(device_id);
           if (tuned_device_it != tuned_device_specifications_.end()) {
@@ -101,8 +101,9 @@ void AudioTunerImpl::DeleteAudioDeviceProfile(std::string device_id,
   auto promise = context_.device_manager().UpdatePipelineConfig(
       device_id, default_device.pipeline_config, default_device.volume_curve);
 
-  context_.threading_model().FidlDomain().executor()->schedule_task(promise.then(
-      [this, device_id, callback = std::move(callback)](fit::result<void, zx_status_t>& result) {
+  context_.threading_model().FidlDomain().executor()->schedule_task(
+      promise.then([this, device_id,
+                    callback = std::move(callback)](fpromise::result<void, zx_status_t>& result) {
         FX_CHECK(result.is_ok());
         tuned_device_specifications_.erase(device_id);
         callback(ZX_OK);
@@ -120,7 +121,7 @@ void AudioTunerImpl::SetAudioEffectConfig(std::string device_id,
                                                               effect.configuration());
   context_.threading_model().FidlDomain().executor()->schedule_task(
       promise.then([this, device_id, effect = std::move(effect), callback = std::move(callback)](
-                       fit::result<void, fuchsia::media::audio::UpdateEffectError>& result) {
+                       fpromise::result<void, fuchsia::media::audio::UpdateEffectError>& result) {
         if (result.is_ok()) {
           UpdateTunedDeviceSpecification(device_id, effect) ? callback(ZX_OK)
                                                             : callback(ZX_ERR_NOT_FOUND);

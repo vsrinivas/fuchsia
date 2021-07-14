@@ -12,7 +12,8 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fit/result.h>
+#include <lib/fit/function.h>
+#include <lib/fpromise/result.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
@@ -22,7 +23,7 @@
 class DeviceInstance {
  public:
   DeviceInstance();
-  static fit::result<std::unique_ptr<DeviceInstance>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> Create(
       const fuchsia::sys::LauncherPtr& launcher, fuchsia::hardware::camera::DeviceHandle camera,
       fit::closure on_component_unavailable);
   void OnCameraRequested(fidl::InterfaceRequest<fuchsia::camera3::Device> request);

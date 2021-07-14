@@ -47,18 +47,18 @@ constexpr zx_signals_t kWakeSignals =
 
 namespace internal {
 
-fit::result<VnodeRepresentation, zx_status_t> Describe(const fbl::RefPtr<Vnode>& vnode,
-                                                       VnodeProtocol protocol,
-                                                       VnodeConnectionOptions options) {
+fpromise::result<VnodeRepresentation, zx_status_t> Describe(const fbl::RefPtr<Vnode>& vnode,
+                                                            VnodeProtocol protocol,
+                                                            VnodeConnectionOptions options) {
   if (options.flags.node_reference) {
-    return fit::ok(VnodeRepresentation::Connector());
+    return fpromise::ok(VnodeRepresentation::Connector());
   }
   fs::VnodeRepresentation representation;
   zx_status_t status = vnode->GetNodeInfoForProtocol(protocol, options.rights, &representation);
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
-  return fit::ok(std::move(representation));
+  return fpromise::ok(std::move(representation));
 }
 
 bool PrevalidateFlags(uint32_t flags) {
@@ -352,9 +352,9 @@ Connection::Result<VnodeAttributes> Connection::NodeGetAttr() {
   fs::VnodeAttributes attr;
   zx_status_t r;
   if ((r = vnode_->GetAttributes(&attr)) != ZX_OK) {
-    return fit::error(r);
+    return fpromise::error(r);
   }
-  return fit::ok(attr);
+  return fpromise::ok(attr);
 }
 
 Connection::Result<> Connection::NodeSetAttr(uint32_t flags,
@@ -362,15 +362,15 @@ Connection::Result<> Connection::NodeSetAttr(uint32_t flags,
   FS_PRETTY_TRACE_DEBUG("[NodeSetAttr] our options: ", options(), ", incoming flags: ", flags);
 
   if (options().flags.node_reference) {
-    return fit::error(ZX_ERR_BAD_HANDLE);
+    return fpromise::error(ZX_ERR_BAD_HANDLE);
   }
   if (!options().rights.write) {
-    return fit::error(ZX_ERR_BAD_HANDLE);
+    return fpromise::error(ZX_ERR_BAD_HANDLE);
   }
   constexpr uint32_t supported_flags =
       fio::wire::kNodeAttributeFlagCreationTime | fio::wire::kNodeAttributeFlagModificationTime;
   if (flags & ~supported_flags) {
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   zx_status_t status = vnode_->SetAttributes(
@@ -385,13 +385,13 @@ Connection::Result<> Connection::NodeSetAttr(uint32_t flags,
 }
 
 Connection::Result<uint32_t> Connection::NodeNodeGetFlags() {
-  return fit::ok(options().ToIoV1Flags() & (kStatusFlags | ZX_FS_RIGHTS));
+  return fpromise::ok(options().ToIoV1Flags() & (kStatusFlags | ZX_FS_RIGHTS));
 }
 
 Connection::Result<> Connection::NodeNodeSetFlags(uint32_t flags) {
   auto options = VnodeConnectionOptions::FromIoV1Flags(flags);
   set_append(options.flags.append);
-  return fit::ok();
+  return fpromise::ok();
 }
 
 zx_koid_t Connection::GetChannelOwnerKoid() {

@@ -15,11 +15,11 @@ BlockingCommandRunner::BlockingCommandRunner(
     uint32_t port)
     : socket_endpoint_(socket_endpoint.BindSync()), cid_(cid), port_(port) {}
 
-fit::result<vsh::BlockingCommandRunner::CommandResult, zx_status_t> BlockingCommandRunner::Execute(
-    Command command) {
+fpromise::result<vsh::BlockingCommandRunner::CommandResult, zx_status_t>
+BlockingCommandRunner::Execute(Command command) {
   auto client_result = BlockingClient::Connect(socket_endpoint_, cid_, port_);
   if (client_result.is_error()) {
-    return fit::error(client_result.error());
+    return fpromise::error(client_result.error());
   }
   auto client = client_result.take_value();
 
@@ -31,14 +31,14 @@ fit::result<vsh::BlockingCommandRunner::CommandResult, zx_status_t> BlockingComm
   }
   zx_status_t status = client.Setup(std::move(setup_request));
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   std::string out;
   std::string err;
   int32_t return_code;
   while (client.status() == vm_tools::vsh::ConnectionStatus::READY) {
-    fit::result<vm_tools::vsh::HostMessage, zx_status_t> message_result = client.NextMessage();
+    fpromise::result<vm_tools::vsh::HostMessage, zx_status_t> message_result = client.NextMessage();
     if (message_result.is_error()) {
       break;
     }
@@ -52,11 +52,11 @@ fit::result<vsh::BlockingCommandRunner::CommandResult, zx_status_t> BlockingComm
           } break;
           case vm_tools::vsh::ConnectionStatus::FAILED: {
             FX_LOGS(ERROR) << "Fatal error: " << message.status_message().description();
-            return fit::error(ZX_ERR_CONNECTION_RESET);
+            return fpromise::error(ZX_ERR_CONNECTION_RESET);
           } break;
           default: {
             FX_LOGS(ERROR) << "Invalid state change to " << new_status;
-            return fit::error(ZX_ERR_INVALID_ARGS);
+            return fpromise::error(ZX_ERR_INVALID_ARGS);
           } break;
         }
       } break;
@@ -71,18 +71,18 @@ fit::result<vsh::BlockingCommandRunner::CommandResult, zx_status_t> BlockingComm
           } break;
           default: {
             FX_LOGS(ERROR) << "Unsupported STDIO stream " << data.stream();
-            return fit::error(ZX_ERR_NOT_SUPPORTED);
+            return fpromise::error(ZX_ERR_NOT_SUPPORTED);
           } break;
         }
       } break;
       default: {
         FX_LOGS(ERROR) << "Unsupported message type " << message.msg_case();
-        return fit::error(ZX_ERR_NOT_SUPPORTED);
+        return fpromise::error(ZX_ERR_NOT_SUPPORTED);
       } break;
     }
   }
 
-  return fit::ok(vsh::BlockingCommandRunner::CommandResult{
+  return fpromise::ok(vsh::BlockingCommandRunner::CommandResult{
       out,
       err,
       return_code,

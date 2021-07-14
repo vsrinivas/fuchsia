@@ -9,18 +9,18 @@
 #include "src/storage/volume_image/utils/block_utils.h"
 
 namespace storage::volume_image {
-fit::result<void, std::string> BlockWriter::Write(uint64_t offset,
-                                                  fbl::Span<const uint8_t> buffer) {
+fpromise::result<void, std::string> BlockWriter::Write(uint64_t offset,
+                                                       fbl::Span<const uint8_t> buffer) {
   if (buffer.size() == 0) {
-    return fit::ok();
+    return fpromise::ok();
   }
 
   if (offset + buffer.size() > block_count_ * block_size_) {
-    return fit::error("BlockWriter::Write out of bounds. Offset " + std::to_string(offset) +
-                      " Write Size: " + std::to_string(buffer.size()) + " with " +
-                      std::to_string(block_count_) + " blocks of size " +
-                      std::to_string(block_size_) +
-                      " (Max Offset: " + std::to_string(block_size_ * block_count_) + ").");
+    return fpromise::error("BlockWriter::Write out of bounds. Offset " + std::to_string(offset) +
+                           " Write Size: " + std::to_string(buffer.size()) + " with " +
+                           std::to_string(block_count_) + " blocks of size " +
+                           std::to_string(block_size_) +
+                           " (Max Offset: " + std::to_string(block_size_ * block_count_) + ").");
   }
 
   // First block is unaligned.
@@ -40,7 +40,7 @@ fit::result<void, std::string> BlockWriter::Write(uint64_t offset,
 
     // We consumed all the bytes to write.
     if (block_bytes_to_patch == buffer.size()) {
-      return fit::ok();
+      return fpromise::ok();
     }
 
     offset += block_bytes_to_patch;
@@ -66,7 +66,7 @@ fit::result<void, std::string> BlockWriter::Write(uint64_t offset,
 
     // We consumed all the bytes to write.
     if (aligned_data_bytes == buffer.size()) {
-      return fit::ok();
+      return fpromise::ok();
     }
 
     offset += aligned_data_bytes;
@@ -83,7 +83,7 @@ fit::result<void, std::string> BlockWriter::Write(uint64_t offset,
       return result;
     }
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
 }  // namespace storage::volume_image

@@ -75,7 +75,7 @@ void OutputPipelineImpl::RemoveInput(const ReadableStream& stream) {
   state_.streams.erase(it);
 }
 
-fit::result<void, fuchsia::media::audio::UpdateEffectError> OutputPipelineImpl::UpdateEffect(
+fpromise::result<void, fuchsia::media::audio::UpdateEffectError> OutputPipelineImpl::UpdateEffect(
     const std::string& instance_name, const std::string& config) {
   for (auto& effects_stage : state_.effects_stages) {
     auto result = effects_stage->UpdateEffect(instance_name, config);
@@ -85,7 +85,7 @@ fit::result<void, fuchsia::media::audio::UpdateEffectError> OutputPipelineImpl::
     }
     return result;
   }
-  return fit::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+  return fpromise::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
 }
 
 std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(

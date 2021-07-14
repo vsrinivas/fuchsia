@@ -6,7 +6,7 @@
 #define SRC_UI_A11Y_LIB_SCREEN_READER_THREE_FINGER_SWIPE_ACTION_H_
 
 #include <fuchsia/accessibility/gesture/cpp/fidl.h>
-#include <lib/fit/scope.h>
+#include <lib/fpromise/scope.h>
 
 #include "src/ui/a11y/lib/gesture_manager/gesture_listener_registry.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
@@ -38,7 +38,7 @@ class ThreeFingerSwipeAction : public ScreenReaderAction {
   // Stores which swipe action is being handled.
   fuchsia::accessibility::gesture::Type gesture_type_;
 
-  fit::scope scope_;
+  fpromise::scope scope_;
 };
 
 }  // namespace a11y

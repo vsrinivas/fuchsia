@@ -13,7 +13,7 @@
 namespace vsh {
 
 // static
-fit::result<BlockingClient, zx_status_t> BlockingClient::Connect(
+fpromise::result<BlockingClient, zx_status_t> BlockingClient::Connect(
     const fuchsia::virtualization::HostVsockEndpointSyncPtr& socket_endpoint, uint32_t cid,
     uint32_t port) {
   // Open a socket to the guest's vsock port where vshd should be listening
@@ -21,18 +21,18 @@ fit::result<BlockingClient, zx_status_t> BlockingClient::Connect(
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create socket: " << zx_status_get_string(status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
   zx_status_t fidl_status = socket_endpoint->Connect(cid, port, std::move(remote_socket), &status);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to connect to vshd: " << zx_status_get_string(status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
   if (fidl_status != ZX_OK) {
     FX_LOGS(ERROR) << "FIDL error connecting to vshd: " << zx_status_get_string(fidl_status);
-    return fit::error(fidl_status);
+    return fpromise::error(fidl_status);
   }
-  return fit::ok(BlockingClient(std::move(socket)));
+  return fpromise::ok(BlockingClient(std::move(socket)));
 }
 
 BlockingClient::BlockingClient(zx::socket socket) : vsock_(std::move(socket)) {}
@@ -60,19 +60,19 @@ zx_status_t BlockingClient::Setup(vm_tools::vsh::SetupConnectionRequest conn_req
   return ZX_OK;
 }
 
-fit::result<vm_tools::vsh::HostMessage, zx_status_t> BlockingClient::NextMessage() {
+fpromise::result<vm_tools::vsh::HostMessage, zx_status_t> BlockingClient::NextMessage() {
   FX_CHECK(status_ == vm_tools::vsh::ConnectionStatus::READY);
   vm_tools::vsh::HostMessage msg;
 
   if (!RecvMessage(vsock_, &msg)) {
     FX_LOGS(ERROR) << "Failed to receive response from vshd, giving up after one try";
-    return fit::error(ZX_ERR_INTERNAL);
+    return fpromise::error(ZX_ERR_INTERNAL);
   }
   if (msg.msg_case() == vm_tools::vsh::HostMessage::MsgCase::kStatusMessage) {
     auto new_status = msg.status_message().status();
     status_ = new_status;
   }
-  return fit::ok(std::move(msg));
+  return fpromise::ok(std::move(msg));
 }
 
 }  // namespace vsh

@@ -69,7 +69,7 @@ class PipelineManager {
   void Shutdown();
 
   // Finds which graph head is the requested stream |stream_type| configured in.
-  fit::result<std::pair<ProcessNode*, fuchsia::camera2::CameraStreamType>, zx_status_t>
+  fpromise::result<std::pair<ProcessNode*, fuchsia::camera2::CameraStreamType>, zx_status_t>
   FindGraphHead(fuchsia::camera2::CameraStreamType stream_type);
 
  private:
@@ -101,13 +101,14 @@ class PipelineManager {
   // |parent_node| : Pointer to the node to which  we need to append this new graph.
   // Returns:
   // |OutputNode*| : Pointer to the ouput node.
-  fit::result<OutputNode*, zx_status_t> CreateGraph(StreamCreationData* info,
-                                                    const InternalConfigNode& internal_node,
-                                                    ProcessNode* parent_node);
+  fpromise::result<OutputNode*, zx_status_t> CreateGraph(StreamCreationData* info,
+                                                         const InternalConfigNode& internal_node,
+                                                         ProcessNode* parent_node);
 
-  fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t> FindNodeToAttachNewStream(
-      StreamCreationData* info, const InternalConfigNode& current_internal_node,
-      ProcessNode* graph_head);
+  fpromise::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t>
+  FindNodeToAttachNewStream(StreamCreationData* info,
+                            const InternalConfigNode& current_internal_node,
+                            ProcessNode* graph_head);
 
   // Helper function to find out which portion of the graph
   // needs to be disconnected and shut down.

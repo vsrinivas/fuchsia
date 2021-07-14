@@ -7,7 +7,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
@@ -32,7 +32,8 @@ class Reporter {
   void ReportOn(const feedback::RebootLog& reboot_log, zx::duration crash_reporting_delay);
 
  private:
-  ::fit::promise<void> FileCrashReport(const feedback::RebootLog& reboot_log, zx::duration delay);
+  ::fpromise::promise<void> FileCrashReport(const feedback::RebootLog& reboot_log,
+                                            zx::duration delay);
 
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;

@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_ADAPTER_MTD_WRITER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_ADAPTER_MTD_WRITER_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 #include <string_view>
@@ -28,9 +28,9 @@ struct MtdParams {
 };
 
 // Returns a writer into the underlying MTD(Memory Technology Device) protocol.
-fit::result<std::unique_ptr<Writer>, std::string> CreateMtdWriter(std::string_view path,
-                                                                  const MtdParams& params,
-                                                                  FtlHandle* = nullptr);
+fpromise::result<std::unique_ptr<Writer>, std::string> CreateMtdWriter(std::string_view path,
+                                                                       const MtdParams& params,
+                                                                       FtlHandle* = nullptr);
 
 }  // namespace storage::volume_image
 

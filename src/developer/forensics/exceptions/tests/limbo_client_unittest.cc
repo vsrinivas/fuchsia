@@ -69,7 +69,7 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
       exceptions.push_back(std::move(metadata));
     }
 
-    callback(fit::ok(std::move(exceptions)));
+    callback(fpromise::ok(std::move(exceptions)));
   }
 
   void RetrieveException(zx_koid_t process_koid,
@@ -88,19 +88,19 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
     }
 
     if (it == exceptions_.end()) {
-      cb(fit::error(ZX_ERR_NOT_FOUND));
+      cb(fpromise::error(ZX_ERR_NOT_FOUND));
       return;
     }
 
     exceptions_.erase(it);
-    cb(fit::ok());
+    cb(fpromise::ok());
   }
 
   void GetFilters(GetFiltersCallback callback) override { callback(filters_); }
 
   void AppendFilters(std::vector<std::string> filters, AppendFiltersCallback callback) override {
     filters_ = std::move(filters);
-    callback(fit::ok());
+    callback(fpromise::ok());
   }
 
   void RemoveFilters(std::vector<std::string> filters, RemoveFiltersCallback) override {

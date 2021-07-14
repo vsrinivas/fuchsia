@@ -11,7 +11,7 @@ namespace root_presenter {
 
 class MediaRetriever {
  public:
-  using ResetSoundResult = fit::result<fidl::InterfaceHandle<fuchsia::io::File>, zx_status_t>;
+  using ResetSoundResult = fpromise::result<fidl::InterfaceHandle<fuchsia::io::File>, zx_status_t>;
 
   virtual ~MediaRetriever();
   virtual ResetSoundResult GetResetSound();

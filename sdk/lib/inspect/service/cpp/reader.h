@@ -6,7 +6,7 @@
 #define LIB_INSPECT_SERVICE_CPP_READER_H_
 
 #include <fuchsia/inspect/cpp/fidl.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/inspect/cpp/hierarchy.h>
 
 namespace inspect {
@@ -16,7 +16,7 @@ namespace inspect {
 // This function continually calls GetNext on the iterator until all child names have been returned.
 //
 // Returns a promise for the vector of child names names.
-fit::promise<std::vector<std::string>> ReadAllChildNames(
+fpromise::promise<std::vector<std::string>> ReadAllChildNames(
     fuchsia::inspect::TreeNameIteratorPtr iterator);
 
 // Read a full inspect::Hierarchy from a fuchsia.inspect.Tree.
@@ -26,7 +26,7 @@ fit::promise<std::vector<std::string>> ReadAllChildNames(
 // including dynamically generated subtrees.
 //
 // Returns a promise for the hierarchy parsed from the Tree.
-fit::promise<Hierarchy> ReadFromTree(fuchsia::inspect::TreePtr tree);
+fpromise::promise<Hierarchy> ReadFromTree(fuchsia::inspect::TreePtr tree);
 
 }  // namespace inspect
 

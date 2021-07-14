@@ -317,30 +317,30 @@ void CodecAdapterAacEncoder::ProcessInput(CodecInputItem input_item) {
   };
 }
 
-fit::result<void, CodecAdapterAacEncoder::Error>
+fpromise::result<void, CodecAdapterAacEncoder::Error>
 CodecAdapterAacEncoder::BuildStreamFromFormatDetails(
     const fuchsia::media::FormatDetails& format_details) {
   if (!format_details.has_encoder_settings() || !format_details.encoder_settings().is_aac()) {
-    return fit::error(kSettingsMissing);
+    return fpromise::error(kSettingsMissing);
   }
   auto& encoder_settings = format_details.encoder_settings().aac();
 
   auto pcm_format_result = ValidateInputFormat(format_details);
   if (pcm_format_result.is_error()) {
-    return fit::error(pcm_format_result.error());
+    return fpromise::error(pcm_format_result.error());
   }
   auto pcm_format = pcm_format_result.take_value();
 
   auto create_encoder_result = CreateEncoder(pcm_format, encoder_settings);
   if (create_encoder_result.is_error()) {
-    return fit::error(create_encoder_result.error());
+    return fpromise::error(create_encoder_result.error());
   }
   auto encoder = create_encoder_result.take_value();
 
   AACENC_InfoStruct enc_info = {};
   AACENC_ERROR status = aacEncInfo(encoder.get(), &enc_info);
   if (status != AACENC_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   // FDK can output in one frame at most 6144 bits per channel (from
@@ -373,42 +373,42 @@ CodecAdapterAacEncoder::BuildStreamFromFormatDetails(
                   std::move(encoder), format_details.format_details_version_ordinal(),
                   max_output_size);
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
-fit::result<fuchsia::media::PcmFormat, CodecAdapterAacEncoder::InputError>
+fpromise::result<fuchsia::media::PcmFormat, CodecAdapterAacEncoder::InputError>
 CodecAdapterAacEncoder::ValidateInputFormat(const fuchsia::media::FormatDetails& format_details) {
   if (!format_details.domain().is_audio()) {
-    return fit::error(kNotAudio);
+    return fpromise::error(kNotAudio);
   }
 
   if (!format_details.domain().audio().is_uncompressed()) {
-    return fit::error(kCompressed);
+    return fpromise::error(kCompressed);
   }
 
   if (!format_details.domain().audio().uncompressed().is_pcm()) {
-    return fit::error(kNotPcm);
+    return fpromise::error(kNotPcm);
   }
   auto& pcm_format = format_details.domain().audio().uncompressed().pcm();
 
   if (!(pcm_format.pcm_mode == fuchsia::media::AudioPcmMode::LINEAR)) {
-    return fit::error(kNotLinear);
+    return fpromise::error(kNotLinear);
   }
 
   if (!(pcm_format.bits_per_sample == 16u)) {
-    return fit::error(kNot16Bit);
+    return fpromise::error(kNot16Bit);
   }
 
-  return fit::ok(fidl::Clone(pcm_format));
+  return fpromise::ok(fidl::Clone(pcm_format));
 }
 
-fit::result<CodecAdapterAacEncoder::Encoder, CodecAdapterAacEncoder::Error>
+fpromise::result<CodecAdapterAacEncoder::Encoder, CodecAdapterAacEncoder::Error>
 CodecAdapterAacEncoder::CreateEncoder(const fuchsia::media::PcmFormat& pcm_format,
                                       const fuchsia::media::AacEncoderSettings& encoder_settings) {
   HANDLE_AACENCODER encoder = nullptr;
   AACENC_ERROR status = aacEncOpen(&encoder, 0, 0);
   if (status != AACENC_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   uint32_t aot = INT_MAX;
@@ -420,11 +420,11 @@ CodecAdapterAacEncoder::CreateEncoder(const fuchsia::media::PcmFormat& pcm_forma
       aot = AOT_AAC_LC;
       break;
     default:
-      return fit::error(kUnsupportedObjectType);
+      return fpromise::error(kUnsupportedObjectType);
   };
 
   if ((status = aacEncoder_SetParam(encoder, AACENC_AOT, aot)) != AACENC_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   constexpr uint32_t kFdkMono = MODE_1;
@@ -439,16 +439,16 @@ CodecAdapterAacEncoder::CreateEncoder(const fuchsia::media::PcmFormat& pcm_forma
       channel_mode = kFdkStereo;
       break;
     default:
-      return fit::error(kUnsupportedChannelMode);
+      return fpromise::error(kUnsupportedChannelMode);
   };
 
   if ((status = aacEncoder_SetParam(encoder, AACENC_CHANNELMODE, channel_mode)) != AACENC_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   if ((status = aacEncoder_SetParam(encoder, AACENC_SAMPLERATE, pcm_format.frames_per_second)) !=
       AACENC_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   uint32_t bit_rate = 0;
@@ -460,11 +460,11 @@ CodecAdapterAacEncoder::CreateEncoder(const fuchsia::media::PcmFormat& pcm_forma
   }
 
   if ((status = aacEncoder_SetParam(encoder, AACENC_BITRATEMODE, bit_rate_mode)) != AACENC_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   if ((status = aacEncoder_SetParam(encoder, AACENC_BITRATE, bit_rate)) != AACENC_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   uint32_t transmux = INT_MAX;
@@ -479,23 +479,23 @@ CodecAdapterAacEncoder::CreateEncoder(const fuchsia::media::PcmFormat& pcm_forma
   } else if (encoder_settings.transport.is_adts()) {
     transmux = TT_MP4_ADTS;
   } else {
-    return fit::error(kUnsupportedTransport);
+    return fpromise::error(kUnsupportedTransport);
   }
 
   if ((status = aacEncoder_SetParam(encoder, AACENC_TRANSMUX, transmux)) != AACENC_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   if (transmux == TT_MP4_LATM_MCP1) {
     uint32_t header_period = 1;
     if ((status = aacEncoder_SetParam(encoder, AACENC_HEADER_PERIOD, header_period)) != AACENC_OK) {
-      return fit::error(status);
+      return fpromise::error(status);
     }
 
     uint32_t audio_mux_version = 2;
     if ((status = aacEncoder_SetParam(encoder, AACENC_AUDIOMUXVER, audio_mux_version)) !=
         AACENC_OK) {
-      return fit::error(status);
+      return fpromise::error(status);
     }
   }
 
@@ -503,19 +503,19 @@ CodecAdapterAacEncoder::CreateEncoder(const fuchsia::media::PcmFormat& pcm_forma
   // appreciable amount of extra CPU.
   uint32_t afterburner = 1;
   if ((status = aacEncoder_SetParam(encoder, AACENC_AFTERBURNER, afterburner)) != AACENC_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   if ((status = aacEncoder_SetParam(encoder, AACENC_SIGNALING_MODE, SIG_EXPLICIT_BW_COMPATIBLE)) !=
       AACENC_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   if ((status = aacEncEncode(encoder, NULL, NULL, NULL, NULL)) != AACENC_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
-  return fit::ok(Encoder(encoder, [](AACENCODER* encoder) { aacEncClose(&encoder); }));
+  return fpromise::ok(Encoder(encoder, [](AACENCODER* encoder) { aacEncClose(&encoder); }));
 }
 
 ChunkInputStream::ControlFlow CodecAdapterAacEncoder::ProcessInputBlock(
@@ -579,7 +579,7 @@ ChunkInputStream::ControlFlow CodecAdapterAacEncoder::ProcessInputBlock(
   return ChunkInputStream::kContinue;
 }
 
-fit::result<CodecAdapterAacEncoder::EncodeResult, AACENC_ERROR> CodecAdapterAacEncoder::Encode(
+fpromise::result<CodecAdapterAacEncoder::EncodeResult, AACENC_ERROR> CodecAdapterAacEncoder::Encode(
     ChunkInputStream::InputBlock input_block, OutputSink::OutputBlock output_block) {
   void* input_buffers[] = {const_cast<uint8_t*>(input_block.data)};
   INT input_buffer_identifiers[] = {IN_AUDIO_DATA};
@@ -598,7 +598,7 @@ fit::result<CodecAdapterAacEncoder::EncodeResult, AACENC_ERROR> CodecAdapterAacE
   return CallEncoder(&input_args, &input_buffer_descriptor, output_block);
 }
 
-fit::result<CodecAdapterAacEncoder::EncodeResult, AACENC_ERROR> CodecAdapterAacEncoder::Flush(
+fpromise::result<CodecAdapterAacEncoder::EncodeResult, AACENC_ERROR> CodecAdapterAacEncoder::Flush(
     OutputSink::OutputBlock output_block) {
   void* input_buffers[] = {};
   INT input_buffer_identifiers[] = {IN_AUDIO_DATA};
@@ -617,8 +617,9 @@ fit::result<CodecAdapterAacEncoder::EncodeResult, AACENC_ERROR> CodecAdapterAacE
   return CallEncoder(&input_args, &input_buffer_descriptor, output_block);
 }
 
-fit::result<CodecAdapterAacEncoder::EncodeResult, AACENC_ERROR> CodecAdapterAacEncoder::CallEncoder(
-    AACENC_InArgs* in_args, AACENC_BufDesc* in_buffer, OutputSink::OutputBlock output_block) {
+fpromise::result<CodecAdapterAacEncoder::EncodeResult, AACENC_ERROR>
+CodecAdapterAacEncoder::CallEncoder(AACENC_InArgs* in_args, AACENC_BufDesc* in_buffer,
+                                    OutputSink::OutputBlock output_block) {
   void* output_buffers[] = {output_block.data};
   INT output_buffer_identifiers[] = {OUT_BITSTREAM_DATA};
   INT output_buffer_sizes[] = {static_cast<INT>(output_block.len)};
@@ -639,11 +640,11 @@ fit::result<CodecAdapterAacEncoder::EncodeResult, AACENC_ERROR> CodecAdapterAacE
   if (status == AACENC_ENCODE_EOF) {
     result.is_end_of_stream = true;
   } else if (status != AACENC_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   result.bytes_written = output_args.numOutBytes;
-  return fit::ok(result);
+  return fpromise::ok(result);
 }
 
 void CodecAdapterAacEncoder::ReportError(Error error) {

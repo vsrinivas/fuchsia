@@ -15,7 +15,7 @@
 #include <lib/device-protocol/pci.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fit/function.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <lib/synchronous-executor/executor.h>
@@ -101,7 +101,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   }
 
   // Queues a request and returns a promise
-  fit::promise<OwnedRequest, void> UsbHciRequestQueue(OwnedRequest usb_request);
+  fpromise::promise<OwnedRequest, void> UsbHciRequestQueue(OwnedRequest usb_request);
 
   void UsbHciSetBusInterface(const usb_bus_interface_protocol_t* bus_intf);
 
@@ -198,9 +198,10 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   template <typename T>
   void PostCallback(T&& callback) {
-    ddk_interaction_executor_.schedule_task(
-        fit::make_ok_promise().then([this, cb = std::forward<T>(callback)](
-                                        fit::result<void, void>& result) mutable { cb(bus_); }));
+    ddk_interaction_executor_.schedule_task(fpromise::make_ok_promise().then(
+        [this, cb = std::forward<T>(callback)](fpromise::result<void, void>& result) mutable {
+          cb(bus_);
+        }));
   }
 
   uint8_t get_port_count() { return static_cast<uint8_t>(params_.MaxPorts()); }
@@ -239,10 +240,10 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   }
 
   // Schedules the promise for execution and synchronously waits for it to complete
-  zx_status_t RunSynchronously(fit::promise<TRB*, zx_status_t> promise) {
+  zx_status_t RunSynchronously(fpromise::promise<TRB*, zx_status_t> promise) {
     sync_completion_t completion;
     zx_status_t completion_code;
-    auto continuation = promise.then([&](fit::result<TRB*, zx_status_t>& result) {
+    auto continuation = promise.then([&](fpromise::result<TRB*, zx_status_t>& result) {
       if (result.is_ok()) {
         completion_code = ZX_OK;
         sync_completion_signal(&completion);

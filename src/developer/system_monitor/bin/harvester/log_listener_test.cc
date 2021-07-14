@@ -5,8 +5,8 @@
 #include "log_listener.h"
 
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -153,9 +153,9 @@ TEST_F(LogListenerTest, ClosesOnEmptyBatch) {
 
   int counter = 0;
   bool completed = false;
-  fit::promise<> promise =
+  fpromise::promise<> promise =
       listener.Listen([&counter](auto result) { counter++; })
-          .then([&completed](fit::result<>& result) {
+          .then([&completed](fpromise::result<>& result) {
             if (result.is_ok()) {
               completed = true;
             }
@@ -175,9 +175,9 @@ TEST_F(LogListenerTest, ClosesOnError) {
 
   int counter = 0;
   bool completedErr = false;
-  fit::promise<> promise =
+  fpromise::promise<> promise =
       listener.Listen([&counter](auto result) { counter++; })
-          .then([&completedErr](fit::result<>& result) {
+          .then([&completedErr](fpromise::result<>& result) {
             if (result.is_error()) {
               completedErr = true;
             }

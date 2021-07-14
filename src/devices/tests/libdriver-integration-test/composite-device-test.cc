@@ -26,8 +26,8 @@ class CompositeDeviceTest : public IntegrationTest {
   Promise<void> CreateFragmentDevices(std::unique_ptr<RootMockDevice>* root_device,
                                       std::unique_ptr<MockDevice>* child1_device,
                                       std::unique_ptr<MockDevice>* child2_device) {
-    fit::bridge<void, Error> child1_bridge;
-    fit::bridge<void, Error> child2_bridge;
+    fpromise::bridge<void, Error> child1_bridge;
+    fpromise::bridge<void, Error> child2_bridge;
     return ExpectBind(root_device,
                       [=, child1_completer = std::move(child1_bridge.completer),
                        child2_completer = std::move(child2_bridge.completer)](
@@ -56,8 +56,8 @@ class CompositeDeviceTest : public IntegrationTest {
                         completer.complete_ok();
                         return actions;
                       })
-        .and_then(child1_bridge.consumer.promise_or(::fit::error("child1 create abandoned")))
-        .and_then(child2_bridge.consumer.promise_or(::fit::error("child2 create abandoned")));
+        .and_then(child1_bridge.consumer.promise_or(::fpromise::error("child1 create abandoned")))
+        .and_then(child2_bridge.consumer.promise_or(::fpromise::error("child2 create abandoned")));
   }
 };
 
@@ -113,7 +113,7 @@ TEST_F(CompositeDeviceTest, DISABLED_UnbindFragment) {
               return actions;
             };
 
-            fit::bridge<void, Error> bridge;
+            fpromise::bridge<void, Error> bridge;
             auto bind_hook =
                 std::make_unique<BindOnce>(std::move(bridge.completer), std::move(bind_callback));
             // Bind the mock device driver to a new child
@@ -122,7 +122,7 @@ TEST_F(CompositeDeviceTest, DISABLED_UnbindFragment) {
                 &composite_mock);
             PROMISE_ASSERT(ASSERT_EQ(status, ZX_OK));
 
-            return bridge.consumer.promise_or(::fit::error("bind abandoned"));
+            return bridge.consumer.promise_or(::fpromise::error("bind abandoned"));
           })
           .and_then([&]() -> Promise<void> {
             // Open up child1, so we can send it an unbind request
@@ -142,7 +142,7 @@ TEST_F(CompositeDeviceTest, DISABLED_UnbindFragment) {
                 child1_controller.Bind(client.Unbind().TakeChannel(), loop_.dispatcher());
             PROMISE_ASSERT(ASSERT_EQ(status, ZX_OK));
 
-            fit::bridge<void, Error> bridge;
+            fpromise::bridge<void, Error> bridge;
             child1_controller->ScheduleUnbind(
                 [completer = std::move(bridge.completer)](
                     fuchsia::device::Controller_ScheduleUnbind_Result result) mutable {
@@ -170,7 +170,7 @@ TEST_F(CompositeDeviceTest, DISABLED_UnbindFragment) {
                 }).and_then(ExpectUnbindThenRelease(composite_child_device));
 
             return unbind_promise.and_then(
-                bridge.consumer.promise_or(::fit::error("Unbind abandoned")));
+                bridge.consumer.promise_or(::fpromise::error("Unbind abandoned")));
           })
           .and_then([&]() -> Promise<void> {
             child1_controller.Unbind();

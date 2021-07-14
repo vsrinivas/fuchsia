@@ -644,7 +644,7 @@ TEST_F(JournalTest, NoWorkSyncCompletesBeforeJournalDestruction) {
   auto promise = journal.Sync().and_then([&] {
     sync_completed = true;
     sync_completion_signal(&sync_completion);
-    return fit::ok();
+    return fpromise::ok();
   });
 
   ASSERT_FALSE(sync_completed);
@@ -663,7 +663,7 @@ TEST_F(JournalTest, NoWorkSyncCompletesOnDestruction) {
                     Journal::Options());
     auto promise = journal.Sync().and_then([&] {
       sync_completed = true;
-      return fit::ok();
+      return fpromise::ok();
     });
 
     ASSERT_FALSE(sync_completed);
@@ -2405,7 +2405,7 @@ TEST_F(JournalTest, SyncAfterWritingDataWaitsForData) {
       EXPECT_TRUE(data_written);
       EXPECT_FALSE(sync_called);
       sync_called = true;
-      return fit::ok();
+      return fpromise::ok();
     }));
   }
   EXPECT_TRUE(data_written);
@@ -2463,7 +2463,7 @@ TEST_F(JournalTest, SyncAfterWritingMetadataWaitsForMetadata) {
       EXPECT_TRUE(metadata_written);
       EXPECT_FALSE(sync_called);
       sync_called = true;
-      return fit::ok();
+      return fpromise::ok();
     }));
   }
   EXPECT_TRUE(metadata_written);
@@ -2571,7 +2571,7 @@ TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
                     Journal::Options());
     auto promise = journal.WriteData({operations[0]})
-                       .then([&](fit::result<void, zx_status_t>& result) {
+                       .then([&](fpromise::result<void, zx_status_t>& result) {
                          EXPECT_EQ(result.error(), ZX_ERR_IO)
                              << "operations[0] should fail with ZX_ERR_IO";
                          first_operation_failed = true;
@@ -2580,7 +2580,7 @@ TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
                        .or_else([&](zx_status_t& status) {
                          EXPECT_EQ(status, ZX_ERR_IO_REFUSED);
                          second_operation_failed = true;
-                         return fit::error(status);
+                         return fpromise::error(status);
                        });
     journal.schedule_task(std::move(promise));
   }
@@ -2624,10 +2624,10 @@ TEST_F(JournalTest, DataWriteFailureStillLetsSyncComplete) {
 
     auto data_promise = journal.WriteData({operations[0]});
     auto sync_promise = journal.Sync().then(
-        [&](fit::result<void, zx_status_t>& result) -> fit::result<void, zx_status_t> {
+        [&](fpromise::result<void, zx_status_t>& result) -> fpromise::result<void, zx_status_t> {
           EXPECT_EQ(result.error(), ZX_ERR_IO_REFUSED);
           sync_done = true;
-          return fit::ok();
+          return fpromise::ok();
         });
     journal.schedule_task(std::move(data_promise));
     journal.schedule_task(std::move(sync_promise));
@@ -2681,13 +2681,14 @@ TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
                     kJournalStartBlock, Journal::Options());
     EXPECT_EQ(journal.CommitTransaction({.metadata_operations = {operations[0]}}), ZX_OK);
     sync_completion_t sync_completion;
-    journal.schedule_task(journal.Sync().inspect([&](const fit::result<void, zx_status_t>& result) {
-      EXPECT_TRUE(result.is_error());
-      if (result.is_error()) {
-        EXPECT_EQ(result.error(), ZX_ERR_IO_REFUSED);
-      }
-      sync_completion_signal(&sync_completion);
-    }));
+    journal.schedule_task(
+        journal.Sync().inspect([&](const fpromise::result<void, zx_status_t>& result) {
+          EXPECT_TRUE(result.is_error());
+          if (result.is_error()) {
+            EXPECT_EQ(result.error(), ZX_ERR_IO_REFUSED);
+          }
+          sync_completion_signal(&sync_completion);
+        }));
     sync_completion_wait(&sync_completion, ZX_TIME_INFINITE);
     EXPECT_EQ(journal.CommitTransaction({.metadata_operations = {operations[1]}}),
               ZX_ERR_IO_REFUSED);
@@ -2747,7 +2748,7 @@ TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
     EXPECT_EQ(journal.CommitTransaction({.metadata_operations = {operations[0]}}), ZX_OK);
     sync_completion_t sync;
     journal.schedule_task(journal.Sync().then(
-        [&](const fit::result<void, zx_status_t>& result) { sync_completion_signal(&sync); }));
+        [&](const fpromise::result<void, zx_status_t>& result) { sync_completion_signal(&sync); }));
     sync_completion_wait(&sync, ZX_TIME_INFINITE);
     EXPECT_EQ(journal.CommitTransaction({.metadata_operations = {operations[1]}}),
               ZX_ERR_IO_REFUSED);
@@ -2819,7 +2820,7 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
     EXPECT_EQ(journal.CommitTransaction({.metadata_operations = {operations[0]},
                                          .commit_callback = [&] { write_ok = true; }}),
               ZX_OK);
-    journal.schedule_task(journal.Sync().then([&](fit::result<void, zx_status_t>& result) {
+    journal.schedule_task(journal.Sync().then([&](fpromise::result<void, zx_status_t>& result) {
       // Failure triggered by the info block writeback.
       EXPECT_EQ(result.error(), ZX_ERR_IO);
       sync_failed = true;
@@ -3420,8 +3421,8 @@ TEST(JournalSimpleTest, EmptyOperationWithDataOrTrimReturnsError) {
   TestTransactionHandler handler(device);
   std::unique_ptr<Journal> journal = CreateJournal(handler);
   EXPECT_EQ(journal->CommitTransaction(
-                {.data_promise = fit::make_promise(
-                     []() -> fit::result<void, zx_status_t> { return fit::ok(); })}),
+                {.data_promise = fpromise::make_promise(
+                     []() -> fpromise::result<void, zx_status_t> { return fpromise::ok(); })}),
             ZX_ERR_INVALID_ARGS);
   EXPECT_EQ(journal->CommitTransaction({.trim = {{}}}), ZX_ERR_INVALID_ARGS);
 }

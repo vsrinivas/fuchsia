@@ -17,7 +17,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_TEST_DEVICE_INSPECT_TEST_UTILS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_TEST_DEVICE_INSPECT_TEST_UTILS_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 
@@ -25,7 +25,7 @@ namespace wlan {
 namespace brcmfmac {
 
 // Fetch the entire hierarchy from an inspector.
-fit::result<inspect::Hierarchy> FetchHierarchy(inspect::Inspector inspector);
+fpromise::result<inspect::Hierarchy> FetchHierarchy(inspect::Inspector inspector);
 
 }  // namespace brcmfmac
 }  // namespace wlan

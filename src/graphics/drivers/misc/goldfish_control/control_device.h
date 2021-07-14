@@ -12,7 +12,7 @@
 #include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -46,9 +46,9 @@ class Control : public ControlType,
   uint64_t RegisterBufferHandle(const zx::vmo& vmo);
   void FreeBufferHandle(uint64_t id);
 
-  using CreateColorBuffer2Result =
-      fit::result<fidl::WireResponse<fuchsia_hardware_goldfish::ControlDevice::CreateColorBuffer2>,
-                  zx_status_t>;
+  using CreateColorBuffer2Result = fpromise::result<
+      fidl::WireResponse<fuchsia_hardware_goldfish::ControlDevice::CreateColorBuffer2>,
+      zx_status_t>;
 
   CreateColorBuffer2Result CreateColorBuffer2(
       zx::vmo vmo, fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params);
@@ -58,7 +58,8 @@ class Control : public ControlType,
                           CreateColorBuffer2Completer::Sync& completer) override;
 
   using CreateBuffer2Result =
-      fit::result<fuchsia_hardware_goldfish::wire::ControlDeviceCreateBuffer2Result, zx_status_t>;
+      fpromise::result<fuchsia_hardware_goldfish::wire::ControlDeviceCreateBuffer2Result,
+                       zx_status_t>;
 
   CreateBuffer2Result CreateBuffer2(
       fidl::AnyAllocator& allocator, zx::vmo vmo,

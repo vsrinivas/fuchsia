@@ -54,41 +54,42 @@ bool ParseRealmPath(const rapidjson::Value& json, std::vector<std::string>* real
   return true;
 }
 
-fit::result<ComponentIdEntry, ComponentIdIndex::Error> ParseEntry(const rapidjson::Value& entry) {
+fpromise::result<ComponentIdEntry, ComponentIdIndex::Error> ParseEntry(
+    const rapidjson::Value& entry) {
   // Entry must be an object.
   if (!entry.IsObject()) {
     FX_LOGS(ERROR) << "Entry must be an object.";
-    return fit::error(ComponentIdIndex::Error::INVALID_SCHEMA);
+    return fpromise::error(ComponentIdIndex::Error::INVALID_SCHEMA);
   }
 
   // `instance_id` is a required string.
   if (!entry.HasMember("instance_id") || !entry["instance_id"].IsString()) {
     FX_LOGS(ERROR) << "instance_id is a required string.";
-    return fit::error(ComponentIdIndex::Error::INVALID_SCHEMA);
+    return fpromise::error(ComponentIdIndex::Error::INVALID_SCHEMA);
   }
 
   // `instance_id` must be a valid format.
   if (!IsValidInstanceId(entry["instance_id"].GetString())) {
     FX_LOGS(ERROR) << "instance_id must be valid format.";
-    return fit::error(ComponentIdIndex::Error::INVALID_INSTANCE_ID);
+    return fpromise::error(ComponentIdIndex::Error::INVALID_INSTANCE_ID);
   }
 
   // `appmgr_moniker` must not be missing.
   if (!entry.HasMember("appmgr_moniker") || entry["appmgr_moniker"].IsNull()) {
-    return fit::error(ComponentIdIndex::Error::MISSING_MONIKER);
+    return fpromise::error(ComponentIdIndex::Error::MISSING_MONIKER);
   }
 
   const auto& appmgr_moniker = entry["appmgr_moniker"];
   // `appmgr_moniker` must be an object.
   if (!appmgr_moniker.IsObject()) {
     FX_LOGS(ERROR) << "appmgr_moniker must be valid object.";
-    return fit::error(ComponentIdIndex::Error::INVALID_MONIKER);
+    return fpromise::error(ComponentIdIndex::Error::INVALID_MONIKER);
   }
 
   // `url` is a required string.
   if (!appmgr_moniker.HasMember("url") || !appmgr_moniker["url"].IsString()) {
     FX_LOGS(ERROR) << "appmgr_moniker.url is a required string.";
-    return fit::error(ComponentIdIndex::Error::INVALID_MONIKER);
+    return fpromise::error(ComponentIdIndex::Error::INVALID_MONIKER);
   }
 
   // `realm_path` is a required vector of size >= 1.
@@ -96,7 +97,7 @@ fit::result<ComponentIdEntry, ComponentIdIndex::Error> ParseEntry(const rapidjso
   if (!appmgr_moniker.HasMember("realm_path") ||
       !ParseRealmPath(appmgr_moniker["realm_path"], &realm_path)) {
     FX_LOGS(ERROR) << "appmgr_moniker.realm_path is a required, non-empty list.";
-    return fit::error(ComponentIdIndex::Error::INVALID_MONIKER);
+    return fpromise::error(ComponentIdIndex::Error::INVALID_MONIKER);
   }
 
   const std::string& component_url = appmgr_moniker["url"].GetString();
@@ -112,14 +113,14 @@ fit::result<ComponentIdEntry, ComponentIdIndex::Error> ParseEntry(const rapidjso
     const auto& transitional_paths = appmgr_moniker[kTransitionalRealmPaths];
     if (!transitional_paths.IsArray() || transitional_paths.GetArray().Size() < 1) {
       FX_LOGS(ERROR) << "appmgr_moniker.transitional_realm_paths is an optional, non-empty list.";
-      return fit::error(ComponentIdIndex::Error::INVALID_MONIKER);
+      return fpromise::error(ComponentIdIndex::Error::INVALID_MONIKER);
     }
 
     for (auto& json : transitional_paths.GetArray()) {
       if (!ParseRealmPath(json, &realm_path)) {
         FX_LOGS(ERROR)
             << "appmgr_moniker.transitional_realm_paths entries must be non-empty string lists.";
-        return fit::error(ComponentIdIndex::Error::INVALID_MONIKER);
+        return fpromise::error(ComponentIdIndex::Error::INVALID_MONIKER);
       }
 
       component_id_entry.monikers.emplace_back(
@@ -127,7 +128,7 @@ fit::result<ComponentIdEntry, ComponentIdIndex::Error> ParseEntry(const rapidjso
     }
   }
 
-  return fit::ok(std::move(component_id_entry));
+  return fpromise::ok(std::move(component_id_entry));
 }
 }  // namespace
 
@@ -137,35 +138,35 @@ ComponentIdIndex::ComponentIdIndex(ComponentIdIndex::MonikerToInstanceId moniker
       restrict_isolated_persistent_storage_(restrict_isolated_persistent_storage) {}
 
 // static
-fit::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error>
+fpromise::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error>
 ComponentIdIndex::CreateFromAppmgrConfigDir(const fbl::unique_fd& appmgr_config_dir) {
   if (!files::IsFileAt(appmgr_config_dir.get(), kIndexFilePath)) {
     FX_LOGS(WARNING) << "Could not find component instance ID index file = " << kIndexFilePath;
-    return fit::ok(fbl::AdoptRef(new ComponentIdIndex({}, false)));
+    return fpromise::ok(fbl::AdoptRef(new ComponentIdIndex({}, false)));
   }
 
   std::string file_contents;
   if (!files::ReadFileToStringAt(appmgr_config_dir.get(), kIndexFilePath, &file_contents)) {
     FX_LOGS(ERROR) << "Could not read component instance ID index file.";
-    return fit::error(Error::INVALID_JSON);
+    return fpromise::error(Error::INVALID_JSON);
   }
 
   return CreateFromIndexContents(file_contents);
 }
 
 // static
-fit::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error>
+fpromise::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error>
 ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
   rapidjson::Document doc;
   doc.Parse(index_contents.c_str());
   if (doc.HasParseError()) {
     FX_LOGS(ERROR) << "Could not json-parse component instance ID index file.";
-    return fit::error(Error::INVALID_JSON);
+    return fpromise::error(Error::INVALID_JSON);
   }
 
   if (!doc.IsObject()) {
     FX_LOGS(ERROR) << "Index must be a valid object.";
-    return fit::error(ComponentIdIndex::Error::INVALID_SCHEMA);
+    return fpromise::error(ComponentIdIndex::Error::INVALID_SCHEMA);
   }
 
   constexpr char kRestrictIsolatedPersistentStorage[] =
@@ -179,7 +180,7 @@ ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
       !doc[kRestrictIsolatedPersistentStorage].IsNull()) {
     if (!doc[kRestrictIsolatedPersistentStorage].IsBool()) {
       FX_LOGS(ERROR) << "appmgr_restrict_isolated_persistent_storage must be bool";
-      return fit::error(ComponentIdIndex::Error::INVALID_SCHEMA);
+      return fpromise::error(ComponentIdIndex::Error::INVALID_SCHEMA);
     }
     restrict_isolated_persistent_storage = doc[kRestrictIsolatedPersistentStorage].GetBool();
   }
@@ -187,7 +188,7 @@ ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
   // `instances` must be an array.
   if (!doc.HasMember("instances") || !doc["instances"].IsArray()) {
     FX_LOGS(ERROR) << "instances is a required list.";
-    return fit::error(ComponentIdIndex::Error::INVALID_SCHEMA);
+    return fpromise::error(ComponentIdIndex::Error::INVALID_SCHEMA);
   }
 
   const auto& instances = doc["instances"].GetArray();
@@ -201,13 +202,13 @@ ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
         // might have a component_manager-based moniker.
         continue;
       }
-      return fit::error(parsed_entry.error());
+      return fpromise::error(parsed_entry.error());
     }
 
     auto id_result = instance_id_set.insert(parsed_entry.value().id);
     if (!id_result.second) {
       FX_LOGS(ERROR) << "The set of instance IDs must be unique.";
-      return fit::error(ComponentIdIndex::Error::DUPLICATE_INSTANCE_ID);
+      return fpromise::error(ComponentIdIndex::Error::DUPLICATE_INSTANCE_ID);
     }
 
     for (Moniker& moniker : parsed_entry.value().monikers) {
@@ -215,14 +216,14 @@ ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
           moniker_to_id.insert(std::make_pair(std::move(moniker), parsed_entry.value().id));
       if (!result.second) {
         FX_LOGS(ERROR) << "The set of appmgr_monikers must be unique.";
-        return fit::error(ComponentIdIndex::Error::DUPLICATE_MONIKER);
+        return fpromise::error(ComponentIdIndex::Error::DUPLICATE_MONIKER);
       }
     }
   }
 
   FX_LOGS(INFO) << "Found " << instances.Size() << " entries in component instance ID index.";
 
-  return fit::ok(
+  return fpromise::ok(
       fbl::AdoptRef(new ComponentIdIndex(moniker_to_id, restrict_isolated_persistent_storage)));
 }
 

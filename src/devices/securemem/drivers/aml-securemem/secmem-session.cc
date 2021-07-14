@@ -54,13 +54,13 @@ zx::vmo CreateVmo(uint64_t size) {
   return vmo;
 }
 
-fit::result<fuchsia::tee::Buffer> CreateCommandBuffer(const std::vector<uint8_t>& contents) {
+fpromise::result<fuchsia::tee::Buffer> CreateCommandBuffer(const std::vector<uint8_t>& contents) {
   zx::vmo vmo = CreateVmo(static_cast<uint64_t>(contents.size()));
 
   zx_status_t status = vmo.write(contents.data(), /*offset=*/0, contents.size());
   if (status != ZX_OK) {
     LOG(ERROR, "Failed to write to command buffer VMO - status: %d", status);
-    return fit::error();
+    return fpromise::error();
   }
 
   fuchsia::tee::Buffer buffer;
@@ -68,7 +68,7 @@ fit::result<fuchsia::tee::Buffer> CreateCommandBuffer(const std::vector<uint8_t>
       .set_size(static_cast<uint64_t>(contents.size()))
       .set_offset(0)
       .set_direction(fuchsia::tee::Direction::INOUT);
-  return fit::ok(std::move(buffer));
+  return fpromise::ok(std::move(buffer));
 }
 
 fuchsia::tee::Value CreateReturnCodeParameter() {
@@ -77,24 +77,24 @@ fuchsia::tee::Value CreateReturnCodeParameter() {
   return value;
 }
 
-fit::result<fuchsia::tee::Buffer> GetCommandBuffer(
+fpromise::result<fuchsia::tee::Buffer> GetCommandBuffer(
     std::vector<fuchsia::tee::Parameter>* parameter_set) {
   ZX_DEBUG_ASSERT(parameter_set);
   constexpr size_t kParamBufferIndex = 0;
 
   if (!parameter_set->at(kParamBufferIndex).is_buffer()) {
-    return fit::error();
+    return fpromise::error();
   }
 
   fuchsia::tee::Buffer& buffer = parameter_set->at(kParamBufferIndex).buffer();
   if (!buffer.has_vmo() || !buffer.has_size() || !buffer.has_offset() || !buffer.has_direction()) {
-    return fit::error();
+    return fpromise::error();
   }
   if (buffer.offset() >= buffer.size()) {
-    return fit::error();
+    return fpromise::error();
   }
 
-  return fit::ok(std::move(buffer));
+  return fpromise::ok(std::move(buffer));
 }
 
 bool IsExpectedSecmemCommandResult(const fuchsia::tee::OpResult& result) {
@@ -104,10 +104,10 @@ bool IsExpectedSecmemCommandResult(const fuchsia::tee::OpResult& result) {
 
 }  // namespace
 
-fit::result<SecmemSession, fuchsia::tee::ApplicationSyncPtr> SecmemSession::TryOpen(
+fpromise::result<SecmemSession, fuchsia::tee::ApplicationSyncPtr> SecmemSession::TryOpen(
     fuchsia::tee::ApplicationSyncPtr tee_connection) {
   if (!tee_connection.is_bound()) {
-    return fit::error(std::move(tee_connection));
+    return fpromise::error(std::move(tee_connection));
   }
 
   fuchsia::tee::OpResult result;
@@ -117,21 +117,21 @@ fit::result<SecmemSession, fuchsia::tee::ApplicationSyncPtr> SecmemSession::TryO
   if (zx_status_t status = tee_connection->OpenSession2(std::move(params), &session_id, &result);
       status != ZX_OK) {
     LOG(ERROR, "OpenSession channel call failed - status: %d", status);
-    return fit::error(std::move(tee_connection));
+    return fpromise::error(std::move(tee_connection));
   }
 
   if (!result.has_return_code() || !result.has_return_origin()) {
     LOG(ERROR, "OpenSession returned with result codes missing");
-    return fit::error(std::move(tee_connection));
+    return fpromise::error(std::move(tee_connection));
   }
 
   if (result.return_code() != TEEC_SUCCESS) {
     LOG(WARNING, "OpenSession to secmem failed - TEEC_Result: %" PRIx64 ", origin: %" PRIu32 ".",
         result.return_code(), static_cast<uint32_t>(result.return_origin()));
-    return fit::error(std::move(tee_connection));
+    return fpromise::error(std::move(tee_connection));
   }
 
-  return fit::ok(SecmemSession{session_id, std::move(tee_connection)});
+  return fpromise::ok(SecmemSession{session_id, std::move(tee_connection)});
 }
 
 SecmemSession::~SecmemSession() {
@@ -222,27 +222,27 @@ TEEC_Result SecmemSession::InvokeSecmemCommand(uint32_t command,
   return static_cast<TEEC_Result>(result.return_code());
 }
 
-fit::result<uint32_t> SecmemSession::UnpackUint32Parameter(const std::vector<uint8_t>& buffer,
-                                                           size_t* offset_in_out) {
+fpromise::result<uint32_t> SecmemSession::UnpackUint32Parameter(const std::vector<uint8_t>& buffer,
+                                                                size_t* offset_in_out) {
   ZX_DEBUG_ASSERT(offset_in_out);
 
   size_t offset = *offset_in_out;
 
   if (offset + sizeof(TeeCommandParam) > buffer.size()) {
-    return fit::error();
+    return fpromise::error();
   }
 
   const uint8_t* param_addr = buffer.data() + offset;
   auto param = reinterpret_cast<const TeeCommandParam*>(param_addr);
   if (param->type != kTeeParamTypeUint32) {
     LOG(ERROR, "Received unexpected param type");
-    return fit::error();
+    return fpromise::error();
   }
 
   offset += sizeof(TeeCommandParam);
   *offset_in_out = fbl::round_up(offset, kParameterAlignment);
 
-  return fit::ok(param->param.u32);
+  return fpromise::ok(param->param.u32);
 }
 
 TEEC_Result SecmemSession::ProtectMemoryRange(uint32_t start, uint32_t length, bool is_enable) {
@@ -282,7 +282,8 @@ TEEC_Result SecmemSession::AllocateSecureMemory(uint32_t* start, uint32_t* lengt
   }
 
   size_t output_offset = 0;
-  fit::result<uint32_t> max_vdec_size_result = UnpackUint32Parameter(cmd_buffer, &output_offset);
+  fpromise::result<uint32_t> max_vdec_size_result =
+      UnpackUint32Parameter(cmd_buffer, &output_offset);
   if (!max_vdec_size_result.is_ok()) {
     LOG(ERROR, "UnpackUint32Parameter() after kSecmemCommandIdGetMemSize failed");
     return TEEC_ERROR_COMMUNICATION;
@@ -312,7 +313,7 @@ TEEC_Result SecmemSession::AllocateSecureMemory(uint32_t* start, uint32_t* lengt
   }
 
   output_offset = 0;
-  fit::result<uint32_t> vdec_paddr_result = UnpackUint32Parameter(cmd_buffer, &output_offset);
+  fpromise::result<uint32_t> vdec_paddr_result = UnpackUint32Parameter(cmd_buffer, &output_offset);
   if (!vdec_paddr_result.is_ok()) {
     LOG(ERROR, "UnpackUint32Parameter() after kSecmemCommandIdAllocateSecureMemory failed");
     return TEEC_ERROR_COMMUNICATION;

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_COMMON_ASYNC_UTIL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_ASYNC_UTIL_H_
 
-#include "lib/fit/promise.h"
+#include "lib/fpromise/promise.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
@@ -13,8 +13,8 @@ namespace zxdb {
 // Helper for creating an error promise. This is used when the error is synchronously known in
 // a function that returns a promise.
 template <typename ResultType>
-fit::promise<ResultType, Err> MakeErrPromise(Err err) {
-  return fit::make_result_promise<ResultType, Err>(fit::error(std::move(err)));
+fpromise::promise<ResultType, Err> MakeErrPromise(Err err) {
+  return fpromise::make_result_promise<ResultType, Err>(fpromise::error(std::move(err)));
 }
 
 }  // namespace zxdb

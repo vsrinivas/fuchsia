@@ -151,10 +151,10 @@ class FakeImx227Device : public Imx227Device {
     mock_mipi_.VerifyAndClear();
   }
 
-  fit::result<uint8_t, zx_status_t> GetRegValFromSeq(uint8_t index, uint16_t address) {
+  fpromise::result<uint8_t, zx_status_t> GetRegValFromSeq(uint8_t index, uint16_t address) {
     return GetRegisterValueFromSequence(index, address);
   }
-  fit::result<uint16_t, zx_status_t> GetRegValFromSeq16(uint8_t index, uint16_t address) {
+  fpromise::result<uint16_t, zx_status_t> GetRegValFromSeq16(uint8_t index, uint16_t address) {
     return GetRegisterValueFromSequence16(index, address);
   }
 

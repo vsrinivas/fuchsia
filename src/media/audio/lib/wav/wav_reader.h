@@ -31,7 +31,8 @@ class WavReader {
   WavReader(WavReader&&) = default;
   WavReader& operator=(WavReader&&) = default;
 
-  static fit::result<std::unique_ptr<WavReader>, zx_status_t> Open(const std::string& file_name);
+  static fpromise::result<std::unique_ptr<WavReader>, zx_status_t> Open(
+      const std::string& file_name);
 
   fuchsia::media::AudioSampleFormat sample_format() const { return sample_format_; }
   uint32_t channel_count() const { return channel_count_; }
@@ -41,7 +42,7 @@ class WavReader {
   uint32_t length_in_frames() const { return length_ / (bits_per_sample_ / 8 * channel_count_); }
 
   // Read up to num_bytes of audio into buffer; return number of bytes read, or errno on failure.
-  fit::result<size_t, int> Read(void* buffer, size_t num_bytes);
+  fpromise::result<size_t, int> Read(void* buffer, size_t num_bytes);
   // Prepare to Read from the beginning of the data section (again).
   int Reset();
 

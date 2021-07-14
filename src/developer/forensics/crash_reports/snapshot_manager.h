@@ -8,7 +8,7 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
@@ -47,7 +47,7 @@ class SnapshotManager {
   // Returns a promise of a snapshot uuid for a snapshot that contains the most up-to-date system
   // data (a new snapshot will be created if all existing snapshots contain data that is
   // out-of-date). No uuid will be returned if |timeout| expires.
-  ::fit::promise<SnapshotUuid> GetSnapshotUuid(zx::duration timeout);
+  ::fpromise::promise<SnapshotUuid> GetSnapshotUuid(zx::duration timeout);
 
   // Returns the snapshot for |uuid|, if one exists. If no snapshot exists for |uuid| a snapshot
   // containing annotations indicating the error will be returned.
@@ -80,7 +80,7 @@ class SnapshotManager {
     bool is_pending;
 
     // Promises that are waiting on the call to complete.
-    std::vector<::fit::suspended_task> blocked_promises;
+    std::vector<::fpromise::suspended_task> blocked_promises;
 
     // The actual request that we delay by |shared_request_window_| after the SnapshotRequest is
     // created.
@@ -114,7 +114,7 @@ class SnapshotManager {
 
   // Resume |get_uuid_promise| when |deadline| expires or request |uuid| completes with a snapshot.
   void WaitForSnapshot(const SnapshotUuid& uuid, zx::time deadline,
-                       ::fit::suspended_task get_uuid_promise);
+                       ::fpromise::suspended_task get_uuid_promise);
 
   // Make a call to fuchsia.feedback.DataProvider/GetSnapshot, started at |start_time|, and return
   // the Uuid of its eventual snapshot.

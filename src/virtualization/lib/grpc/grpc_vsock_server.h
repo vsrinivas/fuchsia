@@ -6,10 +6,11 @@
 #define SRC_VIRTUALIZATION_LIB_GRPC_GRPC_VSOCK_SERVER_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <grpc++/grpc++.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
+
+#include <grpc++/grpc++.h>
 
 // A thin wrapper around |grpc::Server| that handles accepting connections
 // from a |fuchsia::virtualization::HostVsockEndpoint| and adding them to a
@@ -65,10 +66,10 @@ class GrpcVsockServerBuilder {
   // requests on the sockets.
   //
   // It is safe to free the builder immediately after a call to |Build|.
-  fit::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> Build();
+  fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> Build();
 
  private:
-  std::vector<fit::promise<void, zx_status_t>> service_promises_;
+  std::vector<fpromise::promise<void, zx_status_t>> service_promises_;
   std::shared_ptr<fuchsia::virtualization::HostVsockEndpointPtr> socket_endpoint_;
   std::unique_ptr<grpc::ServerBuilder> builder_;
   std::unique_ptr<GrpcVsockServer> server_;

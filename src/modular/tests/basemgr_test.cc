@@ -30,28 +30,28 @@ class BasemgrTest : public modular_testing::TestHarnessFixture {
  public:
   BasemgrTest() : executor_(dispatcher()) {}
 
-  fit::result<inspect::contrib::DiagnosticsData> GetInspectDiagnosticsData() {
+  fpromise::result<inspect::contrib::DiagnosticsData> GetInspectDiagnosticsData() {
     auto archive = real_services()->Connect<fuchsia::diagnostics::ArchiveAccessor>();
 
     inspect::contrib::ArchiveReader reader(std::move(archive), {kBasemgrSelector});
-    fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> result;
+    fpromise::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> result;
     executor_.schedule_task(
         reader.SnapshotInspectUntilPresent({kBasemgrComponentName})
-            .then([&](fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>&
+            .then([&](fpromise::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>&
                           snapshot_result) { result = std::move(snapshot_result); }));
     RunLoopUntil([&] { return result.is_ok() || result.is_error(); });
 
     if (result.is_error()) {
       EXPECT_FALSE(result.is_error()) << "Error was " << result.error();
-      return fit::error();
+      return fpromise::error();
     }
 
     if (result.value().size() != 1) {
       EXPECT_EQ(1u, result.value().size()) << "Expected only one component";
-      return fit::error();
+      return fpromise::error();
     }
 
-    return fit::ok(std::move(result.value()[0]));
+    return fpromise::ok(std::move(result.value()[0]));
   }
 
   async::Executor executor_;

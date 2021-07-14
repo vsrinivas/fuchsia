@@ -110,11 +110,11 @@ constexpr uint64_t kLowMask = 0x0F;
 
 }  // namespace
 
-fit::result<std::string, std::string> Guid::ToString(fbl::Span<const uint8_t> guid) {
+fpromise::result<std::string, std::string> Guid::ToString(fbl::Span<const uint8_t> guid) {
   if (guid.size() != kGuidLength) {
     std::string error = "Input GUID size must be equal to |kGuidLength|. Input Size: ";
     error.append(std::to_string(guid.size())).append(".\n");
-    return fit::error(error);
+    return fpromise::error(error);
   }
   std::array<char, kGuidStrLength> out_guid;
 
@@ -139,15 +139,15 @@ fit::result<std::string, std::string> Guid::ToString(fbl::Span<const uint8_t> gu
     }
     current_section++;
   }
-  return fit::ok(std::string(out_guid.data(), out_guid.size()));
+  return fpromise::ok(std::string(out_guid.data(), out_guid.size()));
 }
 
-fit::result<std::array<uint8_t, kGuidLength>, std::string> Guid::FromString(
+fpromise::result<std::array<uint8_t, kGuidLength>, std::string> Guid::FromString(
     fbl::Span<const char> guid) {
   if (guid.size() != kGuidStrLength) {
     std::string error = "Input GUID size must be equal to |kGuidStrLength|. Input Size: ";
     error.append(std::to_string(guid.size())).append(".\n");
-    return fit::error(error);
+    return fpromise::error(error);
   }
   std::array<uint8_t, kGuidLength> out_guid;
 
@@ -169,7 +169,7 @@ fit::result<std::array<uint8_t, kGuidLength>, std::string> Guid::FromString(
     current_section++;
   }
 
-  return fit::ok(out_guid);
+  return fpromise::ok(out_guid);
 }
 
 }  // namespace storage::volume_image

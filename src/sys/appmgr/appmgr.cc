@@ -12,7 +12,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/zx/time.h>
@@ -66,7 +66,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
         insp.GetRoot().CreateUint("current_size", stats.size, &insp);
         insp.GetRoot().CreateUint("maximum_size", stats.maximum_size, &insp);
         insp.GetRoot().CreateUint("dynamic_links", stats.dynamic_child_count, &insp);
-        return fit::make_result_promise(fit::ok(std::move(insp)));
+        return fpromise::make_result_promise(fpromise::ok(std::move(insp)));
       },
       &inspector_);
 
@@ -82,7 +82,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   if (!appmgr_config_dir.is_valid()) {
     FX_LOGS(ERROR) << "Could not open appmgr's config dir. error = " << appmgr_config_dir.get();
   }
-  fit::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error> component_id_index =
+  fpromise::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error> component_id_index =
       ComponentIdIndex::CreateFromAppmgrConfigDir(appmgr_config_dir);
   FX_CHECK(component_id_index) << "Cannot read component ID Index. error = "
                                << static_cast<int>(component_id_index.error());

@@ -12,7 +12,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <iostream>
 #include <string>
@@ -29,9 +29,9 @@ namespace modular {
 
 class SessionCtlApp {
  public:
-  // A fit::error("") will result in command usage being printed. Any other value
+  // A fpromise::error("") will result in command usage being printed. Any other value
   // will result in that error string being printed.
-  using CommandResult = fit::result<void, std::string>;
+  using CommandResult = fpromise::result<void, std::string>;
   using CommandDoneCallback = fit::function<void(CommandResult)>;
 
   // Constructs a SessionCtlApp which can read and execute session commands.

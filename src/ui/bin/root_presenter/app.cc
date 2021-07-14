@@ -180,7 +180,7 @@ void App::RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> vi
 
 void App::RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) {
   if (!view_ref.reference.is_valid()) {
-    callback(fit::error(fuchsia::ui::views::Error::DENIED));
+    callback(fpromise::error(fuchsia::ui::views::Error::DENIED));
     return;
   }
   FX_DCHECK(view_focuser_);

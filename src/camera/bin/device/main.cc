@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<camera::DeviceImpl> device;
   executor.schedule_task(
       result.then([&context, &device, &loop, &outgoing_service_name](
-                      fit::result<std::unique_ptr<camera::DeviceImpl>, zx_status_t>& result) {
+                      fpromise::result<std::unique_ptr<camera::DeviceImpl>, zx_status_t>& result) {
         if (result.is_error()) {
           FX_PLOGS(FATAL, result.error()) << "Failed to create device.";
           loop.Quit();

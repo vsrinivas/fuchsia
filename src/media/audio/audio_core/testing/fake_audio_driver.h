@@ -8,7 +8,7 @@
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <lib/async/cpp/time.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>

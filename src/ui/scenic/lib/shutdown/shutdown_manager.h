@@ -8,7 +8,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include <memory>
 
@@ -39,13 +39,11 @@ class ShutdownManager final : public std::enable_shared_from_this<ShutdownManage
         }
       });
 
-
-
   ~ShutdownManager();
 
   // Registers a callback that will be invoked when |Shutdown()| is called.  Once |Shutdown()| has
   // been called, it is no longer legal to register additional callbacks.
-  using ClientCallback = fit::function<fit::promise<>()>;
+  using ClientCallback = fit::function<fpromise::promise<>()>;
   void RegisterClient(ClientCallback client);
 
   // Attempts to shutdown gracefully.  If the specified |timeout| is exceeded, then the

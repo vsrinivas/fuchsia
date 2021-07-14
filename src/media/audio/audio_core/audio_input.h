@@ -33,7 +33,7 @@ class AudioInput : public AudioDevice {
 
  protected:
   // |media::audio::AudioObject|
-  fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
+  fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
 
   // |media::audio::AudioDevice|

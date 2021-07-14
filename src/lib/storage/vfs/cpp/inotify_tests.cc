@@ -8,7 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/inotify.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/memfs/memfs.h>
 #include <sys/stat.h>
 

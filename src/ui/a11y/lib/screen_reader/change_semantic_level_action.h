@@ -27,7 +27,7 @@ class ChangeSemanticLevelAction : public ScreenReaderAction {
 
  private:
   // Returns a promise that speaks the |semantic_level|.
-  fit::promise<> SpeakSemanticLevelPromise(ScreenReaderContext::SemanticLevel semantic_level);
+  fpromise::promise<> SpeakSemanticLevelPromise(ScreenReaderContext::SemanticLevel semantic_level);
 
   Direction direction_;
 };

@@ -12,7 +12,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -37,9 +37,9 @@ class DeviceWatcherImpl {
  public:
   DeviceWatcherImpl();
   ~DeviceWatcherImpl();
-  static fit::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> Create(
       fuchsia::sys::LauncherHandle launcher);
-  fit::result<PersistentDeviceId, zx_status_t> AddDevice(
+  fpromise::result<PersistentDeviceId, zx_status_t> AddDevice(
       fuchsia::hardware::camera::DeviceHandle camera);
   void UpdateClients();
   fidl::InterfaceRequestHandler<fuchsia::camera3::DeviceWatcher> GetHandler();
@@ -51,7 +51,7 @@ class DeviceWatcherImpl {
   class Client : public fuchsia::camera3::DeviceWatcher {
    public:
     explicit Client(DeviceWatcherImpl& watcher);
-    static fit::result<std::unique_ptr<Client>, zx_status_t> Create(
+    static fpromise::result<std::unique_ptr<Client>, zx_status_t> Create(
         DeviceWatcherImpl& watcher, ClientId id,
         fidl::InterfaceRequest<fuchsia::camera3::DeviceWatcher> request,
         async_dispatcher_t* dispatcher);

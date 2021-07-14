@@ -8,7 +8,7 @@
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 

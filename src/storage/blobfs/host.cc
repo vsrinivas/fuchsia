@@ -845,8 +845,8 @@ zx::status<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint64_t start_bloc
   }
   size_t block_offset = 0;
   for (auto range : ranges) {
-    zx::status<> status =
-        ReadBlocks(data_start_block_ + range.first, range.second, &data[block_offset * GetBlockSize()]);
+    zx::status<> status = ReadBlocks(data_start_block_ + range.first, range.second,
+                                     &data[block_offset * GetBlockSize()]);
     if (status.is_error()) {
       return status;
     }
@@ -855,11 +855,12 @@ zx::status<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint64_t start_bloc
   return zx::ok();
 }
 
-fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlob(uint32_t node_index) {
+fpromise::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlob(
+    uint32_t node_index) {
   auto inode_ptr = GetNode(node_index);
   if (inode_ptr.is_error()) {
-    return fit::error("Failed to get Inode index " + std::to_string(node_index) + ": " +
-                      std::to_string(inode_ptr.status_value()));
+    return fpromise::error("Failed to get Inode index " + std::to_string(node_index) + ": " +
+                           std::to_string(inode_ptr.status_value()));
   }
   Inode inode = *inode_ptr.value();
   const uint32_t block_size = GetBlockSize();
@@ -867,9 +868,9 @@ fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlob(uin
   auto make_error = [&](const std::string& error) {
     digest::Digest digest(inode.merkle_root_hash);
     auto digest_str = digest.ToString();
-    return fit::error("Blob with merkle root hash of " +
-                      std::string(digest_str.data(), digest_str.length()) +
-                      " had errors. More specifically: " + error);
+    return fpromise::error("Blob with merkle root hash of " +
+                           std::string(digest_str.data(), digest_str.length()) +
+                           " had errors. More specifically: " + error);
   };
 
   auto blob_layout =
@@ -933,7 +934,7 @@ fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlob(uin
   // Remove trailing block alignment.
   data_blocks.resize(inode.blob_size, 0);
 
-  return fit::ok(std::move(data_blocks));
+  return fpromise::ok(std::move(data_blocks));
 }
 
 zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
@@ -947,13 +948,13 @@ zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
 
 uint32_t Blobfs::GetBlockSize() const { return Info().block_size; }
 
-fit::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
+fpromise::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
   for (uint64_t inode_index = 0, allocated_nodes = 0;
        inode_index < info_.inode_count && allocated_nodes < info_.alloc_inode_count;
        ++inode_index) {
     auto inode = GetNode(inode_index);
     if (inode.is_error()) {
-      return fit::error("Failed to retrieve inode.");
+      return fpromise::error("Failed to retrieve inode.");
     }
     if (!inode->header.IsAllocated()) {
       continue;
@@ -974,17 +975,17 @@ fit::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
       return visitor_result.take_error_result();
     }
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
-fit::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs) {
-  return fs.VisitBlobs([output_dir](Blobfs::BlobView view) -> fit::result<void, std::string> {
+fpromise::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs) {
+  return fs.VisitBlobs([output_dir](Blobfs::BlobView view) -> fpromise::result<void, std::string> {
     uint8_t hash[digest::kSha256Length];
     memcpy(hash, view.merkle_hash.data(), digest::kSha256Length);
     auto blob_name = digest::Digest(hash).ToString();
     fbl::unique_fd file(openat(output_dir, blob_name.c_str(), O_CREAT | O_RDWR, 0644));
     if (!file.is_valid()) {
-      return fit::error(
+      return fpromise::error(
           "Failed to create blob file" + std::string(blob_name.c_str()) +
           "(merkle root digest) in output dir. More specifically: " + strerror(errno));
     }
@@ -995,14 +996,14 @@ fit::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs) {
       write_result = write(file.get(), &view.blob_contents[written_bytes],
                            view.blob_contents.size() - written_bytes);
       if (write_result < 0) {
-        return fit::error(
+        return fpromise::error(
             "Failed to write blob " + std::string(blob_name.c_str()) +
             "(merkle root digest) contents in output file. More specifically: " + strerror(errno));
       }
       written_bytes += write_result;
     }
 
-    return fit::ok();
+    return fpromise::ok();
   });
 }
 

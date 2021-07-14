@@ -8,8 +8,8 @@
 #include <fuchsia/feedback/internal/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -50,13 +50,13 @@ class DirectoryMigratorPtr {
   // Call the underlying GetDirectories and convert the returned values into file descriptors.
   //
   // Returns |Error::kConnectionError| in the event the connection is lost.
-  ::fit::promise<Directories, Error> GetDirectories(const zx::duration timeout) {
+  ::fpromise::promise<Directories, Error> GetDirectories(const zx::duration timeout) {
     FX_CHECK(!called_) << "GetDirectories() can only be called once";
     called_ = true;
 
-    ::fit::bridge<Directories, Error> bridge;
+    ::fpromise::bridge<Directories, Error> bridge;
     auto completer =
-        std::make_shared<::fit::completer<Directories, Error>>(std::move(bridge.completer));
+        std::make_shared<::fpromise::completer<Directories, Error>>(std::move(bridge.completer));
 
     if (const zx_status_t status = async::PostDelayedTask(
             dispatcher_,
@@ -80,13 +80,13 @@ class DirectoryMigratorPtr {
     });
 
     completer_ = completer;
-    return bridge.consumer.promise_or(::fit::error(Error::kLogicError));
+    return bridge.consumer.promise_or(::fpromise::error(Error::kLogicError));
   }
 
  private:
   async_dispatcher_t* dispatcher_;
   ::fidl::InterfacePtr<DirectoryMigratorProtocol> migrator_;
-  std::shared_ptr<::fit::completer<Directories, Error>> completer_;
+  std::shared_ptr<::fpromise::completer<Directories, Error>> completer_;
   bool called_{false};
 };
 

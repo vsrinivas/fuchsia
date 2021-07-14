@@ -5,9 +5,7 @@
 #include <fuchsia/hardware/block/volume/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fit/defer.h>
-#include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -75,22 +73,23 @@ class VmoWriter final : public Writer {
     ASSERT_TRUE(Write(offset, data).is_ok());
   }
 
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     if (offset + buffer.size() > vmo_size_) {
       auto result = zx::make_status(vmo_->set_size(offset + buffer.size()));
       if (result.is_error()) {
-        return fit::error(std::string("VmoWriter::Write failed to extend vmo with status: ") +
-                          result.status_string() + ".");
+        return fpromise::error(std::string("VmoWriter::Write failed to extend vmo with status: ") +
+                               result.status_string() + ".");
       }
       vmo_size_ = offset + buffer.size();
     }
     auto result = zx::make_status(vmo_->write(buffer.data(), offset, buffer.size()));
     if (result.is_error()) {
-      return fit::error(std::string("VmoWriter::Write failed to write to vmo with status: ") +
-                        result.status_string() + ".");
+      return fpromise::error(std::string("VmoWriter::Write failed to write to vmo with status: ") +
+                             result.status_string() + ".");
     }
     last_written_byte_ = std::max(last_written_byte_, offset + buffer.size());
-    return fit::ok();
+    return fpromise::ok();
   }
 
   uint64_t vmo_size() const { return vmo_size_; }
@@ -110,12 +109,12 @@ class VmoReader final : public Reader {
 
   uint64_t length() const final { return vmo_size_; }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     auto result = zx::make_status(vmo_->read(buffer.data(), offset, buffer.size()));
     if (result.is_error()) {
-      return fit::error(result.status_string());
+      return fpromise::error(result.status_string());
     }
-    return fit::ok();
+    return fpromise::ok();
   }
 
   uint64_t vmo_size() const { return vmo_size_; }
@@ -135,8 +134,8 @@ constexpr uint64_t kSliceSize = 32u * (1u << 10);
 constexpr uint64_t kImageSize = 500u * (1u << 20);
 constexpr uint64_t kBlockSize = 512;
 
-fit::result<Partition, std::string> GetBlobfsPartition(const PartitionOptions& options,
-                                                       const FvmOptions& fvm_options) {
+fpromise::result<Partition, std::string> GetBlobfsPartition(const PartitionOptions& options,
+                                                            const FvmOptions& fvm_options) {
   auto blobfs_reader_or = FdReader::Create(kBlobfsImagePath);
   if (blobfs_reader_or.is_error()) {
     return blobfs_reader_or.take_error_result();
@@ -146,8 +145,8 @@ fit::result<Partition, std::string> GetBlobfsPartition(const PartitionOptions& o
   return CreateBlobfsFvmPartition(std::move(blobfs_reader), options, fvm_options);
 }
 
-fit::result<Partition, std::string> GetMinfsPartition(const PartitionOptions& options,
-                                                      const FvmOptions& fvm_options) {
+fpromise::result<Partition, std::string> GetMinfsPartition(const PartitionOptions& options,
+                                                           const FvmOptions& fvm_options) {
   auto minfs_reader_or = FdReader::Create(kMinfsImagePath);
   if (minfs_reader_or.is_error()) {
     return minfs_reader_or.take_error_result();
@@ -162,25 +161,25 @@ struct WriteResult {
   VmoWriter image_writer;
 };
 
-fit::result<WriteResult, std::string> WriteFvmImage(const FvmDescriptor& fvm_descriptor) {
+fpromise::result<WriteResult, std::string> WriteFvmImage(const FvmDescriptor& fvm_descriptor) {
   const auto& fvm_options = fvm_descriptor.options();
   zx::vmo fvm_vmo;
   if (auto result = zx::vmo::create(kImageSize, 0u, &fvm_vmo); result != ZX_OK) {
-    return fit::error("Failed to create fvm image vmo. Error Code: " + std::to_string(result) +
-                      ".");
+    return fpromise::error("Failed to create fvm image vmo. Error Code: " + std::to_string(result) +
+                           ".");
   }
 
   VmoWriter fvm_writer(fvm_vmo.borrow(), kImageSize);
   fvm_writer.PoisonRange(0, fvm_descriptor.metadata_required_size() * 2);
   if (testing::Test::HasFailure()) {
-    return fit::error("Failed to poison fvm image vmo.");
+    return fpromise::error("Failed to poison fvm image vmo.");
   }
 
   auto header = internal::MakeHeader(fvm_options, 200);
   for (uint64_t i = 1; i <= fvm_descriptor.slice_count(); ++i) {
     fvm_writer.PoisonRange(header.GetSliceDataOffset(i), kSliceSize);
     if (testing::Test::HasFailure()) {
-      return fit::error("Failed to poison fvm image vmo.");
+      return fpromise::error("Failed to poison fvm image vmo.");
     }
   }
 
@@ -192,35 +191,35 @@ fit::result<WriteResult, std::string> WriteFvmImage(const FvmDescriptor& fvm_des
   uint64_t block_count = GetBlockCount(0, fvm_writer.vmo_size(), kBlockSize);
   if (fvm_writer.vmo_size() % kBlockSize != 0) {
     if (auto result = fvm_vmo.set_size(kBlockSize * block_count); result != ZX_OK) {
-      return fit::error("Failed to extend fvm image vmo to block boundary. Error Code: " +
-                        std::to_string(result) + ".");
+      return fpromise::error("Failed to extend fvm image vmo to block boundary. Error Code: " +
+                             std::to_string(result) + ".");
     }
   }
 
-  return fit::ok(WriteResult{std::move(fvm_vmo), std::move(fvm_writer)});
+  return fpromise::ok(WriteResult{std::move(fvm_vmo), std::move(fvm_writer)});
 }
 
-fit::result<storage::RamDisk, std::string> LaunchFvm(zx::vmo& fvm_vmo) {
+fpromise::result<storage::RamDisk, std::string> LaunchFvm(zx::vmo& fvm_vmo) {
   zx::vmo ramdisk_vmo;
   if (auto result = fvm_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &ramdisk_vmo); result != ZX_OK) {
-    return fit::error("Failed to extend fvm image vmo to block boundary. Error Code: " +
-                      std::to_string(result) + ".");
+    return fpromise::error("Failed to extend fvm image vmo to block boundary. Error Code: " +
+                           std::to_string(result) + ".");
   }
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(ramdisk_vmo), kBlockSize);
   if (ramdisk_or.is_error()) {
-    return fit::error("Failed to create ramdisk for FVM. Error: " +
-                      std::string(ramdisk_or.status_string()) + ".");
+    return fpromise::error("Failed to create ramdisk for FVM. Error: " +
+                           std::string(ramdisk_or.status_string()) + ".");
   }
   auto ramdisk = std::move(ramdisk_or.value());
 
   int fvm_dev_fd = ramdisk_get_block_fd(ramdisk.client());
   auto fvm_bind_result = BindFvm(fvm_dev_fd);
   if (fvm_bind_result.is_error()) {
-    return fit::error("Failed to bind FVM to ramdisk. Error: " +
-                      std::string(fvm_bind_result.status_string()) + ".");
+    return fpromise::error("Failed to bind FVM to ramdisk. Error: " +
+                           std::string(fvm_bind_result.status_string()) + ".");
   }
 
-  return fit::ok(std::move(ramdisk));
+  return fpromise::ok(std::move(ramdisk));
 }
 
 void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {

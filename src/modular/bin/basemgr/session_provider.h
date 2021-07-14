@@ -33,7 +33,7 @@ class SessionProvider {
         fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) = 0;
   };
 
-  using StartSessionResult = fit::result<void, zx_status_t>;
+  using StartSessionResult = fpromise::result<void, zx_status_t>;
 
   // Target constructor.
   //
@@ -50,7 +50,7 @@ class SessionProvider {
   // Returns |ZX_ERR_BAD_STATE| if there is an existing sessionmgr process, and does not
   // start a new session.
   //
-  // Returns fit::ok if a new session was started successfully.
+  // Returns fpromise::ok if a new session was started successfully.
   StartSessionResult StartSession(fuchsia::ui::views::ViewToken view_token,
                                   scenic::ViewRefPair view_ref_pair);
 

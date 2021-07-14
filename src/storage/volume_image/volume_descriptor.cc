@@ -21,7 +21,7 @@
 
 namespace storage::volume_image {
 
-fit::result<VolumeDescriptor, std::string> VolumeDescriptor::Deserialize(
+fpromise::result<VolumeDescriptor, std::string> VolumeDescriptor::Deserialize(
     fbl::Span<const uint8_t> serialized) {
   rapidjson::Document document;
   rapidjson::ParseResult result =
@@ -31,19 +31,19 @@ fit::result<VolumeDescriptor, std::string> VolumeDescriptor::Deserialize(
     std::ostringstream error;
     error << "Error parsing serialized VolumeDescriptor. "
           << rapidjson::GetParseError_En(result.Code()) << std::endl;
-    return fit::error(error.str());
+    return fpromise::error(error.str());
   }
 
   uint64_t magic = document["magic"].GetUint64();
   if (magic != kMagic) {
-    return fit::error("Invalid Magic\n");
+    return fpromise::error("Invalid Magic\n");
   }
 
   VolumeDescriptor descriptor = {};
   const std::string& instance_guid = document["instance_guid"].GetString();
   // The stringified version includes 4 Hyphens.
   if (instance_guid.length() != kGuidStrLength) {
-    return fit::error("instance_guid length must be 36 bytes.\n");
+    return fpromise::error("instance_guid length must be 36 bytes.\n");
   }
   auto instance_bytes = Guid::FromString(instance_guid);
   if (instance_bytes.is_error()) {
@@ -54,7 +54,7 @@ fit::result<VolumeDescriptor, std::string> VolumeDescriptor::Deserialize(
   const std::string& type_guid = document["type_guid"].GetString();
   // The stringified version includes 4 Hyphens.
   if (type_guid.length() != kGuidStrLength) {
-    return fit::error("type_guid length must be 36 bytes.\n");
+    return fpromise::error("type_guid length must be 36 bytes.\n");
   }
 
   auto type_bytes = Guid::FromString(type_guid);
@@ -65,7 +65,7 @@ fit::result<VolumeDescriptor, std::string> VolumeDescriptor::Deserialize(
 
   const std::string& name = document["name"].GetString();
   if (name.length() > kNameLength) {
-    return fit::error("name exceeds maximum length.\n");
+    return fpromise::error("name exceeds maximum length.\n");
   }
   descriptor.name = name;
 
@@ -88,10 +88,10 @@ fit::result<VolumeDescriptor, std::string> VolumeDescriptor::Deserialize(
     }
   }
 
-  return fit::ok(descriptor);
+  return fpromise::ok(descriptor);
 }
 
-fit::result<std::vector<uint8_t>, std::string> VolumeDescriptor::Serialize() const {
+fpromise::result<std::vector<uint8_t>, std::string> VolumeDescriptor::Serialize() const {
   rapidjson::Document document;
   document.SetObject();
 
@@ -124,14 +124,14 @@ fit::result<std::vector<uint8_t>, std::string> VolumeDescriptor::Serialize() con
   rapidjson::StringBuffer buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
   if (!document.Accept(writer)) {
-    return fit::error("Failed to obtain string representation of VolumeDescriptor.\n");
+    return fpromise::error("Failed to obtain string representation of VolumeDescriptor.\n");
   }
 
   const auto* serialized_content = reinterpret_cast<const uint8_t*>(buffer.GetString());
   std::vector<uint8_t> data(serialized_content, serialized_content + buffer.GetLength());
   data.push_back('\0');
 
-  return fit::ok(data);
+  return fpromise::ok(data);
 }
 
 std::string VolumeDescriptor::DebugString() const {

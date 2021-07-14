@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_UTILS_FIT_BRIDGE_MAP_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include <cstdint>
 #include <map>
@@ -85,21 +85,21 @@ class BridgeMap {
 
   // Get the promise that will be ungated when the bridge at |id| is completed. An error is returned
   // if the bridge doesn't exist.
-  ::fit::promise<V, Error> WaitForDone(uint64_t id) {
+  ::fpromise::promise<V, Error> WaitForDone(uint64_t id) {
     if (Contains(id)) {
       return bridges_.at(id).WaitForDone();
     }
 
-    return ::fit::make_result_promise<V>(::fit::error(Error::kDefault));
+    return ::fpromise::make_result_promise<V>(::fpromise::error(Error::kDefault));
   }
 
   // Start the timeout and get the promise that will be ungated when the bridge at |id| is
   // completed. An error if returned if the bridge doesn't exist.
-  ::fit::promise<V, Error> WaitForDone(uint64_t id, Timeout timeout) {
+  ::fpromise::promise<V, Error> WaitForDone(uint64_t id, Timeout timeout) {
     if (Contains(id)) {
       return bridges_.at(id).WaitForDone(std::move(timeout));
     }
-    return ::fit::make_result_promise<V>(::fit::error(Error::kDefault));
+    return ::fpromise::make_result_promise<V>(::fpromise::error(Error::kDefault));
   }
 
  private:

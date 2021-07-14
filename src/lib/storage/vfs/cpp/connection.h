@@ -13,7 +13,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/event.h>
 #include <stdint.h>
 #include <zircon/fidl.h>
@@ -35,9 +35,9 @@ namespace internal {
 class FidlTransaction;
 class Binding;
 
-fit::result<VnodeRepresentation, zx_status_t> Describe(const fbl::RefPtr<Vnode>& vnode,
-                                                       VnodeProtocol protocol,
-                                                       VnodeConnectionOptions options);
+fpromise::result<VnodeRepresentation, zx_status_t> Describe(const fbl::RefPtr<Vnode>& vnode,
+                                                            VnodeProtocol protocol,
+                                                            VnodeConnectionOptions options);
 
 // Perform basic flags sanitization.
 // Returns false if the flags combination is invalid.
@@ -188,19 +188,19 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // |zx_status_t| indicates application error i.e. in case of error, it should be returned via the
   // FIDL method return value. The connection is never closed except from |NodeClose|.
   //
-  // Note that |fit::result| has an extra |pending| state apart from |ok| and |error|; the pending
-  // state shall never be returned from any of these |Node_*| methods.
+  // Note that |fpromise::result| has an extra |pending| state apart from |ok| and |error|; the
+  // pending state shall never be returned from any of these |Node_*| methods.
   //
   // If the operation is asynchronous, the corresponding function should take in a callback and
   // return |void|.
   template <typename T = void>
-  using Result = fit::result<T, zx_status_t>;
+  using Result = fpromise::result<T, zx_status_t>;
 
   inline Result<> FromStatus(zx_status_t status) {
     if (status == ZX_OK) {
-      return fit::ok();
+      return fpromise::ok();
     } else {
-      return fit::error(status);
+      return fpromise::error(status);
     }
   }
 

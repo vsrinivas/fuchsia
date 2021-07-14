@@ -22,7 +22,7 @@ class FakeStreamImpl : public FakeStream, public fuchsia::camera3::Stream {
  public:
   FakeStreamImpl();
   ~FakeStreamImpl() override;
-  static fit::result<std::unique_ptr<FakeStreamImpl>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<FakeStreamImpl>, zx_status_t> Create(
       fuchsia::camera3::StreamProperties properties,
       fit::function<void(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>)>
           on_set_buffer_collection);

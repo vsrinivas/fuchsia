@@ -12,7 +12,7 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/pdev.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <array>
 #include <mutex>
@@ -93,7 +93,7 @@ class Imx227Device : public DeviceType,
   //  Returns:
   //    A result with a vmo containing the OTP blob if the read succeeded. Otherwise returns a
   //    result with an error code.
-  fit::result<zx::vmo, zx_status_t> OtpRead();
+  fpromise::result<zx::vmo, zx_status_t> OtpRead();
 
   //  Validates the integrity of the data written to the OTP. A checksum is calculated from the
   //  written data and checked against a hard-coded value.
@@ -148,22 +148,23 @@ class Imx227Device : public DeviceType,
   // Gets the register value from the sequence table.
   // |id| : Index of the sequence table.
   // |address| : Address of the register.
-  fit::result<uint8_t, zx_status_t> GetRegisterValueFromSequence(uint8_t index, uint16_t address);
+  fpromise::result<uint8_t, zx_status_t> GetRegisterValueFromSequence(uint8_t index,
+                                                                      uint16_t address);
 
   // Gets a 16-bit register value from the sequence table, high byte first.
   // |id| : Index of the sequence table.
   // |address| : Address of the register.
-  fit::result<uint16_t, zx_status_t> GetRegisterValueFromSequence16(uint8_t index,
-                                                                    uint16_t address);
+  fpromise::result<uint16_t, zx_status_t> GetRegisterValueFromSequence16(uint8_t index,
+                                                                         uint16_t address);
 
  private:
   // I2C Helpers
   // Returns ZX_OK and an uint16_t value if the read succeeds.
   // Returns error if the I2C read fails.
-  fit::result<uint16_t, zx_status_t> Read16(uint16_t addr) __TA_REQUIRES(lock_);
+  fpromise::result<uint16_t, zx_status_t> Read16(uint16_t addr) __TA_REQUIRES(lock_);
   // Returns ZX_OK and an uint8_t value if the read succeeds.
   // Returns error if the I2C read fails.
-  fit::result<uint8_t, zx_status_t> Read8(uint16_t addr) __TA_REQUIRES(lock_);
+  fpromise::result<uint8_t, zx_status_t> Read8(uint16_t addr) __TA_REQUIRES(lock_);
   // Returns ZX_OK if the write is successful otherwise returns an error.
   zx_status_t Write16(uint16_t addr, uint16_t val) __TA_REQUIRES(lock_);
   // Returns ZX_OK if the write is successful otherwise returns an error.
@@ -179,14 +180,14 @@ class Imx227Device : public DeviceType,
 
   // Read sensor temperature
   // Ranges between -20C and 80C
-  fit::result<int32_t, zx_status_t> GetTemperature();
+  fpromise::result<int32_t, zx_status_t> GetTemperature();
 
   bool is_streaming_;
   uint32_t num_modes_;
   uint32_t current_mode_;
 
   // Timing data
-  fit::result<uint32_t, zx_status_t> GetLinesPerSecond();
+  fpromise::result<uint32_t, zx_status_t> GetLinesPerSecond();
 
   // Exposure data
 

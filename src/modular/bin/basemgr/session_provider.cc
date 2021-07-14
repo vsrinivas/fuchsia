@@ -41,7 +41,7 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
   if (is_session_running()) {
     FX_LOGS(WARNING) << "StartSession() called when session context already "
                         "exists. Try calling SessionProvider::Teardown()";
-    return fit::error(ZX_ERR_BAD_STATE);
+    return fpromise::error(ZX_ERR_BAD_STATE);
   }
 
   auto done = [this](SessionContextImpl::ShutDownReason shutdown_reason) {
@@ -65,7 +65,7 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
       },
       done);
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
 void SessionProvider::Teardown(fit::function<void()> callback) {

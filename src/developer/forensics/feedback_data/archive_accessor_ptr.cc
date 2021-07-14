@@ -4,8 +4,8 @@
 
 #include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 
-#include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/diagnostics/formatting.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -58,7 +58,7 @@ void ArchiveAccessor::Collect(
 
 void ArchiveAccessor::StopCollect() { snapshot_iterator_.Unbind(); }
 
-::fit::promise<void, Error> ArchiveAccessor::WaitForDone(fit::Timeout timeout) {
+::fpromise::promise<void, Error> ArchiveAccessor::WaitForDone(fit::Timeout timeout) {
   return archive_.WaitForDone(std::move(timeout));
 }
 

@@ -218,7 +218,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   //
   // Note: This method is public only for the purposes for testing storage paths and migration
   // logic.
-  fit::result<std::string, zx_status_t> InitIsolatedPathForComponentInstance(
+  fpromise::result<std::string, zx_status_t> InitIsolatedPathForComponentInstance(
       const FuchsiaPkgUrl& fp, internal::StorageType storage_type);
 
   // Shutdown realm's namespace processing all pending messages.

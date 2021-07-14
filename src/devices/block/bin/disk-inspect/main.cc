@@ -94,12 +94,12 @@ std::optional<Config> GetOptions(int argc, char** argv) {
   return config;
 }
 
-fit::result<uint32_t, std::string> GetBlockSize(const std::string& name) {
+fpromise::result<uint32_t, std::string> GetBlockSize(const std::string& name) {
   if (name == "minfs") {
-    return fit::ok(minfs::kMinfsBlockSize);
+    return fpromise::ok(minfs::kMinfsBlockSize);
   }
-  return fit::error("FS with label \"" + name +
-                    "\" is not supported for inspection.\nSupported types: minfs\n");
+  return fpromise::error("FS with label \"" + name +
+                         "\" is not supported for inspection.\nSupported types: minfs\n");
 }
 
 std::unique_ptr<disk_inspector::CommandHandler> GetHandler(const char* path, const char* fs_name) {

@@ -215,14 +215,15 @@ class RawBlockImageWriter final : public storage::volume_image::Writer {
  public:
   explicit RawBlockImageWriter(storage::volume_image::Writer* writer) : writer_(writer) {}
 
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     ranges_.insert(range::Range<>(offset, offset + buffer.size()));
     return writer_->Write(offset, buffer);
   }
 
-  fit::result<void, std::string> VisitGaps(
-      fit::function<fit::result<void, std::string>(uint64_t start, uint64_t end, Writer* writer)>
-          visitor) {
+  fpromise::result<void, std::string> VisitGaps(fit::function<fpromise::result<void, std::string>(
+                                                    uint64_t start, uint64_t end, Writer* writer)>
+                                                    visitor) {
     uint64_t last_gap_end = 0;
     for (const auto& range : ranges_) {
       if (range.second.Start() > last_gap_end) {
@@ -233,7 +234,7 @@ class RawBlockImageWriter final : public storage::volume_image::Writer {
       }
       last_gap_end = range.second.End();
     }
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:
@@ -749,7 +750,7 @@ int main(int argc, char** argv) {
     std::vector<uint8_t> filler(4 << 10, 0xFF);
     auto fill_result = raw_writer.VisitGaps(
         [&filler](uint64_t start, uint64_t end,
-                  storage::volume_image::Writer* writer) -> fit::result<void, std::string> {
+                  storage::volume_image::Writer* writer) -> fpromise::result<void, std::string> {
           uint64_t length = end - start;
           if (filler.size() < length) {
             filler.resize(length, 0xFF);

@@ -64,13 +64,13 @@ void PrettyStackManager::LoadDefaultMatchers() {
                                 PrettyFrameGlob::Func("async_loop_dispatch_tasks"),
                                 PrettyFrameGlob::Func("async_loop_run")}));
 
-  // fit::promise and fit::function occur a lot and generate extremely long and useless names.
+  // fpromise::promise and fit::function occur a lot and generate extremely long and useless names.
   // Matching useful sequences is difficult. But just replacing individual stack entries with
   // a simple string eliminates ~3 lines of template goop and ~3 lines of unnecessary function
   // parameters. This makes backtraces much easier to read.
   matchers.push_back(
-      StackGlob("fit::promise code", {PrettyFrameGlob::File("fit/promise_internal.h")}));
-  matchers.push_back(StackGlob("fit::promise code", {PrettyFrameGlob::File("fit/promise.h")}));
+      StackGlob("fpromise::promise code", {PrettyFrameGlob::File("fit/promise_internal.h")}));
+  matchers.push_back(StackGlob("fpromise::promise code", {PrettyFrameGlob::File("fit/promise.h")}));
   matchers.push_back(StackGlob("fit::function code", {PrettyFrameGlob::File("fit/function.h")}));
   matchers.push_back(
       StackGlob("fit::function code", {PrettyFrameGlob::File("fit/function_internal.h")}));

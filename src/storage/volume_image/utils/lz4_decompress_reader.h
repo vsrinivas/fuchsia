@@ -32,7 +32,7 @@ class Lz4DecompressReader final : public Reader {
         compressed_reader_(std::move(compressed_reader)) {}
 
   // Initializes the underlying |StreamContext|.
-  fit::result<void, std::string> Initialize(uint64_t max_buffer_size = kMaxBufferSize) const;
+  fpromise::result<void, std::string> Initialize(uint64_t max_buffer_size = kMaxBufferSize) const;
 
   // Returns the number of bytes readable from this reader.
   uint64_t length() const final { return length_; }
@@ -41,15 +41,15 @@ class Lz4DecompressReader final : public Reader {
   // |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final;
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final;
 
  private:
-  fit::result<void, std::string> DecompressionHandler(
+  fpromise::result<void, std::string> DecompressionHandler(
       fbl::Span<const uint8_t> decompressed_data) const;
 
-  fit::result<void, std::string> Seek(uint64_t offset) const;
+  fpromise::result<void, std::string> Seek(uint64_t offset) const;
 
-  fit::result<void, std::string> NextDecompressedChunk() const;
+  fpromise::result<void, std::string> NextDecompressedChunk() const;
 
   // Describes the current state of the decompression stream.
   struct StreamContext {
@@ -66,7 +66,7 @@ class Lz4DecompressReader final : public Reader {
   };
 
   // Reinitializes the streaming context.
-  fit::result<void, std::string> ResetStreamContext();
+  fpromise::result<void, std::string> ResetStreamContext();
 
   uint64_t offset_ = 0;
   uint64_t length_ = 0;

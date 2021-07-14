@@ -39,7 +39,7 @@ class EffectsStage : public ReadableStream {
 
   uint32_t block_size() const { return effects_processor_->block_size(); }
 
-  fit::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+  fpromise::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config);
 
   const EffectsProcessor& effects_processor() const { return *effects_processor_; }

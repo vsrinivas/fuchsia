@@ -5,8 +5,8 @@
 // This is an integrated test to make sure libcurl works well with the threading and timeout
 // logic implemented in AnalyticsExecutor.
 
-#include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <iostream>
@@ -26,7 +26,7 @@ bool IsResponseCodeSuccess(long response_code) {
   return response_code >= 200 && response_code < 300;
 }
 
-fit::promise<> CurlPerformAsync(const std::string& url, const std::string& data) {
+fpromise::promise<> CurlPerformAsync(const std::string& url, const std::string& data) {
   auto curl = fxl::MakeRefCounted<Curl>();
 
   curl->SetURL(url);
@@ -43,7 +43,7 @@ fit::promise<> CurlPerformAsync(const std::string& url, const std::string& data)
     return data.size();
   });
 
-  fit::bridge bridge;
+  fpromise::bridge bridge;
   curl->Perform([completer = std::move(bridge.completer)](Curl* curl, Curl::Error result) mutable {
     auto response_code = curl->ResponseCode();
     if (!result && IsResponseCodeSuccess(response_code)) {
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
   {
     AnalyticsExecutor executor(soft_timeout_ms);
     executor.schedule_task(
-        fit::make_promise([&url, &data] { return CurlPerformAsync(url, data); }));
+        fpromise::make_promise([&url, &data] { return CurlPerformAsync(url, data); }));
   }
 
   return 0;

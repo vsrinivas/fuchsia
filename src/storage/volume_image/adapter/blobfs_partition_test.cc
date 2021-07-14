@@ -5,7 +5,7 @@
 #include "src/storage/volume_image/adapter/blobfs_partition.h"
 
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <zircon/hw/gpt.h>
 
 #include <array>
@@ -48,13 +48,13 @@ class FakeReader final : public Reader {
  public:
   uint64_t length() const final { return 0; }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     memset(buffer.data(), 0, buffer.size());
     if (offset == 0) {
       memcpy(buffer.data(), &superblock_, sizeof(superblock_));
-      return fit::ok();
+      return fpromise::ok();
     }
-    return fit::ok();
+    return fpromise::ok();
   }
 
   blobfs::Superblock& superblock() { return superblock_; }

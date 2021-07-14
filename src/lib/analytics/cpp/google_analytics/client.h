@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ANALYTICS_CPP_GOOGLE_ANALYTICS_CLIENT_H_
 #define SRC_LIB_ANALYTICS_CPP_GOOGLE_ANALYTICS_CLIENT_H_
 
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include <string>
 

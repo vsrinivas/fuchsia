@@ -6,7 +6,7 @@
 #define SRC_VIRTUALIZATION_LIB_VSH_COMMAND_RUNNER_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 #include <unordered_map>
@@ -48,7 +48,7 @@ class BlockingCommandRunner {
   //
   // Note this is a blocking API that won't return until the process started
   // by |command| has exited, or the vsh connection has been closed.
-  fit::result<CommandResult, zx_status_t> Execute(Command command);
+  fpromise::result<CommandResult, zx_status_t> Execute(Command command);
 
  private:
   fuchsia::virtualization::HostVsockEndpointSyncPtr socket_endpoint_;

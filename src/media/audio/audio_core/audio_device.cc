@@ -4,7 +4,7 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/trace/event.h>
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
@@ -32,9 +32,9 @@ std::string AudioDevice::UniqueIdToString(const audio_stream_unique_id_t& id) {
 }
 
 // static
-fit::result<audio_stream_unique_id_t> AudioDevice::UniqueIdFromString(const std::string& id) {
+fpromise::result<audio_stream_unique_id_t> AudioDevice::UniqueIdFromString(const std::string& id) {
   if (id.size() != 32) {
-    return fit::error();
+    return fpromise::error();
   }
 
   audio_stream_unique_id_t unique_id;
@@ -45,10 +45,10 @@ fit::result<audio_stream_unique_id_t> AudioDevice::UniqueIdFromString(const std:
              &d[0], &d[1], &d[2], &d[3], &d[4], &d[5], &d[6], &d[7], &d[8], &d[9], &d[10], &d[11],
              &d[12], &d[13], &d[14], &d[15]);
   if (captured != 16) {
-    return fit::error();
+    return fpromise::error();
   }
 
-  return fit::ok(unique_id);
+  return fpromise::ok(unique_id);
 }
 
 // Simple accessor here (not in .h) because of forward-declaration issues with AudioDriver
@@ -230,9 +230,9 @@ void AudioDevice::ShutdownSelf() {
   }
 }
 
-fit::promise<void, zx_status_t> AudioDevice::Startup() {
+fpromise::promise<void, zx_status_t> AudioDevice::Startup() {
   TRACE_DURATION("audio", "AudioDevice::Startup");
-  fit::bridge<void, zx_status_t> bridge;
+  fpromise::bridge<void, zx_status_t> bridge;
   mix_domain_->PostTask(
       [self = shared_from_this(), completer = std::move(bridge.completer)]() mutable {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &self->mix_domain());
@@ -248,16 +248,16 @@ fit::promise<void, zx_status_t> AudioDevice::Startup() {
   return bridge.consumer.promise();
 }
 
-fit::promise<void> AudioDevice::Shutdown() {
+fpromise::promise<void> AudioDevice::Shutdown() {
   TRACE_DURATION("audio", "AudioDevice::Shutdown");
   // The only reason we have this flag is to make sure that Shutdown is idempotent.
   if (shut_down_) {
-    return fit::make_ok_promise();
+    return fpromise::make_ok_promise();
   }
   shut_down_ = true;
 
   // Give our derived class, and our driver, a chance to clean up resources.
-  fit::bridge<void> bridge;
+  fpromise::bridge<void> bridge;
   mix_domain_->PostTask(
       [self = shared_from_this(), completer = std::move(bridge.completer)]() mutable {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &self->mix_domain());

@@ -28,7 +28,7 @@ class ChannelProviderPtr {
                      std::shared_ptr<sys::ServiceDirectory> services)
       : channel_ptr_(dispatcher, std::move(services)) {}
 
-  ::fit::promise<std::string, Error> GetCurrentChannel(fit::Timeout timeout) {
+  ::fpromise::promise<std::string, Error> GetCurrentChannel(fit::Timeout timeout) {
     channel_ptr_->GetCurrent([this](std::string channel) {
       if (channel_ptr_.IsAlreadyDone()) {
         return;
@@ -40,7 +40,7 @@ class ChannelProviderPtr {
     return channel_ptr_.WaitForDone(std::move(timeout));
   }
 
-  ::fit::promise<std::string, Error> GetTargetChannel(fit::Timeout timeout) {
+  ::fpromise::promise<std::string, Error> GetTargetChannel(fit::Timeout timeout) {
     channel_ptr_->GetTarget([this](std::string channel) {
       if (channel_ptr_.IsAlreadyDone()) {
         return;
@@ -58,7 +58,7 @@ class ChannelProviderPtr {
 
 }  // namespace
 
-::fit::promise<std::string, Error> GetCurrentChannel(
+::fpromise::promise<std::string, Error> GetCurrentChannel(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     fit::Timeout timeout) {
   auto ptr = std::make_unique<fidl::ChannelProviderPtr>(dispatcher, services);
@@ -70,9 +70,9 @@ class ChannelProviderPtr {
                                               /*args=*/std::move(ptr));
 }
 
-::fit::promise<std::string, Error> GetTargetChannel(async_dispatcher_t* dispatcher,
-                                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                                    fit::Timeout timeout) {
+::fpromise::promise<std::string, Error> GetTargetChannel(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    fit::Timeout timeout) {
   auto ptr = std::make_unique<fidl::ChannelProviderPtr>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of

@@ -38,7 +38,7 @@
 #ifndef SRC_LIB_INTL_LOOKUP_CPP_LOOKUP_H_
 #define SRC_LIB_INTL_LOOKUP_CPP_LOOKUP_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <memory>
 #include <string>
@@ -74,7 +74,7 @@ class Lookup {
   //   - UNAVAILABLE: one of the requested locale IDs is not avalable for use.
   //   - ARGUMENT_ERROR: the locales ids are malfomed, e.g. nonexistent, or
   //     not a valid UTF8 encoding of the locale ID.
-  static fit::result<std::unique_ptr<Lookup>, Lookup::Status> New(
+  static fpromise::result<std::unique_ptr<Lookup>, Lookup::Status> New(
       const std::vector<std::string>& locale_ids);
 
   // Looks up the message by its unique `message_id`.
@@ -82,7 +82,7 @@ class Lookup {
   // Errors:
   //   - UNAVAILABLE: the requested message ID is not present in the loaded
   //     resource bundle.
-  fit::result<std::string_view, Lookup::Status> String(uint64_t message_id);
+  fpromise::result<std::string_view, Lookup::Status> String(uint64_t message_id);
 
   // Instantiates a fake Lookup instance, which is useful for tests that don't
   // want to make a full end-to-end localization setup.
@@ -100,7 +100,7 @@ class Lookup {
   //
   // The implementation of the fake itself is done in rust behind a FFI ABI,
   // see the package //src/lib/intl/lookup/rust for details.
-  static fit::result<std::unique_ptr<Lookup>, Lookup::Status> NewForTest(
+  static fpromise::result<std::unique_ptr<Lookup>, Lookup::Status> NewForTest(
       const std::vector<std::string>& locale_ids);
 
   // Same as above, except allows you to pass in custom behavior operations
@@ -108,7 +108,7 @@ class Lookup {
   // normally never need to use this particular constructor.  If you need
   // special behavior, consider filing a feature request instead to component
   // "I18N>Localization" at https://fxbug.dev.
-  static fit::result<std::unique_ptr<Lookup>, Lookup::Status> NewForTest(
+  static fpromise::result<std::unique_ptr<Lookup>, Lookup::Status> NewForTest(
       const std::vector<std::string>& locale_ids, const intl_lookup_ops_t ops);
 
  private:

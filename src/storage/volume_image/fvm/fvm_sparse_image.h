@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_SPARSE_IMAGE_H_
 #define SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_SPARSE_IMAGE_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <cstdint>
 
@@ -47,14 +47,13 @@ CompressionOptions GetCompressionOptions(const fvm::SparseImage& header);
 // |offset|.
 //
 // On failure, returns the error which caused the header to be invalid.
-fit::result<fvm::SparseImage, std::string> GetHeader(uint64_t offset, const Reader& reader);
+fpromise::result<fvm::SparseImage, std::string> GetHeader(uint64_t offset, const Reader& reader);
 
 // On success, returns the valid collection of |FvmSparsePartitionEntry| as described by |header|
 // and contained in |reader| as starting at |offset|. That is, the partition descriptors start
 // at |offset| in |reader|.
-fit::result<std::vector<PartitionEntry>, std::string> GetPartitions(uint64_t offset,
-                                                                    const Reader& reader,
-                                                                    const fvm::SparseImage& header);
+fpromise::result<std::vector<PartitionEntry>, std::string> GetPartitions(
+    uint64_t offset, const Reader& reader, const fvm::SparseImage& header);
 
 // Returns a non sparse |fvm::Header| from a sparse |header| with supported |options| overriden,
 // and with a known number of initial slices.
@@ -63,17 +62,17 @@ fit::result<std::vector<PartitionEntry>, std::string> GetPartitions(uint64_t off
 // Supported options:
 //   - |max_volume_size|
 //   - |target_volume_size
-fit::result<fvm::Header, std::string> ConvertToFvmHeader(const fvm::SparseImage& sparse_header,
-                                                         uint64_t slice_count,
-                                                         const std::optional<FvmOptions>& options);
+fpromise::result<fvm::Header, std::string> ConvertToFvmHeader(
+    const fvm::SparseImage& sparse_header, uint64_t slice_count,
+    const std::optional<FvmOptions>& options);
 
 // Overload with no options by default.
-inline fit::result<fvm::Header, std::string> ConvertToFvmHeader(
+inline fpromise::result<fvm::Header, std::string> ConvertToFvmHeader(
     const fvm::SparseImage& sparse_header, uint64_t slice_count) {
   return ConvertToFvmHeader(sparse_header, slice_count, std::nullopt);
 }
 
-fit::result<fvm::Metadata, std::string> ConvertToFvmMetadata(
+fpromise::result<fvm::Metadata, std::string> ConvertToFvmMetadata(
     const fvm::Header& header, fbl::Span<const PartitionEntry> partition_entries);
 
 // Returns a |fvm::SparseImage| representation of |descriptor| on success.
@@ -83,9 +82,8 @@ fvm::SparseImage GenerateHeader(const FvmDescriptor& descriptor);
 // If |extents_are_filled| is set to true, for each mapping in |partition| that has
 // |AddressMapOption::kFill| set, the extent length will match the size of the extent, since the
 // data will be expanded to include such values.
-fit::result<PartitionEntry, std::string> GeneratePartitionEntry(uint64_t slice_size,
-                                                                const Partition& partition,
-                                                                bool extents_are_filled = false);
+fpromise::result<PartitionEntry, std::string> GeneratePartitionEntry(
+    uint64_t slice_size, const Partition& partition, bool extents_are_filled = false);
 
 // Returns the size in bytes of the generated sparse image for |descriptor|.
 uint64_t CalculateUncompressedImageSize(const FvmDescriptor& descriptor);
@@ -94,24 +92,24 @@ uint64_t CalculateUncompressedImageSize(const FvmDescriptor& descriptor);
 
 // Returns the size of the written image in bytes when successfully writing a |SparseImage| and
 // its data with |writer|.
-fit::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& descriptor,
-                                                       Writer* writer,
-                                                       Compressor* compressor = nullptr);
+fpromise::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& descriptor,
+                                                            Writer* writer,
+                                                            Compressor* compressor = nullptr);
 
 // Returns true if |reader| is a compressed |fvm::SparseImage|, and has been successfully
 // decompressed into |writer|. If not compressed returns false, and this is not considered an error.
 //
 // On error, returns a description of the error condition.
-fit::result<bool, std::string> FvmSparseDecompressImage(uint64_t offset, const Reader& reader,
-                                                        Writer& writer);
+fpromise::result<bool, std::string> FvmSparseDecompressImage(uint64_t offset, const Reader& reader,
+                                                             Writer& writer);
 
 // Returns a |FvmDescriptor| representing the contained data in sparse image contained in |reader|
 // starting at |offset|. |reader| must contain an uncompressed fvm sparse image, or an error is
 // returned.
 //
 // On error, returns a description of the error condition.
-fit::result<FvmDescriptor, std::string> FvmSparseReadImage(uint64_t offset,
-                                                           std::unique_ptr<Reader> reader);
+fpromise::result<FvmDescriptor, std::string> FvmSparseReadImage(uint64_t offset,
+                                                                std::unique_ptr<Reader> reader);
 
 }  // namespace storage::volume_image
 

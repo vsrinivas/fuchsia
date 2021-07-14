@@ -10,8 +10,8 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/result.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -34,13 +34,13 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   //
   // References to |dispatcher|, |executor|, and |context| may be retained by the instance so the
   // caller must ensure these outlive the returned DeviceImpl.
-  static fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> Create(
-      async_dispatcher_t* dispatcher, fit::executor& executor,
+  static fpromise::promise<std::unique_ptr<DeviceImpl>, zx_status_t> Create(
+      async_dispatcher_t* dispatcher, fpromise::executor& executor,
       fuchsia::camera2::hal::ControllerHandle controller,
       fuchsia::sysmem::AllocatorHandle allocator,
       fuchsia::ui::policy::DeviceListenerRegistryHandle registry, zx::event bad_state_event);
 
-  DeviceImpl(async_dispatcher_t* dispatcher, fit::executor& executor,
+  DeviceImpl(async_dispatcher_t* dispatcher, fpromise::executor& executor,
              fuchsia::sysmem::AllocatorHandle allocator, zx::event bad_state_event);
   ~DeviceImpl() override;
 
@@ -135,7 +135,7 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   };
 
   async_dispatcher_t* dispatcher_;
-  fit::executor& executor_;
+  fpromise::executor& executor_;
   SysmemAllocator sysmem_allocator_;
   zx::event bad_state_event_;
   fuchsia::camera2::hal::ControllerPtr controller_;
@@ -151,7 +151,7 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   uint32_t current_configuration_index_ = 0;
 
   std::vector<zx::eventpair> deallocation_events_;
-  std::vector<fit::promise<void, zx_status_t>> deallocation_promises_;
+  std::vector<fpromise::promise<void, zx_status_t>> deallocation_promises_;
   std::vector<std::unique_ptr<StreamImpl>> streams_;
   MuteState mute_state_;
   bool controller_streaming_ = true;

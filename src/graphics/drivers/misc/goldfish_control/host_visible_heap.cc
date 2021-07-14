@@ -14,7 +14,7 @@
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/vmar.h>
 #include <zircon/assert.h>
 #include <zircon/rights.h>
@@ -88,7 +88,7 @@ zx_status_t CheckSingleBufferSettings(
   return ZX_OK;
 }
 
-fit::result<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params, zx_status_t>
+fpromise::result<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params, zx_status_t>
 GetCreateColorBuffer2Params(fidl::AnyAllocator& allocator,
                             const fuchsia_sysmem2::wire::SingleBufferSettings& buffer_settings,
                             uint64_t paddr) {
@@ -116,7 +116,7 @@ GetCreateColorBuffer2Params(fidl::AnyAllocator& allocator,
     default:
       zxlogf(ERROR, "[%s][%s] pixel_format_type unsupported: type %u", __func__, kTag,
              pixel_format_type);
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
+      return fpromise::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   uint32_t width = image_constraints.min_coded_width();
@@ -141,7 +141,7 @@ GetCreateColorBuffer2Params(fidl::AnyAllocator& allocator,
       .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible)
       .set_physical_address(allocator, paddr)
       .set_format(allocator, color_buffer_format);
-  return fit::ok(std::move(buffer2_params));
+  return fpromise::ok(std::move(buffer2_params));
 }
 
 fuchsia_hardware_goldfish::wire::CreateBuffer2Params GetCreateBuffer2Params(

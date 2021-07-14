@@ -14,8 +14,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/result.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <map>
@@ -62,7 +62,7 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   // Creates a new BufferCollage instance using the provided interface handles. After returning, if
   // the instance stops running, either due to an error or explicit action, |stop_callback| is
   // invoked exactly once if non-null.
-  static fit::result<std::unique_ptr<BufferCollage>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<BufferCollage>, zx_status_t> Create(
       fuchsia::ui::scenic::ScenicHandle scenic, fuchsia::sysmem::AllocatorHandle allocator,
       fuchsia::ui::policy::PresenterHandle presenter, fit::closure stop_callback = nullptr);
 
@@ -72,9 +72,9 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   // Registers a new buffer collection and adds it to the view, updating the layout of existing
   // collections to fit. Returns an id representing the collection. Collections are initially
   // hidden and must be made visible using PostSetCollectionVisibility.
-  fit::promise<uint32_t> AddCollection(fuchsia::sysmem::BufferCollectionTokenHandle token,
-                                       fuchsia::sysmem::ImageFormat_2 image_format,
-                                       std::string description);
+  fpromise::promise<uint32_t> AddCollection(fuchsia::sysmem::BufferCollectionTokenHandle token,
+                                            fuchsia::sysmem::ImageFormat_2 image_format,
+                                            std::string description);
 
   // Removes the collection with the given |id| from the view and updates the layout to fill the
   // vacated space. If |id| is not a valid collection, the instance stops.

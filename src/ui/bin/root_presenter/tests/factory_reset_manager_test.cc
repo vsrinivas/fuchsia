@@ -488,8 +488,8 @@ class FactoryResetManagerSoundTest : public gtest::TestLoopFixture {
     zx::channel client;
     zx::channel::create(0, &client, &server_);
     EXPECT_CALL(*media_retriever_, GetResetSound())
-        .WillRepeatedly(
-            Return(ByMove(fit::ok(fidl::InterfaceHandle<fuchsia::io::File>(std::move(client))))));
+        .WillRepeatedly(Return(
+            ByMove(fpromise::ok(fidl::InterfaceHandle<fuchsia::io::File>(std::move(client))))));
 
     sound_player_.add = true;
     sound_player_.play = true;
@@ -525,7 +525,7 @@ TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerPlaysSoundBeforeReset) {
 TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerResetsWhenFailsToGetSound) {
   EXPECT_EQ(FactoryResetState::ALLOWED, factory_reset_manager_.factory_reset_state());
 
-  EXPECT_CALL(*media_retriever_, GetResetSound()).WillOnce(Return(ByMove(fit::error(-1))));
+  EXPECT_CALL(*media_retriever_, GetResetSound()).WillOnce(Return(ByMove(fpromise::error(-1))));
   EXPECT_CALL(check_, Call("Reset")).Times(1);
   EXPECT_CALL(check_, Call("AddSoundFromFile")).Times(0);
   EXPECT_CALL(check_, Call("PlaySound")).Times(0);

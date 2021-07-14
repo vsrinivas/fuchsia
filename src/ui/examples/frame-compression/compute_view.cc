@@ -954,15 +954,15 @@ void ComputeView::RenderFrameFromPng(Image& image, png_structp png, uint32_t fra
   }
 }
 
-fit::promise<inspect::Inspector> ComputeView::PopulateStats() const {
+fpromise::promise<inspect::Inspector> ComputeView::PopulateStats() const {
   inspect::Inspector inspector;
 
   inspector.GetRoot().CreateUint(kModifier, modifier_, &inspector);
 
-  return fit::make_ok_promise(std::move(inspector));
+  return fpromise::make_ok_promise(std::move(inspector));
 }
 
-fit::promise<inspect::Inspector> ComputeView::PopulateImageStats(const Image& image) {
+fpromise::promise<inspect::Inspector> ComputeView::PopulateImageStats(const Image& image) {
   inspect::Inspector inspector;
 
   inspector.GetRoot().CreateUint(kImageBytes, image.buffer->size(), &inspector);
@@ -980,7 +980,7 @@ fit::promise<inspect::Inspector> ComputeView::PopulateImageStats(const Image& im
     inspector.GetRoot().CreateUint(kHeightInTiles, image.height_in_tiles, &inspector);
   }
 
-  return fit::make_ok_promise(std::move(inspector));
+  return fpromise::make_ok_promise(std::move(inspector));
 }
 
 }  // namespace frame_compression

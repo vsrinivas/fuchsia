@@ -181,19 +181,19 @@ class MemoryBandwidthInspectTest : public gtest::TestLoopFixture {
     monitor_->SetRamDevice(std::move(ram_device));
   }
 
-  void RunPromiseToCompletion(fit::promise<> promise) {
+  void RunPromiseToCompletion(fpromise::promise<> promise) {
     bool done = false;
     executor_.schedule_task(std::move(promise).and_then([&]() { done = true; }));
     RunLoopUntilIdle();
     ASSERT_TRUE(done);
   }
 
-  fit::result<inspect::Hierarchy> GetHierachyFromInspect() {
-    fit::result<inspect::Hierarchy> hierarchy;
-    RunPromiseToCompletion(
-        inspect::ReadFromInspector(Inspector()).then([&](fit::result<inspect::Hierarchy>& result) {
-          hierarchy = std::move(result);
-        }));
+  fpromise::result<inspect::Hierarchy> GetHierachyFromInspect() {
+    fpromise::result<inspect::Hierarchy> hierarchy;
+    RunPromiseToCompletion(inspect::ReadFromInspector(Inspector())
+                               .then([&](fpromise::result<inspect::Hierarchy>& result) {
+                                 hierarchy = std::move(result);
+                               }));
     return hierarchy;
   }
 
@@ -204,9 +204,8 @@ class MemoryBandwidthInspectTest : public gtest::TestLoopFixture {
     // The Monitor will make asynchronous calls to the MockLogger*s that are also running in this
     // class/tests thread. So the call to the Monitor needs to be made on a different thread, such
     // that the MockLogger*s running on the main thread can respond to those calls.
-    std::future<void /*fuchsia::cobalt::Logger_Sync**/> result = std::async([this]() {
-      monitor_->CreateMetrics({});
-    });
+    std::future<void /*fuchsia::cobalt::Logger_Sync**/> result =
+        std::async([this]() { monitor_->CreateMetrics({}); });
     while (result.wait_for(std::chrono::milliseconds(1)) != std::future_status::ready) {
       // Run the main thread's loop, allowing the MockLogger* objects to respond to requests.
       RunLoopUntilIdle();
@@ -225,7 +224,7 @@ class MemoryBandwidthInspectTest : public gtest::TestLoopFixture {
 
 TEST_F(MemoryBandwidthInspectTest, MemoryBandwidth) {
   RunLoopUntilIdle();
-  fit::result<inspect::Hierarchy> result = GetHierachyFromInspect();
+  fpromise::result<inspect::Hierarchy> result = GetHierachyFromInspect();
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
 

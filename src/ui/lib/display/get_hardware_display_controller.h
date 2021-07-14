@@ -6,7 +6,7 @@
 #define SRC_UI_LIB_DISPLAY_GET_HARDWARE_DISPLAY_CONTROLLER_H_
 
 #include <fuchsia/hardware/display/cpp/fidl.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 namespace ui_display {
 
@@ -28,9 +28,9 @@ struct DisplayControllerHandles {
 //
 // |hdcp_service_impl| binding to Display is done internally and does not need any published
 // services. This breaks the dependency in Scenic service startup.
-fit::promise<DisplayControllerHandles> GetHardwareDisplayController(
+fpromise::promise<DisplayControllerHandles> GetHardwareDisplayController(
     std::shared_ptr<fuchsia::hardware::display::ProviderPtr> provider);
-fit::promise<DisplayControllerHandles> GetHardwareDisplayController(
+fpromise::promise<DisplayControllerHandles> GetHardwareDisplayController(
     HardwareDisplayControllerProviderImpl* hdcp_service_impl = nullptr);
 
 }  // namespace ui_display

@@ -7,8 +7,8 @@
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include "src/developer/system_monitor/lib/dockyard/dockyard.h"
@@ -32,7 +32,7 @@ class LogListener {
   // Return:
   // A promise that resolves when no more logs are available or an error is
   // recieved.
-  fit::promise<> Listen(
+  fpromise::promise<> Listen(
       std::function<void(std::vector<const std::string>)> content_callback);
 
  private:
@@ -43,7 +43,7 @@ class LogListener {
   // new batch of logs.
   void GetLogData(
       std::function<void(std::vector<const std::string>)> content_callback,
-      fit::completer<>&& completer);
+      fpromise::completer<>&& completer);
 };
 
 }  // namespace harvester

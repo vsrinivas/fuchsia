@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <lib/async/cpp/task.h>
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <unistd.h>
 
@@ -73,7 +73,7 @@ void SortObject(rapidjson::Value* object) {
 }
 
 void InnerReadBatches(fuchsia::diagnostics::BatchIteratorPtr ptr,
-                      fit::bridge<std::vector<DiagnosticsData>, std::string> done,
+                      fpromise::bridge<std::vector<DiagnosticsData>, std::string> done,
                       std::vector<DiagnosticsData> ret) {
   ptr->GetNext(
       [ptr = std::move(ptr), done = std::move(done), ret = std::move(ret)](auto result) mutable {
@@ -108,12 +108,12 @@ void InnerReadBatches(fuchsia::diagnostics::BatchIteratorPtr ptr,
       });
 }
 
-fit::promise<std::vector<DiagnosticsData>, std::string> ReadBatches(
+fpromise::promise<std::vector<DiagnosticsData>, std::string> ReadBatches(
     fuchsia::diagnostics::BatchIteratorPtr ptr) {
-  fit::bridge<std::vector<DiagnosticsData>, std::string> result;
+  fpromise::bridge<std::vector<DiagnosticsData>, std::string> result;
   auto consumer = std::move(result.consumer);
   InnerReadBatches(std::move(ptr), std::move(result), {});
-  return consumer.promise_or(fit::error("Failed to obtain consumer promise"));
+  return consumer.promise_or(fpromise::error("Failed to obtain consumer promise"));
 }
 
 }  // namespace
@@ -196,8 +196,8 @@ ArchiveReader::ArchiveReader(fuchsia::diagnostics::ArchiveAccessorPtr archive,
   ZX_ASSERT(archive_.dispatcher() != nullptr);
 }
 
-fit::promise<std::vector<DiagnosticsData>, std::string> ArchiveReader::GetInspectSnapshot() {
-  return fit::make_promise([this] {
+fpromise::promise<std::vector<DiagnosticsData>, std::string> ArchiveReader::GetInspectSnapshot() {
+  return fpromise::make_promise([this] {
            std::vector<fuchsia::diagnostics::SelectorArgument> selector_args;
            for (const auto& selector : selectors_) {
              fuchsia::diagnostics::SelectorArgument arg;
@@ -227,23 +227,23 @@ fit::promise<std::vector<DiagnosticsData>, std::string> ArchiveReader::GetInspec
       .wrap_with(scope_);
 }
 
-fit::promise<std::vector<DiagnosticsData>, std::string> ArchiveReader::SnapshotInspectUntilPresent(
-    std::vector<std::string> component_names) {
-  fit::bridge<std::vector<DiagnosticsData>, std::string> bridge;
+fpromise::promise<std::vector<DiagnosticsData>, std::string>
+ArchiveReader::SnapshotInspectUntilPresent(std::vector<std::string> component_names) {
+  fpromise::bridge<std::vector<DiagnosticsData>, std::string> bridge;
 
   InnerSnapshotInspectUntilPresent(std::move(bridge.completer), std::move(component_names));
 
-  return bridge.consumer.promise_or(fit::error("Failed to create bridge promise"));
+  return bridge.consumer.promise_or(fpromise::error("Failed to create bridge promise"));
 }
 
 void ArchiveReader::InnerSnapshotInspectUntilPresent(
-    fit::completer<std::vector<DiagnosticsData>, std::string> completer,
+    fpromise::completer<std::vector<DiagnosticsData>, std::string> completer,
     std::vector<std::string> component_names) {
   executor_.schedule_task(
       GetInspectSnapshot()
           .then([this, component_names = std::move(component_names),
                  completer = std::move(completer)](
-                    fit::result<std::vector<DiagnosticsData>, std::string>& result) mutable {
+                    fpromise::result<std::vector<DiagnosticsData>, std::string>& result) mutable {
             if (result.is_error()) {
               completer.complete_error(result.take_error());
               return;
@@ -258,15 +258,15 @@ void ArchiveReader::InnerSnapshotInspectUntilPresent(
             if (remaining.empty()) {
               completer.complete_ok(std::move(value));
             } else {
-              fit::bridge<> timeout;
+              fpromise::bridge<> timeout;
               async::PostDelayedTask(
                   executor_.dispatcher(),
                   [completer = std::move(timeout.completer)]() mutable { completer.complete_ok(); },
                   zx::msec(kDelayMs));
-              executor_.schedule_task(timeout.consumer.promise_or(fit::error())
+              executor_.schedule_task(timeout.consumer.promise_or(fpromise::error())
                                           .then([this, completer = std::move(completer),
                                                  component_names = std::move(component_names)](
-                                                    fit::result<>& res) mutable {
+                                                    fpromise::result<>& res) mutable {
                                             InnerSnapshotInspectUntilPresent(
                                                 std::move(completer), std::move(component_names));
                                           })

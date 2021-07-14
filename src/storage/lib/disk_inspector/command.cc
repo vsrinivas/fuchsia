@@ -40,15 +40,15 @@ std::string PrintCommandList(const std::vector<Command>& commands) {
   return os.str();
 }
 
-fit::result<ParsedCommand, zx_status_t> ParseCommand(const std::vector<std::string>& args,
-                                                     const Command& command) {
+fpromise::result<ParsedCommand, zx_status_t> ParseCommand(const std::vector<std::string>& args,
+                                                          const Command& command) {
   ZX_DEBUG_ASSERT(!args.empty() && args[0] == command.name);
   ParsedCommand parsed_args;
   parsed_args.name = args[0];
   if (command.fields.size() != args.size() - 1) {
     FX_LOGS(INFO) << "Number of arguments provided(" << args.size() - 1
                   << ") does not match number of arguments needed(" << command.fields.size() << ")";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
   for (uint32_t i = 0; i < command.fields.size(); ++i) {
     Field field = command.fields[i];
@@ -65,18 +65,18 @@ fit::result<ParsedCommand, zx_status_t> ParseCommand(const std::vector<std::stri
         if (*endptr != '\0') {
           FX_LOGS(INFO) << "Argument " << field.name
                         << " cannot be converted to uint64 (value: " << args[i] << ")";
-          return fit::error(ZX_ERR_INVALID_ARGS);
+          return fpromise::error(ZX_ERR_INVALID_ARGS);
         }
         parsed_args.uint64_fields[field.name] = value;
         break;
       }
       default: {
         FX_LOGS(INFO) << "Command parsing reached unknown ArgType.";
-        return fit::error(ZX_ERR_NOT_SUPPORTED);
+        return fpromise::error(ZX_ERR_NOT_SUPPORTED);
       }
     }
   }
-  return fit::ok(parsed_args);
+  return fpromise::ok(parsed_args);
 }
 
 }  // namespace disk_inspector

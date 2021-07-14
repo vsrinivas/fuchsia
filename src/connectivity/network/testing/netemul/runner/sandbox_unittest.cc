@@ -5,8 +5,8 @@
 #include "sandbox.h"
 
 #include <fuchsia/logger/cpp/fidl.h>
-#include <lib/fit/sequencer.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/sequencer.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/sys/cpp/termination_reason.h>
 
 #include <iostream>

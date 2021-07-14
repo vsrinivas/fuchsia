@@ -39,7 +39,7 @@ FrameStats::FrameStats(inspect::Node inspect_node,
   inspect_frame_stats_dump_ = inspect_node_.CreateLazyValues("Aggregate Stats", [this] {
     inspect::Inspector insp;
     ReportStats(&insp);
-    return fit::make_ok_promise(std::move(insp));
+    return fpromise::make_ok_promise(std::move(insp));
   });
   InitializeFrameTimeBucketConfig();
   cobalt_logging_task_.PostDelayed(async_get_default_dispatcher(), kCobaltDataCollectionInterval);

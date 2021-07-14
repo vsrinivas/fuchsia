@@ -39,18 +39,18 @@ BoardInfoProvider::BoardInfoProvider(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       board_ptr_(dispatcher_, services_, [this] { GetInfo(); }) {}
 
-::fit::promise<Annotations> BoardInfoProvider::GetAnnotations(zx::duration timeout,
-                                                              const AnnotationKeys& allowlist) {
+::fpromise::promise<Annotations> BoardInfoProvider::GetAnnotations(
+    zx::duration timeout, const AnnotationKeys& allowlist) {
   const AnnotationKeys annotations_to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
   if (annotations_to_get.empty()) {
-    return ::fit::make_result_promise<Annotations>(::fit::ok<Annotations>({}));
+    return ::fpromise::make_result_promise<Annotations>(::fpromise::ok<Annotations>({}));
   }
 
   return board_ptr_
       .GetValue(fit::Timeout(
           timeout,
           /*action*/ [=] { cobalt_->LogOccurrence(cobalt::TimedOutData::kBoardInfo); }))
-      .then([=](const ::fit::result<std::map<AnnotationKey, std::string>, Error>& result) {
+      .then([=](const ::fpromise::result<std::map<AnnotationKey, std::string>, Error>& result) {
         Annotations annotations;
 
         if (result.is_error()) {
@@ -67,7 +67,7 @@ BoardInfoProvider::BoardInfoProvider(async_dispatcher_t* dispatcher,
             }
           }
         }
-        return ::fit::ok(std::move(annotations));
+        return ::fpromise::ok(std::move(annotations));
       });
 }
 

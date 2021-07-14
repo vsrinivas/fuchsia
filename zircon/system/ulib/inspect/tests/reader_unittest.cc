@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
@@ -297,11 +297,11 @@ TEST(Reader, NameDoesNotFit) {
   EXPECT_EQ(0u, result.value().children().size());
 }
 
-fit::result<Hierarchy> ReadHierarchyFromInspector(const Inspector& inspector) {
-  fit::result<Hierarchy> result;
-  fit::single_threaded_executor exec;
+fpromise::result<Hierarchy> ReadHierarchyFromInspector(const Inspector& inspector) {
+  fpromise::result<Hierarchy> result;
+  fpromise::single_threaded_executor exec;
   exec.schedule_task(inspect::ReadFromInspector(inspector).then(
-      [&](fit::result<Hierarchy>& res) { result = std::move(res); }));
+      [&](fpromise::result<Hierarchy>& res) { result = std::move(res); }));
   exec.run();
 
   return result;
@@ -330,13 +330,13 @@ TEST(Reader, LinkedChildren) {
   auto link0 = state->CreateLazyNode("link", 0, []() {
     inspect::Inspector inspect;
     inspect.GetRoot().CreateInt("val", 1, &inspect);
-    return fit::make_ok_promise(inspect);
+    return fpromise::make_ok_promise(inspect);
   });
 
   auto link1 = state->CreateLazyNode("other", 0, []() {
     inspect::Inspector inspect;
     inspect.GetRoot().CreateInt("val", 2, &inspect);
-    return fit::make_ok_promise(inspect);
+    return fpromise::make_ok_promise(inspect);
   });
 
   auto result = ReadHierarchyFromInspector(inspector);
@@ -371,7 +371,7 @@ TEST(Reader, LinkedInline) {
     inspect::Inspector inspector;
     inspector.GetRoot().CreateChild("child", &inspector);
     inspector.GetRoot().CreateInt("a", 10, &inspector);
-    return fit::make_ok_promise(inspector);
+    return fpromise::make_ok_promise(inspector);
   });
 
   auto result = ReadHierarchyFromInspector(inspector);
@@ -402,13 +402,13 @@ TEST(Reader, LinkedInlineChain) {
               []() {
                 inspect::Inspector inspector;
                 inspector.GetRoot().CreateInt("c", 12, &inspector);
-                return fit::make_ok_promise(inspector);
+                return fpromise::make_ok_promise(inspector);
               },
               &inspector);
-          return fit::make_ok_promise(inspector);
+          return fpromise::make_ok_promise(inspector);
         },
         &inspector);
-    return fit::make_ok_promise(inspector);
+    return fpromise::make_ok_promise(inspector);
   });
 
   auto result = ReadHierarchyFromInspector(inspector);

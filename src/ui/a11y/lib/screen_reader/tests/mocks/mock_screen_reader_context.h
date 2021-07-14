@@ -26,23 +26,23 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
     ~MockSpeaker() override;
 
     // |Speaker|
-    fit::promise<> SpeakNodePromise(const fuchsia::accessibility::semantics::Node* node,
-                                    Options options) override;
+    fpromise::promise<> SpeakNodePromise(const fuchsia::accessibility::semantics::Node* node,
+                                         Options options) override;
 
     // |Speaker|
-    fit::promise<> SpeakMessagePromise(fuchsia::accessibility::tts::Utterance utterance,
-                                       Options options) override;
+    fpromise::promise<> SpeakMessagePromise(fuchsia::accessibility::tts::Utterance utterance,
+                                            Options options) override;
 
     // |Speaker|
-    fit::promise<> SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds message_id,
-                                           Options options) override;
+    fpromise::promise<> SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds message_id,
+                                                Options options) override;
 
     // |Speaker|
-    fit::promise<> SpeakNodeCanonicalizedLabelPromise(
+    fpromise::promise<> SpeakNodeCanonicalizedLabelPromise(
         const fuchsia::accessibility::semantics::Node* node, Options options) override;
 
     // |Speaker|
-    fit::promise<> CancelTts() override;
+    fpromise::promise<> CancelTts() override;
 
     // Returns true whether any speak request was done.
     bool ReceivedSpeak() const { return received_speak_; }

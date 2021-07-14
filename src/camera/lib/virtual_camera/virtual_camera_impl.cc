@@ -22,13 +22,13 @@
 #include "src/lib/fsl/handles/object_info.h"
 namespace camera {
 
-fit::result<std::unique_ptr<VirtualCamera>, zx_status_t> VirtualCamera::Create(
+fpromise::result<std::unique_ptr<VirtualCamera>, zx_status_t> VirtualCamera::Create(
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator) {
   auto result = VirtualCameraImpl::Create(std::move(allocator));
   if (result.is_error()) {
-    return fit::error(result.error());
+    return fpromise::error(result.error());
   }
-  return fit::ok(result.take_value());
+  return fpromise::ok(result.take_value());
 }
 
 VirtualCameraImpl::VirtualCameraImpl() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
@@ -102,7 +102,7 @@ static size_t Extract(const char* data, T& value, size_t total_buffer_size) {
   return offset;
 }
 
-fit::result<std::unique_ptr<VirtualCamera>, zx_status_t> VirtualCameraImpl::Create(
+fpromise::result<std::unique_ptr<VirtualCamera>, zx_status_t> VirtualCameraImpl::Create(
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator) {
   auto camera = std::make_unique<VirtualCameraImpl>();
 
@@ -119,7 +119,7 @@ fit::result<std::unique_ptr<VirtualCamera>, zx_status_t> VirtualCameraImpl::Crea
                          fit::bind_member(camera.get(), &VirtualCameraImpl::OnSetBufferCollection));
   if (stream_result.is_error()) {
     FX_PLOGS(ERROR, stream_result.error()) << "Failed to create fake stream.";
-    return fit::error(ZX_ERR_INTERNAL);
+    return fpromise::error(ZX_ERR_INTERNAL);
   }
 
   camera->stream_ = stream_result.take_value();
@@ -131,7 +131,7 @@ fit::result<std::unique_ptr<VirtualCamera>, zx_status_t> VirtualCameraImpl::Crea
   auto camera_result = FakeCamera::Create("VirtualCamera", std::move(configs));
   if (camera_result.is_error()) {
     FX_PLOGS(ERROR, camera_result.error()) << "Failed to create fake camera.";
-    return fit::error(ZX_ERR_INTERNAL);
+    return fpromise::error(ZX_ERR_INTERNAL);
   }
 
   camera->camera_ = camera_result.take_value();
@@ -144,17 +144,17 @@ fit::result<std::unique_ptr<VirtualCamera>, zx_status_t> VirtualCameraImpl::Crea
                             fit::bind_member(camera.get(), &VirtualCameraImpl::FrameTick)) ==
             ZX_OK);
 
-  return fit::ok(std::move(camera));
+  return fpromise::ok(std::move(camera));
 }
 
 fidl::InterfaceRequestHandler<fuchsia::camera3::Device> VirtualCameraImpl::GetHandler() {
   return camera_->GetHandler();
 }
 
-fit::result<void, std::string> VirtualCameraImpl::CheckFrame(
+fpromise::result<void, std::string> VirtualCameraImpl::CheckFrame(
     const void* data, size_t size, const fuchsia::camera3::FrameInfo& info) {
   if (size != buffers_->settings.buffer_settings.size_bytes) {
-    return fit::error("Data size does not match buffer size.");
+    return fpromise::error("Data size does not match buffer size.");
   }
 
   const char* image_data = reinterpret_cast<const char*>(data);
@@ -165,7 +165,7 @@ fit::result<void, std::string> VirtualCameraImpl::CheckFrame(
     std::ostringstream oss;
     oss << "Magic value mismatch: expected " << kEmbeddedMetadataMagic << ", got " << embedded_magic
         << ".";
-    return fit::error(oss.str());
+    return fpromise::error(oss.str());
   }
 
   fuchsia::camera3::FrameInfo embedded_info{};
@@ -175,7 +175,7 @@ fit::result<void, std::string> VirtualCameraImpl::CheckFrame(
     std::ostringstream oss;
     oss << "Buffer index mismatch: data = " << embedded_info.buffer_index
         << ", info = " << info.buffer_index << ".";
-    return fit::error(oss.str());
+    return fpromise::error(oss.str());
   }
 
   image_data += Extract(image_data, embedded_info.frame_counter, size);
@@ -183,7 +183,7 @@ fit::result<void, std::string> VirtualCameraImpl::CheckFrame(
     std::ostringstream oss;
     oss << "Frame counter mismatch: data = " << embedded_info.frame_counter
         << ", info = " << info.frame_counter << ".";
-    return fit::error(oss.str());
+    return fpromise::error(oss.str());
   }
 
   image_data += Extract(image_data, embedded_info.timestamp, size);
@@ -191,10 +191,10 @@ fit::result<void, std::string> VirtualCameraImpl::CheckFrame(
     std::ostringstream oss;
     oss << "Timestamp mismatch: data = " << embedded_info.timestamp << ", info = " << info.timestamp
         << ".";
-    return fit::error(oss.str());
+    return fpromise::error(oss.str());
   }
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
 void VirtualCameraImpl::OnDestruction() {

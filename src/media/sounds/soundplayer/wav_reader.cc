@@ -31,18 +31,18 @@ WavReader::WavReader() {}
 
 WavReader::~WavReader() {}
 
-fit::result<Sound, zx_status_t> WavReader::Process(int fd) {
+fpromise::result<Sound, zx_status_t> WavReader::Process(int fd) {
   std::vector<uint8_t> buffer;
   if (!files::ReadFileDescriptorToVector(fd, &buffer)) {
     COMPLAIN() << "ReadFileDescriptorToVector failed";
     Fail();
-    return fit::error(status_);
+    return fpromise::error(status_);
   }
 
   return Process(buffer.data(), buffer.size());
 }
 
-fit::result<Sound, zx_status_t> WavReader::Process(const uint8_t* data, size_t size) {
+fpromise::result<Sound, zx_status_t> WavReader::Process(const uint8_t* data, size_t size) {
   buffer_ = data;
   size_ = size;
 
@@ -55,16 +55,16 @@ fit::result<Sound, zx_status_t> WavReader::Process(const uint8_t* data, size_t s
 
   if (!healthy()) {
     COMPLAIN() << "Parse failed";
-    return fit::error(status_);
+    return fpromise::error(status_);
   }
 
   if (bytes_remaining() != 0) {
     COMPLAIN() << "Parse did not reach end-of-file";
     Fail();
-    return fit::error(status_);
+    return fpromise::error(status_);
   }
 
-  return fit::ok(std::move(sound));
+  return fpromise::ok(std::move(sound));
 }
 
 WavReader& WavReader::Fail(zx_status_t status) {

@@ -528,15 +528,15 @@ void SoftwareView::SetLinearPixelsFromPng(Image& image, png_structp png) {
   image.image_bytes_deduped = 0;
 }
 
-fit::promise<inspect::Inspector> SoftwareView::PopulateStats() const {
+fpromise::promise<inspect::Inspector> SoftwareView::PopulateStats() const {
   inspect::Inspector inspector;
 
   inspector.GetRoot().CreateUint(kModifier, modifier_, &inspector);
 
-  return fit::make_ok_promise(std::move(inspector));
+  return fpromise::make_ok_promise(std::move(inspector));
 }
 
-fit::promise<inspect::Inspector> SoftwareView::PopulateImageStats(const Image& image) const {
+fpromise::promise<inspect::Inspector> SoftwareView::PopulateImageStats(const Image& image) const {
   inspect::Inspector inspector;
 
   inspector.GetRoot().CreateUint(kImageBytes, image.image_bytes, &inspector);
@@ -547,7 +547,7 @@ fit::promise<inspect::Inspector> SoftwareView::PopulateImageStats(const Image& i
     inspector.GetRoot().CreateUint(kHeightInTiles, image.height_in_tiles, &inspector);
   }
 
-  return fit::make_ok_promise(std::move(inspector));
+  return fpromise::make_ok_promise(std::move(inspector));
 }
 
 }  // namespace frame_compression

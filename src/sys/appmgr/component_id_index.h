@@ -5,7 +5,7 @@
 #ifndef SRC_SYS_APPMGR_COMPONENT_ID_INDEX_H_
 #define SRC_SYS_APPMGR_COMPONENT_ID_INDEX_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <map>
 #include <optional>
@@ -40,7 +40,7 @@ class ComponentIdIndex : public fbl::RefCounted<ComponentIdIndex> {
   //  - ComponentIdIndex::Error::INVALID_INSTANCE_ID
   //  - ComponentIdIndex::Error::DUPLICATE_INSTANCE_ID
   //  - ComponentIdIndex::Error::DUPLICATE_MONIKER
-  static fit::result<fbl::RefPtr<ComponentIdIndex>, Error> CreateFromAppmgrConfigDir(
+  static fpromise::result<fbl::RefPtr<ComponentIdIndex>, Error> CreateFromAppmgrConfigDir(
       const fbl::unique_fd& appmgr_config_dir);
 
   // Parses the component id index from the given |index_contents|.
@@ -51,7 +51,7 @@ class ComponentIdIndex : public fbl::RefCounted<ComponentIdIndex> {
   //  - ComponentIdIndex::Error::INVALID_INSTANCE_ID
   //  - ComponentIdIndex::Error::DUPLICATE_INSTANCE_ID
   //  - ComponentIdIndex::Error::DUPLICATE_MONIKER
-  static fit::result<fbl::RefPtr<ComponentIdIndex>, Error> CreateFromIndexContents(
+  static fpromise::result<fbl::RefPtr<ComponentIdIndex>, Error> CreateFromIndexContents(
       const std::string& index_contents);
 
   // Returns the instance ID of the given moniker if it exists.

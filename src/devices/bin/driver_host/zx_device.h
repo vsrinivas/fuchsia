@@ -11,7 +11,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/trace/event.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>

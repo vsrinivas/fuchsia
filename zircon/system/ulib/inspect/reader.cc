@@ -45,16 +45,16 @@ void VisitHierarchiesWithLink(Hierarchy* root, fit::function<void(Hierarchy*)> c
 //
 // Between the initial Snapshot and reading lazy children, it is possible that the lazy child was
 // deleted. In this case, the child snapshot will be missing.
-fit::promise<SnapshotTree> SnapshotTreeFromInspector(Inspector insp) {
+fpromise::promise<SnapshotTree> SnapshotTreeFromInspector(Inspector insp) {
   SnapshotTree ret;
   if (ZX_OK != Snapshot::Create(insp.DuplicateVmo(), &ret.snapshot)) {
-    return fit::make_result_promise<SnapshotTree>(fit::error());
+    return fpromise::make_result_promise<SnapshotTree>(fpromise::error());
   }
 
   // Sequence all promises to ensure depth-first traversal. Otherwise traversal may cause
   // all children for a Snapshot to be instantiated simultaneously.
-  fit::sequencer seq;
-  std::vector<fit::promise<SnapshotTree>> promises;
+  fpromise::sequencer seq;
+  std::vector<fpromise::promise<SnapshotTree>> promises;
   auto child_names = insp.GetChildNames();
   for (const auto& child_name : child_names) {
     promises.emplace_back(
@@ -63,10 +63,10 @@ fit::promise<SnapshotTree> SnapshotTreeFromInspector(Inspector insp) {
             .wrap_with(seq));
   }
 
-  return fit::join_promise_vector(std::move(promises))
+  return fpromise::join_promise_vector(std::move(promises))
       .and_then([ret = std::move(ret), names = std::move(child_names)](
-                    std::vector<fit::result<SnapshotTree>>& children) mutable
-                -> fit::result<SnapshotTree> {
+                    std::vector<fpromise::result<SnapshotTree>>& children) mutable
+                -> fpromise::result<SnapshotTree> {
         ZX_ASSERT(names.size() == children.size());
 
         for (size_t i = 0; i < names.size(); i++) {
@@ -75,7 +75,7 @@ fit::promise<SnapshotTree> SnapshotTreeFromInspector(Inspector insp) {
           }
         }
 
-        return fit::ok(std::move(ret));
+        return fpromise::ok(std::move(ret));
       });
 }
 
@@ -128,7 +128,7 @@ class Reader {
   Reader(Snapshot snapshot) : snapshot_(std::move(snapshot)) {}
 
   // Read the contents of the snapshot and return the root node.
-  fit::result<Hierarchy> Read();
+  fpromise::result<Hierarchy> Read();
 
  private:
   // Gets a pointer to the ParsedNode for the given index. A new ParsedObject
@@ -266,10 +266,10 @@ void Reader::InnerScanBlocks() {
   });
 }
 
-fit::result<Hierarchy> Reader::Read() {
+fpromise::result<Hierarchy> Reader::Read() {
   if (!snapshot_) {
     // Snapshot is invalid, return an error.
-    return fit::error();
+    return fpromise::error();
   }
 
   // Initialize the implicit root node, which uses index 0.
@@ -300,7 +300,7 @@ fit::result<Hierarchy> Reader::Read() {
     if (it->second.is_complete()) {
       if (it->first == 0) {
         // The root is complete, return it.
-        return fit::ok(std::move(it->second.hierarchy));
+        return fpromise::ok(std::move(it->second.hierarchy));
       }
 
       // The node is valid and complete, push it onto the stack.
@@ -331,7 +331,7 @@ fit::result<Hierarchy> Reader::Read() {
       if (obj.second == 0) {
         // This was the last node that needed to be added to the root to complete it.
         // Return the root.
-        return fit::ok(std::move(parent->hierarchy));
+        return fpromise::ok(std::move(parent->hierarchy));
       }
 
       // The parent node is now complete, push it onto the stack.
@@ -342,7 +342,7 @@ fit::result<Hierarchy> Reader::Read() {
 
   // We processed all completed nodes but could not find a complete root,
   // return an error.
-  return fit::error();
+  return fpromise::error();
 }
 
 ParsedNode* Reader::GetOrCreate(BlockIndex index) {
@@ -509,7 +509,7 @@ void Reader::InnerCreateObject(BlockIndex index, const Block* block) {
   }
 }
 
-fit::result<Hierarchy> ReadFromSnapshotTree(const SnapshotTree& tree) {
+fpromise::result<Hierarchy> ReadFromSnapshotTree(const SnapshotTree& tree) {
   auto read_result = internal::Reader(tree.snapshot).Read();
   if (!read_result.is_ok()) {
     return read_result;
@@ -563,34 +563,34 @@ fit::result<Hierarchy> ReadFromSnapshotTree(const SnapshotTree& tree) {
     }
   });
 
-  return fit::ok(std::move(ret));
+  return fpromise::ok(std::move(ret));
 }
 
 }  // namespace internal
 
-fit::result<Hierarchy> ReadFromSnapshot(Snapshot snapshot) {
+fpromise::result<Hierarchy> ReadFromSnapshot(Snapshot snapshot) {
   internal::Reader reader(std::move(snapshot));
   return reader.Read();
 }
 
-fit::result<Hierarchy> ReadFromVmo(const zx::vmo& vmo) {
+fpromise::result<Hierarchy> ReadFromVmo(const zx::vmo& vmo) {
   inspect::Snapshot snapshot;
   if (inspect::Snapshot::Create(std::move(vmo), &snapshot) != ZX_OK) {
-    return fit::error();
+    return fpromise::error();
   }
   return ReadFromSnapshot(std::move(snapshot));
 }
 
-fit::result<Hierarchy> ReadFromBuffer(std::vector<uint8_t> buffer) {
+fpromise::result<Hierarchy> ReadFromBuffer(std::vector<uint8_t> buffer) {
   inspect::Snapshot snapshot;
   if (inspect::Snapshot::Create(std::move(buffer), &snapshot) != ZX_OK) {
     // TODO(fxbug.dev/4734): Best-effort read of invalid snapshots.
-    return fit::error();
+    return fpromise::error();
   }
   return ReadFromSnapshot(std::move(snapshot));
 }
 
-fit::promise<Hierarchy> ReadFromInspector(Inspector inspector) {
+fpromise::promise<Hierarchy> ReadFromInspector(Inspector inspector) {
   return SnapshotTreeFromInspector(std::move(inspector)).and_then(internal::ReadFromSnapshotTree);
 }
 

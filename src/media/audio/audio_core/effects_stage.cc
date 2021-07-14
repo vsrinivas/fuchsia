@@ -298,18 +298,18 @@ void EffectsStage::SetPresentationDelay(zx::duration external_delay) {
   source_->SetPresentationDelay(total_delay);
 }
 
-fit::result<void, fuchsia::media::audio::UpdateEffectError> EffectsStage::UpdateEffect(
+fpromise::result<void, fuchsia::media::audio::UpdateEffectError> EffectsStage::UpdateEffect(
     const std::string& instance_name, const std::string& config) {
   for (auto& effect : *effects_processor_) {
     if (effect.instance_name() == instance_name) {
       if (effect.UpdateConfiguration(config) == ZX_OK) {
-        return fit::ok();
+        return fpromise::ok();
       } else {
-        return fit::error(fuchsia::media::audio::UpdateEffectError::INVALID_CONFIG);
+        return fpromise::error(fuchsia::media::audio::UpdateEffectError::INVALID_CONFIG);
       }
     }
   }
-  return fit::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+  return fpromise::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
 }
 
 zx::duration EffectsStage::ComputeIntrinsicMinLeadTime() const {

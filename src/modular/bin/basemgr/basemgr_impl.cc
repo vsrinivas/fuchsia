@@ -5,8 +5,8 @@
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 
 #include <lib/async/default.h>
-#include <lib/fit/bridge.h>
 #include <lib/fostr/fidl/fuchsia/modular/session/formatting.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -146,7 +146,7 @@ void BasemgrImpl::Shutdown() {
   // Teardown the session provider if it exists.
   // Always completes successfully.
   auto teardown_session_provider = [this]() {
-    auto bridge = fit::bridge();
+    auto bridge = fpromise::bridge();
     if (session_provider_.get()) {
       session_provider_.Teardown(kSessionProviderTimeout, bridge.completer.bind());
     } else {
@@ -158,7 +158,7 @@ void BasemgrImpl::Shutdown() {
   // Teardown the session component if it exists.
   // Always completes successfully.
   auto teardown_session_component_app = [this]() {
-    auto bridge = fit::bridge();
+    auto bridge = fpromise::bridge();
     if (session_launcher_component_app_) {
       session_launcher_component_app_->Teardown(kSessionLauncherComponentTimeout,
                                                 bridge.completer.bind());
@@ -203,7 +203,7 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
 BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
   if (state_ == State::SHUTTING_DOWN || !session_provider_.get() ||
       session_provider_->is_session_running()) {
-    return fit::error(ZX_ERR_BAD_STATE);
+    return fpromise::error(ZX_ERR_BAD_STATE);
   }
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
@@ -221,7 +221,7 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
         [this](zx_status_t /* unused */) { presentation_container_.reset(); });
   }
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
 void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {

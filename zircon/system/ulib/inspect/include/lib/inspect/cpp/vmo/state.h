@@ -6,9 +6,9 @@
 #define LIB_INSPECT_CPP_VMO_STATE_H_
 
 #include <lib/fit/function.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/sequencer.h>
 #include <lib/fit/thread_safety.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/sequencer.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/heap.h>
@@ -176,7 +176,7 @@ class State final {
   std::vector<std::string> GetLinkNames() const;
 
   // Call a specific link by name, return a promise for the Inspector it produces.
-  fit::promise<Inspector> CallLinkCallback(const std::string& name);
+  fpromise::promise<Inspector> CallLinkCallback(const std::string& name);
 
   // Create a unique name for children in this State.
   //
@@ -215,12 +215,12 @@ class State final {
     }
 
     // Call the callback if it is not cancelled.
-    fit::promise<Inspector> call() {
+    fpromise::promise<Inspector> call() {
       std::lock_guard<std::mutex> lock(inner_->mutex);
       if (inner_->callback) {
         return inner_->callback();
       } else {
-        return fit::make_result_promise<Inspector>(fit::error());
+        return fpromise::make_result_promise<Inspector>(fpromise::error());
       }
     }
 

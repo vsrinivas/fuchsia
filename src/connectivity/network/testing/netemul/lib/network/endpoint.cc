@@ -246,7 +246,7 @@ class NetworkDeviceImpl : public EndpointImpl,
     fuchsia::net::tun::Frame frame;
     frame.set_frame_type(fuchsia::hardware::network::FrameType::ETHERNET);
     frame.set_data(std::vector<uint8_t>(p, p + len));
-    tun_device_->WriteFrame(std::move(frame), [](fit::result<void, zx_status_t> status) {
+    tun_device_->WriteFrame(std::move(frame), [](fpromise::result<void, zx_status_t> status) {
       if (status.is_error()) {
         FX_LOGS(WARNING) << "Failed to send data to network device: "
                          << zx_status_get_string(status.error());

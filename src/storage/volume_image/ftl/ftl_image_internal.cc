@@ -65,15 +65,15 @@ void WriteOutOfBandBytes<PageType::kMapPage>(uint32_t logical_page_number,
   FillOutOfBandBytes(logical_page_number, 0, oob_bytes);
 }
 
-fit::result<void, std::string> WriteMapBlock(
+fpromise::result<void, std::string> WriteMapBlock(
     const std::map<uint32_t, uint32_t>& logical_to_physical_pages,
     const RawNandOptions& ftl_options, uint64_t offset, Writer* writer) {
   if (ftl_options.page_size < 4) {
-    return fit::error("Page Size must be greater than 4 bytes.");
+    return fpromise::error("Page Size must be greater than 4 bytes.");
   }
 
   if (ftl_options.oob_bytes_size < 16) {
-    return fit::error("OOB Size must be greater or equal to 16 bytes per page.");
+    return fpromise::error("OOB Size must be greater or equal to 16 bytes per page.");
   }
 
   uint32_t mappings_per_page =
@@ -116,7 +116,7 @@ fit::result<void, std::string> WriteMapBlock(
     written_pages++;
   }
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
 }  // namespace storage::volume_image::ftl_image_internal

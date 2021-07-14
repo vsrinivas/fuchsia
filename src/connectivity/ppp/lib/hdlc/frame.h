@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_PPP_LIB_HDLC_FRAME_H_
+#define SRC_CONNECTIVITY_PPP_LIB_HDLC_FRAME_H_
 
-#include <fbl/span.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <vector>
+
+#include <fbl/span.h>
 
 #include "lib/common/ppp.h"
 
@@ -41,6 +43,8 @@ enum class DeserializationError {
 
 std::vector<uint8_t> SerializeFrame(FrameView frame);
 
-fit::result<Frame, DeserializationError> DeserializeFrame(fbl::Span<const uint8_t> raw_frame);
+fpromise::result<Frame, DeserializationError> DeserializeFrame(fbl::Span<const uint8_t> raw_frame);
 
 }  // namespace ppp
+
+#endif  // SRC_CONNECTIVITY_PPP_LIB_HDLC_FRAME_H_

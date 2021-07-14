@@ -102,17 +102,17 @@ bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem::wire::PixelFormat& pixel
 bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format,
                                   zx_pixel_format_t* zx_pixel_format_out);
 
-fit::result<fuchsia_sysmem2::wire::PixelFormat> ImageFormatConvertZxToSysmem_v2(
+fpromise::result<fuchsia_sysmem2::wire::PixelFormat> ImageFormatConvertZxToSysmem_v2(
     fidl::AnyAllocator& allocator, zx_pixel_format_t zx_pixel_format);
-fit::result<fuchsia_sysmem::wire::PixelFormat> ImageFormatConvertZxToSysmem_v1(
+fpromise::result<fuchsia_sysmem::wire::PixelFormat> ImageFormatConvertZxToSysmem_v1(
     fidl::AnyAllocator& allocator, zx_pixel_format_t zx_pixel_format);
 bool ImageFormatConvertZxToSysmem(zx_pixel_format_t zx_pixel_format,
                                   fuchsia_sysmem_PixelFormat* pixel_format_out);
 
-fit::result<fuchsia_sysmem2::wire::ImageFormat> ImageConstraintsToFormat(
+fpromise::result<fuchsia_sysmem2::wire::ImageFormat> ImageConstraintsToFormat(
     fidl::AnyAllocator& allocator, const fuchsia_sysmem2::wire::ImageFormatConstraints& constraints,
     uint32_t width, uint32_t height);
-fit::result<fuchsia_sysmem::wire::ImageFormat2> ImageConstraintsToFormat(
+fpromise::result<fuchsia_sysmem::wire::ImageFormat2> ImageConstraintsToFormat(
     const fuchsia_sysmem::wire::ImageFormatConstraints& constraints, uint32_t width,
     uint32_t height);
 bool ImageConstraintsToFormat(const fuchsia_sysmem_ImageFormatConstraints* constraints,

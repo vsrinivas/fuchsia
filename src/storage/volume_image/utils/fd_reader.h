@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_FD_READER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_FD_READER_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 #include <string_view>
@@ -22,7 +22,7 @@ class FdReader final : public Reader {
  public:
   // On success returns a |FdReader| from a file descriptor pointing to |path|, and whose name is
   // |path|.
-  static fit::result<FdReader, std::string> Create(std::string_view path);
+  static fpromise::result<FdReader, std::string> Create(std::string_view path);
 
   explicit FdReader(fbl::unique_fd fd) : FdReader(std::move(fd), std::string_view()) {}
   FdReader(fbl::unique_fd fd, std::string_view name)
@@ -41,7 +41,7 @@ class FdReader final : public Reader {
   // |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final;
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final;
 
   // Returns a unique identifier for this |FdReader|.
   std::string_view name() const { return name_; }

@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_CLOCK_TESTING_CLOCK_TEST_H_
 #define SRC_MEDIA_AUDIO_LIB_CLOCK_TESTING_CLOCK_TEST_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/clock.h>
 
 #include <optional>
@@ -27,8 +27,8 @@ struct ClockProperties {
   std::optional<int32_t> rate_adjust_ppm = std::nullopt;
 };
 
-fit::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props);
-fit::result<zx::duration, zx_status_t> GetOffsetFromMonotonic(const zx::clock& clock);
+fpromise::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props);
+fpromise::result<zx::duration, zx_status_t> GetOffsetFromMonotonic(const zx::clock& clock);
 
 }  // namespace media::audio::clock::testing
 

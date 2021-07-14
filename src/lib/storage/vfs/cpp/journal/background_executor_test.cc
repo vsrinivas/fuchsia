@@ -19,10 +19,10 @@ TEST(BackgroundExecutorTest, DestructorCompletesOneScheduledTask) {
   bool called = false;
   {
     BackgroundExecutor executor;
-    executor.schedule_task(fit::make_promise([&called]() -> fit::result<> {
+    executor.schedule_task(fpromise::make_promise([&called]() -> fpromise::result<> {
       EXPECT_FALSE(called);
       called = true;
-      return fit::ok();
+      return fpromise::ok();
     }));
   }
   ASSERT_TRUE(called);
@@ -35,14 +35,14 @@ TEST(BackgroundExecutorTest, DestructorCompletesManyScheduledTasks) {
   {
     BackgroundExecutor executor;
     for (size_t i = 0; i < kTotalTasks; i++) {
-      executor.schedule_task(fit::make_promise([&counter]() -> fit::result<> {
+      executor.schedule_task(fpromise::make_promise([&counter]() -> fpromise::result<> {
         // Note: We don't bother comparing the order that these promises are scheduled, since they
         // may occur in any order.
         //
         // They are guaranteed to be executed by a single thread, so we increment this counter
         // non-atomically.
         counter++;
-        return fit::ok();
+        return fpromise::ok();
       }));
     }
   }
@@ -55,12 +55,12 @@ TEST(BackgroundExecutorTest, ScheduleNotStalledUntilDestructor) {
   std::mutex mutex;
   std::condition_variable cvar;
   bool called = false;
-  executor.schedule_task(fit::make_promise([&]() -> fit::result<> {
+  executor.schedule_task(fpromise::make_promise([&]() -> fpromise::result<> {
     std::unique_lock<std::mutex> lock(mutex);
     EXPECT_FALSE(called);
     called = true;
     cvar.notify_one();
-    return fit::ok();
+    return fpromise::ok();
   }));
   std::unique_lock<std::mutex> lock(mutex);
   cvar.wait(lock, [&called] { return called; });

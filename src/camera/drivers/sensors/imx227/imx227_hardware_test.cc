@@ -44,7 +44,7 @@ TEST_F(Imx227DeviceTest, PoweredUp) {
 
 TEST_F(Imx227DeviceTest, OtpReadAndValidate) {
   // Try reading the entire OTP from the start
-  fit::result result = imx227_device_->OtpRead();
+  fpromise::result result = imx227_device_->OtpRead();
   ASSERT_TRUE(result.is_ok());
   zx::vmo vmo = std::move(result.value());
 

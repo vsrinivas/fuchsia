@@ -454,8 +454,8 @@ fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TransferRing::TakePendingTRBs
   return std::move(pending_trbs_);
 }
 
-void EventRing::ScheduleTask(fit::promise<TRB*, zx_status_t> promise) {
-  auto continuation = promise.then([=](fit::result<TRB*, zx_status_t>& result) {
+void EventRing::ScheduleTask(fpromise::promise<TRB*, zx_status_t> promise) {
+  auto continuation = promise.then([=](fpromise::result<TRB*, zx_status_t>& result) {
     if (result.is_error()) {
       if (result.error() == ZX_ERR_BAD_STATE) {
         hci_->Shutdown(ZX_ERR_BAD_STATE);
@@ -676,7 +676,7 @@ int Interrupter::IrqThread() { return 0; }
 // This method should be called once the physical port of a device has been
 // initialized.
 TRBPromise EnumerateDevice(UsbXhci* hci, uint8_t port, std::optional<HubInfo> hub_info) {
-  fit::bridge<TRB*, zx_status_t> bridge;
+  fpromise::bridge<TRB*, zx_status_t> bridge;
   return bridge.consumer.promise();
 }
 

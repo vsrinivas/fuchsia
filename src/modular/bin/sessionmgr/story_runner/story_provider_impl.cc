@@ -157,7 +157,7 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
       // TODO(thatguy): If the StoryControllerImpl is deleted before it can
       // complete StopWithoutNotifying(), we will never be called back and the
       // OperationQueue on which we're running will block.  Moving over to
-      // fit::promise will allow us to observe cancellation.
+      // fpromise::promise will allow us to observe cancellation.
       operations_.Add(std::make_unique<StopStoryCall>(
           it.first, true /* skip_notifying_sessionshell */,
           &story_provider_impl_->story_runtime_containers_, [flow] {}));

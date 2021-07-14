@@ -50,7 +50,7 @@ void LogMessageStore::AddToBuffer(const std::string& str) {
   buffer_stats_.Use(StorageSize::Bytes(encoded.size()));
 }
 
-bool LogMessageStore::Add(::fit::result<fuchsia::logger::LogMessage, std::string> log) {
+bool LogMessageStore::Add(::fpromise::result<fuchsia::logger::LogMessage, std::string> log) {
   TRACE_DURATION("feedback:io", "LogMessageStore::Add");
 
   std::lock_guard<std::mutex> lk(mtx_);

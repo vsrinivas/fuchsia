@@ -65,14 +65,14 @@ class File : public zxtest::Test {
     return static_cast<ServerImpl*>(server_.get());
   }
 
-  fit::result<fidl::ClientEnd<fio::File>, zx_status_t> OpenConnection() {
+  fpromise::result<fidl::ClientEnd<fio::File>, zx_status_t> OpenConnection() {
     auto ends = fidl::CreateEndpoints<fio::File>();
     if (!ends.is_ok()) {
-      return fit::error(ends.status_value());
+      return fpromise::error(ends.status_value());
     }
     auto binding = fidl::BindServer(loop_->dispatcher(), std::move(ends->server), server_.get());
     binding_ = std::make_unique<fidl::ServerBindingRef<fio::File>>(std::move(binding));
-    return fit::ok(std::move(ends->client));
+    return fpromise::ok(std::move(ends->client));
   }
 
   zx_status_t OpenFile() {

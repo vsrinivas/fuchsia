@@ -460,7 +460,7 @@ TEST_F(ComponentControllerTest, GetDiagnosticsDirExists) {
   async::Executor executor(async_get_default_dispatcher());
   fidl::InterfaceHandle<fuchsia::io::Directory> directory_handle;
   executor.schedule_task(component->GetDiagnosticsDir().then(
-      [&](fit::result<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>& result) {
+      [&](fpromise::result<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>& result) {
         EXPECT_TRUE(result.is_ok());
         directory_handle = std::move(result.value());
         done = true;
@@ -516,7 +516,7 @@ TEST_F(ComponentControllerTest, GetDiagnosticsDirMissing) {
   bool done = false;
   async::Executor executor(async_get_default_dispatcher());
   executor.schedule_task(component->GetDiagnosticsDir().then(
-      [&](fit::result<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>& result) {
+      [&](fpromise::result<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>& result) {
         EXPECT_TRUE(result.is_error());
         done = true;
       }));

@@ -6,7 +6,7 @@
 #define SRC_LIB_INTL_INTL_PROPERTY_PROVIDER_IMPL_LOCALE_UTIL_H_
 
 #include <fuchsia/intl/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 
@@ -25,7 +25,7 @@ struct LocaleKeys {
 };
 
 // Convert the given locale ID to an `icu::Locale`.
-fit::result<icu::Locale, zx_status_t> LocaleIdToIcuLocale(
+fpromise::result<icu::Locale, zx_status_t> LocaleIdToIcuLocale(
     const fuchsia::intl::LocaleId& locale_id,
     const std::map<std::string, std::string>& unicode_extensions = {});
 
@@ -35,17 +35,18 @@ fit::result<icu::Locale, zx_status_t> LocaleIdToIcuLocale(
 //   locale_id: A Unicode BCP-47 Locale ID
 //   unicode_extensions: Optional Unicode extension keys and values to add to
 //     the locale.
-fit::result<icu::Locale, zx_status_t> LocaleIdToIcuLocale(
+fpromise::result<icu::Locale, zx_status_t> LocaleIdToIcuLocale(
     const std::string& locale_id,
     const std::map<std::string, std::string>& unicode_extensions = {});
 
 // For the given `icu::Locale`, generate a Unicode BCP-47 Locale ID that
 // includes extension keys and values for supported Unicode extensions.
-fit::result<fuchsia::intl::LocaleId, zx_status_t> ExpandLocaleId(const icu::Locale& icu_locale);
+fpromise::result<fuchsia::intl::LocaleId, zx_status_t> ExpandLocaleId(
+    const icu::Locale& icu_locale);
 
 // Extract just the calendar value from a `CalendarId`, which is of the form
 // `"und-u-ca-<calendarid>"`.
-fit::result<std::string, zx_status_t> ExtractBcp47CalendarId(
+fpromise::result<std::string, zx_status_t> ExtractBcp47CalendarId(
     const fuchsia::intl::CalendarId& calendar_id);
 
 // Get a Unicode locale ID extension value ("sun", "mon", "tue", etc.) for the

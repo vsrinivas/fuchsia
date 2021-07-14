@@ -28,7 +28,7 @@ int main() {
         buffer_properties.CreateString("string", "foo", &inspector);
         buffer_properties.CreateByteVector("bytes", std::vector<uint8_t>({1, 2, 3}), &inspector);
         inspector.emplace(std::move(buffer_properties));
-        return fit::make_ok_promise(std::move(inspector));
+        return fpromise::make_ok_promise(std::move(inspector));
       },
       inspector.get());
 
@@ -48,7 +48,7 @@ int main() {
         doubles.Set(2, 3.5);
         inspector.emplace(std::move(doubles));
 
-        return fit::make_ok_promise(std::move(inspector));
+        return fpromise::make_ok_promise(std::move(inspector));
       },
       inspector.get());
 

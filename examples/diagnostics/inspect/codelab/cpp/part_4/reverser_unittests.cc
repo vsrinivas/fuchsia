@@ -83,7 +83,8 @@ TEST_F(ReverserTest, ReversePart4) {
 
   {
     // [START get_hierarchy]
-    fit::result<inspect::Hierarchy> hierarchy = RunPromise(inspect::ReadFromInspector(inspector));
+    fpromise::result<inspect::Hierarchy> hierarchy =
+        RunPromise(inspect::ReadFromInspector(inspector));
     ASSERT_TRUE(hierarchy.is_ok());
     // [END get_hierarchy]
 
@@ -114,7 +115,8 @@ TEST_F(ReverserTest, ReversePart4) {
   RunLoopUntil([&] { return connection_count() == 1; });
 
   {
-    fit::result<inspect::Hierarchy> hierarchy = RunPromise(inspect::ReadFromInspector(inspector));
+    fpromise::result<inspect::Hierarchy> hierarchy =
+        RunPromise(inspect::ReadFromInspector(inspector));
     ASSERT_TRUE(hierarchy.is_ok());
 
     auto* connection_0 = hierarchy.value().GetByPath({"connection_0x0"});

@@ -21,7 +21,7 @@
 #include <sstream>
 
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/fit/result.h"
+#include "lib/fpromise/result.h"
 #include "lib/media/cpp/timeline_rate.h"
 #include "src/lib/storage/vfs/cpp/pseudo_file.h"
 #include "src/media/playback/mediaplayer/core/renderer_sink_segment.h"

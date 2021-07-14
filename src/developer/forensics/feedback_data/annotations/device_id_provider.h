@@ -19,8 +19,8 @@ class DeviceIdProviderClient : public AnnotationProvider {
   DeviceIdProviderClient(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<Annotations> GetAnnotations(zx::duration timeout,
-                                             const AnnotationKeys& allowlist) override;
+  ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout,
+                                                  const AnnotationKeys& allowlist) override;
 
  private:
   fidl::DeviceIdProviderPtr device_id_provider_ptr_;

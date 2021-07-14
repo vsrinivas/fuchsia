@@ -69,19 +69,19 @@ uint32_t CountLoopbackStages(const PipelineConfig::MixGroup& root) {
   return count;
 }
 
-fit::result<rapidjson::SchemaDocument, std::string> LoadProcessConfigSchema() {
+fpromise::result<rapidjson::SchemaDocument, std::string> LoadProcessConfigSchema() {
   rapidjson::Document schema_doc;
   const rapidjson::ParseResult result = schema_doc.Parse(kAudioCoreConfigSchema);
   if (result.IsError()) {
     std::ostringstream oss;
     oss << "Failed to load config schema: " << rapidjson::GetParseError_En(result.Code()) << "("
         << result.Offset() << ")";
-    return fit::error(oss.str());
+    return fpromise::error(oss.str());
   }
-  return fit::ok(rapidjson::SchemaDocument(schema_doc));
+  return fpromise::ok(rapidjson::SchemaDocument(schema_doc));
 }
 
-fit::result<VolumeCurve, std::string> ParseVolumeCurveFromJsonObject(
+fpromise::result<VolumeCurve, std::string> ParseVolumeCurveFromJsonObject(
     const rapidjson::Value& value) {
   FX_CHECK(value.IsArray());
   std::vector<VolumeCurve::VolumeMapping> mappings;
@@ -89,7 +89,7 @@ fit::result<VolumeCurve, std::string> ParseVolumeCurveFromJsonObject(
     if (mapping["db"].IsString()) {
       std::string str = mapping["db"].GetString();
       if (str != "MUTED") {
-        return fit::error("unknown gain value '" + str + "'");
+        return fpromise::error("unknown gain value '" + str + "'");
       }
       mappings.emplace_back(mapping["level"].GetFloat(), fuchsia::media::audio::MUTED_GAIN_DB);
     } else {
@@ -344,9 +344,9 @@ StreamUsageSet ParseStreamUsageSetFromJsonArray(const rapidjson::Value& value,
   return supported_stream_types;
 }
 
-fit::result<std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
-                      DeviceConfig::OutputDeviceProfile>,
-            std::string>
+fpromise::result<std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
+                           DeviceConfig::OutputDeviceProfile>,
+                 std::string>
 ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
                                        StreamUsageSet* all_supported_usages,
                                        VolumeCurve volume_curve) {
@@ -406,10 +406,10 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
     auto loopback_stages = CountLoopbackStages(root);
     if (supports_loopback) {
       if (loopback_stages > 1) {
-        return fit::error("More than 1 loopback stage specified");
+        return fpromise::error("More than 1 loopback stage specified");
       }
       if (loopback_stages == 0) {
-        return fit::error("Device supports loopback but no loopback point specified");
+        return fpromise::error("Device supports loopback but no loopback point specified");
       }
     }
     pipeline_config = PipelineConfig(std::move(root));
@@ -424,7 +424,7 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
     }
   }
 
-  return fit::ok(std::make_pair(
+  return fpromise::ok(std::make_pair(
       device_id, DeviceConfig::OutputDeviceProfile(
                      eligible_for_loopback, std::move(supported_stream_types), volume_curve,
                      independent_volume_control, std::move(pipeline_config), driver_gain_db)));
@@ -474,7 +474,7 @@ ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Valu
       transitions);
 }
 
-fit::result<void, std::string> ParseOutputDevicePoliciesFromJsonObject(
+fpromise::result<void, std::string> ParseOutputDevicePoliciesFromJsonObject(
     const rapidjson::Value& output_device_profiles, ProcessConfigBuilder* config_builder) {
   FX_CHECK(output_device_profiles.IsArray());
 
@@ -494,14 +494,14 @@ fit::result<void, std::string> ParseOutputDevicePoliciesFromJsonObject(
     if (all_supported_usages.find(stream_usage) == all_supported_usages.end()) {
       std::ostringstream oss;
       oss << "No output to support usage " << stream_usage.ToString();
-      return fit::error(oss.str());
+      return fpromise::error(oss.str());
     }
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
-fit::result<std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
-                      DeviceConfig::InputDeviceProfile>>
+fpromise::result<std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
+                           DeviceConfig::InputDeviceProfile>>
 ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
   FX_CHECK(value.IsObject());
 
@@ -513,7 +513,7 @@ ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
   auto rate_it = value.FindMember(kJsonKeyRate);
   FX_CHECK(rate_it != value.MemberEnd());
   if (!rate_it->value.IsUint()) {
-    return fit::error();
+    return fpromise::error();
   }
   auto rate = rate_it->value.GetUint();
 
@@ -528,26 +528,27 @@ ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
   auto supported_stream_types_it = value.FindMember(kJsonKeySupportedStreamTypes);
   if (supported_stream_types_it != value.MemberEnd()) {
     supported_stream_types = ParseStreamUsageSetFromJsonArray(supported_stream_types_it->value);
-    return fit::ok(std::make_pair(
+    return fpromise::ok(std::make_pair(
         device_id,
         DeviceConfig::InputDeviceProfile(rate, std::move(supported_stream_types), driver_gain_db)));
   }
 
-  return fit::ok(std::make_pair(device_id, DeviceConfig::InputDeviceProfile(rate, driver_gain_db)));
+  return fpromise::ok(
+      std::make_pair(device_id, DeviceConfig::InputDeviceProfile(rate, driver_gain_db)));
 }
 
-fit::result<> ParseInputDevicePoliciesFromJsonObject(const rapidjson::Value& input_device_profiles,
-                                                     ProcessConfigBuilder* config_builder) {
+fpromise::result<> ParseInputDevicePoliciesFromJsonObject(
+    const rapidjson::Value& input_device_profiles, ProcessConfigBuilder* config_builder) {
   FX_CHECK(input_device_profiles.IsArray());
 
   for (const auto& input_device_profile : input_device_profiles.GetArray()) {
     auto result = ParseInputDeviceProfileFromJsonObject(input_device_profile);
     if (result.is_error()) {
-      return fit::error();
+      return fpromise::error();
     }
     config_builder->AddDeviceProfile(result.take_value());
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
 void ParseThermalPolicyFromJsonObject(const rapidjson::Value& value,
@@ -561,25 +562,25 @@ void ParseThermalPolicyFromJsonObject(const rapidjson::Value& value,
 
 }  // namespace
 
-fit::result<ProcessConfig, std::string> ProcessConfigLoader::LoadProcessConfig(
+fpromise::result<ProcessConfig, std::string> ProcessConfigLoader::LoadProcessConfig(
     const char* filename) {
   std::string buffer;
   const auto file_exists = files::ReadFileToString(filename, &buffer);
   if (!file_exists) {
-    return fit::error("File does not exist");
+    return fpromise::error("File does not exist");
   }
 
   auto result = ParseProcessConfig(buffer);
   if (result.is_error()) {
     std::ostringstream oss;
     oss << "Parse error: " << result.error();
-    return fit::error(oss.str());
+    return fpromise::error(oss.str());
   }
 
-  return fit::ok(result.take_value());
+  return fpromise::ok(result.take_value());
 }
 
-fit::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
+fpromise::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
     const std::string& config) {
   rapidjson::Document doc;
   std::string parse_buffer = config;
@@ -588,12 +589,12 @@ fit::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
     std::stringstream error;
     error << "Parse error (" << rapidjson::GetParseError_En(parse_res.Code())
           << "): " << parse_res.Offset();
-    return fit::error(error.str());
+    return fpromise::error(error.str());
   }
 
   auto schema_result = LoadProcessConfigSchema();
   if (schema_result.is_error()) {
-    return fit::error(schema_result.take_error());
+    return fpromise::error(schema_result.take_error());
   }
   rapidjson::SchemaValidator validator(schema_result.value());
   if (!doc.Accept(validator)) {
@@ -602,14 +603,14 @@ fit::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
     validator.GetError().Accept(writer);
     std::stringstream error;
     error << "Schema validation error (" << error_buf.GetString() << ")";
-    return fit::error(error.str());
+    return fpromise::error(error.str());
   }
 
   auto curve_result = ParseVolumeCurveFromJsonObject(doc[kJsonKeyVolumeCurve]);
   if (!curve_result.is_ok()) {
     std::stringstream error;
     error << "Invalid volume curve; error: " << curve_result.take_error();
-    return fit::error(error.str());
+    return fpromise::error(error.str());
   }
 
   auto config_builder = ProcessConfig::Builder();
@@ -629,14 +630,14 @@ fit::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
     if (result.is_error()) {
       std::ostringstream oss;
       oss << "Failed to parse output device policies: " << result.error();
-      return fit::error(oss.str());
+      return fpromise::error(oss.str());
     }
   }
   auto input_devices_it = doc.FindMember(kJsonKeyInputDevices);
   if (input_devices_it != doc.MemberEnd()) {
     auto result = ParseInputDevicePoliciesFromJsonObject(input_devices_it->value, &config_builder);
     if (result.is_error()) {
-      return fit::error("Failed to parse input device policies");
+      return fpromise::error("Failed to parse input device policies");
     }
   }
 
@@ -645,7 +646,7 @@ fit::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
     ParseThermalPolicyFromJsonObject(thermal_policy_it->value, &config_builder);
   }
 
-  return fit::ok(config_builder.Build());
+  return fpromise::ok(config_builder.Build());
 }
 
 }  // namespace media::audio

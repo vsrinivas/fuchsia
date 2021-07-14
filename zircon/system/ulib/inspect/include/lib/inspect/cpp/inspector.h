@@ -5,7 +5,7 @@
 #ifndef LIB_INSPECT_CPP_INSPECTOR_H_
 #define LIB_INSPECT_CPP_INSPECTOR_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/inspect/cpp/value_list.h>
 #include <lib/zx/vmo.h>
 
@@ -104,7 +104,7 @@ class Inspector final {
   // Open a child of this inspector by name.
   //
   // Returns a promise for the opened inspector.
-  fit::promise<Inspector> OpenChild(const std::string& name) const;
+  fpromise::promise<Inspector> OpenChild(const std::string& name) const;
 
  private:
   friend std::shared_ptr<internal::State> internal::GetState(const Inspector* inspector);

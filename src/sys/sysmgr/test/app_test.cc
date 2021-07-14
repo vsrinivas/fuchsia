@@ -43,7 +43,7 @@ class TestSysmgr : public ::testing::Test, fuchsia::hardware::power::statecontro
   void Reboot(fuchsia::hardware::power::statecontrol::RebootReason reason,
               RebootCallback callback) override {
     on_reboot_(reason);
-    callback(fit::ok());
+    callback(fpromise::ok());
   }
   // |fuchsia::hardware::power::statecontrol::Admin|
   void RebootToBootloader(RebootToBootloaderCallback callback) override {}

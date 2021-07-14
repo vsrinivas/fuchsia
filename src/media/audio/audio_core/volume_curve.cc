@@ -36,15 +36,15 @@ VolumeCurve VolumeCurve::DefaultForMinGain(float min_gain_db) {
   return curve_result.take_value();
 }
 
-fit::result<VolumeCurve, std::string> VolumeCurve::FromMappings(
+fpromise::result<VolumeCurve, std::string> VolumeCurve::FromMappings(
     std::vector<VolumeMapping> mappings) {
   if (mappings.size() < 2) {
-    return fit::error("mapping must have at least two entries");
+    return fpromise::error("mapping must have at least two entries");
   }
 
   if (auto& front = mappings.front(); front.volume != fuchsia::media::audio::MIN_VOLUME ||
                                       front.gain_dbfs != fuchsia::media::audio::MUTED_GAIN_DB) {
-    return fit::error(fxl::StringPrintf(
+    return fpromise::error(fxl::StringPrintf(
         "first entry (%.2f -> %.2f) must map volume level %.2f to muted gain_db (%.2f)",
         front.volume, front.gain_dbfs, fuchsia::media::audio::MIN_VOLUME,
         fuchsia::media::audio::MUTED_GAIN_DB));
@@ -52,24 +52,26 @@ fit::result<VolumeCurve, std::string> VolumeCurve::FromMappings(
 
   if (auto& back = mappings.back();
       back.volume != fuchsia::media::audio::MAX_VOLUME || back.gain_dbfs != Gain::kUnityGainDb) {
-    return fit::error(fxl::StringPrintf(
+    return fpromise::error(fxl::StringPrintf(
         "last entry (%.2f -> %.2f) must map volume level %.2f to gain_db = %.2f", back.volume,
         back.gain_dbfs, fuchsia::media::audio::MAX_VOLUME, Gain::kUnityGainDb));
   }
 
   for (size_t i = 1; i < mappings.size(); ++i) {
     if (mappings[i - 1].volume >= mappings[i].volume) {
-      return fit::error(fxl::StringPrintf("volume mapping does not increase: %.2f is not > %.2f",
-                                          mappings[i].volume, mappings[i - 1].volume));
+      return fpromise::error(
+          fxl::StringPrintf("volume mapping does not increase: %.2f is not > %.2f",
+                            mappings[i].volume, mappings[i - 1].volume));
     }
 
     if (mappings[i - 1].gain_dbfs >= mappings[i].gain_dbfs) {
-      return fit::error(fxl::StringPrintf("gain_db mapping does not increase: %.2f is not > %.2f",
-                                          mappings[i].gain_dbfs, mappings[i - 1].gain_dbfs));
+      return fpromise::error(
+          fxl::StringPrintf("gain_db mapping does not increase: %.2f is not > %.2f",
+                            mappings[i].gain_dbfs, mappings[i - 1].gain_dbfs));
     }
   }
 
-  return fit::ok(VolumeCurve(std::move(mappings)));
+  return fpromise::ok(VolumeCurve(std::move(mappings)));
 }
 
 VolumeCurve::VolumeCurve(std::vector<VolumeMapping> mappings) : mappings_(std::move(mappings)) {}

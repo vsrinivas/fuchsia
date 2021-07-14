@@ -9,7 +9,7 @@
 #include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -79,12 +79,12 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
   }
 
   // |camera::FakeLegacyStream|
-  fit::result<void, std::string> StreamClientStatus() override {
+  fpromise::result<void, std::string> StreamClientStatus() override {
     if (client_error_count_ == 0) {
-      return fit::ok();
+      return fpromise::ok();
     }
     auto error_string = client_error_explanation_.str();
-    return fit::error(std::move(error_string));
+    return fpromise::error(std::move(error_string));
   }
 
   zx_status_t SendFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) override {
@@ -213,7 +213,7 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
   friend class FakeLegacyStream;
 };
 
-fit::result<std::unique_ptr<FakeLegacyStream>, zx_status_t> FakeLegacyStream::Create(
+fpromise::result<std::unique_ptr<FakeLegacyStream>, zx_status_t> FakeLegacyStream::Create(
     fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
     fuchsia::sysmem::AllocatorPtr& allocator, uint32_t format_index,
 
@@ -222,11 +222,11 @@ fit::result<std::unique_ptr<FakeLegacyStream>, zx_status_t> FakeLegacyStream::Cr
   zx_status_t status = impl->binding_.Bind(std::move(request), dispatcher);
   impl->image_format_ = format_index;
   if (status) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
   impl->binding_.set_error_handler(
       [impl = impl.get()](zx_status_t status) { impl->ClientErrors() << "Client disconnected"; });
-  return fit::ok(std::move(impl));
+  return fpromise::ok(std::move(impl));
 }
 
 }  // namespace camera

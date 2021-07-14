@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_GPT_INCLUDE_GPT_GPT_H_
 #define SRC_STORAGE_GPT_INCLUDE_GPT_GPT_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/status.h>
 
 #include <memory>
@@ -80,36 +80,36 @@ constexpr uint32_t kGptDiffName = 0x20;
 constexpr uint64_t kFlagHidden = 0x2;
 
 // Returns the maximum size in bytes to hold header block and partition table.
-constexpr fit::result<size_t, zx_status_t> MinimumBytesPerCopy(uint64_t block_size) {
+constexpr fpromise::result<size_t, zx_status_t> MinimumBytesPerCopy(uint64_t block_size) {
   if (block_size < kHeaderSize) {
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
-  return fit::ok(block_size + kMaxPartitionTableSize);
+  return fpromise::ok(block_size + kMaxPartitionTableSize);
 }
 
 // Returns the maximum blocks needed to hold header block and partition table.
-constexpr fit::result<uint64_t, zx_status_t> MinimumBlocksPerCopy(uint64_t block_size) {
+constexpr fpromise::result<uint64_t, zx_status_t> MinimumBlocksPerCopy(uint64_t block_size) {
   if (block_size < kHeaderSize) {
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
-  return fit::ok((MinimumBytesPerCopy(block_size).value() + block_size - 1) / block_size);
+  return fpromise::ok((MinimumBytesPerCopy(block_size).value() + block_size - 1) / block_size);
 }
 
 // Returns the minimum blocks needed to hold two copies of GPT at appropriate
 // offset (considering mbr block).
-constexpr fit::result<uint64_t, zx_status_t> MinimumBlockDeviceSize(uint64_t block_size) {
+constexpr fpromise::result<uint64_t, zx_status_t> MinimumBlockDeviceSize(uint64_t block_size) {
   if (block_size < kHeaderSize) {
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
   // There are two copies of GPT and a block for MBR(or such use).
-  return fit::ok(kPrimaryHeaderStartBlock + (2 * MinimumBlocksPerCopy(block_size).value()));
+  return fpromise::ok(kPrimaryHeaderStartBlock + (2 * MinimumBlocksPerCopy(block_size).value()));
 }
 
 // Returns number of addressable blocks. On finding entry
 //  - nullptr, returns ZX_ERR_INVALID_ARGS
 //  - invalid, returns ZX_ERR_BAD_STATE
 //  - uninitialized, returns ZX_ERR_NOT_FOUND
-fit::result<uint64_t, zx_status_t> EntryBlockCount(const gpt_entry_t* entry);
+fpromise::result<uint64_t, zx_status_t> EntryBlockCount(const gpt_entry_t* entry);
 
 // Sets or clears partition visibility flag
 void SetPartitionVisibility(gpt_partition_t* partition, bool visible);
@@ -274,8 +274,8 @@ class GptDevice {
 
 // On success returns initialized gpt header. On finding either |block_size| or
 // |block_count| is not large enough, returns error.
-fit::result<gpt_header_t, zx_status_t> InitializePrimaryHeader(uint64_t block_size,
-                                                               uint64_t block_count);
+fpromise::result<gpt_header_t, zx_status_t> InitializePrimaryHeader(uint64_t block_size,
+                                                                    uint64_t block_count);
 
 // Validates gpt header. Each type of inconsistency leads to unique status code.
 // The status can be used to print user friendly error messages.
@@ -289,7 +289,7 @@ zx_status_t ValidateHeader(const gpt_header_t* header, uint64_t block_count);
 //  - true if the entry is valid
 //  - false if entry is unused
 //  - error if entry fields are inconsistent
-fit::result<bool, zx_status_t> ValidateEntry(const gpt_entry_t* entry);
+fpromise::result<bool, zx_status_t> ValidateEntry(const gpt_entry_t* entry);
 
 // Converts status returned by ValidateHeader to a human readable error message.
 const char* HeaderStatusToCString(zx_status_t status);

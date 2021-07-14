@@ -53,16 +53,16 @@ TEST(ReaderTest, VisitPropertiesWildcard) {
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
 
-  fit::result<int64_t> v1_result, v3_result;
+  fpromise::result<int64_t> v1_result, v3_result;
   bool found_other_match = false;
 
   EXPECT_TRUE(VisitProperties<inspect::IntPropertyValue>(
       hierarchy, {"test", inspect::contrib::kPathWildcard},
       [&](const std::vector<cpp17::string_view> path, const inspect::IntPropertyValue& value) {
         if (path.back() == "v1") {
-          v1_result = fit::ok(value.value());
+          v1_result = fpromise::ok(value.value());
         } else if (path.back() == "v3") {
-          v3_result = fit::ok(value.value());
+          v3_result = fpromise::ok(value.value());
         } else {
           found_other_match = true;
         }
@@ -85,11 +85,11 @@ TEST(ReaderTest, VisitPropertiesExact) {
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
 
-  fit::result<uint64_t> v2_result;
+  fpromise::result<uint64_t> v2_result;
   EXPECT_TRUE(VisitProperties<inspect::UintPropertyValue>(
       hierarchy, {"test", "v2"},
       [&](const std::vector<cpp17::string_view> path, const inspect::UintPropertyValue& value) {
-        v2_result = fit::ok(value.value());
+        v2_result = fpromise::ok(value.value());
       }));
   ASSERT_TRUE(v2_result.is_ok());
   EXPECT_EQ(12, v2_result.value());
@@ -105,11 +105,11 @@ TEST(ReaderTest, VisitPropertiesHistogram) {
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
 
-  fit::result<std::vector<inspect::UintArrayValue::HistogramBucket>> hist_result;
+  fpromise::result<std::vector<inspect::UintArrayValue::HistogramBucket>> hist_result;
   EXPECT_TRUE(VisitProperties<inspect::UintArrayValue>(
       hierarchy, {"test", "hist"},
       [&](const std::vector<cpp17::string_view> path, const inspect::UintArrayValue& value) {
-        hist_result = fit::ok(value.GetBuckets());
+        hist_result = fpromise::ok(value.GetBuckets());
       }));
   ASSERT_TRUE(hist_result.is_ok());
   ASSERT_EQ(6, hist_result.value().size());
@@ -131,17 +131,17 @@ TEST(ReaderTest, VisitPropertiesRecursive) {
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
 
-  fit::result<std::string> v4_result;
-  fit::result<std::string> v5_result;
+  fpromise::result<std::string> v4_result;
+  fpromise::result<std::string> v5_result;
   bool found_other_match = false;
   EXPECT_TRUE(VisitProperties<inspect::StringPropertyValue>(
       hierarchy, {"test", inspect::contrib::kPathWildcard, inspect::contrib::kPathRecursive},
       [&](const std::vector<cpp17::string_view> path, const inspect::StringPropertyValue& value) {
         if (path.back() == "v4") {
-          v4_result = fit::ok(value.value());
+          v4_result = fpromise::ok(value.value());
         }
         if (path.back() == "v5") {
-          v5_result = fit::ok(value.value());
+          v5_result = fpromise::ok(value.value());
         }
       }));
   EXPECT_FALSE(found_other_match);

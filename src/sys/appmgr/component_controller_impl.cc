@@ -9,8 +9,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
@@ -188,12 +188,12 @@ void ComponentControllerBase::NotifyDiagnosticsDirReady(uint32_t max_retries) {
                   },
                   next_backoff_duration);
             }
-            return fit::error(status);
+            return fpromise::error(status);
           });
   executor_.schedule_task(std::move(promise));
 }
 
-fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>
+fpromise::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>
 ComponentControllerBase::GetDir(std::string path) {
   // This error would occur if the method was called when the component out/ directory wasn't ready
   // yet. This can be triggered when a listener is attached to a realm and notifies about existing
@@ -203,11 +203,11 @@ ComponentControllerBase::GetDir(std::string path) {
   // will be triggered later once the out/ directory is ready if the component exposes a
   // diagnostics directory.
   if (!out_ready_) {
-    return fit::make_result_promise<fidl::InterfaceHandle<fuchsia::io::Directory>>(
-        fit::error(ZX_ERR_BAD_STATE));
+    return fpromise::make_result_promise<fidl::InterfaceHandle<fuchsia::io::Directory>>(
+        fpromise::error(ZX_ERR_BAD_STATE));
   }
   fuchsia::io::NodePtr diagnostics_dir_node;
-  fit::bridge<void, zx_status_t> bridge;
+  fpromise::bridge<void, zx_status_t> bridge;
   diagnostics_dir_node.events().OnOpen =
       [completer = std::move(bridge.completer), label = label_](
           zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> node_info) mutable {
@@ -229,17 +229,17 @@ ComponentControllerBase::GetDir(std::string path) {
                                                  std::move(diagnostics_dir_node)]() mutable {
     auto diagnostics_dir =
         fidl::InterfaceHandle<fuchsia::io::Directory>(diagnostics_dir_node.Unbind().TakeChannel());
-    return fit::make_result_promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>(
-        fit::ok(std::move(diagnostics_dir)));
+    return fpromise::make_result_promise<fidl::InterfaceHandle<fuchsia::io::Directory>,
+                                         zx_status_t>(fpromise::ok(std::move(diagnostics_dir)));
   });
 }
 
-fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>
+fpromise::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>
 ComponentControllerBase::GetDiagnosticsDir() {
   return GetDir("diagnostics");
 }
 
-fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>
+fpromise::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>
 ComponentControllerBase::GetServiceDir() {
   return GetDir("svc");
 }

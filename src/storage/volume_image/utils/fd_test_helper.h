@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_FD_TEST_HELPER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_FD_TEST_HELPER_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 #include <string_view>
@@ -18,7 +18,7 @@ class TempFile {
   // On Success return a |TempFile| in the system's temporary directory.
   //
   // On error returns a string describing the failure reason.
-  static fit::result<TempFile, std::string> Create();
+  static fpromise::result<TempFile, std::string> Create();
 
   TempFile() = default;
   TempFile(const TempFile&) = delete;

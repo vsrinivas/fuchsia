@@ -32,14 +32,12 @@ class InternalBuffer {
   //
   // |is_mapping_needed| if a mapping to the allocated buffer is needed.  This must be false if
   // is_secure.
-  static fit::result<InternalBuffer, zx_status_t> Create(const char* name,
-                                                         fuchsia::sysmem::AllocatorSyncPtr* sysmem,
-                                                         const zx::unowned_bti& bti, size_t size,
-                                                         bool is_secure, bool is_writable,
-                                                         bool is_mapping_needed);
+  static fpromise::result<InternalBuffer, zx_status_t> Create(
+      const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem, const zx::unowned_bti& bti,
+      size_t size, bool is_secure, bool is_writable, bool is_mapping_needed);
 
   // Same as above, but alignment is the byte multiple to align the buffer to.
-  static fit::result<InternalBuffer, zx_status_t> CreateAligned(
+  static fpromise::result<InternalBuffer, zx_status_t> CreateAligned(
       const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem, const zx::unowned_bti& bti,
       size_t size, size_t alignment, bool is_secure, bool is_writable, bool is_mapping_needed);
 

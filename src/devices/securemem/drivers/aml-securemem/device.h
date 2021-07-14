@@ -11,7 +11,7 @@
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/hardware/tee/cpp/banjo.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/bti.h>
 #include <threads.h>
 #include <zircon/types.h>
@@ -49,7 +49,7 @@ class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
       GetSecureMemoryPhysicalAddressRequestView request,
       GetSecureMemoryPhysicalAddressCompleter::Sync& completer) override;
 
-  fit::result<zx_paddr_t, zx_status_t> GetSecureMemoryPhysicalAddress(zx::vmo secure_mem);
+  fpromise::result<zx_paddr_t, zx_status_t> GetSecureMemoryPhysicalAddress(zx::vmo secure_mem);
 
  private:
   explicit AmlogicSecureMemDevice(zx_device_t* device) : AmlogicSecureMemDeviceBase(device) {}

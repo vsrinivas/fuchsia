@@ -7,7 +7,7 @@
 
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/time.h>
 
@@ -28,8 +28,8 @@ class BoardInfoProvider : public AnnotationProvider {
   BoardInfoProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                     cobalt::Logger* cobalt);
 
-  ::fit::promise<Annotations> GetAnnotations(zx::duration timeout,
-                                             const AnnotationKeys& allowlist) override;
+  ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout,
+                                                  const AnnotationKeys& allowlist) override;
 
  private:
   void GetInfo();

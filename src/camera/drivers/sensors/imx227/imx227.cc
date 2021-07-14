@@ -11,7 +11,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/driver-unit-test/utils.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/trace/event.h>
 #include <threads.h>
 #include <zircon/types.h>
@@ -28,11 +28,11 @@
 
 namespace camera {
 
-fit::result<uint8_t, zx_status_t> Imx227Device::GetRegisterValueFromSequence(uint8_t index,
-                                                                             uint16_t address) {
+fpromise::result<uint8_t, zx_status_t> Imx227Device::GetRegisterValueFromSequence(
+    uint8_t index, uint16_t address) {
   TRACE_DURATION("camera", "Imx227Device::GetRegisterValueFromSequence");
   if (index >= kSEQUENCE_TABLE.size()) {
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
   const InitSeqFmt* sequence = kSEQUENCE_TABLE[index];
   while (true) {
@@ -43,25 +43,25 @@ fit::result<uint8_t, zx_status_t> Imx227Device::GetRegisterValueFromSequence(uin
       break;
     }
     if (address == register_address) {
-      return fit::ok(register_value);
+      return fpromise::ok(register_value);
     }
     sequence++;
   }
-  return fit::error(ZX_ERR_NOT_FOUND);
+  return fpromise::error(ZX_ERR_NOT_FOUND);
 }
 
-fit::result<uint16_t, zx_status_t> Imx227Device::GetRegisterValueFromSequence16(uint8_t index,
-                                                                                uint16_t address) {
+fpromise::result<uint16_t, zx_status_t> Imx227Device::GetRegisterValueFromSequence16(
+    uint8_t index, uint16_t address) {
   TRACE_DURATION("camera", "Imx227Device::GetRegisterValueFromSequence16");
   auto result_hi = GetRegisterValueFromSequence(index, address);
   auto result_lo = GetRegisterValueFromSequence(index, address + 1);
   if (result_hi.is_error()) {
-    return fit::error(result_hi.error());
+    return fpromise::error(result_hi.error());
   }
   if (result_lo.is_error()) {
-    return fit::error(result_lo.error());
+    return fpromise::error(result_lo.error());
   }
-  return fit::ok(result_hi.value() << 8 | result_lo.value());
+  return fpromise::ok(result_hi.value() << 8 | result_lo.value());
 }
 
 zx_status_t Imx227Device::InitPdev() {
@@ -109,7 +109,7 @@ zx_status_t Imx227Device::InitPdev() {
   return ZX_OK;
 }
 
-fit::result<uint16_t, zx_status_t> Imx227Device::Read16(uint16_t addr) {
+fpromise::result<uint16_t, zx_status_t> Imx227Device::Read16(uint16_t addr) {
   TRACE_DURATION("camera", "Imx227Device::Read16", "addr", addr);
   auto result = Read8(addr);
   if (result.is_error()) {
@@ -122,10 +122,10 @@ fit::result<uint16_t, zx_status_t> Imx227Device::Read16(uint16_t addr) {
   }
   auto lower_byte = result.value();
   uint16_t reg_value = safemath::checked_cast<uint16_t>(upper_byte << kByteShift) | lower_byte;
-  return fit::ok(reg_value);
+  return fpromise::ok(reg_value);
 }
 
-fit::result<uint8_t, zx_status_t> Imx227Device::Read8(uint16_t addr) {
+fpromise::result<uint8_t, zx_status_t> Imx227Device::Read8(uint16_t addr) {
   TRACE_DURATION("camera", "Imx227Device::Read8", "addr", addr);
   // Convert the address to Big Endian format.
   // The camera sensor expects in this format.
@@ -135,9 +135,9 @@ fit::result<uint8_t, zx_status_t> Imx227Device::Read8(uint16_t addr) {
       i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(buf), &val, sizeof(val));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Imx227Device: could not read reg addr: 0x%08x  status: %d", addr, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
-  return fit::ok(val);
+  return fpromise::ok(val);
 }
 
 zx_status_t Imx227Device::Write16(uint16_t addr, uint16_t val) {
@@ -271,33 +271,33 @@ zx_status_t Imx227Device::InitMipiCsi(uint32_t mode) {
   return status;
 }
 
-fit::result<int32_t, zx_status_t> Imx227Device::GetTemperature() {
+fpromise::result<int32_t, zx_status_t> Imx227Device::GetTemperature() {
   std::lock_guard guard(lock_);
   // Enable temperature control
   zx_status_t status = Write8(kTempCtrlReg, 0x01);
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
   auto result = Read8(kTempOutputReg);
   if (result.is_error()) {
     return result.take_error_result();
   }
   auto retval = static_cast<int32_t>(result.value());
-  return fit::ok(retval);
+  return fpromise::ok(retval);
 }
 
-fit::result<uint32_t, zx_status_t> Imx227Device::GetLinesPerSecond() {
+fpromise::result<uint32_t, zx_status_t> Imx227Device::GetLinesPerSecond() {
   auto result_hi =
       GetRegisterValueFromSequence(available_modes[current_mode_].idx, kLineLengthPckReg);
   auto result_lo =
       GetRegisterValueFromSequence(available_modes[current_mode_].idx, kLineLengthPckReg + 1);
   if (result_hi.is_error() || result_lo.is_error()) {
-    return fit::error(ZX_ERR_INTERNAL);
+    return fpromise::error(ZX_ERR_INTERNAL);
   }
   uint16_t line_length_pclk =
       safemath::checked_cast<uint16_t>(result_hi.value() << 8) | result_lo.value();
   uint32_t lines_per_second = kMasterClock / line_length_pclk;
-  return fit::ok(lines_per_second);
+  return fpromise::ok(lines_per_second);
 }
 
 float Imx227Device::AnalogRegValueToTotalGain(uint16_t reg_value) {

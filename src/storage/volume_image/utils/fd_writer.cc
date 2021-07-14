@@ -5,7 +5,7 @@
 #include "src/storage/volume_image/utils/fd_writer.h"
 
 #include <fcntl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -15,21 +15,22 @@
 
 namespace storage::volume_image {
 
-fit::result<FdWriter, std::string> FdWriter::Create(std::string_view path) {
+fpromise::result<FdWriter, std::string> FdWriter::Create(std::string_view path) {
   if (path.empty()) {
-    return fit::error("Cannot obtain file descriptor from empty path.");
+    return fpromise::error("Cannot obtain file descriptor from empty path.");
   }
 
   std::string pathname(path);
   fbl::unique_fd fd(open(pathname.c_str(), O_WRONLY));
   if (!fd.is_valid()) {
-    return fit::error("Failed to obtain file descriptor from " + pathname +
-                      ", More specifically: " + strerror(errno));
+    return fpromise::error("Failed to obtain file descriptor from " + pathname +
+                           ", More specifically: " + strerror(errno));
   }
-  return fit::ok(FdWriter(std::move(fd), path));
+  return fpromise::ok(FdWriter(std::move(fd), path));
 }
 
-fit::result<void, std::string> FdWriter::Write(uint64_t offset, fbl::Span<const uint8_t> buffer) {
+fpromise::result<void, std::string> FdWriter::Write(uint64_t offset,
+                                                    fbl::Span<const uint8_t> buffer) {
   size_t bytes_written = 0;
   while (bytes_written < buffer.size()) {
     const uint8_t* source = buffer.data() + bytes_written;
@@ -38,11 +39,12 @@ fit::result<void, std::string> FdWriter::Write(uint64_t offset, fbl::Span<const 
     ssize_t result = pwrite(fd_.get(), source, remaining_bytes, target_offset);
 
     if (result < 0) {
-      return fit::error("Write failed from " + name_ + ". More specifically " + strerror(errno));
+      return fpromise::error("Write failed from " + name_ + ". More specifically " +
+                             strerror(errno));
     }
     bytes_written += result;
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
 }  // namespace storage::volume_image

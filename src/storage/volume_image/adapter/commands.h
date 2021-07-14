@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_ADAPTER_COMMANDS_H_
 #define SRC_STORAGE_VOLUME_IMAGE_ADAPTER_COMMANDS_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <optional>
 #include <string>
@@ -53,7 +53,7 @@ enum PartitionImageFormat {
 };
 
 struct PartitionParams {
-  static fit::result<std::vector<PartitionParams>, std::string> FromArguments(
+  static fpromise::result<std::vector<PartitionParams>, std::string> FromArguments(
       fbl::Span<std::string_view> arguments, const FvmOptions& options);
 
   // The image path for the partition.
@@ -80,7 +80,7 @@ struct PartitionParams {
 struct CreateParams {
   // Returns arguments from |arguments| as a |CreateParam| instance. Validation is done by the
   // |CreateParam| consumers.
-  static fit::result<CreateParams, std::string> FromArguments(
+  static fpromise::result<CreateParams, std::string> FromArguments(
       fbl::Span<std::string_view> arguments);
 
   // Path to the output file where the FVM image should be written to.
@@ -114,7 +114,7 @@ struct CreateParams {
 };
 
 // Creates an fvm image according to |params| and |options|.
-fit::result<void, std::string> Create(const CreateParams& params);
+fpromise::result<void, std::string> Create(const CreateParams& params);
 
 enum class TargetType {
   // Device is a Memory Techonology Device. (Raw Nand)
@@ -130,7 +130,8 @@ enum class TargetType {
 struct PaveParams {
   // Returns arguments from |arguments| as a |PaveParams| instance. Validation is done by the
   // |PaveParams| consumers.
-  static fit::result<PaveParams, std::string> FromArguments(fbl::Span<std::string_view> arguments);
+  static fpromise::result<PaveParams, std::string> FromArguments(
+      fbl::Span<std::string_view> arguments);
 
   // Sparse image path.
   std::string input_path;
@@ -164,7 +165,7 @@ struct PaveParams {
 };
 
 // Given an input sparse fvm image, it will write the expanded contents to the path.
-fit::result<void, std::string> Pave(const PaveParams& params);
+fpromise::result<void, std::string> Pave(const PaveParams& params);
 
 }  // namespace storage::volume_image
 

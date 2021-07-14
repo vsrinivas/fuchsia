@@ -103,12 +103,12 @@ class TestDevice : public AudioOutput {
   }
 
   // AudioDevice
-  fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+  fpromise::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config) override {
     effect_update_bridges_.emplace_back();
     return effect_update_bridges_.back().consumer.promise();
   }
-  fit::promise<void, zx_status_t> UpdateDeviceProfile(
+  fpromise::promise<void, zx_status_t> UpdateDeviceProfile(
       const DeviceConfig::OutputDeviceProfile::Parameters& params) override {
     pipeline_update_bridges_.emplace_back();
     return pipeline_update_bridges_.back().consumer.promise();
@@ -127,10 +127,10 @@ class TestDevice : public AudioOutput {
         .is_default = true,
     };
   }
-  fit::promise<void, zx_status_t> Startup() override {
-    return fit::make_result_promise<void, zx_status_t>(fit::ok());
+  fpromise::promise<void, zx_status_t> Startup() override {
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
-  fit::promise<void> Shutdown() override { return fit::make_ok_promise(); }
+  fpromise::promise<void> Shutdown() override { return fpromise::make_ok_promise(); }
   void OnWakeup() override {}
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
                        fuchsia::media::AudioGainValidFlags set_flags) override {}
@@ -143,8 +143,9 @@ class TestDevice : public AudioOutput {
   zx::duration MixDeadline() const override { return zx::msec(10); }
 
  private:
-  std::vector<fit::bridge<void, zx_status_t>> pipeline_update_bridges_;
-  std::vector<fit::bridge<void, fuchsia::media::audio::UpdateEffectError>> effect_update_bridges_;
+  std::vector<fpromise::bridge<void, zx_status_t>> pipeline_update_bridges_;
+  std::vector<fpromise::bridge<void, fuchsia::media::audio::UpdateEffectError>>
+      effect_update_bridges_;
   std::unique_ptr<testing::FakeAudioDriver> fake_driver_;
 };
 

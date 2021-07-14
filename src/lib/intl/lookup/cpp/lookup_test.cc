@@ -6,7 +6,7 @@
 
 #include "lookup.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <memory>
 #include <string>

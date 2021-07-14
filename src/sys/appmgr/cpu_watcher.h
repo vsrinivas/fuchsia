@@ -62,8 +62,8 @@ class CpuWatcher {
   static constexpr int64_t kProcessTimeBuckets = 16;
   static constexpr size_t kDefaultMaxSamples = 60;
 
-  fit::promise<inspect::Inspector> PopulateInspector() const;
-  fit::promise<inspect::Inspector> PopulateRecentUsage() const;
+  fpromise::promise<inspect::Inspector> PopulateInspector() const;
+  fpromise::promise<inspect::Inspector> PopulateRecentUsage() const;
 
   // An individual measurement.
   struct Measurement {

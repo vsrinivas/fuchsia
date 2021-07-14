@@ -4,7 +4,7 @@
 
 #include "src/storage/volume_image/fvm/fvm_sparse_image_reader.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/status.h>
 #include <zircon/status.h>
 
@@ -37,18 +37,18 @@ class DecompressionHelper {
                   .Prepare([this](fbl::Span<const uint8_t> decompressed_data) {
                     decompressed_buffer_.insert(decompressed_buffer_.end(),
                                                 decompressed_data.begin(), decompressed_data.end());
-                    return fit::ok();
+                    return fpromise::ok();
                   })
                   .is_ok());
   }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) {
     size_t some;
     for (size_t done = 0; done < buffer.size(); done += some, offset += some) {
       bool making_progress = true;
       while (decompressed_buffer_.size() < std::min(kBufferSize, buffer.size() - done)) {
         if (!making_progress) {
-          return fit::error("no progress with decompressor");
+          return fpromise::error("no progress with decompressor");
         }
         making_progress = false;
         if (compressed_buffer_.size() < kBufferSize && compressed_offset_ < base_reader_.length()) {
@@ -83,7 +83,7 @@ class DecompressionHelper {
       }
       if (offset != uncompressed_offset_) {
         // For now, all use cases that we have only require sequential reading.
-        return fit::error("Non sequential reading is not supported");
+        return fpromise::error("Non sequential reading is not supported");
       }
       // Copy from the decompression buffer into the caller's buffer.
       some = std::min(buffer.size() - done, decompressed_buffer_.size());
@@ -91,7 +91,7 @@ class DecompressionHelper {
       decompressed_buffer_.erase(decompressed_buffer_.begin(), decompressed_buffer_.begin() + some);
       uncompressed_offset_ += some;
     }
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:
@@ -119,7 +119,8 @@ class SparseImageReader : public Reader {
 
   uint64_t length() const override { return kMetadataOffset + metadata_.Get()->size(); }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const override {
+  fpromise::result<void, std::string> Read(uint64_t offset,
+                                           fbl::Span<uint8_t> buffer) const override {
     if (IsMetadata(offset)) {
       size_t some = 0;
       const fvm::MetadataBuffer* raw_metadata = metadata_.Get();
@@ -130,7 +131,7 @@ class SparseImageReader : public Reader {
         memcpy(buffer.data() + done,
                static_cast<const uint8_t*>(raw_metadata->data()) + metadata_offset, some);
       }
-      return fit::ok();
+      return fpromise::ok();
     } else {
       return decompression_helper_.Read(offset, buffer);
     }
@@ -143,8 +144,8 @@ class SparseImageReader : public Reader {
 
 }  // namespace
 
-fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
-                                                    std::optional<uint64_t> maximum_disk_size) {
+fpromise::result<Partition, std::string> OpenSparseImage(
+    Reader& base_reader, std::optional<uint64_t> maximum_disk_size) {
   // Start by reading the header.
   fvm::SparseImage fvm_sparse_header;
   auto result = base_reader.Read(0, FixedSizeStructToSpan(fvm_sparse_header));
@@ -153,13 +154,13 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
   }
 
   if (fvm_sparse_header.magic != fvm::kSparseFormatMagic) {
-    return fit::error("Unrecognized magic in sparse header");
+    return fpromise::error("Unrecognized magic in sparse header");
   }
   if (fvm_sparse_header.version != fvm::kSparseFormatVersion) {
-    return fit::error("Unsupported sparse version");
+    return fpromise::error("Unsupported sparse version");
   }
   if ((fvm_sparse_header.flags & fvm::kSparseFlagLz4) == 0) {
-    return fit::error("Only Lz4 supported");
+    return fpromise::error("Only Lz4 supported");
   }
 
   if (maximum_disk_size.has_value()) {
@@ -218,7 +219,7 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
   // Remember the first offset where data starts.
   const uint64_t data_start = offset;
   if (base_reader.length() <= data_start) {
-    return fit::error("bad maximum offset from base reader");
+    return fpromise::error("bad maximum offset from base reader");
   }
 
   fvm::Header header;
@@ -227,9 +228,9 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
     header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions,
                                        fvm_sparse_header.maximum_disk_size, slice_size);
     if (slices.size() > header.GetAllocationTableUsedEntryCount()) {
-      return fit::error("Fvm Sparse Image Reader, found " + std::to_string(slices.size()) +
-                        ", but disk size allows " +
-                        std::to_string(header.GetAllocationTableUsedEntryCount()) + ".");
+      return fpromise::error("Fvm Sparse Image Reader, found " + std::to_string(slices.size()) +
+                             ", but disk size allows " +
+                             std::to_string(header.GetAllocationTableUsedEntryCount()) + ".");
     }
   } else {
     // When no disk size is specified, compute the disk size using the number of allocated slices.
@@ -239,8 +240,8 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
   zx::status<fvm::Metadata> metadata_or = fvm::Metadata::Synthesize(
       header, fvm_partitions.data(), fvm_partitions.size(), slices.data(), slices.size());
   if (metadata_or.is_error()) {
-    return fit::error("Generating FVM metadata failed: " +
-                      std::to_string(metadata_or.status_value()));
+    return fpromise::error("Generating FVM metadata failed: " +
+                           std::to_string(metadata_or.status_value()));
   }
 
   // Build the address mappings now.
@@ -279,7 +280,7 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
   // Now we can create a reader.
   auto reader =
       std::make_unique<SparseImageReader>(base_reader, data_start, std::move(metadata_or.value()));
-  return fit::ok(Partition(descriptor, address_descriptor, std::move(reader)));
+  return fpromise::ok(Partition(descriptor, address_descriptor, std::move(reader)));
 }
 
 }  // namespace storage::volume_image

@@ -26,7 +26,7 @@ FactoryServer::~FactoryServer() {
   loop_.JoinThreads();
 }
 
-fit::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create(
+fpromise::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create(
     fuchsia::sysmem::AllocatorHandle allocator, fuchsia::camera3::DeviceWatcherHandle watcher,
     fit::closure stop_callback) {
   auto server = std::make_unique<FactoryServer>();
@@ -37,7 +37,7 @@ fit::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create(
   zx_status_t status = server->loop_.StartThread("camera-factory Loop");
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   auto streamer_result =
@@ -58,7 +58,7 @@ fit::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create(
   constexpr uint32_t kPortNumber = 52224;
   server->webui_->PostListen(kPortNumber);
 
-  return fit::ok(std::move(server));
+  return fpromise::ok(std::move(server));
 }
 
 fidl::InterfaceRequestHandler<fuchsia::factory::camera::Controller> FactoryServer::GetHandler() {

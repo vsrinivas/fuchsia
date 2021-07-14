@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_METADATA_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <optional>
 #include <string>
@@ -30,8 +30,8 @@ class Metadata {
   // |missing_non_platform_annotations| indicates whether some non-platform annotations are
   // missing, i.e. whether clients tried to insert more non-platform annotations than the maximum
   // number of non-platform annotations the Datastore can hold.
-  std::string MakeMetadata(const ::fit::result<Annotations>& annotations,
-                           const ::fit::result<Attachments>& attachments,
+  std::string MakeMetadata(const ::fpromise::result<Annotations>& annotations,
+                           const ::fpromise::result<Attachments>& attachments,
                            bool missing_non_platform_annotations);
 
   static constexpr const char* kVersion = "1";

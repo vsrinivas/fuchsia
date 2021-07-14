@@ -11,8 +11,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/scope.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/scope.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <mutex>
@@ -75,9 +75,9 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
                        std::unique_ptr<sys::ComponentContext> context);
 
  private:
-  fit::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>> GetNetwork(
+  fpromise::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>> GetNetwork(
       std::string network_name);
-  fit::promise<> SetupEthClient(const std::unique_ptr<netemul::EthernetClient>& eth_client);
+  fpromise::promise<> SetupEthClient(const std::unique_ptr<netemul::EthernetClient>& eth_client);
 
   void ReadGuestEp(size_t index);
 
@@ -86,7 +86,7 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
 
   std::unique_ptr<sys::ComponentContext> context_;
   async::Executor executor_;
-  fit::scope scope_;
+  fpromise::scope scope_;
 
   fidl::BindingSet<fuchsia::netstack::Netstack> bindings_;
   uint64_t pending_writes_;

@@ -6,7 +6,7 @@
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_COMPRESSOR_H_
 
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 
@@ -35,26 +35,27 @@ class Compressor {
   // for processing. Anytime a compressor emits symbols, it will call the provided |Handler|.
   //
   // The compressed data is only guaranteed to be valid within a single call to the handler.
-  using Handler = fit::function<fit::result<void, std::string>(fbl::Span<const uint8_t>)>;
+  using Handler = fit::function<fpromise::result<void, std::string>(fbl::Span<const uint8_t>)>;
 
   virtual ~Compressor() = default;
 
-  // Returns |fit::ok| on success. Setting |handler| for consuming symbols emitted during
+  // Returns |fpromise::ok| on success. Setting |handler| for consuming symbols emitted during
   // compression.
   //
   // On failure, returns a string decribing the error condition.
-  virtual fit::result<void, std::string> Prepare(Handler handler) = 0;
+  virtual fpromise::result<void, std::string> Prepare(Handler handler) = 0;
 
-  // Returns |fit::ok| on success.
+  // Returns |fpromise::ok| on success.
   //
   // On failure, returns a string decribing the error condition.
-  virtual fit::result<void, std::string> Compress(fbl::Span<const uint8_t> uncompressed_data) = 0;
+  virtual fpromise::result<void, std::string> Compress(
+      fbl::Span<const uint8_t> uncompressed_data) = 0;
 
-  // Returns |fit::ok| on success. At this point all remaining symbols for the compressed
+  // Returns |fpromise::ok| on success. At this point all remaining symbols for the compressed
   // representation will be emitted.
   //
   // On failure, returns a string describing the error condition.
-  virtual fit::result<void, std::string> Finalize() = 0;
+  virtual fpromise::result<void, std::string> Finalize() = 0;
 };
 
 }  // namespace storage::volume_image

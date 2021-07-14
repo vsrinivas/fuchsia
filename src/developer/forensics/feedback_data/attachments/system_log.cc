@@ -6,7 +6,7 @@
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -35,9 +35,9 @@ struct LogMessage {
 
 }  // namespace
 
-::fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
-                                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                                 fit::Timeout timeout) {
+::fpromise::promise<AttachmentValue> CollectSystemLog(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    fit::Timeout timeout) {
   auto log_service =
       std::make_unique<ArchiveAccessor>(dispatcher, services, fuchsia::diagnostics::DataType::LOGS,
                                         fuchsia::diagnostics::StreamMode::SNAPSHOT);
@@ -83,38 +83,38 @@ struct LogMessage {
   });
 
   // Post-collection task.
-  ::fit::promise<AttachmentValue> log_promise =
+  ::fpromise::promise<AttachmentValue> log_promise =
       log_service->WaitForDone(std::move(timeout))
-          .then(
-              [log_messages](::fit::result<void, Error>& result) -> ::fit::result<AttachmentValue> {
-                if (log_messages->empty()) {
-                  FX_LOGS(WARNING) << "Empty system log";
-                  AttachmentValue value = (result.is_ok()) ? AttachmentValue(Error::kMissingValue)
-                                                           : AttachmentValue(result.error());
-                  return ::fit::ok(std::move(value));
-                }
+          .then([log_messages](::fpromise::result<void, Error>& result)
+                    -> ::fpromise::result<AttachmentValue> {
+            if (log_messages->empty()) {
+              FX_LOGS(WARNING) << "Empty system log";
+              AttachmentValue value = (result.is_ok()) ? AttachmentValue(Error::kMissingValue)
+                                                       : AttachmentValue(result.error());
+              return ::fpromise::ok(std::move(value));
+            }
 
-                // Format the log messages by converting them to text and appending errors on their
-                // own lines.
-                std::vector<std::string> formatted_logs;
-                for (const auto& log_message : *log_messages) {
-                  std::string formatted =
-                      (log_message.message.has_value()) ? Format(log_message.message.value()) : "";
+            // Format the log messages by converting them to text and appending errors on their
+            // own lines.
+            std::vector<std::string> formatted_logs;
+            for (const auto& log_message : *log_messages) {
+              std::string formatted =
+                  (log_message.message.has_value()) ? Format(log_message.message.value()) : "";
 
-                  if (!log_message.errors.empty()) {
-                    formatted += fxl::JoinStrings(log_message.errors, "\n") + "\n";
-                  }
-                  formatted_logs.push_back(std::move(formatted));
-                }
+              if (!log_message.errors.empty()) {
+                formatted += fxl::JoinStrings(log_message.errors, "\n") + "\n";
+              }
+              formatted_logs.push_back(std::move(formatted));
+            }
 
-                std::string joined_data = fxl::JoinStrings(formatted_logs, "");
+            std::string joined_data = fxl::JoinStrings(formatted_logs, "");
 
-                AttachmentValue value =
-                    (result.is_ok()) ? AttachmentValue(std::move(joined_data))
-                                     : AttachmentValue(std::move(joined_data), result.error());
+            AttachmentValue value = (result.is_ok())
+                                        ? AttachmentValue(std::move(joined_data))
+                                        : AttachmentValue(std::move(joined_data), result.error());
 
-                return ::fit::ok(std::move(value));
-              });
+            return ::fpromise::ok(std::move(value));
+          });
 
   return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(log_promise),
                                               /*args=*/std::move(log_service));

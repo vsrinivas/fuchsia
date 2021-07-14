@@ -417,7 +417,7 @@ class Reporter::ThermalStateTransition {
               i.GetRoot().CreateUint(
                   "duration (ns)",
                   (alive_ ? zx::clock::get_monotonic() - start_time_ : past_duration_).get(), &i);
-              return fit::make_ok_promise(std::move(i));
+              return fpromise::make_ok_promise(std::move(i));
             })),
         start_time_(zx::clock::get_monotonic()) {}
 
@@ -668,7 +668,7 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
       i.GetRoot().CreateUint(
           "time since death (ns)",
           time_of_death_ ? (zx::clock::get_monotonic() - time_of_death_.value()).get() : 0, &i);
-      return fit::make_ok_promise(std::move(i));
+      return fpromise::make_ok_promise(std::move(i));
     });
   }
 
@@ -723,7 +723,7 @@ class Reporter::InputDeviceImpl : public Reporter::InputDevice {
       i.GetRoot().CreateUint(
           "time since death (ns)",
           time_of_death_ ? (zx::clock::get_monotonic() - time_of_death_.value()).get() : 0, &i);
-      return fit::make_ok_promise(std::move(i));
+      return fpromise::make_ok_promise(std::move(i));
     });
   }
 
@@ -839,7 +839,7 @@ class Reporter::RendererImpl : public Reporter::Renderer {
       i.GetRoot().CreateUint(
           "time since death (ns)",
           time_of_death_ ? (zx::clock::get_monotonic() - time_of_death_.value()).get() : 0, &i);
-      return fit::make_ok_promise(std::move(i));
+      return fpromise::make_ok_promise(std::move(i));
     });
   }
 
@@ -911,7 +911,7 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
       i.GetRoot().CreateUint(
           "time since death (ns)",
           time_of_death_ ? (zx::clock::get_monotonic() - time_of_death_.value()).get() : 0, &i);
-      return fit::make_ok_promise(std::move(i));
+      return fpromise::make_ok_promise(std::move(i));
     });
   }
 
@@ -1170,7 +1170,7 @@ Reporter::OverflowUnderflowTracker::OverflowUnderflowTracker(Args args)
     inspect::Inspector i;
     i.GetRoot().CreateUint("total duration of all parent sessions (ns)",
                            ComputeDurationOfAllSessions().get(), &i);
-    return fit::make_ok_promise(std::move(i));
+    return fpromise::make_ok_promise(std::move(i));
   });
 }
 
@@ -1345,7 +1345,7 @@ void Reporter::ThermalStateTracker::State::Activate() {
                                                       : past_duration)
                                  .get(),
                              &i);
-      return fit::make_ok_promise(std::move(i));
+      return fpromise::make_ok_promise(std::move(i));
     });
   }
 }

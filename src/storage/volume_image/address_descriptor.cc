@@ -58,7 +58,7 @@ AddressMap FromValue(const rapidjson::Value& value) {
 
 }  // namespace
 
-fit::result<AddressDescriptor, std::string> AddressDescriptor::Deserialize(
+fpromise::result<AddressDescriptor, std::string> AddressDescriptor::Deserialize(
     fbl::Span<const uint8_t> serialized) {
   rapidjson::Document document;
   rapidjson::ParseResult result =
@@ -68,17 +68,17 @@ fit::result<AddressDescriptor, std::string> AddressDescriptor::Deserialize(
     std::ostringstream error;
     error << "Error parsing serialized AddressDescriptor. "
           << rapidjson::GetParseError_En(result.Code()) << std::endl;
-    return fit::error(error.str());
+    return fpromise::error(error.str());
   }
 
   uint64_t magic = document["magic"].GetUint64();
   if (magic != kMagic) {
-    return fit::error("Invalid Magic\n");
+    return fpromise::error("Invalid Magic\n");
   }
 
   if (!document.HasMember("mappings") || !document["mappings"].IsArray() ||
       document["mappings"].GetArray().Empty()) {
-    return fit::error("AddressDescriptor must contain a non empty array field 'mapping'.\n");
+    return fpromise::error("AddressDescriptor must contain a non empty array field 'mapping'.\n");
   }
 
   AddressDescriptor descriptor = {};
@@ -87,10 +87,10 @@ fit::result<AddressDescriptor, std::string> AddressDescriptor::Deserialize(
     descriptor.mappings.push_back(FromValue(mapping));
   }
 
-  return fit::ok(descriptor);
+  return fpromise::ok(descriptor);
 }
 
-fit::result<std::vector<uint8_t>, std::string> AddressDescriptor::Serialize() const {
+fpromise::result<std::vector<uint8_t>, std::string> AddressDescriptor::Serialize() const {
   rapidjson::Document document;
   document.SetObject();
 
@@ -106,13 +106,13 @@ fit::result<std::vector<uint8_t>, std::string> AddressDescriptor::Serialize() co
   rapidjson::StringBuffer buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
   if (!document.Accept(writer)) {
-    return fit::error("Failed to obtain string representation of AddressDescriptor.\n");
+    return fpromise::error("Failed to obtain string representation of AddressDescriptor.\n");
   }
   const auto* serialized_content = reinterpret_cast<const uint8_t*>(buffer.GetString());
   std::vector<uint8_t> data(serialized_content, serialized_content + buffer.GetLength());
   data.push_back('\0');
 
-  return fit::ok(data);
+  return fpromise::ok(data);
 }
 
 std::string AddressMap::DebugString() const {

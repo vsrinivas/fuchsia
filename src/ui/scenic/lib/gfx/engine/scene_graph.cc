@@ -88,11 +88,11 @@ void SceneGraph::RegisterViewFocuser(SessionId session_id,
         std::optional<zx_koid_t> requestor = this->view_tree().ConnectedViewRefKoidOf(session_id);
         if (requestor.has_value() &&
             request_focus_(requestor.value(), utils::ExtractKoid(view_ref))) {
-          response(fit::ok());  // Request received, and honored.
+          response(fpromise::ok());  // Request received, and honored.
           return;
         }
 
-        response(fit::error(Error::DENIED));  // Report a problem.
+        response(fpromise::error(Error::DENIED));  // Report a problem.
       };
 
   view_focuser_endpoints_.emplace(

@@ -6,7 +6,7 @@
 #define SRC_UI_A11Y_LIB_SCREEN_READER_CHANGE_RANGE_VALUE_ACTION_H_
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
-#include <lib/fit/scope.h>
+#include <lib/fpromise/scope.h>
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
 
@@ -32,7 +32,7 @@ class ChangeRangeValueAction : public ScreenReaderAction {
   // Stores if the range value will be incremented or decremented.
   ChangeRangeValueActionType range_value_action_;
 
-  fit::scope scope_;
+  fpromise::scope scope_;
 };
 }  // namespace a11y
 

@@ -11,7 +11,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/interface_ptr.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -33,17 +33,17 @@ inline void Unbind(fidl::InterfacePtr<T>& p) {
 }
 
 // Converts a camera2.hal.Config to a camera3.Configuration
-inline fit::result<fuchsia::camera3::Configuration2, zx_status_t> Convert(
+inline fpromise::result<fuchsia::camera3::Configuration2, zx_status_t> Convert(
     const fuchsia::camera2::hal::Config& config) {
   if (config.stream_configs.empty()) {
     FX_LOGS(ERROR) << "Config reported no streams.";
-    return fit::error(ZX_ERR_INTERNAL);
+    return fpromise::error(ZX_ERR_INTERNAL);
   }
   std::vector<fuchsia::camera3::StreamProperties2> streams;
   for (const auto& stream_config : config.stream_configs) {
     if (stream_config.image_formats.empty()) {
       FX_LOGS(ERROR) << "Stream reported no image formats.";
-      return fit::error(ZX_ERR_INTERNAL);
+      return fpromise::error(ZX_ERR_INTERNAL);
     }
     fuchsia::camera3::StreamProperties2 stream_properties;
     stream_properties.set_frame_rate(
@@ -62,7 +62,7 @@ inline fit::result<fuchsia::camera3::Configuration2, zx_status_t> Convert(
   }
   fuchsia::camera3::Configuration2 ret;
   ret.set_streams(std::move(streams));
-  return fit::ok(std::move(ret));
+  return fpromise::ok(std::move(ret));
 }
 
 // Converts a valid camera3.StreamProperties2 to a camera3.StreamProperties, dropping the

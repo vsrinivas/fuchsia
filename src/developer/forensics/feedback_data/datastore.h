@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_DATASTORE_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
@@ -37,7 +37,7 @@ namespace feedback_data {
 //   "platform".
 //
 // Because of dynamic asynchronous data, the data requests can take some time and return a
-// ::fit::promise.
+// ::fpromise::promise.
 class Datastore {
  public:
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
@@ -48,8 +48,8 @@ class Datastore {
             const ErrorOr<std::string>& previous_build_version,
             InspectDataBudget* inspect_data_budget);
 
-  ::fit::promise<Annotations> GetAnnotations(zx::duration timeout);
-  ::fit::promise<Attachments> GetAttachments(zx::duration timeout);
+  ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout);
+  ::fpromise::promise<Attachments> GetAttachments(zx::duration timeout);
 
   // Returns whether the non-platform annotations were actually set as there is a cap on the number
   // of non-platform annotations.
@@ -68,9 +68,9 @@ class Datastore {
   void DropStaticAttachment(const AttachmentKey& key, Error error);
 
  private:
-  ::fit::promise<Attachment> BuildAttachment(const AttachmentKey& key, zx::duration timeout);
-  ::fit::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key,
-                                                       zx::duration timeout);
+  ::fpromise::promise<Attachment> BuildAttachment(const AttachmentKey& key, zx::duration timeout);
+  ::fpromise::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key,
+                                                            zx::duration timeout);
   fit::Timeout MakeCobaltTimeout(cobalt::TimedOutData data, zx::duration timeout);
 
   async_dispatcher_t* dispatcher_;

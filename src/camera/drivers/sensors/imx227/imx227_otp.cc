@@ -13,7 +13,7 @@
 
 namespace camera {
 
-fit::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
+fpromise::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
   std::lock_guard guard(lock_);
 
   fzl::VmoMapper mapper;
@@ -22,7 +22,7 @@ fit::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
       mapper.CreateAndMap(OTP_TOTAL_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to create and map VMO", __func__);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   auto* dest = static_cast<unsigned char*>(mapper.start());
@@ -35,7 +35,7 @@ fit::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
     if (!ValidateSensorID()) {
       status = ZX_ERR_INTERNAL;
       zxlogf(ERROR, "%s: could not read Sensor ID", __func__);
-      return fit::error(status);
+      return fpromise::error(status);
     }
 
     // Select page to read from and enable OTP page reads
@@ -45,27 +45,27 @@ fit::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
     // Optional check
     auto result = Read8(OTP_ACCESS_STATUS);
     if (result.is_error()) {
-      return fit::error(result.error());
+      return fpromise::error(result.error());
     }
     const auto kReadStatus = result.value();
     if (kReadStatus != 1) {
       status = ZX_ERR_IO;
       zxlogf(ERROR, "%s: read access could not be verified, access is %x", __func__, kReadStatus);
-      return fit::error(status);
+      return fpromise::error(status);
     }
 
     status = i2c_.WriteReadSync(reinterpret_cast<const uint8_t*>(&kPageStartRegister),
                                 sizeof(kPageStartRegister), dest, OTP_PAGE_SIZE);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: failed to read from I2C channel", __func__);
-      return fit::error(status);
+      return fpromise::error(status);
     }
 
     dest += OTP_PAGE_SIZE;
   }
 
   mapper.Unmap();
-  return fit::ok(std::move(vmo));
+  return fpromise::ok(std::move(vmo));
 }
 
 bool Imx227Device::OtpValidate(const zx::vmo& vmo) {

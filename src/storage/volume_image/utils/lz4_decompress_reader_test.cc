@@ -62,7 +62,7 @@ constexpr std::string_view kLoremIpsum =
     elementum integer. Diam vulputate ut pharetra sit amet aliquam. At consectetur lorem
     donec massa sapien faucibus et.)";
 
-fit::result<std::vector<uint8_t>, std::string> CompressedData(
+fpromise::result<std::vector<uint8_t>, std::string> CompressedData(
     fbl::Span<const uint8_t> source_data) {
   std::vector<uint8_t> compressed_data;
   Lz4Compressor compressor;
@@ -70,7 +70,7 @@ fit::result<std::vector<uint8_t>, std::string> CompressedData(
           compressor.Prepare([&compressed_data](fbl::Span<const uint8_t> compressed_chunk) {
             compressed_data.insert(compressed_data.end(), compressed_chunk.begin(),
                                    compressed_chunk.end());
-            return fit::ok();
+            return fpromise::ok();
           });
       result.is_error()) {
     return result.take_error_result();
@@ -84,7 +84,7 @@ fit::result<std::vector<uint8_t>, std::string> CompressedData(
     return result.take_error_result();
   }
 
-  return fit::ok(compressed_data);
+  return fpromise::ok(compressed_data);
 }
 
 // Compressed Reader.
@@ -94,15 +94,15 @@ class FakeReader : public Reader {
 
   uint64_t length() const final { return data_.size(); }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     if (buffer.empty()) {
-      return fit::ok();
+      return fpromise::ok();
     }
     if (offset + buffer.size() > data_.size()) {
-      return fit::error("FakeReader::Read out of bounds.");
+      return fpromise::error("FakeReader::Read out of bounds.");
     }
     memcpy(buffer.data(), data_.data() + offset, buffer.size());
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:
@@ -114,7 +114,7 @@ constexpr uint64_t kDecompressedLength = kUncompressedDataPrefix + kLoremIpsum.s
 constexpr uint64_t kMaxBufferLength = kUncompressedDataPrefix + 1;
 // constexpr uint64_t kMaxReadBufferLength = kUncompressedDataPrefix / 3;
 
-fit::result<std::vector<uint8_t>, std::string> GetData() {
+fpromise::result<std::vector<uint8_t>, std::string> GetData() {
   auto data_or = CompressedData(fbl::Span<const uint8_t>(
       reinterpret_cast<const uint8_t*>(kLoremIpsum.data()), kLoremIpsum.size()));
   if (data_or.is_error()) {
@@ -123,7 +123,7 @@ fit::result<std::vector<uint8_t>, std::string> GetData() {
   auto data = data_or.take_value();
 
   data.insert(data.begin(), kLoremIpsum.begin(), kLoremIpsum.begin() + kUncompressedDataPrefix);
-  return fit::ok(data);
+  return fpromise::ok(data);
 }
 
 void CheckRangeMatch(uint64_t offset, const Reader& reader,

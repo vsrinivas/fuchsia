@@ -9,7 +9,7 @@
 #include <algorithm>
 
 #include "debug_info_retriever.h"
-#include "lib/fit/promise.h"
+#include "lib/fpromise/promise.h"
 #include "lib/inspect/cpp/inspector.h"
 #include "lib/inspect/cpp/value_list.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -137,7 +137,7 @@ void GetThreads(const zx::process* process, std::vector<ThreadInfo>* out) {
   }
 }
 
-fit::promise<inspect::Inspector> PopulateThreadInspect(zx::process* process) {
+fpromise::promise<inspect::Inspector> PopulateThreadInspect(zx::process* process) {
   // Make a 1mb buffer.
   inspect::Inspector inspector(inspect::InspectSettings{.maximum_size = 1024 * 1024});
 
@@ -163,10 +163,10 @@ fit::promise<inspect::Inspector> PopulateThreadInspect(zx::process* process) {
     inspector.emplace(std::move(values));
   }
 
-  return fit::make_ok_promise(std::move(inspector));
+  return fpromise::make_ok_promise(std::move(inspector));
 }
 
-fit::promise<inspect::Inspector> PopulateMemoryInspect(zx::process* process) {
+fpromise::promise<inspect::Inspector> PopulateMemoryInspect(zx::process* process) {
   inspect::Inspector inspector;
 
   zx_info_task_stats_t task_stats = {};
@@ -177,7 +177,7 @@ fit::promise<inspect::Inspector> PopulateMemoryInspect(zx::process* process) {
   inspector.GetRoot().CreateUint("scaled_shared_bytes", task_stats.mem_scaled_shared_bytes,
                                  &inspector);
 
-  return fit::make_ok_promise(std::move(inspector));
+  return fpromise::make_ok_promise(std::move(inspector));
 }
 }  // namespace
 
@@ -187,11 +187,11 @@ SystemDiagnosticsDirectory::SystemDiagnosticsDirectory(zx::process process)
     : process_(std::move(process)), inspector_() {
   inspector_.GetRoot().CreateLazyNode(
       "handle_count",
-      [this]() -> fit::promise<inspect::Inspector> {
+      [this]() -> fpromise::promise<inspect::Inspector> {
         inspect::Inspector inspector;
         zx_info_process_handle_stats_t process_handle_stats;
         if (GetProcessHandleStats(&process_, &process_handle_stats) != ZX_OK) {
-          return fit::make_result_promise<inspect::Inspector>(fit::error());
+          return fpromise::make_result_promise<inspect::Inspector>(fpromise::error());
         }
 
         for (zx_obj_type_t obj_type = ZX_OBJ_TYPE_NONE; obj_type < ZX_OBJ_TYPE_UPPER_BOUND;
@@ -199,7 +199,7 @@ SystemDiagnosticsDirectory::SystemDiagnosticsDirectory(zx::process process)
           inspector.GetRoot().CreateUint(obj_type_get_name(obj_type),
                                          process_handle_stats.handle_count[obj_type], &inspector);
         }
-        return fit::make_ok_promise(std::move(inspector));
+        return fpromise::make_ok_promise(std::move(inspector));
       },
       &inspector_);
   inspector_.GetRoot().CreateLazyNode(

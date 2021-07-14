@@ -99,24 +99,25 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
   auto file_crash_report =
       GetComponentSourceIdentity(dispatcher_, services_, fit::Timeout(component_lookup_timeout_),
                                  fsl::GetKoid(crashed_thread.get()))
-          .then([services = services_, builder = std::move(builder),
-                 callback = std::move(callback)](::fit::result<SourceIdentity>& result) mutable {
-            SourceIdentity component_lookup;
-            if (result.is_ok()) {
-              component_lookup = result.take_value();
-            }
+          .then(
+              [services = services_, builder = std::move(builder),
+               callback = std::move(callback)](::fpromise::result<SourceIdentity>& result) mutable {
+                SourceIdentity component_lookup;
+                if (result.is_ok()) {
+                  component_lookup = result.take_value();
+                }
 
-            builder.SetComponentInfo(component_lookup);
+                builder.SetComponentInfo(component_lookup);
 
-            // We make a fire-and-forget request as we won't do anything with the result.
-            auto crash_reporter = services->Connect<fuchsia::feedback::CrashReporter>();
-            crash_reporter->File(builder.Consume(),
-                                 [](fuchsia::feedback::CrashReporter_File_Result result) {});
+                // We make a fire-and-forget request as we won't do anything with the result.
+                auto crash_reporter = services->Connect<fuchsia::feedback::CrashReporter>();
+                crash_reporter->File(builder.Consume(),
+                                     [](fuchsia::feedback::CrashReporter_File_Result result) {});
 
-            callback(CreateMoniker(component_lookup));
+                callback(CreateMoniker(component_lookup));
 
-            return ::fit::ok();
-          });
+                return ::fpromise::ok();
+              });
 
   executor_.schedule_task(std::move(file_crash_report));
 }

@@ -7,7 +7,7 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fdio/fd.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include "src/virtualization/lib/grpc/fdio_util.h"
 
@@ -18,29 +18,29 @@
 //
 // If you need to dispatch RPCs to the service, consider using
 // |NewGrpcVsockStub| instead.
-fit::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(
+fpromise::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(
     const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint, uint32_t cid,
     uint32_t port);
 
 // Creates a new gRPC stub backed by a zx::socket.
 template <typename T>
-fit::result<std::unique_ptr<typename T::Stub>, zx_status_t> NewGrpcStub(zx::socket socket) {
+fpromise::result<std::unique_ptr<typename T::Stub>, zx_status_t> NewGrpcStub(zx::socket socket) {
   fbl::unique_fd fd;
   zx_status_t status = fdio_fd_create(socket.release(), fd.reset_and_get_address());
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
   if (SetNonBlocking(fd) != 0) {
-    return fit::error(ZX_ERR_IO);
+    return fpromise::error(ZX_ERR_IO);
   }
-  return fit::ok(T::NewStub(grpc::CreateInsecureChannelFromFd("vsock", fd.release())));
+  return fpromise::ok(T::NewStub(grpc::CreateInsecureChannelFromFd("vsock", fd.release())));
 }
 
 // Connects to a gRPC service listening on cid:port and returns a gRPC
 // interface stub for the connection. This stub can be used to dispatch RPCs
 // to the server.
 template <typename T>
-fit::promise<std::unique_ptr<typename T::Stub>, zx_status_t> NewGrpcVsockStub(
+fpromise::promise<std::unique_ptr<typename T::Stub>, zx_status_t> NewGrpcVsockStub(
     const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint, uint32_t cid,
     uint32_t port) {
   return ConnectToGrpcVsockService(socket_endpoint, cid, port)

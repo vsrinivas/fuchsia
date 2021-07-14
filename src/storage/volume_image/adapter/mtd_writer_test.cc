@@ -5,7 +5,7 @@
 #include "src/storage/volume_image/adapter/mtd_writer.h"
 
 #include <fcntl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 #include <string_view>
@@ -33,8 +33,9 @@ constexpr const char* kTestMtdDevicePath = "/dev/mtd0";
 constexpr std::string_view kFvmSparseImagePath =
     STORAGE_VOLUME_IMAGE_ADAPTER_TEST_IMAGE_PATH "test_fvm.sparse.blk";
 
-fit::result<void, std::string> ReadUnalignedBlock(uint64_t offset, fbl::Span<uint8_t> data,
-                                                  fbl::Span<uint8_t> block_buffer, Reader& reader) {
+fpromise::result<void, std::string> ReadUnalignedBlock(uint64_t offset, fbl::Span<uint8_t> data,
+                                                       fbl::Span<uint8_t> block_buffer,
+                                                       Reader& reader) {
   uint64_t read_bytes = 0;
 
   while (read_bytes < data.size()) {
@@ -51,7 +52,7 @@ fit::result<void, std::string> ReadUnalignedBlock(uint64_t offset, fbl::Span<uin
     memcpy(data.data() + read_bytes, block_buffer.data(), bytes_in_buffer);
     read_bytes += bytes_in_buffer;
   }
-  return fit::ok();
+  return fpromise::ok();
 }
 
 TEST(MtdWriterTest, WriteContentsAreOk) {

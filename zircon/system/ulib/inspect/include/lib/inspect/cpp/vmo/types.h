@@ -6,7 +6,7 @@
 #define LIB_INSPECT_CPP_VMO_TYPES_H_
 
 #include <lib/fit/function.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -19,7 +19,7 @@ namespace inspect {
 class Node;
 class Inspector;
 
-using LazyNodeCallbackFn = fit::function<fit::promise<Inspector>()>;
+using LazyNodeCallbackFn = fit::function<fpromise::promise<Inspector>()>;
 
 namespace internal {
 class State;
@@ -552,7 +552,7 @@ class Node final {
   //    Inspector insp;
   //    ValueList values;
   //    insp.GetRoot().CreateInt("val", 2, &values);
-  //    return fit::make_ok_result(insp);
+  //    return fpromise::make_ok_result(insp);
   //  });
   //
   //  Output:
@@ -588,7 +588,7 @@ class Node final {
   //    Inspector insp;
   //    ValueList values;
   //    insp.GetRoot().CreateInt("val", 2).enlist(&values);
-  //    return fit::make_ok_promise(insp);
+  //    return fpromise::make_ok_promise(insp);
   //  });
   //
   //  Output:
@@ -599,7 +599,7 @@ class Node final {
   //  Alternatively:
   //
   //  a.CreateLazyNode("b", [] {
-  //    return fit::make_error_promise();
+  //    return fpromise::make_error_promise();
   //  });
   //
   //  Possible output:

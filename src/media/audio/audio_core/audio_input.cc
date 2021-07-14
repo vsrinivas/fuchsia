@@ -49,9 +49,9 @@ zx_status_t AudioInput::Init() {
   return res;
 }
 
-fit::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioInput::InitializeDestLink(
+fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioInput::InitializeDestLink(
     const AudioObject& dest) {
-  return fit::ok(driver()->readable_ring_buffer());
+  return fpromise::ok(driver()->readable_ring_buffer());
 }
 
 void AudioInput::OnWakeup() {

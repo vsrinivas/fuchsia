@@ -6,8 +6,8 @@
 
 #include <fcntl.h>
 #include <lib/async/default.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/device/network.h>
@@ -114,7 +114,7 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
     return;
   }
   session_running_ = true;
-  fit::bridge<DeviceInfo, zx_status_t> bridge;
+  fpromise::bridge<DeviceInfo, zx_status_t> bridge;
   fidl::Result result =
       device_->GetInfo([res = std::move(bridge.completer)](
                            fidl::WireResponse<netdev::Device::GetInfo>* response) mutable {
@@ -130,22 +130,22 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
     return;
   }
 
-  auto prepare_session =
-      [this, cfg = std::move(config_factory)](DeviceInfo& info) -> fit::result<void, zx_status_t> {
+  auto prepare_session = [this, cfg = std::move(config_factory)](
+                             DeviceInfo& info) -> fpromise::result<void, zx_status_t> {
     session_config_ = cfg(info);
     device_info_ = std::move(info);
     zx_status_t status;
     if ((status = PrepareSession()) != ZX_OK) {
-      return fit::error(status);
+      return fpromise::error(status);
     }
-    return fit::ok();
+    return fpromise::ok();
   };
-  auto open_session = [this, name]() -> fit::promise<void, zx_status_t> {
-    fit::bridge<void, zx_status_t> bridge;
+  auto open_session = [this, name]() -> fpromise::promise<void, zx_status_t> {
+    fpromise::bridge<void, zx_status_t> bridge;
     fidl::FidlAllocator alloc;
     zx::status session_info = MakeSessionInfo(alloc);
     if (session_info.is_error()) {
-      return fit::make_error_promise(session_info.error_value());
+      return fpromise::make_error_promise(session_info.error_value());
     }
     fidl::Result result = device_->OpenSession(
         fidl::StringView::FromExternal(name), session_info.value(),
@@ -166,19 +166,20 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
           }
         });
     if (!result.ok()) {
-      return fit::make_error_promise(result.status());
+      return fpromise::make_error_promise(result.status());
     }
     return bridge.consumer.promise();
   };
-  auto prepare_descriptors = [this]() -> fit::result<void, zx_status_t> {
+  auto prepare_descriptors = [this]() -> fpromise::result<void, zx_status_t> {
     zx_status_t status;
     if ((status = PrepareDescriptors()) != ZX_OK) {
-      return fit::error(status);
+      return fpromise::error(status);
     } else {
-      return fit::ok();
+      return fpromise::ok();
     }
   };
-  auto fire_callback = [this, cb = std::move(callback)](fit::result<void, zx_status_t>& result) {
+  auto fire_callback = [this,
+                        cb = std::move(callback)](fpromise::result<void, zx_status_t>& result) {
     if (result.is_ok()) {
       cb(ZX_OK);
     } else {
@@ -191,7 +192,7 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
                   .and_then(std::move(open_session))
                   .and_then(std::move(prepare_descriptors))
                   .then(std::move(fire_callback));
-  fit::schedule_for_consumer(executor_.get(), std::move(prom));
+  fpromise::schedule_for_consumer(executor_.get(), std::move(prom));
 }
 
 zx_status_t NetworkDeviceClient::PrepareSession() {
@@ -259,11 +260,11 @@ zx_status_t NetworkDeviceClient::PrepareSession() {
 void NetworkDeviceClient::AttachPort(uint8_t port_id,
                                      std::vector<netdev::wire::FrameType> rx_frame_types,
                                      ErrorCallback callback) {
-  auto promise = [this, port_id, &rx_frame_types]() -> fit::promise<void, zx_status_t> {
+  auto promise = [this, port_id, &rx_frame_types]() -> fpromise::promise<void, zx_status_t> {
     if (!session_.is_valid()) {
-      return fit::make_error_promise(ZX_ERR_BAD_STATE);
+      return fpromise::make_error_promise(ZX_ERR_BAD_STATE);
     }
-    fit::bridge<void, zx_status_t> bridge;
+    fpromise::bridge<void, zx_status_t> bridge;
     fidl::Result result = session_->Attach(
         port_id, fidl::VectorView<netdev::wire::FrameType>::FromExternal(rx_frame_types),
         [completer = std::move(bridge.completer)](
@@ -278,7 +279,7 @@ void NetworkDeviceClient::AttachPort(uint8_t port_id,
           }
         });
     if (!result.ok()) {
-      return fit::make_error_promise(result.status());
+      return fpromise::make_error_promise(result.status());
     }
     return bridge.consumer.promise();
   }();
@@ -286,11 +287,11 @@ void NetworkDeviceClient::AttachPort(uint8_t port_id,
 }
 
 void NetworkDeviceClient::DetachPort(uint8_t port_id, ErrorCallback callback) {
-  auto promise = [this, &port_id]() -> fit::promise<void, zx_status_t> {
+  auto promise = [this, &port_id]() -> fpromise::promise<void, zx_status_t> {
     if (!session_.is_valid()) {
-      return fit::make_error_promise(ZX_ERR_BAD_STATE);
+      return fpromise::make_error_promise(ZX_ERR_BAD_STATE);
     }
-    fit::bridge<void, zx_status_t> bridge;
+    fpromise::bridge<void, zx_status_t> bridge;
     fidl::Result result = session_->Detach(
         port_id, [completer = std::move(bridge.completer)](
                      fidl::WireResponse<netdev::Session::Detach>* response) mutable {
@@ -304,18 +305,18 @@ void NetworkDeviceClient::DetachPort(uint8_t port_id, ErrorCallback callback) {
           }
         });
     if (!result.ok()) {
-      return fit::make_error_promise(result.status());
+      return fpromise::make_error_promise(result.status());
     }
     return bridge.consumer.promise();
   }();
   ScheduleCallbackPromise(std::move(promise), std::move(callback));
 }
 
-void NetworkDeviceClient::ScheduleCallbackPromise(fit::promise<void, zx_status_t> promise,
+void NetworkDeviceClient::ScheduleCallbackPromise(fpromise::promise<void, zx_status_t> promise,
                                                   ErrorCallback callback) {
-  fit::schedule_for_consumer(
+  fpromise::schedule_for_consumer(
       executor_.get(),
-      promise.then([callback = std::move(callback)](fit::result<void, zx_status_t>& result) {
+      promise.then([callback = std::move(callback)](fpromise::result<void, zx_status_t>& result) {
         if (result.is_ok()) {
           callback(ZX_OK);
         } else {

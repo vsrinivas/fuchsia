@@ -7,9 +7,9 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -21,8 +21,8 @@
 namespace forensics {
 namespace fit {
 
-// Wrapper around ::fit::bridge with the ability to post a task that that will complete the bridge
-// at a certain point in the future if the bridge hasn't already been completed.
+// Wrapper around ::fpromise::bridge with the ability to post a task that that will complete the
+// bridge at a certain point in the future if the bridge hasn't already been completed.
 template <typename V = void>
 class Bridge {
  public:
@@ -51,16 +51,17 @@ class Bridge {
   bool IsAlreadyDone() const { return !bridge_.completer; }
 
   // Get the promise that will be ungated when |bridge_| is completed.
-  ::fit::promise<V, Error> WaitForDone() { return bridge_.consumer.promise(); }
+  ::fpromise::promise<V, Error> WaitForDone() { return bridge_.consumer.promise(); }
 
   // Start the timeout and get the promise that will be ungated when |bridge_| is completed.
-  ::fit::promise<V, Error> WaitForDone(Timeout timeout) {
+  ::fpromise::promise<V, Error> WaitForDone(Timeout timeout) {
     timeout_ = std::move(timeout);
 
     if (zx_status_t status = timeout_task_.PostDelayed(dispatcher_, timeout_.value);
         status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to post timeout task, aborting " << task_name_;
-      return ::fit::make_result_promise<V, Error>(::fit::error(Error::kAsyncTaskPostFailure));
+      return ::fpromise::make_result_promise<V, Error>(
+          ::fpromise::error(Error::kAsyncTaskPostFailure));
     }
 
     return WaitForDone();
@@ -82,7 +83,7 @@ class Bridge {
 
   async_dispatcher_t* dispatcher_;
   const std::string task_name_;
-  ::fit::bridge<V, Error> bridge_;
+  ::fpromise::bridge<V, Error> bridge_;
 
   async::TaskClosureMethod<Bridge, &Bridge::AtTimeout> timeout_task_{this};
 

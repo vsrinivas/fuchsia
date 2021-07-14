@@ -363,14 +363,14 @@ TEST(BlobfsHostTest, VisitBlobsVisitsAllBlobsAndProvidesTheCorrectContents) {
 
   int visited_blob_count = 0;
   auto visit_result =
-      blobfs->VisitBlobs([&](Blobfs::BlobView blob_view) -> fit::result<void, std::string> {
+      blobfs->VisitBlobs([&](Blobfs::BlobView blob_view) -> fpromise::result<void, std::string> {
         auto blob_index = get_blob_index_by_digest(blob_view.merkle_hash);
         if (!blob_index.has_value()) {
-          return fit::error("Blob not found!");
+          return fpromise::error("Blob not found!");
         }
         CheckBlobContents(*blobs[blob_index.value()], blob_view.blob_contents);
         visited_blob_count++;
-        return fit::ok();
+        return fpromise::ok();
       });
   ASSERT_TRUE(visit_result.is_ok()) << visit_result.error();
   ASSERT_EQ(visited_blob_count, blob_count);
@@ -388,7 +388,7 @@ TEST(BlobfsHostTest, VisitBlobsForwardsVisitorErrors) {
   // One blob to visit at least.
   AddUncompressedBlob(/*data_size=*/0, *blobfs);
 
-  auto res = blobfs->VisitBlobs([](auto view) { return fit::error("1234"); });
+  auto res = blobfs->VisitBlobs([](auto view) { return fpromise::error("1234"); });
 
   ASSERT_TRUE(res.is_error());
   ASSERT_TRUE(res.error().find("1234") != std::string::npos);

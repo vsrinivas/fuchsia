@@ -18,7 +18,7 @@ class PolicyLoader {
  public:
   static AudioPolicy LoadPolicy();
 
-  static fit::result<AudioPolicy> ParseConfig(const char* file_body);
+  static fpromise::result<AudioPolicy> ParseConfig(const char* file_body);
 };
 
 }  // namespace audio

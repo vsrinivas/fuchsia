@@ -6,7 +6,7 @@
 #define SRC_CAMERA_LIB_FAKE_CAMERA_FAKE_CAMERA_H_
 
 #include <fuchsia/camera3/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <zircon/types.h>
 
 #include "src/camera/lib/fake_stream/fake_stream.h"
@@ -22,7 +22,7 @@ class FakeCamera {
   virtual ~FakeCamera() = default;
 
   // Create a fake camera with the given identifier and configurations.
-  static fit::result<std::unique_ptr<FakeCamera>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<FakeCamera>, zx_status_t> Create(
       std::string identifier, std::vector<FakeConfiguration> configurations);
 
   // Returns a request handler for the Device interface.

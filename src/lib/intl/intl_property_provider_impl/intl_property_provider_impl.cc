@@ -60,12 +60,12 @@ fuchsia::intl::merge::Data GetDefaultRawData(
 
 // Collect key-value pairs of Unicode locale properties that will be applied to
 // each locale ID.
-fit::result<std::map<std::string, std::string>, zx_status_t> GetUnicodeExtensionsForDenormalization(
-    const fuchsia::intl::merge::Data& raw_data) {
+fpromise::result<std::map<std::string, std::string>, zx_status_t>
+GetUnicodeExtensionsForDenormalization(const fuchsia::intl::merge::Data& raw_data) {
   auto primary_calendar_id_result = ExtractBcp47CalendarId(raw_data.calendar_ids()[0]);
   if (primary_calendar_id_result.is_error()) {
     FX_LOGS(ERROR) << "Bad calendar ID: " << raw_data.calendar_ids()[0];
-    return fit::error(primary_calendar_id_result.error());
+    return fpromise::error(primary_calendar_id_result.error());
   }
   const std::string& primary_calendar_id = primary_calendar_id_result.value();
 
@@ -74,7 +74,7 @@ fit::result<std::map<std::string, std::string>, zx_status_t> GetUnicodeExtension
       uloc_toUnicodeLocaleType(LocaleKeys::kTimeZone.c_str(), primary_tz_id_iana.c_str());
   if (primary_tz_id == nullptr) {
     FX_LOGS(ERROR) << "Bad time zone ID: " << primary_tz_id_iana;
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   std::map<std::string, std::string> extensions{{LocaleKeys::kCalendar, primary_calendar_id},
@@ -92,18 +92,18 @@ fit::result<std::map<std::string, std::string>, zx_status_t> GetUnicodeExtension
         break;
     }
   }
-  return fit::ok(extensions);
+  return fpromise::ok(extensions);
 }
 
-fit::result<Profile, zx_status_t> GenerateProfile(const fuchsia::intl::merge::Data& raw_data) {
+fpromise::result<Profile, zx_status_t> GenerateProfile(const fuchsia::intl::merge::Data& raw_data) {
   if (raw_data.language_tags().empty()) {
     FX_LOGS(ERROR) << "GenerateProfile called with empty raw locale IDs";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   auto unicode_extensions_result = GetUnicodeExtensionsForDenormalization(raw_data);
   if (unicode_extensions_result.is_error()) {
-    return fit::error(unicode_extensions_result.error());
+    return fpromise::error(unicode_extensions_result.error());
   }
 
   const auto unicode_extensions = unicode_extensions_result.value();
@@ -121,7 +121,7 @@ fit::result<Profile, zx_status_t> GenerateProfile(const fuchsia::intl::merge::Da
   Profile profile;
   // Update locales
   for (auto& icu_locale : icu_locales) {
-    fit::result<LocaleId, zx_status_t> locale_id_result = ExpandLocaleId(icu_locale);
+    fpromise::result<LocaleId, zx_status_t> locale_id_result = ExpandLocaleId(icu_locale);
     if (locale_id_result.is_ok()) {
       profile.mutable_locales()->push_back(locale_id_result.value());
     }
@@ -130,7 +130,7 @@ fit::result<Profile, zx_status_t> GenerateProfile(const fuchsia::intl::merge::Da
 
   if (!profile.has_locales() || profile.locales().empty()) {
     FX_LOGS(ERROR) << "No valid locales could be built";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   // Update calendars
@@ -151,7 +151,7 @@ fit::result<Profile, zx_status_t> GenerateProfile(const fuchsia::intl::merge::Da
   }
   // TODO(kpozin): Consider inferring temperature unit from region if missing.
 
-  return fit::ok(std::move(profile));
+  return fpromise::ok(std::move(profile));
 }
 
 // Extracts just the timezone ID from the setting object.  If the setting is not
@@ -270,11 +270,11 @@ void IntlPropertyProviderImpl::StartSettingsWatcher() {
   });
 }
 
-fit::result<Profile, zx_status_t> IntlPropertyProviderImpl::GetProfileInternal() {
+fpromise::result<Profile, zx_status_t> IntlPropertyProviderImpl::GetProfileInternal() {
   if (!intl_profile_) {
     Profile profile;
     if (!IsRawDataInitialized()) {
-      return fit::error(ZX_ERR_SHOULD_WAIT);
+      return fpromise::error(ZX_ERR_SHOULD_WAIT);
     }
     auto result = GenerateProfile(*raw_profile_data_);
     if (result.is_error()) {
@@ -283,7 +283,7 @@ fit::result<Profile, zx_status_t> IntlPropertyProviderImpl::GetProfileInternal()
     }
     intl_profile_ = result.take_value();
   }
-  return fit::ok(fidl::Clone(*intl_profile_));
+  return fpromise::ok(fidl::Clone(*intl_profile_));
 }
 
 bool IntlPropertyProviderImpl::IsRawDataInitialized() { return raw_profile_data_.has_value(); }

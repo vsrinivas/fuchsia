@@ -4,8 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 
-#include <lib/fit/promise.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
@@ -57,7 +57,7 @@ void AudioDeviceManager::Shutdown() {
   TRACE_DURATION("audio", "AudioDeviceManager::Shutdown");
   plug_detector_->Stop();
 
-  std::vector<fit::promise<void>> device_promises;
+  std::vector<fpromise::promise<void>> device_promises;
   for (auto& [_, device] : devices_pending_init_) {
     device_promises.push_back(device->Shutdown());
   }
@@ -68,68 +68,70 @@ void AudioDeviceManager::Shutdown() {
   }
   devices_.clear();
 
-  fit::run_single_threaded(fit::join_promise_vector(std::move(device_promises)));
+  fpromise::run_single_threaded(fpromise::join_promise_vector(std::move(device_promises)));
 }
 
-fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioDeviceManager::UpdateEffect(
+fpromise::promise<void, fuchsia::media::audio::UpdateEffectError> AudioDeviceManager::UpdateEffect(
     const std::string& instance_name, const std::string& config, bool persist) {
   if (persist) {
     persisted_effects_updates_[instance_name] = config;
   }
-  std::vector<fit::promise<void, fuchsia::media::audio::UpdateEffectError>> promises;
+  std::vector<fpromise::promise<void, fuchsia::media::audio::UpdateEffectError>> promises;
   for (auto& [_, device] : devices_) {
     promises.push_back(device->UpdateEffect(instance_name, config));
   }
-  return fit::join_promise_vector(std::move(promises))
-      .then(
-          [](fit::result<std::vector<fit::result<void, fuchsia::media::audio::UpdateEffectError>>>&
-                 results) -> fit::result<void, fuchsia::media::audio::UpdateEffectError> {
-            FX_DCHECK(results.is_ok()) << "fit::join_promise_vector returns an error";
-            bool found = false;
-            for (const auto& result : results.value()) {
-              if (result.is_error() &&
-                  result.error() == fuchsia::media::audio::UpdateEffectError::INVALID_CONFIG) {
-                return result;
-              }
-              if (result.is_ok()) {
-                found = true;
-              }
-            }
-            if (found) {
-              return fit::ok();
-            } else {
-              return fit::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
-            }
-          });
+  return fpromise::join_promise_vector(std::move(promises))
+      .then([](fpromise::result<
+                std::vector<fpromise::result<void, fuchsia::media::audio::UpdateEffectError>>>&
+                   results) -> fpromise::result<void, fuchsia::media::audio::UpdateEffectError> {
+        FX_DCHECK(results.is_ok()) << "fpromise::join_promise_vector returns an error";
+        bool found = false;
+        for (const auto& result : results.value()) {
+          if (result.is_error() &&
+              result.error() == fuchsia::media::audio::UpdateEffectError::INVALID_CONFIG) {
+            return result;
+          }
+          if (result.is_ok()) {
+            found = true;
+          }
+        }
+        if (found) {
+          return fpromise::ok();
+        } else {
+          return fpromise::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+        }
+      });
 }
 
-fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioDeviceManager::UpdateDeviceEffect(
-    const std::string device_id, const std::string& instance_name, const std::string& message) {
+fpromise::promise<void, fuchsia::media::audio::UpdateEffectError>
+AudioDeviceManager::UpdateDeviceEffect(const std::string device_id,
+                                       const std::string& instance_name,
+                                       const std::string& message) {
   auto devices = GetDeviceInfos();
   const auto dev = std::find_if(devices.begin(), devices.end(), [&device_id](auto candidate) {
     return candidate.unique_id == device_id;
   });
   if (dev == devices.end()) {
-    return fit::make_error_promise(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+    return fpromise::make_error_promise(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
   }
   auto device = devices_[dev->token_id];
   FX_DCHECK(device);
 
   return device->UpdateEffect(instance_name, message)
-      .then([](fit::result<void, fuchsia::media::audio::UpdateEffectError>& result)
-                -> fit::result<void, fuchsia::media::audio::UpdateEffectError> {
+      .then([](fpromise::result<void, fuchsia::media::audio::UpdateEffectError>& result)
+                -> fpromise::result<void, fuchsia::media::audio::UpdateEffectError> {
         if (result.is_ok()) {
-          return fit::ok();
+          return fpromise::ok();
         }
         if (result.error() == fuchsia::media::audio::UpdateEffectError::INVALID_CONFIG) {
           return result;
         } else {
-          return fit::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+          return fpromise::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
         }
       });
 }
 
-fit::promise<void, zx_status_t> AudioDeviceManager::UpdatePipelineConfig(
+fpromise::promise<void, zx_status_t> AudioDeviceManager::UpdatePipelineConfig(
     const std::string device_id, const PipelineConfig& pipeline_config,
     const VolumeCurve& volume_curve) {
   auto devices = GetDeviceInfos();
@@ -137,7 +139,7 @@ fit::promise<void, zx_status_t> AudioDeviceManager::UpdatePipelineConfig(
     return candidate.unique_id == device_id;
   });
   if (dev == devices.end()) {
-    return fit::make_error_promise(ZX_ERR_NOT_FOUND);
+    return fpromise::make_error_promise(ZX_ERR_NOT_FOUND);
   }
   auto device = devices_[dev->token_id];
   FX_DCHECK(device);
@@ -146,7 +148,7 @@ fit::promise<void, zx_status_t> AudioDeviceManager::UpdatePipelineConfig(
   // protects from devices being plugged or unplugged during update of the PipelineConfig,
   // as well as ensures only one update to the PipelineConfig will be processed at a time.
   if (!device->routable()) {
-    return fit::make_error_promise(ZX_ERR_BAD_STATE);
+    return fpromise::make_error_promise(ZX_ERR_BAD_STATE);
   }
 
   // UpdatePipelineConfig is only valid on a device without links (for the purpose of effects
@@ -205,14 +207,14 @@ void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& devi
   device->SetActivated();
 
   // Apply persisted effects updates.
-  std::vector<fit::promise<void, void>> promises;
+  std::vector<fpromise::promise<void, void>> promises;
   for (auto it : persisted_effects_updates_) {
     std::string instance_name = it.first;
     std::string config = it.second;
     promises.push_back(
         device->UpdateEffect(instance_name, config)
-            .then([instance_name,
-                   config](fit::result<void, fuchsia::media::audio::UpdateEffectError>& result) {
+            .then([instance_name, config](
+                      fpromise::result<void, fuchsia::media::audio::UpdateEffectError>& result) {
               if (result.is_error()) {
                 FX_LOGS_FIRST_N(ERROR, 10) << "Unable to update effect " << instance_name
                                            << ", error code " << static_cast<int>(result.error());
@@ -220,7 +222,7 @@ void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& devi
             }));
   }
   threading_model_.FidlDomain().executor()->schedule_task(
-      fit::join_promise_vector(std::move(promises)));
+      fpromise::join_promise_vector(std::move(promises)));
 
   // Notify interested users of the new device.
   auto info = device->GetDeviceInfo();

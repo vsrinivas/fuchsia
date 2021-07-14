@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_FTL_FTL_IMAGE_INTERNAL_H_
 #define SRC_STORAGE_VOLUME_IMAGE_FTL_FTL_IMAGE_INTERNAL_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <map>
 #include <string>
@@ -42,7 +42,7 @@ void WriteOutOfBandBytes(uint32_t logical_page_number, fbl::Span<uint8_t> oob_by
 
 // Writes a map block into |writer| with the providing |logical_to_physical_pages| mappings,
 // assuming the next block starts at |offset|.
-fit::result<void, std::string> WriteMapBlock(
+fpromise::result<void, std::string> WriteMapBlock(
     const std::map<uint32_t, uint32_t>& logical_to_physical_pages,
     const RawNandOptions& ftl_options, uint64_t offset, Writer* writer);
 

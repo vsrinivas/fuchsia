@@ -262,16 +262,16 @@ zx::time AudioClock::MonotonicTimeFromReferenceTime(zx::time ref_time) const {
   return audio::clock::MonotonicTimeFromReferenceTime(clock_, ref_time).take_value();
 }
 
-fit::result<zx::clock, zx_status_t> AudioClock::DuplicateClock(zx_rights_t rights) const {
+fpromise::result<zx::clock, zx_status_t> AudioClock::DuplicateClock(zx_rights_t rights) const {
   zx::clock dup_clock;
   auto status = clock_.duplicate(rights, &dup_clock);
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
-  return fit::ok(std::move(dup_clock));
+  return fpromise::ok(std::move(dup_clock));
 }
 
-fit::result<zx::clock, zx_status_t> AudioClock::DuplicateClockReadOnly() const {
+fpromise::result<zx::clock, zx_status_t> AudioClock::DuplicateClockReadOnly() const {
   constexpr auto rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
   return DuplicateClock(rights);
 }

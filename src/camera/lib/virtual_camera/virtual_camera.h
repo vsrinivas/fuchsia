@@ -7,7 +7,7 @@
 
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 namespace camera {
 
@@ -17,7 +17,7 @@ class VirtualCamera {
   virtual ~VirtualCamera() = default;
 
   // Create a virtual camera using the provided sysmem allocator service handle.
-  static fit::result<std::unique_ptr<VirtualCamera>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<VirtualCamera>, zx_status_t> Create(
       fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator);
 
   // Returns a request handler for the Device interface.
@@ -25,8 +25,8 @@ class VirtualCamera {
 
   // Checks the provided buffer for consistency with the provided frame info, returning a
   // descriptive error string on failure.
-  virtual fit::result<void, std::string> CheckFrame(const void* data, size_t size,
-                                                    const fuchsia::camera3::FrameInfo& info) = 0;
+  virtual fpromise::result<void, std::string> CheckFrame(
+      const void* data, size_t size, const fuchsia::camera3::FrameInfo& info) = 0;
 };
 
 }  // namespace camera

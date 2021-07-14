@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_FORENSICS_UTILS_FIT_PROMISE_H_
 #define SRC_DEVELOPER_FORENSICS_UTILS_FIT_PROMISE_H_
 
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include <memory>
 #include <tuple>

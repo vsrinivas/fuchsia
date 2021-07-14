@@ -92,7 +92,7 @@ static std::vector<fuchsia::camera2::hal::Config> DefaultConfigs() {
   return configs;
 }
 
-fit::result<std::unique_ptr<FakeController>, zx_status_t> FakeController::Create(
+fpromise::result<std::unique_ptr<FakeController>, zx_status_t> FakeController::Create(
     fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request,
     fuchsia::sysmem::AllocatorHandle allocator) {
   auto controller = std::make_unique<FakeController>();
@@ -100,22 +100,22 @@ fit::result<std::unique_ptr<FakeController>, zx_status_t> FakeController::Create
   zx_status_t status = controller->loop_.StartThread("Fake Controller Loop");
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   status = controller->binding_.Bind(std::move(request), controller->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   status = controller->allocator_.Bind(std::move(allocator), controller->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
-  return fit::ok(std::move(controller));
+  return fpromise::ok(std::move(controller));
 }
 
 std::vector<fuchsia::camera2::hal::Config> FakeController::GetDefaultConfigs() {

@@ -193,14 +193,14 @@ void AudioOutput::Process() {
   }
 }
 
-fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+fpromise::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
 AudioOutput::InitializeSourceLink(const AudioObject& source,
                                   std::shared_ptr<ReadableStream> source_stream) {
   TRACE_DURATION("audio", "AudioOutput::InitializeSourceLink");
 
   // If there's no source, use a Mixer that only trims, and no execution domain.
   if (!source_stream) {
-    return fit::ok(std::make_pair(std::make_shared<audio::mixer::NoOp>(), nullptr));
+    return fpromise::ok(std::make_pair(std::make_shared<audio::mixer::NoOp>(), nullptr));
   }
 
   auto usage = source.usage();
@@ -223,7 +223,7 @@ AudioOutput::InitializeSourceLink(const AudioObject& source,
            source_stream->reference_clock() == reference_clock());
 
   auto mixer = pipeline_->AddInput(std::move(source_stream), *usage, gain_db);
-  return fit::ok(std::make_pair(std::move(mixer), &mix_domain()));
+  return fpromise::ok(std::make_pair(std::move(mixer), &mix_domain()));
 }
 
 void AudioOutput::CleanupSourceLink(const AudioObject& source,
@@ -234,13 +234,13 @@ void AudioOutput::CleanupSourceLink(const AudioObject& source,
   }
 }
 
-fit::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioOutput::InitializeDestLink(
+fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioOutput::InitializeDestLink(
     const AudioObject& dest) {
   TRACE_DURATION("audio", "AudioOutput::InitializeDestLink");
   if (!pipeline_) {
-    return fit::error(ZX_ERR_BAD_STATE);
+    return fpromise::error(ZX_ERR_BAD_STATE);
   }
-  return fit::ok(pipeline_->loopback());
+  return fpromise::ok(pipeline_->loopback());
 }
 
 std::unique_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
@@ -274,9 +274,9 @@ void AudioOutput::Cleanup() {
   mix_timer_.Cancel();
 }
 
-fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioOutput::UpdateEffect(
+fpromise::promise<void, fuchsia::media::audio::UpdateEffectError> AudioOutput::UpdateEffect(
     const std::string& instance_name, const std::string& config) {
-  fit::bridge<void, fuchsia::media::audio::UpdateEffectError> bridge;
+  fpromise::bridge<void, fuchsia::media::audio::UpdateEffectError> bridge;
   mix_domain().PostTask([this, self = shared_from_this(), instance_name, config,
                          completer = std::move(bridge.completer)]() mutable {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
@@ -289,9 +289,9 @@ fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioOutput::Update
   return bridge.consumer.promise();
 }
 
-fit::promise<void, zx_status_t> AudioOutput::UpdateDeviceProfile(
+fpromise::promise<void, zx_status_t> AudioOutput::UpdateDeviceProfile(
     const DeviceConfig::OutputDeviceProfile::Parameters& params) {
-  fit::bridge<void, zx_status_t> bridge;
+  fpromise::bridge<void, zx_status_t> bridge;
   mix_domain().PostTask([this, params, completer = std::move(bridge.completer)]() mutable {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
     DeviceConfig device_config = config();

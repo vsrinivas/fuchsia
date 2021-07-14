@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_INSPECTOR_TRANSACTION_HANDLER_H_
 #define SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_INSPECTOR_TRANSACTION_HANDLER_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <zircon/types.h>
 
 #include <memory>

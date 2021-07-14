@@ -5,7 +5,7 @@
 #ifndef SRC_UI_A11Y_LIB_SCREEN_READER_RECOVER_A11Y_FOCUS_ACTION_H_
 #define SRC_UI_A11Y_LIB_SCREEN_READER_RECOVER_A11Y_FOCUS_ACTION_H_
 
-#include <lib/fit/scope.h>
+#include <lib/fpromise/scope.h>
 
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
@@ -24,7 +24,7 @@ class RecoverA11YFocusAction : public ScreenReaderAction {
   void Run(GestureContext gesture_context) override;
 
  private:
-  fit::scope scope_;
+  fpromise::scope scope_;
 };
 
 }  // namespace a11y

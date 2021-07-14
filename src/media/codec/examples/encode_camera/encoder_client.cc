@@ -30,22 +30,22 @@ static void SetAbortOnError(fidl::InterfacePtr<T>& p, std::string message) {
   p.set_error_handler([message](zx_status_t status) { FatalError(message); });
 }
 
-fit::result<std::unique_ptr<EncoderClient>, zx_status_t> EncoderClient::Create(
+fpromise::result<std::unique_ptr<EncoderClient>, zx_status_t> EncoderClient::Create(
     fuchsia::mediacodec::CodecFactoryHandle codec_factory,
     fuchsia::sysmem::AllocatorHandle allocator, uint32_t bitrate, uint32_t gop_size,
     const std::string& mime_type) {
   auto encoder = std::unique_ptr<EncoderClient>(new EncoderClient(bitrate, gop_size, mime_type));
   zx_status_t status = encoder->codec_factory_.Bind(std::move(codec_factory));
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   status = encoder->sysmem_.Bind(std::move(allocator));
   if (status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
-  return fit::ok(std::move(encoder));
+  return fpromise::ok(std::move(encoder));
 }
 
 EncoderClient::EncoderClient(uint32_t bitrate, uint32_t gop_size, const std::string& mime_type)
@@ -196,7 +196,8 @@ void EncoderClient::OnInputConstraints(fuchsia::media::StreamBufferConstraints i
 }
 
 void EncoderClient::OnInputBuffersReady(
-    fit::result<std::pair<fuchsia::sysmem::BufferCollectionInfo_2, uint32_t>, zx_status_t> result) {
+    fpromise::result<std::pair<fuchsia::sysmem::BufferCollectionInfo_2, uint32_t>, zx_status_t>
+        result) {
   if (result.is_error()) {
     FatalError("failed to get input buffers");
     return;
@@ -284,10 +285,10 @@ void EncoderClient::ConfigurePortBufferCollection(
           zx_status_t allocate_status,
           fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) mutable {
         if (allocate_status != ZX_OK) {
-          callback(fit::error(allocate_status));
+          callback(fpromise::error(allocate_status));
           return;
         }
-        callback(fit::ok(
+        callback(fpromise::ok(
             std::pair(std::move(buffer_collection_info), buffer_collection_info.buffer_count)));
       });
 }
@@ -326,7 +327,8 @@ void EncoderClient::OnOutputConstraints(
 }
 
 void EncoderClient::OnOutputBuffersReady(
-    fit::result<std::pair<fuchsia::sysmem::BufferCollectionInfo_2, uint32_t>, zx_status_t> result) {
+    fpromise::result<std::pair<fuchsia::sysmem::BufferCollectionInfo_2, uint32_t>, zx_status_t>
+        result) {
   if (result.is_error()) {
     FatalError("Failed to get output buffers");
     return;

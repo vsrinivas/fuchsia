@@ -8,7 +8,7 @@
 
 #include <utility>
 
-#include "lib/fit/result.h"
+#include "lib/fpromise/result.h"
 
 namespace fidl {
 namespace test {
@@ -26,25 +26,25 @@ void FrobinatorImpl::Grob(std::string value, GrobCallback callback) {
 
 void FrobinatorImpl::Fail(bool fail, FailCallback callback) {
   if (fail) {
-    callback(fit::error(42U));
+    callback(fpromise::error(42U));
   } else {
-    callback(fit::ok());
+    callback(fpromise::ok());
   }
 }
 
 void FrobinatorImpl::FailHard(bool fail, FailHardCallback callback) {
   if (fail) {
-    callback(fit::error(42U));
+    callback(fpromise::error(42U));
   } else {
-    callback(fit::ok(std::string("hello, world")));
+    callback(fpromise::ok(std::string("hello, world")));
   }
 }
 
 void FrobinatorImpl::FailHardest(bool fail, FailHardestCallback callback) {
   if (fail) {
-    callback(fit::error(42U));
+    callback(fpromise::error(42U));
   } else {
-    callback(fit::ok(std::make_tuple(std::string("hello"), std::string("world"))));
+    callback(fpromise::ok(std::make_tuple(std::string("hello"), std::string("world"))));
   }
 }
 

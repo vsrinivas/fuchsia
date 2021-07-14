@@ -10,7 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include <unordered_set>
 
@@ -97,8 +97,8 @@ class Sandbox {
       std::shared_ptr<fidl::SynchronousInterfacePtr<ManagedEnvironment::FManagedEnvironment>>;
   using ConfiguringEnvironmentLauncher =
       std::shared_ptr<fidl::SynchronousInterfacePtr<fuchsia::sys::Launcher>>;
-  using Promise = fit::promise<void, SandboxResult>;
-  using PromiseResult = fit::result<void, SandboxResult>;
+  using Promise = fpromise::promise<void, SandboxResult>;
+  using PromiseResult = fpromise::result<void, SandboxResult>;
 
   void StartEnvironments();
   void Terminate(SandboxResult result);

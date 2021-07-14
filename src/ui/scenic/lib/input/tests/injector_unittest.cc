@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/input/injector.h"
 
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -884,10 +884,10 @@ class InjectorInspectionTest : public gtest::TestLoopFixture {
   }
 
   std::pair<inspect::Hierarchy, const inspect::Hierarchy*> ReadHierarchyFromInspector() {
-    fit::result<inspect::Hierarchy> result;
-    fit::single_threaded_executor exec;
+    fpromise::result<inspect::Hierarchy> result;
+    fpromise::single_threaded_executor exec;
     exec.schedule_task(
-        inspect::ReadFromInspector(inspector_).then([&](fit::result<inspect::Hierarchy>& res) {
+        inspect::ReadFromInspector(inspector_).then([&](fpromise::result<inspect::Hierarchy>& res) {
           result = std::move(res);
         }));
     exec.run();

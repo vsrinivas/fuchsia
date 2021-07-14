@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_BLOCK_WRITER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_BLOCK_WRITER_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string_view>
 #include <vector>
@@ -38,7 +38,7 @@ class BlockWriter final : public Writer {
   // |buffer.size()|] to |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final;
+  fpromise::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final;
 
  private:
   // Used to define the block alignment of the resource.

@@ -38,12 +38,13 @@ class FakeWriter final : public Writer {
   // |buffer.size()|] to |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     if (offset > pages_.size()) {
       std::fill_n(std::back_inserter(pages_), offset - pages_.size(), -1);
     }
     pages_.insert(pages_.end(), buffer.begin(), buffer.end());
-    return fit::ok();
+    return fpromise::ok();
   }
 
   fbl::Span<const uint8_t> pages() const { return pages_; }
@@ -101,9 +102,9 @@ class FakeReader final : public Reader {
   // |buffer.size()|] to |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     VisitBlocksOnBuffer(block_size_, offset, buffer, FillBlock);
-    return fit::ok();
+    return fpromise::ok();
   }
 
  private:
@@ -682,9 +683,9 @@ class ZeroReader final : public Reader {
  public:
   uint64_t length() const override { return std::numeric_limits<uint64_t>::max(); }
 
-  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     std::fill(buffer.begin(), buffer.end(), 0);
-    return fit::ok();
+    return fpromise::ok();
   }
 };
 

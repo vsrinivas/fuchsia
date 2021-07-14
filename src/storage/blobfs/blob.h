@@ -13,7 +13,7 @@
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/zx/event.h>
 #include <string.h>
 

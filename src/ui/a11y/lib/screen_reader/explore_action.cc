@@ -4,8 +4,8 @@
 
 #include "src/ui/a11y/lib/screen_reader/explore_action.h"
 
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <cstdint>
@@ -25,8 +25,9 @@ ExploreAction::ExploreAction(ActionContext* context, ScreenReaderContext* screen
     : ScreenReaderAction(context, screen_reader_context) {}
 ExploreAction::~ExploreAction() = default;
 
-fit::promise<Hit> ExploreAction::ExecuteHitTestingPromise(const GestureContext& gesture_context) {
-  fit::bridge<Hit> bridge;
+fpromise::promise<Hit> ExploreAction::ExecuteHitTestingPromise(
+    const GestureContext& gesture_context) {
+  fpromise::bridge<Hit> bridge;
   ExecuteHitTesting(action_context_, gesture_context,
                     [completer = std::move(bridge.completer)](Hit hit) mutable {
                       if (!hit.has_node_id()) {
@@ -35,19 +36,20 @@ fit::promise<Hit> ExploreAction::ExecuteHitTestingPromise(const GestureContext& 
                       completer.complete_ok(std::move(hit));
                     });
 
-  return bridge.consumer.promise_or(fit::error());
+  return bridge.consumer.promise_or(fpromise::error());
 }
 
-fit::result<uint32_t> ExploreAction::SelectDescribableNodePromise(zx_koid_t view_koid, Hit& hit) {
+fpromise::result<uint32_t> ExploreAction::SelectDescribableNodePromise(zx_koid_t view_koid,
+                                                                       Hit& hit) {
   if (!hit.has_node_id()) {
-    return fit::error();
+    return fpromise::error();
   }
 
   auto hit_test_result_node =
       action_context_->semantics_source->GetSemanticNode(view_koid, hit.node_id());
   if (!hit_test_result_node || !hit_test_result_node->has_node_id()) {
     FX_LOGS(WARNING) << "Invalid hit test result.";
-    return fit::error();
+    return fpromise::error();
   }
 
   auto node_to_return = hit_test_result_node;
@@ -58,16 +60,16 @@ fit::result<uint32_t> ExploreAction::SelectDescribableNodePromise(zx_koid_t view
   }
 
   if (node_to_return && node_to_return->has_node_id()) {
-    return fit::ok(node_to_return->node_id());
+    return fpromise::ok(node_to_return->node_id());
   }
 
   FX_LOGS(WARNING) << "No describable ancestor found for node " << hit_test_result_node->node_id();
-  return fit::error();
+  return fpromise::error();
 }
 
-fit::promise<> ExploreAction::SetA11yFocusOrStopPromise(ScreenReaderContext::ScreenReaderMode mode,
-                                                        zx_koid_t view_koid, uint32_t node_id) {
-  return fit::make_promise([this, mode, view_koid, node_id]() mutable -> fit::promise<> {
+fpromise::promise<> ExploreAction::SetA11yFocusOrStopPromise(
+    ScreenReaderContext::ScreenReaderMode mode, zx_koid_t view_koid, uint32_t node_id) {
+  return fpromise::make_promise([this, mode, view_koid, node_id]() mutable -> fpromise::promise<> {
     if (mode == ScreenReaderContext::ScreenReaderMode::kContinuousExploration) {
       // If the new a11y focus to be set is the same as the existing one during a
       // continuous exploration, this means that the same node would be spoken
@@ -75,10 +77,10 @@ fit::promise<> ExploreAction::SetA11yFocusOrStopPromise(ScreenReaderContext::Scr
       auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
       auto focus = a11y_focus_manager->GetA11yFocus();
       if (!focus) {
-        return fit::make_error_promise();
+        return fpromise::make_error_promise();
       }
       if (focus->view_ref_koid == view_koid && focus->node_id == node_id) {
-        return fit::make_error_promise();
+        return fpromise::make_error_promise();
       }
     }
     return SetA11yFocusPromise(node_id, view_koid);
@@ -86,29 +88,30 @@ fit::promise<> ExploreAction::SetA11yFocusOrStopPromise(ScreenReaderContext::Scr
 }
 
 void ExploreAction::Run(GestureContext gesture_context) {
-  auto promise = ExecuteHitTestingPromise(gesture_context)
-                     .and_then([this, view_koid = gesture_context.view_ref_koid](
-                                   Hit& hit) mutable -> fit::result<uint32_t> {
-                       return SelectDescribableNodePromise(view_koid, hit);
-                     })
-                     .and_then([this, view_koid = gesture_context.view_ref_koid,
-                                mode = screen_reader_context_->mode()](
-                                   uint32_t& node_id) mutable -> fit::promise<> {
-                       return SetA11yFocusOrStopPromise(mode, view_koid, node_id);
-                     })
-                     .and_then([this]() mutable -> fit::result<A11yFocusManager::A11yFocusInfo> {
-                       auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
-                       auto focus = a11y_focus_manager->GetA11yFocus();
-                       if (!focus) {
-                         return fit::error();
-                       }
-                       return fit::ok(std::move(*focus));
-                     })
-                     .and_then([this](const A11yFocusManager::A11yFocusInfo& focus) mutable {
-                       return BuildSpeechTaskFromNodePromise(focus.view_ref_koid, focus.node_id);
-                     })
-                     // Cancel any promises if this class goes out of scope.
-                     .wrap_with(scope_);
+  auto promise =
+      ExecuteHitTestingPromise(gesture_context)
+          .and_then([this, view_koid = gesture_context.view_ref_koid](
+                        Hit& hit) mutable -> fpromise::result<uint32_t> {
+            return SelectDescribableNodePromise(view_koid, hit);
+          })
+          .and_then([this, view_koid = gesture_context.view_ref_koid,
+                     mode = screen_reader_context_->mode()](
+                        uint32_t& node_id) mutable -> fpromise::promise<> {
+            return SetA11yFocusOrStopPromise(mode, view_koid, node_id);
+          })
+          .and_then([this]() mutable -> fpromise::result<A11yFocusManager::A11yFocusInfo> {
+            auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
+            auto focus = a11y_focus_manager->GetA11yFocus();
+            if (!focus) {
+              return fpromise::error();
+            }
+            return fpromise::ok(std::move(*focus));
+          })
+          .and_then([this](const A11yFocusManager::A11yFocusInfo& focus) mutable {
+            return BuildSpeechTaskFromNodePromise(focus.view_ref_koid, focus.node_id);
+          })
+          // Cancel any promises if this class goes out of scope.
+          .wrap_with(scope_);
   auto* executor = screen_reader_context_->executor();
   executor->schedule_task(std::move(promise));
 }

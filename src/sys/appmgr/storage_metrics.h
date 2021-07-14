@@ -56,10 +56,10 @@ class StorageMetrics {
   friend class StorageMetricsTest;
 
   // Populate the inspect node for byte usage using the results from the last poll.
-  fit::promise<inspect::Inspector> InspectByteUsage(const std::string& path) const;
+  fpromise::promise<inspect::Inspector> InspectByteUsage(const std::string& path) const;
 
   // Populate the inspect node for inode usage using the results from the last poll.
-  fit::promise<inspect::Inspector> InspectInodeUsage(const std::string& path) const;
+  fpromise::promise<inspect::Inspector> InspectInodeUsage(const std::string& path) const;
 
   // Perform the actual aggregation.
   std::unordered_map<std::string, StorageMetrics::UsageMap> GatherStorageUsage() const;

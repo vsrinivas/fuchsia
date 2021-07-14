@@ -4,7 +4,7 @@
 
 #include "src/storage/volume_image/utils/lz4_decompressor.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <cstddef>
 #include <iostream>
@@ -20,13 +20,13 @@ constexpr LZ4F_decompressOptions_t kDefaultOptions = {};
 
 }  // namespace
 
-fit::result<Lz4Decompressor, std::string> Lz4Decompressor::Create(
+fpromise::result<Lz4Decompressor, std::string> Lz4Decompressor::Create(
     const CompressionOptions &options, uint64_t decompression_buffer_size) {
   if (options.schema != CompressionSchema::kLz4) {
-    return fit::error("Lz4Compressor requires" + EnumAsString(CompressionSchema::kLz4) +
-                      ". Provided: " + EnumAsString(options.schema) + ".");
+    return fpromise::error("Lz4Compressor requires" + EnumAsString(CompressionSchema::kLz4) +
+                           ". Provided: " + EnumAsString(options.schema) + ".");
   }
-  return fit::ok(Lz4Decompressor(decompression_buffer_size));
+  return fpromise::ok(Lz4Decompressor(decompression_buffer_size));
 }
 
 Lz4Decompressor::~Lz4Decompressor() {
@@ -35,21 +35,21 @@ Lz4Decompressor::~Lz4Decompressor() {
   }
 }
 
-fit::result<void, std::string> Lz4Decompressor::Prepare(Handler handler) {
+fpromise::result<void, std::string> Lz4Decompressor::Prepare(Handler handler) {
   if (state_ != State::kInitalized && state_ != State::kFinalized) {
-    return fit::error(
+    return fpromise::error(
         "Lz4Decompressor::Prepare may only be called in |State::kInitialized| or "
         "|State::kFinalized|state.");
   }
 
   if (handler == nullptr) {
-    return fit::error("Lz4Decompressor::Prepare requires a valid |handler|.");
+    return fpromise::error("Lz4Decompressor::Prepare requires a valid |handler|.");
   }
 
   Lz4Result result = LZ4F_createDecompressionContext(&context_, LZ4F_VERSION);
   if (result.is_error()) {
-    return fit::error("Failed to create LZ4 Compression Context. LZ4 Error: " +
-                      std::string(result.error()) + ".");
+    return fpromise::error("Failed to create LZ4 Compression Context. LZ4 Error: " +
+                           std::string(result.error()) + ".");
   }
 
   // Adjust buffer so it fits the header.
@@ -60,13 +60,13 @@ fit::result<void, std::string> Lz4Decompressor::Prepare(Handler handler) {
   handler_ = std::move(handler);
   state_ = State::kPrepared;
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
-fit::result<Decompressor::DecompressResult, std::string> Lz4Decompressor::Decompress(
+fpromise::result<Decompressor::DecompressResult, std::string> Lz4Decompressor::Decompress(
     fbl::Span<const uint8_t> compressed_data) {
   if (state_ != State::kPrepared && state_ != State::kDecompressed) {
-    return fit::error(
+    return fpromise::error(
         "Lz4Decompressor::Decompress may only be called in |State::kPrepared| or "
         "|State::kDecompressed| state.");
   }
@@ -77,8 +77,8 @@ fit::result<Decompressor::DecompressResult, std::string> Lz4Decompressor::Decomp
       LZ4F_decompress(context_, decompression_buffer_.data(), &written_bytes,
                       compressed_data.data(), &read_bytes, &kDefaultOptions);
   if (decompress_result.is_error()) {
-    return fit::error("Lz4Decompressor::Decompress failed. LZ4 Error: " +
-                      std::string(decompress_result.error()) + ".");
+    return fpromise::error("Lz4Decompressor::Decompress failed. LZ4 Error: " +
+                           std::string(decompress_result.error()) + ".");
   }
 
   auto handler_result =
@@ -89,26 +89,26 @@ fit::result<Decompressor::DecompressResult, std::string> Lz4Decompressor::Decomp
   state_ = State::kDecompressed;
 
   // lz4_decompress returns 0 when the end of the decompression frame has been reached.
-  return fit::ok(
+  return fpromise::ok(
       DecompressResult{.hint = decompress_result.byte_count(), .read_bytes = read_bytes});
 }
 
-fit::result<void, std::string> Lz4Decompressor::Finalize() {
+fpromise::result<void, std::string> Lz4Decompressor::Finalize() {
   if (state_ != State::kPrepared && state_ != State::kDecompressed) {
-    return fit::error(
+    return fpromise::error(
         "Lz4Decompressor::Decompress may only be called in |State::kPrepared| or "
         "|State::kDecompressed| state.");
   }
 
   Lz4Result result = LZ4F_freeDecompressionContext(context_);
   if (result.is_error()) {
-    return fit::error(
+    return fpromise::error(
         "Failed to free LZ4 Compression Context. LZ4 Error: " + std::string(result.error()) + ".");
   }
   context_ = nullptr;
   state_ = State::kFinalized;
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
 void Lz4Decompressor::ProvideSizeHint(size_t size_hint) {

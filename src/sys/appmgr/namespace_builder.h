@@ -35,13 +35,13 @@ class NamespaceBuilder {
   using HubDirectoryFactory = fit::function<zx::channel()>;
   // A factory function that returns a new path for /data to point to when it
   // should be isolated from other components and realms
-  using IsolatedDataPathFactory = fit::function<fit::result<std::string, zx_status_t>()>;
+  using IsolatedDataPathFactory = fit::function<fpromise::result<std::string, zx_status_t>()>;
   // A factory function that returns a new path for /cache to point to when it
   // should be isolated from other components and realms
-  using IsolatedCachePathFactory = fit::function<fit::result<std::string, zx_status_t>()>;
+  using IsolatedCachePathFactory = fit::function<fpromise::result<std::string, zx_status_t>()>;
   // A factory function that returns a new path for /tmp to point to when it
   // should be isolated from other components and realms
-  using IsolatedTempPathFactory = fit::function<fit::result<std::string, zx_status_t>()>;
+  using IsolatedTempPathFactory = fit::function<fpromise::result<std::string, zx_status_t>()>;
   // Returns a non-ZX_OK status if the sandbox cannot be made.
   [[nodiscard]] zx_status_t AddSandbox(const SandboxMetadata& sandbox,
                                        const HubDirectoryFactory& hub_directory_factory);

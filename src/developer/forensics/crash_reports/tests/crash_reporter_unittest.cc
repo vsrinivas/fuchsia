@@ -7,7 +7,7 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <fuchsia/settings/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -267,21 +267,22 @@ class CrashReporterTest : public UnitTestFixture {
   }
 
   // Files one crash report.
-  ::fit::result<void, zx_status_t> FileOneCrashReport(CrashReport report) {
+  ::fpromise::result<void, zx_status_t> FileOneCrashReport(CrashReport report) {
     FX_CHECK(crash_reporter_ != nullptr)
         << "crash_reporter_ is nullptr. Call SetUpCrashReporter() or one of its variants "
            "at the beginning of a test case.";
-    std::optional<::fit::result<void, zx_status_t>> out_result{std::nullopt};
-    crash_reporter_->File(
-        std::move(report),
-        [&out_result](::fit::result<void, zx_status_t> result) { out_result = std::move(result); });
+    std::optional<::fpromise::result<void, zx_status_t>> out_result{std::nullopt};
+    crash_reporter_->File(std::move(report),
+                          [&out_result](::fpromise::result<void, zx_status_t> result) {
+                            out_result = std::move(result);
+                          });
     RunLoopFor(kSnapshotSharedRequestWindow);
     FX_CHECK(out_result.has_value());
     return out_result.value();
   }
 
   // Files one crash report.
-  ::fit::result<void, zx_status_t> FileOneCrashReport(
+  ::fpromise::result<void, zx_status_t> FileOneCrashReport(
       const std::vector<Annotation>& annotations = {}, std::vector<Attachment> attachments = {}) {
     CrashReport report;
     report.set_program_name(kProgramName);
@@ -298,7 +299,7 @@ class CrashReporterTest : public UnitTestFixture {
   //
   // |attachment| is useful to control the lower bound of the size of the report by controlling the
   // size of some of the attachment(s).
-  ::fit::result<void, zx_status_t> FileOneCrashReportWithSingleAttachment(
+  ::fpromise::result<void, zx_status_t> FileOneCrashReportWithSingleAttachment(
       const std::string& attachment = kSingleAttachmentValue) {
     std::vector<Attachment> attachments;
     attachments.emplace_back(BuildAttachment(kSingleAttachmentKey, attachment));
@@ -307,7 +308,7 @@ class CrashReporterTest : public UnitTestFixture {
   }
 
   // Files one native crash report.
-  ::fit::result<void, zx_status_t> FileOneNativeCrashReport(
+  ::fpromise::result<void, zx_status_t> FileOneNativeCrashReport(
       std::optional<fuchsia::mem::Buffer> minidump,
       const std::optional<std::string>& crash_signature) {
     NativeCrashReport native_report;
@@ -334,7 +335,7 @@ class CrashReporterTest : public UnitTestFixture {
   }
 
   // Files one Dart crash report.
-  ::fit::result<void, zx_status_t> FileOneDartCrashReport(
+  ::fpromise::result<void, zx_status_t> FileOneDartCrashReport(
       const std::optional<std::string>& exception_type,
       const std::optional<std::string>& exception_message,
       std::optional<fuchsia::mem::Buffer> exception_stack_trace) {
@@ -360,13 +361,14 @@ class CrashReporterTest : public UnitTestFixture {
   }
 
   // Files one empty crash report.
-  ::fit::result<void, zx_status_t> FileOneEmptyCrashReport() {
+  ::fpromise::result<void, zx_status_t> FileOneEmptyCrashReport() {
     CrashReport report;
     return FileOneCrashReport(std::move(report));
   }
 
   // Files one crash report with the provided crash signature.
-  ::fit::result<void, zx_status_t> FileOneCrashReportWithSignature(const std::string& signature) {
+  ::fpromise::result<void, zx_status_t> FileOneCrashReportWithSignature(
+      const std::string& signature) {
     CrashReport report;
     report.set_program_name("crashing_program_generic");
     report.set_crash_signature(signature);
@@ -375,7 +377,7 @@ class CrashReporterTest : public UnitTestFixture {
   }
 
   // Files one crash report with the provided is fatal value.
-  ::fit::result<void, zx_status_t> FileOneCrashReportWithIsFatal(const bool is_fatal) {
+  ::fpromise::result<void, zx_status_t> FileOneCrashReportWithIsFatal(const bool is_fatal) {
     CrashReport report;
     report.set_program_name("crashing_program_generic");
     report.set_is_fatal(is_fatal);
@@ -386,10 +388,10 @@ class CrashReporterTest : public UnitTestFixture {
   void SetPrivacySettings(std::optional<bool> user_data_sharing_consent) {
     FX_CHECK(privacy_settings_server_);
 
-    ::fit::result<void, fuchsia::settings::Error> set_result;
+    ::fpromise::result<void, fuchsia::settings::Error> set_result;
     privacy_settings_server_->Set(
         MakePrivacySettings(user_data_sharing_consent),
-        [&set_result](::fit::result<void, fuchsia::settings::Error> result) {
+        [&set_result](::fpromise::result<void, fuchsia::settings::Error> result) {
           set_result = std::move(result);
         });
     EXPECT_TRUE(set_result.is_ok());

@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_PARTITION_H_
 #define SRC_STORAGE_VOLUME_IMAGE_PARTITION_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <memory>
 #include <string>
@@ -36,8 +36,8 @@ class Partition {
   // On success returns a Partition representing the serialized volume image, which contains the
   // volume and address descriptors, and backed by |reader|. On error retruns a string describing
   // the failure reason.
-  static fit::result<Partition, std::string> Create(std::string_view serialized_volume_image,
-                                                    std::unique_ptr<Reader> reader);
+  static fpromise::result<Partition, std::string> Create(std::string_view serialized_volume_image,
+                                                         std::unique_ptr<Reader> reader);
 
   Partition() = default;
   Partition(VolumeDescriptor volume_descriptor, AddressDescriptor address_descriptor,

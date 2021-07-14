@@ -6,7 +6,7 @@
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
@@ -31,11 +31,11 @@ namespace {
 
 // Collects Archive data in snapshot mode; concatenates data in the output string "contents" and
 // returns a promise of the done signal. After every Collect(), "." is also appended.
-::fit::promise<void, Error> CollectArchiveData(async_dispatcher_t* dispatcher,
-                                               std::shared_ptr<sys::ServiceDirectory> services,
-                                               fit::Timeout timeout,
-                                               std::shared_ptr<std::string> content,
-                                               std::optional<size_t> data_budget) {
+::fpromise::promise<void, Error> CollectArchiveData(async_dispatcher_t* dispatcher,
+                                                    std::shared_ptr<sys::ServiceDirectory> services,
+                                                    fit::Timeout timeout,
+                                                    std::shared_ptr<std::string> content,
+                                                    std::optional<size_t> data_budget) {
   std::unique_ptr<ArchiveAccessor> inspect = std::make_unique<ArchiveAccessor>(
       dispatcher, services, fuchsia::diagnostics::DataType::INSPECT,
       fuchsia::diagnostics::StreamMode::SNAPSHOT, data_budget);
@@ -48,7 +48,7 @@ namespace {
   });
 
   // Wait for done signal.
-  ::fit::promise<void, Error> inspect_data = inspect->WaitForDone(std::move(timeout));
+  ::fpromise::promise<void, Error> inspect_data = inspect->WaitForDone(std::move(timeout));
 
   return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(inspect_data),
                                               /*args=*/std::move(inspect));
@@ -69,15 +69,15 @@ class ArchiveAccessorTest : public UnitTestFixture {
     }
   }
 
-  ::fit::result<void, Error> CollectData(std::shared_ptr<std::string> content,
-                                         std::optional<size_t> data_budget = {}) {
-    ::fit::result<void, Error> status;
+  ::fpromise::result<void, Error> CollectData(std::shared_ptr<std::string> content,
+                                              std::optional<size_t> data_budget = {}) {
+    ::fpromise::result<void, Error> status;
 
     const zx::duration timeout = zx::sec(1);
     executor_.schedule_task(
         feedback_data::CollectArchiveData(
             dispatcher(), services(), fit::Timeout(timeout, /*action=*/[] {}), content, data_budget)
-            .then([&status](::fit::result<void, Error>& res) { status = std::move(res); }));
+            .then([&status](::fpromise::result<void, Error>& res) { status = std::move(res); }));
     RunLoopFor(timeout);
     return status;
   }

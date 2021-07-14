@@ -33,9 +33,9 @@ FuchsiaGuestInteractionService::FuchsiaGuestInteractionService(zx::socket socket
 
 FuchsiaGuestInteractionService::~FuchsiaGuestInteractionService() { Stop(); }
 
-fit::promise<zx_status_t> FuchsiaGuestInteractionService::InitiatePut(
+fpromise::promise<zx_status_t> FuchsiaGuestInteractionService::InitiatePut(
     zx::channel local_file, const std::string& remote_path) {
-  fit::bridge<zx_status_t> bridge;
+  fpromise::bridge<zx_status_t> bridge;
   client_->Put(std::move(local_file), remote_path,
                [completer = std::move(bridge.completer)](zx_status_t status) mutable {
                  completer.complete_ok(status);
@@ -53,9 +53,9 @@ void FuchsiaGuestInteractionService::PutFile(fidl::InterfaceHandle<fuchsia::io::
           .wrap_with(scope_));
 }
 
-fit::promise<zx_status_t> FuchsiaGuestInteractionService::InitiateGet(
+fpromise::promise<zx_status_t> FuchsiaGuestInteractionService::InitiateGet(
     const std::string& remote_path, zx::channel local_file) {
-  fit::bridge<zx_status_t> bridge;
+  fpromise::bridge<zx_status_t> bridge;
   client_->Get(remote_path, std::move(local_file),
                [completer = std::move(bridge.completer)](zx_status_t status) mutable {
                  completer.complete_ok(status);

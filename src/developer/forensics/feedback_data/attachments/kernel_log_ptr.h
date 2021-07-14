@@ -8,7 +8,7 @@
 #include <fuchsia/boot/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/debuglog.h>
 
@@ -22,9 +22,9 @@ namespace feedback_data {
 
 // Retrieves the kernel log. fuchsia.boot.ReadOnlyLog is expected to be in
 // |services|.
-::fit::promise<AttachmentValue> CollectKernelLog(async_dispatcher_t* dispatcher,
-                                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                                 fit::Timeout timeout);
+::fpromise::promise<AttachmentValue> CollectKernelLog(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    fit::Timeout timeout);
 
 // Wraps around fuchsia::boot::ReadOnlyLogPtr to handle establishing the
 // connection, losing the connection, waiting for the callback, enforcing a
@@ -35,7 +35,7 @@ class BootLog {
  public:
   BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<AttachmentValue> GetLog(fit::Timeout timeout);
+  ::fpromise::promise<AttachmentValue> GetLog(fit::Timeout timeout);
 
  private:
   fidl::OneShotPtr<fuchsia::boot::ReadOnlyLog, std::string> log_ptr_;

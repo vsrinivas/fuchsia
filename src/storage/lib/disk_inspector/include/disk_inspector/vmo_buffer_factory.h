@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_VMO_BUFFER_FACTORY_H_
 #define SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_VMO_BUFFER_FACTORY_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -30,7 +30,7 @@ class VmoBufferFactory : public BufferFactory {
   ~VmoBufferFactory() override = default;
 
   // BufferFactory interface:
-  fit::result<std::unique_ptr<storage::BlockBuffer>, zx_status_t> CreateBuffer(
+  fpromise::result<std::unique_ptr<storage::BlockBuffer>, zx_status_t> CreateBuffer(
       size_t capacity) const final;
 
  private:

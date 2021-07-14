@@ -64,14 +64,15 @@ class UserReportingPolicyWatcherTest : public UnitTestFixture, public UserReport
   }
 
   void SetPrivacySettings(std::optional<bool> user_data_sharing_consent) {
-    ::fit::result<void, fuchsia::settings::Error> set_result;
+    ::fpromise::result<void, fuchsia::settings::Error> set_result;
     fuchsia::settings::PrivacySettings settings;
     if (user_data_sharing_consent.has_value()) {
       settings.set_user_data_sharing_consent(user_data_sharing_consent.value());
     }
 
     privacy_settings_server_->Set(
-        std::move(settings), [&set_result](::fit::result<void, fuchsia::settings::Error> result) {
+        std::move(settings),
+        [&set_result](::fpromise::result<void, fuchsia::settings::Error> result) {
           set_result = std::move(result);
         });
     FX_CHECK(set_result.is_ok());

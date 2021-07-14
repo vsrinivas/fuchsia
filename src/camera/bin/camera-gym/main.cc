@@ -9,8 +9,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
       [&collage, &collection_ids](fuchsia::sysmem::BufferCollectionTokenHandle token,
                                   fuchsia::sysmem::ImageFormat_2 image_format,
                                   std::string description) -> uint32_t {
-    auto result = fit::run_single_threaded(
+    auto result = fpromise::run_single_threaded(
         collage->AddCollection(std::move(token), image_format, description));
     if (result.is_error()) {
       FX_LOGS(FATAL) << "Failed to add collection to collage.";

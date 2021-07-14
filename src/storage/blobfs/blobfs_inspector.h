@@ -64,8 +64,8 @@ class BlobfsInspector {
   uint64_t GetJournalEntryCount();
 
   // The following functions need to load data from disk, leading to the possibility of failed
-  // loads. Since they need to return values, we have fit::results for all of the return types. In
-  // addition, they all depend on the loaded |superblock_| value to get where to start indexing.
+  // loads. Since they need to return values, we have fpromise::results for all of the return types.
+  // In addition, they all depend on the loaded |superblock_| value to get where to start indexing.
 
   // Loads the inode table blocks for which the inodes from |start_index| inclusive to |end_index|
   // exclusive from disk and returns the Inodes in the range as a vector.

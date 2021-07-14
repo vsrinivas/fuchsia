@@ -5,7 +5,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <zircon/assert.h>
 
 namespace async {
@@ -15,13 +15,13 @@ Executor::Executor(async_dispatcher_t* dispatcher)
 
 Executor::~Executor() { dispatcher_->Shutdown(); }
 
-void Executor::schedule_task(fit::pending_task task) {
+void Executor::schedule_task(fpromise::pending_task task) {
   ZX_DEBUG_ASSERT(task);
   dispatcher_->ScheduleTask(std::move(task));
 }
 
-fit::promise<> Executor::MakeDelayedPromise(zx::duration duration) {
-  fit::bridge<> bridge;
+fpromise::promise<> Executor::MakeDelayedPromise(zx::duration duration) {
+  fpromise::bridge<> bridge;
   async::PostDelayedTask(
       dispatcher(),
       [completer = std::move(bridge.completer)]() mutable { completer.complete_ok(); }, duration);
@@ -29,8 +29,8 @@ fit::promise<> Executor::MakeDelayedPromise(zx::duration duration) {
   return bridge.consumer.promise();
 }
 
-fit::promise<> Executor::MakePromiseForTime(zx::time deadline) {
-  fit::bridge<> bridge;
+fpromise::promise<> Executor::MakePromiseForTime(zx::time deadline) {
+  fpromise::bridge<> bridge;
   async::PostTaskForTime(
       dispatcher(),
       [completer = std::move(bridge.completer)]() mutable { completer.complete_ok(); }, deadline);
@@ -38,9 +38,9 @@ fit::promise<> Executor::MakePromiseForTime(zx::time deadline) {
   return bridge.consumer.promise();
 }
 
-fit::promise<zx_packet_signal_t, zx_status_t> Executor::MakePromiseWaitHandle(
+fpromise::promise<zx_packet_signal_t, zx_status_t> Executor::MakePromiseWaitHandle(
     zx::unowned_handle object, zx_signals_t trigger, uint32_t options) {
-  fit::bridge<zx_packet_signal_t, zx_status_t> bridge;
+  fpromise::bridge<zx_packet_signal_t, zx_status_t> bridge;
   auto wait_once = std::make_unique<async::WaitOnce>(object->get(), trigger, options);
   auto wait_once_raw = wait_once.get();
   wait_once_raw->Begin(
@@ -89,7 +89,7 @@ void Executor::DispatcherImpl::Shutdown() FIT_NO_THREAD_SAFETY_ANALYSIS {
   PurgeTasksAndMaybeDeleteSelfLocked(std::move(lock));
 }
 
-void Executor::DispatcherImpl::ScheduleTask(fit::pending_task task) {
+void Executor::DispatcherImpl::ScheduleTask(fpromise::pending_task task) {
   std::lock_guard<std::mutex> lock(guarded_.mutex_);
   ZX_DEBUG_ASSERT(!guarded_.was_shutdown_);
 
@@ -161,7 +161,7 @@ void Executor::DispatcherImpl::Dispatch(zx_status_t status) FIT_NO_THREAD_SAFETY
   PurgeTasksAndMaybeDeleteSelfLocked(std::move(lock));
 }
 
-void Executor::DispatcherImpl::RunTask(fit::pending_task* task) {
+void Executor::DispatcherImpl::RunTask(fpromise::pending_task* task) {
   ZX_DEBUG_ASSERT(current_task_ticket_ == 0);
   const bool finished = (*task)(*this);
   ZX_DEBUG_ASSERT(!*task == finished);
@@ -177,7 +177,7 @@ void Executor::DispatcherImpl::RunTask(fit::pending_task* task) {
 // Must only be called while |run_task()| is running a task.
 // This happens when the task's continuation calls |context::suspend_task()|
 // upon the context it received as an argument.
-fit::suspended_task Executor::DispatcherImpl::suspend_task() {
+fpromise::suspended_task Executor::DispatcherImpl::suspend_task() {
   std::lock_guard<std::mutex> lock(guarded_.mutex_);
   ZX_DEBUG_ASSERT(guarded_.task_running_);
   if (current_task_ticket_ == 0) {
@@ -185,20 +185,20 @@ fit::suspended_task Executor::DispatcherImpl::suspend_task() {
   } else {
     guarded_.scheduler_.duplicate_ticket(current_task_ticket_);
   }
-  return fit::suspended_task(this, current_task_ticket_);
+  return fpromise::suspended_task(this, current_task_ticket_);
 }
 
-fit::suspended_task::ticket Executor::DispatcherImpl::duplicate_ticket(
-    fit::suspended_task::ticket ticket) {
+fpromise::suspended_task::ticket Executor::DispatcherImpl::duplicate_ticket(
+    fpromise::suspended_task::ticket ticket) {
   std::lock_guard<std::mutex> lock(guarded_.mutex_);
   guarded_.scheduler_.duplicate_ticket(ticket);
   return ticket;
 }
 
 // Unfortunately std::unique_lock does not support thread-safety annotations
-void Executor::DispatcherImpl::resolve_ticket(fit::suspended_task::ticket ticket,
+void Executor::DispatcherImpl::resolve_ticket(fpromise::suspended_task::ticket ticket,
                                               bool resume_task) FIT_NO_THREAD_SAFETY_ANALYSIS {
-  fit::pending_task abandoned_task;  // drop outside of the lock
+  fpromise::pending_task abandoned_task;  // drop outside of the lock
   {
     std::unique_lock<std::mutex> lock(guarded_.mutex_);
     bool did_resume = false;
@@ -243,7 +243,7 @@ void Executor::DispatcherImpl::PurgeTasksAndMaybeDeleteSelfLocked(std::unique_lo
   ZX_DEBUG_ASSERT(lock.owns_lock());
   ZX_DEBUG_ASSERT(guarded_.was_shutdown_ || guarded_.loop_failure_);
 
-  fit::subtle::scheduler::task_queue tasks;
+  fpromise::subtle::scheduler::task_queue tasks;
   AcceptIncomingTasksLocked();
   guarded_.scheduler_.take_all_tasks(&tasks);
   const bool can_delete_self = guarded_.was_shutdown_ && !guarded_.dispatch_pending_ &&

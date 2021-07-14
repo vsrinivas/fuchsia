@@ -1135,7 +1135,7 @@ bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format
   return ImageFormatConvertSysmemToZx(pixel_format, zx_pixel_format_out);
 }
 
-fit::result<fuchsia_sysmem2::wire::PixelFormat> ImageFormatConvertZxToSysmem_v2(
+fpromise::result<fuchsia_sysmem2::wire::PixelFormat> ImageFormatConvertZxToSysmem_v2(
     fidl::AnyAllocator& allocator, zx_pixel_format_t zx_pixel_format) {
   PixelFormat v2b = PixelFormat(allocator);
   v2b.set_format_modifier_value(allocator, fuchsia_sysmem2::wire::kFormatModifierLinear);
@@ -1175,21 +1175,21 @@ fit::result<fuchsia_sysmem2::wire::PixelFormat> ImageFormatConvertZxToSysmem_v2(
       break;
 
     default:
-      return fit::error();
+      return fpromise::error();
   }
   v2b.set_type(allocator, out_type);
-  return fit::ok(std::move(v2b));
+  return fpromise::ok(std::move(v2b));
 }
 
-fit::result<fuchsia_sysmem::wire::PixelFormat> ImageFormatConvertZxToSysmem_v1(
+fpromise::result<fuchsia_sysmem::wire::PixelFormat> ImageFormatConvertZxToSysmem_v1(
     fidl::AnyAllocator& allocator, zx_pixel_format_t zx_pixel_format) {
   auto pixel_format_v2_result = ImageFormatConvertZxToSysmem_v2(allocator, zx_pixel_format);
   if (!pixel_format_v2_result.is_ok()) {
-    return fit::error();
+    return fpromise::error();
   }
   auto pixel_format_v2 = pixel_format_v2_result.take_value();
   auto pixel_format_v1 = sysmem::V1CopyFromV2PixelFormat(pixel_format_v2);
-  return fit::ok(std::move(pixel_format_v1));
+  return fpromise::ok(std::move(pixel_format_v1));
 }
 
 bool ImageFormatConvertZxToSysmem(zx_pixel_format_t zx_pixel_format,
@@ -1210,16 +1210,16 @@ bool ImageFormatConvertZxToSysmem(zx_pixel_format_t zx_pixel_format,
 // TODO(dustingreen): From here down need to be converted to operate on v2 natively similar to
 // above (merged while 1st sysmem v2 CL was in flight):
 
-fit::result<ImageFormat> ImageConstraintsToFormat(fidl::AnyAllocator& allocator,
-                                                  const ImageFormatConstraints& constraints,
-                                                  uint32_t width, uint32_t height) {
+fpromise::result<ImageFormat> ImageConstraintsToFormat(fidl::AnyAllocator& allocator,
+                                                       const ImageFormatConstraints& constraints,
+                                                       uint32_t width, uint32_t height) {
   if ((constraints.has_min_coded_height() && height < constraints.min_coded_height()) ||
       (constraints.has_max_coded_height() && height > constraints.max_coded_height())) {
-    return fit::error();
+    return fpromise::error();
   }
   if ((constraints.has_min_coded_width() && width < constraints.min_coded_width()) ||
       (constraints.has_max_coded_width() && width > constraints.max_coded_width())) {
-    return fit::error();
+    return fpromise::error();
   }
   ImageFormat result(allocator);
   uint32_t minimum_row_bytes;
@@ -1239,10 +1239,10 @@ fit::result<ImageFormat> ImageConstraintsToFormat(fidl::AnyAllocator& allocator,
                            sysmem::V2CloneColorSpace(allocator, constraints.color_spaces()[0]));
   }
   // result's has_pixel_aspect_ratio field remains un-set which is equivalent to false
-  return fit::ok(std::move(result));
+  return fpromise::ok(std::move(result));
 }
 
-fit::result<fuchsia_sysmem::wire::ImageFormat2> ImageConstraintsToFormat(
+fpromise::result<fuchsia_sysmem::wire::ImageFormat2> ImageConstraintsToFormat(
     const fuchsia_sysmem::wire::ImageFormatConstraints& image_format_constraints_v1, uint32_t width,
     uint32_t height) {
   fidl::FidlAllocator allocator;
@@ -1252,14 +1252,14 @@ fit::result<fuchsia_sysmem::wire::ImageFormat2> ImageConstraintsToFormat(
   auto v2_out_result =
       ImageConstraintsToFormat(allocator, image_format_constraints_v2, width, height);
   if (!v2_out_result.is_ok()) {
-    return fit::error();
+    return fpromise::error();
   }
   auto v2_out = v2_out_result.take_value();
   auto v1_out_result = sysmem::V1CopyFromV2ImageFormat(v2_out);
   if (!v1_out_result.is_ok()) {
-    return fit::error();
+    return fpromise::error();
   }
-  return fit::ok(v1_out_result.take_value());
+  return fpromise::ok(v1_out_result.take_value());
 }
 
 bool ImageConstraintsToFormat(

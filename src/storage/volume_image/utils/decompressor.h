@@ -6,7 +6,7 @@
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_DECOMPRESSOR_H_
 
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <string>
 
@@ -41,8 +41,8 @@ class Decompressor {
   // The decompressor will provide the handler with the number of consumed bytes if any.
   // The decompressor wil not provide the handler with consumbed byte count if the decompressions is
   // completed.
-  using Handler =
-      fit::function<fit::result<void, std::string>(fbl::Span<const uint8_t> decompressed_data)>;
+  using Handler = fit::function<fpromise::result<void, std::string>(
+      fbl::Span<const uint8_t> decompressed_data)>;
 
   struct DecompressResult {
     // Zero if decompression is finished, otherwise provides a hint with respect to the size of the
@@ -55,24 +55,24 @@ class Decompressor {
 
   virtual ~Decompressor() = default;
 
-  // Returns |fit::ok| on success. Setting |handler| for consuming symbols emitted during
+  // Returns |fpromise::ok| on success. Setting |handler| for consuming symbols emitted during
   // decompression.
   //
   // On failure, returns a string decribing the error condition.
-  virtual fit::result<void, std::string> Prepare(Handler handler) = 0;
+  virtual fpromise::result<void, std::string> Prepare(Handler handler) = 0;
 
-  // Returns |fit::ok| on success. When data has been fully decompressed, will return a
+  // Returns |fpromise::ok| on success. When data has been fully decompressed, will return a
   // |DecompressResult| instance.
   //
   // On failure, returns a string decribing the error condition.
-  virtual fit::result<DecompressResult, std::string> Decompress(
+  virtual fpromise::result<DecompressResult, std::string> Decompress(
       fbl::Span<const uint8_t> compressed_data) = 0;
 
-  // Returns |fit::ok| on success. At this point all remaining symbols for the decompressed
+  // Returns |fpromise::ok| on success. At this point all remaining symbols for the decompressed
   // representation will be emitted.
   //
   // On failure, returns a string describing the error condition.
-  virtual fit::result<void, std::string> Finalize() = 0;
+  virtual fpromise::result<void, std::string> Finalize() = 0;
 };
 
 }  // namespace storage::volume_image

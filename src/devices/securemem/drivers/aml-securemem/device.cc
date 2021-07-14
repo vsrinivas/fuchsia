@@ -132,7 +132,7 @@ void AmlogicSecureMemDevice::GetSecureMemoryPhysicalAddress(
   completer.Reply(ZX_OK, result.value());
 }
 
-fit::result<zx_paddr_t, zx_status_t> AmlogicSecureMemDevice::GetSecureMemoryPhysicalAddress(
+fpromise::result<zx_paddr_t, zx_status_t> AmlogicSecureMemDevice::GetSecureMemoryPhysicalAddress(
     zx::vmo secure_mem) {
   ZX_DEBUG_ASSERT(secure_mem.is_valid());
   ZX_ASSERT(bti_.is_valid());
@@ -143,13 +143,13 @@ fit::result<zx_paddr_t, zx_status_t> AmlogicSecureMemDevice::GetSecureMemoryPhys
                                            sizeof(secure_mem_info), nullptr, nullptr);
   if (status != ZX_OK) {
     LOG(ERROR, "Failed to get VMO info - status: %d", status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   // Only allow pinning on VMOs that are contiguous.
   if ((secure_mem_info.flags & ZX_INFO_VMO_CONTIGUOUS) != ZX_INFO_VMO_CONTIGUOUS) {
     LOG(ERROR, "Received non-contiguous VMO type to pin");
-    return fit::error(ZX_ERR_WRONG_TYPE);
+    return fpromise::error(ZX_ERR_WRONG_TYPE);
   }
 
   // Pin the VMO to get the physical address.
@@ -159,14 +159,14 @@ fit::result<zx_paddr_t, zx_status_t> AmlogicSecureMemDevice::GetSecureMemoryPhys
                     secure_mem_info.size_bytes, &paddr, 1u, &pmt);
   if (status != ZX_OK) {
     LOG(ERROR, "Failed to pin memory - status: %d", status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   // Unpinning the PMT should never fail
   status = pmt.unpin();
   ZX_DEBUG_ASSERT(status == ZX_OK);
 
-  return fit::ok(paddr);
+  return fpromise::ok(paddr);
 }
 
 zx_status_t AmlogicSecureMemDevice::CreateAndServeSysmemTee() {

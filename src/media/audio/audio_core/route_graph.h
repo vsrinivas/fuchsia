@@ -6,7 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_ROUTE_GRAPH_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 
 #include <array>
 #include <deque>
@@ -125,7 +125,7 @@ class RouteGraph {
   std::unordered_map<const AudioObject*, RoutableOwnedObject> loopback_capturers_;
 
   // TODO(fxbug.dev/13339): Remove throttle_output_.
-  std::optional<fit::completer<void, void>> throttle_release_fence_;
+  std::optional<fpromise::completer<void, void>> throttle_release_fence_;
   std::shared_ptr<AudioOutput> throttle_output_;
 };
 

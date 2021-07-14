@@ -4,7 +4,7 @@
 
 #include "src/developer/forensics/testing/stubs/crash_reporter.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -62,7 +62,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
 
   if (!fsl::StringFromVmo(report.attachments()[0].value, &reboot_log_)) {
     FX_LOGS(ERROR) << "error parsing feedback log VMO as string";
-    callback(::fit::error(ZX_ERR_INTERNAL));
+    callback(::fpromise::error(ZX_ERR_INTERNAL));
     return;
   }
 
@@ -78,12 +78,12 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
     is_fatal_ = std::nullopt;
   }
 
-  callback(::fit::ok());
+  callback(::fpromise::ok());
 }
 
 void CrashReporterAlwaysReturnsError::File(fuchsia::feedback::CrashReport report,
                                            FileCallback callback) {
-  callback(::fit::error(ZX_ERR_INTERNAL));
+  callback(::fpromise::error(ZX_ERR_INTERNAL));
 }
 
 void CrashReporterNoFileExpected::File(fuchsia::feedback::CrashReport report,

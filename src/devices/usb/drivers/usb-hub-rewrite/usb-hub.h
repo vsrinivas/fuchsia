@@ -13,9 +13,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/result.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/zx/status.h>
 #include <zircon/compiler.h>
@@ -72,7 +72,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
         loop_(&kAsyncLoopConfigNeverAttachToThread),
         blocking_executor_(loop_.dispatcher()) {}
 
-  UsbHubDevice(zx_device_t* parent, std::unique_ptr<fit::executor> executor)
+  UsbHubDevice(zx_device_t* parent, std::unique_ptr<fpromise::executor> executor)
       : UsbHub(parent),
         loop_(&kAsyncLoopConfigNeverAttachToThread),
         executor_(std::move(executor)),
@@ -90,21 +90,21 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   zx_status_t Init();
 
   // Invokes a promise and waits for its completion
-  zx_status_t RunSynchronously(fit::promise<void, zx_status_t> promise);
+  zx_status_t RunSynchronously(fpromise::promise<void, zx_status_t> promise);
 
   // Synchronously resets a port
   zx_status_t UsbHubInterfaceResetPort(uint32_t port);
 
   // Powers on all ports on the hub
-  fit::promise<void, zx_status_t> PowerOnPorts();
+  fpromise::promise<void, zx_status_t> PowerOnPorts();
 
   // Retrieves the status of a port.
-  fit::promise<usb_port_status_t, zx_status_t> GetPortStatus(PortNumber port);
+  fpromise::promise<usb_port_status_t, zx_status_t> GetPortStatus(PortNumber port);
 
   void InterruptCallback(CallbackRequest request);
 
   // Updates the status of all ports on the hub
-  fit::promise<void, zx_status_t> GetPortStatus();
+  fpromise::promise<void, zx_status_t> GetPortStatus();
 
   void DdkInit(ddk::InitTxn txn);
 
@@ -114,7 +114,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   void StartInterruptLoop();
 
   // Resets a port
-  fit::promise<void, zx_status_t> ResetPort(PortNumber port);
+  fpromise::promise<void, zx_status_t> ResetPort(PortNumber port);
 
   // Obtains the 1-based port number from a PortStatus reference
   PortNumber GetPortNumber(const PortStatus& status);
@@ -151,21 +151,21 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   }
 
   // Invokes a promise at the specified deadline
-  fit::promise<void, zx_status_t> Sleep(zx::time deadline);
+  fpromise::promise<void, zx_status_t> Sleep(zx::time deadline);
 
-  fit::promise<void, zx_status_t> SetFeature(uint8_t request_type, uint16_t feature,
-                                             uint16_t index);
+  fpromise::promise<void, zx_status_t> SetFeature(uint8_t request_type, uint16_t feature,
+                                                  uint16_t index);
 
-  fit::promise<void, zx_status_t> ClearFeature(uint8_t request_type, uint16_t feature,
-                                               uint16_t index);
+  fpromise::promise<void, zx_status_t> ClearFeature(uint8_t request_type, uint16_t feature,
+                                                    uint16_t index);
 
-  fit::promise<std::vector<uint8_t>, zx_status_t> ControlIn(uint8_t request_type, uint8_t request,
-                                                            uint16_t value, uint16_t index,
-                                                            size_t read_size);
+  fpromise::promise<std::vector<uint8_t>, zx_status_t> ControlIn(uint8_t request_type,
+                                                                 uint8_t request, uint16_t value,
+                                                                 uint16_t index, size_t read_size);
 
-  fit::promise<void, zx_status_t> ControlOut(uint8_t request_type, uint8_t request, uint16_t value,
-                                             uint16_t index, const void* write_buffer,
-                                             size_t write_size);
+  fpromise::promise<void, zx_status_t> ControlOut(uint8_t request_type, uint8_t request,
+                                                  uint16_t value, uint16_t index,
+                                                  const void* write_buffer, size_t write_size);
 
   std::optional<Request> AllocRequest();
 
@@ -174,9 +174,9 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   // gets executed in the async context.
   template <typename T>
   auto RunBlocking(fit::function<T()> task) {
-    fit::bridge<T, void> bridge;
+    fpromise::bridge<T, void> bridge;
 
-    blocking_executor_.schedule_task(fit::make_promise(
+    blocking_executor_.schedule_task(fpromise::make_promise(
         [functor = std::move(task), completer = std::move(bridge.completer)]() mutable {
           auto value = functor();
           completer.complete_ok(value);
@@ -185,43 +185,43 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   }
 
   template <typename T>
-  fit::promise<VariableLengthDescriptor<T>, zx_status_t> GetVariableLengthDescriptor(
+  fpromise::promise<VariableLengthDescriptor<T>, zx_status_t> GetVariableLengthDescriptor(
       uint8_t request_type, uint16_t type, uint16_t index, size_t length = sizeof(T)) {
     static_assert(sizeof(T) >= sizeof(usb_descriptor_header_t));
     return ControlIn(request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
                      static_cast<uint16_t>(type << 8 | index), 0, length)
         .and_then([](std::vector<uint8_t>& data)
-                      -> fit::result<VariableLengthDescriptor<T>, zx_status_t> {
+                      -> fpromise::result<VariableLengthDescriptor<T>, zx_status_t> {
           VariableLengthDescriptor<T> value;
           memcpy(&value.descriptor, data.data(), data.size());
           if (reinterpret_cast<usb_descriptor_header_t*>(&value.descriptor)->bLength !=
               data.size()) {
             zxlogf(INFO, "Mismatched descriptor length\n");
-            return fit::error(ZX_ERR_BAD_STATE);
+            return fpromise::error(ZX_ERR_BAD_STATE);
           }
           value.length = data.size();
-          return fit::ok(value);
+          return fpromise::ok(value);
         });
   }
 
   template <typename T>
-  fit::promise<T, zx_status_t> GetDescriptor(uint8_t request_type, uint16_t type, uint16_t index,
-                                             size_t length = sizeof(T)) {
+  fpromise::promise<T, zx_status_t> GetDescriptor(uint8_t request_type, uint16_t type,
+                                                  uint16_t index, size_t length = sizeof(T)) {
     return GetVariableLengthDescriptor<T>(request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
                                           static_cast<uint16_t>(type << 8 | index), length)
         .and_then([length](VariableLengthDescriptor<T>& data) {
           if (data.length != length) {
-            return fit::error(ZX_ERR_BAD_STATE);
+            return fpromise::error(ZX_ERR_BAD_STATE);
           }
-          return fit::ok(data.descriptor);
+          return fpromise::ok(data.descriptor);
         });
   }
 
-  fit::promise<Request, void> RequestQueue(Request request);
+  fpromise::promise<Request, void> RequestQueue(Request request);
 
   static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
-  static zx_status_t Bind(std::unique_ptr<fit::executor> executor, zx_device_t* parent);
+  static zx_status_t Bind(std::unique_ptr<fpromise::executor> executor, zx_device_t* parent);
 
   void DdkUnbind(ddk::UnbindTxn txn);
 
@@ -243,7 +243,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   ddk::UsbProtocolClient usb_;
   ddk::UsbBusProtocolClient bus_;
   async::Loop loop_;
-  std::unique_ptr<fit::executor> executor_;
+  std::unique_ptr<fpromise::executor> executor_;
 
   std::optional<ddk::InitTxn> txn_;
   // Executor for running blocking tasks. These tasks MUST NOT

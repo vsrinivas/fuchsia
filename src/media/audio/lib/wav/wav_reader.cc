@@ -34,12 +34,13 @@ using wav::internal::WavHeader;
 }  // namespace
 
 // static
-fit::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(const std::string& file_name) {
+fpromise::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(
+    const std::string& file_name) {
   fbl::unique_fd fd(open(file_name.c_str(), O_RDONLY));
   if (fd.get() < 0) {
     FX_LOGS(WARNING) << "open failed for " << std::quoted(file_name) << ", returned " << fd.get()
                      << ", errno " << errno;
-    return fit::error(ZX_ERR_NOT_FOUND);
+    return fpromise::error(ZX_ERR_NOT_FOUND);
   }
 
   // 'RIFF'
@@ -47,7 +48,7 @@ fit::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(const std::
   if (read(fd.get(), &riff_header, sizeof(riff_header)) != sizeof(riff_header)) {
     FX_LOGS(WARNING) << "read initial header failed for " << std::quoted(file_name)
                      << ", amount read was too small; errno " << errno;
-    return fit::error(ZX_ERR_IO);
+    return fpromise::error(ZX_ERR_IO);
   }
   riff_header.FixupEndianForReading();
 
@@ -58,12 +59,12 @@ fit::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(const std::
                      << riff_header.four_cc << ") -- expected '"
                      << wav::internal::fourcc_to_string(RIFF_FOUR_CC) << "' (0x" << RIFF_FOUR_CC
                      << ")";
-    return fit::error(ZX_ERR_IO);
+    return fpromise::error(ZX_ERR_IO);
   }
   if (auto want = sizeof(WavHeader) + sizeof(RiffChunkHeader); riff_header.length < want) {
     FX_LOGS(WARNING) << "RIFF header incorrect for " << std::quoted(file_name)
                      << ", read length of " << riff_header.length << ", expected at least " << want;
-    return fit::error(ZX_ERR_IO);
+    return fpromise::error(ZX_ERR_IO);
   }
   uint32_t header_size = sizeof(riff_header);
   FX_LOGS(DEBUG) << "Successfully read '" << wav::internal::fourcc_to_string(RIFF_FOUR_CC)
@@ -74,7 +75,7 @@ fit::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(const std::
   if (read(fd.get(), &wav_header, sizeof(wav_header)) != sizeof(wav_header)) {
     FX_LOGS(WARNING) << "read RIFF chunk failed for " << std::quoted(file_name)
                      << ", amount read was too small; errno " << errno;
-    return fit::error(ZX_ERR_IO);
+    return fpromise::error(ZX_ERR_IO);
   }
   wav_header.FixupEndianForReading();
 
@@ -85,7 +86,7 @@ fit::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(const std::
                      << std::hex << wav_header.wave_four_cc << ") -- expected '"
                      << wav::internal::fourcc_to_string(WAVE_FOUR_CC) << "' (0x" << WAVE_FOUR_CC
                      << ")";
-    return fit::error(ZX_ERR_IO);
+    return fpromise::error(ZX_ERR_IO);
   }
   if (wav_header.fmt_four_cc != FMT_FOUR_CC) {
     FX_LOGS(WARNING) << "read WAV header failed for " << std::quoted(file_name)
@@ -94,13 +95,13 @@ fit::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(const std::
                      << std::hex << wav_header.fmt_four_cc << ") -- expected '"
                      << wav::internal::fourcc_to_string(FMT_FOUR_CC) << "' (0x" << FMT_FOUR_CC
                      << ")";
-    return fit::error(ZX_ERR_IO);
+    return fpromise::error(ZX_ERR_IO);
   }
   if (wav_header.bits_per_sample != 8 && wav_header.bits_per_sample != 16 &&
       wav_header.bits_per_sample != 24 && wav_header.bits_per_sample != 32) {
     FX_LOGS(WARNING) << "read WAV header failed for " << std::quoted(file_name)
                      << ", unsupported bits_per_sample: " << wav_header.bits_per_sample;
-    return fit::error(ZX_ERR_IO);
+    return fpromise::error(ZX_ERR_IO);
   }
   // In the WAV file definition, the format chunk is not constant-size; it specifies its own length.
   // Valid WAV files might have a fmt_chunk_len of 14, 16, 18, 40, etc. (representing valid
@@ -120,7 +121,7 @@ fit::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(const std::
     if (pos < 0) {
       FX_LOGS(WARNING) << "read RIFF chunk failed for " << std::quoted(file_name)
                        << ", could not seek past the wave header; errno " << errno;
-      return fit::error(ZX_ERR_IO);
+      return fpromise::error(ZX_ERR_IO);
     }
     FX_CHECK(pos == header_size);
   }
@@ -135,7 +136,7 @@ fit::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(const std::
   if (read(fd.get(), &data_header, sizeof(data_header)) != sizeof(data_header)) {
     FX_LOGS(WARNING) << "read data header failed for " << std::quoted(file_name) << ", errno "
                      << errno;
-    return fit::error(ZX_ERR_IO);
+    return fpromise::error(ZX_ERR_IO);
   }
   data_header.FixupEndianForReading();
 
@@ -154,7 +155,7 @@ fit::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(const std::
       // We reached the end of the file before we found a 'DATA' chunk.
       FX_LOGS(WARNING) << "header read (at byte position " << header_size << ") failed for "
                        << std::quoted(file_name) << ", errno " << errno;
-      return fit::error(ZX_ERR_IO);
+      return fpromise::error(ZX_ERR_IO);
     }
     data_header.FixupEndianForReading();
   }
@@ -180,18 +181,18 @@ fit::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(const std::
     out->packed_24_buffer_ = std::make_unique<uint8_t[]>(kPacked24BufferSize);
   }
 
-  return fit::ok(std::move(out));
+  return fpromise::ok(std::move(out));
 }
 
-fit::result<size_t, int> WavReader::Read(void* buffer, size_t requested_bytes) {
+fpromise::result<size_t, int> WavReader::Read(void* buffer, size_t requested_bytes) {
   // In the majority, non-packed-24 case, just read the bytes directly to the client buffer.
   if (!packed_24_) {
     int64_t file_bytes = read(file_.get(), buffer, requested_bytes);
 
     if (file_bytes < 0) {
-      return fit::error(errno);
+      return fpromise::error(errno);
     }
-    return fit::ok(file_bytes);
+    return fpromise::ok(file_bytes);
   }
 
   // If packed-24, read the file just once, to avoid potential performance problems, then
@@ -201,7 +202,7 @@ fit::result<size_t, int> WavReader::Read(void* buffer, size_t requested_bytes) {
   int64_t file_bytes = read(file_.get(), packed_24_buffer_.get(), file_bytes_needed);
 
   if (file_bytes < 0) {
-    return fit::error(static_cast<int>(errno));
+    return fpromise::error(static_cast<int>(errno));
   }
 
   auto client_buffer = reinterpret_cast<uint8_t*>(buffer);
@@ -216,7 +217,7 @@ fit::result<size_t, int> WavReader::Read(void* buffer, size_t requested_bytes) {
   FX_CHECK(client_offset <= static_cast<int64_t>(requested_bytes));
 
   last_modulo_4_ = (last_modulo_4_ + client_offset) % 4;
-  return fit::ok(static_cast<size_t>(client_offset));
+  return fpromise::ok(static_cast<size_t>(client_offset));
 }
 
 int WavReader::Reset() {

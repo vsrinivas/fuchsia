@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_MESSAGE_H_
 #define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_MESSAGE_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 
@@ -262,7 +262,7 @@ class Message : public MessageBase<std::unique_ptr<SharedMemory>> {
 // This OP-TEE message is used to start a session between a client app and trusted app.
 class OpenSessionMessage : public Message {
  public:
-  static fit::result<OpenSessionMessage, zx_status_t> TryCreate(
+  static fpromise::result<OpenSessionMessage, zx_status_t> TryCreate(
       SharedMemoryManager::DriverMemoryPool* message_pool,
       SharedMemoryManager::ClientMemoryPool* temp_memory_pool, const Uuid& trusted_app,
       fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set);
@@ -293,7 +293,7 @@ class OpenSessionMessage : public Message {
 // This OP-TEE message is used to close an existing open session.
 class CloseSessionMessage : public Message {
  public:
-  static fit::result<CloseSessionMessage, zx_status_t> TryCreate(
+  static fpromise::result<CloseSessionMessage, zx_status_t> TryCreate(
       SharedMemoryManager::DriverMemoryPool* message_pool, uint32_t session_id);
 
   // Outputs
@@ -312,7 +312,7 @@ class CloseSessionMessage : public Message {
 // This OP-TEE message is used to invoke a command on a session between client app and trusted app.
 class InvokeCommandMessage : public Message {
  public:
-  static fit::result<InvokeCommandMessage, zx_status_t> TryCreate(
+  static fpromise::result<InvokeCommandMessage, zx_status_t> TryCreate(
       SharedMemoryManager::DriverMemoryPool* message_pool,
       SharedMemoryManager::ClientMemoryPool* temp_memory_pool, uint32_t session_id,
       uint32_t command_id, fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set);
@@ -366,7 +366,7 @@ class RpcMessage : public MessageBase<SharedMemory*> {
   // Parameters:
   //  * memory:   A pointer to the SharedMemory object backing the RpcMessage. This pointer must
   //              be non-null and valid.
-  static fit::result<RpcMessage, zx_status_t> CreateFromSharedMemory(SharedMemory* memory);
+  static fpromise::result<RpcMessage, zx_status_t> CreateFromSharedMemory(SharedMemory* memory);
 
   uint32_t command() const { return header()->command; }
 
@@ -391,7 +391,8 @@ class LoadTaRpcMessage : public RpcMessage {
   // LoadTaRpcMessage
   //
   // Attempts to create a `LoadTaRpcMessage` from a moved-in `RpcMessage`.
-  static fit::result<LoadTaRpcMessage, zx_status_t> CreateFromRpcMessage(RpcMessage&& rpc_message);
+  static fpromise::result<LoadTaRpcMessage, zx_status_t> CreateFromRpcMessage(
+      RpcMessage&& rpc_message);
 
   const Uuid& ta_uuid() const { return ta_uuid_; }
 
@@ -438,7 +439,8 @@ class RpmbRpcMessage : public RpcMessage {
   // RpmbRpcMessage
   //
   // Attempts to create a `RpmbRpcMessage` from a moved-in `RpcMessage`.
-  static fit::result<RpmbRpcMessage, zx_status_t> CreateFromRpcMessage(RpcMessage&& rpc_message);
+  static fpromise::result<RpmbRpcMessage, zx_status_t> CreateFromRpcMessage(
+      RpcMessage&& rpc_message);
 
   uint64_t tx_memory_reference_id() const { return tx_frame_mem_id_; }
 
@@ -486,7 +488,7 @@ class WaitQueueRpcMessage : public RpcMessage {
   // WaitQueueRpcMessage
   //
   // Attempts to create a `WaitQueueRpcMessage` from a moved-in `RpcMessage`.
-  static fit::result<WaitQueueRpcMessage, zx_status_t> CreateFromRpcMessage(
+  static fpromise::result<WaitQueueRpcMessage, zx_status_t> CreateFromRpcMessage(
       RpcMessage&& rpc_message);
 
   uint64_t command() const { return command_; }
@@ -516,7 +518,8 @@ class GetTimeRpcMessage : public RpcMessage {
   // GetTimeRpcMessage
   //
   // Attempts to create a `GetTimeRpcMessage` from a moved-in `RpcMessage`.
-  static fit::result<GetTimeRpcMessage, zx_status_t> CreateFromRpcMessage(RpcMessage&& rpc_message);
+  static fpromise::result<GetTimeRpcMessage, zx_status_t> CreateFromRpcMessage(
+      RpcMessage&& rpc_message);
 
   void set_output_seconds(uint64_t secs) {
     ZX_DEBUG_ASSERT(out_secs_ != nullptr);
@@ -551,7 +554,7 @@ class AllocateMemoryRpcMessage : public RpcMessage {
   // AllocateMemoryRpcMessage
   //
   // Attempts to create a `AllocateMemoryRpcMessage` from a moved-in `RpcMessage`.
-  static fit::result<AllocateMemoryRpcMessage, zx_status_t> CreateFromRpcMessage(
+  static fpromise::result<AllocateMemoryRpcMessage, zx_status_t> CreateFromRpcMessage(
       RpcMessage&& rpc_message);
 
   SharedMemoryType memory_type() const { return memory_type_; }
@@ -598,7 +601,7 @@ class FreeMemoryRpcMessage : public RpcMessage {
   // FreeMemoryRpcMessage
   //
   // Attempts to create a `FreeMemoryRpcMessage from a moved-in `RpcMessage`.
-  static fit::result<FreeMemoryRpcMessage, zx_status_t> CreateFromRpcMessage(
+  static fpromise::result<FreeMemoryRpcMessage, zx_status_t> CreateFromRpcMessage(
       RpcMessage&& rpc_message);
 
   SharedMemoryType memory_type() const { return memory_type_; }
@@ -642,7 +645,7 @@ class FileSystemRpcMessage : public RpcMessage {
   // FileSystemRpcMessage
   //
   // Attempts to create a `FileSystemRpcMessage` from a moved-in RpcMessage.
-  static fit::result<FileSystemRpcMessage, zx_status_t> CreateFromRpcMessage(
+  static fpromise::result<FileSystemRpcMessage, zx_status_t> CreateFromRpcMessage(
       RpcMessage&& rpc_message);
 
   FileSystemCommand file_system_command() const { return fs_command_; }
@@ -671,7 +674,7 @@ class OpenFileFileSystemRpcMessage : public FileSystemRpcMessage {
   // OpenFileFileSystemRpcMessage
   //
   // Attempts to create a `OpenFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
-  static fit::result<OpenFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
+  static fpromise::result<OpenFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
       FileSystemRpcMessage&& fs_message);
 
   uint64_t path_memory_identifier() const { return path_mem_id_; }
@@ -713,7 +716,7 @@ class CreateFileFileSystemRpcMessage : public FileSystemRpcMessage {
   // CreateFileFileSystemRpcMessage
   //
   // Attempts to create a `CreateFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
-  static fit::result<CreateFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
+  static fpromise::result<CreateFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
       FileSystemRpcMessage&& fs_message);
 
   uint64_t path_memory_identifier() const { return path_mem_id_; }
@@ -755,7 +758,7 @@ class CloseFileFileSystemRpcMessage : public FileSystemRpcMessage {
   // CloseFileFileSystemRpcMessage
   //
   // Attempts to create a `CloseFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
-  static fit::result<CloseFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
+  static fpromise::result<CloseFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
       FileSystemRpcMessage&& fs_message);
 
   uint64_t file_system_object_identifier() const { return fs_object_id_; }
@@ -783,7 +786,7 @@ class ReadFileFileSystemRpcMessage : public FileSystemRpcMessage {
   // ReadFileFileSystemRpcMessage
   //
   // Attempts to create a `ReadFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
-  static fit::result<ReadFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
+  static fpromise::result<ReadFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
       FileSystemRpcMessage&& fs_message);
 
   uint64_t file_system_object_identifier() const { return fs_object_id_; }
@@ -830,7 +833,7 @@ class WriteFileFileSystemRpcMessage : public FileSystemRpcMessage {
   // WriteFileFileSystemRpcMessage
   //
   // Constructs a `WriteFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
-  static fit::result<WriteFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
+  static fpromise::result<WriteFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
       FileSystemRpcMessage&& fs_message);
 
   uint64_t file_system_object_identifier() const { return fs_object_id_; }
@@ -872,7 +875,7 @@ class TruncateFileFileSystemRpcMessage : public FileSystemRpcMessage {
   //
   // Attempts to create a `TruncateFileFileSystemRpcMessage` from a moved-in
   // `FileSystemRpcMessage`.
-  static fit::result<TruncateFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
+  static fpromise::result<TruncateFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
       FileSystemRpcMessage&& fs_message);
 
   uint64_t file_system_object_identifier() const { return fs_object_id_; }
@@ -903,7 +906,7 @@ class RemoveFileFileSystemRpcMessage : public FileSystemRpcMessage {
   // RemoveFileFileSystemRpcMessage
   //
   // Attempts to create a `RemoveFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
-  static fit::result<RemoveFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
+  static fpromise::result<RemoveFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
       FileSystemRpcMessage&& fs_message);
 
   uint64_t path_memory_identifier() const { return path_mem_id_; }
@@ -938,7 +941,7 @@ class RenameFileFileSystemRpcMessage : public FileSystemRpcMessage {
   // RenameFileFileSystemRpcMessage
   //
   // Attempts to create a `RenameFileFileSystemRpcMessage` from a moved-in `FileSystemRpcMessage`.
-  static fit::result<RenameFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
+  static fpromise::result<RenameFileFileSystemRpcMessage, zx_status_t> CreateFromFsRpcMessage(
       FileSystemRpcMessage&& fs_message);
 
   bool should_overwrite() const { return should_overwrite_; }

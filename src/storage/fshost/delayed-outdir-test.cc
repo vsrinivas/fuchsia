@@ -5,9 +5,9 @@
 #include "delayed-outdir.h"
 
 #include <lib/fdio/directory.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/result.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/result.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
@@ -73,11 +73,12 @@ TEST(DelayedOutdirTest, MessagesWaitForStart) {
   // Shut down the managed VFS to get it to close active connections, otherwise
   // the deconstructor will crash.
 
-  fit::bridge<zx_status_t> bridge;
+  fpromise::bridge<zx_status_t> bridge;
   vfs.Shutdown(bridge.completer.bind());
-  auto promise_shutdown = bridge.consumer.promise_or(::fit::error());
+  auto promise_shutdown = bridge.consumer.promise_or(::fpromise::error());
 
-  fit::result<zx_status_t, void> result = fit::run_single_threaded(std::move(promise_shutdown));
+  fpromise::result<zx_status_t, void> result =
+      fpromise::run_single_threaded(std::move(promise_shutdown));
   ASSERT_TRUE(result.is_ok());
   ASSERT_OK(result.value());
 }

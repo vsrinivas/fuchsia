@@ -7,9 +7,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/result.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/result.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
@@ -42,13 +42,14 @@ class DelayedOutdir {
       // connections that got created in the mean time.
       outgoing_dir_delayed_loop_->StartThread("delayed_outgoing_dir");
     }
-    fit::bridge<zx_status_t> bridge;
+    fpromise::bridge<zx_status_t> bridge;
     delayed_vfs_.Shutdown(bridge.completer.bind());
-    auto promise_shutdown = bridge.consumer.promise_or(::fit::error());
+    auto promise_shutdown = bridge.consumer.promise_or(::fpromise::error());
 
-    fit::result<zx_status_t, void> result = fit::run_single_threaded(std::move(promise_shutdown));
+    fpromise::result<zx_status_t, void> result =
+        fpromise::run_single_threaded(std::move(promise_shutdown));
     if (!result.is_ok()) {
-      FX_LOGS(ERROR) << "error running fit executor to shutdown delayed outdir vfs";
+      FX_LOGS(ERROR) << "error running fpromise executor to shutdown delayed outdir vfs";
     } else if (result.value() != ZX_OK) {
       FX_LOGS(ERROR) << "error shutting down delayed outdir vfs: "
                      << zx_status_get_string(result.value());

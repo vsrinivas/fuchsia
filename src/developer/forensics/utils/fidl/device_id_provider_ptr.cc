@@ -15,7 +15,7 @@ DeviceIdProviderPtr::DeviceIdProviderPtr(async_dispatcher_t* dispatcher,
                                          std::shared_ptr<sys::ServiceDirectory> services)
     : connection_(dispatcher, services, [this] { MakeCall(); }) {}
 
-::fit::promise<std::string, Error> DeviceIdProviderPtr::GetId(const zx::duration timeout) {
+::fpromise::promise<std::string, Error> DeviceIdProviderPtr::GetId(const zx::duration timeout) {
   return connection_.GetValue(fit::Timeout(timeout));
 }
 

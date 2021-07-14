@@ -23,7 +23,7 @@ class MockMessage : public Message {
   using Message::CreateOutputParameterSet;
   using Message::Message;
 
-  static fit::result<MockMessage, zx_status_t> TryCreate(
+  static fpromise::result<MockMessage, zx_status_t> TryCreate(
       SharedMemoryManager::DriverMemoryPool* message_pool,
       SharedMemoryManager::ClientMemoryPool* temp_memory_pool, size_t start_index,
       fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set) {
@@ -36,7 +36,7 @@ class MockMessage : public Message {
     SharedMemoryPtr memory;
     zx_status_t status = message_pool->Allocate(CalculateSize(num_params), &memory);
     if (status != ZX_OK) {
-      return fit::error(status);
+      return fpromise::error(status);
     }
 
     MockMessage message(std::move(memory));
@@ -52,10 +52,10 @@ class MockMessage : public Message {
     status =
         message.TryInitializeParameters(start_index, std::move(parameter_set), temp_memory_pool);
     if (status != ZX_OK) {
-      return fit::error(status);
+      return fpromise::error(status);
     }
 
-    return fit::ok(std::move(message));
+    return fpromise::ok(std::move(message));
   }
 };
 

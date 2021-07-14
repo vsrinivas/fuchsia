@@ -8,7 +8,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/string_view.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/service/llcpp/constants.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>

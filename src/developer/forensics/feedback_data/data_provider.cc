@@ -6,8 +6,8 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -92,64 +92,67 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
 
   const uint64_t timer_id = cobalt_->StartTimer();
   auto promise =
-      ::fit::join_promises(datastore_->GetAnnotations(timeout), datastore_->GetAttachments(timeout))
-          .and_then([this, channel = std::move(channel)](
-                        std::tuple<::fit::result<Annotations>, ::fit::result<Attachments>>&
-                            annotations_and_attachments) mutable {
-            Snapshot snapshot;
-            std::map<std::string, std::string> attachments;
+      ::fpromise::join_promises(datastore_->GetAnnotations(timeout),
+                                datastore_->GetAttachments(timeout))
+          .and_then(
+              [this, channel = std::move(channel)](
+                  std::tuple<::fpromise::result<Annotations>, ::fpromise::result<Attachments>>&
+                      annotations_and_attachments) mutable {
+                Snapshot snapshot;
+                std::map<std::string, std::string> attachments;
 
-            const auto& annotations_result = std::get<0>(annotations_and_attachments);
-            if (annotations_result.is_ok()) {
-              snapshot.set_annotations(ToFeedbackAnnotationVector(annotations_result.value()));
-            } else {
-              FX_LOGS(WARNING) << "Failed to retrieve any annotations";
-            }
-
-            const auto& attachments_result = std::get<1>(annotations_and_attachments);
-            if (attachments_result.is_ok()) {
-              for (const auto& [key, value] : attachments_result.value()) {
-                if (value.HasValue()) {
-                  attachments[key] = value.Value();
-                }
-              }
-            } else {
-              FX_LOGS(WARNING) << "Failed to retrieve any attachments";
-            }
-
-            // We also add the annotations as a single extra attachment.
-            // This is useful for clients that surface the annotations differently in the UI
-            // but still want all the annotations to be easily downloadable in one file.
-            if (snapshot.has_annotations()) {
-              const auto annotations_json = ToJsonString(snapshot.annotations());
-              if (annotations_json.has_value()) {
-                attachments[kAttachmentAnnotations] = annotations_json.value();
-              }
-            }
-
-            attachments[kAttachmentMetadata] =
-                metadata_.MakeMetadata(annotations_result, attachments_result,
-                                       datastore_->IsMissingNonPlatformAnnotations());
-
-            // We bundle the attachments into a single archive.
-            if (!attachments.empty()) {
-              fsl::SizedVmo archive;
-              std::map<std::string, ArchiveFileStats> file_size_stats;
-              if (Archive(attachments, &archive, &file_size_stats)) {
-                inspect_data_budget_->UpdateBudget(file_size_stats);
-                cobalt_->LogCount(SnapshotVersion::kCobalt, (uint64_t)archive.size());
-                if (channel) {
-                  ServeArchive(std::move(archive), std::move(channel.value()));
+                const auto& annotations_result = std::get<0>(annotations_and_attachments);
+                if (annotations_result.is_ok()) {
+                  snapshot.set_annotations(ToFeedbackAnnotationVector(annotations_result.value()));
                 } else {
-                  snapshot.set_archive(
-                      {.key = kSnapshotFilename, .value = std::move(archive).ToTransport()});
+                  FX_LOGS(WARNING) << "Failed to retrieve any annotations";
                 }
-              }
-            }
 
-            return ::fit::ok(std::move(snapshot));
-          })
-          .then([this, callback = std::move(callback), timer_id](::fit::result<Snapshot>& result) {
+                const auto& attachments_result = std::get<1>(annotations_and_attachments);
+                if (attachments_result.is_ok()) {
+                  for (const auto& [key, value] : attachments_result.value()) {
+                    if (value.HasValue()) {
+                      attachments[key] = value.Value();
+                    }
+                  }
+                } else {
+                  FX_LOGS(WARNING) << "Failed to retrieve any attachments";
+                }
+
+                // We also add the annotations as a single extra attachment.
+                // This is useful for clients that surface the annotations differently in the UI
+                // but still want all the annotations to be easily downloadable in one file.
+                if (snapshot.has_annotations()) {
+                  const auto annotations_json = ToJsonString(snapshot.annotations());
+                  if (annotations_json.has_value()) {
+                    attachments[kAttachmentAnnotations] = annotations_json.value();
+                  }
+                }
+
+                attachments[kAttachmentMetadata] =
+                    metadata_.MakeMetadata(annotations_result, attachments_result,
+                                           datastore_->IsMissingNonPlatformAnnotations());
+
+                // We bundle the attachments into a single archive.
+                if (!attachments.empty()) {
+                  fsl::SizedVmo archive;
+                  std::map<std::string, ArchiveFileStats> file_size_stats;
+                  if (Archive(attachments, &archive, &file_size_stats)) {
+                    inspect_data_budget_->UpdateBudget(file_size_stats);
+                    cobalt_->LogCount(SnapshotVersion::kCobalt, (uint64_t)archive.size());
+                    if (channel) {
+                      ServeArchive(std::move(archive), std::move(channel.value()));
+                    } else {
+                      snapshot.set_archive(
+                          {.key = kSnapshotFilename, .value = std::move(archive).ToTransport()});
+                    }
+                  }
+                }
+
+                return ::fpromise::ok(std::move(snapshot));
+              })
+          .then([this, callback = std::move(callback),
+                 timer_id](::fpromise::result<Snapshot>& result) {
             if (result.is_error()) {
               cobalt_->LogElapsedTime(cobalt::SnapshotGenerationFlow::kFailure, timer_id);
               callback(Snapshot());
@@ -206,7 +209,7 @@ void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback c
           fit::Timeout(kScreenshotTimeout,
                        [this] { cobalt_->LogOccurrence(cobalt::TimedOutData::kScreenshot); }))
           .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
-                        -> ::fit::result<Screenshot> {
+                        -> ::fpromise::result<Screenshot> {
             Screenshot screenshot;
             screenshot.dimensions_in_px.height = raw_screenshot.info.height;
             screenshot.dimensions_in_px.width = raw_screenshot.info.width;
@@ -216,13 +219,13 @@ void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback c
                               raw_screenshot.info.width, raw_screenshot.info.stride,
                               raw_screenshot.info.pixel_format, &screenshot.image)) {
                   FX_LOGS(ERROR) << "Failed to convert raw screenshot to PNG";
-                  return ::fit::error();
+                  return ::fpromise::error();
                 }
                 break;
             }
-            return ::fit::ok(std::move(screenshot));
+            return ::fpromise::ok(std::move(screenshot));
           })
-          .then([callback = std::move(callback)](::fit::result<Screenshot>& result) {
+          .then([callback = std::move(callback)](::fpromise::result<Screenshot>& result) {
             if (!result.is_ok()) {
               callback(/*screenshot=*/nullptr);
             } else {

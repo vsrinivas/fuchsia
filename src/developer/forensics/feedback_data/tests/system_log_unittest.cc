@@ -6,7 +6,7 @@
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
@@ -107,12 +107,13 @@ class CollectLogDataTest : public UnitTestFixture {
     }
   }
 
-  ::fit::result<AttachmentValue> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
-    ::fit::result<AttachmentValue> result;
-    executor_.schedule_task(
-        feedback_data::CollectSystemLog(dispatcher(), services(),
-                                        fit::Timeout(timeout, /*action=*/[] {}))
-            .then([&result](::fit::result<AttachmentValue>& res) { result = std::move(res); }));
+  ::fpromise::result<AttachmentValue> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
+    ::fpromise::result<AttachmentValue> result;
+    executor_.schedule_task(feedback_data::CollectSystemLog(dispatcher(), services(),
+                                                            fit::Timeout(timeout, /*action=*/[] {}))
+                                .then([&result](::fpromise::result<AttachmentValue>& res) {
+                                  result = std::move(res);
+                                }));
     RunLoopFor(timeout);
     return result;
   }
@@ -131,7 +132,7 @@ TEST_F(CollectLogDataTest, Succeed_AllSystemLogs) {
           {},
       }))));
 
-  ::fit::result<AttachmentValue> result = CollectSystemLog();
+  ::fpromise::result<AttachmentValue> result = CollectSystemLog();
   ASSERT_TRUE(result.is_ok());
 
   const AttachmentValue& logs = result.value();
@@ -147,7 +148,7 @@ TEST_F(CollectLogDataTest, Succeed_PartialSystemLogs) {
       std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
           std::vector<std::string>({kMessage1Json, kMessage2Json}))));
 
-  ::fit::result<AttachmentValue> result = CollectSystemLog();
+  ::fpromise::result<AttachmentValue> result = CollectSystemLog();
   ASSERT_TRUE(result.is_ok());
 
   const AttachmentValue& logs = result.value();
@@ -167,7 +168,7 @@ TEST_F(CollectLogDataTest, Succeed_FormattingErrors) {
           {},
       }))));
 
-  ::fit::result<AttachmentValue> result = CollectSystemLog();
+  ::fpromise::result<AttachmentValue> result = CollectSystemLog();
   ASSERT_TRUE(result.is_ok());
 
   const AttachmentValue& logs = result.value();

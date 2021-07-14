@@ -20,8 +20,8 @@ bool Partition::LessThan::operator()(const Partition& lhs, const Partition& rhs)
          std::tie(rhs.volume().name, rhs.volume().instance);
 }
 
-fit::result<Partition, std::string> Partition::Create(std::string_view serialized_volume_image,
-                                                      std::unique_ptr<Reader> reader) {
+fpromise::result<Partition, std::string> Partition::Create(std::string_view serialized_volume_image,
+                                                           std::unique_ptr<Reader> reader) {
   rapidjson::Document document;
   rapidjson::ParseResult result =
       document.Parse(reinterpret_cast<const char*>(serialized_volume_image.data()),
@@ -31,15 +31,15 @@ fit::result<Partition, std::string> Partition::Create(std::string_view serialize
     std::ostringstream error;
     error << "Error parsing serialized VolumeDescriptor. "
           << rapidjson::GetParseError_En(result.Code()) << std::endl;
-    return fit::error(error.str());
+    return fpromise::error(error.str());
   }
 
   if (!document.HasMember("volume")) {
-    return fit::error("volume_image missing volume_descriptor field 'volume'.");
+    return fpromise::error("volume_image missing volume_descriptor field 'volume'.");
   }
 
   if (!document.HasMember("address")) {
-    return fit::error("volume_image missing address_descriptor field 'address'.");
+    return fpromise::error("volume_image missing address_descriptor field 'address'.");
   }
 
   rapidjson::StringBuffer buffer;
@@ -60,8 +60,8 @@ fit::result<Partition, std::string> Partition::Create(std::string_view serialize
     return address_descriptor_result.take_error_result();
   }
 
-  return fit::ok(Partition(volume_descriptor_result.take_value(),
-                           address_descriptor_result.take_value(), std::move(reader)));
+  return fpromise::ok(Partition(volume_descriptor_result.take_value(),
+                                address_descriptor_result.take_value(), std::move(reader)));
 }
 
 }  // namespace storage::volume_image

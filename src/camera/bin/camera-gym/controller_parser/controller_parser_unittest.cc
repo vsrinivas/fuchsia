@@ -5,7 +5,7 @@
 #include "src/camera/bin/camera-gym/controller_parser/controller_parser.h"
 
 #include <fuchsia/camera/gym/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <gtest/gtest.h>
 
@@ -13,7 +13,7 @@ namespace camera {
 
 class ControllerParserTest : public testing::Test {
  public:
-  fit::result<std::vector<fuchsia::camera::gym::Command>> Parse(int argc, const char* argv[]) {
+  fpromise::result<std::vector<fuchsia::camera::gym::Command>> Parse(int argc, const char* argv[]) {
     return controller_parser_->ParseArgcArgv(argc, argv);
   }
   void set_controller_parser(std::unique_ptr<ControllerParser> parser) {
@@ -25,7 +25,7 @@ class ControllerParserTest : public testing::Test {
 };
 
 TEST_F(ControllerParserTest, TestSingleCommandPassCases) {
-  fit::result<std::vector<fuchsia::camera::gym::Command>> result;
+  fpromise::result<std::vector<fuchsia::camera::gym::Command>> result;
   set_controller_parser(std::make_unique<ControllerParser>());
   {
     const int argc = 2;
@@ -378,7 +378,7 @@ TEST_F(ControllerParserTest, TestSingleCommandPassCases) {
 }
 
 TEST_F(ControllerParserTest, TestSingleCommandFailCases) {
-  fit::result<std::vector<fuchsia::camera::gym::Command>> result;
+  fpromise::result<std::vector<fuchsia::camera::gym::Command>> result;
   set_controller_parser(std::make_unique<ControllerParser>());
   {
     // Should fail: Missing argument.
@@ -684,7 +684,7 @@ TEST_F(ControllerParserTest, TestSingleCommandFailCases) {
 }
 
 TEST_F(ControllerParserTest, TestMultipleCommandPassCases) {
-  fit::result<std::vector<fuchsia::camera::gym::Command>> result;
+  fpromise::result<std::vector<fuchsia::camera::gym::Command>> result;
   set_controller_parser(std::make_unique<ControllerParser>());
   {
     const int argc = 3;
@@ -738,7 +738,7 @@ TEST_F(ControllerParserTest, TestMultipleCommandPassCases) {
 }
 
 TEST_F(ControllerParserTest, TestMultipleCommandFailCases) {
-  fit::result<std::vector<fuchsia::camera::gym::Command>> result;
+  fpromise::result<std::vector<fuchsia::camera::gym::Command>> result;
   set_controller_parser(std::make_unique<ControllerParser>());
   {
     // Should fail: Invalid character for argument

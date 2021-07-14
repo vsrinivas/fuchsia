@@ -13,15 +13,15 @@
 
 namespace camera {
 
-fit::result<std::unique_ptr<FakeStream>, zx_status_t> FakeStream::Create(
+fpromise::result<std::unique_ptr<FakeStream>, zx_status_t> FakeStream::Create(
     fuchsia::camera3::StreamProperties properties,
     fit::function<void(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>)>
         on_set_buffer_collection) {
   auto result = FakeStreamImpl::Create(std::move(properties), std::move(on_set_buffer_collection));
   if (result.is_error()) {
-    return fit::error(result.error());
+    return fpromise::error(result.error());
   }
-  return fit::ok(result.take_value());
+  return fpromise::ok(result.take_value());
 }
 
 FakeStreamImpl::FakeStreamImpl() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
@@ -50,7 +50,7 @@ static zx_status_t Validate(const fuchsia::camera3::StreamProperties& properties
   return status;
 }
 
-fit::result<std::unique_ptr<FakeStreamImpl>, zx_status_t> FakeStreamImpl::Create(
+fpromise::result<std::unique_ptr<FakeStreamImpl>, zx_status_t> FakeStreamImpl::Create(
     fuchsia::camera3::StreamProperties properties,
     fit::function<void(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>)>
         on_set_buffer_collection) {
@@ -59,7 +59,7 @@ fit::result<std::unique_ptr<FakeStreamImpl>, zx_status_t> FakeStreamImpl::Create
   zx_status_t status = Validate(properties);
   if (status != ZX_OK) {
     FX_PLOGS(DEBUG, status) << "StreamProperties failed validation.";
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   stream->properties_ = std::move(properties);
@@ -68,7 +68,7 @@ fit::result<std::unique_ptr<FakeStreamImpl>, zx_status_t> FakeStreamImpl::Create
 
   ZX_ASSERT(stream->loop_.StartThread("Fake Stream Loop") == ZX_OK);
 
-  return fit::ok(std::move(stream));
+  return fpromise::ok(std::move(stream));
 }
 
 fidl::InterfaceRequestHandler<fuchsia::camera3::Stream> FakeStreamImpl::GetHandler() {

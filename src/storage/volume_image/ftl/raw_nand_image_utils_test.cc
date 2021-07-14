@@ -21,12 +21,13 @@ class BufferWriter final : public Writer {
  public:
   explicit BufferWriter(size_t size) : buffer_(size, std::numeric_limits<uint8_t>::max()) {}
 
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            fbl::Span<const uint8_t> buffer) final {
     if (offset + buffer.size() > buffer_.size()) {
-      return fit::error("Out of Range");
+      return fpromise::error("Out of Range");
     }
     memcpy(buffer_.data() + offset, buffer.data(), buffer.size());
-    return fit::ok();
+    return fpromise::ok();
   }
 
   fbl::Span<const uint8_t> data() const { return buffer_; }

@@ -6,7 +6,7 @@
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_
 
 #include <fuchsia/tee/cpp/fidl.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <optional>
 
@@ -16,7 +16,7 @@ namespace amlogic_decoder {
 
 class VideoFirmwareSession {
  public:
-  static fit::result<VideoFirmwareSession, fuchsia::tee::ApplicationSyncPtr> TryOpen(
+  static fpromise::result<VideoFirmwareSession, fuchsia::tee::ApplicationSyncPtr> TryOpen(
       fuchsia::tee::ApplicationSyncPtr tee_connection);
 
   VideoFirmwareSession(VideoFirmwareSession&&) = default;

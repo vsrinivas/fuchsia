@@ -15,8 +15,8 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/sequencer.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/sequencer.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/syslog/cpp/macros.h>
@@ -188,7 +188,7 @@ void Sandbox::PostTerminate(netemul::SandboxResult::Status status, std::string d
 }
 
 Sandbox::Promise Sandbox::RunRootConfiguration(ManagedEnvironment::Options root_options) {
-  fit::bridge<void, SandboxResult> bridge;
+  fpromise::bridge<void, SandboxResult> bridge;
   async::PostTask(main_dispatcher_, [this, completer = std::move(bridge.completer),
                                      root_options = std::move(root_options)]() mutable {
     ASSERT_MAIN_DISPATCHER;
@@ -205,7 +205,7 @@ Sandbox::Promise Sandbox::RunRootConfiguration(ManagedEnvironment::Options root_
 }
 
 Sandbox::Promise Sandbox::RunGuestConfiguration(ManagedEnvironment::Options guest_options) {
-  fit::bridge<void, SandboxResult> bridge;
+  fpromise::bridge<void, SandboxResult> bridge;
   async::PostTask(main_dispatcher_, [this, completer = std::move(bridge.completer),
                                      guest_options = std::move(guest_options)]() mutable {
     ASSERT_MAIN_DISPATCHER;
@@ -241,13 +241,13 @@ void Sandbox::StartEnvironments() {
     }
 
     if (env_config_.guests().empty()) {
-      fit::schedule_for_consumer(
+      fpromise::schedule_for_consumer(
           helper_executor_.get(),
           RunRootConfiguration(std::move(root_options)).or_else([this](SandboxResult& result) {
             PostTerminate(std::move(result));
           }));
     } else {
-      fit::schedule_for_consumer(
+      fpromise::schedule_for_consumer(
           helper_executor_.get(),
           RunGuestConfiguration(std::move(guest_options))
               .and_then([this, root_options = std::move(root_options)]() mutable {
@@ -477,19 +477,22 @@ Sandbox::Promise Sandbox::StartChildEnvironment(ConfiguringEnvironmentPtr parent
                                                 const config::Environment* config) {
   ASSERT_HELPER_DISPATCHER;
 
-  return fit::make_promise(
-             [this, parent, config]() -> fit::result<ConfiguringEnvironmentPtr, SandboxResult> {
+  return fpromise::make_promise(
+             [this, parent,
+              config]() -> fpromise::result<ConfiguringEnvironmentPtr, SandboxResult> {
                ManagedEnvironment::Options options;
                if (!CreateEnvironmentOptions(*config, &options)) {
-                 return fit::error(SandboxResult(SandboxResult::Status::ENVIRONMENT_CONFIG_FAILED));
+                 return fpromise::error(
+                     SandboxResult(SandboxResult::Status::ENVIRONMENT_CONFIG_FAILED));
                }
                auto child_env = std::make_shared<environment::ManagedEnvironmentSyncPtr>();
                if ((*parent)->CreateChildEnvironment(child_env->NewRequest(), std::move(options)) !=
                    ZX_OK) {
-                 return fit::error(SandboxResult(SandboxResult::Status::ENVIRONMENT_CONFIG_FAILED));
+                 return fpromise::error(
+                     SandboxResult(SandboxResult::Status::ENVIRONMENT_CONFIG_FAILED));
                }
 
-               return fit::ok(std::move(child_env));
+               return fpromise::ok(std::move(child_env));
              })
       .and_then([this, config](ConfiguringEnvironmentPtr& child_env) {
         return ConfigureEnvironment(std::move(child_env), config);
@@ -500,46 +503,48 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
                                                  const config::Guest& guest) {
   ASSERT_HELPER_DISPATCHER;
 
-  return fit::make_promise([this, env, &guest]()
-                               -> fit::promise<fuchsia::virtualization::GuestPtr, SandboxResult> {
-           // Launch the guest
-           fuchsia::virtualization::GuestConfig cfg;
-           cfg.set_virtio_gpu(false);
+  return fpromise::make_promise(
+             [this, env,
+              &guest]() -> fpromise::promise<fuchsia::virtualization::GuestPtr, SandboxResult> {
+               // Launch the guest
+               fuchsia::virtualization::GuestConfig cfg;
+               cfg.set_virtio_gpu(false);
 
-           if (!guest.macs().empty()) {
-             for (const std::pair<std::string, std::string>& mac_ethertap_mapping : guest.macs()) {
-               fuchsia::virtualization::NetSpec out{};
-               uint32_t bytes[6];
-               std::sscanf(mac_ethertap_mapping.first.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x",
-                           &bytes[0], &bytes[1], &bytes[2], &bytes[3], &bytes[4], &bytes[5]);
-               for (size_t i = 0; i != 6; ++i) {
-                 out.mac_address.octets[i] = static_cast<uint8_t>(bytes[i]);
+               if (!guest.macs().empty()) {
+                 for (const std::pair<std::string, std::string>& mac_ethertap_mapping :
+                      guest.macs()) {
+                   fuchsia::virtualization::NetSpec out{};
+                   uint32_t bytes[6];
+                   std::sscanf(mac_ethertap_mapping.first.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x",
+                               &bytes[0], &bytes[1], &bytes[2], &bytes[3], &bytes[4], &bytes[5]);
+                   for (size_t i = 0; i != 6; ++i) {
+                     out.mac_address.octets[i] = static_cast<uint8_t>(bytes[i]);
+                   }
+                   out.enable_bridge = false;
+                   cfg.mutable_net_devices()->push_back(out);
+                 }
+
+                 // Prevent the guest from receiving a default MAC address from the VirtioNet
+                 // internals.
+                 cfg.set_default_net(false);
                }
-               out.enable_bridge = false;
-               cfg.mutable_net_devices()->push_back(out);
-             }
 
-             // Prevent the guest from receiving a default MAC address from the VirtioNet
-             // internals.
-             cfg.set_default_net(false);
-           }
+               fuchsia::virtualization::GuestPtr guest_controller;
 
-           fuchsia::virtualization::GuestPtr guest_controller;
+               fpromise::bridge<fuchsia::virtualization::GuestPtr, SandboxResult> bridge;
+               realm_->LaunchInstance(
+                   guest.guest_image_url(), guest.guest_label(), std::move(cfg),
+                   guest_controller.NewRequest(),
+                   [completer = std::move(bridge.completer),
+                    guest_controller = std::move(guest_controller)](uint32_t cid) mutable {
+                     completer.complete_ok(std::move(guest_controller));
+                   });
 
-           fit::bridge<fuchsia::virtualization::GuestPtr, SandboxResult> bridge;
-           realm_->LaunchInstance(
-               guest.guest_image_url(), guest.guest_label(), std::move(cfg),
-               guest_controller.NewRequest(),
-               [completer = std::move(bridge.completer),
-                guest_controller = std::move(guest_controller)](uint32_t cid) mutable {
-                 completer.complete_ok(std::move(guest_controller));
-               });
-
-           return bridge.consumer.promise();
-         })
+               return bridge.consumer.promise();
+             })
       .and_then([](const fuchsia::virtualization::GuestPtr& guest_controller)
-                    -> fit::promise<zx::socket, SandboxResult> {
-        fit::bridge<zx::socket, SandboxResult> bridge;
+                    -> fpromise::promise<zx::socket, SandboxResult> {
+        fpromise::bridge<zx::socket, SandboxResult> bridge;
         guest_controller->GetSerial(
             [completer = std::move(bridge.completer)](zx::socket socket) mutable {
               if (!socket.is_valid()) {
@@ -558,8 +563,8 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
         zx_status_t status = serial.Start(zx::time::infinite());
 
         if (status != ZX_OK) {
-          return fit::error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
-                                          "Could not start guest serial connection"));
+          return fpromise::error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
+                                               "Could not start guest serial connection"));
         }
 
         if (guest.guest_image_url() == kDebianGuestUrl) {
@@ -572,7 +577,7 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
                                        "$", zx::time::infinite(), &output);
             // If the command cannot be executed, break out of the loop so the test can fail.
             if (status != ZX_OK) {
-              return fit::error(
+              return fpromise::error(
                   SandboxResult(SandboxResult::Status::SETUP_FAILED,
                                 "Could not communicate with guest over serial connection"));
             }
@@ -585,7 +590,7 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
           }
         }
 
-        return fit::ok();
+        return fpromise::ok();
       });
 }
 
@@ -593,7 +598,7 @@ Sandbox::Promise Sandbox::SendGuestFiles(ConfiguringEnvironmentPtr env,
                                          const config::Guest& guest) {
   ASSERT_HELPER_DISPATCHER;
 
-  return fit::make_promise([env, &guest]() {
+  return fpromise::make_promise([env, &guest]() {
     fuchsia::netemul::guest::GuestDiscoveryPtr gds;
     fuchsia::netemul::guest::GuestInteractionPtr gis;
 
@@ -611,14 +616,14 @@ Sandbox::Promise Sandbox::SendGuestFiles(ConfiguringEnvironmentPtr env,
 
       if (open_status != ZX_OK) {
         transfer_promises.clear();
-        transfer_promises.emplace_back(fit::make_promise([file_info]() {
-          return fit::error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
-                                          "Could not open " + file_info.first));
+        transfer_promises.emplace_back(fpromise::make_promise([file_info]() {
+          return fpromise::error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
+                                               "Could not open " + file_info.first));
         }));
         break;
       }
 
-      fit::bridge<void, SandboxResult> bridge;
+      fpromise::bridge<void, SandboxResult> bridge;
       gis->PutFile(
           std::move(put_file), file_info.second,
           [file_info, completer = std::move(bridge.completer)](zx_status_t put_result) mutable {
@@ -631,16 +636,16 @@ Sandbox::Promise Sandbox::SendGuestFiles(ConfiguringEnvironmentPtr env,
           });
       transfer_promises.emplace_back(bridge.consumer.promise());
     }
-    return fit::join_promise_vector(std::move(transfer_promises))
+    return fpromise::join_promise_vector(std::move(transfer_promises))
         .then([gis = std::move(gis)](
-                  fit::result<std::vector<PromiseResult>>& result) -> PromiseResult {
+                  fpromise::result<std::vector<PromiseResult>>& result) -> PromiseResult {
           auto results = result.take_value();
           for (auto& r : results) {
             if (r.is_error()) {
               return r;
             }
           }
-          return fit::ok();
+          return fpromise::ok();
         });
   });
 }
@@ -660,22 +665,22 @@ Sandbox::Promise Sandbox::StartGuests(ConfiguringEnvironmentPtr env, const confi
     promises.emplace_back(LaunchGuestEnvironment(env, guest).and_then(SendGuestFiles(env, guest)));
   }
 
-  return fit::join_promise_vector(std::move(promises))
-      .then([](fit::result<std::vector<PromiseResult>>& result) -> PromiseResult {
+  return fpromise::join_promise_vector(std::move(promises))
+      .then([](fpromise::result<std::vector<PromiseResult>>& result) -> PromiseResult {
         auto results = result.take_value();
         for (auto& r : results) {
           if (r.is_error()) {
             return r;
           }
         }
-        return fit::ok();
+        return fpromise::ok();
       });
 }
 
 Sandbox::Promise Sandbox::StartEnvironmentSetup(const config::Environment* config,
                                                 ConfiguringEnvironmentLauncher launcher) {
-  return fit::make_promise([this, config, launcher = std::move(launcher)] {
-    auto prom = fit::make_result_promise(PromiseResult(fit::ok())).box();
+  return fpromise::make_promise([this, config, launcher = std::move(launcher)] {
+    auto prom = fpromise::make_result_promise(PromiseResult(fpromise::ok())).box();
     for (const auto& setup : config->setup()) {
       prom = prom.and_then([this, setup = &setup, launcher]() {
                    return LaunchSetup(launcher.get(),
@@ -691,13 +696,13 @@ Sandbox::Promise Sandbox::StartEnvironmentSetup(const config::Environment* confi
 Sandbox::Promise Sandbox::StartEnvironmentAppsAndTests(
     const netemul::config::Environment* config,
     netemul::Sandbox::ConfiguringEnvironmentLauncher launcher) {
-  return fit::make_promise([this, config, launcher = std::move(launcher)]() -> PromiseResult {
+  return fpromise::make_promise([this, config, launcher = std::move(launcher)]() -> PromiseResult {
     for (const auto& app : config->apps()) {
       auto& url = app.GetUrlOrDefault(sandbox_env_->default_name());
       if (!LaunchProcess<kMsgApp>(launcher.get(), url, app.arguments(), false)) {
         std::stringstream ss;
         ss << "Failed to launch app " << url;
-        return fit::error(SandboxResult(SandboxResult::Status::INTERNAL_ERROR, ss.str()));
+        return fpromise::error(SandboxResult(SandboxResult::Status::INTERNAL_ERROR, ss.str()));
       }
     }
 
@@ -706,13 +711,13 @@ Sandbox::Promise Sandbox::StartEnvironmentAppsAndTests(
       if (!LaunchProcess<kMsgTest>(launcher.get(), url, test.arguments(), true)) {
         std::stringstream ss;
         ss << "Failed to launch test " << url;
-        return fit::error(SandboxResult(SandboxResult::Status::INTERNAL_ERROR, ss.str()));
+        return fpromise::error(SandboxResult(SandboxResult::Status::INTERNAL_ERROR, ss.str()));
       }
       // save that at least one test was spawned.
       test_spawned_ = true;
     }
 
-    return fit::ok();
+    return fpromise::ok();
   });
 }
 
@@ -720,13 +725,13 @@ Sandbox::Promise Sandbox::StartEnvironmentInner(ConfiguringEnvironmentPtr env,
                                                 const config::Environment* config) {
   ASSERT_HELPER_DISPATCHER;
   auto launcher = std::make_shared<fuchsia::sys::LauncherSyncPtr>();
-  return fit::make_promise([launcher, env]() -> PromiseResult {
+  return fpromise::make_promise([launcher, env]() -> PromiseResult {
            // get launcher
            if ((*env)->GetLauncher(launcher->NewRequest()) != ZX_OK) {
-             return fit::error(SandboxResult(SandboxResult::Status::INTERNAL_ERROR,
-                                             "Can't get environment launcher"));
+             return fpromise::error(SandboxResult(SandboxResult::Status::INTERNAL_ERROR,
+                                                  "Can't get environment launcher"));
            }
-           return fit::ok();
+           return fpromise::ok();
          })
       .and_then(StartEnvironmentSetup(config, launcher))
       .and_then(StartEnvironmentAppsAndTests(config, launcher));
@@ -747,8 +752,8 @@ Sandbox::Promise Sandbox::ConfigureEnvironment(ConfiguringEnvironmentPtr env,
   // start this processes inside this environment
   promises.emplace_back(StartEnvironmentInner(env, config));
 
-  return fit::join_promise_vector(std::move(promises))
-      .then([this, root](fit::result<std::vector<PromiseResult>>& result) -> PromiseResult {
+  return fpromise::join_promise_vector(std::move(promises))
+      .then([this, root](fpromise::result<std::vector<PromiseResult>>& result) -> PromiseResult {
         auto results = result.take_value();
         for (auto& r : results) {
           if (r.is_error()) {
@@ -758,7 +763,7 @@ Sandbox::Promise Sandbox::ConfigureEnvironment(ConfiguringEnvironmentPtr env,
         if (root) {
           EnableTestObservation();
         }
-        return fit::ok();
+        return fpromise::ok();
       });
 }
 
@@ -822,7 +827,7 @@ Sandbox::Promise Sandbox::LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
                                       const std::vector<std::string>& arguments) {
   ASSERT_HELPER_DISPATCHER;
 
-  fit::bridge<void, SandboxResult> bridge;
+  fpromise::bridge<void, SandboxResult> bridge;
 
   fuchsia::sys::LaunchInfo linfo;
   linfo.url = url;

@@ -7,9 +7,9 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/mem/formatting.h>
 #include <lib/fostr/indent.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <ostream>
@@ -21,18 +21,18 @@
 
 namespace fit {
 
-// Pretty-prints fit::result_state in gTest matchers instead of the default byte string in case of
-// failed expectations.
-inline void PrintTo(const fit::result_state& state, std::ostream* os) {
+// Pretty-prints fpromise::result_state in gTest matchers instead of the default byte string in case
+// of failed expectations.
+inline void PrintTo(const fpromise::result_state& state, std::ostream* os) {
   std::string state_str;
   switch (state) {
-    case fit::result_state::pending:
+    case fpromise::result_state::pending:
       state_str = "PENDING";
       break;
-    case fit::result_state::ok:
+    case fpromise::result_state::ok:
       state_str = "OK";
       break;
-    case fit::result_state::error:
+    case fpromise::result_state::error:
       state_str = "ERROR";
       break;
   }

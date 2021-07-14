@@ -62,7 +62,7 @@ BaseRenderer::~BaseRenderer() {
 // send a new AudioClock object to each PacketQueue. If the client uses our clock (which is
 // adjustable), then one PacketQueue will receive an AudioClock marked adjustable. All other
 // PacketQueues receive AudioClocks that are non-adjustable.
-fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::InitializeDestLink(
+fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::InitializeDestLink(
     const AudioObject& dest) {
   TRACE_DURATION("audio", "BaseRenderer::InitializeDestLink");
 
@@ -72,7 +72,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
     // note that an adjustable clock has been provided.
     auto adjustable_duplicate_result = clock_->DuplicateClock();
     if (adjustable_duplicate_result.is_error()) {
-      return fit::error(adjustable_duplicate_result.error());
+      return fpromise::error(adjustable_duplicate_result.error());
     }
     FX_DCHECK(adjustable_duplicate_result.value().is_valid());
 
@@ -83,7 +83,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
     // This strips off WRITE rights, which is appropriate for a non-adjustable clock.
     auto readable_clock_result = clock_->DuplicateClockReadOnly();
     if (readable_clock_result.is_error()) {
-      return fit::error(readable_clock_result.error());
+      return fpromise::error(readable_clock_result.error());
     }
 
     clock_for_packet_queue =
@@ -100,7 +100,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
   FX_DCHECK(stream_usage) << "A renderer cannot be linked without a usage";
   queue->set_usage(*stream_usage);
   packet_queues_.insert({&dest, queue});
-  return fit::ok(std::move(queue));
+  return fpromise::ok(std::move(queue));
 }
 
 void BaseRenderer::CleanupDestLink(const AudioObject& dest) {

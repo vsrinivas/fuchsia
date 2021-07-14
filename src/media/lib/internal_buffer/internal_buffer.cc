@@ -4,7 +4,7 @@
 
 #include "internal_buffer.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/global.h>
 #include <threads.h>
 
@@ -19,13 +19,13 @@
     FX_LOGF(severity, nullptr, "[%s:%d] " fmt "", __func__, __LINE__, ##__VA_ARGS__); \
   } while (0)
 
-fit::result<InternalBuffer, zx_status_t> InternalBuffer::Create(
+fpromise::result<InternalBuffer, zx_status_t> InternalBuffer::Create(
     const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem, const zx::unowned_bti& bti,
     size_t size, bool is_secure, bool is_writable, bool is_mapping_needed) {
   return CreateAligned(name, sysmem, bti, size, 0, is_secure, is_writable, is_mapping_needed);
 }
 
-fit::result<InternalBuffer, zx_status_t> InternalBuffer::CreateAligned(
+fpromise::result<InternalBuffer, zx_status_t> InternalBuffer::CreateAligned(
     const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem, const zx::unowned_bti& bti,
     size_t size, size_t alignment, bool is_secure, bool is_writable, bool is_mapping_needed) {
   ZX_DEBUG_ASSERT(sysmem);
@@ -38,9 +38,9 @@ fit::result<InternalBuffer, zx_status_t> InternalBuffer::CreateAligned(
   zx_status_t status = local_result.Init(name, sysmem, alignment, bti);
   if (status != ZX_OK) {
     LOG(ERROR, "Init() failed - status: %d", status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
-  return fit::ok(std::move(local_result));
+  return fpromise::ok(std::move(local_result));
 }
 
 InternalBuffer::~InternalBuffer() { DeInit(); }
@@ -248,8 +248,8 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
       map_options |= ZX_VM_PERM_WRITE;
     }
 
-    status = zx::vmar::root_self()->map(
-        map_options, /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, real_size_, &virt_base);
+    status = zx::vmar::root_self()->map(map_options, /*vmar_offset=*/0, vmo, /*vmo_offset=*/0,
+                                        real_size_, &virt_base);
     if (status != ZX_OK) {
       LOG(ERROR, "zx::vmar::root_self()->map() failed - status: %d", status);
       return status;

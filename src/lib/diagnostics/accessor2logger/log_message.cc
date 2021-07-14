@@ -45,12 +45,12 @@ inline int32_t StringToSeverity(const std::string& input) {
   return fuchsia::logger::LOG_LEVEL_DEFAULT;
 }
 
-inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& value) {
+inline fpromise::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& value) {
   LogMessage ret = {};
   std::stringstream kv_mapping;
 
   if (!value.IsObject()) {
-    return fit::error("Value is not an object");
+    return fpromise::error("Value is not an object");
   }
 
   auto metadata = value.FindMember("metadata");
@@ -58,22 +58,22 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
 
   if (metadata == value.MemberEnd() || payload == value.MemberEnd() ||
       !metadata->value.IsObject() || !payload->value.IsObject()) {
-    return fit::error("Expected metadata and payload objects");
+    return fpromise::error("Expected metadata and payload objects");
   }
   auto root = payload->value.FindMember("root");
   if (!root->value.IsObject()) {
-    return fit::error("Expected payload.root to be an object if present");
+    return fpromise::error("Expected payload.root to be an object if present");
   }
 
   auto timestamp = metadata->value.FindMember("timestamp");
   if (timestamp == metadata->value.MemberEnd() || !timestamp->value.IsUint64()) {
-    return fit::error("Expected metadata.timestamp key");
+    return fpromise::error("Expected metadata.timestamp key");
   }
   ret.time = timestamp->value.GetUint64();
 
   auto severity = metadata->value.FindMember("severity");
   if (severity == metadata->value.MemberEnd() || !severity->value.IsString()) {
-    return fit::error("Expected metadata.severity key");
+    return fpromise::error("Expected metadata.severity key");
   }
   ret.severity = StringToSeverity(severity->value.GetString());
 
@@ -101,11 +101,11 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
   if (payload->value.MemberCount() == 1 && payload->value.HasMember("root")) {
     payload = payload->value.FindMember("root");
     if (!payload->value.IsObject()) {
-      return fit::error("Expected payload.root to be an object if present");
+      return fpromise::error("Expected payload.root to be an object if present");
     }
     payload = payload->value.FindMember("message");
     if (!payload->value.IsObject()) {
-      return fit::error("Expected payload.root.message to be an object if present");
+      return fpromise::error("Expected payload.root.message to be an object if present");
     }
   }
   std::string msg;
@@ -113,7 +113,7 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
   std::optional<int> line_number;
   for (auto it = payload->value.MemberBegin(); it != payload->value.MemberEnd(); ++it) {
     if (!it->name.IsString()) {
-      return fit::error("A key is not a string");
+      return fpromise::error("A key is not a string");
     }
     std::string name = it->name.GetString();
     if (name == kMessageLabel && it->value.IsString()) {
@@ -122,7 +122,7 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
   }
   for (auto it = metadata->value.MemberBegin(); it != metadata->value.MemberEnd(); ++it) {
     if (!it->name.IsString()) {
-      return fit::error("A key is not a string");
+      return fpromise::error("A key is not a string");
     }
     std::string name = it->name.GetString();
     if (name == kTagsLabel) {
@@ -132,12 +132,12 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
         for (rapidjson::SizeType i = 0; i < it->value.Size(); ++i) {
           auto& val = it->value[i];
           if (!val.IsString()) {
-            return fit::error("Tags array must contain strings");
+            return fpromise::error("Tags array must contain strings");
           }
           ret.tags.emplace_back(std::move(val.GetString()));
         }
       } else {
-        return fit::error("Tags must be a string or array of strings");
+        return fpromise::error("Tags must be a string or array of strings");
       }
     } else if (name == kTidLabel && it->value.IsUint64()) {
       ret.tid = it->value.GetUint64();
@@ -153,7 +153,7 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
   if ((kvps != root->value.MemberEnd()) && kvps->value.IsObject() && (kvps->name == "keys")) {
     for (auto it = kvps->value.MemberBegin(); it != kvps->value.MemberEnd(); ++it) {
       if (!it->name.IsString()) {
-        return fit::error("A key is not a string");
+        return fpromise::error("A key is not a string");
       }
       std::string name = it->name.GetString();
       // If the name of the field is not a known special field, treat it as a key/value pair and
@@ -190,22 +190,23 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
     ret.dropped_logs = dropped_logs;
   }
 
-  return fit::ok(std::move(ret));
+  return fpromise::ok(std::move(ret));
 }
 }  // namespace
 
-fit::result<std::vector<fit::result<fuchsia::logger::LogMessage, std::string>>, std::string>
+fpromise::result<std::vector<fpromise::result<fuchsia::logger::LogMessage, std::string>>,
+                 std::string>
 ConvertFormattedContentToLogMessages(FormattedContent content) {
-  std::vector<fit::result<LogMessage, std::string>> output;
+  std::vector<fpromise::result<LogMessage, std::string>> output;
 
   if (!content.is_json()) {
     // Expecting JSON in all cases.
-    return fit::error("Expected json content");
+    return fpromise::error("Expected json content");
   }
 
   std::string data;
   if (!fsl::StringFromVmo(content.json(), &data)) {
-    return fit::error("Failed to read string from VMO");
+    return fpromise::error("Failed to read string from VMO");
   }
   content.json().vmo.reset();
 
@@ -215,18 +216,18 @@ ConvertFormattedContentToLogMessages(FormattedContent content) {
     std::string error = "Failed to parse content as JSON. Offset " +
                         std::to_string(d.GetErrorOffset()) + ": " +
                         rapidjson::GetParseError_En(d.GetParseError());
-    return fit::error(std::move(error));
+    return fpromise::error(std::move(error));
   }
 
   if (!d.IsArray()) {
-    return fit::error("Expected content to contain an array");
+    return fpromise::error("Expected content to contain an array");
   }
 
   for (rapidjson::SizeType i = 0; i < d.Size(); ++i) {
     output.emplace_back(JsonToLogMessage(d[i]));
   }
 
-  return fit::ok(std::move(output));
+  return fpromise::ok(std::move(output));
 }
 
 }  // namespace diagnostics::accessor2logger

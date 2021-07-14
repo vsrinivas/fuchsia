@@ -19,20 +19,20 @@ namespace camera {
 
 constexpr auto kTag = "camera_controller";
 
-fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
+fpromise::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
     StreamCreationData* info, const InternalConfigNode& internal_node, ProcessNode* parent_node) {
-  fit::result<OutputNode*, zx_status_t> result;
+  fpromise::result<OutputNode*, zx_status_t> result;
   const auto* next_node_internal = GetNextNodeInPipeline(info->stream_type(), internal_node);
   if (!next_node_internal) {
     FX_LOGST(ERROR, kTag) << "Failed to get next node";
-    return fit::error(ZX_ERR_INTERNAL);
+    return fpromise::error(ZX_ERR_INTERNAL);
   }
 
   switch (next_node_internal->type) {
     // Input Node
     case NodeType::kInputStream: {
       FX_LOGST(ERROR, kTag) << "Child node cannot be input node";
-      return fit::error(ZX_ERR_INVALID_ARGS);
+      return fpromise::error(ZX_ERR_INVALID_ARGS);
     }
     // GDC
     case NodeType::kGdc: {
@@ -41,7 +41,7 @@ fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
       if (gdc_result.is_error()) {
         FX_PLOGST(ERROR, kTag, gdc_result.error()) << "Failed to configure GDC Node";
         // TODO(braval): Handle already configured nodes
-        return fit::error(gdc_result.error());
+        return fpromise::error(gdc_result.error());
       }
       return CreateGraph(info, *next_node_internal, gdc_result.value());
     }
@@ -52,7 +52,7 @@ fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
       if (ge2d_result.is_error()) {
         FX_PLOGST(ERROR, kTag, ge2d_result.error()) << "Failed to configure GE2D Node";
         // TODO(braval): Handle already configured nodes
-        return fit::error(ge2d_result.error());
+        return fpromise::error(ge2d_result.error());
       }
       return CreateGraph(info, *next_node_internal, ge2d_result.value());
     }
@@ -70,14 +70,14 @@ fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
     }
       // clang-format off
     default: {
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
+      return fpromise::error(ZX_ERR_NOT_SUPPORTED);
     }
       // clang-format on
   }
   return result;
 }
 
-fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t>
+fpromise::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t>
 PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
                                            const InternalConfigNode& current_internal_node,
                                            ProcessNode* node) {
@@ -86,7 +86,7 @@ PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
   // Validate if this node supports the requested stream type
   // to be safe.
   if (!node->is_stream_supported(requested_stream_type)) {
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   // Traverse the |node| to find a node which supports this stream
@@ -99,17 +99,17 @@ PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
           GetNextNodeInPipeline(info->stream_type(), current_internal_node);
       if (!next_internal_node) {
         FX_LOGS(ERROR) << "Failed to get next node for requested stream";
-        return fit::error(ZX_ERR_INTERNAL);
+        return fpromise::error(ZX_ERR_INTERNAL);
       }
       return FindNodeToAttachNewStream(info, *next_internal_node, child_node.get());
     }
     // This is the node we need to attach the new stream pipeline to
-    return fit::ok(std::make_pair(current_internal_node, node));
+    return fpromise::ok(std::make_pair(current_internal_node, node));
   }
 
   // Should not reach here
   FX_LOGS(ERROR) << "Failed FindNodeToAttachNewStream";
-  return fit::error(ZX_ERR_INTERNAL);
+  return fpromise::error(ZX_ERR_INTERNAL);
 }
 
 void PipelineManager::ConfigureStreamPipeline(
@@ -311,14 +311,14 @@ void PipelineManager::DisconnectStream(ProcessNode* graph_head,
   }
 }
 
-fit::result<std::pair<ProcessNode*, fuchsia::camera2::CameraStreamType>, zx_status_t>
+fpromise::result<std::pair<ProcessNode*, fuchsia::camera2::CameraStreamType>, zx_status_t>
 PipelineManager::FindGraphHead(fuchsia::camera2::CameraStreamType stream_type) {
   for (auto& stream : streams_) {
     if (HasStreamType(stream.second->configured_streams(), stream_type)) {
-      return fit::ok(std::make_pair(stream.second.get(), stream.first));
+      return fpromise::ok(std::make_pair(stream.second.get(), stream.first));
     }
   }
-  return fit::error(ZX_ERR_BAD_STATE);
+  return fpromise::error(ZX_ERR_BAD_STATE);
 }
 
 void PipelineManager::OnClientStreamDisconnect(

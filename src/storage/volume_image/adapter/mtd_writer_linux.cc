@@ -19,21 +19,21 @@
 
 namespace storage::volume_image {
 
-fit::result<std::unique_ptr<Writer>, std::string> CreateMtdWriter(std::string_view path,
-                                                                  const MtdParams& params,
-                                                                  FtlHandle* ftl_handle) {
+fpromise::result<std::unique_ptr<Writer>, std::string> CreateMtdWriter(std::string_view path,
+                                                                       const MtdParams& params,
+                                                                       FtlHandle* ftl_handle) {
   std::unique_ptr<mtd::MtdInterface> interface = mtd::MtdInterface::Create(std::string(path));
   if (!interface) {
-    return fit::error("Failed to create MTD interface at " + std::string(path));
+    return fpromise::error("Failed to create MTD interface at " + std::string(path));
   }
 
   std::unique_ptr<ftl_mtd::NandVolumeDriver> driver;
   uint32_t block_size = interface->BlockSize();
 
   if (params.offset % block_size != 0) {
-    return fit::error("MTD Device offset must be NAND Page aligned. Page size is " +
-                      std::to_string(block_size) + " and provided offset is " +
-                      std::to_string(params.offset) + ".");
+    return fpromise::error("MTD Device offset must be NAND Page aligned. Page size is " +
+                           std::to_string(block_size) + " and provided offset is " +
+                           std::to_string(params.offset) + ".");
   }
 
   uint32_t block_offset = safemath::checked_cast<uint32_t>(params.offset / block_size);
@@ -42,13 +42,13 @@ fit::result<std::unique_ptr<Writer>, std::string> CreateMtdWriter(std::string_vi
   zx_status_t status = ftl_mtd::NandVolumeDriver::Create(block_offset, max_bad_blocks,
                                                          std::move(interface), &driver);
   if (status != ZX_OK) {
-    return fit::error(
+    return fpromise::error(
         "ftl_mtd::NandVolumeDriver creation failed. Error Code: " + std::to_string(status) + ".");
   }
 
   const char* error = driver->Init();
   if (error != nullptr) {
-    return fit::error(
+    return fpromise::error(
         "ftl_mtd::NandVolumeDriver initialization failed failed. More specifically: " +
         std::string(error) + ".");
   }
@@ -64,14 +64,14 @@ fit::result<std::unique_ptr<Writer>, std::string> CreateMtdWriter(std::string_vi
   if (params.format) {
     status = handle->volume().Format();
     if (status != ZX_OK) {
-      return fit::error("Device FTL formatting failed. Error code: " + std::to_string(status) +
-                        ".");
+      return fpromise::error("Device FTL formatting failed. Error code: " + std::to_string(status) +
+                             ".");
     }
   }
 
-  return fit::ok(std::make_unique<BlockWriter>(handle->instance().page_size(),
-                                               handle->instance().page_count(),
-                                               handle->MakeReader(), handle->MakeWriter()));
+  return fpromise::ok(std::make_unique<BlockWriter>(handle->instance().page_size(),
+                                                    handle->instance().page_count(),
+                                                    handle->MakeReader(), handle->MakeWriter()));
 }
 
 }  // namespace storage::volume_image

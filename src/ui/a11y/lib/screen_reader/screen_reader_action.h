@@ -7,7 +7,7 @@
 
 #include <fuchsia/accessibility/tts/cpp/fidl.h>
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
 #include "src/ui/a11y/lib/input_injection/injector_manager.h"
@@ -54,22 +54,22 @@ class ScreenReaderAction {
   // Returns a promise that executes an accessibility action targeting the semantic tree
   // corresponding to |view_ref_koid|, on the node |node_id|. An error is thrown if the semantic
   // tree can't be found or if the semantic provider did not handle this action.
-  fit::promise<> ExecuteAccessibilityActionPromise(
+  fpromise::promise<> ExecuteAccessibilityActionPromise(
       zx_koid_t view_ref_koid, uint32_t node_id, fuchsia::accessibility::semantics::Action action);
 
   // Returns a promise that sets a new A11y Focus. If the operation is not successful, throws an
   // error.
-  fit::promise<> SetA11yFocusPromise(const uint32_t node_id, zx_koid_t view_koid);
+  fpromise::promise<> SetA11yFocusPromise(const uint32_t node_id, zx_koid_t view_koid);
 
   // Returns a promise that from a node_id and view_koid, builds a speech task to speak the node
   // description. An error is thrown if the semantic tree or the semantic node are missing data
   // necessary to build an utterance.
-  fit::promise<> BuildSpeechTaskFromNodePromise(zx_koid_t view_koid, uint32_t node_id);
+  fpromise::promise<> BuildSpeechTaskFromNodePromise(zx_koid_t view_koid, uint32_t node_id);
 
   // Returns a promise that from a node_id and view_koid, builds a speech task to speak the range
   // control's |range_value|. An error is thrown if the semantic tree or the semantic node are
   // missing data necessary to build an utterance.
-  fit::promise<> BuildSpeechTaskForRangeValuePromise(zx_koid_t view_koid, uint32_t node_id);
+  fpromise::promise<> BuildSpeechTaskForRangeValuePromise(zx_koid_t view_koid, uint32_t node_id);
 
   // ActionContext which is used to make calls to Semantics Manager and TTS.
   ActionContext* action_context_;

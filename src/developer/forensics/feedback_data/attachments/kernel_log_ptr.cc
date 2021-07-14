@@ -15,9 +15,9 @@
 namespace forensics {
 namespace feedback_data {
 
-::fit::promise<AttachmentValue> CollectKernelLog(async_dispatcher_t* dispatcher,
-                                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                                 fit::Timeout timeout) {
+::fpromise::promise<AttachmentValue> CollectKernelLog(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    fit::Timeout timeout) {
   std::unique_ptr<BootLog> boot_log = std::make_unique<BootLog>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
@@ -30,7 +30,7 @@ namespace feedback_data {
 BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
     : log_ptr_(dispatcher, services) {}
 
-::fit::promise<AttachmentValue> BootLog::GetLog(fit::Timeout timeout) {
+::fpromise::promise<AttachmentValue> BootLog::GetLog(fit::Timeout timeout) {
   log_ptr_->Get([this](zx::debuglog log) {
     if (log_ptr_.IsAlreadyDone()) {
       return;
@@ -63,10 +63,10 @@ BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
   });
 
   return log_ptr_.WaitForDone(std::move(timeout))
-      .then([](const ::fit::result<std::string, Error>& result) {
+      .then([](const ::fpromise::result<std::string, Error>& result) {
         AttachmentValue value =
             (result.is_ok()) ? AttachmentValue(result.value()) : AttachmentValue(result.error());
-        return ::fit::ok(std::move(value));
+        return ::fpromise::ok(std::move(value));
       });
 }
 

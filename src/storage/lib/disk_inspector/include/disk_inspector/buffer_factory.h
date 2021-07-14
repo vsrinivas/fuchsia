@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_BUFFER_FACTORY_H_
 #define SRC_STORAGE_LIB_DISK_INSPECTOR_INCLUDE_DISK_INSPECTOR_BUFFER_FACTORY_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -22,7 +22,7 @@ class BufferFactory {
   virtual ~BufferFactory() = default;
 
   // Creates a block buffer of size |capacity| to store in |out|.
-  virtual fit::result<std::unique_ptr<storage::BlockBuffer>, zx_status_t> CreateBuffer(
+  virtual fpromise::result<std::unique_ptr<storage::BlockBuffer>, zx_status_t> CreateBuffer(
       size_t capacity) const = 0;
 };
 

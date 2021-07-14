@@ -6,7 +6,7 @@
 #define SRC_MODULAR_LIB_ASYNC_CPP_OPERATION_H_
 
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include <functional>
 #include <memory>
@@ -34,9 +34,9 @@ class OperationContainer {
   void Add(std::unique_ptr<OperationBase> o);
 
   // Adds |task| to be scheduled on |this|. This mirrors
-  // the interface in fit::executor, and is here only during
-  // a transition from Operations to fit::promises.
-  virtual void ScheduleTask(fit::pending_task task) = 0;
+  // the interface in fpromise::executor, and is here only during
+  // a transition from Operations to fpromise::promises.
+  virtual void ScheduleTask(fpromise::pending_task task) = 0;
 
  protected:
   void Schedule(OperationBase* o);
@@ -65,7 +65,7 @@ class OperationCollection : public OperationContainer {
   OperationCollection(const OperationCollection&) = delete;
   OperationCollection& operator=(const OperationCollection&) = delete;
 
-  void ScheduleTask(fit::pending_task task) override;
+  void ScheduleTask(fpromise::pending_task task) override;
 
  private:
   fxl::WeakPtr<OperationContainer> GetWeakPtr() override;
@@ -97,7 +97,7 @@ class OperationQueue : public OperationContainer {
   OperationQueue(const OperationQueue&) = delete;
   OperationQueue& operator=(const OperationQueue&) = delete;
 
-  void ScheduleTask(fit::pending_task task) override;
+  void ScheduleTask(fpromise::pending_task task) override;
 
  private:
   fxl::WeakPtr<OperationContainer> GetWeakPtr() override;

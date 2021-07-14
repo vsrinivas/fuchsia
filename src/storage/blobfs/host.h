@@ -13,7 +13,7 @@
 
 #include <assert.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -144,7 +144,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
     fbl::Span<const uint8_t> blob_contents;
   };
 
-  using BlobVisitor = fit::function<fit::result<void, std::string>(BlobView)>;
+  using BlobVisitor = fit::function<fpromise::result<void, std::string>(BlobView)>;
 
   // Creates an instance of Blobfs from the file at |blockfd|. The blobfs partition is expected to
   // start at |offset| bytes into the file.
@@ -171,7 +171,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
 
   // Calls |visitor| on each of the existing blobs. Errors on |visitor| will be forwarded to the
   // caller, and will stop the iteration.
-  fit::result<void, std::string> VisitBlobs(BlobVisitor visitor);
+  fpromise::result<void, std::string> VisitBlobs(BlobVisitor visitor);
 
   zx::status<std::unique_ptr<Superblock>> ReadBackupSuperblock();
 
@@ -233,7 +233,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   zx::status<> ResetCache();
 
   zx_status_t LoadAndVerifyBlob(uint32_t node_index);
-  fit::result<std::vector<uint8_t>, std::string> LoadDataAndVerifyBlob(uint32_t inode_index);
+  fpromise::result<std::vector<uint8_t>, std::string> LoadDataAndVerifyBlob(uint32_t inode_index);
 
   RawBitmap block_map_{};
 
@@ -304,7 +304,7 @@ zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd
 
 // Write each blob contained in this image into |output_dir| as a standalone file, with the merkle
 // root hash as the filename.
-fit::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs);
+fpromise::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs);
 
 }  // namespace blobfs
 

@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_GUID_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_GUID_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <array>
 #include <cstdint>
@@ -28,12 +28,12 @@ struct Guid {
   // Returns a string containing the representation of |guid|.
   //
   // On error returns a string describing the error condition.
-  static fit::result<std::string, std::string> ToString(fbl::Span<const uint8_t> guid);
+  static fpromise::result<std::string, std::string> ToString(fbl::Span<const uint8_t> guid);
 
   // Returns an array containing the byte representation of |guid|.
   //
   // On error returns a string describing the error condition.
-  static fit::result<std::array<uint8_t, kGuidLength>, std::string> FromString(
+  static fpromise::result<std::array<uint8_t, kGuidLength>, std::string> FromString(
       fbl::Span<const char> guid);
 };
 

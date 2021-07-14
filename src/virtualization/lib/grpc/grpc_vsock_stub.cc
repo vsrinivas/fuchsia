@@ -4,12 +4,12 @@
 
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/virtualization/lib/grpc/fdio_util.h"
 
-fit::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(
+fpromise::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(
     const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint, uint32_t cid,
     uint32_t port) {
   // Create the socket for the connection.
@@ -17,11 +17,11 @@ fit::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create socket";
-    return fit::make_result_promise<zx::socket, zx_status_t>(fit::error(status));
+    return fpromise::make_result_promise<zx::socket, zx_status_t>(fpromise::error(status));
   }
 
   // Establish connection, hand first socket endpoint over to the guest.
-  fit::bridge<zx::socket, zx_status_t> bridge;
+  fpromise::bridge<zx::socket, zx_status_t> bridge;
   socket_endpoint->Connect(
       cid, port, std::move(h1),
       [completer = std::move(bridge.completer), h2 = std::move(h2)](zx_status_t status) mutable {

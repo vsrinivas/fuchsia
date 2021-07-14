@@ -101,7 +101,7 @@ class EventRing {
   TRB* erdp_virt() { return erdp_virt_; }
   zx_status_t HandleIRQ();
   zx_status_t Ring0Bringup();
-  void ScheduleTask(fit::promise<TRB*, zx_status_t> promise);
+  void ScheduleTask(fpromise::promise<TRB*, zx_status_t> promise);
   void RunUntilIdle();
 
  private:

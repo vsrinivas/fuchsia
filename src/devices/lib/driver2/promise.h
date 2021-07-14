@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_LIB_DRIVER2_PROMISE_H_
 #define SRC_DEVICES_LIB_DRIVER2_PROMISE_H_
 
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include "src/devices/lib/driver2/namespace.h"
 
@@ -16,21 +16,21 @@ class ContinueWith;
 
 namespace internal {
 
-// Connects to the given |path| in |ns|, and returns a fit::result containing a
+// Connects to the given |path| in |ns|, and returns a fpromise::result containing a
 // fidl::Client on success.
 template <typename T>
-fit::result<fidl::Client<T>, zx_status_t> ConnectWithResult(const driver::Namespace& ns,
-                                                            async_dispatcher_t* dispatcher,
-                                                            std::string_view path) {
+fpromise::result<fidl::Client<T>, zx_status_t> ConnectWithResult(const driver::Namespace& ns,
+                                                                 async_dispatcher_t* dispatcher,
+                                                                 std::string_view path) {
   auto result = ns.Connect<T>(path);
   if (result.is_error()) {
-    return fit::error(result.status_value());
+    return fpromise::error(result.status_value());
   }
   fidl::Client<T> client(std::move(*result), dispatcher);
-  return fit::ok(std::move(client));
+  return fpromise::ok(std::move(client));
 }
 
-// Helps to call a fit::promise lambda function.
+// Helps to call a fpromise::promise lambda function.
 template <typename Func, size_t size>
 struct ContinueCall {
   static_assert(size == 2, "Unexpected number of arguments");
@@ -40,7 +40,7 @@ struct ContinueCall {
 
   static auto Call(Func func) {
     return [func = std::move(func), done = false, with = ContinueWith<return_type>()](
-               fit::context& context, value_type value) mutable -> return_type {
+               fpromise::context& context, value_type value) mutable -> return_type {
       if (done) {
         return with.Result();
       }
@@ -57,7 +57,7 @@ struct ContinueCall<Func, 1> {
 
   static auto Call(Func func) {
     return [func = std::move(func), done = false,
-            with = ContinueWith<return_type>()](fit::context& context) mutable -> return_type {
+            with = ContinueWith<return_type>()](fpromise::context& context) mutable -> return_type {
       if (done) {
         return with.Result();
       }
@@ -70,17 +70,17 @@ struct ContinueCall<Func, 1> {
 
 }  // namespace internal
 
-// Connects to the given |path| in |ns|, and returns a fit::promise containing a
+// Connects to the given |path| in |ns|, and returns a fpromise::promise containing a
 // fidl::Client on success.
 template <typename T>
-fit::promise<fidl::Client<T>, zx_status_t> Connect(
+fpromise::promise<fidl::Client<T>, zx_status_t> Connect(
     const driver::Namespace& ns, async_dispatcher_t* dispatcher,
     std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>) {
-  return fit::make_result_promise(internal::ConnectWithResult<T>(ns, dispatcher, path));
+  return fpromise::make_result_promise(internal::ConnectWithResult<T>(ns, dispatcher, path));
 }
 
-// Wraps a fit::suspended_task in order to provide an ergonomic way to suspend
-// and resume when using a FIDL callback, without the need for a fit::bridge.
+// Wraps a fpromise::suspended_task in order to provide an ergonomic way to suspend
+// and resume when using a FIDL callback, without the need for a fpromise::bridge.
 //
 // TODO(fxbug.dev/62049): Consider moving this into libfit.
 template <typename T>
@@ -93,10 +93,10 @@ class ContinueWith {
   }
 
  private:
-  fit::suspended_task task_;
+  fpromise::suspended_task task_;
   T result_;
 
-  void Suspend(fit::context& context) {
+  void Suspend(fpromise::context& context) {
     auto task = context.suspend_task();
     task_.swap(task);
   }
@@ -107,7 +107,7 @@ class ContinueWith {
   friend struct internal::ContinueCall;
 };
 
-// Allows a fit::promise compatible lambda function to be easily suspended and
+// Allows a fpromise::promise compatible lambda function to be easily suspended and
 // resumed. This is achieved by replacing the first argument with a ContinueWith
 // object that can capture the result of a callback and resume execution of a
 // promise.

@@ -5,7 +5,7 @@
 #include "src/developer/forensics/feedback_data/attachments/inspect.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -24,10 +24,9 @@
 namespace forensics {
 namespace feedback_data {
 
-::fit::promise<AttachmentValue> CollectInspectData(async_dispatcher_t* dispatcher,
-                                                   std::shared_ptr<sys::ServiceDirectory> services,
-                                                   fit::Timeout timeout,
-                                                   std::optional<size_t> data_budget) {
+::fpromise::promise<AttachmentValue> CollectInspectData(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    fit::Timeout timeout, std::optional<size_t> data_budget) {
   std::unique_ptr<ArchiveAccessor> inspect = std::make_unique<ArchiveAccessor>(
       dispatcher, services, fuchsia::diagnostics::DataType::INSPECT,
       fuchsia::diagnostics::StreamMode::SNAPSHOT, data_budget);
@@ -52,15 +51,15 @@ namespace feedback_data {
   });
 
   // Wait to receive all data and post process.
-  ::fit::promise<AttachmentValue> inspect_data =
+  ::fpromise::promise<AttachmentValue> inspect_data =
       inspect->WaitForDone(std::move(timeout))
-          .then([inspect_vector](
-                    ::fit::result<void, Error>& result) -> ::fit::result<AttachmentValue> {
+          .then([inspect_vector](::fpromise::result<void, Error>& result)
+                    -> ::fpromise::result<AttachmentValue> {
             if (inspect_vector->empty()) {
               FX_LOGS(WARNING) << "Empty Inspect data";
               AttachmentValue value = (result.is_ok()) ? AttachmentValue(Error::kMissingValue)
                                                        : AttachmentValue(result.error());
-              return ::fit::ok(std::move(value));
+              return ::fpromise::ok(std::move(value));
             }
 
             std::string joined_data = "[\n";
@@ -71,7 +70,7 @@ namespace feedback_data {
                                         ? AttachmentValue(std::move(joined_data))
                                         : AttachmentValue(std::move(joined_data), result.error());
 
-            return ::fit::ok(std::move(value));
+            return ::fpromise::ok(std::move(value));
           });
 
   return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(inspect_data),

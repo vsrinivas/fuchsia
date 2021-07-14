@@ -153,7 +153,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
   inspector_.root().CreateLazyValues(
       "memory_measurements",
       [this, bucket_matches = std::move(bucket_matches)] {
-        return fit::make_result_promise(fit::ok(Inspect(bucket_matches)));
+        return fpromise::make_result_promise(fpromise::ok(Inspect(bucket_matches)));
       },
       &inspector_);
 

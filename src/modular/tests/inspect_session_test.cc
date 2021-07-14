@@ -54,28 +54,28 @@ class InspectSessionTest : public modular_testing::TestHarnessFixture {
     RunLoopUntil([&] { return fake_session_shell_->is_running(); });
   }
 
-  fit::result<inspect::contrib::DiagnosticsData> GetInspectDiagnosticsData() {
+  fpromise::result<inspect::contrib::DiagnosticsData> GetInspectDiagnosticsData() {
     auto archive = real_services()->Connect<fuchsia::diagnostics::ArchiveAccessor>();
 
     inspect::contrib::ArchiveReader reader(std::move(archive), {kSessionmgrSelector});
-    fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> result;
+    fpromise::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> result;
     executor_.schedule_task(
         reader.SnapshotInspectUntilPresent({kSessionmgrName})
-            .then([&](fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>&
+            .then([&](fpromise::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>&
                           rest) { result = std::move(rest); }));
     RunLoopUntil([&] { return result.is_ok() || result.is_error(); });
 
     if (result.is_error()) {
       EXPECT_FALSE(result.is_error()) << "Error was " << result.error();
-      return fit::error();
+      return fpromise::error();
     }
 
     if (result.value().size() != 1) {
       EXPECT_EQ(1u, result.value().size()) << "Expected only one component";
-      return fit::error();
+      return fpromise::error();
     }
 
-    return fit::ok(std::move(result.value()[0]));
+    return fpromise::ok(std::move(result.value()[0]));
   }
 
   fuchsia::modular::Intent CreateIntent(std::string handler) {

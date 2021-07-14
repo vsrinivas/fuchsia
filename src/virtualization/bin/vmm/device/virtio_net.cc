@@ -7,10 +7,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
-#include <lib/fit/promise.h>
-#include <lib/fit/scope.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/scope.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/fifo.h>
@@ -213,12 +213,12 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
 
     mac_address_ = std::move(mac_address);
 
-    fit::promise<uint32_t> guest_interface =
+    fpromise::promise<uint32_t> guest_interface =
         CreateGuestInterface().and_then(fit::bind_member(this, &VirtioNetImpl::EnableInterface));
 
     if (enable_bridge) {
-      fit::promise<uint32_t> bridge =
-          fit::join_promises(FindHostInterface(), std::move(guest_interface))
+      fpromise::promise<uint32_t> bridge =
+          fpromise::join_promises(FindHostInterface(), std::move(guest_interface))
               .and_then(fit::bind_member(this, &VirtioNetImpl::CreateBridgeInterface))
               .and_then(fit::bind_member(this, &VirtioNetImpl::EnableInterface));
       guest_interface = std::move(bridge);
@@ -231,8 +231,8 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
             .wrap_with(scope_));
   }
 
-  fit::promise<uint32_t> CreateGuestInterface() {
-    fit::bridge<uint32_t> bridge;
+  fpromise::promise<uint32_t> CreateGuestInterface() {
+    fpromise::bridge<uint32_t> bridge;
 
     fuchsia::netstack::InterfaceConfig config;
     config.name = kInterfaceName;
@@ -251,9 +251,9 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     return bridge.consumer.promise();
   }
 
-  fit::promise<uint32_t> EnableInterface(const uint32_t& nic_id) {
+  fpromise::promise<uint32_t> EnableInterface(const uint32_t& nic_id) {
     netstack_->SetInterfaceStatus(nic_id, true);
-    return fit::make_ok_promise(nic_id);
+    return fpromise::make_ok_promise(nic_id);
   }
 
   struct HostInterfaceFinder {
@@ -301,8 +301,8 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     completer_type& completer;
   };
 
-  fit::promise<uint32_t> FindHostInterface() {
-    fit::bridge<uint32_t> bridge;
+  fpromise::promise<uint32_t> FindHostInterface() {
+    fpromise::bridge<uint32_t> bridge;
 
     watcher_->Watch([completer = std::move(bridge.completer),
                      this](fuchsia::net::interfaces::Event event) mutable {
@@ -316,13 +316,13 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     return bridge.consumer.promise();
   }
 
-  fit::promise<uint32_t> CreateBridgeInterface(
-      const std::tuple<fit::result<uint32_t>, fit::result<uint32_t>>& nic_ids) {
+  fpromise::promise<uint32_t> CreateBridgeInterface(
+      const std::tuple<fpromise::result<uint32_t>, fpromise::result<uint32_t>>& nic_ids) {
     auto& [host_id, guest_id] = nic_ids;
     if (host_id.is_error() || guest_id.is_error()) {
-      return fit::make_result_promise<uint32_t>(fit::error());
+      return fpromise::make_result_promise<uint32_t>(fpromise::error());
     }
-    fit::bridge<uint32_t> bridge;
+    fpromise::bridge<uint32_t> bridge;
 
     auto callback = [completer = std::move(bridge.completer)](fuchsia::netstack::NetErr result,
                                                               uint32_t nic_id) mutable {
@@ -372,7 +372,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   TxStream tx_stream_;
 
   uint32_t negotiated_features_;
-  fit::scope scope_;
+  fpromise::scope scope_;
   async::Executor executor_ = async::Executor(async_get_default_dispatcher());
 
   fuchsia::hardware::ethernet::MacAddress mac_address_;

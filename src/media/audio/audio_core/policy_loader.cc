@@ -107,7 +107,7 @@ static std::optional<fuchsia::media::Usage> JsonToUsage(const rapidjson::Value& 
 
 }  // namespace
 
-fit::result<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
+fpromise::result<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
   rapidjson::Document doc;
 
   std::vector<AudioPolicy::Rule> rules;
@@ -116,7 +116,7 @@ fit::result<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
     FX_LOGS(ERROR) << "Failed to parse settings file JSON schema: "
                    << rapidjson::GetParseError_En(parse_res.Code()) << " " << parse_res.Offset()
                    << file_body + parse_res.Offset();
-    return fit::error();
+    return fpromise::error();
   }
 
   rapidjson::Document doc2;
@@ -125,7 +125,7 @@ fit::result<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
     FX_LOGS(ERROR) << "Failed to parse settings file JSON schema: "
                    << rapidjson::GetParseError_En(parse_res.Code()) << " " << parse_res.Offset()
                    << kAudioPolicySchema + parse_res.Offset();
-    return fit::error();
+    return fpromise::error();
   }
 
   rapidjson::SchemaDocument schema_doc(doc2);
@@ -134,66 +134,66 @@ fit::result<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
   if (!doc.Accept(validator)) {
     FX_LOGS(ERROR) << "Schema validation error when reading policy settings.";
 
-    return fit::error();
+    return fpromise::error();
   }
 
   const rapidjson::Value& rules_json = doc["audio_policy_rules"];
   if (!rules_json.IsArray()) {
-    return fit::error();
+    return fpromise::error();
   }
   for (auto& rule_json : rules_json.GetArray()) {
     auto& rule = rules.emplace_back();
     if (!rule_json.IsObject()) {
-      return fit::error();
+      return fpromise::error();
     }
     if (rule_json.HasMember("active")) {
       auto active = JsonToUsage(rule_json["active"]);
       if (!active) {
         FX_LOGS(ERROR) << "Rule `active` object invalid.";
-        return fit::error();
+        return fpromise::error();
       }
       rule.active = std::move(*active);
     } else {
       FX_LOGS(ERROR) << "Rule `active` object missing.";
-      return fit::error();
+      return fpromise::error();
     }
 
     if (rule_json.HasMember("affected")) {
       auto affected = JsonToUsage(rule_json["affected"]);
       if (!affected) {
         FX_LOGS(ERROR) << "Rule `affected` object invalid.";
-        return fit::error();
+        return fpromise::error();
       }
       rule.affected = std::move(*affected);
     } else {
       FX_LOGS(ERROR) << "Rule `affected` object missing.";
-      return fit::error();
+      return fpromise::error();
     }
 
     if (rule_json.HasMember("behavior")) {
       auto behavior = JsonToBehavior(rule_json["behavior"]);
       if (!behavior) {
         FX_LOGS(ERROR) << "Rule `behavior` object invalid.";
-        return fit::error();
+        return fpromise::error();
       }
       rule.behavior = std::move(*behavior);
     } else {
       FX_LOGS(ERROR) << "Rule `behavior` object missing.";
-      return fit::error();
+      return fpromise::error();
     }
   }
 
   FX_LOGS(INFO) << "Successfully loaded " << rules.size() << " rules.";
 
-  return fit::ok(AudioPolicy{std::move(rules)});
+  return fpromise::ok(AudioPolicy{std::move(rules)});
 }
 
-fit::result<std::optional<AudioPolicy>> LoadConfigFromFile(const std::string config) {
+fpromise::result<std::optional<AudioPolicy>> LoadConfigFromFile(const std::string config) {
   fbl::unique_fd json_file;
   json_file.reset(open(config.c_str(), O_RDONLY));
 
   if (!json_file.is_valid()) {
-    return fit::ok(std::nullopt);
+    return fpromise::ok(std::nullopt);
   }
 
   // Figure out the size of the file, then allocate storage for reading the
@@ -201,33 +201,33 @@ fit::result<std::optional<AudioPolicy>> LoadConfigFromFile(const std::string con
   off_t file_size = lseek(json_file.get(), 0, SEEK_END);
   if ((file_size <= 0)) {
     FX_LOGS(ERROR) << "Could not find filesize";
-    return fit::error();
+    return fpromise::error();
   }
 
   if (static_cast<size_t>(file_size) > kMaxSettingFileSize) {
     FX_LOGS(ERROR) << "Config file too large. Max file size: " << kMaxSettingFileSize
                    << " Config file size: " << file_size;
-    return fit::error();
+    return fpromise::error();
   }
 
   if (lseek(json_file.get(), 0, SEEK_SET) != 0) {
     FX_LOGS(ERROR) << "Failed to seek to 0.";
-    return fit::error();
+    return fpromise::error();
   }
 
   // Allocate the buffer and read in the contents.
   auto buffer = std::make_unique<char[]>(file_size + 1);
   if (read(json_file.get(), buffer.get(), file_size) != file_size) {
     FX_LOGS(ERROR) << "Failed to read buffer.";
-    return fit::error();
+    return fpromise::error();
   }
   buffer[file_size] = 0;
 
   auto result = PolicyLoader::ParseConfig(buffer.get());
   if (result.is_error()) {
-    return fit::error();
+    return fpromise::error();
   }
-  return fit::ok(std::make_optional(result.take_value()));
+  return fpromise::ok(std::make_optional(result.take_value()));
 }
 
 AudioPolicy PolicyLoader::LoadPolicy() {

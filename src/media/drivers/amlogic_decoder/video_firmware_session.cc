@@ -36,28 +36,28 @@ zx::vmo CreateVmo(uint64_t size) {
   return result;
 }
 
-fit::result<fuchsia::tee::Buffer, zx_status_t> CreateBufferParameter(
+fpromise::result<fuchsia::tee::Buffer, zx_status_t> CreateBufferParameter(
     const uint8_t* data, uint64_t size, fuchsia::tee::Direction direction) {
   zx::vmo vmo = CreateVmo(size);
 
   zx_status_t status = vmo.write(data, /*offset=*/0, static_cast<size_t>(size));
   if (status != ZX_OK) {
     LOG(ERROR, "Failed to write to parameter to VMO - status: %d", status);
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   fuchsia::tee::Buffer buffer;
   buffer.set_vmo(std::move(vmo)).set_direction(direction).set_offset(0).set_size(size);
 
-  return fit::ok(std::move(buffer));
+  return fpromise::ok(std::move(buffer));
 }
 
 }  // namespace
 
-fit::result<VideoFirmwareSession, fuchsia::tee::ApplicationSyncPtr> VideoFirmwareSession::TryOpen(
-    fuchsia::tee::ApplicationSyncPtr tee_connection) {
+fpromise::result<VideoFirmwareSession, fuchsia::tee::ApplicationSyncPtr>
+VideoFirmwareSession::TryOpen(fuchsia::tee::ApplicationSyncPtr tee_connection) {
   if (!tee_connection.is_bound()) {
-    return fit::error(std::move(tee_connection));
+    return fpromise::error(std::move(tee_connection));
   }
 
   fuchsia::tee::OpResult result;
@@ -67,12 +67,12 @@ fit::result<VideoFirmwareSession, fuchsia::tee::ApplicationSyncPtr> VideoFirmwar
   if (zx_status_t status = tee_connection->OpenSession2(std::move(params), &session_id, &result);
       status != ZX_OK) {
     LOG(ERROR, "OpenSession channel call failed (status: %d)", status);
-    return fit::error(std::move(tee_connection));
+    return fpromise::error(std::move(tee_connection));
   }
 
   if (!result.has_return_code() || !result.has_return_origin()) {
     LOG(ERROR, "OpenSession returned with result codes missing");
-    return fit::error(std::move(tee_connection));
+    return fpromise::error(std::move(tee_connection));
   }
 
   if (result.return_code() != TEEC_SUCCESS) {
@@ -80,7 +80,7 @@ fit::result<VideoFirmwareSession, fuchsia::tee::ApplicationSyncPtr> VideoFirmwar
         result.return_code(), static_cast<uint32_t>(result.return_origin()));
   }
 
-  return fit::ok(VideoFirmwareSession{session_id, std::move(tee_connection)});
+  return fpromise::ok(VideoFirmwareSession{session_id, std::move(tee_connection)});
 }
 
 VideoFirmwareSession::~VideoFirmwareSession() {

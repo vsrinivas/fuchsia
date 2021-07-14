@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_UTILS_FIDL_CHANNEL_PROVIDER_PTR_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
@@ -21,16 +21,16 @@ namespace fidl {
 // Fetches the current update channel.
 //
 // fuchsia.update.channelcontrol.ChannelControl is expected to be in |services|.
-::fit::promise<std::string, Error> GetCurrentChannel(
+::fpromise::promise<std::string, Error> GetCurrentChannel(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     fit::Timeout timeout);
 
 // Fetches the target channel.
 //
 // fuchsia.update.channelcontrol.ChannelControl is expected to be in |services|.
-::fit::promise<std::string, Error> GetTargetChannel(async_dispatcher_t* dispatcher,
-                                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                                    fit::Timeout timeout);
+::fpromise::promise<std::string, Error> GetTargetChannel(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    fit::Timeout timeout);
 
 }  // namespace fidl
 }  // namespace forensics

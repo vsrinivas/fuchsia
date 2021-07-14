@@ -33,16 +33,16 @@ namespace ftest = fuchsia_driverhost_test;
 using Completer = fidl::WireServer<fdf::DriverHost>::StartCompleter::Sync;
 using namespace inspect::testing;
 
-class FakeContext : public fit::context {
+class FakeContext : public fpromise::context {
  public:
-  fit::executor* executor() const override {
+  fpromise::executor* executor() const override {
     EXPECT_TRUE(false);
     return nullptr;
   }
 
-  fit::suspended_task suspend_task() override {
+  fpromise::suspended_task suspend_task() override {
     EXPECT_TRUE(false);
-    return fit::suspended_task();
+    return fpromise::suspended_task();
   }
 };
 

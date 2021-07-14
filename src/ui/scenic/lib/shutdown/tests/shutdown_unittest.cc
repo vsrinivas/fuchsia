@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/bridge.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 // TODO(fxbug.dev/40804): delete once log output is properly interleaved.e
@@ -139,7 +139,7 @@ TEST_F(ShutdownManagerTest, NoClients) {
 // Verify that Shutdown() succeeds when all registered clients shutdown before the timeout occurs.
 TEST_F(ShutdownManagerTest, ClientsComplete) {
   // Register 2 clients.  Their callback notifications won't be invoked until Shutdown() is called.
-  fit::bridge<> client1, client2;
+  fpromise::bridge<> client1, client2;
   bool client1_notified = false;
   bool client2_notified = false;
   manager()->RegisterClient([&] {
@@ -180,7 +180,7 @@ TEST_F(ShutdownManagerTest, ClientsComplete) {
 // deadline.
 TEST_F(ShutdownManagerTest, ClientTimesOut) {
   // Register 2 clients.  Their callback notifications won't be invoked until Shutdown() is called.
-  fit::bridge<> client1, client2;
+  fpromise::bridge<> client1, client2;
   bool client1_notified = false;
   bool client2_notified = false;
   manager()->RegisterClient([&] {
@@ -222,7 +222,7 @@ TEST_F(ShutdownManagerTest, ClientTimesOut) {
 // has been destroyed.
 TEST_F(ShutdownManagerTest, ManagerDeleted) {
   // This client outlives the ShutdownManager.
-  fit::bridge<> client;
+  fpromise::bridge<> client;
   bool client_notified = false;
 
   {

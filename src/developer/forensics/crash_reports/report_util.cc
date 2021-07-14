@@ -198,7 +198,7 @@ void AddSnapshotAnnotations(const SnapshotUuid& snapshot_uuid, const Snapshot& s
 
 void AddCrashServerAnnotations(const std::string& program_name,
                                const std::optional<zx::time_utc>& current_time,
-                               const ::fit::result<std::string, Error>& device_id,
+                               const ::fpromise::result<std::string, Error>& device_id,
                                const Product& product, const bool should_process,
                                AnnotationMap* annotations) {
   // Product.
@@ -236,7 +236,7 @@ void AddCrashServerAnnotations(const std::string& program_name,
 std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const ReportId report_id,
                                  const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
                                  const std::optional<zx::time_utc>& current_time,
-                                 const ::fit::result<std::string, Error>& device_id,
+                                 const ::fpromise::result<std::string, Error>& device_id,
                                  const AnnotationMap& default_annotations, const Product& product,
                                  const bool is_hourly_report) {
   const std::string program_name = report.program_name();

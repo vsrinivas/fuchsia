@@ -519,13 +519,13 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fsys::Realm> realm,
       "driver_runner", [this] { return Inspect(); }, &inspector);
 }
 
-fit::promise<inspect::Inspector> DriverRunner::Inspect() const {
+fpromise::promise<inspect::Inspector> DriverRunner::Inspect() const {
   inspect::Inspector inspector;
   auto root = inspector.GetRoot().CreateChild(root_node_->name());
   InspectStack stack{{std::make_pair(&root, root_node_.get())}};
   InspectNode(inspector, stack);
   inspector.emplace(std::move(root));
-  return fit::make_ok_promise(inspector);
+  return fpromise::make_ok_promise(inspector);
 }
 
 size_t DriverRunner::NumOrphanedNodes() const { return orphaned_nodes_.size(); }

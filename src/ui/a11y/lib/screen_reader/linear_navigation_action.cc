@@ -4,8 +4,8 @@
 
 #include "src/ui/a11y/lib/screen_reader/linear_navigation_action.h"
 
-#include <lib/fit/bridge.h>
-#include <lib/fit/scope.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/scope.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <set>
@@ -69,7 +69,7 @@ void LinearNavigationAction::Run(GestureContext gesture_context) {
     // This is the last / first node on the tree, inform the user that the linear navigation can't
     // continue further in this direction.
     auto* speaker = screen_reader_context_->speaker();
-    fit::promise<> promise;
+    fpromise::promise<> promise;
     switch (direction_) {
       case kNextAction:
         promise = speaker->SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds::LAST_ELEMENT,

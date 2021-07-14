@@ -71,15 +71,15 @@ FvmDescriptor::Builder& FvmDescriptor::Builder::SetOptions(const FvmOptions& opt
   return *this;
 }
 
-fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
+fpromise::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
   FvmDescriptor descriptor;
 
   if (!options_.has_value()) {
-    return fit::error("FVM Options were not set.");
+    return fpromise::error("FVM Options were not set.");
   }
 
   if (options_->slice_size == 0) {
-    return fit::error("FVM's slice_size must be greater than zero.");
+    return fpromise::error("FVM's slice_size must be greater than zero.");
   }
 
   if (options_->max_volume_size.has_value() &&
@@ -89,7 +89,7 @@ fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
         .append(") is smaller than target_volume_size(")
         .append(ToSizeString(options_->target_volume_size.value()))
         .append(").");
-    return fit::error(error);
+    return fpromise::error(error);
   }
 
   accumulated_slices_ = 0;
@@ -103,7 +103,7 @@ fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
                           " failed.\n Partition" + it->volume().name + " and instance guid " +
                           Guid::ToString(it->volume().instance).value() + " was added before.";
       partitions_.clear();
-      return fit::error(error);
+      return fpromise::error(error);
     }
 
     // Update accumulated slice count, and check for overlapping extents.
@@ -119,9 +119,9 @@ fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
 
         if (current_extent->target + current_extent->count > mapping.target) {
           // Get the other mapping
-          return fit::error("Address descriptor of " + partition.volume().name +
-                            " contains overlapping mappings. Conflict between " +
-                            mapping.DebugString() + " and " + current_extent->DebugString());
+          return fpromise::error("Address descriptor of " + partition.volume().name +
+                                 " contains overlapping mappings. Conflict between " +
+                                 mapping.DebugString() + " and " + current_extent->DebugString());
         }
       }
       extents.insert(&mapping);
@@ -144,17 +144,17 @@ fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
         "is " +
         ToSizeString(minimum_size) + " and target size is " +
         ToSizeString(options_->target_volume_size.value()) + ".";
-    return fit::error(error);
+    return fpromise::error(error);
   }
 
   descriptor.metadata_required_size_ = metadata_allocated_size_;
   descriptor.slice_count_ = accumulated_slices_;
   descriptor.options_ = std::move(options_.value());
 
-  return fit::ok(std::move(descriptor));
+  return fpromise::ok(std::move(descriptor));
 }
 
-fit::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& writer) const {
+fpromise::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& writer) const {
   fvm::Header header = internal::MakeHeader(options_, slice_count_);
 
   std::vector<fvm::VPartitionEntry> vpartitions;
@@ -182,9 +182,9 @@ fit::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& writer) co
       uint64_t start_slice = GetBlockFromBytes(mapping.target, options_.slice_size);
 
       if (!IsOffsetBlockAligned(mapping.target, options_.slice_size)) {
-        return fit::error("Partition " + partition.volume().name + " contains unaligned mapping " +
-                          std::to_string(mapping.target) +
-                          ". FVM Sparse Image requires slice aligned extent |vslice_start|.");
+        return fpromise::error("Partition " + partition.volume().name +
+                               " contains unaligned mapping " + std::to_string(mapping.target) +
+                               ". FVM Sparse Image requires slice aligned extent |vslice_start|.");
       }
 
       // Slice entry for each slice in the mapping.
@@ -201,7 +201,7 @@ fit::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& writer) co
   auto fvm_metadata_or = fvm::Metadata::Synthesize(header, vpartitions.data(), vpartitions.size(),
                                                    slices.data(), slices.size());
   if (fvm_metadata_or.is_error()) {
-    return fit::error(
+    return fpromise::error(
         "FvmDescriptor::WriteBlockImage failed to synthesize fvm metadata with error code : " +
         std::to_string(fvm_metadata_or.status_value()));
   }
@@ -296,7 +296,7 @@ fit::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& writer) co
   }
   // Account for slice zero.
   ZX_ASSERT(slices.size() + 1 == current_physical_slice);
-  return fit::ok();
+  return fpromise::ok();
 }
 
 }  // namespace storage::volume_image

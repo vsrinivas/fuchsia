@@ -6,9 +6,9 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/result.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/result.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -273,11 +273,11 @@ TEST_F(AccessorTest, StreamDiagnosticsInspect) {
       context->svc()->Connect<fuchsia::diagnostics::ArchiveAccessor>(),
       {"inspect-publisher.cmx:root"});
 
-  fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> actual_result;
-  fit::single_threaded_executor executor;
+  fpromise::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> actual_result;
+  fpromise::single_threaded_executor executor;
   executor.schedule_task(
       reader.SnapshotInspectUntilPresent({"inspect-publisher.cmx"})
-          .then([&](fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>&
+          .then([&](fpromise::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>&
                         result) mutable { actual_result = std::move(result); }));
   executor.run();
 

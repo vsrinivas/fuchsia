@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_SOUNDS_SOUNDPLAYER_OGG_DEMUX_H_
 #define SRC_MEDIA_SOUNDS_SOUNDPLAYER_OGG_DEMUX_H_
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <memory>
 
@@ -23,7 +23,7 @@ class OggDemux {
   // Processes the file. |fd| must be positioned at the beginning of the file. This method does
   // not close |fd| regardless of the result, but will leave |fd| at an arbitrary position. The
   // first valid stream in the file is decoded.
-  fit::result<Sound, zx_status_t> Process(int fd);
+  fpromise::result<Sound, zx_status_t> Process(int fd);
 
  private:
   class Stream {

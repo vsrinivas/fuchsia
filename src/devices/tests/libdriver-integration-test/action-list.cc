@@ -20,17 +20,17 @@ void ActionList::AppendAddMockDevice(async_dispatcher_t* dispatcher, const std::
                                      std::string name, std::vector<zx_device_prop_t> props,
                                      zx_status_t expect_status,
                                      std::unique_ptr<MockDevice>* new_device_out,
-                                     fit::promise<void, std::string>* add_done_out) {
-  fit::bridge<void, std::string> bridge;
+                                     fpromise::promise<void, std::string>* add_done_out) {
+  fpromise::bridge<void, std::string> bridge;
   AppendAddMockDevice(dispatcher, parent_path, std::move(name), std::move(props), expect_status,
                       std::move(bridge.completer), new_device_out);
-  *add_done_out = bridge.consumer.promise_or(::fit::error("add device abandoned")).box();
+  *add_done_out = bridge.consumer.promise_or(::fpromise::error("add device abandoned")).box();
 }
 
 void ActionList::AppendAddMockDevice(async_dispatcher_t* dispatcher, const std::string& parent_path,
                                      std::string name, std::vector<zx_device_prop_t> props,
                                      zx_status_t expect_status,
-                                     fit::completer<void, std::string> add_done,
+                                     fpromise::completer<void, std::string> add_done,
                                      std::unique_ptr<MockDevice>* new_device_out) {
   fidl::InterfaceHandle<fuchsia::device::mock::MockDevice> client;
   fidl::InterfaceRequest<fuchsia::device::mock::MockDevice> server(client.NewRequest());
@@ -60,18 +60,19 @@ void ActionList::AppendAddMockDevice(async_dispatcher_t* dispatcher, const std::
   return AppendAction(std::move(action));
 }
 
-void ActionList::AppendUnbindReply(fit::promise<void, std::string>* unbind_reply_done_out) {
-  fit::bridge<void, std::string> bridge;
+void ActionList::AppendUnbindReply(fpromise::promise<void, std::string>* unbind_reply_done_out) {
+  fpromise::bridge<void, std::string> bridge;
   AppendUnbindReply(std::move(bridge.completer));
-  *unbind_reply_done_out = bridge.consumer.promise_or(::fit::error("unbind reply abandoned")).box();
+  *unbind_reply_done_out =
+      bridge.consumer.promise_or(::fpromise::error("unbind reply abandoned")).box();
 }
 
-void ActionList::AppendUnbindReply(fit::completer<void, std::string> unbind_reply_done) {
+void ActionList::AppendUnbindReply(fpromise::completer<void, std::string> unbind_reply_done) {
   Action action;
   auto& unbind_reply = action.unbind_reply();
   unbind_reply.action_id = next_action_id_++;
 
-  fit::bridge<void, std::string> bridge;
+  fpromise::bridge<void, std::string> bridge;
   local_action_map_[unbind_reply.action_id] = std::move(unbind_reply_done);
   return AppendAction(std::move(action));
 }

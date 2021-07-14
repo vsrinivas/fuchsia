@@ -187,7 +187,7 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
 
   ~Client();
 
-  fit::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_status_t> Init(
+  fpromise::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_status_t> Init(
       zx::channel server_channel);
 
   void OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,

@@ -4,7 +4,7 @@
 
 #include "src/storage/volume_image/ftl/ftl_raw_nand_image_writer.h"
 
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <array>
 #include <cinttypes>
@@ -41,7 +41,7 @@ class RamRawNandImageWriter : public Writer {
  public:
   explicit RamRawNandImageWriter(RawNandOptions options) : options_(options) {}
 
-  fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> data) final {
+  fpromise::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> data) final {
     uint32_t data_offset = 0;
     if (offset < sizeof(RawNandImageHeader)) {
       data_offset = sizeof(RawNandImageHeader) - offset;
@@ -54,7 +54,7 @@ class RamRawNandImageWriter : public Writer {
 
     // No image data write.
     if (data_offset >= data.size()) {
-      return fit::ok();
+      return fpromise::ok();
     }
 
     uint64_t image_offset = offset - sizeof(RawNandImageHeader);
@@ -64,23 +64,23 @@ class RamRawNandImageWriter : public Writer {
     // Its a page write.
     if (image_page_offset == 0) {
       if (data.size() != options_.page_size) {
-        return fit::error("Bad page data buffer.");
+        return fpromise::error("Bad page data buffer.");
       }
       pages_[image_page_number].data_ = std::vector(data.begin(), data.end());
-      return fit::ok();
+      return fpromise::ok();
     }
 
     // Its oob data.
     if (image_page_offset == options_.page_size) {
       if (data.size() != options_.oob_bytes_size) {
-        return fit::error("Bad oob buffer size.");
+        return fpromise::error("Bad oob buffer size.");
       }
 
       pages_[image_page_number].oob_ = std::vector(data.begin(), data.end());
-      return fit::ok();
+      return fpromise::ok();
     }
 
-    return fit::error("Unaligned page write.");
+    return fpromise::error("Unaligned page write.");
   }
 
   const auto& pages() { return pages_; }

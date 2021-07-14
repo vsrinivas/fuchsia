@@ -5,8 +5,8 @@
 #include "xhci-event-ring.h"
 
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <zircon/errors.h>
 #include <zircon/hw/usb.h>
 
@@ -44,7 +44,7 @@ enum class CommandType {
 struct Command : public fbl::DoublyLinkedListable<std::unique_ptr<Command>> {
   uint8_t port;
   std::optional<HubInfo> hub;
-  fit::completer<TRB*, zx_status_t> completer;
+  fpromise::completer<TRB*, zx_status_t> completer;
   CommandType type;
   uint8_t endpoint;
   uint32_t device_id;
@@ -292,7 +292,7 @@ zx_status_t UsbXhci::UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address)
 TRBPromise UsbXhci::UsbHciResetEndpointAsync(uint32_t device_id, uint8_t ep_address) {
   auto harness = static_cast<EventRingHarness*>(get_test_harness());
   std::unique_ptr<Command> command = std::make_unique<Command>();
-  fit::bridge<TRB*, zx_status_t> bridge;
+  fpromise::bridge<TRB*, zx_status_t> bridge;
   command->type = CommandType::ResetEndpoint;
   command->device_id = device_id;
   command->endpoint = ep_address;
@@ -343,13 +343,13 @@ fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TransferRing::TakePendingTRBs
 }
 
 TRBPromise UsbXhci::DeviceOffline(uint32_t slot, TRB* continuation) {
-  return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
+  return fpromise::make_error_promise(ZX_ERR_NOT_SUPPORTED);
 }
 
 TRBPromise EnumerateDevice(UsbXhci* hci, uint8_t port, std::optional<HubInfo> hub_info) {
   auto harness = static_cast<EventRingHarness*>(hci->get_test_harness());
   std::unique_ptr<Command> command = std::make_unique<Command>();
-  fit::bridge<TRB*, zx_status_t> bridge;
+  fpromise::bridge<TRB*, zx_status_t> bridge;
   command->type = CommandType::EnumerateDevice;
   command->port = port;
   command->hub = hub_info;

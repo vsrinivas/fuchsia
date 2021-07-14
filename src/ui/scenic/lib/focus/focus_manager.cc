@@ -38,7 +38,7 @@ FocusManager::FocusManager(inspect::Node inspect_node, LegacyFocusListener legac
     }
     inspector.emplace(std::move(array));
 
-    return fit::make_ok_promise(std::move(inspector));
+    return fpromise::make_ok_promise(std::move(inspector));
   });
 }
 

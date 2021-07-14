@@ -17,7 +17,7 @@ class FakeCameraImpl : public FakeCamera, public fuchsia::camera3::Device {
  public:
   FakeCameraImpl();
   ~FakeCameraImpl() override;
-  static fit::result<std::unique_ptr<FakeCameraImpl>, zx_status_t> Create(
+  static fpromise::result<std::unique_ptr<FakeCameraImpl>, zx_status_t> Create(
       std::string identifier, std::vector<FakeConfiguration> configurations);
   fidl::InterfaceRequestHandler<fuchsia::camera3::Device> GetHandler() override;
   void SetHardwareMuteState(bool muted) override;

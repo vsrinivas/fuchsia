@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/focus/focus_manager.h"
 
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
@@ -430,11 +430,11 @@ class FocusManagerInspectTest : public gtest::TestLoopFixture {
     return focus_chain->value();
   }
 
-  fit::result<inspect::Hierarchy> ReadHierarchyFromInspector() {
-    fit::result<inspect::Hierarchy> result;
-    fit::single_threaded_executor exec;
+  fpromise::result<inspect::Hierarchy> ReadHierarchyFromInspector() {
+    fpromise::result<inspect::Hierarchy> result;
+    fpromise::single_threaded_executor exec;
     exec.schedule_task(
-        inspect::ReadFromInspector(inspector_).then([&](fit::result<inspect::Hierarchy>& res) {
+        inspect::ReadFromInspector(inspector_).then([&](fpromise::result<inspect::Hierarchy>& res) {
           result = std::move(res);
         }));
     exec.run();

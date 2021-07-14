@@ -17,20 +17,20 @@ UltrasoundCapturer::UltrasoundCapturer(
   reporter().SetUsage(CaptureUsage::ULTRASOUND);
 }
 
-fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
+fpromise::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
 UltrasoundCapturer::InitializeSourceLink(const AudioObject& source,
                                          std::shared_ptr<ReadableStream> stream) {
   if (!create_callback_) {
-    return fit::error(ZX_ERR_BAD_STATE);
+    return fpromise::error(ZX_ERR_BAD_STATE);
   }
   auto format = source.format();
   if (!format) {
-    return fit::error(ZX_ERR_BAD_STATE);
+    return fpromise::error(ZX_ERR_BAD_STATE);
   }
 
   auto reference_clock_result = reference_clock().DuplicateClockReadOnly();
   if (reference_clock_result.is_error()) {
-    return fit::error(reference_clock_result.error());
+    return fpromise::error(reference_clock_result.error());
   }
 
   // Ultrasound renderers require FLOAT samples.
