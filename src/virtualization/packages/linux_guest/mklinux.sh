@@ -39,9 +39,9 @@ declare -rx KBUILD_BUILD_HOST="fuchsia.com"
 
 case "${1}" in
 arm64)
-  type aarch64-linux-gnu-gcc-10 ||
-    { echo "Required package gcc-aarch64-linux-gnu-10 is not installed."
-      echo "(sudo apt install gcc-aarch64-linux-gnu-10)"; exit 1; }
+  type aarch64-linux-gnu-gcc-9 ||
+    { echo "Required package gcc-aarch64-linux-gnu-9 is not installed."
+      echo "(sudo apt install gcc-aarch64-linux-gnu-9)"; exit 1; }
 
   declare -rx ARCH=arm64
   declare -x CROSS_COMPILE=aarch64-linux-gnu-
@@ -55,7 +55,7 @@ x64)
 esac
 
 # Current default branch isn't compatible with gcc10
-declare -x CC=${CROSS_COMPILE}gcc-10
+declare -x CC=${CROSS_COMPILE}gcc-9
 
 if [ -n "${LINUX_BRANCH}" ]; then
   # Shallow clone the repository.
