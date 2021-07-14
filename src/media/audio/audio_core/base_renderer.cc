@@ -221,6 +221,10 @@ void BaseRenderer::ComputePtsToFracFrames(int64_t first_pts) {
 }
 
 void BaseRenderer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
+  AddPayloadBufferInternal(id, std::move(payload_buffer));
+}
+
+void BaseRenderer::AddPayloadBufferInternal(uint32_t id, zx::vmo payload_buffer) {
   TRACE_DURATION("audio", "BaseRenderer::AddPayloadBuffer");
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
@@ -251,7 +255,9 @@ void BaseRenderer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   cleanup.cancel();
 }
 
-void BaseRenderer::RemovePayloadBuffer(uint32_t id) {
+void BaseRenderer::RemovePayloadBuffer(uint32_t id) { RemovePayloadBufferInternal(id); }
+
+void BaseRenderer::RemovePayloadBufferInternal(uint32_t id) {
   TRACE_DURATION("audio", "BaseRenderer::RemovePayloadBuffer");
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
@@ -347,6 +353,11 @@ void BaseRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
 }
 
 void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCallback callback) {
+  SendPacketInternal(packet, std::move(callback));
+}
+
+void BaseRenderer::SendPacketInternal(fuchsia::media::StreamPacket packet,
+                                      SendPacketCallback callback) {
   TRACE_DURATION("audio", "BaseRenderer::SendPacket", "pts", packet.pts);
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
@@ -491,6 +502,10 @@ void BaseRenderer::EndOfStream() {
 }
 
 void BaseRenderer::DiscardAllPackets(DiscardAllPacketsCallback callback) {
+  DiscardAllPacketsInternal(std::move(callback));
+}
+
+void BaseRenderer::DiscardAllPacketsInternal(DiscardAllPacketsCallback callback) {
   TRACE_DURATION("audio", "BaseRenderer::DiscardAllPackets");
 
   // If the user has requested a callback, create the flush token we will use to invoke the callback
@@ -737,6 +752,10 @@ void BaseRenderer::ReportStop() {
 void BaseRenderer::OnLinkAdded() { RecomputeMinLeadTime(); }
 
 void BaseRenderer::EnableMinLeadTimeEvents(bool enabled) {
+  EnableMinLeadTimeEventsInternal(enabled);
+}
+
+void BaseRenderer::EnableMinLeadTimeEventsInternal(bool enabled) {
   TRACE_DURATION("audio", "BaseRenderer::EnableMinLeadTimeEvents");
 
   min_lead_time_events_enabled_ = enabled;
@@ -746,6 +765,10 @@ void BaseRenderer::EnableMinLeadTimeEvents(bool enabled) {
 }
 
 void BaseRenderer::GetMinLeadTime(GetMinLeadTimeCallback callback) {
+  GetMinLeadTimeInternal(std::move(callback));
+}
+
+void BaseRenderer::GetMinLeadTimeInternal(GetMinLeadTimeCallback callback) {
   TRACE_DURATION("audio", "BaseRenderer::GetMinLeadTime");
 
   callback(min_lead_time_.to_nsecs());

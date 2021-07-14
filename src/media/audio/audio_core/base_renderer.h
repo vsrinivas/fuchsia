@@ -79,7 +79,13 @@ class BaseRenderer : public AudioObject,
   virtual void ReportStart();
   virtual void ReportStop();
 
-  // Overridden by children that need to intercept Play/Pause. They should still call up to these.
+  // Can be overridden by subclasses that need to wrap these methods.
+  virtual void AddPayloadBufferInternal(uint32_t id, zx::vmo payload_buffer);
+  virtual void RemovePayloadBufferInternal(uint32_t id);
+  virtual void SendPacketInternal(fuchsia::media::StreamPacket packet, SendPacketCallback callback);
+  virtual void DiscardAllPacketsInternal(DiscardAllPacketsCallback callback);
+  virtual void EnableMinLeadTimeEventsInternal(bool enabled);
+  virtual void GetMinLeadTimeInternal(GetMinLeadTimeCallback callback);
   virtual void PlayInternal(zx::time reference_time, zx::time media_time, PlayCallback callback);
   virtual void PauseInternal(PauseCallback callback);
 

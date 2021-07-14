@@ -126,19 +126,70 @@ void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
   cleanup.cancel();
 }
 
+void AudioRenderer::SerializeWithPause(fit::closure callback) {
+  if (pause_ramp_state_) {
+    pause_ramp_state_->queued.push_back(std::move(callback));
+  } else {
+    callback();
+  }
+}
+
+void AudioRenderer::AddPayloadBufferInternal(uint32_t id, zx::vmo payload_buffer) {
+  SerializeWithPause([this, id, payload_buffer = std::move(payload_buffer)]() mutable {
+    BaseRenderer::AddPayloadBufferInternal(id, std::move(payload_buffer));
+  });
+}
+
+void AudioRenderer::RemovePayloadBufferInternal(uint32_t id) {
+  SerializeWithPause([this, id]() mutable { BaseRenderer::RemovePayloadBufferInternal(id); });
+}
+
+void AudioRenderer::SendPacketInternal(fuchsia::media::StreamPacket packet,
+                                       SendPacketCallback callback) {
+  SerializeWithPause([this, packet, callback = std::move(callback)]() mutable {
+    BaseRenderer::SendPacketInternal(packet, std::move(callback));
+  });
+}
+
+void AudioRenderer::DiscardAllPacketsInternal(DiscardAllPacketsCallback callback) {
+  SerializeWithPause([this, callback = std::move(callback)]() mutable {
+    BaseRenderer::DiscardAllPacketsInternal(std::move(callback));
+  });
+}
+
+void AudioRenderer::EnableMinLeadTimeEventsInternal(bool enabled) {
+  SerializeWithPause(
+      [this, enabled]() mutable { BaseRenderer::EnableMinLeadTimeEventsInternal(enabled); });
+}
+
+void AudioRenderer::GetMinLeadTimeInternal(GetMinLeadTimeCallback callback) {
+  SerializeWithPause([this, callback = std::move(callback)]() mutable {
+    BaseRenderer::GetMinLeadTimeInternal(std::move(callback));
+  });
+}
+
 // To eliminate audible pops from discontinuity-on-immediate-start, ramp up from a very low level.
 constexpr bool kEnableRampUpOnPlay = true;
 constexpr float kInitialRampUpGainDb = -120.0f;
 constexpr zx::duration kRampUpOnPlayDuration = zx::msec(5);
 
-// To eliminate audible pops from discontinuity-on-pause, first ramp down to a very low level.
+// To eliminate audible pops from discontinuity-on-pause, first ramp down to silence, then pause.
 constexpr bool kEnableRampDownOnPause = true;
 constexpr float kFinalRampDownGainDb = -120.0f;
 constexpr zx::duration kRampDownOnPauseDuration = zx::msec(5);
-constexpr zx::duration kAdditionalDelayBeforePauseDuration = zx::msec(5);
 
 void AudioRenderer::PlayInternal(zx::time reference_time, zx::time media_time,
                                  PlayCallback callback) {
+  if constexpr (kEnableRampDownOnPause) {
+    // Allow Play() to interrupt a pending Pause(). This reduces the chance of underflow when
+    // the client calls Play() with a reference_time very close to now -- if we instead wait
+    // for the Pause() to complete before calling Play(), we delay starting the Play(), which
+    // may move the clock past reference_time.
+    if (pause_ramp_state_) {
+      FinishPauseRamp(pause_ramp_state_);
+    }
+  }
+
   if constexpr (kEnableRampUpOnPlay) {
     // As a workaround until time-stamped Play/Pause/Gain commands, start a ramp-up then call Play.
     // Set gain to silent, before starting the ramp-up to current val.
@@ -152,33 +203,70 @@ void AudioRenderer::PlayInternal(zx::time reference_time, zx::time media_time,
 }
 
 void AudioRenderer::PauseInternal(PauseCallback callback) {
+  if constexpr (!kEnableRampDownOnPause) {
+    BaseRenderer::PauseInternal(std::move(callback));
+    return;
+  }
+
+  // If already pausing, just queue this callback to be run when the pause ramp completes.
+  // There cannot be an intervening Play() because Play() always interrupts the pause ramp.
+  if (pause_ramp_state_) {
+    if (callback) {
+      pause_ramp_state_->callbacks.push_back(std::move(callback));
+    }
+    return;
+  }
+
   // As a short-term workaround until time-stamped Play/Pause/Gain commands are in place, start the
   // ramp-down immediately, and post a delayed task for the actual Pause.
-  if constexpr (kEnableRampDownOnPause) {
-    auto prev_gain_db = stream_gain_db_;
-    // Start ramping to kFinalRampDownGainDb. Post a task to Pause (delayed longer than ramp-down).
-    // On receiving the Pause callback, restore stream gain to its original value.
-    // Use internal SetGain/SetGainWithRamp versions, to avoid gain notifications.
-    PostStreamGainMute({.ramp = GainRamp{kFinalRampDownGainDb, kRampDownOnPauseDuration,
-                                         fuchsia::media::audio::RampType::SCALE_LINEAR}});
-
-    auto pause_callback = [this, prev_gain_db, client_callback = std::move(callback)](
-                              int64_t ref_time, int64_t media_time) {
-      if (client_callback != nullptr) {
-        client_callback(ref_time, media_time);
-      }
-      PostStreamGainMute({.gain_db = prev_gain_db});
-    };
-
-    // We add a shared self-reference, in case renderer is unbound before/during the delayed task.
-    context().threading_model().FidlDomain().PostDelayedTask(
-        [this, self = shared_from_this(), callback = std::move(pause_callback)]() mutable {
-          BaseRenderer::PauseInternal(std::move(callback));
-        },
-        kRampDownOnPauseDuration + kAdditionalDelayBeforePauseDuration);
-  } else {
-    BaseRenderer::PauseInternal(std::move(callback));
+  // On receiving the Pause callback, restore stream gain to its original value.
+  pause_ramp_state_ = std::make_shared<PauseRampState>();
+  pause_ramp_state_->prior_stream_gain_db = stream_gain_db_;
+  if (callback) {
+    pause_ramp_state_->callbacks.push_back(std::move(callback));
   }
+
+  // Callback to tear down pause_ramp_state_ when the ramp completes.
+  // We add a shared self-reference in case the renderer is unbound before this callback runs.
+  auto finish_pause_ramp = [this, self = shared_from_this(), state = pause_ramp_state_]() mutable {
+    FinishPauseRamp(state);
+  };
+
+  // Use internal SetGain/SetGainWithRamp versions, to avoid gain notifications.
+  PostStreamGainMute({.ramp = GainRamp{kFinalRampDownGainDb, kRampDownOnPauseDuration,
+                                       fuchsia::media::audio::RampType::SCALE_LINEAR}});
+
+  // Wait for the ramp to complete.
+  const zx::duration delay = kRampDownOnPauseDuration;
+  context().threading_model().FidlDomain().PostDelayedTask(std::move(finish_pause_ramp), delay);
+}
+
+void AudioRenderer::FinishPauseRamp(std::shared_ptr<PauseRampState> expected_state) {
+  TRACE_DURATION("audio", "AudioRenderer::FinishPauseRamp");
+  FX_CHECK(expected_state);
+
+  // Skip if the callback was already invoked. This can happen if our pause ramp was
+  // interrupted by a call to Play(). We use a shared pointer to avoid ABA problems
+  // when the ramp is interrupted by a Play() followed by another Pause().
+  if (pause_ramp_state_ != expected_state) {
+    return;
+  }
+
+  BaseRenderer::PauseInternal([this](int64_t ref_time, int64_t media_time) mutable {
+    FX_CHECK(pause_ramp_state_);
+
+    // Restore stream gain.
+    PostStreamGainMute({.gain_db = pause_ramp_state_->prior_stream_gain_db});
+
+    // Run all pending callbacks.
+    for (auto& f : pause_ramp_state_->callbacks) {
+      f(ref_time, media_time);
+    }
+    for (auto& f : pause_ramp_state_->queued) {
+      f();
+    }
+    pause_ramp_state_ = nullptr;
+  });
 }
 
 void AudioRenderer::BindGainControl(
@@ -281,6 +369,10 @@ void AudioRenderer::PostStreamGainMute(StreamGainCommand gain_command) {
 // stages. In playback, renderer gain is pre-mix and hence is "source" gain; the usage gain (or
 // output gain, if the mixer topology is single-tier) is "dest" gain.
 void AudioRenderer::SetGain(float gain_db) {
+  SerializeWithPause(std::bind(&AudioRenderer::SetGainInternal, this, gain_db));
+}
+
+void AudioRenderer::SetGainInternal(float gain_db) {
   TRACE_DURATION("audio", "AudioRenderer::SetGain");
   if constexpr (kLogSetGainMuteRampCalls) {
     FX_LOGS(INFO) << __FUNCTION__ << "(" << gain_db << " dB)";
@@ -305,6 +397,12 @@ void AudioRenderer::SetGain(float gain_db) {
 // hence is the Source component in the Gain object.
 void AudioRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
                                     fuchsia::media::audio::RampType ramp_type) {
+  SerializeWithPause(
+      std::bind(&AudioRenderer::SetGainWithRampInternal, this, gain_db, duration_ns, ramp_type));
+}
+
+void AudioRenderer::SetGainWithRampInternal(float gain_db, int64_t duration_ns,
+                                            fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "AudioRenderer::SetGainWithRamp");
   if constexpr (kLogSetGainMuteRampCalls) {
     FX_LOGS(INFO) << __FUNCTION__ << "(to " << gain_db << " dB over " << duration_ns / 1000
@@ -326,10 +424,12 @@ void AudioRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
   // TODO(mpuryear): implement GainControl notifications for gain ramps.
 }
 
-// Set a stream mute, in each Renderer -> Output audio path. For now, mute is handled by setting
-// gain to a value guaranteed to be silent, but going forward we may pass this thru to the Gain
-// object. Renderer gain/mute is pre-mix and hence is the Source component in the Gain object.
+// Set a stream mute, in each Renderer -> Output audio path.
 void AudioRenderer::SetMute(bool mute) {
+  SerializeWithPause(std::bind(&AudioRenderer::SetMuteInternal, this, mute));
+}
+
+void AudioRenderer::SetMuteInternal(bool mute) {
   TRACE_DURATION("audio", "AudioRenderer::SetMute");
   if constexpr (kLogSetGainMuteRampCalls) {
     FX_LOGS(INFO) << __FUNCTION__ << "(" << mute << ")";

@@ -1201,7 +1201,7 @@ TEST_F(AudioRendererTransportTest, PauseWithoutBufferShouldDisconnect) {
 // "Quick" and "Multiple" cases validate synchronization via a series of immediate Play/Pause calls
 //
 // Immediate Play then Pause. Verify we are paused by failing if the packet completes
-TEST_F(AudioRendererTransportTest, DISABLED_QuickPlayPause) {
+TEST_F(AudioRendererTransportTest, QuickPlayPause) {
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
 
@@ -1215,7 +1215,7 @@ TEST_F(AudioRendererTransportTest, DISABLED_QuickPlayPause) {
 }
 
 // Immediate Pause then Play. Verify we are playing by expecting the packet completion
-TEST_F(AudioRendererTransportTest, DISABLED_QuickPausePlay) {
+TEST_F(AudioRendererTransportTest, QuickPausePlay) {
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
 
@@ -1231,7 +1231,7 @@ TEST_F(AudioRendererTransportTest, DISABLED_QuickPausePlay) {
   ExpectCallbacks();
 }
 
-TEST_F(AudioRendererTransportTest, DISABLED_MultiplePlayPause) {
+TEST_F(AudioRendererTransportTest, MultiplePlayPause) {
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
 
@@ -1246,6 +1246,43 @@ TEST_F(AudioRendererTransportTest, DISABLED_MultiplePlayPause) {
 
   audio_renderer_->SendPacket(kTestPacket, AddUnexpectedCallback("SendPacket"));
 
+  ExpectConnected();
+}
+
+TEST_F(AudioRendererTransportTest, CommandsSerializedAfterPause) {
+  CreateAndAddPayloadBuffer(1);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  static constexpr fuchsia::media::StreamPacket packet1{
+      .payload_buffer_id = 1,
+      .payload_offset = 0,
+      .payload_size = kDefaultPacketSize,
+  };
+  static constexpr fuchsia::media::StreamPacket packet2{
+      .payload_buffer_id = 2,
+      .payload_offset = 0,
+      .payload_size = kDefaultPacketSize,
+  };
+
+  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, 0, AddCallback("Play1"));
+  audio_renderer_->Pause(AddCallback("Pause1"));
+  audio_renderer_->SendPacket(packet1, AddCallback("SendPacket1"));
+  audio_renderer_->DiscardAllPackets(AddCallback("DiscardAllPackets1"));
+  // {Add,Remove}PayloadBuffer don't have callbacks, however they will crash
+  // if not invoked in the correct order: Add will crash if the packet queue
+  // is not empty (not called after the above discard) and Remove will crash
+  // if not called after Add.
+  CreateAndAddPayloadBuffer(2);
+  audio_renderer_->SendPacket(packet2, AddCallback("SendPacket2"));
+  // Queue must be empty before removing the payload buffer.
+  audio_renderer_->DiscardAllPackets(AddCallback("DiscardAllPackets2"));
+  audio_renderer_->RemovePayloadBuffer(2);
+
+  ExpectCallbacks();
+
+  // Do this after ExpectCallbacks to ensure the above callbacks have fired,
+  // otherwise the ping sent by ExpectedConnect might return before some of
+  // the async methods (such as SendPacket) have completed.
   ExpectConnected();
 }
 

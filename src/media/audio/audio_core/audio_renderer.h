@@ -68,6 +68,12 @@ class AudioRenderer : public BaseRenderer,
   void ReportStart() final;
   void ReportStop() final;
   // Needed for ramped Play/Pause transitions
+  void AddPayloadBufferInternal(uint32_t id, zx::vmo payload_buffer) final;
+  void RemovePayloadBufferInternal(uint32_t id) final;
+  void SendPacketInternal(fuchsia::media::StreamPacket packet, SendPacketCallback callback) final;
+  void DiscardAllPacketsInternal(DiscardAllPacketsCallback callback) final;
+  void EnableMinLeadTimeEventsInternal(bool enabled) final;
+  void GetMinLeadTimeInternal(GetMinLeadTimeCallback callback) final;
   void PlayInternal(zx::time reference_time, zx::time media_time, PlayCallback callback) final;
   void PauseInternal(PauseCallback callback) final;
 
@@ -83,6 +89,12 @@ class AudioRenderer : public BaseRenderer,
   void NotifyGainMuteChanged();
   // TODO(mpuryear): Notify on SetGainWithRamp.
 
+  void SetGainInternal(float gain_db);
+  void SetGainWithRampInternal(float gain_db, int64_t duration_ns,
+                               fuchsia::media::audio::RampType ramp_type);
+  void SetMuteInternal(bool muted);
+
+  void SerializeWithPause(fit::closure callback);
   void PostStreamGainMute(StreamGainCommand gain_command);
 
   float stream_gain_db_ = 0.0f;
@@ -90,6 +102,16 @@ class AudioRenderer : public BaseRenderer,
   std::optional<Format> format_;
 
   fuchsia::media::AudioRenderUsage usage_ = fuchsia::media::AudioRenderUsage::MEDIA;
+
+  // Set when pause is ramping, cleared when the ramp is finished.
+  // Must be accessed on the FIDL thread only.
+  struct PauseRampState {
+    float prior_stream_gain_db;            // gain to restore after the pause ramp is complete
+    std::vector<PauseCallback> callbacks;  // Pause calls in flight
+    std::vector<fit::closure> queued;      // closures to run on completion
+  };
+  std::shared_ptr<PauseRampState> pause_ramp_state_;
+  void FinishPauseRamp(std::shared_ptr<PauseRampState> expected_state);
 
   std::mutex mutex_;
   bool reference_clock_is_set_ FXL_GUARDED_BY(mutex_) = false;
