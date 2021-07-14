@@ -25,7 +25,20 @@ group("runtime") {
 }
 
 group("scenic") {
-  public_deps = [ ":scenic_pkg" ]
+  public_deps = [
+    ":configs",
+    ":scenic_pkg",
+  ]
+}
+
+group("configs") {
+  deps = [ ":scenic_config" ]
+}
+
+config_data("scenic_config") {
+  for_pkg = "sysmgr"
+  outputs = [ "scenic.config" ]
+  sources = [ "services.config" ]
 }
 
 group("tests") {

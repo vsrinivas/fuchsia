@@ -12,6 +12,7 @@ base_package_labels += [
   "//src/devices/sysmem/bin/sysmem_connector",
   "//src/ui/bin/root_presenter",
   "//src/ui/bin/root_presenter:configs",
+  "//src/ui/scenic:configs",
   "//src/fonts",
   "//src/graphics/bin/vulkan_loader",
   "//src/intl/intl_services:config",
