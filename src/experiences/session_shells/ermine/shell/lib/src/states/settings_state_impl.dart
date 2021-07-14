@@ -5,6 +5,7 @@
 import 'dart:io';
 
 import 'package:ermine/src/services/settings/battery_watcher_service.dart';
+import 'package:ermine/src/services/settings/brightness_service.dart';
 import 'package:ermine/src/services/settings/datetime_service.dart';
 import 'package:ermine/src/services/settings/memory_watcher_service.dart';
 import 'package:ermine/src/services/settings/network_address_service.dart';
@@ -66,6 +67,16 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   final Observable<double?> powerLevel = Observable<double?>(null);
 
+  @override
+  final Observable<double?> brightnessLevel = Observable<double?>(null);
+
+  @override
+  final Observable<bool?> brightnessAuto = Observable<bool?>(null);
+
+  @override
+  final Observable<IconData> brightnessIcon =
+      Icons.brightness_auto.asObservable();
+
   final List<String> _timezones;
 
   @override
@@ -85,6 +96,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final NetworkAddressService networkService;
   final MemoryWatcherService memoryWatcherService;
   final BatteryWatcherService batteryWatcherService;
+  final BrightnessService brightnessService;
 
   SettingsStateImpl({
     required ShortcutsService shortcutsService,
@@ -93,6 +105,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     required this.networkService,
     required this.memoryWatcherService,
     required this.batteryWatcherService,
+    required this.brightnessService,
   })  : shortcutBindings = shortcutsService.keyboardBindings,
         _timezones = _loadTimezones(),
         selectedTimezone = timezoneService.timezone.asObservable() {
@@ -128,6 +141,13 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
         powerLevel.value = batteryWatcherService.levelPercent;
       });
     };
+    brightnessService.onChanged = () {
+      runInAction(() {
+        brightnessLevel.value = brightnessService.brightness;
+        brightnessAuto.value = brightnessService.auto;
+        brightnessIcon.value = brightnessService.icon;
+      });
+    };
   }
 
   @override
@@ -138,6 +158,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       networkService.start(),
       memoryWatcherService.start(),
       batteryWatcherService.start(),
+      brightnessService.start(),
     ]);
   }
 
@@ -149,6 +170,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     await networkService.stop();
     await memoryWatcherService.stop();
     await batteryWatcherService.stop();
+    await brightnessService.stop();
     _dateTimeNow = null;
   }
 
@@ -182,6 +204,16 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   late final Action showTimezoneSettings = () {
     settingsPage.value = SettingsPage.timezone;
+  }.asAction();
+
+  @override
+  late final Action setBrightnessLevel = (double value) {
+    brightnessService.brightness = value;
+  }.asAction();
+
+  @override
+  late final Action setBrightnessAuto = (bool value) {
+    brightnessService.auto = value;
   }.asAction();
 
   Observable<DateTime>? _dateTimeNow;

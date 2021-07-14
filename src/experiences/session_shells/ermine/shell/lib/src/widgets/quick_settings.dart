@@ -160,15 +160,46 @@ class _ListSettings extends StatelessWidget {
                     child: Text(Strings.open.toUpperCase()),
                   ),
                 ),
+                // Brightness
+                Observer(builder: (_) {
+                  return ListTile(
+                    enabled: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                    leading: Icon(appState.settingsState.brightnessIcon.value),
+                    title: Text(Strings.brightness),
+                    trailing: Wrap(
+                      alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      children: [
+                        SizedBox(
+                          height: 20,
+                          width: 200,
+                          child: Slider(
+                            value:
+                                appState.settingsState.brightnessLevel.value ??
+                                    1,
+                            onChanged: (double value) {
+                              appState.settingsState
+                                  .setBrightnessLevel([value]);
+                            },
+                          ),
+                        ),
+                        OutlinedButton(
+                          onPressed:
+                              appState.settingsState.brightnessAuto.value ==
+                                      true
+                                  ? null
+                                  : () => appState.settingsState
+                                      .setBrightnessAuto([true]),
+                          child: Text(Strings.auto.toUpperCase()),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
 
                 // Features not implemented yet.
-                // Brightness
-                ListTile(
-                  enabled: false,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.brightness_auto),
-                  title: Text(Strings.brightness),
-                ),
                 // Volume
                 ListTile(
                   enabled: false,

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:ermine/src/services/settings/battery_watcher_service.dart';
+import 'package:ermine/src/services/settings/brightness_service.dart';
 import 'package:ermine/src/services/settings/datetime_service.dart';
 import 'package:ermine/src/services/settings/memory_watcher_service.dart';
 import 'package:ermine/src/services/settings/network_address_service.dart';
@@ -29,6 +30,7 @@ enum SettingsPage {
   shortcuts,
   feedback,
   opensource,
+  brightness
 }
 
 /// Defines the state of the [QuickSettings] overlay.
@@ -48,6 +50,9 @@ abstract class SettingsState with Store implements TaskService {
   ObservableValue<double?> get powerLevel;
   Map<String, Set<String>> get shortcutBindings;
   List<String> get timezones;
+  ObservableValue<double?> get brightnessLevel;
+  ObservableValue<bool?> get brightnessAuto;
+  ObservableValue<IconData> get brightnessIcon;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     return SettingsStateImpl(
@@ -57,6 +62,7 @@ abstract class SettingsState with Store implements TaskService {
       networkService: NetworkAddressService(),
       memoryWatcherService: MemoryWatcherService(),
       batteryWatcherService: BatteryWatcherService(),
+      brightnessService: BrightnessService(),
     );
   }
 
@@ -64,4 +70,6 @@ abstract class SettingsState with Store implements TaskService {
   Action get showAllSettings;
   Action get showShortcutSettings;
   Action get showTimezoneSettings;
+  Action get setBrightnessLevel;
+  Action get setBrightnessAuto;
 }
