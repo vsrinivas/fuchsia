@@ -6,7 +6,9 @@ use crate::context::LowpanCtlContext;
 use anyhow::{format_err, Context, Error};
 use argh::FromArgs;
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_lowpan::{Credential, Identity, JoinParams, ProvisioningParams};
+use fidl_fuchsia_lowpan::{
+    Credential, Identity, JoinParams, JoinerCommissioningParams, ProvisioningParams,
+};
 use fidl_fuchsia_lowpan_device::{ProvisioningMonitorMarker, ProvisioningProgress};
 use hex;
 
@@ -20,7 +22,7 @@ const PROVISION_CMD_CRED_MASTER_LEY_LEN: &[usize] = &[16, 32];
 pub struct JoinCommand {
     /// name
     #[argh(option)]
-    pub name: String,
+    pub name: Option<String>,
 
     /// extended PANID, input hex string
     #[argh(option)]
@@ -41,14 +43,38 @@ pub struct JoinCommand {
     /// credential master key
     #[argh(option)]
     pub credential_master_key: Option<String>,
+
+    /// pskd, optional
+    #[argh(option)]
+    pub pskd: Option<String>,
+
+    /// provisioning url, optional
+    #[argh(option)]
+    pub provisioning_url: Option<String>,
+
+    /// vendor name, optional
+    #[argh(option)]
+    pub vendor_name: Option<String>,
+
+    /// vendor model, optional
+    #[argh(option)]
+    pub vendor_model: Option<String>,
+
+    /// vendor sw version, optional
+    #[argh(option)]
+    pub vendor_sw_version: Option<String>,
+
+    /// vendor data string, optional
+    #[argh(option)]
+    pub vendor_data_string: Option<String>,
 }
 
 impl JoinCommand {
     fn get_name_vec_from_str(&self) -> Result<Option<Vec<u8>>, Error> {
-        if self.name.as_bytes().len() > PROVISION_CMD_NAME_LEN {
+        if self.name.clone().unwrap().as_bytes().len() > PROVISION_CMD_NAME_LEN {
             return Err(format_err!("name should be less or equal to 63 bytes"));
         }
-        Ok(Some(self.name.as_bytes().to_vec()))
+        Ok(Some(self.name.clone().unwrap().as_bytes().to_vec()))
     }
 
     fn get_xpanid_vec(&self) -> Result<Option<Vec<u8>>, Error> {
@@ -95,11 +121,29 @@ impl JoinCommand {
         Ok(cred_master_key_vec.map(|value| Box::new(Credential::MasterKey(value))))
     }
 
+    fn get_joiner_params(&self) -> JoinerCommissioningParams {
+        JoinerCommissioningParams {
+            pskd: self.pskd.clone(),
+            provisioning_url: self.provisioning_url.clone(),
+            vendor_name: self.vendor_name.clone(),
+            vendor_model: self.vendor_model.clone(),
+            vendor_sw_version: self.vendor_sw_version.clone(),
+            vendor_data_string: self.vendor_data_string.clone(),
+            ..JoinerCommissioningParams::EMPTY
+        }
+    }
+
     fn get_join_params(&self) -> Result<JoinParams, Error> {
-        Ok(JoinParams::ProvisioningParameter(ProvisioningParams {
-            identity: self.get_identity()?,
-            credential: self.get_credential()?,
-        }))
+        if let Some(_) = self.name.clone() {
+            return Ok(JoinParams::ProvisioningParameter(ProvisioningParams {
+                identity: self.get_identity()?,
+                credential: self.get_credential()?,
+            }));
+        }
+        if !self.pskd.clone().unwrap().is_empty() {
+            return Ok(JoinParams::JoinerParameter(self.get_joiner_params()));
+        }
+        Err(format_err!("invalid parameter: one of the following needs to be set: name or pskd"))
     }
 
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {

@@ -28,7 +28,7 @@ macro_rules! traceln (($($args:tt)*) => { fuchsia_syslog::macros::fx_log_trace!(
 
 #[cfg(not(test))]
 #[macro_export]
-macro_rules! traceln (($($args:tt)*) => { }; );
+macro_rules! traceln (($($args:tt)*) => { fuchsia_syslog::macros::fx_log_trace!($($args)*); }; );
 
 #[macro_use]
 mod prelude {

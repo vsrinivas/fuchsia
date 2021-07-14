@@ -254,6 +254,8 @@ pub(super) trait ConnectivityStateExt {
     /// Returns the next state to switch to if the device
     /// role changes.
     fn role_updated(&self, role: Role) -> ConnectivityState;
+
+    fn commissioning(&self) -> Result<ConnectivityState, Error>;
 }
 
 impl ConnectivityStateExt for ConnectivityState {
@@ -323,6 +325,16 @@ impl ConnectivityStateExt for ConnectivityState {
             ConnectivityState::Isolated => ConnectivityState::Ready,
 
             state => state.clone(),
+        }
+    }
+
+    fn commissioning(&self) -> Result<ConnectivityState, Error> {
+        match self {
+            ConnectivityState::Offline => Ok(ConnectivityState::Commissioning),
+            state => Err(format_err!(
+                "Can't transition to ConnectivityState::Commissioning from {:?}",
+                *state,
+            )),
         }
     }
 

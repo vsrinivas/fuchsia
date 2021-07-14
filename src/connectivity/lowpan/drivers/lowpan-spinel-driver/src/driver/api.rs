@@ -471,18 +471,58 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
 
         let init_task = async move {
             // Wait for our turn.
-            let _lock = self.wait_for_api_task_lock("join_network").await?;
+            let lock = self.wait_for_api_task_lock("join_network").await?;
 
             // Wait until we are ready.
             self.wait_for_state(DriverState::is_initialized).await;
 
-            // TODO: Uncomment this line once implemented and remove the error line below
-            // Ok(_lock)
-            Result::<(), _>::Err(ZxStatus::NOT_SUPPORTED.into())
+            match params {
+                JoinParams::JoinerParameter(joiner_params) => {
+                    // For in-band joiner commissioning, pskd is required.
+                    if joiner_params.pskd.as_ref().map(|x| x.is_empty()).unwrap_or(true) {
+                        fx_log_err!("join network: pskd is empty");
+                        return Err(Error::from(ZxStatus::INVALID_ARGS));
+                    }
+
+                    let joiner_commissioning_param: JoinerCommissioning =
+                        joiner_params.try_into()?;
+
+                    fx_log_info!("join network: init-task: start to set interface up prop");
+
+                    // Bring up the network interface.
+                    self.frame_handler
+                        .send_request(CmdPropValueSet(PropNet::InterfaceUp.into(), true).verify())
+                        .await
+                        .context("Setting PropNet::InterfaceUp")?;
+
+                    fx_log_info!("join network: init-task: start to set joiner commissioning prop");
+
+                    // starting joiner commissioning
+                    self.frame_handler
+                        .send_request(CmdPropValueSet(
+                            PropMeshcop::JoinerCommissioning.into(),
+                            joiner_commissioning_param,
+                        ))
+                        .await
+                        .context("error setting joiner commissioning property")?;
+
+                    self.on_provisioned(false);
+
+                    self.on_start_of_commissioning()?;
+                }
+                _ => {
+                    fx_log_err!("join network: provision params not supported");
+                    return Err(Error::from(ZxStatus::INVALID_ARGS));
+                }
+            }
+
+            fx_log_info!("joiner commissioning: init-task: returning api lock");
+
+            Ok(lock)
         };
 
         let stream = self.frame_handler.inspect_as_stream(|frame| {
-            fx_log_debug!("join_network: Inspecting {:?}", frame);
+            fx_log_info!("join network stream: Inspecting {:?}", frame);
 
             // This method may return the following values:
             //
@@ -494,11 +534,60 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             //    * Some(Err(zx_error)): Close the stream with a `ZxStatus`.
             //    * Some(Ok(Some(Err(provision_err)))): Close the stream with a `ProvisionError`
 
-            // TODO: Add code to monitor and emit results here.
-            None
+            match SpinelPropValueRef::try_unpack_from_slice(frame.payload) {
+                Ok(prop_value) if prop_value.prop == Prop::Meshcop(PropMeshcop::JoinerState) => {
+                    fx_log_info!(
+                        "join network stream: found joiner state change: {:?}",
+                        MeshcopJoinerState::try_unpack_from_slice(prop_value.value)
+                    );
+                    None
+                }
+
+                Ok(prop_value) if prop_value.prop == Prop::LastStatus => {
+                    match Status::try_unpack_from_slice(prop_value.value) {
+                        Ok(Status::Join(join_status)) => {
+                            fx_log_info!("join network stream: inspect error {:?}", join_status);
+                            match join_status {
+                                StatusJoin::Failure => {
+                                    Some(Ok(Some(Err(ProvisionError::Canceled))))
+                                }
+                                StatusJoin::Security => {
+                                    Some(Ok(Some(Err(ProvisionError::CredentialRejected))))
+                                }
+                                StatusJoin::NoPeers => {
+                                    Some(Ok(Some(Err(ProvisionError::NetworkNotFound))))
+                                }
+                                StatusJoin::Incompatible => {
+                                    Some(Ok(Some(Err(ProvisionError::Canceled))))
+                                }
+                                StatusJoin::RspTimeout => {
+                                    Some(Ok(Some(Err(ProvisionError::NetworkNotFound))))
+                                }
+                                StatusJoin::Success => Some(Ok(None)),
+                            }
+                        }
+                        Err(err) => Some(
+                            Err(err).context("join network stream: inspecting last_status frame"),
+                        ),
+                        _ => None,
+                    }
+                }
+                Err(err) => Some(Err(err).context("join network stream: inspecting inbound frame")),
+                _ => None,
+            }
         });
 
-        self.start_ongoing_stream_process(init_task, stream, Time::after(DEFAULT_TIMEOUT))
+        self.start_ongoing_stream_process(
+            init_task,
+            stream,
+            Time::after(Duration::from_seconds(15)),
+        )
+        .chain(
+            async move { Ok(Ok(ProvisioningProgress::Identity(self.identity_snapshot()))) }
+                .into_stream()
+                .boxed(),
+        )
+        .boxed()
     }
 
     async fn get_credential(&self) -> ZxResult<Option<fidl_fuchsia_lowpan::Credential>> {

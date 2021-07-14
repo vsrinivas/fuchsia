@@ -6,6 +6,7 @@ use super::enums::*;
 use super::{Correlated, CorrelatedBox, NetFlags, RouteFlags};
 use anyhow::{format_err, Context as _};
 use core::convert::{TryFrom, TryInto};
+use fidl_fuchsia_lowpan::JoinerCommissioningParams;
 use fidl_fuchsia_lowpan_device::{AllCounters, MacCounters};
 use hex;
 use net_types::ip::IpAddress;
@@ -617,6 +618,34 @@ impl std::convert::Into<AllCounters> for AllMacCounters {
             }),
             ..AllCounters::EMPTY
         }
+    }
+}
+
+#[spinel_packed("bUUUUUU")]
+#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+pub struct JoinerCommissioning {
+    pub switch: bool,
+    pub pskd: String,
+    pub provisioning_url: String,
+    pub vendor_name: String,
+    pub vendor_model: String,
+    pub vendor_sw_version: String,
+    pub vendor_data_string: String,
+}
+
+impl std::convert::TryInto<JoinerCommissioning> for JoinerCommissioningParams {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<JoinerCommissioning, Self::Error> {
+        Ok(JoinerCommissioning {
+            switch: true,
+            pskd: self.pskd.ok_or(format_err!("missing pskd"))?,
+            provisioning_url: self.provisioning_url.unwrap_or("".to_string()),
+            vendor_name: self.vendor_name.unwrap_or("".to_string()),
+            vendor_model: self.vendor_model.unwrap_or("".to_string()),
+            vendor_sw_version: self.vendor_sw_version.unwrap_or("".to_string()),
+            vendor_data_string: self.vendor_data_string.unwrap_or("".to_string()),
+        })
     }
 }
 

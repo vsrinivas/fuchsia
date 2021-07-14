@@ -326,6 +326,54 @@ pub enum PropIpv6 {
 impl_sub_enum!(Prop::Ipv6, PropIpv6);
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum PropMeshcop {
+    JoinerState,
+    JoinerCommissioning,
+}
+impl_sub_enum!(Prop::Meshcop, PropMeshcop);
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum MeshcopJoinerState {
+    Idle,
+    Discover,
+    Connecting,
+    Connected,
+    Entrust,
+    Joined,
+    Unknown(u32),
+}
+impl_spinel_pack_uint!(MeshcopJoinerState);
+impl_spinel_unpack_uint!(MeshcopJoinerState);
+
+impl From<MeshcopJoinerState> for u32 {
+    fn from(value: MeshcopJoinerState) -> Self {
+        match value {
+            MeshcopJoinerState::Idle => 0,
+            MeshcopJoinerState::Discover => 1,
+            MeshcopJoinerState::Connecting => 2,
+            MeshcopJoinerState::Connected => 3,
+            MeshcopJoinerState::Entrust => 4,
+            MeshcopJoinerState::Joined => 5,
+            MeshcopJoinerState::Unknown(x) => x,
+        }
+    }
+}
+
+impl From<u32> for MeshcopJoinerState {
+    fn from(value: u32) -> Self {
+        match value {
+            0 => MeshcopJoinerState::Idle,
+            1 => MeshcopJoinerState::Discover,
+            2 => MeshcopJoinerState::Connecting,
+            3 => MeshcopJoinerState::Connected,
+            4 => MeshcopJoinerState::Entrust,
+            5 => MeshcopJoinerState::Joined,
+            x => MeshcopJoinerState::Unknown(x),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum Prop {
     LastStatus,
     ProtocolVersion,
@@ -349,6 +397,7 @@ pub enum Prop {
     Cntr(PropCntr),
     Ipv6(PropIpv6),
     NestLegacy(PropNestLegacy),
+    Meshcop(PropMeshcop),
     Unknown(u32),
 }
 impl_spinel_pack_uint!(Prop);
@@ -489,6 +538,9 @@ impl From<Prop> for u32 {
             Ipv6(PropIpv6::IcmpPingOffloadMode) => 0x67,
             Ipv6(PropIpv6::Unknown(x)) => x,
 
+            Meshcop(PropMeshcop::JoinerState) => 0x80,
+            Meshcop(PropMeshcop::JoinerCommissioning) => 0x81,
+
             Unknown(x) => x,
         }
     }
@@ -621,6 +673,9 @@ impl From<u32> for Prop {
             }
 
             0x691 => Cntr(PropCntr::AllMacCounters),
+
+            0x80 => Meshcop(PropMeshcop::JoinerState),
+            0x81 => Meshcop(PropMeshcop::JoinerCommissioning),
 
             112 => Stream(PropStream::Debug),
             113 => Stream(PropStream::Raw),

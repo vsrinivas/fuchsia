@@ -126,6 +126,36 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         let driver_state = self.driver_state.lock();
         driver_state.preferred_net_type.is_empty() || (driver_state.preferred_net_type == net_type)
     }
+
+    pub(super) fn on_start_of_commissioning(&self) -> Result<(), Error> {
+        let mut driver_state = self.driver_state.lock();
+        let new_connectivity_state = driver_state.connectivity_state.commissioning()?;
+
+        if new_connectivity_state != driver_state.connectivity_state {
+            let old_connectivity_state = driver_state.connectivity_state;
+            driver_state.connectivity_state = new_connectivity_state;
+            std::mem::drop(driver_state);
+            self.driver_state_change.trigger();
+            self.on_connectivity_state_change(new_connectivity_state, old_connectivity_state);
+        }
+        Ok(())
+    }
+
+    pub(super) fn on_provisioned(&self, saved: bool) {
+        let mut driver_state = self.driver_state.lock();
+        let new_connectivity_state = if saved {
+            driver_state.connectivity_state.provisioned()
+        } else {
+            driver_state.connectivity_state.unprovisioned()
+        };
+        if new_connectivity_state != driver_state.connectivity_state {
+            let old_connectivity_state = driver_state.connectivity_state;
+            driver_state.connectivity_state = new_connectivity_state;
+            std::mem::drop(driver_state);
+            self.driver_state_change.trigger();
+            self.on_connectivity_state_change(new_connectivity_state, old_connectivity_state);
+        }
+    }
 }
 
 /// State synchronization
@@ -175,24 +205,19 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                 }
             }
 
+            Prop::LastStatus => {
+                if let Status::Join(join_status) = Status::try_unpack_from_slice(value)? {
+                    if join_status == StatusJoin::Success {
+                        self.on_provisioned(true);
+                    } else {
+                        self.on_provisioned(false);
+                    }
+                }
+            }
+
             Prop::Net(PropNet::Saved) => {
                 let saved = bool::try_unpack_from_slice(value)?;
-                let mut driver_state = self.driver_state.lock();
-                let new_connectivity_state = if saved {
-                    driver_state.connectivity_state.provisioned()
-                } else {
-                    driver_state.connectivity_state.unprovisioned()
-                };
-                if new_connectivity_state != driver_state.connectivity_state {
-                    let old_connectivity_state = driver_state.connectivity_state;
-                    driver_state.connectivity_state = new_connectivity_state;
-                    std::mem::drop(driver_state);
-                    self.driver_state_change.trigger();
-                    self.on_connectivity_state_change(
-                        new_connectivity_state,
-                        old_connectivity_state,
-                    );
-                }
+                self.on_provisioned(saved);
             }
 
             Prop::Net(PropNet::Role) => {
