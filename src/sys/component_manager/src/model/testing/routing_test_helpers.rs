@@ -1083,8 +1083,7 @@ pub mod capability_util {
         expected_res: ExpectedResult,
         events: Vec<::routing::event::EventSubscription>,
     ) {
-        let path: CapabilityPath = "/svc/fuchsia.sys2.EventSource".parse().unwrap();
-        let res = subscribe_to_events(namespace, &path, events).await;
+        let res = subscribe_to_events(namespace, events).await;
         match (res, expected_res) {
             (Err(e), ExpectedResult::Ok) => {
                 panic!("unexpected failure {}", e);
@@ -1098,11 +1097,11 @@ pub mod capability_util {
 
     pub async fn subscribe_to_events(
         namespace: &ManagedNamespace,
-        event_source_path: &CapabilityPath,
         events: Vec<::routing::event::EventSubscription>,
     ) -> Result<fsys::EventStreamRequestStream, anyhow::Error> {
+        let event_source_path = CapabilityPath::try_from("/svc/fuchsia.sys2.EventSource").unwrap();
         let event_source_proxy =
-            connect_to_svc_in_namespace::<EventSourceMarker>(namespace, event_source_path).await;
+            connect_to_svc_in_namespace::<EventSourceMarker>(namespace, &event_source_path).await;
         let (client_end, stream) =
             fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()?;
         // Bind the future to a variable in order to avoid using the `request`s across an await.

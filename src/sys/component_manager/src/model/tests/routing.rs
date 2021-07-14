@@ -285,7 +285,6 @@ async fn capability_requested_event_at_parent() {
     let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
     let mut event_stream = capability_util::subscribe_to_events(
         &namespace_root,
-        &CapabilityPath::try_from("/svc/fuchsia.sys2.EventSource").unwrap(),
         vec![EventSubscription::new("capability_requested".into(), EventMode::Async)],
     )
     .await
@@ -932,6 +931,152 @@ async fn use_runner_from_inherited_environment() {
                 Some("test:///c_resolved".to_string())
             );
         }
+    );
+}
+
+///  a
+///   \
+///    b
+///
+/// a: declares runner "runner" with service "/svc/runner" from "self".
+/// a: registers runner "runner" from self in environment as "hobbit".
+/// b: uses runner "runner". Fails due to a FIDL error, conveyed through a Stop after the
+///    bind succeeds.
+#[fuchsia::test]
+async fn use_runner_from_environment_failed() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env").build())
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_runner(RunnerRegistration {
+                            source_name: "runner".into(),
+                            source: RegistrationSource::Self_,
+                            target_name: "runner".into(),
+                        })
+                        .build(),
+                )
+                .runner(RunnerDecl {
+                    name: "runner".into(),
+                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                })
+                // For Stopped event
+                .use_(UseDecl::Event(UseEventDecl {
+                    dependency_type: DependencyType::Strong,
+                    source: UseSource::Framework,
+                    source_name: "stopped".into(),
+                    target_name: "stopped".into(),
+                    filter: None,
+                    mode: cm_rust::EventMode::Async,
+                }))
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
+                    subscriptions: vec![cm_rust::EventSubscription {
+                        event_name: "stopped".into(),
+                        mode: cm_rust::EventMode::Async,
+                    }],
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
+                    source: UseSource::Parent,
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
+                }))
+                .build(),
+        ),
+        ("b", ComponentDeclBuilder::new_empty_component().add_program("runner").build()),
+    ];
+
+    struct RunnerHost {}
+    #[async_trait]
+    impl Hook for RunnerHost {
+        async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+            if let Ok(EventPayload::CapabilityRouted {
+                source:
+                    CapabilitySource::Component {
+                        capability: ComponentCapability::Runner(decl), ..
+                    },
+                capability_provider,
+            }) = &event.result
+            {
+                let mut capability_provider = capability_provider.lock().await;
+                if decl.name.str() == "runner" {
+                    *capability_provider = Some(Box::new(RunnerCapabilityProvider {}));
+                }
+            }
+            Ok(())
+        }
+    }
+
+    struct RunnerCapabilityProvider {}
+    #[async_trait]
+    impl CapabilityProvider for RunnerCapabilityProvider {
+        async fn open(
+            self: Box<Self>,
+            _flags: u32,
+            _open_mode: u32,
+            _relative_path: PathBuf,
+            server_end: &mut zx::Channel,
+        ) -> Result<OptionalTask, ModelError> {
+            let _ = channel::take_channel(server_end);
+            Ok(None.into())
+        }
+    }
+
+    // Set a capability provider for the runner that closes the server end.
+    // `ComponentRunner.Start` to fail.
+    let test = RoutingTestBuilder::new("a", components).build().await;
+    let runner_host = Arc::new(RunnerHost {});
+    test.model
+        .root
+        .hooks
+        .install(vec![HooksRegistration::new(
+            "RunnerHost",
+            vec![EventType::CapabilityRouted],
+            Arc::downgrade(&runner_host) as Weak<dyn Hook>,
+        )])
+        .await;
+    let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
+    let mut event_stream = capability_util::subscribe_to_events(
+        &namespace_root,
+        vec![EventSubscription::new("stopped".into(), EventMode::Async)],
+    )
+    .await
+    .unwrap();
+
+    // Even though we expect the runner to fail, bind should succeed. This is because the failure
+    // is propagated via the controller channel, separately from the Start action.
+    test.bind_instance(&vec!["b:0"].into()).await.unwrap();
+
+    // Since the controller should have closed, expect a Stopped event.
+    let event = match event_stream.next().await {
+        Some(Ok(fsys::EventStreamRequest::OnEvent { event, .. })) => event,
+        _ => panic!("Event not found"),
+    };
+    assert_matches!(&event,
+        fsys::Event {
+            header: Some(fsys::EventHeader {
+                moniker: Some(moniker),
+                ..
+            }),
+            event_result: Some(
+                fsys::EventResult::Payload(
+                    fsys::EventPayload::Stopped(
+                        fsys::StoppedPayload {
+                            status: Some(status),
+                            ..
+                        }
+                    )
+                )
+            ),
+            ..
+        }
+        if *moniker == "./b:0".to_string()
+            && *status == zx::Status::PEER_CLOSED.into_raw() as i32
     );
 }
 
