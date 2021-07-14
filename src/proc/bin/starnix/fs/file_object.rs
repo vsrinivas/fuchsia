@@ -183,7 +183,7 @@ macro_rules! fd_impl_seekable {
                 SeekOrigin::SET => Some(offset),
                 SeekOrigin::CUR => temp.checked_add(offset),
                 SeekOrigin::END => {
-                    let stat = file.node().stat();
+                    let stat = file.node().stat()?;
                     offset.checked_add(stat.st_size as off_t)
                 }
             };

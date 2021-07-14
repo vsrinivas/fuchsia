@@ -31,15 +31,15 @@ use std::mem;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
-use crate::fs::*;
 use crate::fs::devfs::Devfs;
 use crate::fs::fuchsia::{create_file_from_handle, Remotefs};
 use crate::fs::tmpfs::Tmpfs;
+use crate::fs::*;
 use crate::signals::signal_handling::*;
 use crate::strace;
-use crate::syscalls::*;
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::table::dispatch_syscall;
+use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
 

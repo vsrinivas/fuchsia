@@ -13,20 +13,16 @@ use crate::types::*;
 
 #[derive(Default)]
 struct TmpfsState {
-    last_inode_num: ino_t,
     nodes: HashMap<ino_t, FsNodeHandle>,
 }
 
 impl TmpfsState {
     fn register(&mut self, node: &FsNodeHandle) {
-        self.last_inode_num += 1;
-        let inode_num = self.last_inode_num;
-        node.state_mut().inode_num = inode_num;
-        self.nodes.insert(inode_num, Arc::clone(node));
+        self.nodes.insert(node.info().inode_num, Arc::clone(node));
     }
 
     fn unregister(&mut self, node: &FsNodeHandle) {
-        self.nodes.remove(&node.state_mut().inode_num);
+        self.nodes.remove(&node.info().inode_num);
     }
 }
 
@@ -63,16 +59,35 @@ impl FsNodeOps for TmpfsDirectory {
         Ok(Box::new(NullFile))
     }
 
-    fn lookup(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+    fn lookup(
+        &self,
+        _node: &FsNode,
+        _name: &FsStr,
+        _info: &mut FsNodeInfo,
+    ) -> Result<Box<dyn FsNodeOps>, Errno> {
         Err(ENOENT)
     }
 
-    fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+    fn mkdir(
+        &self,
+        _node: &FsNode,
+        _name: &FsStr,
+        _info: &mut FsNodeInfo,
+    ) -> Result<Box<dyn FsNodeOps>, Errno> {
         Ok(Box::new(TmpfsDirectory { fs: self.fs.clone() }))
     }
 
-    fn create(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
-        Ok(Box::new(TmpfsFileNode::new(self.fs.clone())?))
+    fn mknod(
+        &self,
+        _node: &FsNode,
+        _name: &FsStr,
+        info: &mut FsNodeInfo,
+    ) -> Result<Box<dyn FsNodeOps>, Errno> {
+        if info.mode.is_reg() {
+            Ok(Box::new(TmpfsFileNode::new(self.fs.clone())?))
+        } else {
+            Err(EACCES)
+        }
     }
 
     fn unlink(&self, _node: &FsNode, _name: &FsStr, _kind: UnlinkKind) -> Result<(), Errno> {
@@ -147,7 +162,7 @@ mod test {
         let test_vmo = zx::Vmo::create(test_mem_size).unwrap();
 
         let path = b"test.bin";
-        let _file = task.fs.root.mknod(path, FileMode::IFREG | FileMode::ALLOW_ALL).unwrap();
+        let _file = task.fs.root.mknod(path, FileMode::IFREG | FileMode::ALLOW_ALL, 0).unwrap();
 
         let wr_file = task.open_file(path, OpenFlags::RDWR).unwrap();
 

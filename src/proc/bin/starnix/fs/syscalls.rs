@@ -230,7 +230,7 @@ pub fn sys_faccessat(
     // consider the current uid and they don't consider GRO or OTH bits.
     // Really, these checks should be done by the auth system once that
     // exists.
-    let stat = node.update_stat()?;
+    let stat = node.stat()?;
     if mode & X_OK != 0 && stat.st_mode & S_IRUSR == 0 {
         return Err(EACCES);
     }
@@ -278,7 +278,7 @@ pub fn sys_fstat(
     buffer: UserRef<stat_t>,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    let result = file.node().update_stat()?;
+    let result = file.node().stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
 }
@@ -295,7 +295,7 @@ pub fn sys_newfstatat(
         return Err(ENOSYS);
     }
     let node = lookup_node_at(&ctx.task, dir_fd, user_path)?;
-    let result = node.update_stat()?;
+    let result = node.stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
 }
@@ -352,7 +352,7 @@ pub fn sys_mkdirat(
 ) -> Result<SyscallResult, Errno> {
     let mode = ctx.task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
     lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
-        parent.mknod(basename, FileMode::IFDIR | mode)
+        parent.mknod(basename, FileMode::IFDIR | mode, 0)
     })?;
     Ok(SUCCESS)
 }
@@ -362,7 +362,7 @@ pub fn sys_mknodat(
     dir_fd: FdNumber,
     user_path: UserCString,
     mode: FileMode,
-    _dev: dev_t,
+    dev: dev_t,
 ) -> Result<SyscallResult, Errno> {
     let file_type = match mode & FileMode::IFMT {
         FileMode::IFREG => FileMode::IFREG,
@@ -376,7 +376,7 @@ pub fn sys_mknodat(
     };
     let mode = file_type | ctx.task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
     lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
-        parent.mknod(basename, mode)
+        parent.mknod(basename, mode, dev)
     })?;
     Ok(SUCCESS)
 }
@@ -475,7 +475,7 @@ mod tests {
         let ctx = SyscallContext::new(&task_owner.task);
         let fd = FdNumber::from_raw(10);
         let file_handle = task_owner.task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
-        let file_size = file_handle.node().stat().st_size;
+        let file_size = file_handle.node().stat().unwrap().st_size;
         task_owner.task.files.insert(fd, file_handle);
 
         assert_eq!(sys_lseek(&ctx, fd, 0, SeekOrigin::CUR as u32)?, SyscallResult::Success(0));
@@ -484,15 +484,18 @@ mod tests {
         assert_eq!(sys_lseek(&ctx, fd, -3, SeekOrigin::CUR as u32)?, SyscallResult::Success(0));
         assert_eq!(
             sys_lseek(&ctx, fd, 0, SeekOrigin::END as u32)?,
-            SyscallResult::Success(file_size.try_into().unwrap())
+            SyscallResult::Success(file_size as u64)
         );
         assert_eq!(sys_lseek(&ctx, fd, -5, SeekOrigin::SET as u32), Err(EINVAL));
 
         // Make sure that the failed call above did not change the offset.
-        assert_eq!(sys_lseek(&ctx, fd, 0, SeekOrigin::CUR as u32)?, SyscallResult::Success(0));
+        assert_eq!(
+            sys_lseek(&ctx, fd, 0, SeekOrigin::CUR as u32)?,
+            SyscallResult::Success(file_size as u64)
+        );
 
         // Prepare for an overflow.
-        assert_eq!(sys_lseek(&ctx, fd, 3, SeekOrigin::CUR as u32)?, SyscallResult::Success(3));
+        assert_eq!(sys_lseek(&ctx, fd, 3, SeekOrigin::SET as u32)?, SyscallResult::Success(3));
 
         // Check for overflow.
         assert_eq!(sys_lseek(&ctx, fd, i64::MAX, SeekOrigin::CUR as u32), Err(EOVERFLOW));

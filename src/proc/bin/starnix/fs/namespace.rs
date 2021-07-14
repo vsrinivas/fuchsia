@@ -104,11 +104,11 @@ impl NamespaceNode {
         Ok(FileObject::new(self.node.open()?, self.clone(), flags))
     }
 
-    pub fn mknod(&self, name: &FsStr, mode: FileMode) -> Result<NamespaceNode, Errno> {
+    pub fn mknod(&self, name: &FsStr, mode: FileMode, dev: dev_t) -> Result<NamespaceNode, Errno> {
         if name.is_empty() || name == b"." || name == b".." {
             return Err(EEXIST);
         }
-        Ok(self.with_new_node(self.node.mknod(name, mode)?))
+        Ok(self.with_new_node(self.node.mknod(name, mode, dev)?))
     }
 
     pub fn unlink(&self, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {

@@ -4,32 +4,16 @@
 
 use fuchsia_zircon::{self as zx, HandleBased};
 use log::warn;
+use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
 use std::sync::Arc;
 use syncio::{zxio::zxio_get_posix_mode, zxio_node_attributes_t, Zxio};
 
-use crate::{fd_impl_seekable, not_implemented};
 use crate::devices::*;
+use crate::fd_impl_seekable;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
-
-fn update_stat_from_result(node: &FsNode, attrs: zxio_node_attributes_t) -> Result<(), Errno> {
-    /// st_blksize is measured in units of 512 bytes.
-    const BYTES_PER_BLOCK: usize = 512;
-
-    let mut state = node.state_mut();
-    state.inode_num = attrs.id;
-    // TODO - store these in FsNodeState and convert on fstat
-    state.mode =
-        FileMode::from_bits(unsafe { zxio_get_posix_mode(attrs.protocols, attrs.abilities) });
-    state.size = attrs.content_size as usize;
-    state.storage_size = attrs.storage_size as usize;
-    state.blksize = BYTES_PER_BLOCK;
-    state.link_count = attrs.link_count;
-
-    Ok(())
-}
 
 pub struct Remotefs {
     root: FsNodeHandle,
@@ -62,33 +46,55 @@ struct RemoteNode {
     rights: u32,
 }
 
+fn update_into_from_attrs(info: &mut FsNodeInfo, attrs: zxio_node_attributes_t) {
+    /// st_blksize is measured in units of 512 bytes.
+    const BYTES_PER_BLOCK: usize = 512;
+
+    info.inode_num = attrs.id;
+    // TODO - store these in FsNodeState and convert on fstat
+    info.mode =
+        FileMode::from_bits(unsafe { zxio_get_posix_mode(attrs.protocols, attrs.abilities) });
+    info.size = attrs.content_size as usize;
+    info.storage_size = attrs.storage_size as usize;
+    info.blksize = BYTES_PER_BLOCK;
+    info.link_count = attrs.link_count;
+}
+
 impl FsNodeOps for RemoteNode {
     fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(RemoteFileObject { zxio: Arc::clone(&self.zxio) }))
     }
 
-    fn lookup(&self, _node: &FsNode, name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+    fn lookup(
+        &self,
+        _node: &FsNode,
+        name: &FsStr,
+        info: &mut FsNodeInfo,
+    ) -> Result<Box<dyn FsNodeOps>, Errno> {
         let name = std::str::from_utf8(name).map_err(|_| {
             warn!("bad utf8 in pathname! remote filesystems can't handle this");
             EINVAL
         })?;
         let zxio =
             Arc::new(self.zxio.open(self.rights, 0, name).map_err(Errno::from_status_like_fdio)?);
-        Ok(Box::new(RemoteNode { zxio, rights: self.rights }))
-    }
 
-    fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
-        not_implemented!("remote mkdir");
-        Err(ENOSYS)
+        // TODO: It's unfortunate to have another round-trip. We should be able
+        // to set the mode based on the information we get during open.
+        let attrs = zxio.attr_get().map_err(Errno::from_status_like_fdio)?;
+        update_into_from_attrs(info, attrs);
+
+        Ok(Box::new(RemoteNode { zxio, rights: self.rights }))
     }
 
     fn truncate(&self, _node: &FsNode, length: u64) -> Result<(), Errno> {
         self.zxio.truncate(length).map_err(Errno::from_status_like_fdio)
     }
 
-    fn update_stat(&self, node: &FsNode) -> Result<(), Errno> {
-        let attributes = self.zxio.attr_get().map_err(Errno::from_status_like_fdio)?;
-        update_stat_from_result(node, attributes)
+    fn update_info<'a>(&self, node: &'a FsNode) -> Result<RwLockReadGuard<'a, FsNodeInfo>, Errno> {
+        let attrs = self.zxio.attr_get().map_err(Errno::from_status_like_fdio)?;
+        let mut info = node.info_mut();
+        update_into_from_attrs(&mut info, attrs);
+        Ok(RwLockWriteGuard::downgrade(info))
     }
 }
 

@@ -18,9 +18,7 @@ pub struct Devfs {
 impl Devfs {
     pub fn new() -> FileSystemHandle {
         let devfs_dev = AnonNodeDevice::new(0);
-        Arc::new(Devfs {
-            root: FsNode::new_root(DevfsDirectory, devfs_dev),
-        })
+        Arc::new(Devfs { root: FsNode::new_root(DevfsDirectory, devfs_dev) })
     }
 }
 
@@ -33,31 +31,24 @@ impl FileSystem for Devfs {
 struct DevfsDirectory;
 
 impl FsNodeOps for DevfsDirectory {
-    fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
-        Err(ENOSYS)
-    }
-
     fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(NullFile))
     }
 
-    fn create(&self, _node: &FsNode, name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+    fn lookup(
+        &self,
+        _node: &FsNode,
+        name: &FsStr,
+        info: &mut FsNodeInfo,
+    ) -> Result<Box<dyn FsNodeOps>, Errno> {
         if name == b"null" {
-            Ok(Box::new(DevNullFileNode))
-        } else {
-            Err(ENOENT)
-        }
-    }
-
-    fn lookup(&self, _node: &FsNode, name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
-        if name == b"null" {
+            info.mode = FileMode::IFCHR | FileMode::ALLOW_ALL;
             Ok(Box::new(DevNullFileNode))
         } else {
             Err(ENOENT)
         }
     }
 }
-
 
 /// A `DevNullFileNode` returns a new `DevNullFileObject` for `open`.
 struct DevNullFileNode;

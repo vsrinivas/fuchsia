@@ -33,8 +33,8 @@ impl FileOps for VmoFileObject {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let mut state = file.node().state_mut();
-        let file_length = state.size;
+        let mut info = file.node().info_mut();
+        let file_length = info.size;
         let want_read = UserBuffer::get_total_length(data);
         let to_read =
             if file_length < offset + want_read { file_length - offset } else { want_read };
@@ -42,7 +42,7 @@ impl FileOps for VmoFileObject {
         self.vmo.read(&mut buf[..], offset as u64).map_err(|_| EIO)?;
         // TODO(steveaustin) - write_each might might be more efficient
         task.mm.write_all(data, &mut buf[..])?;
-        state.time_access = fuchsia_runtime::utc_time();
+        info.time_access = fuchsia_runtime::utc_time();
         Ok(to_read)
     }
 
@@ -53,12 +53,12 @@ impl FileOps for VmoFileObject {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let mut state = file.node().state_mut();
+        let mut info = file.node().info_mut();
         let want_write = UserBuffer::get_total_length(data);
         let write_end = offset + want_write;
         let mut update_content_size = false;
-        if write_end > state.size {
-            if write_end > state.storage_size {
+        if write_end > info.size {
+            if write_end > info.storage_size {
                 let mut new_size = write_end as u64;
                 // TODO(steveaustin) move the padding logic
                 // to a library where it can be shared with
@@ -68,7 +68,7 @@ impl FileOps for VmoFileObject {
                     new_size += padding;
                 }
                 self.vmo.set_size(new_size).map_err(|_| ENOMEM)?;
-                state.storage_size = new_size as usize;
+                info.storage_size = new_size as usize;
             }
             update_content_size = true;
         }
@@ -77,11 +77,11 @@ impl FileOps for VmoFileObject {
         task.mm.read_all(data, &mut buf[..])?;
         self.vmo.write(&mut buf[..], offset as u64).map_err(|_| EIO)?;
         if update_content_size {
-            state.size = write_end;
+            info.size = write_end;
         }
         let now = fuchsia_runtime::utc_time();
-        state.time_access = now;
-        state.time_modify = now;
+        info.time_access = now;
+        info.time_modify = now;
         Ok(want_write)
     }
 

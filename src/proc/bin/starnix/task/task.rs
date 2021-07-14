@@ -433,12 +433,10 @@ impl Task {
                 if !flags.contains(OpenFlags::CREAT) {
                     return Err(errno);
                 }
+                let access = self.fs.apply_umask(mode & FileMode::ALLOW_ALL);
                 // TODO: Do we need to check the errno and attempt to create
                 // the file only when we get ENOENT?
-                parent.mknod(
-                    basename,
-                    FileMode::IFREG | self.fs.apply_umask(mode & FileMode::ALLOW_ALL),
-                )?
+                parent.mknod(basename, FileMode::IFREG | access, 0)?
             }
         };
         node.open(flags)
