@@ -5,7 +5,7 @@
 group("scrutiny") {
   testonly = true
   public_deps = [
-    "//src/security/scrutiny/bin:scrutiny",
+    "//src/security/scrutiny/bin",
     "//src/security/scrutiny/lib",
   ]
 }

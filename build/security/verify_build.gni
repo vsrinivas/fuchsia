@@ -40,7 +40,8 @@ template("verify_kernel_cmdline") {
 
     script = "//build/security/verify_build/verify_build.py"
     stamp_file = "$target_gen_dir/$target_name.verified"
-    scrutiny_target = "//src/security/scrutiny/bin($host_toolchain)"
+    scrutiny_target =
+        "//src/security/scrutiny/bin/standalone:bin($host_toolchain)"
     scrutiny_tool =
         get_label_info(scrutiny_target, "root_out_dir") + "/scrutiny"
 
@@ -111,7 +112,8 @@ template("verify_bootfs_filelist") {
 
     script = "//build/security/verify_build/verify_build.py"
     stamp_file = "$target_gen_dir/$target_name.verified"
-    scrutiny_target = "//src/security/scrutiny/bin($host_toolchain)"
+    scrutiny_target =
+        "//src/security/scrutiny/bin/standalone:bin($host_toolchain)"
     scrutiny_tool =
         get_label_info(scrutiny_target, "root_out_dir") + "/scrutiny"
 
@@ -194,7 +196,8 @@ template("verify_static_pkgs") {
     script = "//build/security/verify_build/verify_build.py"
     stamp_file = "$target_gen_dir/$target_name.verified"
     depfile = "$target_gen_dir/$target_name.d"
-    scrutiny_target = "//src/security/scrutiny/bin($host_toolchain)"
+    scrutiny_target =
+        "//src/security/scrutiny/bin/standalone:bin($host_toolchain)"
     scrutiny_tool =
         get_label_info(scrutiny_target, "root_out_dir") + "/scrutiny"
     far_target = "//src/sys/pkg/bin/far:bin($host_toolchain)"
