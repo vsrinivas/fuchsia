@@ -91,7 +91,7 @@ impl NamespaceNode {
     /// Create a namespace node that is not mounted in a namespace.
     ///
     /// The returned node does not have a name.
-    pub fn new_unmounted(node: FsNodeHandle) -> Self {
+    pub fn new_anonymous(node: FsNodeHandle) -> Self {
         Self { mount: None, node }
     }
 
@@ -101,7 +101,7 @@ impl NamespaceNode {
     /// FileObject records the NamespaceNode that created it in order to
     /// remember its path in the Namespace.
     pub fn open(&self, flags: OpenFlags) -> Result<FileHandle, Errno> {
-        Ok(FileObject::new(self.node.open()?, self.clone(), flags))
+        Ok(FileObject::new(self.node.open(flags)?, self.clone(), flags))
     }
 
     pub fn mknod(&self, name: &FsStr, mode: FileMode, dev: dev_t) -> Result<NamespaceNode, Errno> {

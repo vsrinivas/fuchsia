@@ -34,6 +34,10 @@ impl FileMode {
         self.0
     }
 
+    pub fn fmt(&self) -> FileMode {
+        FileMode(self.bits() & uapi::S_IFMT)
+    }
+
     pub fn is_lnk(&self) -> bool {
         (self.bits() & uapi::S_IFMT) == uapi::S_IFLNK
     }

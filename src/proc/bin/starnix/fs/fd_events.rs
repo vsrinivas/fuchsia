@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use std::ops::{BitAnd, BitOr};
+use std::ops;
 
 use crate::types::uapi;
 
@@ -28,6 +28,10 @@ impl FdEvents {
     pub const POLLREMOVE: FdEvents = FdEvents { mask: uapi::POLLREMOVE };
     pub const POLLRDHUP: FdEvents = FdEvents { mask: uapi::POLLRDHUP };
 
+    pub fn empty() -> FdEvents {
+        Self::from(0)
+    }
+
     pub fn from(mask: u32) -> FdEvents {
         FdEvents { mask }
     }
@@ -37,7 +41,7 @@ impl FdEvents {
     }
 }
 
-impl BitAnd for FdEvents {
+impl ops::BitAnd for FdEvents {
     type Output = bool;
 
     // rhs is the "right-hand side" of the expression `a & b`
@@ -46,10 +50,16 @@ impl BitAnd for FdEvents {
     }
 }
 
-impl BitOr for FdEvents {
+impl ops::BitOr for FdEvents {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
         Self { mask: self.mask | rhs.mask }
+    }
+}
+
+impl ops::BitOrAssign for FdEvents {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.mask |= rhs.mask;
     }
 }

@@ -61,7 +61,7 @@ fn update_into_from_attrs(info: &mut FsNodeInfo, attrs: zxio_node_attributes_t) 
 }
 
 impl FsNodeOps for RemoteNode {
-    fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(RemoteFileObject { zxio: Arc::clone(&self.zxio) }))
     }
 
@@ -170,7 +170,7 @@ mod test {
         assert_eq!(root.lookup(b"nib").err(), Some(ENOENT));
         root.lookup(b"lib").unwrap();
 
-        let _test_file = root.lookup(b"bin/hello_starnix")?.node.open()?;
+        let _test_file = root.lookup(b"bin/hello_starnix")?.open(OpenFlags::RDONLY)?;
         Ok(())
     }
 }

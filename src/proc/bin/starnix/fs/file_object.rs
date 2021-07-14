@@ -226,12 +226,12 @@ impl FileObject {
     /// Create a FileObject that is not mounted in a namespace.
     ///
     /// The returned FileObject does not have a name.
-    pub fn new_unmounted<T: FileOps + 'static>(
-        ops: T,
+    pub fn new_anonymous(
+        ops: Box<dyn FileOps>,
         node: FsNodeHandle,
         flags: OpenFlags,
     ) -> FileHandle {
-        Self::new(Box::new(ops), NamespaceNode::new_unmounted(node), flags)
+        Self::new(ops, NamespaceNode::new_anonymous(node), flags)
     }
 
     /// Create a FileObject with an associated NamespaceNode.

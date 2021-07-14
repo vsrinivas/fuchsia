@@ -22,7 +22,7 @@ fn round_up(value: usize, increment: usize) -> usize {
     (value + (increment - 1)) & !(increment - 1)
 }
 
-struct Pipe {
+pub struct Pipe {
     /// The maximum number of bytes that can be stored inside this pipe.
     size: usize,
 
@@ -35,15 +35,15 @@ struct Pipe {
     /// the queue.
     buffers: VecDeque<Vec<u8>>,
 
-    /// The reader end of this pipe is open.
-    has_reader: bool,
+    /// The number of open readers.
+    reader_count: usize,
 
-    /// The writer end of this pipe is open.
-    has_writer: bool,
+    /// The number of open writers.
+    writer_count: usize,
 }
 
 impl Pipe {
-    fn new() -> Arc<Mutex<Pipe>> {
+    pub fn new() -> Arc<Mutex<Pipe>> {
         // Pipes default to a size of 16 pages.
         let default_pipe_size = (*PAGE_SIZE * 16) as usize;
 
@@ -51,9 +51,22 @@ impl Pipe {
             size: default_pipe_size,
             used: 0,
             buffers: VecDeque::new(),
-            has_reader: true,
-            has_writer: true,
+            reader_count: 0,
+            writer_count: 0,
         }))
+    }
+
+    pub fn open(pipe: &Arc<Mutex<Self>>, flags: OpenFlags) -> Box<dyn FileOps> {
+        {
+            let mut pipe = pipe.lock();
+            if flags.can_read() {
+                pipe.reader_count += 1;
+            }
+            if flags.can_write() {
+                pipe.writer_count += 1;
+            }
+        }
+        Box::new(PipeFileObject { pipe: Arc::clone(pipe) })
     }
 
     fn get_size(&self) -> usize {
@@ -141,43 +154,53 @@ impl Pipe {
 /// sys_pipe2().
 pub fn new_pipe(kernel: &Kernel) -> (FileHandle, FileHandle) {
     let pipe = Pipe::new();
-    let read_end = PipeReadEndpoint { pipe: pipe.clone() };
-    let write_end = PipeWriteEndpoint { pipe };
-
     let node = Anon::new_node(kernel, AnonNodeType::Pipe);
     node.info_mut().blksize = ATOMIC_IO_BYTES;
-    let read = FileObject::new_unmounted(read_end, node.clone(), OpenFlags::RDONLY);
-    let write = FileObject::new_unmounted(write_end, node, OpenFlags::WRONLY);
 
-    (read, write)
+    let open = |flags: OpenFlags| {
+        let ops = Pipe::open(&pipe, flags);
+        FileObject::new_anonymous(ops, Arc::clone(&node), flags)
+    };
+
+    (open(OpenFlags::RDONLY), open(OpenFlags::WRONLY))
 }
 
-struct PipeReadEndpoint {
+struct PipeFileObject {
     pipe: Arc<Mutex<Pipe>>,
 }
 
-impl FileOps for PipeReadEndpoint {
+impl FileOps for PipeFileObject {
     fd_impl_nonseekable!();
 
     fn close(&self, file: &FileObject) {
-        let mut pipe = self.pipe.lock();
-        pipe.has_reader = false;
-        file.node().observers.notify(FdEvents::POLLOUT);
-    }
-
-    fn write(
-        &self,
-        _file: &FileObject,
-        _task: &Task,
-        _data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
-        Err(EBADF)
+        let events = {
+            let mut events = FdEvents::empty();
+            let mut pipe = self.pipe.lock();
+            if file.flags().can_read() {
+                assert!(pipe.reader_count > 0);
+                pipe.reader_count -= 1;
+                if pipe.reader_count == 0 {
+                    events |= FdEvents::POLLOUT;
+                }
+            }
+            if file.flags().can_write() {
+                assert!(pipe.writer_count > 0);
+                pipe.writer_count -= 1;
+                if pipe.writer_count == 0 {
+                    events |= FdEvents::POLLIN;
+                }
+            }
+            events
+        };
+        if events != FdEvents::empty() {
+            file.node().observers.notify(events);
+        }
     }
 
     fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut pipe = self.pipe.lock();
         if pipe.used == 0 {
-            if pipe.has_writer {
+            if pipe.writer_count > 0 {
                 return Err(EAGAIN);
             } else {
                 return Ok(0);
@@ -228,44 +251,9 @@ impl FileOps for PipeReadEndpoint {
         Ok(actual)
     }
 
-    fn fcntl(
-        &self,
-        file: &FileObject,
-        task: &Task,
-        cmd: u32,
-        arg: u64,
-    ) -> Result<SyscallResult, Errno> {
-        self.pipe.lock().fcntl(file, task, cmd, arg)
-    }
-
-    fn ioctl(
-        &self,
-        file: &FileObject,
-        task: &Task,
-        request: u32,
-        in_addr: UserAddress,
-        out_addr: UserAddress,
-    ) -> Result<SyscallResult, Errno> {
-        self.pipe.lock().ioctl(file, task, request, in_addr, out_addr)
-    }
-}
-
-struct PipeWriteEndpoint {
-    pipe: Arc<Mutex<Pipe>>,
-}
-
-impl FileOps for PipeWriteEndpoint {
-    fd_impl_nonseekable!();
-
-    fn close(&self, file: &FileObject) {
-        let mut pipe = self.pipe.lock();
-        pipe.has_writer = false;
-        file.node().observers.notify(FdEvents::POLLIN);
-    }
-
     fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut pipe = self.pipe.lock();
-        if !pipe.has_reader {
+        if pipe.reader_count == 0 {
             send_signal(&task, &UncheckedSignal::from(SIGPIPE))?;
             return Err(EPIPE);
         }
@@ -283,10 +271,6 @@ impl FileOps for PipeWriteEndpoint {
 
         file.node().observers.notify(FdEvents::POLLIN);
         Ok(actual)
-    }
-
-    fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
-        Err(EBADF)
     }
 
     fn fcntl(

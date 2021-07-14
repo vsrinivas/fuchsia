@@ -31,7 +31,7 @@ impl FileSystem for Devfs {
 struct DevfsDirectory;
 
 impl FsNodeOps for DevfsDirectory {
-    fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(NullFile))
     }
 
@@ -57,7 +57,7 @@ struct DevNullFileNode;
 struct DevNullFileObject;
 
 impl FsNodeOps for DevNullFileNode {
-    fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevNullFileObject))
     }
 }

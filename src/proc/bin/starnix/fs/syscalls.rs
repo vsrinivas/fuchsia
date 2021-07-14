@@ -290,9 +290,16 @@ pub fn sys_newfstatat(
     buffer: UserRef<stat_t>,
     flags: u32,
 ) -> Result<SyscallResult, Errno> {
-    if flags != 0 {
+    if flags & !AT_SYMLINK_NOFOLLOW != 0 {
         not_implemented!("newfstatat: flags 0x{:x}", flags);
         return Err(ENOSYS);
+    }
+    if flags & AT_SYMLINK_NOFOLLOW != 0 {
+        // TODO: Implement AT_SYMLINK_NOFOLLOW.
+        not_implemented!("newfstatat: flag: AT_SYMLINK_NOFOLLOW");
+        // We pretend to implement AT_SYMLINK_NOFOLLOW in order to run
+        // gVisor tests that involve temp files. Given that we do not yet
+        // implement symlinks, continuing here is harmless.
     }
     let node = lookup_node_at(&ctx.task, dir_fd, user_path)?;
     let result = node.stat()?;
@@ -395,6 +402,20 @@ pub fn sys_unlinkat(
     lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
         parent.unlink(basename, kind)
     })?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_fchmodat(
+    ctx: &SyscallContext<'_>,
+    dir_fd: FdNumber,
+    user_path: UserCString,
+    mode: FileMode,
+) -> Result<SyscallResult, Errno> {
+    if mode & FileMode::IFMT != FileMode::EMPTY {
+        return Err(EINVAL);
+    }
+    let node = lookup_node_at(&ctx.task, dir_fd, user_path)?;
+    node.info_mut().mode = mode;
     Ok(SUCCESS)
 }
 

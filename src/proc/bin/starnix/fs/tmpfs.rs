@@ -9,6 +9,7 @@ use std::sync::{Arc, Weak};
 
 use super::*;
 use crate::devices::*;
+use crate::fs::pipe::Pipe;
 use crate::types::*;
 
 #[derive(Default)]
@@ -55,7 +56,7 @@ struct TmpfsDirectory {
 }
 
 impl FsNodeOps for TmpfsDirectory {
-    fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(NullFile))
     }
 
@@ -83,10 +84,10 @@ impl FsNodeOps for TmpfsDirectory {
         _name: &FsStr,
         info: &mut FsNodeInfo,
     ) -> Result<Box<dyn FsNodeOps>, Errno> {
-        if info.mode.is_reg() {
-            Ok(Box::new(TmpfsFileNode::new(self.fs.clone())?))
-        } else {
-            Err(EACCES)
+        match info.mode.fmt() {
+            FileMode::IFREG => Ok(Box::new(TmpfsFileNode::new(self.fs.clone())?)),
+            FileMode::IFIFO => Ok(Box::new(TmpfsFifoNode::new(self.fs.clone()))),
+            _ => Err(EACCES),
         }
     }
 
@@ -119,8 +120,36 @@ impl TmpfsFileNode {
 }
 
 impl FsNodeOps for TmpfsFileNode {
-    fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(VmoFileObject::new(self.vmo.clone())))
+    }
+
+    fn initialize(&self, node: &FsNodeHandle) {
+        self.fs.upgrade().map(|fs| fs.lock().register(node));
+    }
+
+    fn unlinked(&self, node: &FsNodeHandle) {
+        self.fs.upgrade().map(|fs| fs.lock().unregister(node));
+    }
+}
+
+struct TmpfsFifoNode {
+    /// The file system to which this file belongs.
+    fs: Weak<Mutex<TmpfsState>>,
+
+    /// The pipe located at this node.
+    pipe: Arc<Mutex<Pipe>>,
+}
+
+impl TmpfsFifoNode {
+    fn new(fs: Weak<Mutex<TmpfsState>>) -> TmpfsFifoNode {
+        TmpfsFifoNode { fs, pipe: Pipe::new() }
+    }
+}
+
+impl FsNodeOps for TmpfsFifoNode {
+    fn open(&self, _node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Pipe::open(&self.pipe, flags))
     }
 
     fn initialize(&self, node: &FsNodeHandle) {

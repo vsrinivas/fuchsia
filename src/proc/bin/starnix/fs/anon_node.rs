@@ -23,18 +23,18 @@ impl Anon {
             kernel.devices.get_anon_node_device(name),
         )
     }
-    pub fn new_file<T: FileOps + 'static>(
+    pub fn new_file(
         kernel: &Kernel,
-        ops: T,
+        ops: Box<dyn FileOps>,
         name: AnonNodeType,
         flags: OpenFlags,
     ) -> FileHandle {
-        FileObject::new_unmounted(ops, Self::new_node(kernel, name), flags)
+        FileObject::new_anonymous(ops, Self::new_node(kernel, name), flags)
     }
 }
 
 impl FsNodeOps for Anon {
-    fn open(&self, _node: &FsNode) -> Result<Box<dyn FileOps>, Errno> {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Err(ENOSYS)
     }
 }

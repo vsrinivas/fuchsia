@@ -98,7 +98,7 @@ pub trait FsNodeOps: Send + Sync {
     ///
     /// The returned FileOps will be used to create a FileObject, which might
     /// be assigned an FdNumber.
-    fn open(&self, node: &FsNode) -> Result<Box<dyn FileOps>, Errno>;
+    fn open(&self, node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno>;
 
     /// Find an existing child node with the given name.
     ///
@@ -238,8 +238,8 @@ impl FsNode {
         &**self.ops.get().unwrap()
     }
 
-    pub fn open(self: &FsNodeHandle) -> Result<Box<dyn FileOps>, Errno> {
-        self.ops().open(&self)
+    pub fn open(self: &FsNodeHandle, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        self.ops().open(&self, flags)
     }
 
     pub fn component_lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
