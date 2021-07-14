@@ -51,7 +51,6 @@ executable("test-bin") {
 }
 
 fuchsia_unittest_package("build-info-unittest") {
-  manifest = "tests/meta/build_info_unittest.cmx"
   deps = [ ":test-bin" ]
 }
 
