@@ -57,6 +57,13 @@ executable("test-bin") {
 
 fuchsia_unittest_package("build-info-unittest") {
   deps = [ ":test-bin" ]
+  test_specs = {
+    # Tests may produce ERROR logs when validating behavior in scenarios where
+    # build-info is not present (e.g. not allowlisted).
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

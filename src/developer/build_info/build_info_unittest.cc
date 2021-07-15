@@ -156,6 +156,35 @@ TEST_F(BuildInfoServiceTestFixture, BuildInfo) {
   RunLoopUntilIdle();
 }
 
+TEST_F(BuildInfoServiceTestFixture, EmptyBuildInfo) {
+  CreateBuildInfoFile("");
+  CreateBuildInfoFile("");
+  CreateBuildInfoFile("");
+  CreateBuildInfoFile("");
+
+  fuchsia::buildinfo::ProviderPtr proxy = GetProxy();
+  proxy->GetBuildInfo([&](const fuchsia::buildinfo::BuildInfo &response) {
+    EXPECT_FALSE(response.has_product_config());
+    EXPECT_FALSE(response.has_board_config());
+    EXPECT_FALSE(response.has_version());
+    EXPECT_FALSE(response.has_latest_commit_date());
+  });
+
+  RunLoopUntilIdle();
+}
+
+TEST_F(BuildInfoServiceTestFixture, NonPresentBuildInfo) {
+  fuchsia::buildinfo::ProviderPtr proxy = GetProxy();
+  proxy->GetBuildInfo([&](const fuchsia::buildinfo::BuildInfo &response) {
+    EXPECT_FALSE(response.has_product_config());
+    EXPECT_FALSE(response.has_board_config());
+    EXPECT_FALSE(response.has_version());
+    EXPECT_FALSE(response.has_latest_commit_date());
+  });
+
+  RunLoopUntilIdle();
+}
+
 TEST_F(BuildInfoServiceTestFixture, Snapshot) {
   CreateBuildInfoFile(kSnapshotFileName, false);
 

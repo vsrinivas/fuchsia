@@ -44,23 +44,35 @@ void ProviderImpl::GetBuildInfo(GetBuildInfoCallback callback) {
   if (!product_config_) {
     product_config_ = std::make_unique<std::string>(ContentsOfFileAtPath(kProductFilePath));
   }
-  build_info.set_product_config(*product_config_);
+
+  if (!product_config_->empty()) {
+    build_info.set_product_config(*product_config_);
+  }
 
   if (!board_config_) {
     board_config_ = std::make_unique<std::string>(ContentsOfFileAtPath(kBoardFilePath));
   }
-  build_info.set_board_config(*board_config_);
+
+  if (!board_config_->empty()) {
+    build_info.set_board_config(*board_config_);
+  }
 
   if (!version_) {
     version_ = std::make_unique<std::string>(ContentsOfFileAtPath(kVersionFilePath));
   }
-  build_info.set_version(*version_);
+
+  if (!version_->empty()) {
+    build_info.set_version(*version_);
+  }
 
   if (!latest_commit_date_) {
     latest_commit_date_ =
         std::make_unique<std::string>(ContentsOfFileAtPath(kLatestCommitDateFilePath));
   }
-  build_info.set_latest_commit_date(*latest_commit_date_);
+
+  if (!latest_commit_date_->empty()) {
+    build_info.set_latest_commit_date(*latest_commit_date_);
+  }
 
   callback(std::move(build_info));
 }
