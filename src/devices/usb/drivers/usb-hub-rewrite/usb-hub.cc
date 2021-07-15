@@ -20,6 +20,7 @@
 #include <fbl/hard_int.h>
 #include <usb/usb.h>
 
+#include "lib/fit/result.h"
 #include "src/devices/usb/drivers/usb-hub-rewrite/usb_hub_rewrite_bind.h"
 
 namespace {
@@ -115,29 +116,23 @@ zx_status_t UsbHubDevice::RunSynchronously(fpromise::promise<void, zx_status_t> 
   return status;
 }
 
-fpromise::promise<void, zx_status_t> UsbHubDevice::GetPortStatus() {
-  std::vector<fpromise::promise<usb_port_status_t, zx_status_t>> pending_actions;
+zx_status_t UsbHubDevice::GetPortStatus() {
+  std::vector<zx::status<usb_port_status_t>> pending_actions;
   pending_actions.reserve(hub_descriptor_.b_nbr_ports);
   for (uint8_t i = 1; i <= hub_descriptor_.b_nbr_ports; i++) {
     pending_actions.push_back(GetPortStatus(PortNumber(i)));
   }
-  return fpromise::join_promise_vector(std::move(pending_actions))
-      .then([this](fpromise::result<std::vector<fpromise::result<usb_port_status_t, zx_status_t>>,
-                                    void>& results) -> fpromise::result<void, zx_status_t> {
-        ZX_ASSERT(results.is_ok());
-        size_t index = 0;
-        for (auto& result : results.value()) {
-          if (result.is_error()) {
-            return fpromise::error(result.error());
-          }
-          fbl::AutoLock l(&async_execution_context_);
-          ZX_ASSERT(index <= port_status_.size());
-          port_status_[index].status = result.value().w_port_status;
-          index++;
-        }
-        return fpromise::ok();
-      })
-      .box();
+  size_t index = 0;
+  for (auto& result : pending_actions) {
+    if (result.is_error()) {
+      return result.error_value();
+    }
+    fbl::AutoLock l(&async_execution_context_);
+    ZX_ASSERT(index <= port_status_.size());
+    port_status_[index].status = result.value().w_port_status;
+    index++;
+  }
+  return ZX_OK;
 }
 
 void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
@@ -154,101 +149,94 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
     return;
   }
   executor_ = std::make_unique<async::Executor>(loop_.dispatcher());
-  executor_->schedule_task(fpromise::make_promise([this]() mutable {
-    std::optional<usb::InterfaceList> interfaces;
-    usb::InterfaceList::Create(usb_, false, &interfaces);
-    zx_status_t status = ZX_ERR_IO;
-    // According to USB 2.0 Specification section 11.12.1 a hub should have exactly one
-    // interrupt endpoint and no other endpoints.
-    for (auto& interface : *interfaces) {
-      if (interface.descriptor()->b_num_endpoints == 1) {
-        auto eplist = interface.GetEndpointList();
-        auto ep_iter = eplist.begin();
-        auto ep = ep_iter.endpoint();
-        interrupt_endpoint_ = ep->descriptor;
-        if (ep->has_companion) {
-          status = usb_.EnableEndpoint(&interrupt_endpoint_, &ep->ss_companion, true);
-        } else {
-          status = usb_.EnableEndpoint(&interrupt_endpoint_, nullptr, true);
-        }
-        break;
-      }
+
+  std::optional<usb::InterfaceList> interfaces;
+  status = usb::InterfaceList::Create(usb_, false, &interfaces);
+  if(status != ZX_OK){
+    txn_->Reply(status);
+    return; 
+  }
+  status = ZX_ERR_IO;
+  // According to USB 2.0 Specification section 11.12.1 a hub should have exactly one
+  // interrupt endpoint and no other endpoints.
+  for (auto& interface : *interfaces) {
+    if (interface.descriptor()->b_num_endpoints == 1) {
+      auto eplist = interface.GetEndpointList();
+      auto ep_iter = eplist.begin();
+      auto ep = ep_iter.endpoint();
+      interrupt_endpoint_ = ep->descriptor;
+       status = usb_.EnableEndpoint(&interrupt_endpoint_, (ep->has_companion) ? &ep->ss_companion : nullptr, true);
+      break;
     }
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Initialization failed due to %s", zx_status_get_string(status));
-      txn_->Reply(status);
-    }
-    speed_ = usb_.GetSpeed();
-    uint16_t desc_type = (speed_ == USB_SPEED_SUPER ? USB_HUB_DESC_TYPE_SS : USB_HUB_DESC_TYPE);
-    executor_->schedule_task(
-        GetVariableLengthDescriptor<usb_hub_descriptor_t>(USB_TYPE_CLASS | USB_RECIP_DEVICE,
-                                                          desc_type, 0)
-            .and_then([this](VariableLengthDescriptor<usb_hub_descriptor_t>& descriptor)
-                          -> fpromise::promise<void, zx_status_t> {
-              fbl::AutoLock l(&async_execution_context_);
-              constexpr auto kMinDescriptorLength = 7;
-              if (descriptor.length < kMinDescriptorLength) {
-                return fpromise::make_error_promise(ZX_ERR_IO);
-              }
-              hub_descriptor_ = descriptor.descriptor;
-              {
-                port_status_ = fbl::Array<PortStatus>(new PortStatus[hub_descriptor_.b_nbr_ports],
-                                                      hub_descriptor_.b_nbr_ports);
-              }
-              auto raw_desc = descriptor.descriptor;
-              // TODO (fxbug.dev/57998): Don't pass zxdev() around.
-              return RunBlocking<zx_status_t>([raw_desc, this]() {
-                       auto status = bus_.SetHubInterface(reinterpret_cast<uint64_t>(zxdev()), this,
-                                                          &usb_hub_interface_protocol_ops_);
-                       if (status != ZX_OK) {
-                         return status;
-                       }
-                       // TODO (fxbug.dev/56002): Support multi-TT hubs properly. Currently, we
-                       // operate in single-TT mode even if the hub supports multiple TTs.
-                       return bus_.ConfigureHub(reinterpret_cast<uint64_t>(zxdev()), speed_,
-                                                &raw_desc, false);
-                     })
-                  .then([](fpromise::result<zx_status_t, void>& status)
-                            -> fpromise::result<void, zx_status_t> {
-                    if (status.value() != ZX_OK) {
-                      return fpromise::error(status.value());
-                    }
-                    return fpromise::ok();
-                  })
-                  .and_then([this]() {
-                    // Once the hub is initialized, power on the ports
-                    return PowerOnPorts()
-                        .and_then([this]() {
-                          // then wait for bPwrOn2PwrGood (2 millisecond intervals)
-                          return Sleep(zx::deadline_after(
-                              zx::msec(2 * hub_descriptor_.b_power_on2_pwr_good)));
-                        })
-                        .and_then([this]() {
-                          // Next -- we retrieve the port status
-                          return GetPortStatus();
-                        })
-                        .and_then([this]() {
-                          // Finally -- we can start the interrupt loop
-                          // and bringup our initial set of devices
-                          StartInterruptLoop();
-                          fbl::AutoLock l(&async_execution_context_);
-                          for (size_t i = 0; i < port_status_.size(); i++) {
-                            HandlePortStatusChanged(
-                                IndexToPortNumber(PortArrayIndex(static_cast<uint8_t>(i))));
-                          }
-                        });
-                  });
-            })
-            .then([this](fpromise::result<void, zx_status_t>& status) {
-              if (status.is_error()) {
-                zxlogf(ERROR, "Failed to initialize hub -- error %s",
-                       zx_status_get_string(status.error()));
-                txn_->Reply(status.error());
-              } else {
-                txn_->Reply(ZX_OK);
-              }
-            }));
+  }
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Initialization failed due to %s", zx_status_get_string(status));
+    txn_->Reply(status);
+  }
+  speed_ = usb_.GetSpeed();
+  uint16_t desc_type = (speed_ == USB_SPEED_SUPER ? USB_HUB_DESC_TYPE_SS : USB_HUB_DESC_TYPE);
+
+  auto result = GetVariableLengthDescriptor<usb_hub_descriptor_t>(USB_TYPE_CLASS | USB_RECIP_DEVICE,
+                                                                  desc_type, 0);
+  if (result.is_error()) {
+    zxlogf(ERROR, "Could not create usb hub descriptor");
+    txn_->Reply(result.take_error());
+    return;
+  }
+  usb_hub_descriptor_t descriptor = result.value().descriptor;
+  size_t descriptor_length = result.value().length;
+  fbl::AutoLock l(&async_execution_context_);
+  constexpr auto kMinDescriptorLength = 7;
+  if (descriptor_length < kMinDescriptorLength) {
+    zxlogf(ERROR, "Descriptor length constraint failed");
+    txn_->Reply(result.take_error());
+    return;
+  }
+  hub_descriptor_ = descriptor;
+  {
+    port_status_ = fbl::Array<PortStatus>(new PortStatus[hub_descriptor_.b_nbr_ports],
+                                          hub_descriptor_.b_nbr_ports);
+  }
+  auto raw_desc = descriptor;
+
+  // Config bus
+  status = bus_.SetHubInterface(reinterpret_cast<uint64_t>(zxdev()), this,
+                                &usb_hub_interface_protocol_ops_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not set hub interface");
+    txn_->Reply(status);
+    return;
+  }
+  // TODO (fxbug.dev/56002): Support multi-TT hubs properly. Currently, we
+  // operate in single-TT mode even if the hub supports multiple TTs.
+  status = bus_.ConfigureHub(reinterpret_cast<uint64_t>(zxdev()), speed_, &raw_desc, false);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not configure hub");
+    txn_->Reply(status);
+    return;
+  }
+
+  // Once the hub is initialized, power on the ports and wait as per spec
+  executor_->schedule_task(PowerOnPorts().and_then([this]() {
+    // then wait for bPwrOn2PwrGood (2 millisecond intervals)
+    return Sleep(zx::deadline_after(zx::msec(2 * hub_descriptor_.b_power_on2_pwr_good)));
   }));
+
+  // Next -- we retrieve the port status
+  auto port_status_result = GetPortStatus();
+  if (port_status_result != ZX_OK) {
+    zxlogf(DEBUG, "Could not get port status\n");
+    txn_->Reply(port_status_result);
+    return;
+  }
+
+  // Finally -- we can start the interrupt loop
+  // and bringup our initial set of devices
+  StartInterruptLoop();
+  for (size_t i = 0; i < port_status_.size(); i++) {
+    HandlePortStatusChanged(IndexToPortNumber(PortArrayIndex(static_cast<uint8_t>(i))));
+  }
+  txn_->Reply(ZX_OK);
 }
 
 void UsbHubDevice::HandlePortStatusChanged(PortNumber port) {
@@ -285,7 +273,7 @@ void UsbHubDevice::InterruptCallback(CallbackRequest request) {
   while (bitmap < bitmap_end && port <= hub_descriptor_.b_nbr_ports) {
     if (*bitmap & (1 << bit)) {
       executor_->schedule_task(
-          GetPortStatus(PortNumber(static_cast<uint8_t>(port)))
+          GetPortStatusAsync(PortNumber(static_cast<uint8_t>(port)))
               .and_then([this, port_number = PortNumber(static_cast<uint8_t>(port))](
                             usb_port_status_t& status) {
                 fbl::AutoLock l(&async_execution_context_);
@@ -389,9 +377,10 @@ fpromise::promise<void, zx_status_t> UsbHubDevice::PowerOnPorts() {
   }
   return Fold(fpromise::join_promise_vector(std::move(promises)).box());
 }
-fpromise::promise<usb_port_status_t, zx_status_t> UsbHubDevice::GetPortStatus(PortNumber port) {
-  return ControlIn(USB_RECIP_PORT | USB_DIR_IN, USB_REQ_GET_STATUS, 0, port.value(),
-                   sizeof(usb_port_status_t))
+
+fpromise::promise<usb_port_status_t, zx_status_t> UsbHubDevice::GetPortStatusAsync(PortNumber port) {
+  return ControlInAsync(USB_RECIP_PORT | USB_DIR_IN, USB_REQ_GET_STATUS, 0, port.value(),
+                        sizeof(usb_port_status_t))
       .and_then([](std::vector<uint8_t>& data) -> fpromise::result<usb_port_status_t, zx_status_t> {
         if (data.size() != sizeof(usb_port_status_t)) {
           return fpromise::error(ZX_ERR_IO);
@@ -447,6 +436,80 @@ fpromise::promise<usb_port_status_t, zx_status_t> UsbHubDevice::GetPortStatus(Po
       });
 }
 
+zx::status<usb_port_status_t> UsbHubDevice::GetPortStatus(PortNumber port) {
+  zx::status<std::vector<uint8_t>> result = ControlIn(USB_RECIP_PORT | USB_DIR_IN, USB_REQ_GET_STATUS, 0, port.value(),
+                          sizeof(usb_port_status_t));
+  if(result.is_error()){
+    return zx::error(result.error_value());
+  }
+  auto data = result.value();
+  if (data.size() != sizeof(usb_port_status_t)) {
+    zxlogf(ERROR, "ERROR: Request response size does not match port_status size");
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+  usb_port_status_t status;
+  memcpy(&status, data.data(), sizeof(status));
+  uint16_t port_change = status.w_port_change;
+  std::vector<fpromise::promise<void, zx_status_t>> pending_operations;
+  if (port_change & USB_C_PORT_CONNECTION) {
+    zxlogf(DEBUG, "USB_C_PORT_CONNECTION ");
+    pending_operations.push_back(
+        ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port.value()));
+  }
+  if (port_change & USB_C_PORT_ENABLE) {
+    zxlogf(DEBUG, "USB_C_PORT_ENABLE ");
+    pending_operations.push_back(
+        ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_ENABLE, port.value()));
+  }
+  if (port_change & USB_C_PORT_SUSPEND) {
+    zxlogf(DEBUG, "USB_C_PORT_SUSPEND ");
+    pending_operations.push_back(
+        ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_SUSPEND, port.value()));
+  }
+  if (port_change & USB_C_PORT_OVER_CURRENT) {
+    zxlogf(DEBUG, "USB_C_PORT_OVER_CURRENT ");
+    pending_operations.push_back(
+        ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port.value()));
+  }
+  if (port_change & USB_C_PORT_RESET) {
+    zxlogf(DEBUG, "USB_C_PORT_RESET");
+    pending_operations.push_back(
+        ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port.value()));
+  }
+  if (port_change & USB_C_BH_PORT_RESET) {
+    zxlogf(DEBUG, "USB_C_BH_PORT_RESET");
+    pending_operations.push_back(
+        ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_BH_PORT_RESET, port.value()));
+  }
+  if (port_change & USB_C_PORT_LINK_STATE) {
+    zxlogf(DEBUG, "USB_C_PORT_LINK_STATE");
+    pending_operations.push_back(
+        ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_LINK_STATE, port.value()));
+  }
+  if (port_change & USB_C_PORT_CONFIG_ERROR) {
+    zxlogf(DEBUG, "USB_C_PORT_CONFIG_ERROR");
+    pending_operations.push_back(
+        ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_CONFIG_ERROR, port.value()));
+  }
+  zx_status_t operations_status = ZX_OK;
+  executor_->schedule_task(
+      fpromise::join_promise_vector(std::move(pending_operations))
+          .then([&](clear_feature_result& result) {
+            if (result.is_error()) {
+              operations_status = ZX_ERR_BAD_STATE;
+            }
+            for (auto& result : result.value()) {
+              if (result.is_error()) {
+                operations_status = ZX_ERR_BAD_STATE;
+              }
+            }
+          }));
+  if (operations_status != ZX_OK) {
+    return zx::error(operations_status);
+  }
+  return zx::ok(status);
+}
+
 fpromise::promise<void, zx_status_t> UsbHubDevice::Sleep(zx::time deadline) {
   fpromise::bridge<void, zx_status_t> bridge;
   zx_status_t status = async::PostTaskForTime(
@@ -459,22 +522,15 @@ fpromise::promise<void, zx_status_t> UsbHubDevice::Sleep(zx::time deadline) {
 }
 
 void UsbHubDevice::DdkUnbind(ddk::UnbindTxn txn) {
-  async::PostTask(loop_.dispatcher(), [transaction = std::move(txn), this]() mutable {
-    shutting_down_ = true;
-    zx_status_t status = usb_.CancelAll(interrupt_endpoint_.b_endpoint_address);
-    if (status != ZX_OK) {
-      // Fatal -- unable to shut down properly
-      zxlogf(ERROR, "Error %s during CancelAll for interrupt endpoint\n",
-             zx_status_get_string(status));
-      return;
-    }
-    status = usb_.CancelAll(0);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Error %s during CancelAll for control endpoint", zx_status_get_string(status));
-      return;
-    }
-    transaction.Reply();
-  });
+  shutting_down_ = true;
+  zx_status_t status = usb_.CancelAll(interrupt_endpoint_.b_endpoint_address);
+  if (status != ZX_OK) {
+    // Fatal -- unable to shut down properly
+    zxlogf(ERROR, "Error %s during CancelAll for interrupt endpoint\n",
+           zx_status_get_string(status));
+    return;
+  }
+  txn.Reply();
 }
 
 zx_status_t UsbHubDevice::Bind(std::unique_ptr<fpromise::executor> executor, zx_device_t* parent) {
@@ -497,7 +553,46 @@ fpromise::promise<void, zx_status_t> UsbHubDevice::ClearFeature(uint8_t request_
   return ControlOut(request_type, USB_REQ_CLEAR_FEATURE, feature, index, nullptr, 0);
 }
 
-fpromise::promise<std::vector<uint8_t>, zx_status_t> UsbHubDevice::ControlIn(
+zx::status<std::vector<uint8_t>> UsbHubDevice::ControlIn(
+    uint8_t request_type, uint8_t request, uint16_t value, uint16_t index, size_t read_size) {
+  if ((request_type & USB_DIR_MASK) != USB_DIR_IN) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  ZX_ASSERT(read_size <= kMaxRequestLength);
+  std::optional<Request> usb_request = AllocRequest();
+  usb_request->request()->header.length = read_size;
+  usb_request->request()->setup.bm_request_type = request_type;
+  usb_request->request()->setup.b_request = request;
+  usb_request->request()->setup.w_index = index;
+  usb_request->request()->setup.w_value = value;
+  usb_request->request()->setup.w_length = static_cast<uint16_t>(read_size);
+
+  std::vector<uint8_t> data;
+  zx_status_t status;
+  sync_completion_t completion;
+  executor_->schedule_task(
+      RequestQueue(*std::move(usb_request)).then([&](fpromise::result<Request, void>& value) {
+        auto request = std::move(value.take_ok_result().value);
+        auto rq_status = request.request()->response.status;
+        if (rq_status != ZX_OK) {
+          request_pool_.Add(std::move(request));
+          status = rq_status;
+        } else {
+          if (read_size != 0) {
+            data.resize(request.request()->response.actual);
+            size_t copied = request.CopyFrom(data.data(), data.size(), 0);
+            ZX_ASSERT(copied == data.size());
+          }
+          request_pool_.Add(std::move(request));
+        }
+        sync_completion_signal(&completion);
+      }));
+  sync_completion_wait(&completion, ZX_TIME_INFINITE);
+  return zx::ok(data);
+}
+
+fpromise::promise<std::vector<uint8_t>, zx_status_t> UsbHubDevice::ControlInAsync(
     uint8_t request_type, uint8_t request, uint16_t value, uint16_t index, size_t read_size) {
   if ((request_type & USB_DIR_MASK) != USB_DIR_IN) {
     return fpromise::make_result_promise<std::vector<uint8_t>, zx_status_t>(
@@ -511,7 +606,6 @@ fpromise::promise<std::vector<uint8_t>, zx_status_t> UsbHubDevice::ControlIn(
   usb_request->request()->setup.w_index = index;
   usb_request->request()->setup.w_value = value;
   usb_request->request()->setup.w_length = static_cast<uint16_t>(read_size);
-
   return RequestQueue(*std::move(usb_request))
       .then([this, read_size](fpromise::result<Request, void>& value)
                 -> fpromise::result<std::vector<uint8_t>, zx_status_t> {

@@ -53,6 +53,7 @@
 #include <zxtest/zxtest.h>
 
 #include "fake-device.h"
+#include "lib/fit/promise.h"
 
 namespace {
 template <EmulationMode mode>
@@ -142,8 +143,13 @@ class UsbHarness : public zxtest::Test {
 
 class SyntheticHarness : public zxtest::Test {
  public:
+  SyntheticHarness() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   void SetUp() override {
-    auto executor = std::make_unique<synchronous_executor::synchronous_executor>();
+    zx_status_t status = loop_.StartThread();
+    if (status != ZX_OK) {
+      return;
+    }
+    auto executor = std::make_unique<async::Executor>(loop_.dispatcher());
     executor_ = executor.get();
     device_.emplace(EmulationMode::Smays);
     device_->SetSynthetic(true);
@@ -162,22 +168,20 @@ class SyntheticHarness : public zxtest::Test {
   zx_status_t RunSynchronously(fpromise::promise<void, zx_status_t> promise) {
     bool ran = false;
     zx_status_t status = ZX_OK;
-    executor_->schedule_task(
-        std::move(promise).then([&](fpromise::result<void, zx_status_t>& result) {
-          ran = true;
-          if (result.is_error()) {
-            status = result.error();
-          }
-          return result;
-        }));
-    RunLoop();
+    sync_completion_t completion;
+    executor_->schedule_task(std::move(promise).then([&](fpromise::result<void, zx_status_t>& result) {
+      ran = true;
+      if (result.is_error()) {
+        status = result.error();
+      }
+      sync_completion_signal(&completion);
+    }));
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
     if (!ran) {
       status = ZX_ERR_INTERNAL;
     }
     return status;
   }
-
-  void RunLoop() { executor_->run_until_idle(); }
 
   void TearDown() override {
     device_->Release();
@@ -185,8 +189,9 @@ class SyntheticHarness : public zxtest::Test {
   }
 
  private:
-  synchronous_executor::synchronous_executor* executor_;
   std::optional<FakeDevice> device_;
+  async::Loop loop_;
+  fit::executor* executor_;
 };
 
 class SmaysHarness : public UsbHarness<EmulationMode::Smays> {
@@ -245,6 +250,7 @@ TEST_F(SmaysHarness, Usb2Hub) {
   sync_completion_t enum_complete;
   uint8_t port_bitmask = 7;
   usb_speed_t speeds[] = {USB_SPEED_HIGH, USB_SPEED_LOW, USB_SPEED_FULL};
+
   SetConnectCallback([&enum_complete, &speeds, &port_bitmask](uint32_t port, usb_speed_t speed) {
     ZX_ASSERT((speed - 1) < std::size(speeds));
     ZX_ASSERT(speed < sizeof(int));
@@ -279,6 +285,7 @@ TEST_F(SmaysHarness, Usb2Hub) {
     }
     return ZX_OK;
   });
+
   DisconnectDevice(0);
   DisconnectDevice(1);
   DisconnectDevice(2);
@@ -424,7 +431,7 @@ TEST_F(SyntheticHarness, GetPortStatus) {
       }
       usb_request_complete(request, ZX_OK, 0, &completion);
     });
-    ASSERT_OK(RunSynchronously(dev->GetPortStatus(usb_hub::PortNumber(static_cast<uint8_t>(i)))
+    ASSERT_OK(RunSynchronously(dev->GetPortStatusAsync(usb_hub::PortNumber(static_cast<uint8_t>(i)))
                                    .and_then([&](usb_port_status_t& port_status) {
                                      ran = true;
                                      ASSERT_EQ(port_status.w_port_change, i);
@@ -442,12 +449,8 @@ TEST_F(SyntheticHarness, BadDescriptorTest) {
     devdesc->b_length = sizeof(usb_device_descriptor_t);
     usb_request_complete(request, ZX_OK, sizeof(usb_descriptor_header_t), &completion);
   });
-  ASSERT_EQ(
-      RunSynchronously(dev->GetVariableLengthDescriptor<usb_device_descriptor_t>(0, 0, 0).and_then(
-          [=](usb_hub::VariableLengthDescriptor<usb_device_descriptor_t>& descriptor) {
-            return fpromise::ok();
-          })),
-      ZX_ERR_BAD_STATE);
+  auto result = dev->GetVariableLengthDescriptor<usb_device_descriptor_t>(0, 0, 0);
+  ASSERT_EQ(result.take_error(), ZX_ERR_BAD_STATE);
 }
 
 }  // namespace
