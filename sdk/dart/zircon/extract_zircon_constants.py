@@ -102,8 +102,12 @@ class DartWriter(object):
 
     def __init__(self, path, dart):
         dest = open(path, 'w')
+
+        # The undocumented --no-analytics flag is the only way to avoid
+        # the creation of $BUILD_DIR/.dart/ when 'dart format' is called.
+        # See https://fxbug.dev/80787 for details.
         self.popen = subprocess.Popen(
-            [dart, 'format', '-o', 'show'],
+            [dart, '--no-analytics', 'format', '-o', 'show'],
             stdin=subprocess.PIPE,
             stdout=dest,
             text=True)
