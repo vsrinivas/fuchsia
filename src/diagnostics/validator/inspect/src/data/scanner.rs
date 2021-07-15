@@ -44,6 +44,7 @@ pub struct Scanner {
     names: HashMap<u32, ScannedName>,
     properties: HashMap<u32, ScannedProperty>,
     extents: HashMap<u32, ScannedExtent>,
+    final_dereferenced_strings: HashMap<u32, String>,
     final_nodes: HashMap<u32, Node>,
     final_properties: HashMap<u32, Property>,
     metrics: Metrics,
@@ -178,6 +179,7 @@ impl Scanner {
             names: HashMap::new(),
             properties: HashMap::new(),
             extents: HashMap::new(),
+            final_dereferenced_strings: HashMap::new(),
             metrics: Metrics::new(),
             final_nodes: HashMap::new(),
             final_properties: HashMap::new(),
@@ -201,6 +203,7 @@ impl Scanner {
 
     fn scan(mut self, snapshot: ireader::snapshot::Snapshot, buffer: &[u8]) -> Result<Self, Error> {
         let mut link_blocks: Vec<Block<&[u8]>> = Vec::new();
+        let mut string_references: Vec<ScannedStringReference> = Vec::new();
         for block in snapshot.scan() {
             match block.block_type_or() {
                 Ok(BlockType::Free) => self.process_free(block)?,
@@ -218,12 +221,18 @@ impl Scanner {
                 Ok(BlockType::Name) => self.process_name(block, buffer)?,
                 Ok(BlockType::Tombstone) => self.process_tombstone(block)?,
                 Ok(BlockType::StringReference) => {
-                    // TODO(fxbug.dev/78811): add reader for string references
-                    return Err(format_err!("STRING_REFERENCE is not implemented"));
+                    string_references.push(self.process_string_reference(block)?);
                 }
                 Err(error) => return Err(format_err!("Failed to read block type: {:?}", error)),
             }
         }
+
+        for block in string_references.drain(..) {
+            let index = block.index;
+            let dereferenced = self.expand_string_reference(block)?;
+            self.final_dereferenced_strings.insert(index, dereferenced);
+        }
+
         // We defer processing LINK blocks after because the population of the ScannedPayload::Link depends on all NAME blocks having been read.
         for block in link_blocks.into_iter() {
             self.process_property(block, buffer)?
@@ -236,6 +245,7 @@ impl Scanner {
         for (property, id) in new_properties.drain(..) {
             self.final_properties.insert(id, property);
         }
+
         self.record_unused_metrics();
         Ok(self)
     }
@@ -293,11 +303,42 @@ impl Scanner {
         Ok(property)
     }
 
+    // Used to find the value of a name index. This index, `name_id`, may refer to either a
+    // NAME block or a STRING_REFERENCE. If the block is a NAME, it will be removed.
     fn use_owned_name(&mut self, name_id: u32) -> Result<String, Error> {
-        let name =
-            self.names.remove(&name_id).ok_or(format_err!("No string at index {}", name_id))?;
-        self.metrics.record(&name.metrics, BlockStatus::Used);
-        Ok(name.name.clone())
+        match self.names.remove(&name_id) {
+            Some(name) => {
+                self.metrics.record(&name.metrics, BlockStatus::Used);
+                Ok(name.name)
+            }
+            None => match self.final_dereferenced_strings.get(&name_id) {
+                Some(value) => {
+                    // Once a string is de-referenced, it isn't part of the hierarchy,
+                    // so we use metrics.process(block) when we process a STRING_REFERENCE.
+                    Ok(value.clone())
+                }
+                None => Err(format_err!("No string at index {}", name_id)),
+            },
+        }
+    }
+
+    // Used to find the value of an index that points to a NAME or STRING_REFERENCE. In either
+    // case, the value is not consumed.
+    fn lookup_name_or_string_reference(&mut self, name_id: u32) -> Result<String, Error> {
+        match self.names.get(&name_id) {
+            Some(name) => {
+                self.metrics.record(&name.metrics, BlockStatus::Used);
+                Ok(name.name.clone())
+            }
+            None => match self.final_dereferenced_strings.get(&name_id) {
+                Some(value) => {
+                    // Once a string is de-referenced, it isn't part of the hierarchy,
+                    // so we use metrics.process(block) when we process a STRING_REFERENCE.
+                    Ok(value.clone())
+                }
+                None => Err(format_err!("No string at index {}", name_id)),
+            },
+        }
     }
 
     // ***** Functions which read fuchsia_inspect::format::block::Block (actual
@@ -454,19 +495,15 @@ impl Scanner {
                 }
             }
             BlockType::LinkValue => {
+                let child_name =
+                    self.lookup_name_or_string_reference(block.link_content_index()?).ok().ok_or(
+                        format_err!("Child name not found for LinkValue block {}.", block.index()),
+                    )?;
                 let child_trees = self
                     .child_trees
                     .as_mut()
                     .ok_or(format_err!("LinkValue encountered without child tree."))?;
-                let child_name = &self
-                    .names
-                    .get(&block.link_content_index()?)
-                    .ok_or(format_err!(
-                        "Child name not found for LinkValue block {}.",
-                        block.index()
-                    ))?
-                    .name;
-                let child_tree = child_trees.remove(child_name).ok_or(format_err!(
+                let child_tree = child_trees.remove(&child_name).ok_or(format_err!(
                     "Lazy node not found for LinkValue block {} with name {}.",
                     block.index(),
                     child_name
@@ -480,6 +517,21 @@ impl Scanner {
                 return Err(format_err!("No way I should see {:?} for BlockType", illegal_type))
             }
         })
+    }
+
+    fn process_string_reference(
+        &mut self,
+        block: Block<&[u8]>,
+    ) -> Result<ScannedStringReference, Error> {
+        let scanned = ScannedStringReference {
+            index: block.index(),
+            value: block.inline_string_reference()?,
+            length: block.total_length()?,
+            next_extent: block.next_extent()?,
+        };
+
+        self.metrics.process(block)?;
+        Ok(scanned)
     }
 
     fn process_property(&mut self, block: Block<&[u8]>, buffer: &[u8]) -> Result<(), Error> {
@@ -561,6 +613,20 @@ impl Scanner {
         })
     }
 
+    fn expand_string_reference(
+        &mut self,
+        mut block: ScannedStringReference,
+    ) -> Result<String, Error> {
+        let length_of_inlined = block.value.len();
+        if block.next_extent != 0 {
+            block.value.append(
+                &mut self.make_valid_vector(block.length - length_of_inlined, block.next_extent)?,
+            );
+        }
+
+        Ok(String::from_utf8(block.value)?)
+    }
+
     fn make_valid_vector(&mut self, length: usize, link: u32) -> Result<Vec<u8>, Error> {
         let mut dest = vec![];
         let mut length_remaining = length;
@@ -602,6 +668,14 @@ struct ScannedProperty {
     parent: u32,
     payload: ScannedPayload,
     metrics: BlockMetrics,
+}
+
+#[derive(Debug)]
+struct ScannedStringReference {
+    index: u32,
+    value: Vec<u8>,
+    length: usize,
+    next_extent: u32,
 }
 
 #[derive(Debug)]
@@ -648,7 +722,7 @@ mod tests {
         dest[offset..offset + source.len()].copy_from_slice(source);
     }
 
-    // Run "fx test inspect_validator_tests -- --nocapture" to see all the output
+    // Run "fx test inspect-validator-test -- --nocapture" to see all the output
     // and verify you're getting appropriate error messages for each tweaked byte.
     // (The alternative is hard-coding expected error strings, which is possible but ugh.)
     fn try_byte(
@@ -715,6 +789,46 @@ mod tests {
     }
 
     #[test]
+    fn test_scanning_string_reference() {
+        let mut buffer = [0u8; 4096];
+        const HEADER: usize = 0;
+        const NODE: usize = 3;
+        const NUMBER_NAME: usize = 4;
+        const NUMBER_EXTENT: usize = 5;
+
+        // VMO Header block (index 0)
+        let mut header = BlockHeader(0);
+        header.set_order(0);
+        header.set_block_type(BlockType::Header.to_u8().unwrap());
+        header.set_header_magic(constants::HEADER_MAGIC_NUMBER);
+        header.set_header_version(constants::HEADER_VERSION_NUMBER);
+        put_header(&header, &mut buffer, HEADER);
+
+        // create a Node named number
+        header.set_order(0);
+        header.set_block_type(BlockType::NodeValue.to_u8().unwrap());
+        header.set_value_name_index(NUMBER_NAME as u32);
+        header.set_value_parent_index(HEADER as u32);
+        put_header(&header, &mut buffer, NODE);
+
+        // create a STRING_REFERENCE with value "number" that is the above Node's name.
+        header.set_order(0);
+        header.set_block_type(BlockType::StringReference.to_u8().unwrap());
+        header.set_extent_next_index(NUMBER_EXTENT as u32);
+        put_header(&header, &mut buffer, NUMBER_NAME);
+        copy_into(&[6, 0, 0, 0], &mut buffer, NUMBER_NAME * 16 + 8);
+        copy_into(b"numb", &mut buffer, NUMBER_NAME * 16 + 12);
+        let mut number_extent = BlockHeader(0);
+        number_extent.set_order(0);
+        number_extent.set_block_type(BlockType::Extent.to_u8().unwrap());
+        number_extent.set_extent_next_index(0);
+        put_header(&number_extent, &mut buffer, NUMBER_EXTENT);
+        copy_into(b"er", &mut buffer, NUMBER_EXTENT * 16 + 8);
+
+        try_byte(&mut buffer, (16, 0), 0, Some("root ->\n> number ->"));
+    }
+
+    #[test]
     fn test_scanning_logic() {
         let mut buffer = [0u8; 4096];
         // VMO Header block (index 0)
@@ -751,6 +865,7 @@ mod tests {
         try_byte(&mut buffer, (HEADER, 8), 1, None);
         // But an even generation count should work.
         try_byte(&mut buffer, (HEADER, 8), 2, Some("root ->\n> node ->"));
+
         // Let's give it a property.
         const NUMBER: usize = 4;
         let mut number_header = BlockHeader(0);
@@ -766,6 +881,7 @@ mod tests {
         header.set_name_length(6);
         put_header(&header, &mut buffer, NUMBER_NAME);
         copy_into(b"number", &mut buffer, NUMBER_NAME * 16 + 8);
+
         try_byte(&mut buffer, (HEADER, 8), 2, Some("root ->\n> node ->\n> > number: Int(0)"));
         try_byte(&mut buffer, (NUMBER, 1), 5, Some("root ->\n> node ->\n> > number: Uint(0)"));
         try_byte(&mut buffer, (NUMBER, 1), 6, Some("root ->\n> node ->\n> > number: Double(0.0)"));
