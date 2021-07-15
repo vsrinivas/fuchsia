@@ -112,7 +112,7 @@ pub struct RfcommServer {
 
 impl Inspect for &mut RfcommServer {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect = parent.create_child(name);
+        self.inspect = parent.create_child(name.as_ref());
         Ok(())
     }
 }

@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_pkg_ext::{MirrorConfigInspectState, RepositoryConfig},
-    fuchsia_inspect::{self as inspect, NumericProperty, Property},
+    fuchsia_inspect::{self as inspect, NumericProperty, Property, StringReference},
     fuchsia_inspect_contrib::inspectable::{Inspectable, Watch},
     std::sync::Arc,
 };
@@ -22,7 +22,11 @@ pub struct InspectableRepositoryConfigWatcher {
 }
 
 impl Watch<Arc<RepositoryConfig>> for InspectableRepositoryConfigWatcher {
-    fn new(config: &Arc<RepositoryConfig>, node: &inspect::Node, name: impl AsRef<str>) -> Self {
+    fn new<'a>(
+        config: &Arc<RepositoryConfig>,
+        node: &inspect::Node,
+        name: impl Into<StringReference<'a>>,
+    ) -> Self {
         let repo_config_node = node.create_child(name);
         let mut ret = Self {
             root_keys_node: repo_config_node.create_child("root_keys"),

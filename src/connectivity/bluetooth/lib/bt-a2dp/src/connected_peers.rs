@@ -58,7 +58,7 @@ impl PeerStats {
 
 impl Inspect for &mut PeerStats {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect_node = parent.create_child(name);
+        self.inspect_node = parent.create_child(name.as_ref());
         self.inspect_node.record_string("id", self.id.to_string());
         self.connection_count = self.inspect_node.create_uint("connection_count", 0);
         Ok(())
@@ -115,7 +115,7 @@ impl DiscoveredPeers {
 
 impl Inspect for &mut DiscoveredPeers {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect_node = parent.create_child(name);
+        self.inspect_node = parent.create_child(name.as_ref());
         Ok(())
     }
 }
@@ -404,7 +404,7 @@ impl ConnectedPeers {
 
 impl Inspect for &mut ConnectedPeers {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect = parent.create_child(name);
+        self.inspect = parent.create_child(name.as_ref());
         let peer_dir_str = format!("{:?}", self.preferred_direction());
         self.inspect_peer_direction =
             self.inspect.create_string("preferred_peer_direction", peer_dir_str);

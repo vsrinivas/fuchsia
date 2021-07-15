@@ -9,32 +9,40 @@ mod list;
 pub use list::BoundedListNode;
 
 use fuchsia_inspect::Node;
-use fuchsia_inspect::{IntProperty, Property};
+use fuchsia_inspect::{IntProperty, Property, StringReference};
 use fuchsia_zircon as zx;
 
 /// Extension trait that allows to manage timestamp properties.
 pub trait NodeExt {
     /// Creates a new property holding the current monotonic timestamp.
-    fn create_time(&self, name: impl AsRef<str>) -> TimeProperty;
+    fn create_time<'b>(&self, name: impl Into<StringReference<'b>>) -> TimeProperty;
 
     /// Creates a new property holding the given timestamp.
-    fn create_time_at(&self, name: impl AsRef<str>, timestamp: zx::Time) -> TimeProperty;
+    fn create_time_at<'b>(
+        &self,
+        name: impl Into<StringReference<'b>>,
+        timestamp: zx::Time,
+    ) -> TimeProperty;
 
     /// Records a new property holding the current monotonic timestamp.
-    fn record_time(&self, name: impl AsRef<str>);
+    fn record_time<'b>(&self, name: impl Into<StringReference<'b>>);
 }
 
 impl NodeExt for Node {
-    fn create_time(&self, name: impl AsRef<str>) -> TimeProperty {
+    fn create_time<'b>(&self, name: impl Into<StringReference<'b>>) -> TimeProperty {
         let now = zx::Time::get_monotonic();
         self.create_time_at(name, now)
     }
 
-    fn create_time_at(&self, name: impl AsRef<str>, timestamp: zx::Time) -> TimeProperty {
+    fn create_time_at<'b>(
+        &self,
+        name: impl Into<StringReference<'b>>,
+        timestamp: zx::Time,
+    ) -> TimeProperty {
         TimeProperty { inner: self.create_int(name, timestamp.into_nanos()) }
     }
 
-    fn record_time(&self, name: impl AsRef<str>) {
+    fn record_time<'b>(&self, name: impl Into<StringReference<'b>>) {
         let now = zx::Time::get_monotonic();
         self.record_int(name, now.into_nanos());
     }

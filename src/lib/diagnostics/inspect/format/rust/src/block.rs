@@ -281,11 +281,14 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Read the inline portion of a STRING_REFERENCE
     pub fn inline_string_reference(&self) -> Result<Vec<u8>, Error> {
         self.check_type(BlockType::StringReference)?;
-        let allotted_to_total_len = 4; // 4 bytes are used for the total_length in Payload
-        let max_len_inlined = utils::payload_size_for_order(self.order()) - allotted_to_total_len;
+        let max_len_inlined = utils::payload_size_for_order(self.order())
+            - constants::STRING_REFERENCE_TOTAL_LENGTH_BYTES;
         let length = self.total_length()?;
         let mut bytes = vec![0u8; min(length, max_len_inlined)];
-        self.container.read_bytes(self.payload_offset() + allotted_to_total_len, &mut bytes);
+        self.container.read_bytes(
+            self.payload_offset() + constants::STRING_REFERENCE_TOTAL_LENGTH_BYTES,
+            &mut bytes,
+        );
         Ok(bytes)
     }
 
@@ -770,12 +773,15 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     pub fn write_string_reference_inline(&self, value: &[u8]) -> Result<usize, Error> {
         self.check_type(BlockType::StringReference)?;
         self.set_total_length(value.len() as u32)?;
-        let allotted_to_total_len = 4; // 4 bytes are used for the total_length in Payload
-        let max_len = utils::payload_size_for_order(self.order()) - allotted_to_total_len;
+        let max_len = utils::payload_size_for_order(self.order())
+            - constants::STRING_REFERENCE_TOTAL_LENGTH_BYTES;
         // we do not care about splitting multibyte UTF-8 characters, because the rest
         // of the split will go in an extent and be joined together at read time.
         let to_inline = &value[..min(value.len(), max_len)];
-        Ok(self.container.write_bytes(self.payload_offset() + allotted_to_total_len, to_inline))
+        Ok(self.container.write_bytes(
+            self.payload_offset() + constants::STRING_REFERENCE_TOTAL_LENGTH_BYTES,
+            to_inline,
+        ))
     }
 
     /// Creates a NAME block.

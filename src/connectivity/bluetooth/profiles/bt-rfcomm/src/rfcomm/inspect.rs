@@ -95,7 +95,7 @@ pub struct SessionMultiplexerInspect {
 
 impl Inspect for &mut SessionMultiplexerInspect {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect_node = parent.create_child(name);
+        self.inspect_node = parent.create_child(name.as_ref());
         self.role = self.inspect_node.create_string("role", role_to_display_str(Role::Unassigned));
         Ok(())
     }
@@ -130,7 +130,7 @@ pub struct SessionInspect {
 
 impl Inspect for &mut SessionInspect {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect_node = parent.create_child(name);
+        self.inspect_node = parent.create_child(name.as_ref());
         self.connected = self.inspect_node.create_string("connected", "Connected");
         Ok(())
     }

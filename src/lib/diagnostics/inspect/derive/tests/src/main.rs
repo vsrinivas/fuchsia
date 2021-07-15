@@ -99,7 +99,7 @@ impl PowerYak {
 // easily be auto-generated (using a derive-macro).
 impl Inspect for &mut PowerYak {
     fn iattach(self, parent: &Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        let inspect_node = parent.create_child(name);
+        let inspect_node = parent.create_child(name.as_ref());
         self.name.iattach(&inspect_node, "name")?;
         self.age.iattach(&inspect_node, "age")?;
         self.size.iattach(&inspect_node, "size")?;

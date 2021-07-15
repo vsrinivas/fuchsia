@@ -120,7 +120,7 @@ impl<T> Inspect for &mut PeerChannel<T> {
         parent: &fuchsia_inspect::Node,
         name: impl AsRef<str>,
     ) -> Result<(), AttachError> {
-        self.inspect = parent.create_string(name, "Disconnected");
+        self.inspect = parent.create_string(name.as_ref(), "Disconnected");
         Ok(())
     }
 }
@@ -190,7 +190,7 @@ impl Inspect for &mut RemotePeer {
         parent: &fuchsia_inspect::Node,
         name: impl AsRef<str>,
     ) -> Result<(), AttachError> {
-        self.inspect.iattach(parent, name)?;
+        self.inspect.iattach(parent, name.as_ref())?;
         self.control_channel.iattach(&self.inspect.node(), "control")?;
         self.browse_channel.iattach(&self.inspect.node(), "browse")?;
         Ok(())
@@ -439,7 +439,7 @@ impl Inspect for &mut RemotePeerHandle {
         parent: &fuchsia_inspect::Node,
         name: impl AsRef<str>,
     ) -> Result<(), AttachError> {
-        self.peer.write().iattach(parent, name)
+        self.peer.write().iattach(parent, name.as_ref())
     }
 }
 

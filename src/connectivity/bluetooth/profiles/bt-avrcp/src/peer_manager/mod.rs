@@ -90,7 +90,7 @@ impl Inspect for &mut PeerManager {
         parent: &fuchsia_inspect::Node,
         name: impl AsRef<str>,
     ) -> Result<(), AttachError> {
-        self.inspect.iattach(parent, name)
+        self.inspect.iattach(parent, name.as_ref())
     }
 }
 

@@ -18,7 +18,7 @@ pub struct PeerManagerInspect {
 
 impl Inspect for &mut PeerManagerInspect {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect_node = parent.create_child(name);
+        self.inspect_node = parent.create_child(name.as_ref());
         Ok(())
     }
 }

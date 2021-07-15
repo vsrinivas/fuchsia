@@ -34,7 +34,7 @@ pub struct RemotePeerInspect {
 
 impl Inspect for &mut RemotePeerInspect {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect_node = parent.create_child(name);
+        self.inspect_node = parent.create_child(name.as_ref());
         self.inspect_node.record_string("peer_id", self.peer_id.to_string());
         self.target_info = Some(BoundedListNode::new(
             self.inspect_node.create_child("target_info"),

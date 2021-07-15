@@ -531,14 +531,14 @@ macro_rules! create_numeric_property_fn {
         paste::paste! {
             #[doc = "Creates a new `" $name_cap "` with the given `name` and `value`."]
             #[must_use]
-            pub fn [<create_ $name >](&self, name: impl AsRef<str>, value: $type)
+            pub fn [<create_ $name >]<'b>(&self, name: impl Into<StringReference<'b>>, value: $type)
                 -> [<$name_cap Property>] {
                     self.inner.inner_ref().and_then(|inner_ref| {
                         inner_ref.state
                             .try_lock()
                             .and_then(|mut state| {
                                 state.[<create_ $name _metric>](
-                                    name.as_ref(), value, inner_ref.block_index)
+                                    name, value, inner_ref.block_index)
                             })
                             .map(|block| {
                                 [<$name_cap Property>]::new(inner_ref.state.clone(), block.index())
@@ -549,7 +549,7 @@ macro_rules! create_numeric_property_fn {
             }
 
             #[doc = "Records a new `" $name_cap "` with the given `name` and `value`."]
-            pub fn [<record_ $name >](&self, name: impl AsRef<str>, value: $type) {
+            pub fn [<record_ $name >]<'b>(&self, name: impl Into<StringReference<'b>>, value: $type) {
                 let property = self.[<create_ $name>](name, value);
                 self.record(property);
             }
@@ -566,20 +566,20 @@ macro_rules! create_array_property_fn {
         paste::paste! {
             #[doc = "Creates a new `" $name_cap "ArrayProperty` with the given `name` and `slots`."]
             #[must_use]
-            pub fn [<create_ $name _array>](&self, name: impl AsRef<str>, slots: usize)
+            pub fn [<create_ $name _array>]<'b>(&self, name: impl Into<StringReference<'b>>, slots: usize)
                 -> [<$name_cap ArrayProperty>] {
                     self.[<create_ $name _array_internal>](name, slots, ArrayFormat::Default)
             }
 
-            fn [<create_ $name _array_internal>](
-                &self, name: impl AsRef<str>, slots: usize, format: ArrayFormat)
+            fn [<create_ $name _array_internal>]<'b>(
+                &self, name: impl Into<StringReference<'b>>, slots: usize, format: ArrayFormat)
                 -> [<$name_cap ArrayProperty>] {
                     self.inner.inner_ref().and_then(|inner_ref| {
                         inner_ref.state
                             .try_lock()
                             .and_then(|mut state| {
                                 state.[<create_ $name _array>](
-                                    name.as_ref(), slots, format, inner_ref.block_index)
+                                    name, slots, format, inner_ref.block_index)
                             })
                             .map(|block| {
                                 [<$name_cap ArrayProperty>]::new(inner_ref.state.clone(), block.index())
@@ -602,8 +602,8 @@ macro_rules! create_linear_histogram_property_fn {
             #[doc = "Creates a new `" $name_cap
                "LinearHistogramProperty` with the given `name` and `params`."]
             #[must_use]
-            pub fn [<create_ $name _linear_histogram>](
-                &self, name: impl AsRef<str>, params: LinearHistogramParams<$type>)
+            pub fn [<create_ $name _linear_histogram>]<'b>(
+                &self, name: impl Into<StringReference<'b>>, params: LinearHistogramParams<$type>)
                 -> [<$name_cap LinearHistogramProperty>] {
                 let slots = params.buckets + constants::LINEAR_HISTOGRAM_EXTRA_SLOTS;
                 let array = self.[<create_ $name _array_internal>](
@@ -631,8 +631,8 @@ macro_rules! create_exponential_histogram_property_fn {
             #[doc = "Creates a new `" $name_cap
                "ExponentialHistogramProperty` with the given `name` and `params`."]
             #[must_use]
-            pub fn [<create_ $name _exponential_histogram>](
-              &self, name: impl AsRef<str>, params: ExponentialHistogramParams<$type>)
+            pub fn [<create_ $name _exponential_histogram>]<'b>(
+              &self, name: impl Into<StringReference<'b>>, params: ExponentialHistogramParams<$type>)
               -> [<$name_cap ExponentialHistogramProperty>] {
                 let slots = params.buckets + constants::EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS;
                 let array = self.[<create_ $name _array_internal>](
@@ -660,14 +660,14 @@ macro_rules! create_lazy_property_fn {
         paste::paste! {
             #[must_use]
             #[doc = "Creates a new lazy " $fn_suffix " link with the given `name` and `callback`."]
-            pub fn [<create_lazy_ $fn_suffix>]<F>(&self, name: impl AsRef<str>, callback: F) -> LazyNode
+            pub fn [<create_lazy_ $fn_suffix>]<'b, F>(&self, name: impl Into<StringReference<'b>>, callback: F) -> LazyNode
             where F: Fn() -> BoxFuture<'static, Result<Inspector, anyhow::Error>> + Sync + Send + 'static {
                 self.inner.inner_ref().and_then(|inner_ref| {
                     inner_ref
                         .state
                         .try_lock()
                         .and_then(|mut state| state.create_lazy_node(
-                            name.as_ref(),
+                            name,
                             inner_ref.block_index,
                             LinkNodeDisposition::$disposition,
                             callback,
@@ -680,8 +680,8 @@ macro_rules! create_lazy_property_fn {
             }
 
             #[doc = "Records a new lazy " $fn_suffix " link with the given `name` and `callback`."]
-            pub fn [<record_lazy_ $fn_suffix>]<F>(
-                &self, name: impl AsRef<str>, callback: F)
+            pub fn [<record_lazy_ $fn_suffix>]<'b, F>(
+                &self, name: impl Into<StringReference<'b>>, callback: F)
             where F: Fn() -> BoxFuture<'static, Result<Inspector, anyhow::Error>> + Sync + Send + 'static {
                 let property = self.[<create_lazy_ $fn_suffix>](name, callback);
                 self.record(property);
@@ -721,7 +721,7 @@ impl Node {
     }
 
     /// Creates and keeps track of a child with the given `name`.
-    pub fn record_child<F>(&self, name: impl AsRef<str>, initialize: F)
+    pub fn record_child<'b, F>(&self, name: impl Into<StringReference<'b>>, initialize: F)
     where
         F: FnOnce(&Node),
     {
@@ -732,14 +732,14 @@ impl Node {
 
     /// Add a child to this node.
     #[must_use]
-    pub fn create_child(&self, name: impl AsRef<str>) -> Node {
+    pub fn create_child<'b>(&self, name: impl Into<StringReference<'b>>) -> Node {
         self.inner
             .inner_ref()
             .and_then(|inner_ref| {
                 inner_ref
                     .state
                     .try_lock()
-                    .and_then(|mut state| state.create_node(name.as_ref(), inner_ref.block_index))
+                    .and_then(|mut state| state.create_node(name, inner_ref.block_index))
                     .map(|block| Node::new(inner_ref.state.clone(), block.index()))
                     .ok()
             })
@@ -810,16 +810,24 @@ impl Node {
 
     /// Creates a lazy node from the given VMO.
     #[must_use]
-    pub fn create_lazy_child_from_vmo(&self, name: impl AsRef<str>, vmo: Arc<zx::Vmo>) -> LazyNode {
-        self.create_lazy_child(name.as_ref(), move || {
+    pub fn create_lazy_child_from_vmo<'b>(
+        &self,
+        name: impl Into<StringReference<'b>>,
+        vmo: Arc<zx::Vmo>,
+    ) -> LazyNode {
+        self.create_lazy_child(name, move || {
             let vmo_clone = vmo.clone();
             async move { Ok(Inspector::no_op_from_vmo(vmo_clone)) }.boxed()
         })
     }
 
     /// Records a lazy node from the given VMO.
-    pub fn record_lazy_child_from_vmo(&self, name: impl AsRef<str>, vmo: Arc<zx::Vmo>) {
-        self.record_lazy_child(name.as_ref(), move || {
+    pub fn record_lazy_child_from_vmo<'b>(
+        &self,
+        name: impl Into<StringReference<'b>>,
+        vmo: Arc<zx::Vmo>,
+    ) {
+        self.record_lazy_child(name, move || {
             let vmo_clone = vmo.clone();
             async move { Ok(Inspector::no_op_from_vmo(vmo_clone)) }.boxed()
         });
@@ -827,7 +835,11 @@ impl Node {
 
     /// Add a string property to this node.
     #[must_use]
-    pub fn create_string(&self, name: impl AsRef<str>, value: impl AsRef<str>) -> StringProperty {
+    pub fn create_string<'b>(
+        &self,
+        name: impl Into<StringReference<'b>>,
+        value: impl AsRef<str>,
+    ) -> StringProperty {
         self.inner
             .inner_ref()
             .and_then(|inner_ref| {
@@ -836,7 +848,7 @@ impl Node {
                     .try_lock()
                     .and_then(|mut state| {
                         state.create_property(
-                            name.as_ref(),
+                            name,
                             value.as_ref().as_bytes(),
                             PropertyFormat::String,
                             inner_ref.block_index,
@@ -849,14 +861,18 @@ impl Node {
     }
 
     /// Creates and saves a string property for the lifetime of the node.
-    pub fn record_string(&self, name: impl AsRef<str>, value: impl AsRef<str>) {
+    pub fn record_string<'b>(&self, name: impl Into<StringReference<'b>>, value: impl AsRef<str>) {
         let property = self.create_string(name, value);
         self.record(property);
     }
 
     /// Add a byte vector property to this node.
     #[must_use]
-    pub fn create_bytes(&self, name: impl AsRef<str>, value: impl AsRef<[u8]>) -> BytesProperty {
+    pub fn create_bytes<'b>(
+        &self,
+        name: impl Into<StringReference<'b>>,
+        value: impl AsRef<[u8]>,
+    ) -> BytesProperty {
         self.inner
             .inner_ref()
             .and_then(|inner_ref| {
@@ -865,7 +881,7 @@ impl Node {
                     .try_lock()
                     .and_then(|mut state| {
                         state.create_property(
-                            name.as_ref(),
+                            name,
                             value.as_ref(),
                             PropertyFormat::Bytes,
                             inner_ref.block_index,
@@ -878,23 +894,25 @@ impl Node {
     }
 
     /// Creates and saves a bytes property for the lifetime of the node.
-    pub fn record_bytes(&self, name: impl AsRef<str>, value: impl AsRef<[u8]>) {
+    pub fn record_bytes<'b>(&self, name: impl Into<StringReference<'b>>, value: impl AsRef<[u8]>) {
         let property = self.create_bytes(name, value);
         self.record(property);
     }
 
     /// Add a bool property to this node.
     #[must_use]
-    pub fn create_bool(&self, name: impl AsRef<str>, value: bool) -> BoolProperty {
+    pub fn create_bool<'b>(
+        &self,
+        name: impl Into<StringReference<'b>>,
+        value: bool,
+    ) -> BoolProperty {
         self.inner
             .inner_ref()
             .and_then(|inner_ref| {
                 inner_ref
                     .state
                     .try_lock()
-                    .and_then(|mut state| {
-                        state.create_bool(name.as_ref(), value, inner_ref.block_index)
-                    })
+                    .and_then(|mut state| state.create_bool(name, value, inner_ref.block_index))
                     .map(|block| BoolProperty::new(inner_ref.state.clone(), block.index()))
                     .ok()
             })
@@ -902,9 +920,94 @@ impl Node {
     }
 
     /// Creates and saves a bool property for the lifetime of the node.
-    pub fn record_bool(&self, name: impl AsRef<str>, value: bool) {
+    pub fn record_bool<'b>(&self, name: impl Into<StringReference<'b>>, value: bool) {
         let property = self.create_bool(name, value);
         self.record(property);
+    }
+}
+
+/// This is the generator for StringReference ID's.
+static NEXT_STRING_REFERENCE_ID: AtomicUsize = AtomicUsize::new(0);
+
+#[derive(Clone)]
+enum StringReferenceData<'a> {
+    Owned(String),
+    Borrowed(&'a str),
+}
+
+/// StringReference is a type that can be constructed and passed into
+/// the Inspect API as a name of a Node. If this is done, only one
+/// reference counted instance of the string will be allocated per
+/// Inspector. They can be safely used with LazyNodes.
+pub struct StringReference<'a> {
+    // The canonical data referred to by this instance.
+    data: StringReferenceData<'a>,
+
+    // The identifier used by state to locate this reference.
+    reference_id: usize,
+}
+
+impl<'a> StringReference<'a> {
+    /// Construct a StringReference with non-owned data.
+    pub fn new(data: &'a str) -> Self {
+        Self {
+            data: StringReferenceData::Borrowed(data),
+            reference_id: NEXT_STRING_REFERENCE_ID.fetch_add(1, Ordering::SeqCst),
+        }
+    }
+
+    /// Construct a StringReference with owned data. For internal use. To construct
+    /// an owning StringReference with the public API, use from(String).
+    fn new_owned(data: String) -> Self {
+        Self {
+            data: StringReferenceData::Owned(data),
+            reference_id: NEXT_STRING_REFERENCE_ID.fetch_add(1, Ordering::SeqCst),
+        }
+    }
+
+    /// Access a read-only reference to the data in a StringReference.
+    pub(crate) fn data(&self) -> &str {
+        match self.data {
+            StringReferenceData::Owned(ref s) => s,
+            StringReferenceData::Borrowed(s) => s,
+        }
+    }
+
+    /// Get the ID of this StringReference for State. Note that this is not
+    /// necessarily equivalent to the block index of the StringReference in the VMO.
+    pub(crate) fn id(&self) -> usize {
+        self.reference_id
+    }
+}
+
+impl<'a> From<&'a StringReference<'a>> for StringReference<'a> {
+    fn from(sf: &'a StringReference<'a>) -> Self {
+        Self { data: StringReferenceData::Borrowed(sf.data()), reference_id: sf.reference_id }
+    }
+}
+
+impl<'a> From<&'a str> for StringReference<'a> {
+    fn from(data: &'a str) -> Self {
+        StringReference::new(data)
+    }
+}
+
+impl<'a> From<&'a String> for StringReference<'a> {
+    fn from(data: &'a String) -> Self {
+        StringReference::new(data)
+    }
+}
+
+/// This trait allows the construction of a StringReference that owns its data.
+impl From<String> for StringReference<'_> {
+    fn from(data: String) -> Self {
+        StringReference::new_owned(data)
+    }
+}
+
+impl<'a> From<Cow<'a, str>> for StringReference<'a> {
+    fn from(data: Cow<'a, str>) -> StringReference<'a> {
+        StringReference::new_owned(data.into_owned())
     }
 }
 
@@ -1389,6 +1492,78 @@ mod tests {
     }
 
     #[test]
+    fn string_references_as_names() {
+        lazy_static! {
+            static ref FOO: StringReference<'static> = "foo".into();
+            static ref BAR: StringReference<'static> = "bar".into();
+            static ref BAZ: StringReference<'static> = "baz".into();
+        };
+
+        let inspector = Inspector::new();
+        inspector.root().record_int(&*FOO, 0);
+        let child = inspector.root().create_child(&*BAR);
+        child.record_double(&*FOO, 3.25);
+
+        assert_data_tree!(inspector, root: {
+            foo: 0i64,
+            bar: {
+                foo: 3.25,
+            },
+        });
+
+        {
+            let _baz_property = child.create_uint(&*BAZ, 4);
+            assert_data_tree!(inspector, root: {
+                foo: 0i64,
+                bar: {
+                    baz: 4u64,
+                    foo: 3.25,
+                },
+            });
+        }
+
+        assert_data_tree!(inspector, root: {
+            foo: 0i64,
+            bar: {
+                foo: 3.25,
+            },
+        });
+
+        let pre_loop_allocated =
+            inspector.state().unwrap().try_lock().unwrap().stats().allocated_blocks;
+        let pre_loop_deallocated =
+            inspector.state().unwrap().try_lock().unwrap().stats().deallocated_blocks;
+
+        for i in 0..300 {
+            child.record_int(&*BAR, i);
+        }
+
+        assert_eq!(
+            inspector.state().unwrap().try_lock().unwrap().stats().allocated_blocks,
+            pre_loop_allocated + 300
+        );
+        assert_eq!(
+            inspector.state().unwrap().try_lock().unwrap().stats().deallocated_blocks,
+            pre_loop_deallocated
+        );
+
+        let pre_loop_count = pre_loop_allocated + 300;
+
+        for i in 0..300 {
+            child.record_int("abcd", i);
+        }
+
+        assert_eq!(
+            inspector.state().unwrap().try_lock().unwrap().stats().allocated_blocks,
+            pre_loop_count + 300 /* the int blocks */ + 300 /* individual blocks for "abcd" */
+        );
+        assert_eq!(
+            inspector.state().unwrap().try_lock().unwrap().stats().deallocated_blocks,
+            pre_loop_deallocated
+        );
+    }
+
+    #[test]
     fn node_no_op_clone_weak() {
         let default = Node::default();
         assert!(!default.is_valid());
@@ -1860,7 +2035,7 @@ mod tests {
                 lazy_node_block.link_node_disposition().unwrap(),
                 LinkNodeDisposition::Inline
             );
-            assert_eq!(lazy_node_block.link_content_index().unwrap(), 5);
+            assert_eq!(lazy_node_block.link_content_index().unwrap(), 6);
             assert_eq!(node_block.child_count().unwrap(), 1);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
@@ -1880,7 +2055,7 @@ mod tests {
                 lazy_node_block.link_node_disposition().unwrap(),
                 LinkNodeDisposition::Child
             );
-            assert_eq!(lazy_node_block.link_content_index().unwrap(), 5);
+            assert_eq!(lazy_node_block.link_content_index().unwrap(), 6);
             assert_eq!(node_block.child_count().unwrap(), 1);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);

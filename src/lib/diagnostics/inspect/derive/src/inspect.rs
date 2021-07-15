@@ -61,7 +61,7 @@ macro_rules! impl_inspect_property {
             impl Inspect for &mut [<$prop_name_cap Property>] {
                 fn iattach(self, parent: &Node, name: impl AsRef<str>) -> Result<(), AttachError> {
                     let default = <[<$prop_name_cap Property>] as Property<'_>>::Type::default();
-                    *self = parent.[<create_ $prop_name>](name, default);
+                    *self = parent.[<create_ $prop_name>](name.as_ref(), default);
                     Ok(())
                 }
             }

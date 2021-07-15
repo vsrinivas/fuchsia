@@ -395,7 +395,7 @@ impl Inspect for &mut PeerInner {
     // Set up the StreamEndpoint to update the state
     // The MediaTask node will be created when the media task is started.
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect = parent.create_child(name);
+        self.inspect = parent.create_child(name.as_ref());
         self.inspect.record_string("id", self.peer_id.to_string());
         self.local.iattach(&self.inspect, "local_streams")
     }

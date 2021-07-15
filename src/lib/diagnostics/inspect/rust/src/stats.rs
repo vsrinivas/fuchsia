@@ -129,7 +129,7 @@ mod tests {
         }
 
         {
-            let _ = inspector.root().create_int("dropped", 1);
+            let _ = inspector.root().create_int("drop", 1);
         }
 
         assert_data_tree!(inspector, root: contains {
@@ -138,7 +138,8 @@ mod tests {
                 maximum_size: constants::DEFAULT_VMO_SIZE_BYTES as u64,
                 total_dynamic_children: 2u64,
                 allocated_blocks: 323u64,
-                // 2 blocks are deallocated because of the "dropped" int block and its NAME
+                // 2 blocks are deallocated because of the "drop" int block and its
+                // STRING_REFERENCE
                 deallocated_blocks: 2u64,
             }
         });

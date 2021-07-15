@@ -341,7 +341,7 @@ fn derive_unit_inner(ast: DeriveInput) -> Result<TokenStream, Error> {
                 parent: &::fuchsia_inspect_derive::InspectNode,
                 name: impl AsRef<str>
             ) -> Self::Data {
-                let inspect_node = parent.create_child(name);
+                let inspect_node = parent.create_child(name.as_ref());
                 #inspect_data_ident {
                     #(#create_struct_exprs,)*
                     inspect_node,
@@ -429,7 +429,7 @@ fn derive_inspect_inner(ast: DeriveInput) -> Result<TokenStream, Error> {
 
     let node_setup_stmt = if has_inspect_node {
         quote! {
-            self.inspect_node = parent.create_child(name);
+            self.inspect_node = parent.create_child(name.as_ref());
         }
     } else {
         TokenStream::new()

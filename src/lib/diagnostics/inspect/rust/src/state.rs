@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{error::Error, heap::Heap, Inspector},
+    crate::{error::Error, heap::Heap, Inspector, StringReference},
     anyhow,
     derivative::Derivative,
     futures::future::BoxFuture,
@@ -62,9 +62,9 @@ impl SafeOp for f64 {
 macro_rules! locked_state_metric_fns {
     ($name:ident, $type:ident) => {
         paste::paste! {
-            pub fn [<create_ $name _metric>](
+            pub fn [<create_ $name _metric>]<'b>(
                 &mut self,
-                name: &str,
+                name: impl Into<StringReference<'b>>,
                 value: $type,
                 parent_index: u32,
             ) -> Result<Block<Arc<Mapping>>, Error> {
@@ -97,9 +97,9 @@ macro_rules! locked_state_metric_fns {
 macro_rules! metric_fns {
     ($name:ident, $type:ident) => {
         paste::paste! {
-            fn [<create_ $name _metric>](
+            fn [<create_ $name _metric>]<'b>(
                 &mut self,
-                name: &str,
+                name: impl Into<StringReference<'b>>,
                 value: $type,
                 parent_index: u32,
             ) -> Result<Block<Arc<Mapping>>, Error> {
@@ -144,9 +144,9 @@ macro_rules! metric_fns {
 macro_rules! locked_state_array_fns {
     ($name:ident, $type:ident, $value:ident) => {
         paste::paste! {
-            pub fn [<create_ $name _array>](
+            pub fn [<create_ $name _array>]<'b>(
                 &mut self,
-                name: &str,
+                name: impl Into<StringReference<'b>>,
                 slots: usize,
                 array_format: ArrayFormat,
                 parent_index: u32,
@@ -178,9 +178,9 @@ macro_rules! locked_state_array_fns {
 macro_rules! array_fns {
     ($name:ident, $type:ident, $value:ident) => {
         paste::paste! {
-            pub fn [<create_ $name _array>](
+            pub fn [<create_ $name _array>]<'b>(
                 &mut self,
-                name: &str,
+                name: impl Into<StringReference<'b>>,
                 slots: usize,
                 array_format: ArrayFormat,
                 parent_index: u32,
@@ -342,9 +342,9 @@ impl<'a> LockedStateGuard<'a> {
     }
 
     /// Allocate a NODE block with the given |name| and |parent_index|.
-    pub fn create_node(
+    pub fn create_node<'b>(
         &mut self,
-        name: &str,
+        name: impl Into<StringReference<'b>>,
         parent_index: u32,
     ) -> Result<Block<Arc<Mapping>>, Error> {
         self.inner_lock.create_node(name, parent_index)
@@ -352,9 +352,9 @@ impl<'a> LockedStateGuard<'a> {
 
     /// Allocate a LINK block with the given |name| and |parent_index| and keep track
     /// of the callback that will fill it.
-    pub fn create_lazy_node<F>(
+    pub fn create_lazy_node<'b, F>(
         &mut self,
-        name: &str,
+        name: impl Into<StringReference<'b>>,
         parent_index: u32,
         disposition: LinkNodeDisposition,
         callback: F,
@@ -365,7 +365,6 @@ impl<'a> LockedStateGuard<'a> {
         self.inner_lock.create_lazy_node(name, parent_index, disposition, callback)
     }
 
-    /// Frees a LINK block at the given |index|.
     pub fn free_lazy_node(&mut self, index: u32) -> Result<(), Error> {
         self.inner_lock.free_lazy_node(index)
     }
@@ -376,14 +375,34 @@ impl<'a> LockedStateGuard<'a> {
     }
 
     /// Allocate a PROPERTY block with the given |name|, |value| and |parent_index|.
-    pub fn create_property(
+    pub fn create_property<'b>(
         &mut self,
-        name: &str,
+        name: impl Into<StringReference<'b>>,
         value: &[u8],
         format: PropertyFormat,
         parent_index: u32,
     ) -> Result<Block<Arc<Mapping>>, Error> {
         self.inner_lock.create_property(name, value, format, parent_index)
+    }
+
+    /// Allocate a STRING_REFERENCE block and necessary EXTENTs.
+    #[cfg(test)]
+    pub fn create_string_reference<'b>(
+        &mut self,
+        value: impl Into<StringReference<'b>>,
+    ) -> Result<Block<Arc<Mapping>>, Error> {
+        self.inner_lock.create_string_reference(value)
+    }
+
+    /// Free a STRING_REFERENCE block and necessary EXTENTs.
+    #[cfg(test)]
+    pub fn maybe_free_string_reference(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
+        self.inner_lock.maybe_free_string_reference(block)
+    }
+
+    #[cfg(test)]
+    fn load_string(&mut self, index: u32) -> Result<String, Error> {
+        self.inner_lock.load_key_string(index)
     }
 
     /// Free a PROPERTY block.
@@ -396,9 +415,9 @@ impl<'a> LockedStateGuard<'a> {
         self.inner_lock.set_property(block_index, value)
     }
 
-    pub fn create_bool(
+    pub fn create_bool<'b>(
         &mut self,
-        name: &str,
+        name: impl Into<StringReference<'b>>,
         value: bool,
         parent_index: u32,
     ) -> Result<Block<Arc<Mapping>>, Error> {
@@ -431,9 +450,9 @@ impl<'a> LockedStateGuard<'a> {
     }
 
     #[cfg(test)]
-    pub fn allocate_link(
+    pub fn allocate_link<'b>(
         &mut self,
-        name: &str,
+        name: impl Into<StringReference<'b>>,
         content: &str,
         disposition: LinkNodeDisposition,
         parent_index: u32,
@@ -465,6 +484,9 @@ struct InnerState {
     next_unique_link_id: AtomicU64,
     transaction_count: usize,
 
+    // associates a reference ID with it's block index
+    string_reference_ids: HashMap<usize, u32>,
+
     #[derivative(Debug = "ignore")]
     callbacks: HashMap<String, LazyNodeContextFnArc>,
 }
@@ -477,11 +499,16 @@ impl InnerState {
             next_unique_link_id: AtomicU64::new(0),
             callbacks: HashMap::new(),
             transaction_count: 0,
+            string_reference_ids: HashMap::new(),
         }
     }
 
     /// Allocate a NODE block with the given |name| and |parent_index|.
-    fn create_node(&mut self, name: &str, parent_index: u32) -> Result<Block<Arc<Mapping>>, Error> {
+    fn create_node<'b>(
+        &mut self,
+        name: impl Into<StringReference<'b>>,
+        parent_index: u32,
+    ) -> Result<Block<Arc<Mapping>>, Error> {
         let (block, name_block) =
             self.allocate_reserved_value(name, parent_index, constants::MIN_ORDER_SIZE)?;
         block.become_node(name_block.index(), parent_index)?;
@@ -490,9 +517,9 @@ impl InnerState {
 
     /// Allocate a LINK block with the given |name| and |parent_index| and keep track
     /// of the callback that will fill it.
-    fn create_lazy_node<F>(
+    fn create_lazy_node<'b, F>(
         &mut self,
-        name: &str,
+        name: impl Into<StringReference<'b>>,
         parent_index: u32,
         disposition: LinkNodeDisposition,
         callback: F,
@@ -500,8 +527,9 @@ impl InnerState {
     where
         F: Fn() -> BoxFuture<'static, Result<Inspector, anyhow::Error>> + Sync + Send + 'static,
     {
-        let content = self.unique_link_name(name);
-        let link = self.allocate_link(name, &content, disposition, parent_index)?;
+        let converted = name.into();
+        let content = self.unique_link_name(converted.data());
+        let link = self.allocate_link(&converted, &content, disposition, parent_index)?;
         self.callbacks.insert(content, Arc::from(callback));
         Ok(link)
     }
@@ -510,9 +538,18 @@ impl InnerState {
     fn free_lazy_node(&mut self, index: u32) -> Result<(), Error> {
         let block = self.heap.get_block(index)?;
         let content_block = self.heap.get_block(block.link_content_index()?)?;
-        let content = self.heap.get_block(content_block.index())?.name_contents()?;
+        let content = self.load_key_string(content_block.index())?;
         self.delete_value(block)?;
-        self.heap.free_block(content_block)?;
+        // Free the name or string reference block used for content.
+        match content_block.block_type() {
+            BlockType::StringReference => {
+                self.release_string_reference(content_block)?;
+            }
+            _ => {
+                self.heap.free_block(content_block).expect("Failed to free block");
+            }
+        }
+
         self.callbacks.remove(&content);
         Ok(())
     }
@@ -522,16 +559,17 @@ impl InnerState {
         format!("{}-{}", prefix, id)
     }
 
-    pub(in crate) fn allocate_link(
+    pub(in crate) fn allocate_link<'b>(
         &mut self,
-        name: &str,
+        name: impl Into<StringReference<'b>>,
         content: &str,
         disposition: LinkNodeDisposition,
         parent_index: u32,
     ) -> Result<Block<Arc<Mapping>>, Error> {
         let (value_block, name_block) =
             self.allocate_reserved_value(name, parent_index, constants::MIN_ORDER_SIZE)?;
-        let result = self.allocate_name(content).and_then(|content_block| {
+        let result = self.create_string_reference(content).and_then(|content_block| {
+            content_block.increment_string_reference_count()?;
             value_block.become_link(
                 name_block.index(),
                 parent_index,
@@ -557,9 +595,9 @@ impl InnerState {
     }
 
     /// Allocate a PROPERTY block with the given |name|, |value| and |parent_index|.
-    fn create_property(
+    fn create_property<'b>(
         &mut self,
-        name: &str,
+        name: impl Into<StringReference<'b>>,
         value: &[u8],
         format: PropertyFormat,
         parent_index: u32,
@@ -573,6 +611,113 @@ impl InnerState {
             return Err(err);
         }
         Ok(block)
+    }
+
+    /// Allocate a STRING_REFERENCE block with the given |value|.
+    fn create_string_reference<'b>(
+        &mut self,
+        value: impl Into<StringReference<'b>>,
+    ) -> Result<Block<Arc<Mapping>>, Error> {
+        let string_reference = value.into();
+        match self.string_reference_ids.get(&string_reference.id()) {
+            None => {
+                let block = self.heap.allocate_block(utils::block_size_for_payload(
+                    string_reference.data().len() + constants::STRING_REFERENCE_TOTAL_LENGTH_BYTES,
+                ))?;
+                block.become_string_reference()?;
+                self.write_string_reference_payload(&block, string_reference.data())?;
+                self.string_reference_ids.insert(string_reference.id(), block.index());
+                Ok(block)
+            }
+
+            Some(index) => Ok(self.heap.get_block(*index)?),
+        }
+    }
+
+    /// Given a string, write the canonical value out, allocating as needed.
+    fn write_string_reference_payload(
+        &mut self,
+        block: &Block<Arc<Mapping>>,
+        value: &str,
+    ) -> Result<(), Error> {
+        let head_extent = match self.inline_string_reference(&block, value.as_bytes()) {
+            Ok(Some(written)) => self.write_extents(&value.as_bytes()[written..])?,
+            Ok(None) => 0,
+            Err(e) => return Err(e),
+        };
+
+        block.set_extent_next_index(head_extent)?;
+        block.set_total_length(value.as_bytes().len().to_u32().unwrap())?;
+        Ok(())
+    }
+
+    /// Given a string, write the portion that can be inlined to the given block.
+    /// If the data overflows, return the number of bytes written.
+    fn inline_string_reference(
+        &mut self,
+        block: &Block<Arc<Mapping>>,
+        value: &[u8],
+    ) -> Result<Option<usize>, Error> {
+        // only returns an error if you call with wrong block type
+        let bytes_written = block.write_string_reference_inline(value)?;
+        if bytes_written < value.len() {
+            Ok(Some(bytes_written))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Decrement the reference count on the block and free it if the count is 0.
+    /// This is the function to call if you want to give up your hold on a StringReference.
+    fn release_string_reference(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
+        block.decrement_string_reference_count()?;
+        self.maybe_free_string_reference(block)
+    }
+
+    /// Free a STRING_REFERENCE if the count is 0. This should not be
+    /// directly called outside of tests.
+    fn maybe_free_string_reference(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
+        if block.string_reference_count()? != 0 {
+            return Ok(());
+        }
+        let first_extent = block.next_extent()?;
+        let block_index = block.index();
+        self.heap.free_block(block)?;
+
+        let to_remove =
+            self.string_reference_ids.iter().find(|(_, vmo_index)| **vmo_index == block_index);
+        if let Some((id, _)) = to_remove {
+            let id = *id;
+            self.string_reference_ids.remove(&id);
+        }
+
+        if first_extent == 0 {
+            return Ok(());
+        }
+        self.free_extents(first_extent)
+    }
+
+    fn load_key_string(&mut self, index: u32) -> Result<String, Error> {
+        let block = self.heap.get_block(index)?;
+        match block.block_type() {
+            BlockType::StringReference => self.read_string_reference(block),
+            BlockType::Name => block.name_contents().map_err(|_| Error::NameNotUtf8),
+            wrong_type => Err(Error::InvalidBlockType(index as usize, wrong_type)),
+        }
+    }
+
+    /// Read a StringReference
+    fn read_string_reference(&mut self, block: Block<Arc<Mapping>>) -> Result<String, Error> {
+        let mut content = block.inline_string_reference()?;
+        let mut next = block.next_extent()?;
+        while next != 0 {
+            let next_block = self.heap.get_block(next)?;
+            content.append(&mut next_block.extent_contents()?);
+            next = next_block.next_extent()?;
+        }
+
+        content.truncate(block.total_length()?);
+        Ok(String::from_utf8(content).ok().ok_or(Error::NameNotUtf8)?)
     }
 
     /// Free a PROPERTY block.
@@ -590,9 +735,9 @@ impl InnerState {
         Ok(())
     }
 
-    fn create_bool(
+    fn create_bool<'b>(
         &mut self,
-        name: &str,
+        name: impl Into<StringReference<'b>>,
         value: bool,
         parent_index: u32,
     ) -> Result<Block<Arc<Mapping>>, Error> {
@@ -623,15 +768,18 @@ impl InnerState {
         Ok(())
     }
 
-    fn allocate_reserved_value(
+    fn allocate_reserved_value<'b>(
         &mut self,
-        name: &str,
+        name: impl Into<StringReference<'b>>,
         parent_index: u32,
         block_size: usize,
     ) -> Result<(Block<Arc<Mapping>>, Block<Arc<Mapping>>), Error> {
         let block = self.heap.allocate_block(block_size)?;
-        let name_block = match self.allocate_name(name) {
-            Ok(b) => b,
+        let name_block = match self.create_string_reference(name) {
+            Ok(b) => {
+                b.increment_string_reference_count()?;
+                b
+            }
             Err(err) => {
                 self.heap.free_block(block)?;
                 return Err(err);
@@ -656,22 +804,11 @@ impl InnerState {
         match result {
             Ok(()) => Ok((block, name_block)),
             Err(err) => {
-                self.heap.free_block(name_block)?;
+                self.release_string_reference(name_block)?;
                 self.heap.free_block(block)?;
                 Err(err)
             }
         }
-    }
-
-    fn allocate_name(&mut self, name: &str) -> Result<Block<Arc<Mapping>>, Error> {
-        let mut bytes = name.as_bytes();
-        let max_bytes = constants::MAX_ORDER_SIZE - constants::HEADER_SIZE_BYTES;
-        if bytes.len() > max_bytes {
-            bytes = &bytes[..max_bytes];
-        }
-        let name_block = self.heap.allocate_block(utils::block_size_for_payload(bytes.len()))?;
-        name_block.become_name(name)?;
-        Ok(name_block)
     }
 
     fn delete_value(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
@@ -690,7 +827,12 @@ impl InnerState {
         // Free the name block.
         let name_index = block.name_index()?;
         let name = self.heap.get_block(name_index).unwrap();
-        self.heap.free_block(name).expect("Failed to free block");
+        match name.block_type() {
+            BlockType::StringReference => {
+                self.release_string_reference(name)?;
+            }
+            _ => self.heap.free_block(name).expect("Failed to free block"),
+        }
 
         // If the block is a NODE and has children, make it a TOMBSTONE so that
         // it's freed when the last of its children is freed. Otherwise, free it.
@@ -781,6 +923,14 @@ mod tests {
     }
 
     #[test]
+    fn test_load_string() {
+        let outer = get_state(4096);
+        let mut state = outer.try_lock().expect("lock state");
+        let block = state.create_string_reference("a value").unwrap();
+        assert_eq!(state.load_string(block.index()).unwrap(), "a value");
+    }
+
+    #[test]
     fn test_node() {
         let core_state = get_state(4096);
         let block = {
@@ -796,9 +946,10 @@ mod tests {
 
             // Verify name block.
             let name_block = state.heap().get_block(2).unwrap();
-            assert_eq!(name_block.block_type(), BlockType::Name);
-            assert_eq!(name_block.name_length().unwrap(), 9);
-            assert_eq!(name_block.name_contents().unwrap(), "test-node");
+            assert_eq!(name_block.block_type(), BlockType::StringReference);
+            assert_eq!(name_block.total_length().unwrap(), 9);
+            assert_eq!(name_block.order(), 1);
+            assert_eq!(state.load_string(name_block.index()).unwrap(), "test-node");
             block
         };
 
@@ -808,7 +959,7 @@ mod tests {
         assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::NodeValue);
-        assert_eq!(blocks[2].block_type(), BlockType::Name);
+        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
         assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
 
         {
@@ -859,9 +1010,9 @@ mod tests {
             assert_eq!(block.parent_index().unwrap(), 0);
 
             let name_block = state.heap().get_block(2).unwrap();
-            assert_eq!(name_block.block_type(), BlockType::Name);
-            assert_eq!(name_block.name_length().unwrap(), 4);
-            assert_eq!(name_block.name_contents().unwrap(), "test");
+            assert_eq!(name_block.block_type(), BlockType::StringReference);
+            assert_eq!(name_block.total_length().unwrap(), 4);
+            assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
             block
         };
 
@@ -870,7 +1021,7 @@ mod tests {
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::IntValue);
-        assert_eq!(blocks[2].block_type(), BlockType::Name);
+        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
         assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
 
         {
@@ -915,9 +1066,9 @@ mod tests {
             assert_eq!(block.parent_index().unwrap(), 0);
 
             let name_block = state.heap().get_block(2).unwrap();
-            assert_eq!(name_block.block_type(), BlockType::Name);
-            assert_eq!(name_block.name_length().unwrap(), 4);
-            assert_eq!(name_block.name_contents().unwrap(), "test");
+            assert_eq!(name_block.block_type(), BlockType::StringReference);
+            assert_eq!(name_block.total_length().unwrap(), 4);
+            assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
 
             block
         };
@@ -926,7 +1077,7 @@ mod tests {
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::UintValue);
-        assert_eq!(blocks[2].block_type(), BlockType::Name);
+        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
         assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
 
         {
@@ -971,9 +1122,9 @@ mod tests {
             assert_eq!(block.parent_index().unwrap(), 0);
 
             let name_block = state.heap().get_block(2).unwrap();
-            assert_eq!(name_block.block_type(), BlockType::Name);
-            assert_eq!(name_block.name_length().unwrap(), 4);
-            assert_eq!(name_block.name_contents().unwrap(), "test");
+            assert_eq!(name_block.block_type(), BlockType::StringReference);
+            assert_eq!(name_block.total_length().unwrap(), 4);
+            assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
             block
         };
 
@@ -982,7 +1133,7 @@ mod tests {
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::DoubleValue);
-        assert_eq!(blocks[2].block_type(), BlockType::Name);
+        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
         assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
 
         {
@@ -1006,6 +1157,97 @@ mod tests {
     }
 
     #[test]
+    fn test_string_reference_allocations() {
+        let core_state = get_state(4096); // allocates HEADER
+        {
+            let mut state = core_state.try_lock().expect("lock state");
+            let sf = StringReference::from("a reference-counted canonical name");
+            assert_eq!(state.stats().allocated_blocks, 1);
+
+            let mut collected = vec![];
+            for _ in 0..100 {
+                collected.push(state.create_node(&sf, 0).unwrap());
+            }
+
+            assert!(state.inner_lock.string_reference_ids.get(&(&sf).id()).is_some());
+
+            assert_eq!(state.stats().allocated_blocks, 102);
+            let sf_block = state.heap().get_block(collected[0].name_index().unwrap()).unwrap();
+            assert_eq!(sf_block.string_reference_count().unwrap(), 100);
+
+            collected.iter().for_each(|b| {
+                assert!(state.inner_lock.string_reference_ids.get(&(&sf).id()).is_some());
+                assert!(state.free_value(b.index()).is_ok())
+            });
+
+            assert!(state.inner_lock.string_reference_ids.get(&(&sf).id()).is_none());
+
+            let node = state.create_node(&sf, 0).unwrap();
+            assert!(state.inner_lock.string_reference_ids.get(&(&sf).id()).is_some());
+            assert!(state.free_value(node.index()).is_ok());
+            assert!(state.inner_lock.string_reference_ids.get(&(&sf).id()).is_none());
+        }
+
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
+        assert_eq!(blocks[0].block_type(), BlockType::Header);
+        assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
+    }
+
+    #[test]
+    fn test_string_reference_data() {
+        let core_state = get_state(4096); // allocates HEADER
+        let mut state = core_state.try_lock().expect("lock state");
+
+        {
+            // 4 bytes (4 ASCII characters in UTF-8) will fit inlined with a minimum block size
+            let block = state.create_string_reference("abcd").unwrap();
+            assert_eq!(block.block_type(), BlockType::StringReference);
+            assert_eq!(block.order(), 0);
+            assert_eq!(state.stats().allocated_blocks, 2);
+            assert_eq!(state.stats().deallocated_blocks, 0);
+            assert_eq!(block.string_reference_count().unwrap(), 0);
+            assert_eq!(block.total_length().unwrap(), 4);
+            assert_eq!(block.next_extent().unwrap(), 0);
+            assert_eq!(block.order(), 0);
+            assert_eq!(state.load_string(block.index()).unwrap(), "abcd");
+
+            state.maybe_free_string_reference(block).unwrap();
+            assert_eq!(state.stats().deallocated_blocks, 1);
+        }
+
+        {
+            let block = state.create_string_reference("longer").unwrap();
+            assert_eq!(block.block_type(), BlockType::StringReference);
+            assert_eq!(block.order(), 1);
+            assert_eq!(block.string_reference_count().unwrap(), 0);
+            assert_eq!(block.total_length().unwrap(), 6);
+            assert_eq!(state.stats().allocated_blocks, 3);
+            assert_eq!(state.stats().deallocated_blocks, 1);
+            assert_eq!(state.load_string(block.index()).unwrap(), "longer");
+
+            let idx = block.next_extent().unwrap();
+            assert_eq!(idx, 0);
+
+            state.maybe_free_string_reference(block).unwrap();
+            assert_eq!(state.stats().deallocated_blocks, 2);
+        }
+
+        {
+            let block = state.create_string_reference("longer").unwrap();
+            let index = block.index();
+            assert_eq!(block.order(), 1);
+            block.increment_string_reference_count().unwrap();
+            // not an error to try and free
+            assert!(state.maybe_free_string_reference(block).is_ok());
+
+            let block = state.heap().get_block(index).unwrap();
+            block.decrement_string_reference_count().unwrap();
+            state.maybe_free_string_reference(block).unwrap();
+        }
+    }
+
+    #[test]
     fn test_string_property() {
         let core_state = get_state(4096);
         let block = {
@@ -1022,9 +1264,9 @@ mod tests {
             assert_eq!(block.property_format().unwrap(), PropertyFormat::String);
 
             let name_block = state.heap().get_block(2).unwrap();
-            assert_eq!(name_block.block_type(), BlockType::Name);
-            assert_eq!(name_block.name_length().unwrap(), 4);
-            assert_eq!(name_block.name_contents().unwrap(), "test");
+            assert_eq!(name_block.block_type(), BlockType::StringReference);
+            assert_eq!(name_block.total_length().unwrap(), 4);
+            assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
 
             let extent_block = state.heap().get_block(4).unwrap();
             assert_eq!(extent_block.block_type(), BlockType::Extent);
@@ -1041,7 +1283,7 @@ mod tests {
         assert_eq!(blocks.len(), 11);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::BufferValue);
-        assert_eq!(blocks[2].block_type(), BlockType::Name);
+        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
         assert_eq!(blocks[3].block_type(), BlockType::Free);
         assert_eq!(blocks[4].block_type(), BlockType::Extent);
         assert!(blocks[5..].iter().all(|b| b.block_type() == BlockType::Free));
@@ -1074,9 +1316,9 @@ mod tests {
             assert_eq!(block.property_format().unwrap(), PropertyFormat::Bytes);
 
             let name_block = state.heap().get_block(2).unwrap();
-            assert_eq!(name_block.block_type(), BlockType::Name);
-            assert_eq!(name_block.name_length().unwrap(), 4);
-            assert_eq!(name_block.name_contents().unwrap(), "test");
+            assert_eq!(name_block.block_type(), BlockType::StringReference);
+            assert_eq!(name_block.total_length().unwrap(), 4);
+            assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
 
             let extent_block = state.heap().get_block(4).unwrap();
             assert_eq!(extent_block.block_type(), BlockType::Extent);
@@ -1093,7 +1335,7 @@ mod tests {
         assert_eq!(blocks.len(), 11);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::BufferValue);
-        assert_eq!(blocks[2].block_type(), BlockType::Name);
+        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
         assert_eq!(blocks[3].block_type(), BlockType::Free);
         assert_eq!(blocks[4].block_type(), BlockType::Extent);
         assert!(blocks[5..].iter().all(|b| b.block_type() == BlockType::Free));
@@ -1123,9 +1365,9 @@ mod tests {
             assert_eq!(block.parent_index().unwrap(), 0);
 
             let name_block = state.heap().get_block(2).unwrap();
-            assert_eq!(name_block.block_type(), BlockType::Name);
-            assert_eq!(name_block.name_length().unwrap(), 4);
-            assert_eq!(name_block.name_contents().unwrap(), "test");
+            assert_eq!(name_block.block_type(), BlockType::StringReference);
+            assert_eq!(name_block.total_length().unwrap(), 4);
+            assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
             block
         };
 
@@ -1134,7 +1376,7 @@ mod tests {
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::BoolValue);
-        assert_eq!(blocks[2].block_type(), BlockType::Name);
+        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
         assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
 
         // Free metric.
@@ -1163,9 +1405,9 @@ mod tests {
             assert_eq!(block.array_entry_type().unwrap(), BlockType::IntValue);
 
             let name_block = state.heap().get_block(1).unwrap();
-            assert_eq!(name_block.block_type(), BlockType::Name);
-            assert_eq!(name_block.name_length().unwrap(), 4);
-            assert_eq!(name_block.name_contents().unwrap(), "test");
+            assert_eq!(name_block.block_type(), BlockType::StringReference);
+            assert_eq!(name_block.total_length().unwrap(), 4);
+            assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
 
             for i in 0..5 {
                 state.set_array_int_slot(block.index(), i, 3 * i as i64).unwrap();
@@ -1179,7 +1421,7 @@ mod tests {
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks[0].block_type(), BlockType::Header);
-        assert_eq!(blocks[1].block_type(), BlockType::Name);
+        assert_eq!(blocks[1].block_type(), BlockType::StringReference);
         assert_eq!(blocks[2].block_type(), BlockType::Free);
         assert_eq!(blocks[3].block_type(), BlockType::ArrayValue);
         assert!(blocks[4..].iter().all(|b| b.block_type() == BlockType::Free));
@@ -1213,9 +1455,9 @@ mod tests {
             assert_eq!(block.property_format().unwrap(), PropertyFormat::String);
 
             let name_block = state.heap().get_block(2).unwrap();
-            assert_eq!(name_block.block_type(), BlockType::Name);
-            assert_eq!(name_block.name_length().unwrap(), 4);
-            assert_eq!(name_block.name_contents().unwrap(), "test");
+            assert_eq!(name_block.block_type(), BlockType::StringReference);
+            assert_eq!(name_block.total_length().unwrap(), 4);
+            assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
 
             let extent_block = state.heap().get_block(128).unwrap();
             assert_eq!(extent_block.block_type(), BlockType::Extent);
@@ -1252,7 +1494,7 @@ mod tests {
         assert_eq!(blocks.len(), 12);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::BufferValue);
-        assert_eq!(blocks[2].block_type(), BlockType::Name);
+        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
         assert!(blocks[3..9].iter().all(|b| b.block_type() == BlockType::Free));
         assert_eq!(blocks[9].block_type(), BlockType::Extent);
         assert_eq!(blocks[10].block_type(), BlockType::Extent);
@@ -1269,6 +1511,63 @@ mod tests {
     }
 
     #[test]
+    fn test_freeing_string_references() {
+        let core_state = get_state(4096);
+        {
+            let mut state = core_state.try_lock().expect("lock state");
+            assert_eq!(state.stats().allocated_blocks, 1);
+
+            let block0 = state.create_node("abcd123456789", 0).unwrap();
+            let block0_name = state.heap().get_block(block0.name_index().unwrap()).unwrap();
+            assert_eq!(block0_name.order(), 1);
+            assert_eq!(state.stats().allocated_blocks, 3);
+
+            let block1 = state.create_string_reference("abcd").unwrap();
+            assert_eq!(state.stats().allocated_blocks, 4);
+            assert_eq!(block1.order(), 0);
+
+            let block2 = state.create_string_reference("abcd123456789").unwrap();
+            assert_eq!(block2.order(), 1);
+            assert_eq!(state.stats().allocated_blocks, 5);
+
+            let block3 = state.create_node("abcd123456789", 0).unwrap();
+            let block3_name = state.heap().get_block(block3.name_index().unwrap()).unwrap();
+            assert_eq!(block3_name.order(), 1);
+            assert_eq!(block3.order(), 0);
+            assert_eq!(state.stats().allocated_blocks, 7);
+
+            let mut long_name = "".to_string();
+            for _ in 0..3000 {
+                long_name += " ";
+            }
+
+            let block4 = state.create_node(long_name, 0).unwrap();
+            let block4_name = state.heap().get_block(block4.name_index().unwrap()).unwrap();
+            assert_eq!(block4_name.order(), 7);
+            assert!(block4_name.next_extent().unwrap() != 0);
+            assert_eq!(state.stats().allocated_blocks, 10);
+
+            assert!(state.maybe_free_string_reference(block1).is_ok());
+            assert_eq!(state.stats().deallocated_blocks, 1);
+            assert!(state.maybe_free_string_reference(block2).is_ok());
+            assert_eq!(state.stats().deallocated_blocks, 2);
+            assert!(state.free_value(block3.index()).is_ok());
+            assert_eq!(state.stats().deallocated_blocks, 4);
+            assert!(state.free_value(block4.index()).is_ok());
+            assert_eq!(state.stats().deallocated_blocks, 7);
+        }
+
+        // Current expected layout of VMO:
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
+
+        assert_eq!(blocks[0].block_type(), BlockType::Header);
+        assert_eq!(blocks[1].block_type(), BlockType::NodeValue);
+        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
+        assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
+    }
+
+    #[test]
     fn test_tombstone() {
         let core_state = get_state(4096);
         let child_block = {
@@ -1276,21 +1575,34 @@ mod tests {
 
             // Create a node value and verify its fields
             let block = state.create_node("root-node", 0).unwrap();
+            let block_name_as_string_ref =
+                state.heap().get_block(block.name_index().unwrap()).unwrap();
+            assert_eq!(block_name_as_string_ref.order(), 1);
+            assert_eq!(state.stats().allocated_blocks, 3);
+            assert_eq!(state.stats().deallocated_blocks, 0);
+
             let child_block = state.create_node("child-node", block.index()).unwrap();
+            assert_eq!(state.stats().allocated_blocks, 5);
+            assert_eq!(state.stats().deallocated_blocks, 0);
 
             // Node still has children, so will become a tombstone.
             assert!(state.free_value(block.index()).is_ok());
+            assert_eq!(state.stats().allocated_blocks, 5);
+            assert_eq!(state.stats().deallocated_blocks, 1);
             child_block
         };
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
-        assert!(blocks[0].block_type() == BlockType::Header);
-        assert!(blocks[1].block_type() == BlockType::Tombstone);
-        assert!(blocks[2].block_type() == BlockType::Free);
-        assert!(blocks[3].block_type() == BlockType::NodeValue);
-        assert!(blocks[4].block_type() == BlockType::Free);
-        assert!(blocks[5].block_type() == BlockType::Name);
+
+        // Note that the way Extents get allocated means that they aren't necessarily
+        // put in the buffer where it would seem they should based on the literal order of allocation.
+        assert_eq!(blocks[0].block_type(), BlockType::Header);
+        assert_eq!(blocks[1].block_type(), BlockType::Tombstone);
+        assert_eq!(blocks[2].block_type(), BlockType::Free);
+        assert_eq!(blocks[3].block_type(), BlockType::NodeValue);
+        assert_eq!(blocks[4].block_type(), BlockType::Free);
+        assert_eq!(blocks[5].block_type(), BlockType::StringReference);
         assert!(blocks[6..].iter().all(|b| b.block_type() == BlockType::Free));
 
         // Freeing the child, causes all blocks to be freed.
@@ -1365,15 +1677,15 @@ mod tests {
 
             // Verify link's name block.
             let name_block = state_guard.heap().get_block(2).unwrap();
-            assert_eq!(name_block.block_type(), BlockType::Name);
-            assert_eq!(name_block.name_length().unwrap(), 9);
-            assert_eq!(name_block.name_contents().unwrap(), "link-name");
+            assert_eq!(name_block.block_type(), BlockType::StringReference);
+            assert_eq!(name_block.total_length().unwrap(), 9);
+            assert_eq!(state_guard.load_string(name_block.index()).unwrap(), "link-name");
 
             // Verify link's content block.
             let content_block = state_guard.heap().get_block(4).unwrap();
-            assert_eq!(content_block.block_type(), BlockType::Name);
-            assert_eq!(content_block.name_length().unwrap(), 11);
-            assert_eq!(content_block.name_contents().unwrap(), "link-name-0");
+            assert_eq!(content_block.block_type(), BlockType::StringReference);
+            assert_eq!(content_block.total_length().unwrap(), 11);
+            assert_eq!(state_guard.load_string(content_block.index()).unwrap(), "link-name-0");
             block
         };
 
@@ -1383,9 +1695,9 @@ mod tests {
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::LinkValue);
-        assert_eq!(blocks[2].block_type(), BlockType::Name);
-        assert_eq!(blocks[3].block_type(), BlockType::Name);
-        assert!(blocks[4..].iter().all(|b| b.block_type() == BlockType::Free));
+        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
+        assert_eq!(blocks[4].block_type(), BlockType::Free);
+        assert!(blocks[5..].iter().all(|b| b.block_type() == BlockType::Free));
 
         // Free link
         {
@@ -1407,7 +1719,7 @@ mod tests {
             })
             .unwrap();
         let content_block = state_guard.heap().get_block(4).unwrap();
-        assert_eq!(content_block.name_contents().unwrap(), "link-name-1");
+        assert_eq!(state_guard.load_string(content_block.index()).unwrap(), "link-name-1");
     }
 
     #[fuchsia::test]
@@ -1432,7 +1744,8 @@ mod tests {
                 total_dynamic_children: 1,
                 maximum_size: 12288,
                 current_size: 4096,
-                allocated_blocks: 6, // HEADER, state_guard, _block1, "link-name", _block2, "test"
+                allocated_blocks: 6, /* HEADER, state_guard, _block1 (and content),
+                                     // "link-name", _block2, "test" */
                 deallocated_blocks: 0
             }
         )

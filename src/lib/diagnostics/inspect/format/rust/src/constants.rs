@@ -47,3 +47,7 @@ pub const MINIMUM_VMO_SIZE_BYTES: usize = 4 * 1024;
 
 /// Length in bytes of metadata in the payload of an array block.
 pub const ARRAY_PAYLOAD_METADATA_SIZE_BYTES: usize = 8;
+
+/// The number of bytes in the payload of a STRING_REFERENCE allotted to
+/// the total length.
+pub const STRING_REFERENCE_TOTAL_LENGTH_BYTES: usize = 4;

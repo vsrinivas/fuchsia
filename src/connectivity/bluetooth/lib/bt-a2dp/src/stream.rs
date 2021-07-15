@@ -51,7 +51,7 @@ impl Inspect for &mut Stream {
     // Set up the StreamEndpoint to update the state
     // The MediaTask node will be created when the media task is started.
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect = parent.create_child(name);
+        self.inspect = parent.create_child(name.as_ref());
 
         let endpoint_state_prop = self.inspect.create_string("endpoint_state", "");
         let callback =
@@ -294,7 +294,7 @@ impl Streams {
 impl Inspect for &mut Streams {
     // Attach self to `parent`
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect_node = parent.create_child(name);
+        self.inspect_node = parent.create_child(name.as_ref());
         for stream in self.streams.values_mut() {
             stream.iattach(&self.inspect_node, inspect::unique_name("stream_"))?;
         }

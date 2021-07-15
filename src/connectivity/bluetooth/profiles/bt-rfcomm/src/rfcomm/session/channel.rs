@@ -126,7 +126,7 @@ struct SimpleController {
 
 impl Inspect for &mut SimpleController {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect = parent.create_child(name);
+        self.inspect = parent.create_child(name.as_ref());
         self.inspect.record_string("controller_type", "simple");
         self.stream_inspect.iattach(&self.inspect, "data_stream")?;
         self.stream_inspect.start();
@@ -192,7 +192,7 @@ struct CreditFlowController {
 
 impl Inspect for &mut CreditFlowController {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect = parent.create_child(name);
+        self.inspect = parent.create_child(name.as_ref());
         self.inspect.record_string("controller_type", "credit_flow");
         self.credits.iattach(&self.inspect, "credits")?;
         self.stream_inspect.iattach(&self.inspect, "data_stream")?;
@@ -348,7 +348,7 @@ pub struct SessionChannel {
 
 impl Inspect for &mut SessionChannel {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect.iattach(parent, name)?;
+        self.inspect.iattach(parent, name.as_ref())?;
         self.inspect.set_dlci(self.dlci);
         Ok(())
     }
