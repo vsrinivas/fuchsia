@@ -27,8 +27,8 @@
 namespace nelson {
 using spi_channel_t = fidl_metadata::spi::Channel;
 
-// Approximate best-case time to read out one radar burst.
-constexpr zx::duration kSelinaCapacity = zx::usec(10'000);
+// Approximate CPU time required to read a single burst, determined with manual tests.
+constexpr zx::duration kSelinaCapacity = zx::msec(3);
 // The radar sensor interrupts the host with a new burst every 33,333 us.
 constexpr zx::duration kSelinaPeriod = zx::usec(33'333);
 
@@ -157,7 +157,7 @@ zx_status_t Nelson::SpiInit() {
     //
     // Some timing instability was observed which may have been an individual board artifact.  To
     // debug, consider configuring the SCLK=25MHz (i.e. set spicc1_cli_div(10)).
-    buf->Write32(spicc1_clk_sel_fclk_div2 | spicc1_clk_en | spicc1_clk_div(5), HHI_SPICC_CLK_CNTL);
+    buf->Write32(spicc1_clk_sel_fclk_div2 | spicc1_clk_en | spicc1_clk_div(10), HHI_SPICC_CLK_CNTL);
   }
 
   zx_status_t status = pbus_.CompositeDeviceAdd(&spi_dev, reinterpret_cast<uint64_t>(fragments),
