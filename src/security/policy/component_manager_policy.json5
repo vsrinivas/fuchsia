@@ -269,6 +269,7 @@
                 capability: "directory",
                 target_monikers: [
                     "/bootstrap/fshost",
+                    "/core/build-info",
                     "/core/system-updater",
                 ],
             },
