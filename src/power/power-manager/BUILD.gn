@@ -24,6 +24,7 @@ rustc_binary("bin") {
   name = "power_manager"
   edition = "2018"
   force_opt = "z"
+  with_unit_tests = true
 
   # TODO(fxbug.dev/64097): extract to a template
   # power_manager must always be small (even in debug builds) since it is part of bootfs.
@@ -83,93 +84,11 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  sources = [
-    "src/activity_handler.rs",
-    "src/cobalt_metrics.rs",
-    "src/cpu_control_handler.rs",
-    "src/cpu_stats_handler.rs",
-    "src/crash_report_handler.rs",
-    "src/dev_control_handler.rs",
-    "src/driver_manager_handler.rs",
-    "src/error.rs",
-    "src/input_settings_handler.rs",
-    "src/lid_shutdown.rs",
-    "src/main.rs",
-    "src/message.rs",
-    "src/node.rs",
-    "src/power_manager.rs",
-    "src/shutdown_request.rs",
-    "src/shutdown_watcher.rs",
-    "src/system_profile_handler.rs",
-    "src/system_shutdown_handler.rs",
-    "src/temperature_handler.rs",
-    "src/test/mock_node.rs",
-    "src/test/mod.rs",
-    "src/test/thermal_integration_tests.rs",
-    "src/thermal_limiter.rs",
-    "src/thermal_policy.rs",
-    "src/thermal_shutdown.rs",
-    "src/types.rs",
-    "src/utils.rs",
-  ]
-}
-
-# TODO(fxbug.dev/64371): Require a standalone rustc_test target here instead of adding
-# "with_unit_tests = true" to the rustc_binary target above because of a bug that leads to a
-# segmentation fault related to the thinlto configuration. See fxbug.dev/64371 for more details.
-rustc_test("bin_test") {
-  name = "power_manager_bin_test"
-  edition = "2018"
-  source_root = "src/main.rs"
-
-  deps = [
-    ":power_manager_metrics_rustlib",
+  test_deps = [
     "rkf45:lib",
-    "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
-    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
-    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
-    "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl-rustc",
-    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
-    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
-    "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager-rustc",
-    "//sdk/fidl/fuchsia.power.profile:fuchsia.power.profile-rustc",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//sdk/fidl/fuchsia.thermal:fuchsia.thermal-rustc",
-    "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity-rustc",
-    "//src/lib/async-utils",
-    "//src/lib/cobalt/rust:fuchsia-cobalt",
-    "//src/lib/diagnostics/inspect/contrib/rust",
-    "//src/lib/diagnostics/inspect/runtime/rust",
-    "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/storage/vfs/rust:vfs",
-    "//src/lib/syslog/rust",
     "//src/lib/test_util",
-    "//src/lib/trace/rust:trace",
-    "//src/lib/trace/rust:trace-provider",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
-    "//third_party/rust_crates:num-traits",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_derive",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [
