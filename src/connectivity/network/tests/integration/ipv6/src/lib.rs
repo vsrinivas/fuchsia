@@ -4,6 +4,7 @@
 
 #![cfg(test)]
 
+use std::convert::TryFrom as _;
 use std::mem::size_of;
 
 use fidl_fuchsia_net as net;
@@ -37,8 +38,9 @@ use packet::ParsablePacket as _;
 use packet_formats::ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck};
 use packet_formats::icmp::mld::MldPacket;
 use packet_formats::icmp::ndp::{
-    options::{NdpOption, NdpOptionBuilder, PrefixInformation},
-    NeighborAdvertisement, NeighborSolicitation, RouterAdvertisement, RouterSolicitation,
+    options::{NdpOption, NdpOptionBuilder, PrefixInformation, RouteInformationBuilder},
+    NeighborAdvertisement, NeighborSolicitation, RoutePreference, RouterAdvertisement,
+    RouterSolicitation,
 };
 use packet_formats::icmp::{IcmpParseArgs, Icmpv6Packet};
 use packet_formats::ip::Ipv6Proto;
@@ -644,27 +646,38 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
     .expect("error waiting for address to be assigned")
 }
 
+/// Tests to make sure default router discovery, prefix discovery and more-specific
+/// route discovery works.
 #[variants_test]
 #[test_case("host", false ; "host")]
 #[test_case("router", true ; "router")]
-async fn router_and_prefix_discovery<E: netemul::Endpoint>(
+async fn on_and_off_link_route_discovery<E: netemul::Endpoint>(
     test_name: &str,
     sub_test_name: &str,
     forwarding: bool,
 ) {
-    async fn check_route_table<P>(netstack: &netstack::NetstackProxy, pred: P)
-    where
-        P: Fn(&Vec<netstack::RouteTableEntry>) -> bool,
-    {
+    pub const SUBNET_WITH_MORE_SPECIFIC_ROUTE: net_types_ip::Subnet<net_types_ip::Ipv6Addr> = unsafe {
+        net_types_ip::Subnet::new_unchecked(
+            net_types_ip::Ipv6Addr::new([
+                0xa0, 0x01, 0xf1, 0xf0, 0x40, 0x60, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0, 0,
+            ]),
+            64,
+        )
+    };
+
+    async fn check_route_table(
+        netstack: &netstack::NetstackProxy,
+        want_routes: &[netstack::RouteTableEntry],
+    ) {
         let check_attempts = ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.into_seconds()
             / ASYNC_EVENT_CHECK_INTERVAL.into_seconds();
         for attempt in 0..check_attempts {
             let () = sleep(ASYNC_EVENT_CHECK_INTERVAL.into_seconds()).await;
             let route_table = netstack.get_route_table().await.expect("failed to get route table");
-            if pred(&route_table) {
+
+            if want_routes.iter().all(|route| route_table.contains(route)) {
                 return;
             }
-
             let route_table =
                 RouteTable::new(route_table).display().expect("failed to format route table");
             println!("route table at attempt={}:\n{}", attempt, route_table);
@@ -690,65 +703,74 @@ async fn router_and_prefix_discovery<E: netemul::Endpoint>(
         let () = stack.enable_ip_forwarding().await.expect("error enabling IP forwarding");
     }
 
-    let pi = PrefixInformation::new(
-        ipv6_consts::PREFIX.prefix(),  /* prefix_length */
-        true,                          /* on_link_flag */
-        false,                         /* autonomous_address_configuration_flag */
-        1000,                          /* valid_lifetime */
-        0,                             /* preferred_lifetime */
-        ipv6_consts::PREFIX.network(), /* prefix */
-    );
-    let options = [NdpOptionBuilder::PrefixInformation(pi)];
-    let () = send_ra_with_router_lifetime(&fake_ep, 1000, &options)
+    let options = [
+        NdpOptionBuilder::PrefixInformation(PrefixInformation::new(
+            ipv6_consts::PREFIX.prefix(),  /* prefix_length */
+            true,                          /* on_link_flag */
+            false,                         /* autonomous_address_configuration_flag */
+            6234,                          /* valid_lifetime */
+            0,                             /* preferred_lifetime */
+            ipv6_consts::PREFIX.network(), /* prefix */
+        )),
+        NdpOptionBuilder::RouteInformation(RouteInformationBuilder::new(
+            SUBNET_WITH_MORE_SPECIFIC_ROUTE,
+            1337, /* route_lifetime_seconds */
+            RoutePreference::default(),
+        )),
+    ];
+    let () = send_ra_with_router_lifetime(&fake_ep, 1234, &options)
         .await
         .expect("failed to send router advertisement");
 
-    // Test that the default router should be discovered after it is advertised.
-    let () = check_route_table(&netstack, |route_table| {
-        route_table.iter().any(
-            |netstack::RouteTableEntry {
-                 destination: net::Subnet { addr, prefix_len: _ },
-                 gateway,
-                 ..
-             }| {
-                (match addr {
-                    net::IpAddress::Ipv4(net::Ipv4Address { addr: _ }) => false,
-                    net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
-                        net_types_ip::Ipv6Addr::new(*addr)
-                            == net_types_ip::Ipv6::UNSPECIFIED_ADDRESS
-                    }
-                }) && (match gateway.as_deref() {
-                    None | Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: _ })) => false,
-                    Some(net::IpAddress::Ipv6(net::Ipv6Address { addr })) => {
-                        net_types_ip::Ipv6Addr::new(*addr) == ipv6_consts::LINK_LOCAL_ADDR
-                    }
-                })
+    let nicid = iface.id();
+    let nicid = u32::try_from(iface.id())
+        .unwrap_or_else(|e| panic!("interface ID ({}) should fit in a u32: {}", nicid, e));
+    check_route_table(
+        &netstack,
+        &[
+            // Test that a default route through the router is installed.
+            netstack::RouteTableEntry {
+                destination: net::Subnet {
+                    addr: net::IpAddress::Ipv6(net::Ipv6Address {
+                        addr: net_types_ip::Ipv6::UNSPECIFIED_ADDRESS.ipv6_bytes(),
+                    }),
+                    prefix_len: 0,
+                },
+                gateway: Some(Box::new(net::IpAddress::Ipv6(net::Ipv6Address {
+                    addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
+                }))),
+                nicid,
+                metric: 0,
             },
-        )
-    })
-    .await;
-
-    // Test that the prefix should be discovered after it is advertised.
-    let () = check_route_table(&netstack, |route_table| {
-        route_table.iter().any(
-            |netstack::RouteTableEntry {
-                 destination: net::Subnet { addr, prefix_len: _ },
-                 nicid,
-                 ..
-             }| {
-                if let net::IpAddress::Ipv6(net::Ipv6Address { addr }) = addr {
-                    let destination = net_types_ip::Ipv6Addr::new(*addr);
-                    if destination == ipv6_consts::PREFIX.network()
-                        && u64::from(*nicid) == iface.id()
-                    {
-                        return true;
-                    }
-                }
-                false
+            // Test that a route to `SUBNET_WITH_MORE_SPECIFIC_ROUTE` exists through the router.
+            netstack::RouteTableEntry {
+                destination: net::Subnet {
+                    addr: net::IpAddress::Ipv6(net::Ipv6Address {
+                        addr: SUBNET_WITH_MORE_SPECIFIC_ROUTE.network().ipv6_bytes(),
+                    }),
+                    prefix_len: SUBNET_WITH_MORE_SPECIFIC_ROUTE.prefix(),
+                },
+                gateway: Some(Box::new(net::IpAddress::Ipv6(net::Ipv6Address {
+                    addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
+                }))),
+                nicid,
+                metric: 0,
             },
-        )
-    })
-    .await;
+            // Test that the prefix should be discovered after it is advertised.
+            netstack::RouteTableEntry {
+                destination: net::Subnet {
+                    addr: net::IpAddress::Ipv6(net::Ipv6Address {
+                        addr: ipv6_consts::PREFIX.network().ipv6_bytes(),
+                    }),
+                    prefix_len: ipv6_consts::PREFIX.prefix(),
+                },
+                gateway: None,
+                nicid,
+                metric: 0,
+            },
+        ][..],
+    )
+    .await
 }
 
 #[variants_test]

@@ -273,6 +273,7 @@ func Main() {
 					MaxRtrSolicitationDelay:       maxRtrSolicitationDelay,
 					HandleRAs:                     handleRAs,
 					DiscoverDefaultRouters:        true,
+					DiscoverMoreSpecificRoutes:    true,
 					DiscoverOnLinkPrefixes:        true,
 					AutoGenGlobalAddresses:        true,
 					AutoGenAddressConflictRetries: autoGenAddressConflictRetries,
