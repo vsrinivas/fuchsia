@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/fit/defer.h>
+
 #include "test_helper.h"
 
 namespace vm_unittest {
@@ -927,6 +929,114 @@ static bool arch_noncontiguous_map() {
   END_TEST;
 }
 
+// Get the mmu_flags of the given vaddr of the given aspace.
+//
+// Return 0 if the page is unmapped or on error.
+static uint get_vaddr_flags(ArchVmAspace* aspace, vaddr_t vaddr) {
+  paddr_t unused_paddr;
+  uint mmu_flags;
+  if (aspace->Query(vaddr, &unused_paddr, &mmu_flags) != ZX_OK) {
+    return 0;
+  }
+  return mmu_flags;
+}
+
+// Determine if the given page is mapped in.
+static bool is_vaddr_mapped(ArchVmAspace* aspace, vaddr_t vaddr) {
+  return get_vaddr_flags(aspace, vaddr) != 0;
+}
+
+static bool arch_vm_aspace_protect_split_pages() {
+  BEGIN_TEST;
+
+  constexpr uint kReadOnly = ARCH_MMU_FLAG_PERM_READ;
+  constexpr uint kReadWrite = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+
+  // Create a basic address space, starting from vaddr 0.
+  ArchVmAspace aspace(0, USER_ASPACE_SIZE, 0);
+  ASSERT_OK(aspace.Init());
+  auto cleanup = fit::defer([&]() {
+    aspace.Unmap(0, USER_ASPACE_SIZE / PAGE_SIZE, nullptr);
+    aspace.Destroy();
+  });
+
+  // Map in a large contiguous area, which should be mapped by two large pages.
+  static_assert(ZX_MAX_PAGE_SIZE > PAGE_SIZE);
+  constexpr size_t kRegionSize = 16ul * 1024 * 1024 * 1024;  // 16 GiB.
+  ASSERT_OK(aspace.MapContiguous(/*vaddr=*/0, /*paddr=*/0, /*count=*/kRegionSize / PAGE_SIZE,
+                                 kReadOnly, nullptr));
+
+  // Attempt to protect a subrange in the middle of the region, which will require splitting
+  // pages.
+  constexpr vaddr_t kProtectedRange = kRegionSize / 2 - PAGE_SIZE;
+  constexpr size_t kProtectedPages = 2;
+  ASSERT_OK(aspace.Protect(kProtectedRange, /*count=*/kProtectedPages, kReadWrite));
+
+  // Ensure the pages inside the range changed.
+  EXPECT_EQ(get_vaddr_flags(&aspace, kProtectedRange), kReadWrite);
+  EXPECT_EQ(get_vaddr_flags(&aspace, kProtectedRange + PAGE_SIZE), kReadWrite);
+
+  // Ensure the pages surrounding the range did not change.
+  EXPECT_EQ(get_vaddr_flags(&aspace, kProtectedRange - PAGE_SIZE), kReadOnly);
+  EXPECT_EQ(get_vaddr_flags(&aspace, kProtectedRange + kProtectedPages * PAGE_SIZE), kReadOnly);
+
+  END_TEST;
+}
+
+static bool arch_vm_aspace_protect_split_pages_out_of_memory() {
+  BEGIN_TEST;
+
+  constexpr uint kReadOnly = ARCH_MMU_FLAG_PERM_READ;
+  constexpr uint kReadWrite = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+
+  // Create a custom allocator that we can cause to stop returning allocations.
+  //
+  // ArchVmAspace doesn't allow us to send state to the allocator, so we use a
+  // global static here to control the allocator.
+  static bool allow_allocations;
+  auto allocator = +[](uint alloc_flags, vm_page** p, paddr_t* pa) -> zx_status_t {
+    if (!allow_allocations) {
+      return ZX_ERR_NO_MEMORY;
+    }
+    return pmm_alloc_page(0, p, pa);
+  };
+  allow_allocations = true;
+
+  // Create a basic address space, starting from vaddr 0.
+  ArchVmAspace aspace(0, USER_ASPACE_SIZE, 0, allocator);
+  ASSERT_OK(aspace.Init());
+  auto cleanup = fit::defer([&]() {
+    aspace.Unmap(0, USER_ASPACE_SIZE / PAGE_SIZE, nullptr);
+    aspace.Destroy();
+  });
+
+  // Map in a large contiguous area, large enough to use large pages to fill.
+  constexpr size_t kRegionSize = 16ul * 1024 * 1024 * 1024;  // 16 GiB.
+  ASSERT_OK(aspace.MapContiguous(/*vaddr=*/0, /*paddr=*/0, /*count=*/kRegionSize / PAGE_SIZE,
+                                 kReadOnly, nullptr));
+
+  // Prevent further allocations.
+  allow_allocations = false;
+
+  // Attempt to protect a subrange in the middle of the region, which will require splitting
+  // pages. Expect this to fail.
+  constexpr vaddr_t kProtectedRange = kRegionSize / 2 - PAGE_SIZE;
+  constexpr size_t kProtectedSize = 2 * PAGE_SIZE;
+  zx_status_t status = aspace.Protect(kProtectedRange, /*count=*/2, kReadWrite);
+  EXPECT_EQ(status, ZX_ERR_NO_MEMORY);
+
+  // The pages surrounding our protect range should still be mapped.
+  EXPECT_EQ(get_vaddr_flags(&aspace, kProtectedRange - PAGE_SIZE), kReadOnly);
+  EXPECT_EQ(get_vaddr_flags(&aspace, kProtectedRange + kProtectedSize), kReadOnly);
+
+  // The pages we tried to protect should still be mapped, albeit permissions might
+  // be changed.
+  EXPECT_TRUE(is_vaddr_mapped(&aspace, kProtectedRange));
+  EXPECT_TRUE(is_vaddr_mapped(&aspace, kProtectedRange + PAGE_SIZE));
+
+  END_TEST;
+}
+
 // Test to make sure all the vm kernel regions (code, rodata, data, bss, etc.) is correctly mapped
 // in vm and has the correct arch_mmu_flags. This test also check that all gaps are contained within
 // a VMAR.
@@ -1196,6 +1306,8 @@ VM_UNITTEST(vm_mapping_attribution_protect_test)
 VM_UNITTEST(vm_mapping_attribution_map_unmap_test)
 VM_UNITTEST(vm_mapping_attribution_merge_test)
 VM_UNITTEST(arch_noncontiguous_map)
+VM_UNITTEST(arch_vm_aspace_protect_split_pages)
+VM_UNITTEST(arch_vm_aspace_protect_split_pages_out_of_memory)
 VM_UNITTEST(vm_kernel_region_test)
 VM_UNITTEST(region_list_get_alloc_spot_test)
 VM_UNITTEST(region_list_get_alloc_spot_no_memory_test)

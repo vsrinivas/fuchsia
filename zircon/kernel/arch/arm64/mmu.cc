@@ -896,19 +896,15 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
 
     pte_t pte = page_table[index];
 
+    // If the input range partially covers a large page, split the page.
     if (index_shift > page_size_shift &&
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_BLOCK &&
         chunk_size != block_size) {
       zx_status_t s = SplitLargePage(vaddr, index_shift, page_size_shift, index, page_table, cm);
-      if (likely(s == ZX_OK)) {
-        pte = page_table[index];
-      } else {
-        // If split fails, just unmap the whole block and let a
-        // subsequent page fault clean it up.
-        UnmapPageTable(vaddr - vaddr_rel, 0, block_size, index_shift, page_size_shift, page_table,
-                       cm);
-        pte = 0;
+      if (unlikely(s != ZX_OK)) {
+        return s;
       }
+      pte = page_table[index];
     }
 
     if (index_shift > page_size_shift &&
@@ -918,8 +914,12 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
           static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
 
       // Recurse a level.
-      ProtectPageTable(vaddr, vaddr_rem, chunk_size, attrs, index_shift - (page_size_shift - 3),
-                       page_size_shift, next_page_table, cm);
+      zx_status_t status =
+          ProtectPageTable(vaddr, vaddr_rem, chunk_size, attrs, index_shift - (page_size_shift - 3),
+                           page_size_shift, next_page_table, cm);
+      if (unlikely(status != ZX_OK)) {
+        return status;
+      }
     } else if (is_pte_valid(pte)) {
       pte = (pte & ~MMU_PTE_PERMISSION_MASK) | attrs;
       LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);

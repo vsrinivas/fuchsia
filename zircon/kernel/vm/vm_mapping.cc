@@ -146,11 +146,19 @@ namespace {
 // Implementation helper for ProtectLocked
 zx_status_t ProtectOrUnmap(const fbl::RefPtr<VmAspace>& aspace, vaddr_t base, size_t size,
                            uint new_arch_mmu_flags) {
-  if (new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_RWX_MASK) {
-    return aspace->arch_aspace().Protect(base, size / PAGE_SIZE, new_arch_mmu_flags);
-  } else {
+  // If we are removing all permissions, simply unmap the region.
+  if ((new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_RWX_MASK) == 0) {
     return aspace->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
   }
+
+  // Protect the range.
+  zx_status_t result = aspace->arch_aspace().Protect(base, size / PAGE_SIZE, new_arch_mmu_flags);
+  if (result == ZX_ERR_NO_MEMORY) {
+    // If we couldn't protect the pages due to memory, simply unmap the entire range
+    // and let it fault back in later.
+    return aspace->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
+  }
+  return result;
 }
 
 }  // namespace
@@ -823,9 +831,13 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
 
       // same page, different permission
       status = aspace_->arch_aspace().Protect(va, 1, mmu_flags);
-      if (status != ZX_OK) {
+      if (unlikely(status != ZX_OK)) {
+        // ZX_ERR_NO_MEMORY is the only legitimate reason for Protect to fail.
+        DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from protect: %d\n",
+                         status);
+
         TRACEF("failed to modify permissions on existing mapping\n");
-        return ZX_ERR_NO_MEMORY;
+        return status;
       }
     } else {
       // some other page is mapped there already

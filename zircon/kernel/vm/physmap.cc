@@ -36,7 +36,7 @@ void physmap_protect_region(vaddr_t base, size_t size, uint mmu_flags) {
 
   zx_status_t status =
       VmAspace::kernel_aspace()->arch_aspace().Protect(base, page_count, mmu_flags);
-  DEBUG_ASSERT(status == ZX_OK);
+  ASSERT(status == ZX_OK);
 }
 
 void physmap_protect_gap(vaddr_t base, size_t size) {

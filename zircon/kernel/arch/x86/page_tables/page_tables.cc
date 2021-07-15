@@ -859,14 +859,7 @@ zx_status_t X86PageTableBase::UpdateMapping(volatile pt_entry_t* table, uint mmu
       vaddr_t page_vaddr = new_cursor->vaddr() & ~(ps - 1);
       ret = SplitLargePage(level, page_vaddr, e, cm);
       if (ret != ZX_OK) {
-        // If we failed to split the table, just unmap it.  Subsequent
-        // page faults will bring it back in.
-        MappingCursor cursor(/*vaddr=*/new_cursor->vaddr(), /*size=*/ps);
-
-        MappingCursor tmp_cursor;
-        RemoveMapping(table, level, cursor, &tmp_cursor, cm);
-
-        new_cursor->SkipEntry(level);
+        return ret;
       }
       pt_val = *e;
     }
@@ -876,8 +869,7 @@ zx_status_t X86PageTableBase::UpdateMapping(volatile pt_entry_t* table, uint mmu
     ret = UpdateMapping(next_table, mmu_flags, lower_level(level), *new_cursor, &cursor, cm);
     *new_cursor = cursor;
     if (ret != ZX_OK) {
-      // Currently this can't happen
-      ASSERT(false);
+      return ret;
     }
     DEBUG_ASSERT(new_cursor->size() <= start_cursor.size());
     DEBUG_ASSERT(new_cursor->size() == 0 || page_aligned(level, new_cursor->vaddr()));
