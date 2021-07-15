@@ -130,9 +130,6 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.Ge
 		if err != nil {
 			return nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
 		}
-		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
-			continue
-		}
 		valueBuilder := newCppValueBuilder()
 		valueVar := valueBuilder.visit(gidlBenchmark.Value, decl)
 		valueBuild := valueBuilder.String()

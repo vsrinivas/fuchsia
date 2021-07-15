@@ -159,7 +159,7 @@ func (b *unownedBuilder) visitTable(value gidlir.Record, decl *gidlmixer.TableDe
 
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
-			panic("unknown field not supported")
+			panic("LLCPP does not support constructing unknown fields")
 		}
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
@@ -184,7 +184,7 @@ func (b *unownedBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.UnionDe
 
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
-			panic("unknown field not supported")
+			panic("LLCPP does not support constructing unknown fields")
 		}
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {

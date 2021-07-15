@@ -230,9 +230,6 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		if err != nil {
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
 		}
-		if gidlir.ContainsUnknownField(encodeFailure.Value) {
-			continue
-		}
 		errorCode, err := dartErrorCode(encodeFailure.Err)
 		if err != nil {
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)

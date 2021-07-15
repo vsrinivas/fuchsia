@@ -182,7 +182,7 @@ func (b *equalityCheckBuilder) visitTable(actualExpr fidlExpr, expectedValue gid
 	expectedFieldValues := map[string]gidlir.Value{}
 	for _, field := range expectedValue.Fields {
 		if field.Key.IsUnknown() {
-			panic("LLCPP decode_success tests cannot expect unknown table fields")
+			panic("LLCPP does not support constructing unknown fields")
 		}
 		expectedFieldValues[field.Key.Name] = field.Value
 	}
@@ -212,7 +212,7 @@ func (b *equalityCheckBuilder) visitUnion(actualExpr fidlExpr, expectedValue gid
 	}
 	field := expectedValue.Fields[0]
 	if field.Key.IsUnknown() {
-		panic("LLCPP decode_success tests cannot expect unknown union variants")
+		panic("LLCPP does not support constructing unknown fields")
 	}
 	fieldDecl, ok := decl.Field(field.Key.Name)
 	if !ok {
