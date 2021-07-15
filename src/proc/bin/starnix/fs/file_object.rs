@@ -276,9 +276,9 @@ impl FileObject {
         &*self.ops
     }
 
-    fn blocking_op<T, Op>(&self, task: &Task, op: Op, events: FdEvents) -> Result<T, Errno>
+    pub fn blocking_op<T, Op>(&self, task: &Task, mut op: Op, events: FdEvents) -> Result<T, Errno>
     where
-        Op: Fn() -> Result<T, Errno>,
+        Op: FnMut() -> Result<T, Errno>,
     {
         loop {
             match op() {
