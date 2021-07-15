@@ -11,10 +11,10 @@ included in Fuchsia as part of the "media/tests" component group.
 
 When virtual_audio_driver.so is installed (as part of media/tests), the VirtualAudioBus driver
 attaches to the /dev/test device node, automatically adding a device for controlling virtual audio
-devices. This device node is exposed at /dev/test/virtual_audio and is backed by a controller
-driver, implemented by a singleton of the VirtualAudioControlImpl class. Virtual audio devices are
-created by interacting with this virtual audio controller, via FIDL (more on the FIDL connection and
-interfafces below).
+devices. This device node is exposed at /dev/sys/platform/00:00:2f/virtual_audio and is backed by a
+controller driver, implemented by a singleton of the VirtualAudioControlImpl class. Virtual audio
+devices are created by interacting with this virtual audio controller, via FIDL (more on the FIDL
+connection and interfafces below).
 
 The controller can be instructed to create a device configuration, and to create a virtual audio
 device using this configuration. To Add a device, it creates a VirtualAudioStreamIn or

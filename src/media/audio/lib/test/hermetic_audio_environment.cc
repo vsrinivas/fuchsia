@@ -114,7 +114,7 @@ HermeticAudioEnvironment::HermeticAudioEnvironment(Options options) : options_(o
     cv_.wait(lock);
   }
 
-  // IsolatedDevmgr will not serve any messages on the directory until /dev/test/virtual_audio
+  // IsolatedDevmgr will not serve any messages on the directory until /dev/sys/platform/00:00:2f/virtual_audio
   // is ready. Run a simple Describe operation to ensure the devmgr is ready for traffic.
   //
   // Note we specifically use the |TextFixture| overrides of the virtual methods. This is needed

@@ -6,13 +6,6 @@
       "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
     }
   },
-  {
-    "name": "Vendor",
-    "expected": "match",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.test.BIND_PROTOCOL.PARENT"
-    }
-  },
     {
         "device": {
             "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.platform.BIND_PLATFORM_DEV_DID.VIRTUAL_AUDIO",

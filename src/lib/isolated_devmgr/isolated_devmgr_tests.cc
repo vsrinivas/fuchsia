@@ -95,7 +95,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
 
   void EnableVirtualAudio(const zx::channel& devfs) {
     fuchsia::virtualaudio::ForwarderPtr virtualaudio;
-    fdio_service_connect_at(devfs.get(), "test/virtual_audio",
+    fdio_service_connect_at(devfs.get(), "sys/platform/00:00:2f/virtual_audio",
                             virtualaudio.NewRequest().TakeChannel().release());
 
     // Perform a simple RPC with a reply to sanity check we're talking to the driver.

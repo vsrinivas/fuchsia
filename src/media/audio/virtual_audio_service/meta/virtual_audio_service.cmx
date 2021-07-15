@@ -7,7 +7,7 @@
     },
     "sandbox": {
         "dev": [
-            "test/virtual_audio"
+            "sys/platform/00:00:2f/virtual_audio"
         ]
     }
 }
