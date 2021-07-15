@@ -133,6 +133,7 @@ pub fn dispatch_syscall(
         faccessat[3],
         fchdir[1],
         fchmodat[3],
+        fchownat[5],
         fcntl[3],
         fstat[2],
         fstatfs[2],

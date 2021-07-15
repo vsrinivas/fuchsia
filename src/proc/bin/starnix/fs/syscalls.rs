@@ -419,6 +419,17 @@ pub fn sys_fchmodat(
     Ok(SUCCESS)
 }
 
+pub fn sys_fchownat(
+    _ctx: &SyscallContext<'_>,
+    _dir_fd: FdNumber,
+    _user_path: UserCString,
+    _owner: u32,
+    _group: u32,
+    _flags: u32,
+) -> Result<SyscallResult, Errno> {
+    Ok(SUCCESS)
+}
+
 pub fn sys_getcwd(
     ctx: &SyscallContext<'_>,
     buf: UserAddress,
