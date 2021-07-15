@@ -248,7 +248,7 @@ impl PacketBuilder for EthernetFrameBuilder {
         )
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         // NOTE: EtherType values of 1500 and below are used to indicate the
         // length of the body in bytes. We don't need to validate this because
         // the EtherType enum has no variants with values in that range.

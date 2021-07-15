@@ -96,7 +96,7 @@ impl PacketBuilder for PppPacketBuilder {
         PacketConstraints::new(std::mem::size_of::<PppHeader>(), 0, 0, usize::max_value())
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let (mut header, _, _) = buffer.parts();
         let mut header = &mut header;
         let mut header = header.take_obj_front_zero::<PppHeader>().unwrap();
@@ -194,7 +194,7 @@ impl PacketBuilder for ControlProtocolPacketBuilder {
         )
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let (mut header, body, _) = buffer.parts();
         let mut header = &mut header;
         let mut header = header.take_obj_front_zero::<ControlProtocolHeader>().unwrap();
@@ -245,7 +245,7 @@ impl PacketBuilder for ConfigurationPacketBuilder {
         PacketConstraints::new(0, 0, 0, usize::max_value())
     }
 
-    fn serialize(&self, _buffer: &mut SerializeBuffer<'_>) {}
+    fn serialize(&self, _buffer: &mut SerializeBuffer<'_, '_>) {}
 }
 
 /// Wrapper around a parsed on-the-wire termination packet header and the rest of the packet.
@@ -281,7 +281,7 @@ impl PacketBuilder for TerminationPacketBuilder {
         PacketConstraints::new(0, 0, 0, usize::max_value())
     }
 
-    fn serialize(&self, _buffer: &mut SerializeBuffer<'_>) {}
+    fn serialize(&self, _buffer: &mut SerializeBuffer<'_, '_>) {}
 }
 
 /// Wrapper around a parsed on-the-wire code reject packet header and the rest of the packet.
@@ -317,7 +317,7 @@ impl PacketBuilder for CodeRejectPacketBuilder {
         PacketConstraints::new(0, 0, 0, usize::max_value())
     }
 
-    fn serialize(&self, _buffer: &mut SerializeBuffer<'_>) {}
+    fn serialize(&self, _buffer: &mut SerializeBuffer<'_, '_>) {}
 }
 
 #[derive(FromBytes, AsBytes, Unaligned)]
@@ -382,7 +382,7 @@ impl PacketBuilder for ProtocolRejectPacketBuilder {
         )
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let (mut header, _, _) = buffer.parts();
         let mut header = &mut header;
         let mut header = header.take_obj_front_zero::<ProtocolRejectHeader>().unwrap();
@@ -448,7 +448,7 @@ impl PacketBuilder for EchoDiscardPacketBuilder {
         PacketConstraints::new(std::mem::size_of::<EchoDiscardHeader>(), 0, 0, usize::max_value())
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let (mut header, _, _) = buffer.parts();
         let mut header = &mut header;
         let mut header = header.take_obj_front_zero::<EchoDiscardHeader>().unwrap();

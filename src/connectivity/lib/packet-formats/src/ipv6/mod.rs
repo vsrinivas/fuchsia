@@ -816,7 +816,7 @@ impl PacketBuilder for Ipv6PacketBuilder {
         PacketConstraints::new(IPV6_FIXED_HDR_LEN, 0, 0, (1 << 16) - 1)
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let (mut header, body, _) = buffer.parts();
         self.serialize_fixed_hdr(&mut header, body.len(), self.next_hdr);
     }
@@ -830,7 +830,7 @@ impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> PacketBuilder
         PacketConstraints::new(header_len, 0, 0, (1 << 16) - 1)
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let (mut header, body, _) = buffer.parts();
         let aligned_hbh_len = self.aligned_hbh_len();
         // The next header in the fixed header now should be 0 (Hop-by-Hop Extension Header)

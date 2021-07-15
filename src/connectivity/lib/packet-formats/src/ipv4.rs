@@ -521,7 +521,7 @@ impl<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> PacketBuilder
         PacketConstraints::new(header_len, 0, 0, (1 << 16) - 1 - header_len)
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let (mut header, body, _) = buffer.parts();
         // implements BufferViewMut
         let mut header = &mut header;
@@ -669,7 +669,7 @@ impl PacketBuilder for Ipv4PacketBuilder {
         PacketConstraints::new(IPV4_MIN_HDR_LEN, 0, 0, (1 << 16) - 1 - IPV4_MIN_HDR_LEN)
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let (mut header, body, _) = buffer.parts();
         self.write_header_prefix(&mut header, &[][..], body.len());
     }

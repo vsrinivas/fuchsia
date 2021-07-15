@@ -434,7 +434,7 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
         PacketConstraints::new(TCP_MIN_HDR_LEN, 0, 0, core::usize::MAX)
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let mut header = buffer.header();
         // implements BufferViewMut, giving us write_obj_front method
         let mut header = &mut header;

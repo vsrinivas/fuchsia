@@ -143,7 +143,7 @@ where
 
     fn with_bytes<R, F>(&self, f: F) -> R
     where
-        F: FnOnce(FragmentedBytes<'_>) -> R,
+        F: for<'a, 'b> FnOnce(FragmentedBytes<'a, 'b>) -> R,
     {
         call_method_on_either!(self, with_bytes, f)
     }
@@ -202,7 +202,7 @@ where
 {
     fn with_bytes_mut<R, F>(&mut self, f: F) -> R
     where
-        F: FnOnce(FragmentedBytesMut<'_>) -> R,
+        F: for<'a, 'b> FnOnce(FragmentedBytesMut<'a, 'b>) -> R,
     {
         call_method_on_either!(self, with_bytes_mut, f)
     }
@@ -256,7 +256,7 @@ where
 {
     fn with_parts<O, F>(&mut self, f: F) -> O
     where
-        F: for<'a> FnOnce(&'a mut [u8], FragmentedBytesMut<'a>, &'a mut [u8]) -> O,
+        F: for<'a, 'b> FnOnce(&'a mut [u8], FragmentedBytesMut<'a, 'b>, &'a mut [u8]) -> O,
     {
         call_method_on_either!(self, with_parts, f)
     }
@@ -379,7 +379,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> ContiguousBufferMutImpl for Buf<B> {}
 impl<B: AsRef<[u8]> + AsMut<[u8]>> TargetBuffer for Buf<B> {
     fn with_parts<O, F>(&mut self, f: F) -> O
     where
-        F: for<'a> FnOnce(&'a mut [u8], FragmentedBytesMut<'a>, &'a mut [u8]) -> O,
+        F: for<'a, 'b> FnOnce(&'a mut [u8], FragmentedBytesMut<'a, 'b>, &'a mut [u8]) -> O,
     {
         let (prefix, buf) = self.buf.as_mut().split_at_mut(self.range.start);
         let (body, suffix) = buf.split_at_mut(self.range.end - self.range.start);
@@ -635,7 +635,7 @@ pub trait PacketBuilder {
     /// `serialize` may panic if the `SerializeBuffer`'s header or footer are
     /// not large enough to fit the packet's header and footer, or if the body
     /// does not satisfy the minimum or maximum body length requirements.
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>);
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>);
 }
 
 /// One or more nested [`PacketBuilder`]s.
@@ -794,7 +794,7 @@ impl<'a, B: PacketBuilder> PacketBuilder for &'a B {
         B::constraints(self)
     }
     #[inline]
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         B::serialize(self, buffer)
     }
 }
@@ -805,7 +805,7 @@ impl<'a, B: PacketBuilder> PacketBuilder for &'a mut B {
         B::constraints(self)
     }
     #[inline]
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         B::serialize(self, buffer)
     }
 }
@@ -816,14 +816,14 @@ impl PacketBuilder for () {
         PacketConstraints { header_len: 0, footer_len: 0, min_body_len: 0, max_body_len: MAX_USIZE }
     }
     #[inline]
-    fn serialize(&self, _buffer: &mut SerializeBuffer<'_>) {}
+    fn serialize(&self, _buffer: &mut SerializeBuffer<'_, '_>) {}
 }
 
 impl PacketBuilder for Never {
     fn constraints(&self) -> PacketConstraints {
         unreachable!()
     }
-    fn serialize(&self, _buffer: &mut SerializeBuffer<'_>) {}
+    fn serialize(&self, _buffer: &mut SerializeBuffer<'_, '_>) {}
 }
 
 /// One object encapsulated in another one.
@@ -1567,7 +1567,7 @@ impl<I: InnerPacketBuilder, B: GrowBuffer + ShrinkBuffer> Serializer for InnerSe
                 PacketConstraints::new(self.0.bytes_len(), 0, 0, MAX_USIZE)
             }
 
-            fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+            fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
                 // Note that the body might be non-empty if an outer
                 // PacketBuilder added a minimum body length constraint that
                 // required padding.
@@ -1769,7 +1769,7 @@ mod tests {
             )
         }
 
-        fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+        fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
             // // `serialize` is allowed to panic if called on a `PacketBuilder`
             // // with invalid constraints.
             // assert!(self.try_constraints().is_some());
@@ -2516,7 +2516,7 @@ mod tests {
 
         fn with_bytes<R, F>(&self, f: F) -> R
         where
-            F: FnOnce(FragmentedBytes<'_>) -> R,
+            F: for<'a, 'b> FnOnce(FragmentedBytes<'a, 'b>) -> R,
         {
             let (_, rest) = self.data.split_at(self.range.start);
             let (prefix_b, rest) = rest.split_at(self.mid - self.range.start);
@@ -2529,7 +2529,7 @@ mod tests {
     impl<B: BufferMut> FragmentedBufferMut for ScatterGatherBuf<B> {
         fn with_bytes_mut<R, F>(&mut self, f: F) -> R
         where
-            F: FnOnce(FragmentedBytesMut<'_>) -> R,
+            F: for<'a, 'b> FnOnce(FragmentedBytesMut<'a, 'b>) -> R,
         {
             let (_, rest) = self.data.split_at_mut(self.range.start);
             let (prefix_b, rest) = rest.split_at_mut(self.mid - self.range.start);
@@ -2561,7 +2561,7 @@ mod tests {
     impl<B: BufferMut> TargetBuffer for ScatterGatherBuf<B> {
         fn with_parts<O, F>(&mut self, f: F) -> O
         where
-            F: for<'a> FnOnce(&'a mut [u8], FragmentedBytesMut<'a>, &'a mut [u8]) -> O,
+            F: for<'a, 'b> FnOnce(&'a mut [u8], FragmentedBytesMut<'a, 'b>, &'a mut [u8]) -> O,
         {
             let (prefix, rest) = self.data.split_at_mut(self.range.start);
             let (prefix_b, rest) = rest.split_at_mut(self.mid - self.range.start);

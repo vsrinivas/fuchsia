@@ -350,7 +350,7 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
         )
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
         let total_len = buffer.len();

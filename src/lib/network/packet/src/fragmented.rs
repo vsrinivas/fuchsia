@@ -485,9 +485,9 @@ impl<'a, B: 'a + ByteSliceMut + Fragment> FragmentedByteSlice<'a, B> {
 }
 
 /// A [`FragmentedByteSlice`] with immutable byte slices.
-pub type FragmentedBytes<'a> = FragmentedByteSlice<'a, &'a [u8]>;
+pub type FragmentedBytes<'a, 'b> = FragmentedByteSlice<'a, &'b [u8]>;
 /// A [`FragmentedByteSlice`] with mutable byte slices.
-pub type FragmentedBytesMut<'a> = FragmentedByteSlice<'a, &'a mut [u8]>;
+pub type FragmentedBytesMut<'a, 'b> = FragmentedByteSlice<'a, &'b mut [u8]>;
 
 #[cfg(test)]
 mod tests {
@@ -495,7 +495,7 @@ mod tests {
 
     /// Calls `f` with all the possible three way slicings of a non-mutable
     /// buffer containing `[1,2,3,4,5]` (including cases with empty slices).
-    fn with_fragments<F: FnMut(FragmentedBytes<'_>)>(mut f: F) {
+    fn with_fragments<F: for<'a, 'b> FnMut(FragmentedBytes<'a, 'b>)>(mut f: F) {
         let buff = [1_u8, 2, 3, 4, 5];
         for i in 0..buff.len() {
             for j in i..buff.len() {
@@ -509,7 +509,7 @@ mod tests {
 
     /// Calls `f` with all the possible three way slicings of a non-mutable
     /// buffer containing `[1,2,3,4,5]` (including cases with empty slices).
-    fn with_fragments_mut<F: FnMut(FragmentedBytesMut<'_>)>(mut f: F) {
+    fn with_fragments_mut<F: for<'a, 'b> FnMut(FragmentedBytesMut<'a, 'b>)>(mut f: F) {
         let buff = [1_u8, 2, 3, 4, 5];
         for i in 0..buff.len() {
             for j in i..buff.len() {

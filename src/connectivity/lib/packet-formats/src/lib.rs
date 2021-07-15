@@ -209,7 +209,7 @@ fn compute_transport_checksum_serialize<A: IpAddressExt>(
     src_ip: A,
     dst_ip: A,
     proto: <A::Version as IpExt>::Proto,
-    buffer: &mut SerializeBuffer<'_>,
+    buffer: &mut SerializeBuffer<'_, '_>,
 ) -> Option<[u8; 2]> {
     // See for details:
     // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Checksum_computation

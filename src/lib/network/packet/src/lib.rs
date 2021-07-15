@@ -372,7 +372,7 @@ pub trait FragmentedBuffer {
     /// [`FragmentedBytes`].
     fn with_bytes<R, F>(&self, f: F) -> R
     where
-        F: FnOnce(FragmentedBytes<'_>) -> R;
+        F: for<'a, 'b> FnOnce(FragmentedBytes<'a, 'b>) -> R;
 
     /// Returns a flattened version of this buffer, copying its contents into a
     /// `Vec`.
@@ -387,7 +387,7 @@ pub trait FragmentedBufferMut: FragmentedBuffer {
     /// [`FragmentedBytesMut`].
     fn with_bytes_mut<R, F>(&mut self, f: F) -> R
     where
-        F: FnOnce(FragmentedBytesMut<'_>) -> R;
+        F: for<'a, 'b> FnOnce(FragmentedBytesMut<'a, 'b>) -> R;
 
     /// Sets all bytes in `range` to zero.
     ///
@@ -482,7 +482,7 @@ where
 
     fn with_bytes<R, F>(&self, f: F) -> R
     where
-        F: FnOnce(FragmentedBytes<'_>) -> R,
+        F: for<'a, 'b> FnOnce(FragmentedBytes<'a, 'b>) -> R,
     {
         let mut bs = [self.as_ref()];
         f(FragmentedBytes::new(&mut bs))
@@ -508,7 +508,7 @@ where
 {
     fn with_bytes_mut<R, F>(&mut self, f: F) -> R
     where
-        F: FnOnce(FragmentedBytesMut<'_>) -> R,
+        F: for<'a, 'b> FnOnce(FragmentedBytesMut<'a, 'b>) -> R,
     {
         let mut bs = [self.as_mut()];
         f(FragmentedBytesMut::new(&mut bs))
@@ -883,7 +883,7 @@ pub trait TargetBuffer: GrowBufferMut {
     /// Gets a view into the parts of this `TargetBuffer`.
     fn with_parts<O, F>(&mut self, f: F) -> O
     where
-        F: for<'a> FnOnce(&'a mut [u8], FragmentedBytesMut<'a>, &'a mut [u8]) -> O;
+        F: for<'a, 'b> FnOnce(&'a mut [u8], FragmentedBytesMut<'a, 'b>, &'a mut [u8]) -> O;
 
     /// Serializes a packet in the buffer.
     ///
@@ -1059,7 +1059,7 @@ impl GrowBuffer for EmptyBuf {
 impl TargetBuffer for EmptyBuf {
     fn with_parts<O, F>(&mut self, f: F) -> O
     where
-        F: for<'a> FnOnce(&'a mut [u8], FragmentedBytesMut<'a>, &'a mut [u8]) -> O,
+        F: for<'a, 'b> FnOnce(&'a mut [u8], FragmentedBytesMut<'a, 'b>, &'a mut [u8]) -> O,
     {
         f(&mut [], FragmentedBytesMut::new_empty(), &mut [])
     }
@@ -1148,7 +1148,7 @@ impl GrowBuffer for Never {
 impl TargetBuffer for Never {
     fn with_parts<O, F>(&mut self, _f: F) -> O
     where
-        F: for<'a> FnOnce(&'a mut [u8], FragmentedBytesMut<'a>, &'a mut [u8]) -> O,
+        F: for<'a, 'b> FnOnce(&'a mut [u8], FragmentedBytesMut<'a, 'b>, &'a mut [u8]) -> O,
     {
         match *self {}
     }
@@ -1645,23 +1645,23 @@ pub trait ParsablePacket<B: ByteSlice, ParseArgs>: Sized {
 /// the header, body, and footer of the new packet. The body is initialized to
 /// contain the bytes of the packet to be encapsulated (including any padding),
 /// and it is the caller's responsibility to serialize the header and footer.
-pub struct SerializeBuffer<'a> {
+pub struct SerializeBuffer<'a, 'b> {
     header: &'a mut [u8],
-    body: FragmentedBytesMut<'a>,
+    body: FragmentedBytesMut<'a, 'b>,
     footer: &'a mut [u8],
 }
 
 #[allow(clippy::len_without_is_empty)]
-impl<'a> SerializeBuffer<'a> {
+impl<'a, 'b> SerializeBuffer<'a, 'b> {
     /// Constructs a new `SerializeBuffer`.
     ///
     /// `new` constructs a new `SerializeBuffer` with the provided `header`,
     /// `body`, and `footer` parts.
     pub fn new(
         header: &'a mut [u8],
-        body: FragmentedBytesMut<'a>,
+        body: FragmentedBytesMut<'a, 'b>,
         footer: &'a mut [u8],
-    ) -> SerializeBuffer<'a> {
+    ) -> SerializeBuffer<'a, 'b> {
         SerializeBuffer { header, body, footer }
     }
 
@@ -1671,7 +1671,7 @@ impl<'a> SerializeBuffer<'a> {
     }
 
     /// Gets the bytes of the body.
-    pub fn body(&mut self) -> &mut FragmentedBytesMut<'a> {
+    pub fn body(&mut self) -> &mut FragmentedBytesMut<'a, 'b> {
         &mut self.body
     }
 
@@ -1687,7 +1687,7 @@ impl<'a> SerializeBuffer<'a> {
     /// `footer` methods borrow this `SerializeBuffer`, this is the only way to
     /// construct and operate on references to more than one section of the
     /// buffer at a time.
-    pub fn parts(&mut self) -> (&mut [u8], &mut FragmentedBytesMut<'a>, &mut [u8]) {
+    pub fn parts(&mut self) -> (&mut [u8], &mut FragmentedBytesMut<'a, 'b>, &mut [u8]) {
         (self.header, &mut self.body, self.footer)
     }
 

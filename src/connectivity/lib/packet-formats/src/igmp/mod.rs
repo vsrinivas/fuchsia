@@ -197,7 +197,7 @@ where
         )
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let (prefix, message_body, _) = buffer.parts();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         self.serialize_headers(prefix, message_body);
