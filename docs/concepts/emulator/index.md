@@ -107,11 +107,19 @@ To SSH into the emulator, run the following command:
 fx ssh
 ```
 
+## Unsupported CPUs {#unsupported-cpu}
+
+FEMU currently does not run on:
+
+* ARM64 processors, including the Apple M1 processor.
+* AMD processors.
+
 ## Supported hardware for graphics acceleration {#supported-hardware}
 
 FEMU currently supports a limited set of GPUs on macOS and Linux for
 hardware graphics acceleration. FEMU uses a software renderer fallback
 for unsupported GPUs.
+
 
 <table>
   <tbody>
