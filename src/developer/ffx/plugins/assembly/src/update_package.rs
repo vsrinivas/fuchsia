@@ -114,6 +114,7 @@ mod tests {
     use fuchsia_hash::Hash;
     use std::collections::BTreeMap;
     use std::fs::File;
+    use std::path::PathBuf;
     use std::str::FromStr;
     use tempfile::tempdir;
 
@@ -135,6 +136,7 @@ mod tests {
                 embed_fvm_in_zbi: false,
                 compression: "zstd".to_string(),
                 signing_script: None,
+                backstop_file: PathBuf::from("backstop.txt"),
             },
             blobfs: BlobFSConfig::default(),
             fvm: None,

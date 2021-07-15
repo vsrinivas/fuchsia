@@ -25,12 +25,18 @@ pub fn construct_zbi(
     // Add the kernel image.
     zbi_builder.set_kernel(&product.kernel_image);
 
-    // Instruct devmgr that a /system volume is required.
-    zbi_builder.add_boot_arg("devmgr.require-system=true");
-
     // If a base merkle is supplied, then add the boot arguments for starting up pkgfs with the
-    // merkle of the Base Package.
+    // merkle of the Base Package. Currently, all boot args are hidden behind this argument,
+    // because bootfs-only builds have zero boot args (or an empty devmgr config).
     if let Some(base_package) = &base_package {
+        // Indicate the clock UTC backstop.
+        let backstop = std::fs::read_to_string(&board.zbi.backstop_file)
+            .context("Failed to read the backstop file")?;
+        zbi_builder.add_boot_arg(&format!("clock.backstop={}", backstop.trim_end_matches("\n")));
+
+        // Instruct devmgr that a /system volume is required.
+        zbi_builder.add_boot_arg("devmgr.require-system=true");
+
         // Specify how to launch pkgfs: bin/pkgsvr <base-merkle>
         zbi_builder
             .add_boot_arg(&format!("zircon.system.pkgfs.cmd=bin/pkgsvr+{}", &base_package.merkle));
@@ -139,6 +145,9 @@ mod tests {
     fn construct() {
         let dir = tempdir().unwrap();
 
+        let backstop_path = dir.path().join("backstop.txt");
+        std::fs::write(&backstop_path, "12345\n").unwrap();
+
         // Create fake product/board definitions.
         let mut product_config = ProductConfig::default();
         let board_config = BoardConfig {
@@ -152,6 +161,7 @@ mod tests {
                 embed_fvm_in_zbi: false,
                 compression: "zstd".to_string(),
                 signing_script: None,
+                backstop_file: backstop_path,
             },
             blobfs: BlobFSConfig::default(),
             fvm: None,

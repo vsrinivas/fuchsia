@@ -517,27 +517,14 @@ generated_file(labels.kernel_cmdline_args_metadata) {
   deps = [ dep_labels.kernel_cmdline_args ]
 }
 
-if (bootfs_only) {
-  # Bringup has an empty devmgr config.
-  resource("bringup_devmgr_config.txt") {
-    testonly = true
-    sources = [ "bringup_devmgr_config.txt" ]
-    outputs = [ "config/devmgr" ]
-  }
-}
-
 distribution_manifest(labels.bootfs_entries_metadata) {
   testonly = true
   outputs = [ files.bootfs_entries_metadata ]
   deps = [ dep_labels.bootfs_entries ]
-  if (uses_base_package) {
-    # Use the devmgr config for pkgfs
-    deps += [ "//build/images:devmgr_config" ]
-  } else {
+  if (bootfs_only) {
     # In a bootfs-only build, all packages need to be included in bootfs, and so
-    # must be added here, along with the empty devmgr config.
+    # must be added here.
     deps += [
-      ":bringup_devmgr_config.txt",
       ":meta_packages",
       ":universe_packages",
       "//build/input:system_image",
@@ -678,6 +665,9 @@ generated_file(labels.board_config) {
           extra_arguments = vboot_action.args
         }
       }
+
+      backstop_file =
+          rebase_path(build_info_files.minimum_utc_stamp, root_build_dir)
     }
     if (use_vbmeta) {
       vbmeta = {

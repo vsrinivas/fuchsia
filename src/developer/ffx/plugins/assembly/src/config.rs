@@ -157,6 +157,9 @@ pub struct ZbiConfig {
     /// An optional "signing script" to sign/repackage the zbi correctly for
     /// use with the device bootloader.
     pub signing_script: Option<ZbiSigningScript>,
+
+    /// The file that contains the backstop UTC time for the clock.
+    pub backstop_file: PathBuf,
 }
 
 /// The information needed to custom-package a ZBI for use on a board with
@@ -392,7 +395,8 @@ mod tests {
                 "name": "fuchsia",
                 "max_size": 100,
                 "embed_fvm_in_zbi": false,
-                "compression": "zstd.max"
+                "compression": "zstd.max",
+                "backstop_file": "backstop.txt"
               },
               "fvm": {
                 "partition": "name",
@@ -447,7 +451,8 @@ mod tests {
                 "key_metadata": "path/to/metadata"
               },
               "zbi": {
-                "partition": "name"
+                "partition": "name",
+                "backstop_file": "backstop.txt"
               },
               "recovery": {
                 "name": "recovery",
