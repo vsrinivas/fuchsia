@@ -160,7 +160,11 @@ zx_status_t VnodeDir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<f
     return status;
   }
   *out = std::move(vn);
-  return status;
+
+#ifdef __Fuchsia__
+  CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask::kCreate);
+#endif
+  return ZX_OK;
 }
 
 zx_status_t VnodeDir::Unlink(std::string_view name, bool must_be_dir) {

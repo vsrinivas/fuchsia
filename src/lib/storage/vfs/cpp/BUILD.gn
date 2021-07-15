@@ -139,6 +139,25 @@ static_library("cpp") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
+static_library("inotify_test_base") {
+  testonly = true
+  public = [ "inotify_test_base.h" ]
+  sources = [ "inotify_test_base.cc" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/lib/fxl",
+    "//src/lib/storage/vfs/cpp",
+    "//src/storage/memfs",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
 source_set("test_support") {
   public = [ "dir_test_util.h" ]
   public_deps = [ ":cpp" ]
@@ -150,6 +169,8 @@ group("tests") {
     ":fs-connection-test",
     ":fs-connection-test-pkg",
     ":fs-fuzzers",
+    ":fs-inotify-test",
+    ":fs-inotify-test-pkg",
     ":fs-vnode-test",
     ":fs-vnode-test-pkg",
     "journal:tests",
@@ -211,7 +232,6 @@ test("fs-connection-test") {
     "connection_integration_tests.cc",
     "connection_rights_tests.cc",
     "fidl_transaction_tests.cc",
-    "inotify_tests.cc",
     "paging_test.cc",
   ]
   deps = [
@@ -240,6 +260,27 @@ test("fs-connection-test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
+test("fs-inotify-test") {
+  output_name = "fs-inotify-test"
+  sources = [ "inotify_tests.cc" ]
+  deps = [
+    ":inotify_test_base",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl",
+    "//src/lib/storage/vfs/cpp",
+    "//src/storage/memfs",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
 fuzzer("vmo_file-fuzzer") {
   sources = [ "vmo_file-fuzzer.cc" ]
   deps = [ "//src/lib/storage/vfs/cpp" ]
@@ -252,6 +293,11 @@ fuzzers_package("fs-fuzzers") {
 fuchsia_unittest_package("fs-connection-test-pkg") {
   package_name = "fs-connection-test"
   deps = [ ":fs-connection-test" ]
+}
+
+fuchsia_unittest_package("fs-inotify-test-pkg") {
+  package_name = "fs-inotify-test"
+  deps = [ ":fs-inotify-test" ]
 }
 
 fuchsia_unittest_package("fs-vnode-test-pkg") {

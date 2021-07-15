@@ -432,6 +432,12 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   size_t open_count() const __TA_REQUIRES_SHARED(mutex_) { return open_count_; }
 
 #ifdef __Fuchsia__
+  // Check existing inotify watches and issue inotify events.
+  zx_status_t CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask event)
+      __TA_EXCLUDES(gInotifyLock);
+#endif
+
+#ifdef __Fuchsia__
  public:
   // Instead of adding a |file_lock::FileLock| member variable to |Vnode|,
   // maintain a map from |this| to the lock objects. This is done, because
@@ -443,6 +449,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // lock, do not acquire |gLockAccess|.
   bool DeleteFileLockInTeardown(zx_koid_t owner);
 #endif
+
  private:
   Vfs* vfs_ __TA_GUARDED(mutex_) = nullptr;  // Possibly null, see getter above.
   size_t inflight_transactions_ __TA_GUARDED(mutex_) = 0;
@@ -450,8 +457,6 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 #ifdef __Fuchsia__
   static std::mutex gLockAccess;
   static std::map<const Vnode*, std::shared_ptr<file_lock::FileLock>> gLockMap;
-  zx_status_t CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask event)
-      __TA_EXCLUDES(gInotifyLock);
   struct InotifyFilter {
     fio2::wire::InotifyWatchMask filter_;
     uint32_t watch_descriptor_;
