@@ -215,7 +215,7 @@ TEST_F(DevmgrTest, ExceptionCallback_RestartDriverHost) {
     EXPECT_EQ(zx::channel::create(0, &a, &b), ZX_OK);
     fdio_service_connect_at(dir, "sys/platform/11:00:1f/crash-device", b.release());
 
-    return driver_manager_crashed.load() || exception_count.load() == 3u;
+    return driver_manager_crashed.load() || exception_count.load() == 4u;
   });
 
   ASSERT_FALSE(RunLoopWithTimeoutOrUntil(
@@ -229,7 +229,7 @@ TEST_F(DevmgrTest, ExceptionCallback_RestartDriverHost) {
       zx::sec(5)));
 
   ASSERT_FALSE(driver_manager_crashed.load());
-  ASSERT_EQ(exception_count.load(), 3u);
+  ASSERT_GE(exception_count.load(), 4u);
 }
 
 // Driver manager will never crash, and the driver host should never be reloaded.
