@@ -12,7 +12,8 @@ pub fn decode_fidl<T: fidl::encoding::Decodable>(bytes: &mut [u8]) -> Result<T, 
     // WARNING: Since we are decoding without a transaction header, we have to
     // provide a context manually. This could cause problems in future FIDL wire
     // format migrations, which are driven by header flags.
-    let context = fidl::encoding::Context {};
+    let context =
+        fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 };
     fidl::encoding::Decoder::decode_with_context(&context, bytes, &mut [], &mut value)?;
     Ok(value)
 }

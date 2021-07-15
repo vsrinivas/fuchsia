@@ -20,7 +20,7 @@ var benchmarkTmpl = template.Must(template.New("benchmarkTmpls").Parse(`
 #![allow(unused_imports)]
 use {
 	fidl::{
-		encoding::{Context, Decodable, Decoder, Encoder, with_tls_encode_buf},
+		encoding::{Context, Decodable, Decoder, Encoder, with_tls_encode_buf, WireFormatVersion},
 		handle::Handle, handle::HandleDisposition, handle::HandleInfo, handle::HandleOp,
 		ObjectType, Rights, UnknownData,
 	},
@@ -48,7 +48,7 @@ pub const BENCHMARKS: [(&'static str, fn(&mut Bencher)); {{ .NumBenchmarks }}] =
 {{- end }}
 ];
 
-const _V1_CONTEXT: &Context = &Context {};
+const _V1_CONTEXT: &Context = &Context { wire_format_version: WireFormatVersion::V1 };
 
 {{ range .Benchmarks }}
 fn benchmark_{{ .Name }}_builder(b: &mut Bencher) {

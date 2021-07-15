@@ -151,6 +151,19 @@ pub const EPITAPH_ORDINAL: u64 = 0xffffffffffffffffu64;
 /// The current wire format magic number
 pub const MAGIC_NUMBER_INITIAL: u8 = 1;
 
+/// Wire format version to use during encode / decode.
+#[derive(Clone, Copy, Debug)]
+pub enum WireFormatVersion {
+    /// V1 wire format
+    V1,
+    /// V2 wire format
+    /// This includes the following RFCs:
+    /// - Efficient envelopes
+    /// - Inlining small values in FIDL envelopes
+    /// - Wire format support for sparser FIDL tables
+    V2,
+}
+
 /// Context for encoding and decoding.
 ///
 /// This is currently empty. We keep it around to ease the implementation of
@@ -160,13 +173,19 @@ pub const MAGIC_NUMBER_INITIAL: u8 = 1;
 /// FIDL uses `Context` to coordinate soft migrations, so improper uses of it
 /// could result in ABI breakage.
 #[derive(Clone, Copy, Debug)]
-pub struct Context {}
+pub struct Context {
+    /// Wire format version to use when encoding / decoding.
+    pub wire_format_version: WireFormatVersion,
+}
 
 impl Context {
     /// Returns the header flags to set when encoding with this context.
     #[inline]
     fn header_flags(&self) -> HeaderFlags {
-        HeaderFlags::empty()
+        match self.wire_format_version {
+            WireFormatVersion::V1 => HeaderFlags::empty(),
+            WireFormatVersion::V2 => HeaderFlags::USE_V2_WIRE_FORMAT,
+        }
     }
 }
 
@@ -197,7 +216,7 @@ pub struct Encoder<'a, 'b> {
 /// During migrations, this controls the default write path.
 #[inline]
 fn default_encode_context() -> Context {
-    Context {}
+    Context { wire_format_version: WireFormatVersion::V1 }
 }
 
 impl<'a, 'b> Encoder<'a, 'b> {
@@ -3396,6 +3415,14 @@ bitflags! {
         /// removed once any new header flags are defined.
         #[deprecated = "Placeholder since empty bitflags are not allowed."]
         const __PLACEHOLDER = 0;
+
+        /// Indicates that the V2 wire format should be used instead of the V1
+        /// wire format.
+        /// This includes the following RFCs:
+        /// - Efficient envelopes
+        /// - Inlining small values in FIDL envelopes
+        /// - Wire format support for sparser FIDL tables
+        const USE_V2_WIRE_FORMAT = 2;
     }
 }
 
@@ -3452,7 +3479,11 @@ impl TransactionHeader {
     /// controls dynamic behavior in the read path.
     #[inline]
     pub fn decoding_context(&self) -> Context {
-        Context {}
+        if self.flags().contains(HeaderFlags::USE_V2_WIRE_FORMAT) {
+            Context { wire_format_version: WireFormatVersion::V2 }
+        } else {
+            Context { wire_format_version: WireFormatVersion::V1 }
+        }
     }
 }
 
@@ -3510,7 +3541,7 @@ assert_not_impl_any!(TransactionMessage<()>: Decodable);
 /// Returns the header and a reference to the tail of the message.
 pub fn decode_transaction_header(bytes: &[u8]) -> Result<(TransactionHeader, &[u8])> {
     let mut header = TransactionHeader::new_empty();
-    let context = Context {};
+    let context = Context { wire_format_version: WireFormatVersion::V1 };
     let header_len = <TransactionHeader as Layout>::inline_size(&context);
     if bytes.len() < header_len {
         return Err(Error::OutOfRange);
@@ -3589,7 +3620,11 @@ impl PersistentHeader {
     /// controls dynamic behavior in the read path.
     #[inline]
     pub fn decoding_context(&self) -> Context {
-        Context {}
+        if self.flags().contains(HeaderFlags::USE_V2_WIRE_FORMAT) {
+            Context { wire_format_version: WireFormatVersion::V2 }
+        } else {
+            Context { wire_format_version: WireFormatVersion::V1 }
+        }
     }
     /// Returns whether the message containing this `PersistentHeader` is in a
     /// compatible wire format.
@@ -3682,7 +3717,7 @@ pub fn encode_persistent_body<T: Persistable>(
 
 /// Decode the type expected from the persistent binary form.
 pub fn decode_persistent<T: Persistable>(bytes: &[u8]) -> Result<T> {
-    let context = Context {};
+    let context = Context { wire_format_version: WireFormatVersion::V1 };
     let header_len = <PersistentHeader as Layout>::inline_size(&context);
     if bytes.len() < header_len {
         return Err(Error::OutOfRange);
@@ -3971,7 +4006,10 @@ mod test {
     use matches::assert_matches;
     use std::{f32, f64, fmt, i64, u64};
 
-    pub const CONTEXTS: &[&Context] = &[&Context {}];
+    pub const CONTEXTS: &[&Context] = &[
+        &Context { wire_format_version: WireFormatVersion::V1 },
+        &Context { wire_format_version: WireFormatVersion::V2 },
+    ];
 
     fn to_handle_info(handles: &mut Vec<HandleDisposition<'static>>) -> Vec<HandleInfo> {
         handles

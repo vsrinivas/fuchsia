@@ -1317,7 +1317,14 @@ mod tests {
         // Send the event from the server
         let server = AsyncChannel::from_channel(server_end).unwrap();
         let (bytes, handles) = (&mut vec![], &mut vec![]);
-        let header = TransactionHeader::new_full(0, 5, &crate::encoding::Context {}, 0);
+        let header = TransactionHeader::new_full(
+            0,
+            5,
+            &crate::encoding::Context {
+                wire_format_version: crate::encoding::WireFormatVersion::V1,
+            },
+            0,
+        );
         encode_transaction(header, bytes, handles);
         server.write_etc(bytes, handles).expect("Server channel write failed");
         drop(server);
