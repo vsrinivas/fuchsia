@@ -636,6 +636,32 @@ void PlatformBus::DdkInit(ddk::InitTxn txn) {
       return txn.Reply(status);
     }
   }
+  pbus_dev_t device = {};
+  device.name = "ram-disk";
+  device.vid = PDEV_VID_GENERIC;
+  device.pid = PDEV_PID_GENERIC;
+  device.did = PDEV_DID_RAM_DISK;
+  status = PBusDeviceAdd(&device);
+  if (status != ZX_OK) {
+    return txn.Reply(status);
+  }
+  device.name = "ram-nand";
+  device.vid = PDEV_VID_GENERIC;
+  device.pid = PDEV_PID_GENERIC;
+  device.did = PDEV_DID_RAM_NAND;
+  status = PBusDeviceAdd(&device);
+  if (status != ZX_OK) {
+    return txn.Reply(status);
+  }
+  device.name = "virtual-audio";
+  device.vid = PDEV_VID_GENERIC;
+  device.pid = PDEV_PID_GENERIC;
+  device.did = PDEV_DID_VIRTUAL_AUDIO;
+  status = PBusDeviceAdd(&device);
+  if (status != ZX_OK) {
+    return txn.Reply(status);
+  }
+
   return txn.Reply(ZX_OK);  // This will make the device visible and able to be unbound.
 }
 

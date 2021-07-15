@@ -36,6 +36,9 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   POWER_DOMAIN_COMPOSITE = 0x27,
   PWM_VREG = 0x2B,
   FUSB302 = 0x2C,
+  RAM_DISK = 0x2D,
+  RAM_NAND = 0x2E,
+  VIRTUAL_AUDIO = 0x2F,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {

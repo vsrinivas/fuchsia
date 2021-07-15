@@ -11,7 +11,10 @@ driver_bind_rules("ram-nand-bind") {
   rules = "ram-nand.bind"
   header_output = "ram-nand-bind.h"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.misc" ]
+  deps = [
+    "//src/devices/bind/fuchsia.misc",
+    "//src/devices/bind/fuchsia.platform",
+  ]
 }
 
 driver_module("ram-nand") {

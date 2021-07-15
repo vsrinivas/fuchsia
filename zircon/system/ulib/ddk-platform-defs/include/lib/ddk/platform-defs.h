@@ -56,6 +56,9 @@ __BEGIN_CDECLS
 #define PDEV_DID_DAI_TEST               0x2A  // DAI testing codec
 #define PDEV_DID_PWM_VREG               0x2B  // PWM Voltage Regulator
 #define PDEV_DID_FUSB302                0x2C  // FUSB203, USB power delivery
+#define PDEV_DID_RAM_DISK               0x2D  // RAM disk device
+#define PDEV_DID_RAM_NAND               0x2E  // RAM disk for nand devices
+#define PDEV_DID_VIRTUAL_AUDIO          0x2F  // Virtual audio for test
 
 // QEMU emulator
 #define PDEV_VID_QEMU               0x01
