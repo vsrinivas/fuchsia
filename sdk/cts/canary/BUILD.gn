@@ -1,0 +1,10 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/packages/prebuilt_test_manifest.gni")
+
+# Generates prebuilt test targets for the current canary CTS release.
+prebuilt_test_manifest("tests") {
+  archive_dir = rebase_path("//prebuilt/cts/canary/$host_platform/cts")
+}
