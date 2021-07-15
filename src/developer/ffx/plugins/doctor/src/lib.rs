@@ -17,11 +17,13 @@ use {
     fidl_fuchsia_developer_bridge::{DaemonProxy, Target, TargetState, VersionInfo},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     itertools::Itertools,
+    serde_json::json,
     std::sync::Arc,
     std::{
         collections::HashMap,
         io::{stdout, Write},
         path::PathBuf,
+        process::Command,
         time::Duration,
     },
     termion::{color, style},
@@ -34,6 +36,7 @@ mod recorder;
 
 const DEFAULT_TARGET_CONFIG: &str = "target.default";
 const DOCTOR_OUTPUT_FILENAME: &str = "doctor_output.txt";
+const PLATFORM_INFO_FILENAME: &str = "platform.json";
 
 macro_rules! success_or_continue {
     ($fut:expr, $handler:ident, $v:ident, $e:expr) => {
@@ -387,6 +390,23 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
     Ok(())
 }
 
+fn get_kernel_name() -> Result<String> {
+    Ok(String::from_utf8(Command::new("uname").output()?.stdout)?)
+}
+
+fn get_platform_info() -> Result<String> {
+    let kernel_name = match get_kernel_name() {
+        Ok(s) => s,
+        Err(e) => format!("Could not get kernel name: {}", e),
+    };
+
+    let platform_info = json!({
+        "kernel_name": kernel_name.replace("\n",""),
+    });
+
+    Ok(serde_json::to_string_pretty(&platform_info)?)
+}
+
 async fn doctor(
     step_handler: &mut impl DoctorStepHandler,
     daemon_manager: &impl DaemonManager,
@@ -424,9 +444,15 @@ async fn doctor(
 
         step_handler.step(StepType::GeneratingRecord).await?;
 
+        let platform_info = match get_platform_info() {
+            Ok(s) => s,
+            Err(e) => format!("Could not serialize platform info: {}", e),
+        };
+
         let final_path = {
             let mut r = record_params.recorder.lock().await;
             r.add_sources(vec![daemon_log, fe_log]);
+            r.add_content(PLATFORM_INFO_FILENAME, platform_info);
             r.generate(output_dir)?
         };
 
