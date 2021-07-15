@@ -9,7 +9,6 @@
 
 #include <memory>
 
-#include "lib/async/dispatcher.h"
 #include "src/lib/async-watchdog/watchdog.h"
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/ui/lib/display/get_hardware_display_controller.h"
@@ -72,8 +71,6 @@ class App {
   void InitializeInput();
   void InitializeHeartbeat();
 
-  void DoPeriodicLogging(async_dispatcher_t*, async::TaskBase*, zx_status_t);
-
   async::Executor executor_;
   std::unique_ptr<sys::ComponentContext> app_context_;
   const ConfigValues config_values_;
@@ -112,8 +109,6 @@ class App {
   AnnotationRegistry annotation_registry_;
 
   LifecycleControllerImpl lifecycle_controller_impl_;
-
-  async::TaskMethod<App, &App::DoPeriodicLogging> periodic_logging_task_{this};
 };
 
 }  // namespace scenic_impl

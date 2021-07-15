@@ -6,7 +6,6 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "lib/async/default.h"
 #include "rapidjson/document.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/files/file.h"
@@ -73,9 +72,6 @@ scenic_impl::ConfigValues ReadConfig() {
 
   return values;
 }
-
-// Specifies how often DoPeriodicLogging() is called.
-constexpr zx::duration kPeriodicLogInterval{60'000'000'000};
 
 }  // namespace
 
@@ -226,8 +222,6 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   InitializeGraphics(display);
   InitializeInput();
   InitializeHeartbeat();
-
-  periodic_logging_task_.PostDelayed(async_get_default_dispatcher(), kPeriodicLogInterval);
 }
 
 void App::CreateFrameScheduler(std::shared_ptr<const scheduling::VsyncTiming> vsync_timing) {
@@ -395,12 +389,6 @@ void App::InitializeHeartbeat() {
       /*frame_renderer*/ engine_,
       /*session_updaters*/ {scenic_, image_pipe_updater_, flatland_manager_,
                             view_tree_snapshotter_});
-}
-
-void App::DoPeriodicLogging(async_dispatcher_t* dispatcher, async::TaskBase*, zx_status_t) {
-  frame_scheduler_->LogPeriodicDebugInfo();
-
-  periodic_logging_task_.PostDelayed(dispatcher, kPeriodicLogInterval);
 }
 
 }  // namespace scenic_impl

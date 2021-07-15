@@ -61,9 +61,6 @@ class DefaultFrameScheduler final : public FrameScheduler {
   constexpr static zx::duration kInitialRenderDuration = zx::msec(5);
   constexpr static zx::duration kInitialUpdateDuration = zx::msec(1);
 
-  // Log some information that can be used to decide if Scenic is making progress.
-  void LogPeriodicDebugInfo();
-
  private:
   void OnFramePresented(uint64_t frame_number, zx::time render_start_time,
                         zx::time target_presentation_time,
@@ -180,11 +177,6 @@ class DefaultFrameScheduler final : public FrameScheduler {
   inspect::UintProperty inspect_wakeups_without_render_;
   inspect::UintProperty inspect_last_successful_update_start_time_;
   inspect::UintProperty inspect_last_successful_render_start_time_;
-
-  // These mirror the inspect properties above, which are write-only.  They are used only for
-  // logging, not for the frame-scheduling algorithm.
-  zx::time last_successful_update_start_time_ = zx::time(0);
-  zx::time last_successful_render_start_time_ = zx::time(0);
 
   FrameStats stats_;
 

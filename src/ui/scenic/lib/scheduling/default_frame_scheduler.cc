@@ -178,7 +178,6 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
 
   if (needs_render) {
     inspect_last_successful_update_start_time_.Set(update_start_time.get());
-    last_successful_update_start_time_ = update_start_time;
   }
 
   // TODO(fxbug.dev/24669) Revisit how we do this.
@@ -352,7 +351,6 @@ void DefaultFrameScheduler::OnFramePresented(uint64_t frame_number, zx::time ren
         std::max(timestamps.render_done_time - render_start_time, zx::duration(0));
     frame_predictor_->ReportRenderDuration(zx::duration(duration));
     inspect_last_successful_render_start_time_.Set(target_presentation_time.get());
-    last_successful_render_start_time_ = target_presentation_time;
   }
 
   if (timestamps.actual_presentation_time == FrameRenderer::kTimeDropped) {
@@ -565,16 +563,6 @@ std::map<PresentId, zx::time> DefaultFrameScheduler::ExtractLatchTimestampsUpTo(
   presents_.erase(begin_it, end_it);
 
   return timestamps;
-}
-
-void DefaultFrameScheduler::LogPeriodicDebugInfo() {
-  FX_LOGS(INFO) << "DefaultFrameScheduler::LogPeriodicDebugInfo()"
-                << "\n\t frame number: " << frame_number_
-                << "\n\t current time: " << async_now(dispatcher_)
-                << "\n\t last successful update start time: "
-                << last_successful_update_start_time_.get()
-                << "\n\t last successful render start time: "
-                << last_successful_render_start_time_.get();
 }
 
 }  // namespace scheduling
