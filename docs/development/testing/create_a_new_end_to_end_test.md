@@ -11,6 +11,7 @@ to further develop the test.
 
 To create a new end-to-end test, the steps are:
 
+1.  [Prerequisites](#prerequisites).
 1.  [Create a new test](#create-a-new-test).
 1.  [Build the test](#build-the-test).
 1.  [Start the emulator](#start-the-emulator).
@@ -18,24 +19,19 @@ To create a new end-to-end test, the steps are:
 1.  [Edit the test](#edit-the-test).
 1.  [Update and run the test](#update-and-run-the-test).
 
-## Prerequisites
+## 1. Prerequisites {#prerequisites}
 
 This guide requires that you’re familiar with the following tasks:
 
-*   Configure and build a Fuchsia image to include an end-to-end test.
-*   Start the emulator ([FEMU](/docs/get-started/set_up_femu.md)) with a Fuchsia
-    image.
-*   Run an end-to-end test.
+*   [Configure and build a Fuchsia image](/docs/get-started/build_fuchsia.md).
+*   [Start the emulator (FEMU)](/docs/get-started/set_up_femu.md).
+*   [Run an end-to-end test](/docs/development/testing/run_an_end_to_end_test.md).
 
-To learn about these tasks, see the
-[Run an end-to-end test](/docs/development/testing/run_an_end_to_end_test.md)
-guide.
-
-## Create a new test {#create-a-new-test}
+## 2. Create a new test {#create-a-new-test}
 
 An end-to-end test needs to have the following directory structure and files:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 //src/tests/end_to_end/<your_test_directory>
                        ├── test
                        │   └── <test_source_code_files>
@@ -89,7 +85,7 @@ Do the following:
     directory, for example:
 
     ```posix-terminal
-    vim test/my_new_e2e_test.dart
+    nano test/my_new_e2e_test.dart
     ```
 
 1.  Paste the following code to `my_new_e2e_test.dart`:
@@ -127,7 +123,7 @@ Do the following:
 1.  Use a text editor to create a new `BUILD.gn` file, for example:
 
     ```posix-terminal
-    vim ./BUILD.gn
+    nano ./BUILD.gn
     ```
 
 1.  Paste the following code to `BUILD.gn`:
@@ -172,19 +168,19 @@ Do the following:
     a Dart package. Provide the content of `OWNERS` and `README.md` files later
     when you contribue the test to the Fuchsia project.
 
-## Build the test {#build-the-test}
+## 3. Build the test {#build-the-test}
 
 Before you can run an end-to-end test, you first need to configure and build a
 Fuchsia image to include the test in the build artifacts:
 
-Note: The examples in this guide use the `terminal` product. End-to-end tests work with most
-products except `core`.
+Note: The examples in this guide use the `workstation` product. End-to-end tests work
+with most products except `core`.
 
 1.  Configure your Fuchsia image to include the `my_e2e_test_example` test
     directory and the `test` target group:
 
     ```posix-terminal
-    fx set terminal.x64 --with //src/tests/end_to_end/my_e2e_test_example:test
+    fx set workstation.qemu-x64 --with //src/tests/end_to_end/my_e2e_test_example:test
     ```
 
     `//src/tests/end_to_end/my_e2e_test_example` is the path to your new test
@@ -200,7 +196,7 @@ products except `core`.
     When the `fx build` command completes, your build artifacts now include the
     `my_new_e2e_test` end-to-end test, which you can run from your host machine.
 
-## Start the emulator {#start-the-emulator}
+## 4. Start the emulator {#start-the-emulator}
 
 Start the emulator to run your Fuchsia image:
 
@@ -216,8 +212,13 @@ currently running FEMU or the `fx serve` command.
 1.  In a new terminal, start the emulator:
 
     ```posix-terminal
-    fx emu -N
+    fx vdl start -N -u <PATH_TO_UPSCRIPT>
     ```
+
+    Replace the following:
+
+    * `PATH_TO_UPSCRIPT`: The path to a FEMU network setup script; for example,
+    `~/fuchsia/scripts/start-unsecure-internet.sh`.
 
 1.  Run the `fx set-device` command and select `fuchsia-5254-0063-5e7a` (the
     emulator’s default device name) to be your device, for example:
@@ -231,13 +232,7 @@ currently running FEMU or the `fx serve` command.
     New default device: fuchsia-5254-0063-5e7a
     </pre>
 
-1.  In another terminal, start a package server:
-
-    ```posix-terminal
-    fx serve
-    ```
-
-## Run the test {#run-the-test}
+## 5. Run the test {#run-the-test}
 
 In a new terminal, run the `my_new_e2e_test` end-to-end test:
 
@@ -247,7 +242,7 @@ fx test --e2e my_new_e2e_test
 
 This test prints the following output:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 ...
 
 00:00 +0: my_new_e2e_test tests hello world
@@ -259,23 +254,23 @@ Printed "Hello world!" in the device's log.
 ...
 ```
 
-To scan the device’s log for the `Hello world!` string, run the `fx log` command
-with the following options:
+To scan the device’s log for the `Hello world!` string,
+run the following command:
 
 ```posix-terminal
 fx log --dump_logs yes --only Hello,world!
 ```
 
-This command only prints the lines that contain `Hello` or`world!` from the
-device’s log, for example:
+This command only prints the lines that contain `Hello` or `world!` from
+the device’s log, for example:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 [00770.760238][105502][105667][sl4f, parse_request] INFO: request id: String(""), name: "logging_facade.LogInfo", args: Object({"message": String("Hello world!")})
 [00770.760356][105502][105504][sl4f, run_fidl_loop] INFO: Received synchronous request: Sender, MethodId { facade: "logging_facade", method: "LogInfo" }, Object({"message": String("Hello world!")})
 [00770.760432][105502][105504][sl4f] INFO: "\"Hello world!\""
 ```
 
-## Edit the test {#edit-the-test}
+## 6. Edit the test {#edit-the-test}
 
 Edit the `my_new_e2e_test.dart` file to implement your test case.
 
@@ -304,7 +299,7 @@ Use the following resources for writing new tests:
     *   [File facade test](/src/tests/end_to_end/sl4f/test/storage_test.dart) -
         Read and write files on the device’s storage.
 
-## Update and run the test {#update-and-run-the-test}
+## 7. Update and run the test {#update-and-run-the-test}
 
 After editing the test’s source code, use the `fx test --e2e` command to run
 the updated version of the test, for example:

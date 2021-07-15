@@ -141,7 +141,7 @@ see [Execute a build](/docs/development/build/fx.md#execute-a-build).
 To launch the Fuchsia emulator (FEMU) on your machine, see
 [Start the Fuchsia emulator](/docs/get-started/set_up_femu.md).
 
-However, if you want to install Fuchsia on a hardware device, see
+However, if you want to run Fuchsia on a hardware device, see
 [Install Fuchsia on a device](/docs/development/hardware/paving.md) instead.
 
 <!-- Reference links -->

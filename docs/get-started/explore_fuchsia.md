@@ -1,7 +1,12 @@
 # Explore Fuchsia {#explore-fuchsia}
 
-Once you have a device or emulator up an running, explore what you can do next
-with Fuchsia.
+Once you have Fuchsia up an running on a device or emulator,
+check out the following resources:
+
+*  [Run ffx commands](#run-ffx-commands).
+*  [Run examples](#run-examples).
+*  [Create Fuchsia components](#create-fuchsia-components).
+*  [Contribute changes](#contribute-changes).
 
 ## Run ffx commands {#run-ffx-commands}
 
@@ -9,7 +14,7 @@ with Fuchsia.
 provides the consistent development experience across all Fuchsia environments
 and host platforms.
 
-See the following example `ffx` commands:
+The following are some of `ffx` command examples:
 
 *   Display the list of devices:
 
@@ -35,30 +40,36 @@ See the following example `ffx` commands:
     ffx target reboot
     ```
 
-## Run some examples {#run-examples}
+## Run examples {#run-examples}
 
-Follow these guides to try out some example components:
+To try out Fuchsia's sample software, check out the guides below:
 
 *   [Run an example component](/docs/development/run/run-examples.md)
 *   [Run a test component](/docs/development/run/run-test-component.md)
+*   [Run an end-to-end test](/docs/development/testing/run_an_end_to_end_test.md)
 
-## Write software for Fuchsia {#write-software}
+## Create Fuchsia components {#create-fuchsia-components}
 
 The basic executable units of software in Fuchsia are
-[components](/docs/concepts/components/v2) that interact with each other using.
-[FIDL protocols](/docs/concepts/fidl/overview.md). Explore the following guides
-to learn more about building component-based software:
+[components](/docs/concepts/components/v2), and these components interact
+with each other using [FIDL](/docs/concepts/fidl/overview.md)
+(Fuchsia Interface Definition Language) protocols.
+
+To learn more about Fuchsia components and FIDL, check out the guides below:
 
 *   [Build components](/docs/development/components/build.md)
-*   [Fuchsia Interface Definition Language](/docs/development/languages/fidl/README.md)
+*   [FIDL overview](/docs/development/languages/fidl/README.md)
 *   [FIDL tutorials](/docs/development/languages/fidl/tutorials/overview.md)
 
 ## Contribute changes {#contribute-changes}
 
-To submit your contribution to Fuchsia, see
-[Contribute changes][contribute-changes].
+When you're ready to contribute to the Fuchsia project,
+see [Contribute changes][contribute-changes].
 
 ## See also
+
+For more information on Fuchsia's development workflows,
+check out the following resources:
 
 *   [fx workflows](/docs/development/build/fx.md)
 *   [Workflow tips and questions](/docs/development/source_code/workflow_tips_and_faq.md)

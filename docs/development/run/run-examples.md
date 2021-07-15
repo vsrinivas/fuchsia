@@ -181,11 +181,11 @@ to the `run` command:
     fx log --only hello-world
     ```
 
-The component prints the following output to the log:
+    The component prints the following output to the log:
 
-```none
-[ffx-laboratory:hello-world] INFO: Hello, World!
-```
+    ```none {:.devsite-disable-click-to-copy}
+    [ffx-laboratory:hello-world] INFO: Hello, World!
+    ```
 
 ### Troubleshooting {#troubleshooting}
 

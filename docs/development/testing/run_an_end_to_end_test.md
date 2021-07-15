@@ -6,7 +6,7 @@ Fuchsia product.
 This guide uses the Fuchsia emulator ([FEMU](/docs/get-started/set_up_femu.md)) to
 emulate a device that runs Fuchsia. As for the end-to-end test, the guide uses
 the
-<code>[screen_is_not_black](/src/tests/end_to_end/screen_is_not_black/)</code>
+[`screen_is_not_black`](/src/tests/end_to_end/screen_is_not_black/)
 end-to-end test.
 
 The `screen_is_not_black_no_basemgr_test` end-to-end test reboots a device under test
@@ -16,21 +16,21 @@ successfully up and running on the device after reboot.
 
 To run this end-to-end test, the steps are:
 
-*   [Build a Fuchsia image to include the end-to-end test](#build-a-fuchsia-image-to-include-the-end-to-end-test).
-*   [Start the emulator with the Fuchsia image](#start-the-emulator-with-the-fuchsia-image).
-*   [Run the end-to-end test](#run-the-end-to-end-test).
+1.  [Prerequisites](#prerequisites).
+1.  [Build a Fuchsia image to include the end-to-end test](#build-a-fuchsia-image-to-include-the-end-to-end-test).
+1.  [Start the emulator with the Fuchsia image](#start-the-emulator-with-the-fuchsia-image).
+1.   [Run the end-to-end test](#run-the-end-to-end-test).
 
-Also, to run any end-to-end test, see the
-[General instructions](#general-instructions) section.
+Also, to run any end-to-end test, see the [Appendices](#appendices) section.
 
-## Prerequisites
+## 1. Prerequisites {#prerequisites}
 
-Verify the following requirements:
+This guide requires that you've completed the following guides:
 
-*   [Set up your Fuchsia development environment](/docs/get-started/get_fuchsia_source.md).
-*   [Set up and start the Fuchsia emulator](/docs/get-started/set_up_femu.md).
+*   [Download the Fuchsia source code](/docs/get-started/get_fuchsia_source.md).
+*   [Start the Fuchsia emulator](/docs/get-started/set_up_femu.md).
 
-## Build a Fuchsia image to include the end-to-end test {#build-a-fuchsia-image-to-include-the-end-to-end-test}
+## 2. Build a Fuchsia image to include the end-to-end test {#build-a-fuchsia-image-to-include-the-end-to-end-test}
 
 Before you can run the `screen_is_not_black_no_basemgr_test` end-to-end test, you first
 need to build your Fuchsia image to include the test in the build artifacts:
@@ -42,7 +42,7 @@ products except `core`.
     `--with` option:
 
     ```posix-terminal
-    fx set workstation.x64 --with //src/tests/end_to_end/screen_is_not_black:no_basemgr_test
+    fx set workstation.qemu-x64 --with //src/tests/end_to_end/screen_is_not_black:no_basemgr_test
     ```
 
     `//src/tests/end_to_end/screen_is_not_black` is a test directory in the
@@ -62,7 +62,7 @@ products except `core`.
     `screen_is_not_black_no_basemgr_test` end-to-end test, which you can run from your host
     machine.
 
-## Start the emulator with the Fuchsia image {#start-the-emulator-with-the-fuchsia-image}
+## 3. Start the emulator with the Fuchsia image {#start-the-emulator-with-the-fuchsia-image}
 
 Start the emulator with your Fuchsia image and run a
 [package repository server](/docs/development/build/fx.md#serve-a-build):
@@ -79,8 +79,13 @@ currently running FEMU or the `fx serve` command.
 1.  In a new terminal, start the emulator:
 
     ```posix-terminal
-    fx emu -N
+    fx vdl start -N -u <PATH_TO_UPSCRIPT>
     ```
+
+    Replace the following:
+
+    * `PATH_TO_UPSCRIPT`: The path to a FEMU network setup script; for example,
+    `~/fuchsia/scripts/start-unsecure-internet.sh`.
 
 1.  Set the emulator to be your device:
 
@@ -101,15 +106,7 @@ currently running FEMU or the `fx serve` command.
     New default device: fuchsia-5254-0063-5e7a
     </pre>
 
-1.  In another new terminal, start a package repository server:
-
-    ```posix-terminal
-    fx serve
-    ```
-
-    Keep the `fx serve` command running as a package server for your device.
-
-## Run the end-to-end test {#run-the-end-to-end-test}
+## 4. Run the end-to-end test {#run-the-end-to-end-test}
 
 Run the `screen_is_not_black_no_basemgr_test` end-to-end test:
 
@@ -120,7 +117,7 @@ fx test --e2e screen_is_not_black_no_basemgr_test
 When the test passes, this command prints output similar to the
 following:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 Saw a screen that is not black; waiting for 0:00:59.924543 now.
 
 ...
@@ -129,7 +126,7 @@ Saw a screen that is not black; waiting for 0:00:59.924543 now.
 01:46 +1: All tests passed!
 ```
 
-## General instructions {#general-instructions}
+## Appendices {#appendices}
 
 ### Run any end-to-end test {#run-any-end-to-end-test}
 
@@ -155,7 +152,7 @@ with all the end-to-end tests in the
 <code>[//src/tests/end_to_end/perf](/src/tests/end_to_end/perf/)</code> test
 directory:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 $ fx set workstation.qemu-x64 --with //src/tests/end_to_end/perf:test
 $ fx build
 ```
@@ -175,7 +172,7 @@ the Fuchsia repository's <code>[//products][products-dir]</code> directory.
 The following example shows the product configurations files in the
 `//products` directory:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 ~/fuchsia/products$ ls *.gni
 bringup.gni  core.gni  terminal.gni  workstation.gni
 ```
@@ -191,7 +188,7 @@ Among these product configurations, <code>[terminal][terminal-gni]</code> and
 default. The following example shows the end-to-end tests included
 in `terminal.gni`:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 cache_package_labels += [
   ...
   "//src/tests/end_to_end/bundles:end_to_end_deps",

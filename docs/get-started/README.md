@@ -3,7 +3,7 @@
 Welcome to Fuchsia!
 
 This get-started section provides instructions on how to download the
-Fuchsia source code, build a Fuchsia system image, and start Fuchsia on
+Fuchsia source code, build a Fuchsia system image, and run Fuchsia on
 an emulator.
 
 Note: If you want to run Fuchsia on a hardware device, see
@@ -21,19 +21,20 @@ The steps are:
 
 ### Learn more about Fuchsia
 
-If you want to further explore Fuchsia, check out the following resources first:
+If you want to further explore Fuchsia, check out the following resources:
 
-*   [Build and pave quickstart][build-and-pave]
-*   [Run an example Fuchsia component][run-example]
-*   [Fuchsia workflow tips and questions][fuchsia-faq]
-*   [Configure editors][configure-editors]
-*   [Contribute to Fuchsia source code][contribute-changes]
+*   [Fuchsia's software model][software-model]
+*   [Components][components]
+*   [Fuchsia packages][fuchsia-packages]
+*   [Contribute changes][contribute-changes]
 *   [Find a starter project][find-a-starter-project]
 
 ### Get started with Zircon
 
-The Fuchsia source code includes [Zircon][zircon], the core platform that
-underpins Fuchsia. To work on Zircon, see
+The Fuchsia project includes [Zircon][zircon], the core (kernel) platform
+that powers Fuchsia.
+
+If you're interested in working on Zircon, see
 [Getting started with Zircon][get-started-with-zircon].
 
 <!-- Refernce links -->
@@ -43,10 +44,9 @@ underpins Fuchsia. To work on Zircon, see
 [build-fuchsia]: /docs/get-started/build_fuchsia.md
 [start-the-fuchsia-emulator]: /docs/get-started/set_up_femu.md
 [explore-fuchsia]: /docs/get-started/explore_fuchsia.md
-[build-and-pave]: /docs/development/build/build_and_pave_quickstart.md
-[run-example]: /docs/development/run/run-examples.md
-[fuchsia-faq]: /docs/development/source_code/workflow_tips_and_faq.md
-[configure-editors]: /docs/development/editors/
+[software-model]: /docs/concepts/software_model.md
+[components]: /docs/concepts/components/v2/
+[fuchsia-packages]: /docs/concepts/packages/package.md
 [contribute-changes]: /docs/development/source_code/contribute_changes.md
 [find-a-starter-project]: /docs/contribute/open_projects/
 [zircon]: /docs/concepts/kernel/README.md
