@@ -47,7 +47,7 @@ package both components together.
 Components are instantiated in a few ways, all of which somehow specify their
 [URL][glossary.component-url]. Typically components are launched by specifying
 their package names and path to their component manifest in the package, using
-the [`fuchsia-pkg://` scheme][glossary.fuchsia-pkg-url].
+the [<code>fuchsia-pkg://</code> scheme][glossary.fuchsia-pkg-url].
 
 ## Component manifests {#component-manifests}
 

@@ -28,7 +28,7 @@ Help text glossary macros
 {% macro glossary_simple (input, title, notclickable) -%}
   {% set match=false %}
   {% for item in glossary %}
-    {% if item.term|lower ==  input|replace('-', ' ')|lower and item.short_description != '' %}
+    {% if item.term|replace('-', ' ')|lower ==  input|replace('-', ' ')|lower and item.short_description != '' %}
       {% if title is defined %}
         {% if notclickable|lower == "notclickable" %}
           <abbr data-title="{{ item.term }}: {{ item.short_description|striptags }}">{{ title }}</abbr>
