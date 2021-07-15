@@ -198,16 +198,27 @@ void TestGetValidClock(const Fixture& fixture) {
 
 TEST_F(NoUtcClockTestCase, GetTime) {
   // With no clock at all, we expect attempts to read time to fail.
-  struct timespec clock_gettime_ts;
-  struct timeval gettimeofday_tv;
+  // The failing calls shouldn't modify their out parameters.
+  struct timespec clock_gettime_ts = {0xdeadbeef, 0xdeadbeef};
+  struct timeval gettimeofday_tv = {0xdeadbeef, 0xdeadbeef};
+  time_t time_tt = 0xdeadbeef;
 
   errno = 0;
-  ASSERT_EQ(-1, clock_gettime(CLOCK_REALTIME, &clock_gettime_ts));
-  ASSERT_EQ(ENOTSUP, errno);
+  EXPECT_EQ(-1, clock_gettime(CLOCK_REALTIME, &clock_gettime_ts));
+  EXPECT_EQ(0xdeadbeef, clock_gettime_ts.tv_sec);
+  EXPECT_EQ(0xdeadbeef, clock_gettime_ts.tv_nsec);
+  EXPECT_EQ(ENOTSUP, errno);
 
   errno = 0;
-  ASSERT_EQ(-1, gettimeofday(&gettimeofday_tv, nullptr));
-  ASSERT_EQ(ENOTSUP, errno);
+  EXPECT_EQ(-1, gettimeofday(&gettimeofday_tv, nullptr));
+  EXPECT_EQ(0xdeadbeef, gettimeofday_tv.tv_sec);
+  EXPECT_EQ(0xdeadbeef, gettimeofday_tv.tv_usec);
+  EXPECT_EQ(ENOTSUP, errno);
+
+  errno = 0;
+  EXPECT_EQ(-1, time(&time_tt));
+  EXPECT_EQ(0xdeadbeef, time_tt);
+  EXPECT_EQ(ENOTSUP, errno);
 }
 
 TEST_F(ReadOnlyUtcClockTestCase, GetTime) { ASSERT_NO_FAILURES(TestGetValidClock(*this)); }
