@@ -4,16 +4,14 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_packaging") {
+ffx_plugin("ffx_packaging_download") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
-  plugin_deps = [
-    "build:ffx_packaging_build",
-    "download:ffx_packaging_download",
-    "export:ffx_packaging_export",
-    "import:ffx_packaging_import",
-  ]
+  deps = [ "//src/developer/ffx/lib/pkg:pkg" ]
 
-  sources = [ "src/args.rs" ]
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
 }

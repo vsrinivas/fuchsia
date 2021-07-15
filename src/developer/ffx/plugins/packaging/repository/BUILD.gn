@@ -1,0 +1,28 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("ffx_packaging_repository") {
+  name = "ffx_packaging_repository"
+  edition = "2018"
+  with_unit_tests = true
+  deps = [
+    "//src/developer/ffx/lib/pkg:pkg",
+    "//src/lib/fuchsia-async",
+    "//src/sys/pkg/lib/fuchsia-merkle",
+    "//src/sys/pkg/lib/tuf",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:ring",
+  ]
+
+  sources = [
+    "src/constants.rs",
+    "src/lib.rs",
+    "src/repository.rs",
+    "src/tuf_repo.rs",
+  ]
+}

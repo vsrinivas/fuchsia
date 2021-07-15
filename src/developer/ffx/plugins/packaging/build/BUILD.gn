@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_packaging_build") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+  deps = [
+    "//src/developer/ffx/plugins/packaging/repository:ffx_packaging_repository",
+    "//src/lib/fuchsia-async",
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
+}

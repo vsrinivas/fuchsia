@@ -99,10 +99,12 @@ impl TufRepo {
     fn private_key(&mut self, role: Role) -> &dyn PrivateKey {
         let Self { ref mut keys, ref keys_dir, .. } = self;
         &**keys[role as usize].get_or_insert_with(|| {
-            Box::new(Ed25519PrivateKey::from_pkcs8(
-                &fs::read(keys_dir.join(role.key_filename())).unwrap(),
+            Box::new(
+                Ed25519PrivateKey::from_pkcs8(
+                    &fs::read(keys_dir.join(role.key_filename())).unwrap(),
+                )
+                .unwrap(),
             )
-            .unwrap())
         })
     }
 
