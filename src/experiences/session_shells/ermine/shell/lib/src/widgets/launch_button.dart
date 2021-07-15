@@ -23,6 +23,7 @@ class LaunchButton extends StatelessWidget {
           shape: CircleBorder(),
         ),
         child: IconButton(
+          autofocus: !appState.sideBarVisible.value,
           iconSize: 32,
           onPressed: appState.showOverlay,
           padding: EdgeInsets.all(12),

@@ -18,29 +18,31 @@ class Overlays extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
-      return Stack(
-        children: [
-          // Scrim layer.
-          Scrim(state),
+      return FocusScope(
+        child: Stack(
+          children: [
+            // Scrim layer.
+            Scrim(state),
 
-          // App Bar.
-          if (state.appBarVisible.value)
-            Positioned(
-              top: 0,
-              bottom: 0,
-              left: 0,
-              child: AppBar(state),
-            ),
+            // App Bar.
+            if (state.appBarVisible.value)
+              Positioned(
+                top: 0,
+                bottom: 0,
+                left: 0,
+                child: AppBar(state),
+              ),
 
-          // Side Bar.
-          if (state.sideBarVisible.value)
-            Positioned(
-              top: 0,
-              bottom: 0,
-              right: 0,
-              child: SideBar(state),
-            ),
-        ],
+            // Side Bar.
+            if (state.sideBarVisible.value)
+              Positioned(
+                top: 0,
+                bottom: 0,
+                right: 0,
+                child: SideBar(state),
+              ),
+          ],
+        ),
       );
     });
   }
