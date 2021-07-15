@@ -24,7 +24,7 @@ use {
 };
 
 /// The name of the subcommand and the logs-tag.
-pub const PROGRAM_NAME: &str = "diagnostics-persistence";
+pub const PROGRAM_NAME: &str = "persistence";
 pub const PERSIST_NODE_NAME: &str = "persist";
 
 /// Command line args
