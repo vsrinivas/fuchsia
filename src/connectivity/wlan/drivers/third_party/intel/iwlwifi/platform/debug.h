@@ -9,6 +9,7 @@
 
 #include <lib/ddk/debug.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <zircon/assert.h>
 
 #if defined(__cplusplus)
@@ -25,14 +26,29 @@ extern "C" {
 
 #define iwl_assert_lock_held(x) ZX_DEBUG_ASSERT(mtx_trylock(x) == thrd_busy)
 
-// Print a message to the kernel, of different severities.
-#define __iwl_err(dev, rfkill_prefix, only_trace, fmt, ...) \
-  zxlogf(ERROR, "iwlwifi: " fmt, ##__VA_ARGS__)
-#define __iwl_warn(dev, fmt, args...) zxlogf(WARNING, "iwlwifi: " fmt, ##args)
-#define __iwl_info(dev, fmt, args...) zxlogf(INFO, "iwlwifi: " fmt, ##args)
-#define __iwl_crit(dev, fmt, args...) zxlogf(ERROR, "iwlwifi: " fmt, ##args)
+// Print a message to the kernel, of different severities. Removes the trailing newline that is
+// unnecessary for zxlogf() and creates blank lines in the logs. It's a bit ugly, but it allows
+// us to reduce the diffs between our code and the original driver code. If that is no longer a
+// concern at some point in the future, we can remove the newlines in the format strings and
+// this extra step. This potential future improvement is tracked by fxbug.dev/80797.
+#define IWL_ZXLOGF(level, fmt, args...)    \
+  do {                                     \
+    char* buf;                             \
+    size_t buf_len;                        \
+    buf_len = asprintf(&buf, fmt, ##args); \
+    ZX_ASSERT(buf_len > 0 && buf);         \
+    if (buf[buf_len - 1] == '\n') {        \
+      buf[buf_len - 1] = '\0';             \
+    }                                      \
+    zxlogf(level, "%s", buf);              \
+    free(buf);                             \
+  } while (0)
+#define __iwl_err(dev, rfkill_prefix, only_trace, fmt, args...) IWL_ZXLOGF(ERROR, fmt, ##args)
+#define __iwl_warn(dev, fmt, args...) IWL_ZXLOGF(WARNING, fmt, ##args)
+#define __iwl_info(dev, fmt, args...) IWL_ZXLOGF(INFO, fmt, ##args)
+#define __iwl_crit(dev, fmt, args...) IWL_ZXLOGF(ERROR, fmt, ##args)
 #define __iwl_dbg(dev, level, limit, function, fmt, args...) \
-  zxlogf(TRACE, "iwlwifi (%s): " fmt, function, ##args)
+  IWL_ZXLOGF(TRACE, "(%s): " fmt, function, ##args)
 
 // Hex dump function
 //
