@@ -9,6 +9,9 @@
 #include <lib/inspect/cpp/value_list.h>
 #include <lib/zx/vmo.h>
 
+// TODO(78633): Temporarily include legacy header to avoid breaking Flutter runner.
+#include <lib/fit/promise.h>
+
 #include <mutex>
 #include <string>
 
