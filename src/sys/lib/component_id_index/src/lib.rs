@@ -7,7 +7,7 @@
 use {
     anyhow::{anyhow, Context, Result},
     fidl_fuchsia_component_internal as fcomponent_internal,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     serde::{Deserialize, Deserializer, Serialize, Serializer},
     std::collections::HashMap,
     std::convert::TryFrom,

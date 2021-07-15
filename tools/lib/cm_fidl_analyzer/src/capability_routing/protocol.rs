@@ -15,7 +15,7 @@ use {
         CapabilityDecl, CapabilityName, ExposeDecl, ExposeProtocolDecl, ExposeTarget, OfferDecl,
         OfferProtocolDecl, OfferTarget, ProtocolDecl, UseDecl, UseProtocolDecl,
     },
-    moniker::PartialChildMoniker,
+    moniker::{ChildMonikerBase, PartialChildMoniker},
 };
 
 /// A verifier for protocol capability routes.

@@ -402,7 +402,7 @@ pub mod tests {
 pub(crate) mod test_utils {
     use {
         crate::model::component::{ComponentInstance, InstanceState},
-        moniker::ChildMoniker,
+        moniker::{AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
     };
 
     pub async fn is_executing(component: &ComponentInstance) -> bool {

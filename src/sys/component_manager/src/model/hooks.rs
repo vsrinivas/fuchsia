@@ -672,7 +672,8 @@ struct StrongHookEntry {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, ::routing::error::ComponentInstanceError, matches::assert_matches, std::sync::Arc,
+        super::*, ::routing::error::ComponentInstanceError, matches::assert_matches,
+        moniker::AbsoluteMonikerBase, std::sync::Arc,
     };
 
     #[derive(Clone)]

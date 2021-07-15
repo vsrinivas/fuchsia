@@ -3,38 +3,37 @@
 // found in the LICENSE file.
 
 use {
-    crate::{child_moniker::validate_moniker_part, error::MonikerError},
+    crate::{child_moniker::ChildMonikerBase, error::MonikerError},
+    cm_types::Name,
     core::cmp::{Ord, Ordering},
-    std::fmt,
+    std::{fmt, str::FromStr},
 };
+
+/// Validates that the given string is valid as the instance or collection name in a moniker.
+// TODO(fxbug.dev/77563): The moniker types should be updated to use Name directly instead of String
+// so that it is clear what is validated and what isn't.
+pub fn validate_moniker_part(name: Option<&str>) -> Result<(), MonikerError> {
+    // Reuse the validation in cm_types::Name for consistency.
+    name.map(|n| Name::from_str(n).map_err(|_| MonikerError::invalid_moniker_part(n)))
+        .transpose()?;
+    Ok(())
+}
 
 /// A variant of child moniker that does not distinguish between instances
 ///
 /// Display notation: "name[:collection]".
-#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+#[derive(Eq, PartialEq, Debug, Clone, Hash, Default)]
 pub struct PartialChildMoniker {
     pub name: String,
     pub collection: Option<String>,
     rep: String,
 }
 
-impl PartialChildMoniker {
-    // TODO(fxbug.dev/77563): This does not currently validate the String inputs.
-    pub fn new(name: String, collection: Option<String>) -> Self {
-        assert!(!name.is_empty());
-        let rep = if let Some(c) = collection.as_ref() {
-            assert!(!c.is_empty());
-            format!("{}:{}", c, name)
-        } else {
-            name.clone()
-        };
-        PartialChildMoniker { name, collection, rep }
-    }
-
+impl ChildMonikerBase for PartialChildMoniker {
     /// Parses a `PartialChildMoniker` from a string.
     ///
     /// Input strings should be of the format `<name>(:<collection>)?`, e.g. `foo` or `biz:foo`.
-    pub fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError> {
+    fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError> {
         let rep = rep.as_ref();
         let mut parts = rep.split(":").fuse();
         let invalid = || MonikerError::invalid_moniker(rep);
@@ -53,16 +52,34 @@ impl PartialChildMoniker {
         Ok(PartialChildMoniker::new(name.to_string(), coll))
     }
 
-    pub fn name(&self) -> &str {
+    fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn collection(&self) -> Option<&str> {
+    fn collection(&self) -> Option<&str> {
         self.collection.as_ref().map(|s| &**s)
     }
 
-    pub fn as_str(&self) -> &str {
+    fn as_str(&self) -> &str {
         &self.rep
+    }
+
+    fn to_partial(&self) -> PartialChildMoniker {
+        PartialChildMoniker::new(self.name.clone(), self.collection.clone())
+    }
+}
+
+impl PartialChildMoniker {
+    // TODO(fxbug.dev/77563): This does not currently validate the String inputs.
+    pub fn new(name: String, collection: Option<String>) -> Self {
+        assert!(!name.is_empty());
+        let rep = if let Some(c) = collection.as_ref() {
+            assert!(!c.is_empty());
+            format!("{}:{}", c, name)
+        } else {
+            name.clone()
+        };
+        PartialChildMoniker { name, collection, rep }
     }
 }
 

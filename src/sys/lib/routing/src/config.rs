@@ -12,7 +12,7 @@ use {
         CapabilityPolicyAllowlists, DebugRegistrationPolicyAllowlists, OutDirContents,
     },
     fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMoniker, ExtendedMoniker, MonikerError},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, MonikerError},
     std::{
         collections::{HashMap, HashSet},
         convert::TryFrom,

@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{abs_moniker::AbsoluteMoniker, error::MonikerError},
+    crate::{
+        abs_moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+        error::MonikerError,
+    },
     core::cmp::Ord,
     std::fmt,
 };

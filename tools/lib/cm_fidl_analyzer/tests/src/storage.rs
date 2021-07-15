@@ -12,7 +12,7 @@ mod tests {
         cm_rust_testing::{ComponentDeclBuilder, DirectoryDeclBuilder},
         component_id_index::gen_instance_id,
         fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
-        moniker::{AbsoluteMoniker, RelativeMoniker},
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
         routing::rights::{READ_RIGHTS, WRITE_RIGHTS},
         routing_test_helpers::{
             component_id_index::make_index_file, storage::CommonStorageTest, CheckUse,

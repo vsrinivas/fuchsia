@@ -7,7 +7,7 @@ use {
     errors::ffx_bail,
     fidl::endpoints::{Proxy, ServiceMarker},
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    moniker::RelativeMoniker,
+    moniker::{ChildMonikerBase, RelativeMoniker, RelativeMonikerBase},
     std::path::PathBuf,
 };
 

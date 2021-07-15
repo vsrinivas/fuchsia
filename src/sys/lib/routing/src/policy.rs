@@ -12,7 +12,10 @@ use {
     },
     fuchsia_zircon_status as zx,
     log::{error, warn},
-    moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, RelativeMoniker},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, ExtendedMoniker,
+        RelativeMoniker, RelativeMonikerBase,
+    },
     std::sync::{Arc, Weak},
     thiserror::Error,
 };

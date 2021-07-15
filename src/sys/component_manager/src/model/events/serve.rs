@@ -24,7 +24,9 @@ use {
         TryStreamExt,
     },
     log::{debug, error, info, warn},
-    moniker::{AbsoluteMoniker, ExtendedMoniker, RelativeMoniker},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, RelativeMoniker, RelativeMonikerBase,
+    },
     std::sync::Arc,
 };
 
@@ -310,7 +312,7 @@ async fn create_event_fidl_object(
             RelativeMoniker::from_absolute(&AbsoluteMoniker::root(), &target).to_string()
         }
         (ExtendedMoniker::ComponentInstance(target), ExtendedMoniker::ComponentInstance(scope)) => {
-            RelativeMoniker::from_absolute(&scope, &target).to_string()
+            RelativeMoniker::from_absolute::<AbsoluteMoniker>(&scope, &target).to_string()
         }
     };
     let header = Some(fsys::EventHeader {

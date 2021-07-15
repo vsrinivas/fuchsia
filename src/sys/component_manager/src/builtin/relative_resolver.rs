@@ -129,6 +129,7 @@ mod tests {
         async_trait::async_trait,
         fidl_fuchsia_sys2 as fsys,
         matches::assert_matches,
+        moniker::AbsoluteMonikerBase,
         std::sync::Arc,
         std::sync::Weak,
     };

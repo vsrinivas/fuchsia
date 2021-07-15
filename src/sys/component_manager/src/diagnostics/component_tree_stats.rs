@@ -25,7 +25,7 @@ use {
     fuchsia_zircon_sys as zx_sys,
     futures::{channel::oneshot, lock::Mutex, FutureExt},
     log::warn,
-    moniker::{AbsoluteMoniker, ExtendedMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
         collections::BTreeMap,
         sync::{Arc, Weak},

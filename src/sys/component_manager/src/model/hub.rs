@@ -25,7 +25,7 @@ use {
     fidl_fuchsia_sys2::LifecycleControllerMarker,
     fuchsia_async as fasync, fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
     std::{
         collections::HashMap,
         convert::TryFrom,

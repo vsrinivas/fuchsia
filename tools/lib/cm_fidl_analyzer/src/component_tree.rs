@@ -4,7 +4,7 @@
 
 use {
     cm_rust::{ChildDecl, ComponentDecl, EnvironmentDecl},
-    moniker::{AbsoluteMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker},
     routing::environment::{DebugRegistry, EnvironmentExtends, RunnerRegistry},
     serde::{Deserialize, Serialize},
     std::{

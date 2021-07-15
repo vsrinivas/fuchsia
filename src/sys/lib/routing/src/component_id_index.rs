@@ -8,7 +8,7 @@ use {
     component_id_index, fidl,
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_internal as fcomponent_internal,
-    moniker::{AbsoluteMoniker, ChildMoniker, MonikerError},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, MonikerError},
     std::collections::HashMap,
     thiserror::Error,
 };

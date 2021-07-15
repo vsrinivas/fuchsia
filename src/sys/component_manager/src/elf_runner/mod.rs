@@ -608,7 +608,7 @@ mod tests {
         futures::{prelude::*, StreamExt},
         io_util,
         matches::assert_matches,
-        moniker::AbsoluteMoniker,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         runner::component::Controllable,
         scoped_task,
         std::path::Path,

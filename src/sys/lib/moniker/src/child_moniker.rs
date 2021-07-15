@@ -3,27 +3,36 @@
 // found in the LICENSE file.
 
 use {
-    crate::{error::MonikerError, partial_child_moniker::PartialChildMoniker},
-    cm_types::Name,
-    core::cmp::{Ord, Ordering},
-    std::{fmt, str::FromStr},
+    crate::{
+        error::MonikerError,
+        partial_child_moniker::{validate_moniker_part, PartialChildMoniker},
+    },
+    core::{
+        cmp::{Ord, Ordering},
+        fmt::Display,
+    },
+    std::fmt,
 };
-
-/// Validates that the given string is valid as the instance or collection name in a moniker.
-// TODO(fxbug.dev/77563): The moniker types should be updated to use Name directly instead of String
-// so that it is clear what is validated and what isn't.
-pub fn validate_moniker_part(name: Option<&str>) -> Result<(), MonikerError> {
-    // Reuse the validation in cm_types::Name for consistency.
-    name.map(|n| Name::from_str(n).map_err(|_| MonikerError::invalid_moniker_part(n)))
-        .transpose()?;
-    Ok(())
-}
 
 /// A child moniker locally identifies a child component instance using the name assigned by
 /// its parent and its collection (if present). It is a building block for more complex monikers.
 ///
 /// Display notation: "[collection:]name:instance_id".
-#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+pub trait ChildMonikerBase: Eq + PartialOrd + Clone + Default + Display {
+    fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError>
+    where
+        Self: Sized;
+
+    fn name(&self) -> &str;
+
+    fn collection(&self) -> Option<&str>;
+
+    fn as_str(&self) -> &str;
+
+    fn to_partial(&self) -> PartialChildMoniker;
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Hash, Default)]
 pub struct ChildMoniker {
     name: String,
     collection: Option<String>,
@@ -33,24 +42,12 @@ pub struct ChildMoniker {
 
 pub type InstanceId = u32;
 
-impl ChildMoniker {
-    // TODO(fxbug.dev/77563): This does not currently validate the String inputs.
-    pub fn new(name: String, collection: Option<String>, instance: InstanceId) -> Self {
-        assert!(!name.is_empty());
-        let rep = if let Some(c) = collection.as_ref() {
-            assert!(!c.is_empty());
-            format!("{}:{}:{}", c, name, instance)
-        } else {
-            format!("{}:{}", name, instance)
-        };
-        Self { name, collection, instance, rep }
-    }
-
+impl ChildMonikerBase for ChildMoniker {
     /// Parses an `ChildMoniker` from a string.
     ///
     /// Input strings should be of the format `<name>(:<collection>)?:<instance_id>`, e.g. `foo:42`
     /// or `biz:foo:42`.
-    pub fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError> {
+    fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError> {
         let rep = rep.as_ref();
         let parts: Vec<_> = rep.split(":").collect();
         let invalid = || MonikerError::invalid_moniker(rep);
@@ -92,9 +89,35 @@ impl ChildMoniker {
         Ok(Self::new(name, coll, instance))
     }
 
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn collection(&self) -> Option<&str> {
+        self.collection.as_ref().map(|s| &**s)
+    }
+
+    fn as_str(&self) -> &str {
+        &self.rep
+    }
+
     /// Converts this instanced moniker to a regular child moniker by stripping the instance id.
-    pub fn to_partial(&self) -> PartialChildMoniker {
+    fn to_partial(&self) -> PartialChildMoniker {
         PartialChildMoniker::new(self.name.clone(), self.collection.clone())
+    }
+}
+
+impl ChildMoniker {
+    // TODO(fxbug.dev/77563): This does not currently validate the String inputs.
+    pub fn new(name: String, collection: Option<String>, instance: InstanceId) -> Self {
+        assert!(!name.is_empty());
+        let rep = if let Some(c) = collection.as_ref() {
+            assert!(!c.is_empty());
+            format!("{}:{}:{}", c, name, instance)
+        } else {
+            format!("{}:{}", name, instance)
+        };
+        Self { name, collection, instance, rep }
     }
 
     /// Converts this child moniker to an instanced moniker.
@@ -102,20 +125,8 @@ impl ChildMoniker {
         Self::new(m.name.clone(), m.collection.clone(), instance)
     }
 
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn collection(&self) -> Option<&str> {
-        self.collection.as_ref().map(|s| &**s)
-    }
-
     pub fn instance(&self) -> InstanceId {
         self.instance
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.rep
     }
 }
 

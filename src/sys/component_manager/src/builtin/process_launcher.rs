@@ -380,7 +380,7 @@ mod tests {
         fuchsia_zircon::HandleBased,
         futures::lock::Mutex,
         matches::assert_matches,
-        moniker::AbsoluteMoniker,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::{mem, sync::Weak},
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,

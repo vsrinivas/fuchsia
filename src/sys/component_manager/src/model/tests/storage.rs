@@ -17,7 +17,7 @@ use {
     cm_rust_testing::*,
     component_id_index::gen_instance_id,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
-    moniker::{AbsoluteMoniker, RelativeMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
     routing::{error::RoutingError, RouteRequest},
     std::{convert::TryInto, path::PathBuf},
 };

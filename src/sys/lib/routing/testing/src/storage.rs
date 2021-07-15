@@ -11,7 +11,9 @@ use {
     cm_rust_testing::{ComponentDeclBuilder, DirectoryDeclBuilder},
     component_id_index::gen_instance_id,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
-    moniker::{AbsoluteMoniker, ExtendedMoniker, RelativeMoniker},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, RelativeMoniker, RelativeMonikerBase,
+    },
     routing::{
         config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
         rights::{READ_RIGHTS, WRITE_RIGHTS},

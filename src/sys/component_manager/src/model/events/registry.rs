@@ -29,7 +29,7 @@ use {
     cm_rust::{CapabilityName, EventMode, UseDecl, UseEventDecl},
     fuchsia_trace as trace,
     futures::lock::Mutex,
-    moniker::{AbsoluteMoniker, ExtendedMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
         collections::HashMap,
         sync::{Arc, Weak},

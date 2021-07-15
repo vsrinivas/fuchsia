@@ -15,7 +15,7 @@ use {
     },
     futures::future::select_all,
     maplit::hashset,
-    moniker::{ChildMoniker, PartialChildMoniker},
+    moniker::{ChildMoniker, ChildMonikerBase, PartialChildMoniker},
     std::collections::{HashMap, HashSet},
     std::fmt,
     std::sync::Arc,

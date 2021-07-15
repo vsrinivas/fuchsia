@@ -73,7 +73,7 @@ mod tests {
         fuchsia_zircon::AsHandleRef,
         fuchsia_zircon_sys as sys,
         futures::lock::Mutex,
-        moniker::AbsoluteMoniker,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::path::PathBuf,
         std::sync::Weak,
     };

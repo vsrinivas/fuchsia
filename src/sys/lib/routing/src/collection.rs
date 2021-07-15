@@ -16,7 +16,7 @@ use {
     cm_rust::{CapabilityName, ExposeDecl, ExposeDeclCommon, OfferDecl, OfferDeclCommon},
     derivative::Derivative,
     from_enum::FromEnum,
-    moniker::PartialChildMoniker,
+    moniker::{ChildMonikerBase, PartialChildMoniker},
     std::sync::Arc,
 };
 

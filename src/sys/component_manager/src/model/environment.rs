@@ -186,7 +186,7 @@ mod tests {
         },
         maplit::hashmap,
         matches::assert_matches,
-        moniker::AbsoluteMoniker,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::{collections::HashMap, sync::Weak},
     };
 

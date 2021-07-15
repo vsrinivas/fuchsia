@@ -293,7 +293,7 @@ mod tests {
         ::routing::component_instance::ComponentInstanceInterface,
         cm_rust::*,
         cm_rust_testing::{ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder},
-        moniker::{AbsoluteMoniker, PartialChildMoniker},
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker},
         std::{
             collections::{HashMap, HashSet},
             convert::TryInto,

@@ -12,7 +12,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys,
     futures::future::{join_all, BoxFuture},
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::sync::{Arc, Weak},
 };
 

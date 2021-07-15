@@ -13,7 +13,7 @@ use {
     },
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
     routing::{
         component_instance::ComponentInstanceInterface,
         config::{AllowlistEntry, CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},

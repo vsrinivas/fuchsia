@@ -138,7 +138,7 @@ mod tests {
         cm_rust_testing::*,
         futures::{lock::Mutex, prelude::*},
         matches::assert_matches,
-        moniker::AbsoluteMoniker,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::sync::Weak,
     };
 

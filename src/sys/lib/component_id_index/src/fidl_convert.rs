@@ -4,7 +4,7 @@
 
 use crate::{AppmgrMoniker, Index, InstanceIdEntry};
 use fidl_fuchsia_component_internal as fcomponent_internal;
-use moniker::{AbsoluteMoniker, MonikerError};
+use moniker::{AbsoluteMoniker, AbsoluteMonikerBase, MonikerError};
 use std::convert::TryFrom;
 use thiserror::Error;
 

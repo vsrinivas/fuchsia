@@ -18,7 +18,7 @@ use {
     },
     derivative::Derivative,
     from_enum::FromEnum,
-    moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, ChildMoniker, ChildMonikerBase, PartialChildMoniker},
     std::{marker::PhantomData, sync::Arc},
 };
 

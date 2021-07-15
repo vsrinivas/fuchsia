@@ -57,7 +57,7 @@ mod tests {
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel,
         futures::lock::Mutex,
-        moniker::AbsoluteMoniker,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::path::PathBuf,
         std::sync::Weak,
     };

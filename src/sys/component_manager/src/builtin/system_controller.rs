@@ -178,7 +178,7 @@ mod tests {
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
-        moniker::AbsoluteMoniker,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::{boxed::Box, convert::TryFrom, sync::Arc, time::Duration},
     };
 

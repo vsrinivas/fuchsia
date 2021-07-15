@@ -176,7 +176,7 @@ mod time_tests {
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
         fuchsia_async::{TestExecutor, Time, WaitState},
         futures::{executor::block_on, future::BoxFuture, lock::Mutex, Future},
-        moniker::AbsoluteMoniker,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::sync::Arc,
     };
 
@@ -782,7 +782,7 @@ mod connect_tests {
         fidl_fuchsia_sys2::WorkSchedulerControlMarker,
         fuchsia_zircon as zx,
         futures::lock::Mutex,
-        moniker::AbsoluteMoniker,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::{
             path::PathBuf,
             sync::{Arc, Weak},

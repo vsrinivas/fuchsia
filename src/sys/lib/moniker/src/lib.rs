@@ -10,10 +10,10 @@ mod partial_child_moniker;
 mod relative_moniker;
 
 pub use self::{
-    abs_moniker::AbsoluteMoniker,
-    child_moniker::{ChildMoniker, InstanceId},
+    abs_moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker},
+    child_moniker::{ChildMoniker, ChildMonikerBase, InstanceId},
     error::MonikerError,
     extended_moniker::ExtendedMoniker,
     partial_child_moniker::PartialChildMoniker,
-    relative_moniker::RelativeMoniker,
+    relative_moniker::{PartialRelativeMoniker, RelativeMoniker, RelativeMonikerBase},
 };

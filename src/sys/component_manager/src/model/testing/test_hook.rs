@@ -18,7 +18,7 @@ use {
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_zircon as zx,
     futures::{executor::block_on, lock::Mutex, prelude::*},
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
     std::{
         cmp::Eq,
         collections::HashMap,

@@ -45,7 +45,7 @@ use {
     log::*,
     maplit::hashmap,
     matches::assert_matches,
-    moniker::{AbsoluteMoniker, ExtendedMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker},
     routing::{error::ComponentInstanceError, route_capability},
     routing_test_helpers::{
         default_service_capability, instantiate_common_routing_tests, RoutingTestModel,

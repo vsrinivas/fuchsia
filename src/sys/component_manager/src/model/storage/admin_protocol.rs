@@ -33,8 +33,8 @@ use {
     futures::TryStreamExt,
     lazy_static::lazy_static,
     log::*,
-    moniker::AbsoluteMoniker,
     moniker::ExtendedMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     routing::component_instance::ComponentInstanceInterface,
     std::{
         convert::TryInto,

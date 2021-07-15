@@ -12,7 +12,7 @@ use {
         environment::Environment,
         error::ModelError,
     },
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::sync::Arc,
 };
 

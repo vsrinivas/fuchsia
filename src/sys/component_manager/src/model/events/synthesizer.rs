@@ -15,7 +15,7 @@ use {
     fuchsia_async as fasync,
     futures::{channel::mpsc, future::join_all, stream, SinkExt, StreamExt},
     log::error,
-    moniker::{AbsoluteMoniker, ExtendedMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
         collections::{HashMap, HashSet},
         sync::{Arc, Weak},

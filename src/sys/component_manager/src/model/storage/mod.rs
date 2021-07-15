@@ -19,7 +19,7 @@ use {
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
-    moniker::{AbsoluteMoniker, RelativeMoniker},
+    moniker::{AbsoluteMoniker, ChildMonikerBase, RelativeMoniker, RelativeMonikerBase},
     routing::component_id_index::ComponentInstanceId,
     std::path::PathBuf,
     thiserror::Error,
@@ -395,6 +395,7 @@ mod tests {
         cm_rust_testing::ComponentDeclBuilder,
         component_id_index, fidl_fuchsia_io2 as fio2,
         matches::assert_matches,
+        moniker::AbsoluteMonikerBase,
         rand::{self, distributions::Alphanumeric, Rng},
         std::{
             convert::{TryFrom, TryInto},

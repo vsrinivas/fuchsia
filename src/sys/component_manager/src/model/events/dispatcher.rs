@@ -238,7 +238,7 @@ mod tests {
         fuchsia_zircon as zx,
         futures::StreamExt,
         matches::assert_matches,
-        moniker::AbsoluteMoniker,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::{
             convert::TryInto,
             sync::{Arc, Weak},

@@ -24,7 +24,10 @@ use {
     },
     fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx,
     maplit::hashmap,
-    moniker::{AbsoluteMoniker, ExtendedMoniker, RelativeMoniker},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker, RelativeMoniker,
+        RelativeMonikerBase,
+    },
     routing::{
         component_id_index::ComponentInstanceId,
         config::{AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource},

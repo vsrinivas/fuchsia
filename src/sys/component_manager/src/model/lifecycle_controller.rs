@@ -6,7 +6,7 @@ use {
     crate::model::{component::BindReason, error::ModelError, model::Model},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
     futures::prelude::*,
-    moniker::{AbsoluteMoniker, RelativeMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker},
     std::{convert::TryFrom, sync::Weak},
 };
 

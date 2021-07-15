@@ -55,7 +55,10 @@ use {
         lock::{MappedMutexGuard, Mutex, MutexGuard},
     },
     log::warn,
-    moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, InstanceId, PartialChildMoniker},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, ExtendedMoniker,
+        InstanceId, PartialChildMoniker,
+    },
     std::iter::Iterator,
     std::{
         boxed::Box,

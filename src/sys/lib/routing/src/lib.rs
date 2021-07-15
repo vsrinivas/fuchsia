@@ -44,7 +44,7 @@ use {
         UseSource, UseStorageDecl,
     },
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMoniker, PartialChildMoniker, RelativeMoniker},
+    moniker::{AbsoluteMoniker, PartialChildMoniker, RelativeMoniker, RelativeMonikerBase},
     std::{
         path::{Path, PathBuf},
         sync::Arc,

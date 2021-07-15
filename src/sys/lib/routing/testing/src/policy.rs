@@ -9,7 +9,7 @@ use {
     },
     fidl_fuchsia_sys2 as fsys,
     matches::assert_matches,
-    moniker::{AbsoluteMoniker, ExtendedMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     routing::{
         capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},
         component_instance::ComponentInstanceInterface,

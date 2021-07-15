@@ -8,7 +8,9 @@ use {
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
-    moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, PartialChildMoniker,
+    },
     routing::{
         capability_source::{
             CapabilitySourceInterface, ComponentCapability, NamespaceCapabilities,

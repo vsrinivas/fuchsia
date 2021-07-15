@@ -16,7 +16,7 @@ use {
         ExposeTarget, OfferDecl, OfferDirectoryDecl, OfferTarget, UseDecl, UseDirectoryDecl,
     },
     fidl_fuchsia_io2::Operations,
-    moniker::PartialChildMoniker,
+    moniker::{ChildMonikerBase, PartialChildMoniker},
 };
 
 /// A verifier for directory capability routes and rights.

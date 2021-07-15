@@ -108,7 +108,7 @@ fn main() -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use moniker::AbsoluteMoniker;
+    use moniker::{AbsoluteMoniker, AbsoluteMonikerBase};
     use pretty_assertions::assert_eq;
     use regex;
     use std::io::Write;

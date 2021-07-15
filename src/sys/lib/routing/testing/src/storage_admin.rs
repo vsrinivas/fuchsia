@@ -7,7 +7,7 @@ use {
     cm_rust::*,
     cm_rust_testing::*,
     fidl_fuchsia_sys2 as fsys,
-    moniker::RelativeMoniker,
+    moniker::{RelativeMoniker, RelativeMonikerBase},
     routing::rights::{READ_RIGHTS, WRITE_RIGHTS},
     std::{
         convert::{TryFrom, TryInto},

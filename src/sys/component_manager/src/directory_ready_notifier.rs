@@ -27,7 +27,7 @@ use {
     futures::stream::StreamExt,
     io_util,
     log::*,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::sync::{Arc, Mutex, Weak},
 };
 

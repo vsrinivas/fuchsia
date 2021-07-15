@@ -27,7 +27,7 @@ use {
     futures::prelude::*,
     lazy_static::lazy_static,
     log::*,
-    moniker::{AbsoluteMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, ChildMonikerBase, PartialChildMoniker},
     std::{
         cmp,
         path::PathBuf,

@@ -34,7 +34,10 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::prelude::*,
-    moniker::{AbsoluteMoniker, PartialChildMoniker, RelativeMoniker},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker,
+        RelativeMoniker,
+    },
     routing::{
         component_id_index::ComponentInstanceId, component_instance::ComponentInstanceInterface,
     },

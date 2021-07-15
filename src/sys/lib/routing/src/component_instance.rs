@@ -11,7 +11,7 @@ use {
     async_trait::async_trait,
     cm_rust::ComponentDecl,
     derivative::Derivative,
-    moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, PartialChildMoniker},
     std::{
         clone::Clone,
         sync::{Arc, Weak},
