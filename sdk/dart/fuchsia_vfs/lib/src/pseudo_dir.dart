@@ -92,7 +92,7 @@ class PseudoDir extends Vnode {
   /// [fushsia.io.Directory] over fidl.
   @override
   int connect(int flags, int mode, fidl.InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRights]) {
+      [int parentFlags = Flags.fsRightsDefault]) {
     if (_isClosed) {
       sendErrorEvent(flags, ZX.ERR_NOT_SUPPORTED, request);
       return ZX.ERR_NOT_SUPPORTED;
@@ -108,11 +108,9 @@ class PseudoDir extends Vnode {
 
     if (Flags.isPosix(connectFlags)) {
       // grant POSIX clients additional rights
-      var parentRights = parentFlags & Flags.fsRights;
+      var parentRights = parentFlags & Flags.fsRightsDefault;
       connectFlags |= parentRights;
       connectFlags &= ~openFlagPosix;
-      // Mounting is not supported
-      connectFlags &= ~openRightAdmin;
     }
 
     var status = _validateFlags(connectFlags);
@@ -155,7 +153,7 @@ class PseudoDir extends Vnode {
   @override
   void open(
       int flags, int mode, String path, fidl.InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRights]) {
+      [int parentFlags = Flags.fsRightsDefault]) {
     if (path.startsWith('/') || path == '') {
       sendErrorEvent(flags, ZX.ERR_BAD_PATH, request);
       return;

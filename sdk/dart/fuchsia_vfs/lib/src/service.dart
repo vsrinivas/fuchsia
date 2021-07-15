@@ -30,7 +30,7 @@ class Service<T> extends Vnode {
 
   @override
   int connect(int flags, int mode, fidl.InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRights]) {
+      [int parentFlags = Flags.fsRightsDefault]) {
     if (_closed) {
       sendErrorEvent(flags, ZX.ERR_NOT_SUPPORTED, request);
       return ZX.ERR_NOT_SUPPORTED;

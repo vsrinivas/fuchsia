@@ -96,7 +96,7 @@ class PseudoFile extends Vnode {
   /// Connects to this instance of [PseudoFile] and serves [fushsia.io.File] over fidl.
   @override
   int connect(int flags, int mode, fidl.InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRights]) {
+      [int parentFlags = Flags.fsRightsDefault]) {
     if (_isClosed) {
       sendErrorEvent(flags, ZX.ERR_NOT_SUPPORTED, request);
       return ZX.ERR_NOT_SUPPORTED;

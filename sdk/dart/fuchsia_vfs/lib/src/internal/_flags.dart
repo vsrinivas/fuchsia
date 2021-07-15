@@ -6,9 +6,14 @@ import 'package:fidl_fuchsia_io/fidl_async.dart';
 
 /// Common utilities for working with flags during open/clone.
 class Flags {
-  /// All known rights.
-  static const int fsRights =
-      openRightReadable | openRightWritable | openRightAdmin;
+  /// All known rights (some rights may be known but unsupported).
+  static const int fsRights = openRightReadable |
+      openRightWritable |
+      openRightExecutable |
+      openRightAdmin;
+
+  /// Default rights.
+  static const int fsRightsDefault = openRightReadable | openRightWritable;
 
   /// All lower 16 bits are reserved for future rights extensions.
   static const int fsRightsSpace = 0x0000FFFF;

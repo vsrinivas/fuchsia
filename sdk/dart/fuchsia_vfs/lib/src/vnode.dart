@@ -27,7 +27,7 @@ abstract class Vnode {
   /// all rights requested on the incoming [request].
   /// This param is used by clone to restrict cloning.
   int connect(int flags, int mode, InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRights]);
+      [int parentFlags = Flags.fsRightsDefault]);
 
   /// Filter flags when [openFlagNodeReference] is passed.
   /// This will maintain compatibility with c++ layer.
@@ -50,7 +50,7 @@ abstract class Vnode {
   /// For directory types, it will throw UnimplementedError error.
   /// For non empty path it will fail with [ERR_NOT_DIR].
   void open(int flags, int mode, String path, InterfaceRequest<Node> request,
-      [int parentFlags = Flags.fsRights]) {
+      [int parentFlags = Flags.fsRightsDefault]) {
     if (type() == direntTypeDirectory) {
       // dir types should implement this function
       throw UnimplementedError();
