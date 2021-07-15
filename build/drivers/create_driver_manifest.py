@@ -31,7 +31,8 @@ def main():
             'driver_url': args.package_url + '#' + entry['destination']
         }
         for entry in distribution_manifest
-        if entry.get('destination', '').startswith('meta/')
+        if entry.get('destination', '').startswith('meta/') and
+        entry.get("destination", '').endswith(".cm")
     ]
 
     json_manifest = json.dumps(manifest)

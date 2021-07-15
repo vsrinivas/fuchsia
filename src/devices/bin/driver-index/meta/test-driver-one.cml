@@ -1,0 +1,7 @@
+{
+    program: {
+        runner: "driver",
+        program: "driver/fake-driver.so",
+        bind: "meta/bind/test-bind.bindbc",
+    },
+}

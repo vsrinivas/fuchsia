@@ -95,14 +95,16 @@ impl ResolvedDriver {
             ),
             fio::OPEN_RIGHT_READABLE,
         )?;
-        let component: fsys::ComponentDecl = io_util::read_file_fidl(&component).await?;
+        let component: fsys::ComponentDecl =
+            io_util::read_file_fidl(&component).await.context("Failed to read component")?;
         let component = component.fidl_into_native();
 
         let bind_path = get_rules_string_value(&component, "bind")
             .ok_or(anyhow::anyhow!("Missing bind path"))?;
         let bind =
-            io_util::open_file(&dir, std::path::Path::new(&bind_path), fio::OPEN_RIGHT_READABLE)?;
-        let bind = io_util::read_file_bytes(&bind).await?;
+            io_util::open_file(&dir, std::path::Path::new(&bind_path), fio::OPEN_RIGHT_READABLE)
+                .context("Failed to open bind")?;
+        let bind = io_util::read_file_bytes(&bind).await.context("Failed to read bind")?;
         let bind = DecodedBindRules::new(bind)?;
 
         // TODO(fxb/78950): Replace "program" with "rules".
@@ -245,7 +247,7 @@ async fn load_base_drivers(
         fio::OPEN_RIGHT_READABLE,
     )?;
 
-    let data: String = io_util::read_file(&data).await?;
+    let data: String = io_util::read_file(&data).await.context("Failed to read base manifest")?;
     let drivers: Vec<JsonDriver> = serde_json::from_str(&data)?;
     let mut resolved_drivers = std::vec::Vec::new();
     for driver in drivers {
@@ -351,6 +353,7 @@ mod tests {
     // The test reads that json file to determine which bind rules to read and index.
     #[fasync::run_singlethreaded(test)]
     async fn read_from_json() {
+        fuchsia_syslog::init().unwrap();
         let (resolver, resolver_stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
                 .unwrap();
@@ -390,7 +393,8 @@ mod tests {
                 result.url.unwrap(),
             );
             assert_eq!(
-                "fuchsia-pkg://fuchsia.com/driver-index-unittests#driver/not-real.so".to_string(),
+                "fuchsia-pkg://fuchsia.com/driver-index-unittests#driver/fake-driver.so"
+                    .to_string(),
                 result.driver_url.unwrap(),
             );
 
@@ -409,7 +413,8 @@ mod tests {
                 result.url.unwrap(),
             );
             assert_eq!(
-                "fuchsia-pkg://fuchsia.com/driver-index-unittests#driver/not-real2.so".to_string(),
+                "fuchsia-pkg://fuchsia.com/driver-index-unittests#driver/fake-driver2.so"
+                    .to_string(),
                 result.driver_url.unwrap(),
             );
 

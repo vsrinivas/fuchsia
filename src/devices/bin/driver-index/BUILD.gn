@@ -81,9 +81,8 @@ driver_bind_rules("test-bind") {
   rules = "test.bind"
 }
 
-fuchsia_driver_component("test-bind-component") {
-  bind_path = "meta/bind/test-bind.bindbc"
-  driver_path = "driver/not-real.so"
+fuchsia_component("test-bind-component") {
+  manifest = "meta/test-driver-one.cml"
   deps = [ ":test-bind" ]
 }
 
@@ -91,9 +90,8 @@ driver_bind_rules("test-bind2") {
   rules = "test2.bind"
 }
 
-fuchsia_driver_component("test-bind2-component") {
-  bind_path = "meta/bind/test-bind2.bindbc"
-  driver_path = "driver/not-real2.so"
+fuchsia_component("test-bind2-component") {
+  manifest = "meta/test-driver-two.cml"
   deps = [ ":test-bind2" ]
 }
 

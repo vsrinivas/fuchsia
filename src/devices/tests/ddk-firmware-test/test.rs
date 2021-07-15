@@ -221,7 +221,9 @@ async fn load_package_firmware_test() -> Result<(), Error> {
             },
             "my-package" => vfs::pseudo_directory! {
                 "0" => vfs::pseudo_directory! {
-                    "driver" => driver_dir,
+                    "driver" => vfs::pseudo_directory! {
+                        "test" => driver_dir,
+                    },
                     "meta" => meta_dir,
                     "bind" => bind_dir,
                         "lib" => vfs::pseudo_directory! {
