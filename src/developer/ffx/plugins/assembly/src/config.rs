@@ -201,6 +201,9 @@ pub struct BlobFSConfig {
     /// space. This is usually to ensure that OTAs are possible.
     #[serde(default = "default_true")]
     pub include_update_package: bool,
+
+    #[serde(default = "default_true")]
+    pub compress: bool,
 }
 
 fn default_blob_layout() -> String {
@@ -414,6 +417,10 @@ mod tests {
                     }
                   }
                 ]
+              },
+              "blobfs": {
+                "layout": "padded",
+                "compress": true
               },
               "recovery": {
                 "name": "recovery",

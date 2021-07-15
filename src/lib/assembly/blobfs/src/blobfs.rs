@@ -15,7 +15,8 @@ use std::path::Path;
 /// Example usage:
 ///
 /// ```
-/// let builder = BlobFSBuilder::new();
+/// let builder = BlobFSBuilder::new("padded");
+/// builder.set_compressed(false);
 /// builder.add_package("path/to/package_manifest.json")?;
 /// builder.add_file("path/to/file.txt")?;
 /// builder.build(gendir, "blob.blk")?;
@@ -23,13 +24,23 @@ use std::path::Path;
 ///
 pub struct BlobFSBuilder {
     layout: String,
+    compress: bool,
     manifest: BlobManifest,
 }
 
 impl BlobFSBuilder {
     /// Construct a new BlobFSBuilder.
     pub fn new(layout: impl AsRef<str>) -> Self {
-        BlobFSBuilder { layout: layout.as_ref().to_string(), manifest: BlobManifest::default() }
+        BlobFSBuilder {
+            layout: layout.as_ref().to_string(),
+            compress: false,
+            manifest: BlobManifest::default(),
+        }
+    }
+
+    /// Set whether the blobs should be compressed inside BlobFS.
+    pub fn set_compressed(&mut self, compress: bool) {
+        self.compress = compress;
     }
 
     /// Add a package to blobfs by inserting every blob mentioned in the
@@ -62,15 +73,24 @@ impl BlobFSBuilder {
 
         // Build the arguments vector.
         let blobs_json_path = gendir.as_ref().join("blobs.json");
-        let blobfs_args =
-            build_blobfs_args(self.layout.clone(), &blob_manifest_path, blobs_json_path, output)?;
+        let blobfs_args = build_blobfs_args(
+            self.layout.clone(),
+            self.compress,
+            &blob_manifest_path,
+            blobs_json_path,
+            output,
+        )?;
 
         // Run the blobfs tool.
         // TODO(fxbug.dev/76378): Take the tool location from a config.
         let output = std::process::Command::new("host_x64/blobfs").args(&blobfs_args).output();
         let output = output.context("Failed to run the blobfs tool")?;
         if !output.status.success() {
-            anyhow::bail!(format!("Failed to generate blobfs with output: {:?}", output));
+            anyhow::bail!(format!(
+                "Failed to generate blobfs with status: {}\n{}",
+                output.status,
+                String::from_utf8_lossy(output.stderr.as_slice())
+            ));
         }
         Ok(())
     }
@@ -79,21 +99,24 @@ impl BlobFSBuilder {
 /// Build the list of arguments to pass to the blobfs tool.
 fn build_blobfs_args(
     blob_layout: String,
+    compress: bool,
     blob_manifest_path: impl AsRef<Path>,
     blobs_json_path: impl AsRef<Path>,
     output_path: impl AsRef<Path>,
 ) -> Result<Vec<String>> {
-    Ok(vec![
-        "--json-output".to_string(),
-        blobs_json_path.as_ref().path_to_string()?,
-        "--compress".to_string(),
+    let mut args = vec!["--json-output".to_string(), blobs_json_path.as_ref().path_to_string()?];
+    if compress {
+        args.push("--compress".to_string());
+    }
+    args.extend([
         output_path.as_ref().path_to_string()?,
         "create".to_string(),
         "--manifest".to_string(),
         blob_manifest_path.as_ref().path_to_string()?,
         "--blob_layout_format".to_string(),
         blob_layout,
-    ])
+    ]);
+    Ok(args)
 }
 
 #[cfg(test)]
@@ -104,15 +127,45 @@ mod tests {
 
     #[test]
     fn blobfs_args() {
-        let args =
-            build_blobfs_args("compact".to_string(), "blob.manifest", "blobs.json", "blob.blk")
-                .unwrap();
+        let args = build_blobfs_args(
+            "compact".to_string(),
+            true,
+            "blob.manifest",
+            "blobs.json",
+            "blob.blk",
+        )
+        .unwrap();
         assert_eq!(
             args,
             vec![
                 "--json-output",
                 "blobs.json",
                 "--compress",
+                "blob.blk",
+                "create",
+                "--manifest",
+                "blob.manifest",
+                "--blob_layout_format",
+                "compact",
+            ]
+        );
+    }
+
+    #[test]
+    fn blobfs_args_no_compress() {
+        let args = build_blobfs_args(
+            "compact".to_string(),
+            false,
+            "blob.manifest",
+            "blobs.json",
+            "blob.blk",
+        )
+        .unwrap();
+        assert_eq!(
+            args,
+            vec![
+                "--json-output",
+                "blobs.json",
                 "blob.blk",
                 "create",
                 "--manifest",
@@ -137,6 +190,7 @@ mod tests {
         // Build blobfs.
         let output = NamedTempFile::new().unwrap();
         let mut builder = BlobFSBuilder::new("compact");
+        builder.set_compressed(true);
         builder.add_file(&filepath).unwrap();
         builder.build(&gendir.path(), &output.path()).unwrap();
 

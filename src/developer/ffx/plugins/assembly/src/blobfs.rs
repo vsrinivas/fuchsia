@@ -19,6 +19,7 @@ pub fn construct_blobfs(
     update_package: Option<&UpdatePackage>,
 ) -> Result<PathBuf> {
     let mut blobfs_builder = BlobFSBuilder::new(&blobfs_config.layout);
+    blobfs_builder.set_compressed(blobfs_config.compress);
 
     // Add the base and cache packages.
     for package_manifest_path in &product.base_packages {
@@ -62,8 +63,11 @@ mod tests {
     fn construct() {
         let dir = tempdir().unwrap();
         let product_config = ProductConfig::default();
-        let blobfs_config =
-            BlobFSConfig { layout: "padded".to_string(), include_update_package: true };
+        let blobfs_config = BlobFSConfig {
+            layout: "padded".to_string(),
+            include_update_package: true,
+            compress: true,
+        };
 
         // Create a fake base package.
         let base_path = dir.path().join("base.far");
