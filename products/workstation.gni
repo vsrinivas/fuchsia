@@ -28,6 +28,7 @@ base_package_labels += [
   "//src/session/bundles:session_manager",
   "//src/sys/activity",
   "//src/ui/bin/brightness_manager",
+  "//src/ui/bin/screensaver",
   "//src/ui/bin/shortcut",
   "//third_party/openssh-portable:openssh-tools",
 ]
