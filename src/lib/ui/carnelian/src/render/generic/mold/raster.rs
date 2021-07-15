@@ -41,7 +41,7 @@ impl Raster for MoldRaster {
 impl Add for MoldRaster {
     type Output = Self;
 
-    fn add(mut self, mut other: Self) -> Self::Output {
+    fn add(mut self, other: Self) -> Self::Output {
         if self.translation != Vector2D::zero() {
             for print in &mut self.prints {
                 print.transform.m31 += self.translation.x;
@@ -51,14 +51,19 @@ impl Add for MoldRaster {
             self.translation = Vector2D::zero();
         }
 
-        if other.translation != Vector2D::zero() {
-            for print in &mut other.prints {
-                print.transform.m31 += other.translation.x;
-                print.transform.m32 += other.translation.y;
-            }
+        self.prints.reserve(other.prints.len());
+        for print in &other.prints {
+            let transform = Transform2D::new(
+                print.transform.m11,
+                print.transform.m12,
+                print.transform.m21,
+                print.transform.m22,
+                print.transform.m31 + other.translation.x,
+                print.transform.m32 + other.translation.y,
+            );
+            self.prints.push(Print { path: Rc::clone(&print.path), transform });
         }
 
-        self.prints.extend(other.prints);
         self.layer_details = Rc::new(RefCell::new(None));
         self
     }
