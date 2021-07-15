@@ -34,6 +34,10 @@ zx_status_t handle_launch(int argc, const char** argv, async::Loop* loop,
     loop->Quit();
   });
 
+  // Set up serial output.
+  OutputWriter serial(loop);
+  guest->GetSerial([&serial](zx::socket socket) { serial.Start(std::move(socket)); });
+
   // Set up guest console.
   GuestConsole console(loop);
   guest->GetConsole([&loop, &console](fuchsia::virtualization::Guest_GetConsole_Result result) {

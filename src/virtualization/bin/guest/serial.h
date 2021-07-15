@@ -17,6 +17,23 @@
 class InputReader;
 class OutputWriter;
 
+// Reads output from the given socket and writes it to stdout.
+class OutputWriter : public fsl::SocketDrainer::Client {
+ public:
+  explicit OutputWriter(async::Loop* loop);
+
+  // Start marshalling data between the socket and stdout.
+  void Start(zx::socket socket);
+
+ private:
+  // |fsl::SocketDrainer::Client|
+  void OnDataAvailable(const void* data, size_t num_bytes) override;
+  void OnDataComplete() override;
+
+  async::Loop* loop_;
+  fsl::SocketDrainer socket_drainer_{this};
+};
+
 // Reads/writes from the terminal to/from the given socket.
 class GuestConsole {
  public:

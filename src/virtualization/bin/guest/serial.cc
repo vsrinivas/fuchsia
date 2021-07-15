@@ -85,26 +85,15 @@ class InputReader {
   async::WaitMethod<InputReader, &InputReader::OnSocketReady> wait_{this};
 };
 
-// Reads output from a socket provided by the guest and writes the data to
-// stdout. This data generally comes from emulated serial devices (ex:
-// virtio-console).
-class OutputWriter : public fsl::SocketDrainer::Client {
- public:
-  OutputWriter(async::Loop* loop) : loop_(loop) {}
+OutputWriter::OutputWriter(async::Loop* loop) : loop_(loop) {}
 
-  void Start(zx::socket socket) { socket_drainer_.Start(std::move(socket)); }
+void OutputWriter::Start(zx::socket socket) { socket_drainer_.Start(std::move(socket)); }
 
-  // |fsl::SocketDrainer::Client|
-  void OnDataAvailable(const void* data, size_t num_bytes) override {
-    write(STDOUT_FILENO, data, num_bytes);
-  }
+void OutputWriter::OnDataAvailable(const void* data, size_t num_bytes) {
+  write(STDOUT_FILENO, data, num_bytes);
+}
 
-  void OnDataComplete() override { loop_->Shutdown(); }
-
- private:
-  async::Loop* loop_;
-  fsl::SocketDrainer socket_drainer_{this};
-};
+void OutputWriter::OnDataComplete() { loop_->Shutdown(); }
 
 GuestConsole::GuestConsole(async::Loop* loop)
     : loop_(loop),
