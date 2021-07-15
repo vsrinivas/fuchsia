@@ -141,6 +141,7 @@ fidl_struct! {
     normal_handle {
       ty: fidl::Vmo,
       offset_v1: 0,
+      offset_v2: 0,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::VMO,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -149,6 +150,7 @@ fidl_struct! {
     handle_in_vec {
       ty: Vec<fidl::Vmo>,
       offset_v1: 8,
+      offset_v2: 8,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::VMO,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -157,6 +159,7 @@ fidl_struct! {
     handle_in_array {
       ty: [fidl::Vmo; 5],
       offset_v1: 24,
+      offset_v2: 24,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::VMO,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -165,6 +168,7 @@ fidl_struct! {
     handle_in_mixed_vec_array {
       ty: Vec<[fidl::Vmo; 5]>,
       offset_v1: 48,
+      offset_v2: 48,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::VMO,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -173,13 +177,26 @@ fidl_struct! {
     table_with_handle {
       ty: TableWithHandle,
       offset_v1: 64,
+      offset_v2: 64,
     },
     union_with_handle {
       ty: UnionWithHandle,
       offset_v1: 80,
+      offset_v2: 80,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffff00000000u64,
+  },
+  {
+      ty: u64,
+      offset: 40,
+      mask: 0xffffffff00000000u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 0,
@@ -191,7 +208,9 @@ fidl_struct! {
       mask: 0xffffffff00000000u64,
   },],
   size_v1: 104,
+  size_v2: 96,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, PartialEq)]

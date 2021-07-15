@@ -39,20 +39,30 @@ fidl_struct_copy! {
     a {
       ty: u16,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u8,
       offset_v1: 2,
+      offset_v2: 2,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u32,
+      offset: 0,
+      mask: 0xff000000u32,
+  },],
+  padding_v2: [
   {
       ty: u32,
       offset: 0,
       mask: 0xff000000u32,
   },],
   size_v1: 4,
+  size_v2: 4,
   align_v1: 2,
+  align_v2: 2,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -70,20 +80,30 @@ fidl_struct_copy! {
     a {
       ty: u32,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u16,
       offset_v1: 4,
+      offset_v2: 4,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffff000000000000u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 0,
       mask: 0xffff000000000000u64,
   },],
   size_v1: 8,
+  size_v2: 8,
   align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -101,20 +121,30 @@ fidl_struct_copy! {
     a {
       ty: u32,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u8,
       offset_v1: 4,
+      offset_v2: 4,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffff0000000000u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 0,
       mask: 0xffffff0000000000u64,
   },],
   size_v1: 8,
+  size_v2: 8,
   align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -132,20 +162,30 @@ fidl_struct_copy! {
     a {
       ty: u64,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u32,
       offset_v1: 8,
+      offset_v2: 8,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffff00000000u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 8,
       mask: 0xffffffff00000000u64,
   },],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -164,24 +204,35 @@ fidl_struct_copy! {
     a {
       ty: u64,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u16,
       offset_v1: 8,
+      offset_v2: 8,
     },
     c {
       ty: u8,
       offset_v1: 10,
+      offset_v2: 10,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffffff000000u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 8,
       mask: 0xffffffffff000000u64,
   },],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -199,20 +250,30 @@ fidl_struct_copy! {
     a {
       ty: u64,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u16,
       offset_v1: 8,
+      offset_v2: 8,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffffffff0000u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 8,
       mask: 0xffffffffffff0000u64,
   },],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -230,20 +291,30 @@ fidl_struct_copy! {
     a {
       ty: u64,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u8,
       offset_v1: 8,
+      offset_v2: 8,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 8,
+      mask: 0xffffffffffffff00u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 8,
       mask: 0xffffffffffffff00u64,
   },],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -261,20 +332,30 @@ fidl_struct_copy! {
     a {
       ty: u8,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u16,
       offset_v1: 2,
+      offset_v2: 2,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u32,
+      offset: 0,
+      mask: 0x0000ff00u32,
+  },],
+  padding_v2: [
   {
       ty: u32,
       offset: 0,
       mask: 0x0000ff00u32,
   },],
   size_v1: 4,
+  size_v2: 4,
   align_v1: 2,
+  align_v2: 2,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -292,20 +373,30 @@ fidl_struct_copy! {
     a {
       ty: u16,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u32,
       offset_v1: 4,
+      offset_v2: 4,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0x00000000ffff0000u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 0,
       mask: 0x00000000ffff0000u64,
   },],
   size_v1: 8,
+  size_v2: 8,
   align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -323,20 +414,30 @@ fidl_struct_copy! {
     a {
       ty: u8,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u32,
       offset_v1: 4,
+      offset_v2: 4,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0x00000000ffffff00u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 0,
       mask: 0x00000000ffffff00u64,
   },],
   size_v1: 8,
+  size_v2: 8,
   align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -354,20 +455,30 @@ fidl_struct_copy! {
     a {
       ty: u32,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u64,
       offset_v1: 8,
+      offset_v2: 8,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffff00000000u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 0,
       mask: 0xffffffff00000000u64,
   },],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -386,24 +497,35 @@ fidl_struct_copy! {
     a {
       ty: u16,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u8,
       offset_v1: 2,
+      offset_v2: 2,
     },
     c {
       ty: u64,
       offset_v1: 8,
+      offset_v2: 8,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffffff000000u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 0,
       mask: 0xffffffffff000000u64,
   },],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -421,20 +543,30 @@ fidl_struct_copy! {
     a {
       ty: u16,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u64,
       offset_v1: 8,
+      offset_v2: 8,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffffffff0000u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 0,
       mask: 0xffffffffffff0000u64,
   },],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -452,20 +584,30 @@ fidl_struct_copy! {
     a {
       ty: u8,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u64,
       offset_v1: 8,
+      offset_v2: 8,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffffffffff00u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 0,
       mask: 0xffffffffffffff00u64,
   },],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -485,21 +627,36 @@ fidl_struct_copy! {
     a {
       ty: u32,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u8,
       offset_v1: 4,
+      offset_v2: 4,
     },
     c {
       ty: u16,
       offset_v1: 6,
+      offset_v2: 6,
     },
     d {
       ty: u16,
       offset_v1: 8,
+      offset_v2: 8,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0x0000ff0000000000u64,
+  },
+  {
+      ty: u32,
+      offset: 8,
+      mask: 0xffff0000u32,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 0,
@@ -511,7 +668,9 @@ fidl_struct_copy! {
       mask: 0xffff0000u32,
   },],
   size_v1: 12,
+  size_v2: 12,
   align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -530,17 +689,31 @@ fidl_struct_copy! {
     a {
       ty: u8,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: u16,
       offset_v1: 2,
+      offset_v2: 2,
     },
     c {
       ty: u8,
       offset_v1: 4,
+      offset_v2: 4,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u32,
+      offset: 0,
+      mask: 0x0000ff00u32,
+  },
+  {
+      ty: u16,
+      offset: 4,
+      mask: 0xff00u16,
+  },],
+  padding_v2: [
   {
       ty: u32,
       offset: 0,
@@ -552,5 +725,7 @@ fidl_struct_copy! {
       mask: 0xff00u16,
   },],
   size_v1: 6,
+  size_v2: 6,
   align_v1: 2,
+  align_v2: 2,
 }

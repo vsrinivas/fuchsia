@@ -363,7 +363,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		c := compiler{}
-		out := c.buildPaddingMarkers(testCase.in, false)
+		out := c.buildPaddingMarkers(testCase.in, false, getTypeShapeV1, getFieldShapeV1)
 		if diff := cmp.Diff(testCase.out, out); diff != "" {
 			t.Errorf("%s:\nexpected != actual (-want +got)\n%s", testCase.name, diff)
 		}
@@ -412,7 +412,7 @@ func TestBuildPaddingMarkersFlatteningStruct(t *testing.T) {
 		},
 		library: fidlgen.LibraryIdentifier{""},
 	}
-	out := c.buildPaddingMarkers(input, true)
+	out := c.buildPaddingMarkers(input, true, getTypeShapeV1, getFieldShapeV1)
 	expected := []PaddingMarker{
 		{
 			Type:   "u64",
@@ -472,7 +472,7 @@ func TestBuildPaddingMarkersFlatteningArray(t *testing.T) {
 		},
 		library: fidlgen.LibraryIdentifier{""},
 	}
-	out := c.buildPaddingMarkers(input, true)
+	out := c.buildPaddingMarkers(input, true, getTypeShapeV1, getFieldShapeV1)
 	expected := []PaddingMarker{
 		{
 			Type:   "u64",

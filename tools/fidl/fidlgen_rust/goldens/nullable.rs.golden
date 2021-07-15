@@ -75,11 +75,15 @@ fidl_struct! {
     val {
       ty: Option<String>,
       offset_v1: 0,
+      offset_v2: 0,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -95,11 +99,15 @@ fidl_struct! {
     val {
       ty: Option<Vec<i32>>,
       offset_v1: 0,
+      offset_v2: 0,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -113,15 +121,19 @@ fidl_struct! {
     val {
       ty: Option<fidl::Vmo>,
       offset_v1: 0,
+      offset_v2: 0,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::VMO,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 4,
+  size_v2: 4,
   align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -135,15 +147,19 @@ fidl_struct! {
     val {
       ty: Option<fidl::endpoints::ClientEnd<SimpleProtocolMarker>>,
       offset_v1: 0,
+      offset_v2: 0,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::CHANNEL_DEFAULT,
       },
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 4,
+  size_v2: 4,
   align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -157,15 +173,19 @@ fidl_struct! {
     val {
       ty: Option<fidl::endpoints::ServerEnd<SimpleProtocolMarker>>,
       offset_v1: 0,
+      offset_v2: 0,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::CHANNEL_DEFAULT,
       },
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 4,
+  size_v2: 4,
   align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(
@@ -184,11 +204,15 @@ fidl_struct_copy! {
     val {
       ty: i32,
       offset_v1: 0,
+      offset_v2: 0,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 4,
+  size_v2: 4,
   align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -204,11 +228,15 @@ fidl_struct! {
     val {
       ty: Option<Box<Int32Wrapper>>,
       offset_v1: 0,
+      offset_v2: 0,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 8,
+  size_v2: 8,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -224,11 +252,15 @@ fidl_struct! {
     val {
       ty: Option<Box<SimpleUnion>>,
       offset_v1: 0,
+      offset_v2: 0,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 24,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

@@ -64,58 +64,72 @@ fidl_struct! {
     u1 {
       ty: u64,
       offset_v1: 0,
+      offset_v2: 0,
     },
     u2 {
       ty: Vec<u64>,
       offset_v1: 8,
+      offset_v2: 8,
     },
     u3 {
       ty: [u64; 1],
       offset_v1: 24,
+      offset_v2: 24,
     },
     u4 {
       ty: Vec<Vec<u64>>,
       offset_v1: 32,
+      offset_v2: 32,
     },
     u5 {
       ty: Vec<[u64; 1]>,
       offset_v1: 48,
+      offset_v2: 48,
     },
     u6 {
       ty: [Vec<u64>; 4],
       offset_v1: 64,
+      offset_v2: 64,
     },
     u7 {
       ty: [[u64; 1]; 4],
       offset_v1: 128,
+      offset_v2: 128,
     },
     v1 {
       ty: Option<Vec<u64>>,
       offset_v1: 160,
+      offset_v2: 160,
     },
     v2 {
       ty: Vec<Option<Vec<u64>>>,
       offset_v1: 176,
+      offset_v2: 176,
     },
     v3 {
       ty: [Option<Vec<u64>>; 4],
       offset_v1: 192,
+      offset_v2: 192,
     },
     a1 {
       ty: [u64; 1],
       offset_v1: 256,
+      offset_v2: 256,
     },
     a2 {
       ty: Vec<[u64; 1]>,
       offset_v1: 264,
+      offset_v2: 264,
     },
     a3 {
       ty: [[u64; 1]; 4],
       offset_v1: 280,
+      offset_v2: 280,
     },
     r1 {
       ty: Option<fidl::endpoints::ServerEnd<MyProtocolMarker>>,
       offset_v1: 312,
+      offset_v2: 312,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::CHANNEL_DEFAULT,
@@ -124,6 +138,7 @@ fidl_struct! {
     r2 {
       ty: Vec<Option<fidl::endpoints::ServerEnd<MyProtocolMarker>>>,
       offset_v1: 320,
+      offset_v2: 320,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::CHANNEL_DEFAULT,
@@ -132,6 +147,7 @@ fidl_struct! {
     r3 {
       ty: [Option<fidl::endpoints::ServerEnd<MyProtocolMarker>>; 4],
       offset_v1: 336,
+      offset_v2: 336,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::CHANNEL_DEFAULT,
@@ -140,60 +156,80 @@ fidl_struct! {
     b1 {
       ty: Vec<u8>,
       offset_v1: 352,
+      offset_v2: 352,
     },
     b2 {
       ty: Vec<Vec<u8>>,
       offset_v1: 368,
+      offset_v2: 368,
     },
     b3 {
       ty: [Vec<u8>; 4],
       offset_v1: 384,
+      offset_v2: 384,
     },
     s1 {
       ty: String,
       offset_v1: 448,
+      offset_v2: 448,
     },
     s2 {
       ty: Vec<String>,
       offset_v1: 464,
+      offset_v2: 464,
     },
     s3 {
       ty: [String; 4],
       offset_v1: 480,
+      offset_v2: 480,
     },
     vv1 {
       ty: Vec<u64>,
       offset_v1: 544,
+      offset_v2: 544,
     },
     vv2 {
       ty: Vec<Vec<u64>>,
       offset_v1: 560,
+      offset_v2: 560,
     },
     vv3 {
       ty: [Vec<u64>; 3],
       offset_v1: 576,
+      offset_v2: 576,
     },
     aa1 {
       ty: [u64; 2],
       offset_v1: 624,
+      offset_v2: 624,
     },
     aa2 {
       ty: Vec<[u64; 2]>,
       offset_v1: 640,
+      offset_v2: 640,
     },
     aa3 {
       ty: [[u64; 2]; 3],
       offset_v1: 656,
+      offset_v2: 656,
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 312,
+      mask: 0xffffffff00000000u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 312,
       mask: 0xffffffff00000000u64,
   },],
   size_v1: 704,
+  size_v2: 704,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

@@ -2249,6 +2249,7 @@ macro_rules! fidl_struct {
             $member_name:ident {
                 ty: $member_ty:ty,
                 offset_v1: $member_offset_v1:expr,
+                offset_v2: $member_offset_v2:expr,
                 $(
                     handle_metadata: {
                         handle_subtype: $member_handle_subtype:expr,
@@ -2257,25 +2258,40 @@ macro_rules! fidl_struct {
                 )?
             },
         )*],
-        padding: [$(
+        padding_v1: [$(
             {
-                ty: $padding_ty:ty,
-                offset: $padding_offset:expr,
-                mask: $padding_mask:expr,
+                ty: $padding_ty_v1:ty,
+                offset: $padding_offset_v1:expr,
+                mask: $padding_mask_v1:expr,
+            },
+        )*],
+        padding_v2: [$(
+            {
+                ty: $padding_ty_v2:ty,
+                offset: $padding_offset_v2:expr,
+                mask: $padding_mask_v2:expr,
             },
         )*],
         size_v1: $size_v1:expr,
+        size_v2: $size_v2:expr,
         align_v1: $align_v1:expr,
+        align_v2: $align_v2:expr,
     ) => {
         impl $crate::encoding::Layout for $name {
             #[inline(always)]
-            fn inline_align(_context: &$crate::encoding::Context) -> usize {
-                $align_v1
+            fn inline_align(context: &$crate::encoding::Context) -> usize {
+                match context.wire_format_version {
+                    $crate::encoding::WireFormatVersion::V1 => $align_v1,
+                    $crate::encoding::WireFormatVersion::V2 => $align_v2,
+                }
             }
 
             #[inline(always)]
-            fn inline_size(_context: &$crate::encoding::Context) -> usize {
-                $size_v1
+            fn inline_size(context: &$crate::encoding::Context) -> usize {
+                match context.wire_format_version {
+                    $crate::encoding::WireFormatVersion::V1 => $size_v1,
+                    $crate::encoding::WireFormatVersion::V2 => $size_v2,
+                }
             }
         }
 
@@ -2285,19 +2301,35 @@ macro_rules! fidl_struct {
                 encoder.debug_check_bounds::<Self>(offset);
                 // Ensure padding is zero by writing zero to the padded region which will be partially overwritten
                 // when the field is written.
-                $(
-                    unsafe {
-                        let ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize).offset($padding_offset);
-                        std::mem::transmute::<*mut u8, *mut $padding_ty>(ptr).write_unaligned(0);
-                    }
-                )*
+                match encoder.context().wire_format_version {
+                    $crate::encoding::WireFormatVersion::V1 => {
+                        $(
+                            unsafe {
+                                let ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize).offset($padding_offset_v1);
+                                std::mem::transmute::<*mut u8, *mut $padding_ty_v1>(ptr).write_unaligned(0);
+                            }
+                        )*
+                    },
+                    $crate::encoding::WireFormatVersion::V2 => {
+                        $(
+                            unsafe {
+                                let ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize).offset($padding_offset_v2);
+                                std::mem::transmute::<*mut u8, *mut $padding_ty_v2>(ptr).write_unaligned(0);
+                            }
+                        )*
+                    },
+                };
                 // Write the fields.
                 $(
                     $(
                         encoder.set_next_handle_subtype($member_handle_subtype);
                         encoder.set_next_handle_rights($member_handle_rights);
                     )?
-                    self.$member_name.encode(encoder, offset + $member_offset_v1, recursion_depth)?;
+                    let member_offset = match encoder.context().wire_format_version {
+                        $crate::encoding::WireFormatVersion::V1 => $member_offset_v1,
+                        $crate::encoding::WireFormatVersion::V2 => $member_offset_v2,
+                    };
+                    self.$member_name.encode(encoder, offset + member_offset, recursion_depth)?;
                 )*
                 Ok(())
             }
@@ -2317,24 +2349,45 @@ macro_rules! fidl_struct {
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
                 decoder.debug_check_bounds::<Self>(offset);
                 // Apply masks to check if padded regions are zero.
-                $(
-                    let ptr = unsafe { decoder.buffer().as_ptr().offset(offset as isize).offset($padding_offset) };
-                    let padval = unsafe { std::mem::transmute::<*const u8, *const $padding_ty>(ptr).read_unaligned() };
-                    let maskedval = padval & $padding_mask;
-                    if (maskedval != 0) {
-                        return Err($crate::Error::NonZeroPadding {
-                            padding_start: offset + $padding_offset + (($padding_mask as u64).trailing_zeros() / 8) as usize,
-                            non_zero_pos: offset + $padding_offset + (maskedval.trailing_zeros() / 8) as usize
-                        });
-                    }
-                )*
+                match decoder.context().wire_format_version {
+                    $crate::encoding::WireFormatVersion::V1 => {
+                        $(
+                            let ptr = unsafe { decoder.buffer().as_ptr().offset(offset as isize).offset($padding_offset_v1) };
+                            let padval = unsafe { std::mem::transmute::<*const u8, *const $padding_ty_v1>(ptr).read_unaligned() };
+                            let maskedval = padval & $padding_mask_v1;
+                            if (maskedval != 0) {
+                                return Err($crate::Error::NonZeroPadding {
+                                    padding_start: offset + $padding_offset_v1 + (($padding_mask_v1 as u64).trailing_zeros() / 8) as usize,
+                                    non_zero_pos: offset + $padding_offset_v1 + (maskedval.trailing_zeros() / 8) as usize
+                                });
+                            }
+                        )*
+                    },
+                    $crate::encoding::WireFormatVersion::V2 => {
+                        $(
+                            let ptr = unsafe { decoder.buffer().as_ptr().offset(offset as isize).offset($padding_offset_v2) };
+                            let padval = unsafe { std::mem::transmute::<*const u8, *const $padding_ty_v2>(ptr).read_unaligned() };
+                            let maskedval = padval & $padding_mask_v2;
+                            if (maskedval != 0) {
+                                return Err($crate::Error::NonZeroPadding {
+                                    padding_start: offset + $padding_offset_v2 + (($padding_mask_v2 as u64).trailing_zeros() / 8) as usize,
+                                    non_zero_pos: offset + $padding_offset_v2 + (maskedval.trailing_zeros() / 8) as usize
+                                });
+                            }
+                        )*
+                    },
+                };
                 // Read the fields.
                 $(
                     $(
                         decoder.set_next_handle_subtype($member_handle_subtype);
                         decoder.set_next_handle_rights($member_handle_rights);
                     )?
-                    self.$member_name.decode(decoder, offset + $member_offset_v1)?;
+                    let member_offset = match decoder.context().wire_format_version {
+                        $crate::encoding::WireFormatVersion::V1 => $member_offset_v1,
+                        $crate::encoding::WireFormatVersion::V2 => $member_offset_v2,
+                    };
+                    self.$member_name.decode(decoder, offset + member_offset)?;
                 )*
                 Ok(())
             }
@@ -2360,20 +2413,36 @@ macro_rules! fidl_struct_copy {
             $member_name:ident {
                 ty: $member_ty:ty,
                 offset_v1: $member_offset_v1:expr,
+                offset_v2: $member_offset_v2:expr,
             },
         )*],
-        padding: [$(
+        padding_v1: [$(
             {
-                ty: $padding_ty:ty,
-                offset: $padding_offset:expr,
-                mask: $padding_mask:expr,
+                ty: $padding_ty_v1:ty,
+                offset: $padding_offset_v1:expr,
+                mask: $padding_mask_v1:expr,
+            },
+        )*],
+        padding_v2: [$(
+            {
+                ty: $padding_ty_v2:ty,
+                offset: $padding_offset_v2:expr,
+                mask: $padding_mask_v2:expr,
             },
         )*],
         size_v1: $size_v1:expr,
+        size_v2: $size_v2:expr,
         align_v1: $align_v1:expr,
+        align_v2: $align_v2:expr,
     ) => {
         static_assertions::const_assert_eq!(std::mem::size_of::<$name>(), $size_v1);
+        static_assertions::const_assert_eq!($size_v1, $size_v2);
         static_assertions::const_assert_eq!(std::mem::align_of::<$name>(), $align_v1);
+        static_assertions::const_assert_eq!($align_v1, $align_v2);
+        $(
+            static_assertions::const_assert_eq!($padding_offset_v1, $padding_offset_v2);
+            static_assertions::const_assert_eq!($padding_mask_v1, $padding_mask_v2);
+        )*
 
         impl $crate::encoding::Layout for $name {
             #[inline(always)]
@@ -2391,7 +2460,7 @@ macro_rules! fidl_struct_copy {
                 #![allow(unreachable_code)]
                 // Copy as byte array if there is no padding.
                 $(
-                    $padding_offset; // Force this to be the padding repeat list.
+                    $padding_offset_v1; // Force this to be the padding repeat list.
                     return false;
                 )*
                 true
@@ -2407,9 +2476,9 @@ macro_rules! fidl_struct_copy {
                     let typed_buf_ptr = std::mem::transmute::<*mut u8, *mut $name>(buf_ptr);
                     typed_buf_ptr.write_unaligned((self as *const $name).read());
                     $(
-                        let ptr = buf_ptr.offset($padding_offset);
-                        let padding_ptr = std::mem::transmute::<*mut u8, *mut $padding_ty>(ptr);
-                        padding_ptr.write_unaligned(padding_ptr.read_unaligned() & !$padding_mask);
+                        let ptr = buf_ptr.offset($padding_offset_v1);
+                        let padding_ptr = std::mem::transmute::<*mut u8, *mut $padding_ty_v1>(ptr);
+                        padding_ptr.write_unaligned(padding_ptr.read_unaligned() & !$padding_mask_v1);
                     )*
                 }
                 Ok(())
@@ -2433,13 +2502,13 @@ macro_rules! fidl_struct_copy {
 
                 // Apply masks to check if padded regions are zero.
                 $(
-                    let ptr = unsafe { buf_ptr.offset($padding_offset) };
-                    let padval = unsafe { std::mem::transmute::<*const u8, *const $padding_ty>(ptr).read_unaligned() };
-                    let maskedval = padval & $padding_mask;
+                    let ptr = unsafe { buf_ptr.offset($padding_offset_v1) };
+                    let padval = unsafe { std::mem::transmute::<*const u8, *const $padding_ty_v1>(ptr).read_unaligned() };
+                    let maskedval = padval & $padding_mask_v1;
                     if (maskedval != 0) {
                         return Err($crate::Error::NonZeroPadding {
-                            padding_start: offset + $padding_offset + (($padding_mask as u64).trailing_zeros() / 8) as usize,
-                            non_zero_pos: offset + $padding_offset + (maskedval.trailing_zeros() / 8) as usize
+                            padding_start: offset + $padding_offset_v1 + (($padding_mask_v1 as u64).trailing_zeros() / 8) as usize,
+                            non_zero_pos: offset + $padding_offset_v1 + (maskedval.trailing_zeros() / 8) as usize
                         });
                     }
                 )*
@@ -3389,23 +3458,30 @@ fidl_struct_copy! {
         tx_id {
             ty: u32,
             offset_v1: 0,
+            offset_v2: 0,
         },
         flags {
             ty: [u8; 3],
             offset_v1: 4,
+            offset_v2: 4,
         },
         magic_number {
             ty: u8,
             offset_v1: 7,
+            offset_v2: 7,
         },
         ordinal {
             ty: u64,
             offset_v1: 8,
+            offset_v2: 8,
         },
     ],
-    padding: [],
+    padding_v1: [],
+    padding_v2: [],
     size_v1: 16,
+    size_v2: 16,
     align_v1: 8,
+    align_v2: 8,
 }
 
 bitflags! {
@@ -3568,13 +3644,27 @@ fidl_struct! {
         flags {
             ty: [u8; 3],
             offset_v1: 4,
+            offset_v2: 4,
         },
         magic_number {
             ty: u8,
             offset_v1: 7,
+            offset_v2: 7,
         },
     ],
-    padding: [
+    padding_v1: [
+        {
+            ty: u32,
+            offset: 0,
+            mask: 0xffffffffu32,
+        },
+        {
+            ty: u64,
+            offset: 8,
+            mask: 0xffffffffffffffffu64,
+        },
+    ],
+    padding_v2: [
         {
             ty: u32,
             offset: 0,
@@ -3590,7 +3680,9 @@ fidl_struct! {
     // TransactionHeader, giving PersistentHeader 8 bytes of trailing padding.
     // A future RFC will specify the size, which may or may not be 16 bytes.
     size_v1: 16,
+    size_v2: 16,
     align_v1: 8,
+    align_v2: 8,
 }
 
 impl PersistentHeader {
@@ -4386,17 +4478,27 @@ mod test {
             byte {
                 ty: u8,
                 offset_v1: 0,
+                offset_v2: 0,
             },
             bignum {
                 ty: u64,
                 offset_v1: 8,
+                offset_v2: 8,
             },
             string {
                 ty: String,
                 offset_v1: 16,
+                offset_v2: 16,
             },
         ],
-        padding: [
+        padding_v1: [
+            {
+                ty: u64,
+                offset: 0,
+                mask: 0xffffffffffffff00,
+            },
+        ],
+        padding_v2: [
             {
                 ty: u64,
                 offset: 0,
@@ -4404,7 +4506,9 @@ mod test {
             },
         ],
         size_v1: 32,
+        size_v2: 32,
         align_v1: 8,
+        align_v2: 8,
     }
 
     #[test]
@@ -4533,23 +4637,30 @@ mod test {
             a {
                 ty: u64,
                 offset_v1: 0,
+                offset_v2: 0,
             },
             b {
                 ty: u32,
                 offset_v1: 8,
+                offset_v2: 8,
             },
             c {
                 ty: u16,
                 offset_v1: 12,
+                offset_v2: 12,
             },
             d {
                 ty: u16,
                 offset_v1: 14,
+                offset_v2: 14,
             },
         ],
-        padding: [],
+        padding_v1: [],
+        padding_v2: [],
         size_v1: 16,
+        size_v2: 16,
         align_v1: 8,
+        align_v2: 8,
     }
 
     #[test]
@@ -4591,11 +4702,15 @@ mod test {
             x {
                 ty: u64,
                 offset_v1: 0,
+                offset_v2: 0,
             },
         ],
-        padding: [],
+        padding_v1: [],
+        padding_v2: [],
         size_v1: 8,
+        size_v2: 8,
         align_v1: 8,
+        align_v2: 8,
     }
 
     // This is a resource union, as a resource member is added in

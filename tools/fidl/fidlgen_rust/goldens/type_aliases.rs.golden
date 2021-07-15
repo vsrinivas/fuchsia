@@ -84,26 +84,32 @@ fidl_struct! {
     field_of_u32 {
       ty: u32,
       offset_v1: 0,
+      offset_v2: 0,
     },
     field_of_vec_of_strings {
       ty: Vec<String>,
       offset_v1: 8,
+      offset_v2: 8,
     },
     field_of_vec_of_strings_at_most_nine {
       ty: Vec<String>,
       offset_v1: 24,
+      offset_v2: 24,
     },
     field_of_vec_of_strings_at_most_5 {
       ty: Vec<String>,
       offset_v1: 40,
+      offset_v2: 40,
     },
     field_of_vec_of_ref_me_at_most_5 {
       ty: Vec<fidl_someotherlibrary::ReferenceMe>,
       offset_v1: 56,
+      offset_v2: 56,
     },
     field_of_channel {
       ty: fidl::Channel,
       offset_v1: 72,
+      offset_v2: 72,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -112,6 +118,7 @@ fidl_struct! {
     field_of_client_end {
       ty: fidl::Channel,
       offset_v1: 76,
+      offset_v2: 76,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -120,13 +127,25 @@ fidl_struct! {
     field_of_nullable_client_end {
       ty: Option<fidl::Channel>,
       offset_v1: 80,
+      offset_v2: 80,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
   ],
-  padding: [
+  padding_v1: [
+  {
+      ty: u64,
+      offset: 0,
+      mask: 0xffffffff00000000u64,
+  },
+  {
+      ty: u64,
+      offset: 80,
+      mask: 0xffffffff00000000u64,
+  },],
+  padding_v2: [
   {
       ty: u64,
       offset: 0,
@@ -138,5 +157,7 @@ fidl_struct! {
       mask: 0xffffffff00000000u64,
   },],
   size_v1: 88,
+  size_v2: 88,
   align_v1: 8,
+  align_v2: 8,
 }

@@ -977,11 +977,15 @@ fidl_struct! {
     toppings {
       ty: Vec<String>,
       offset_v1: 0,
+      offset_v2: 0,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -997,11 +1001,15 @@ fidl_struct! {
     sauce {
       ty: String,
       offset_v1: 0,
+      offset_v2: 0,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -1017,11 +1025,15 @@ fidl_struct! {
     the_union {
       ty: Option<Box<Union>>,
       offset_v1: 0,
+      offset_v2: 0,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 24,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -1044,11 +1056,15 @@ fidl_struct! {
     x1 {
       ty: Option<Box<OlderSimpleUnion>>,
       offset_v1: 0,
+      offset_v2: 0,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 24,
+  size_v2: 16,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

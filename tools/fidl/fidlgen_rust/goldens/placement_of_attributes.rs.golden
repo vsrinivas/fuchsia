@@ -197,11 +197,15 @@ fidl_struct_copy! {
     member {
       ty: u32,
       offset_v1: 0,
+      offset_v2: 0,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 4,
+  size_v2: 4,
   align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(Debug, Clone, PartialEq)]

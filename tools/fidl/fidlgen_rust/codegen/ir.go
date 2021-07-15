@@ -94,30 +94,30 @@ type Result struct {
 
 type Struct struct {
 	fidlgen.Struct
-	ECI                     EncodedCompoundIdentifier
-	Derives                 derives
-	Name                    string
-	Members                 []StructMember
-	PaddingMarkers          []PaddingMarker
-	FlattenedPaddingMarkers []PaddingMarker
-	Size                    int
-	Alignment               int
-	HasPadding              bool
+	ECI                                                  EncodedCompoundIdentifier
+	Derives                                              derives
+	Name                                                 string
+	Members                                              []StructMember
+	PaddingMarkersV1, PaddingMarkersV2                   []PaddingMarker
+	FlattenedPaddingMarkersV1, FlattenedPaddingMarkersV2 []PaddingMarker
+	SizeV1, SizeV2                                       int
+	AlignmentV1, AlignmentV2                             int
+	HasPadding                                           bool
 	// True iff the fidl_struct_copy! macro should be used instead of fidl_struct!.
 	UseFidlStructCopy bool
 }
 
 type StructMember struct {
 	fidlgen.StructMember
-	OGType            fidlgen.Type
-	Type              string
-	Name              string
-	Offset            int
-	HasDefault        bool
-	DefaultValue      string
-	HasHandleMetadata bool
-	HandleRights      string
-	HandleSubtype     string
+	OGType             fidlgen.Type
+	Type               string
+	Name               string
+	OffsetV1, OffsetV2 int
+	HasDefault         bool
+	DefaultValue       string
+	HasHandleMetadata  bool
+	HandleRights       string
+	HandleSubtype      string
 }
 
 type PaddingMarker struct {
@@ -925,7 +925,8 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 		Type:              c.compileType(val.Type),
 		OGType:            val.Type,
 		Name:              compileSnakeIdentifier(val.Name),
-		Offset:            val.FieldShapeV1.Offset,
+		OffsetV1:          val.FieldShapeV1.Offset,
+		OffsetV2:          val.FieldShapeV2.Offset,
 		HasDefault:        false,
 		DefaultValue:      "", // TODO(cramertj) support defaults
 		HasHandleMetadata: hi.hasHandleMetadata,
@@ -934,21 +935,35 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	}
 }
 
-func (c *compiler) populateFullStructMaskForStruct(mask []byte, val fidlgen.Struct, flatten bool) {
-	paddingEnd := val.TypeShapeV1.InlineSize - 1
+func getTypeShapeV1(s fidlgen.Struct) fidlgen.TypeShape {
+	return s.TypeShapeV1
+}
+func getTypeShapeV2(s fidlgen.Struct) fidlgen.TypeShape {
+	return s.TypeShapeV2
+}
+func getFieldShapeV1(m fidlgen.StructMember) fidlgen.FieldShape {
+	return m.FieldShapeV1
+}
+func getFieldShapeV2(m fidlgen.StructMember) fidlgen.FieldShape {
+	return m.FieldShapeV2
+}
+
+func (c *compiler) populateFullStructMaskForStruct(mask []byte, val fidlgen.Struct, flatten bool, getTypeShape func(fidlgen.Struct) fidlgen.TypeShape, getFieldShape func(fidlgen.StructMember) fidlgen.FieldShape) {
+	paddingEnd := getTypeShape(val).InlineSize - 1
 	for i := len(val.Members) - 1; i >= 0; i-- {
 		member := val.Members[i]
+		fieldShape := getFieldShape(member)
 		if flatten {
-			c.populateFullStructMaskForType(mask[member.FieldShapeV1.Offset:paddingEnd+1], &member.Type, flatten)
+			c.populateFullStructMaskForType(mask[fieldShape.Offset:paddingEnd+1], &member.Type, flatten, getTypeShape, getFieldShape)
 		}
-		for j := 0; j < member.FieldShapeV1.Padding; j++ {
+		for j := 0; j < fieldShape.Padding; j++ {
 			mask[paddingEnd-j] = 0xff
 		}
-		paddingEnd = member.FieldShapeV1.Offset - 1
+		paddingEnd = fieldShape.Offset - 1
 	}
 }
 
-func (c *compiler) populateFullStructMaskForType(mask []byte, typ *fidlgen.Type, flatten bool) {
+func (c *compiler) populateFullStructMaskForType(mask []byte, typ *fidlgen.Type, flatten bool, getTypeShape func(fidlgen.Struct) fidlgen.TypeShape, getFieldShape func(fidlgen.StructMember) fidlgen.FieldShape) {
 	if typ.Nullable {
 		return
 	}
@@ -956,7 +971,7 @@ func (c *compiler) populateFullStructMaskForType(mask []byte, typ *fidlgen.Type,
 	case fidlgen.ArrayType:
 		elemByteSize := len(mask) / *typ.ElementCount
 		for i := 0; i < *typ.ElementCount; i++ {
-			c.populateFullStructMaskForType(mask[i*elemByteSize:(i+1)*elemByteSize], typ.ElementType, flatten)
+			c.populateFullStructMaskForType(mask[i*elemByteSize:(i+1)*elemByteSize], typ.ElementType, flatten, getTypeShape, getFieldShape)
 		}
 	case fidlgen.IdentifierType:
 		if c.inExternalLibrary(fidlgen.ParseCompoundIdentifier(typ.Identifier)) {
@@ -969,17 +984,17 @@ func (c *compiler) populateFullStructMaskForType(mask []byte, typ *fidlgen.Type,
 			if !ok {
 				panic(fmt.Sprintf("struct not found: %v", typ.Identifier))
 			}
-			c.populateFullStructMaskForStruct(mask, st, flatten)
+			c.populateFullStructMaskForStruct(mask, st, flatten, getTypeShape, getFieldShape)
 		}
 	}
 }
 
-func (c *compiler) buildPaddingMarkers(val fidlgen.Struct, flatten bool) []PaddingMarker {
+func (c *compiler) buildPaddingMarkers(val fidlgen.Struct, flatten bool, getTypeShape func(fidlgen.Struct) fidlgen.TypeShape, getFieldShape func(fidlgen.StructMember) fidlgen.FieldShape) []PaddingMarker {
 	var paddingMarkers []PaddingMarker
 
 	// Construct a mask across the whole struct with 0xff bytes where there is padding.
-	fullStructMask := make([]byte, val.TypeShapeV1.InlineSize)
-	c.populateFullStructMaskForStruct(fullStructMask, val, flatten)
+	fullStructMask := make([]byte, getTypeShape(val).InlineSize)
+	c.populateFullStructMaskForStruct(fullStructMask, val, flatten, getTypeShape, getFieldShape)
 
 	// Split up the mask into aligned integer mask segments that can be outputted in the
 	// fidl_struct! macro.
@@ -1084,14 +1099,18 @@ func (c *compiler) computeUseFidlStructCopy(typ *fidlgen.Type) bool {
 func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
-		Struct:                  val,
-		ECI:                     val.Name,
-		Name:                    name,
-		Members:                 []StructMember{},
-		Size:                    val.TypeShapeV1.InlineSize,
-		Alignment:               val.TypeShapeV1.Alignment,
-		PaddingMarkers:          c.buildPaddingMarkers(val, false),
-		FlattenedPaddingMarkers: c.buildPaddingMarkers(val, true),
+		Struct:                    val,
+		ECI:                       val.Name,
+		Name:                      name,
+		Members:                   []StructMember{},
+		SizeV1:                    val.TypeShapeV1.InlineSize,
+		SizeV2:                    val.TypeShapeV2.InlineSize,
+		AlignmentV1:               val.TypeShapeV1.Alignment,
+		AlignmentV2:               val.TypeShapeV2.Alignment,
+		PaddingMarkersV1:          c.buildPaddingMarkers(val, false, getTypeShapeV1, getFieldShapeV1),
+		PaddingMarkersV2:          c.buildPaddingMarkers(val, false, getTypeShapeV2, getFieldShapeV2),
+		FlattenedPaddingMarkersV1: c.buildPaddingMarkers(val, true, getTypeShapeV1, getFieldShapeV1),
+		FlattenedPaddingMarkersV2: c.buildPaddingMarkers(val, true, getTypeShapeV2, getFieldShapeV2),
 	}
 
 	for _, v := range val.Members {

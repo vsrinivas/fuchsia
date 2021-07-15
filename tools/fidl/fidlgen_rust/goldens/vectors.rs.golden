@@ -38,13 +38,18 @@ fidl_struct! {
     vector_of_uint8 {
       ty: Vec<u8>,
       offset_v1: 0,
+      offset_v2: 0,
     },
     vector_of_vector_of_bool {
       ty: Vec<Vec<bool>>,
       offset_v1: 16,
+      offset_v2: 16,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 32,
+  size_v2: 32,
   align_v1: 8,
+  align_v2: 8,
 }

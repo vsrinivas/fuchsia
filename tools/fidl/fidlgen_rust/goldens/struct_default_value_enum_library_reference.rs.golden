@@ -37,9 +37,13 @@ fidl_struct! {
     field {
       ty: fidl_dependent::MyEnum,
       offset_v1: 0,
+      offset_v2: 0,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 4,
+  size_v2: 4,
   align_v1: 4,
+  align_v2: 4,
 }

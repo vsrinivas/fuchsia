@@ -172,19 +172,25 @@ fidl_struct_copy! {
     a {
       ty: i64,
       offset_v1: 0,
+      offset_v2: 0,
     },
     b {
       ty: i64,
       offset_v1: 8,
+      offset_v2: 8,
     },
     c {
       ty: i64,
       offset_v1: 16,
+      offset_v2: 16,
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 24,
+  size_v2: 24,
   align_v1: 8,
+  align_v2: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -212,15 +218,19 @@ fidl_struct! {
     h {
       ty: fidl::Handle,
       offset_v1: 0,
+      offset_v2: 0,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::NONE,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 4,
+  size_v2: 4,
   align_v1: 4,
+  align_v2: 4,
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -237,6 +247,7 @@ fidl_struct! {
     client {
       ty: fidl::endpoints::ClientEnd<DiscoverableProtocolMarker>,
       offset_v1: 0,
+      offset_v2: 0,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::CHANNEL_DEFAULT,
@@ -245,6 +256,7 @@ fidl_struct! {
     server {
       ty: fidl::endpoints::ServerEnd<DiscoverableProtocolMarker>,
       offset_v1: 4,
+      offset_v2: 4,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::CHANNEL_DEFAULT,
@@ -253,6 +265,7 @@ fidl_struct! {
     client_opt {
       ty: Option<fidl::endpoints::ClientEnd<DiscoverableProtocolMarker>>,
       offset_v1: 8,
+      offset_v2: 8,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::CHANNEL_DEFAULT,
@@ -261,15 +274,19 @@ fidl_struct! {
     server_opt {
       ty: Option<fidl::endpoints::ServerEnd<DiscoverableProtocolMarker>>,
       offset_v1: 12,
+      offset_v2: 12,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::CHANNEL_DEFAULT,
       },
     },
   ],
-  padding: [],
+  padding_v1: [],
+  padding_v2: [],
   size_v1: 16,
+  size_v2: 16,
   align_v1: 4,
+  align_v2: 4,
 }
 wrap_handle_metadata!(
     HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT,
