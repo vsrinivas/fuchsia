@@ -214,12 +214,12 @@ external repository that's incompatible with Fuchsia's license requirements.
 Here's [an example](https://fuchsia-review.googlesource.com/c/fuchsia/+/369174)
 OSRB review in which this happened.
 
-To do this, you'll need to add the crate's files to `/third_party/rust_crates/tiny_mirrors`.
+To do this, you'll need to add the crate's files to `/third_party/rust_crates/forks`.
 
 1. Follow the [instructions for adding an external crate](#adding_an_external_crate).
 1. After running `fx update-rustc-third-party`, move the downloaded copy of your
    crate from `/third_party/rust_crates/vendor/<my_crate>` to
-   `/third_party/rust_crates/tiny_mirrors`.
+   `/third_party/rust_crates/forks/<my_crate>`.
 1. Make the changes you need to make to the imported files.
 1. Add a line to the `[patch.crates-io]` section of
    `/third_party/rust_crates/Cargo.toml` to point to your new crate:
@@ -227,10 +227,13 @@ To do this, you'll need to add the crate's files to `/third_party/rust_crates/ti
    ```
    [patch.crates-io]
    ...
-   my_crate = { path = "tiny_mirrors/my_crate" }
+   my_crate = { path = "forks/<my_crate>" }
    ...
    ```
 1. Re-run `fx update-rustc-third-party` and `fx build`.
+1. Add a `/third_party/rust_crates/forks/<my_crate>/README.fuchsia` file which matches the format of
+   other crates' `README.fuchsia`s there. See [/third_party/rust_crates/forks/README.md] for what it
+   should contain.
 
 ## Unicode crates
 

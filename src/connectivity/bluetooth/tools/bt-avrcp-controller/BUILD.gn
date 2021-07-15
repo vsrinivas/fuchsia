@@ -23,7 +23,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates/transitional/rustyline",
+    "//third_party/rust_crates/compat/rustyline",
   ]
 
   sources = [

@@ -17,7 +17,7 @@ group("arbitrary") {
 }
 
 group("argh") {
-  deps = [ ":argh-v0_1_4" ]
+  deps = [ ":argh-v0_1_5" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -1062,40 +1062,40 @@ rust_library("arbitrary-v0_4_0") {
   ]
 }
 
-rust_library("argh-v0_1_4") {
+rust_library("argh-v0_1_5") {
   crate_name = "argh"
   crate_root = "//third_party/rust_crates/vendor/argh/src/lib.rs"
-  output_name = "argh-bd83e7fcbd154aa3"
+  output_name = "argh-147a4ca2b9b38159"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":argh_derive-v0_1_4($host_toolchain)" ]
-  deps += [ ":argh_shared-v0_1_4" ]
+  deps += [ ":argh_derive-v0_1_5($host_toolchain)" ]
+  deps += [ ":argh_shared-v0_1_5" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=bd83e7fcbd154aa3",
-    "-Cextra-filename=-bd83e7fcbd154aa3",
+    "-Cmetadata=147a4ca2b9b38159",
+    "-Cextra-filename=-147a4ca2b9b38159",
   ]
 }
 
-rust_proc_macro("argh_derive-v0_1_4") {
+rust_proc_macro("argh_derive-v0_1_5") {
   crate_name = "argh_derive"
   crate_root = "//third_party/rust_crates/vendor/argh_derive/src/lib.rs"
-  output_name = "argh_derive-d03e76f8d081cdf5"
+  output_name = "argh_derive-176e8a1a8d705cd2"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":argh_shared-v0_1_4" ]
+  deps += [ ":argh_shared-v0_1_5" ]
   deps += [ ":heck-v0_3_1" ]
   deps += [ ":proc-macro2-v1_0_24" ]
   deps += [ ":quote-v1_0_7" ]
@@ -1106,15 +1106,15 @@ rust_proc_macro("argh_derive-v0_1_4") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=d03e76f8d081cdf5",
-    "-Cextra-filename=-d03e76f8d081cdf5",
+    "-Cmetadata=176e8a1a8d705cd2",
+    "-Cextra-filename=-176e8a1a8d705cd2",
   ]
 }
 
-rust_library("argh_shared-v0_1_4") {
+rust_library("argh_shared-v0_1_5") {
   crate_name = "argh_shared"
   crate_root = "//third_party/rust_crates/vendor/argh_shared/src/lib.rs"
-  output_name = "argh_shared-8b110dad3a849fb"
+  output_name = "argh_shared-4c1414e720ac7a0f"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -1127,8 +1127,8 @@ rust_library("argh_shared-v0_1_4") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=8b110dad3a849fb",
-    "-Cextra-filename=-8b110dad3a849fb",
+    "-Cmetadata=4c1414e720ac7a0f",
+    "-Cextra-filename=-4c1414e720ac7a0f",
   ]
 }
 
@@ -1494,7 +1494,7 @@ rust_library("backtrace-v0_3_42") {
 
 rust_library("backtrace-sys-v0_1_37") {
   crate_name = "backtrace_sys"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/backtrace-sys/src/lib.rs"
+  crate_root = "//third_party/rust_crates/empty/backtrace-sys/src/lib.rs"
   output_name = "backtrace_sys-76b66386b02bc30d"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -2679,8 +2679,7 @@ rust_library("crossterm-v0_19_0") {
 
 rust_library("crossterm_winapi-v0_7_0") {
   crate_name = "crossterm_winapi"
-  crate_root =
-      "//third_party/rust_crates/tiny_mirrors/crossterm_winapi/src/lib.rs"
+  crate_root = "//third_party/rust_crates/empty/crossterm_winapi/src/lib.rs"
   output_name = "crossterm_winapi-e4d128a29a118570"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -3328,7 +3327,7 @@ rust_library("fastrand-v1_4_0") {
 
 rust_library("fatfs-v0_4_0") {
   crate_name = "fatfs"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/fatfs/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/fatfs/src/lib.rs"
   output_name = "fatfs-2449189d41d04e86"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -4742,7 +4741,7 @@ rust_library("libc-v0_2_88") {
 
 rust_library("libm-v0_2_1") {
   crate_name = "libm"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/libm/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/libm/src/lib.rs"
   output_name = "libm-9acc3111b7a9209b"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -5029,7 +5028,7 @@ rust_library("maybe-uninit-v2_0_0") {
 
 rust_library("memchr-v2_3_3") {
   crate_name = "memchr"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/memchr/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/memchr/src/lib.rs"
   output_name = "memchr-523a962cdfbcb111"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -5207,7 +5206,7 @@ rust_library("mio-v0_7_11") {
 
 rust_library("miow-v0_3_7") {
   crate_name = "miow"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/miow/src/lib.rs"
+  crate_root = "//third_party/rust_crates/empty/miow/src/lib.rs"
   output_name = "miow-299ced46ef99541f"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -5372,7 +5371,7 @@ rust_library("nom-v5_0_0") {
 
 rust_library("nom_locate-v2_0_0") {
   crate_name = "nom_locate"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/nom_locate/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/nom_locate/src/lib.rs"
   output_name = "nom_locate-9b54fbce8f44d169"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -5457,7 +5456,7 @@ rust_library("notify-v5_0_0-pre_10") {
 
 rust_library("ntapi-v0_3_4") {
   crate_name = "ntapi"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/ntapi/src/lib.rs"
+  crate_root = "//third_party/rust_crates/empty/ntapi/src/lib.rs"
   output_name = "ntapi-3fb9016f4c012ee1"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -7693,8 +7692,7 @@ rust_library("regex-v1_3_5") {
 
 rust_library("regex-automata-v0_1_9") {
   crate_name = "regex_automata"
-  crate_root =
-      "//third_party/rust_crates/tiny_mirrors/regex-automata/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/regex-automata/src/lib.rs"
   output_name = "regex_automata-cdaa0041c57f3413"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -8177,7 +8175,7 @@ rust_library("rustc-serialize-v0_3_24") {
 
 rust_library("rustls-v0_17_0") {
   crate_name = "rustls"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/rustls/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/rustls/src/lib.rs"
   output_name = "rustls-e5718d4d3f3f0783"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -8447,8 +8445,7 @@ rust_library("sct-v0_6_0") {
 
 rust_library("security-framework-v0_4_4") {
   crate_name = "security_framework"
-  crate_root =
-      "//third_party/rust_crates/tiny_mirrors/security-framework/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/security-framework/src/lib.rs"
   output_name = "security_framework-bc94113e1496fc39"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -9135,8 +9132,7 @@ rust_library("static_assertions-v1_1_0") {
 
 rust_library("streaming-stats-v0_2_3") {
   crate_name = "stats"
-  crate_root =
-      "//third_party/rust_crates/tiny_mirrors/streaming-stats/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/streaming-stats/src/lib.rs"
   output_name = "stats-2c02c5c2e153793"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -9464,7 +9460,7 @@ rust_library("term-v0_5_1") {
 
 rust_library("termcolor-v1_1_0") {
   crate_name = "termcolor"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/termcolor/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/termcolor/src/lib.rs"
   output_name = "termcolor-aa3f8d5c992f6147"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -9949,7 +9945,7 @@ rust_proc_macro("tracing-attributes-v0_1_13") {
 
 rust_library("tracing-core-v0_1_17") {
   crate_name = "tracing_core"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/tracing-core/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/tracing-core/src/lib.rs"
   output_name = "tracing_core-54e4edd42ff24907"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -10112,8 +10108,7 @@ rust_library("trust-dns-proto-v0_19_2") {
 
 rust_library("trust-dns-resolver-v0_19_2") {
   crate_name = "trust_dns_resolver"
-  crate_root =
-      "//third_party/rust_crates/tiny_mirrors/trust-dns-resolver/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/trust-dns-resolver/src/lib.rs"
   output_name = "trust_dns_resolver-b1fe29499f1925ce"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -11121,7 +11116,7 @@ rust_library("wasm-bindgen-shared-v0_2_60") {
 
 rust_library("web-sys-v0_3_36") {
   crate_name = "web_sys"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/web-sys/src/lib.rs"
+  crate_root = "//third_party/rust_crates/empty/web-sys/src/lib.rs"
   output_name = "web_sys-41fe16a596d7ee0d"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -11170,7 +11165,7 @@ rust_library("webpki-v0_21_0") {
 
 rust_library("wepoll-sys-v3_0_1") {
   crate_name = "wepoll_sys"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/wepoll-sys/src/lib.rs"
+  crate_root = "//third_party/rust_crates/empty/wepoll-sys/src/lib.rs"
   output_name = "wepoll_sys-ab562e75c3795c15"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -11191,7 +11186,7 @@ rust_library("wepoll-sys-v3_0_1") {
 
 rust_library("winapi-v0_3_9") {
   crate_name = "winapi"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/winapi/src/lib.rs"
+  crate_root = "//third_party/rust_crates/empty/winapi/src/lib.rs"
   output_name = "winapi-36dcf2c9d4b87e51"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -11252,7 +11247,7 @@ rust_library("winapi-v0_3_9") {
 
 rust_library("winapi-util-v0_1_5") {
   crate_name = "winapi_util"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/winapi-util/src/lib.rs"
+  crate_root = "//third_party/rust_crates/empty/winapi-util/src/lib.rs"
   output_name = "winapi_util-d22658bf7990adbd"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -11394,7 +11389,7 @@ rust_library("zstd-safe-v4_0_0+zstd_1_4_9") {
 
 rust_library("zstd-sys-v1_5_0+zstd_1_4_9") {
   crate_name = "zstd_sys"
-  crate_root = "//third_party/rust_crates/tiny_mirrors/zstd-sys/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/zstd-sys/src/lib.rs"
   output_name = "zstd_sys-f55a42cf5076e22d"
   configs -= [
     "//build/config/rust:edition_2018",

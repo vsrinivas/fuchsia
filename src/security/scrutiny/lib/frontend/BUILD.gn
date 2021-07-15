@@ -23,7 +23,7 @@ if (is_host) {
       "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:termion",
       "//third_party/rust_crates:thiserror",
-      "//third_party/rust_crates/transitional/rustyline",
+      "//third_party/rust_crates/compat/rustyline",
     ]
 
     non_rust_deps = [ "//src/lib/chunked-compression" ]

@@ -54,7 +54,7 @@ derivative = "2.1.1"
 derp = "0.0.13"
 difference = "2.0.0"
 event-listener = "2.5.1"
-fatfs = { path = "tiny_mirrors/fatfs" }
+fatfs = { path = "forks/fatfs" }
 flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
 futures = "=0.3.12"
 futures-channel = "=0.3.12"
@@ -251,40 +251,40 @@ zip = { version = "0.5.5", default-features = false, features = ["deflate"] }
 # examples).
 [patch.crates-io]
 # Keep this sorted alphabetically, please.
-backtrace-sys = { path = "tiny_mirrors/backtrace-sys" }
-cmake = { path = "tiny_mirrors/cmake"}
+backtrace-sys = { path = "empty/backtrace-sys" }
+cmake = { path = "empty/cmake"}
 # TODO(fxbug.dev/56201): Vendor fatfs when upstream makes a new release.
 # See https://github.com/rafalh/rust-fatfs/pull/37#issuecomment-653760603 for more information.
-crossterm_winapi = { path = "tiny_mirrors/crossterm_winapi" }
-fatfs = { path = "tiny_mirrors/fatfs" } # TODO(fxbug.dev/75491) remove
+crossterm_winapi = { path = "empty/crossterm_winapi" }
+fatfs = { path = "forks/fatfs" } # TODO(fxbug.dev/75491) remove
 fuchsia-cprng = { path = "../../src/lib/zircon/rust/fuchsia-cprng" }
-futures-timer = { path = "tiny_mirrors/futures-timer" }
-js-sys = { path = "tiny_mirrors/js-sys" }
-libm = { path = "tiny_mirrors/libm" }
-memchr = { path = "tiny_mirrors/memchr" }
-miow = { path = "tiny_mirrors/miow" }
-nom_locate = { path = "tiny_mirrors/nom_locate" }
-ntapi = { path = "tiny_mirrors/ntapi" }
-pkg-config = { path = "tiny_mirrors/pkg-config" }
-regex-automata = { path = "tiny_mirrors/regex-automata" }
+futures-timer = { path = "empty/futures-timer" }
+js-sys = { path = "empty/js-sys" }
+libm = { path = "forks/libm" }
+memchr = { path = "forks/memchr" }
+miow = { path = "empty/miow" }
+nom_locate = { path = "forks/nom_locate" }
+ntapi = { path = "empty/ntapi" }
+pkg-config = { path = "empty/pkg-config" }
+regex-automata = { path = "forks/regex-automata" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }
-rustls = { path = "tiny_mirrors/rustls" }
-security-framework = { path = "tiny_mirrors/security-framework" }
+rustls = { path = "forks/rustls" }
+security-framework = { path = "forks/security-framework" }
 serde_json5 = { path = "../rust-mirrors/serde_json5" } # TODO(fxbug.dev/75491) remove
-streaming-stats = { path = "tiny_mirrors/streaming-stats" }
+streaming-stats = { path = "forks/streaming-stats" }
 # termcolor 1.1.0 w/ UNLICENSE file removed per OSRB
-termcolor = { path = "tiny_mirrors/termcolor" }
-tracing-core = { path = "tiny_mirrors/tracing-core" }
-trust-dns-resolver = { path = "tiny_mirrors/trust-dns-resolver" }
-wasm-bindgen-futures = { path = "tiny_mirrors/wasm-bindgen-futures" }
-web-sys = { path = "tiny_mirrors/web-sys" }
-wepoll-binding = { path = "tiny_mirrors/wepoll-binding" }
-wepoll-sys = { path = "tiny_mirrors/wepoll-sys" }
-winapi-i686-pc-windows-gnu = { path = "tiny_mirrors/winapi-i686-pc-windows-gnu" }
-winapi-x86_64-pc-windows-gnu = { path = "tiny_mirrors/winapi-x86_64-pc-windows-gnu" }
-winapi = { path = "tiny_mirrors/winapi" }
-winapi-util = { path = "tiny_mirrors/winapi-util" }
-zstd-sys = { path = "tiny_mirrors/zstd-sys" }
+termcolor = { path = "forks/termcolor" }
+tracing-core = { path = "forks/tracing-core" }
+trust-dns-resolver = { path = "forks/trust-dns-resolver" }
+wasm-bindgen-futures = { path = "empty/wasm-bindgen-futures" }
+web-sys = { path = "empty/web-sys" }
+wepoll-binding = { path = "empty/wepoll-binding" }
+wepoll-sys = { path = "empty/wepoll-sys" }
+winapi-i686-pc-windows-gnu = { path = "empty/winapi-i686-pc-windows-gnu" }
+winapi-x86_64-pc-windows-gnu = { path = "empty/winapi-x86_64-pc-windows-gnu" }
+winapi = { path = "empty/winapi" }
+winapi-util = { path = "empty/winapi-util" }
+zstd-sys = { path = "forks/zstd-sys" }
 
 #################################################################################
 ###                            Cargo GNaw Configs                             ###

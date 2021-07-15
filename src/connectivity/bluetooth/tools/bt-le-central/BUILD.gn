@@ -25,7 +25,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:num",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates/transitional/rustyline",
+    "//third_party/rust_crates/compat/rustyline",
   ]
 
   sources = [
