@@ -147,7 +147,7 @@ class {{ .Name }} final {
   friend ::fidl::Equality<{{ . }}>;
 
   {{- if .Result }}
-  {{ .Name }}(fpromise::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>&& result) {
+  {{ .Name }}(fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
       {{- if eq 0 .Result.ValueArity }}
@@ -159,21 +159,21 @@ class {{ .Name }} final {
       set_err(std::move(result.take_error()));
     }
   }
-  {{ .Name }}(fpromise::ok_result<{{ .Result.ValueDecl }}>&& result)
-    : {{ .Name }}(fpromise::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>(std::move(result))) { }
-  {{ .Name }}(fpromise::error_result<{{ .Result.ErrorDecl }}>&& result)
-    : {{ .Name }}(fpromise::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>(std::move(result))) { }
-  operator fpromise::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>() && {
+  {{ .Name }}(fit::ok_result<{{ .Result.ValueDecl }}>&& result)
+    : {{ .Name }}(fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>(std::move(result))) { }
+  {{ .Name }}(fit::error_result<{{ .Result.ErrorDecl }}>&& result)
+    : {{ .Name }}(fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>(std::move(result))) { }
+  operator fit::result<{{ .Result.ValueDecl }}, {{ .Result.ErrorDecl }}>() && {
     if (is_err()) {
-      return fpromise::error(err());
+      return fit::error(err());
     }
     {{- if eq 0 .Result.ValueArity }}
-    return fpromise::ok();
+    return fit::ok();
     {{- else if eq 1 .Result.ValueArity }}
     {{ .Result.ValueTupleDecl }} value_tuple = std::move(response());
-    return fpromise::ok(std::move(std::get<0>(value_tuple)));
+    return fit::ok(std::move(std::get<0>(value_tuple)));
     {{- else }}
-    return fpromise::ok(std::move(response()));
+    return fit::ok(std::move(response()));
     {{- end }}
   }
   {{- end }}

@@ -9,7 +9,7 @@
 // C++ FIDL binding proxies and stubs.
 
 #include <lib/fit/function.h>
-#include <lib/fpromise/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/optional.h>
 
 #include <array>
