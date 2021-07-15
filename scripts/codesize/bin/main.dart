@@ -751,9 +751,13 @@ Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs,
             ? cs.build.rebasePath('${blob.buildPath}.filtered.bloaty_report_pb')
             : null,
         name: name);
-    if (!cs.build.openFile(report.path).existsSync())
-      throw Exception('Could not find bloaty report at ${report.path}');
-    allBloatyReportFiles.items.add(report);
+    // Bloaty reports may not be generated in the event of bloaty errors.
+    // Only add successful bloaty reports.
+    if (!cs.build.openFile(report.path).existsSync()) {
+      print('Warning: missing bloaty report expected for ${report.path}');
+    } else {
+      allBloatyReportFiles.items.add(report);
+    }
   }
 
   return allBloatyReportFiles;

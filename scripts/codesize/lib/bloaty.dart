@@ -91,15 +91,20 @@ Future<void> runBloatyOnMatchedBinaries(Set<String> buildIds,
       ],
           // Accommodate binary protobuf data
           stdoutEncoding: null);
+      // In the event of a bloaty failure, log the message but don't bail.
+      // This is potentially an issue of DWARF version comptibility etc.
       if (result.exitCode != 0) {
-        print(result.stdout);
-        print(result.stderr);
-        throw Exception('Failed to inspect ${blob.buildPath} '
-            '(debug file: ${debugElf.absolute.path})');
+        print('Bloaty failed to inspect ${blob.buildPath}');
+        print('-- Exit code: ${result.exitCode}');
+        print('-- Debug file: ${debugElf.absolute.path}');
+        print(
+            '-- Linkmap file: ${options.buildIdToLinkMapFile[buildId]?.absolute}');
+        print('-- Error msg: ${result.stderr}');
+      } else {
+        // Save stdout as protobuf
+        final output = options.build.openFile('${blob.buildPath}$reportSuffix');
+        await output.writeAsBytes(result.stdout, flush: true);
       }
-      // Save stdout as protobuf
-      final output = options.build.openFile('${blob.buildPath}$reportSuffix');
-      await output.writeAsBytes(result.stdout, flush: true);
     }
 
     if (options.buildIdToAccessPattern != null) {
