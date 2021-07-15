@@ -138,6 +138,39 @@ class _ListSettings extends StatelessWidget {
                   ),
                   onTap: appState.settingsState.showTimezoneSettings,
                 ),
+                // Brightness
+                Observer(builder: (_) {
+                  return ListTile(
+                    enabled: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                    leading: Icon(appState.settingsState.brightnessIcon.value),
+                    title: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(Strings.brightness),
+                        Expanded(
+                          child: Slider(
+                            value:
+                                appState.settingsState.brightnessLevel.value ??
+                                    1,
+                            onChanged: (double value) {
+                              appState.settingsState
+                                  .setBrightnessLevel([value]);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: OutlinedButton(
+                      onPressed: appState.settingsState.brightnessAuto.value ==
+                              true
+                          ? null
+                          : () =>
+                              appState.settingsState.setBrightnessAuto([true]),
+                      child: Text(Strings.auto.toUpperCase()),
+                    ),
+                  );
+                }),
                 // Feedback
                 ListTile(
                   enabled: true,
@@ -160,45 +193,6 @@ class _ListSettings extends StatelessWidget {
                     child: Text(Strings.open.toUpperCase()),
                   ),
                 ),
-                // Brightness
-                Observer(builder: (_) {
-                  return ListTile(
-                    enabled: true,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                    leading: Icon(appState.settingsState.brightnessIcon.value),
-                    title: Text(Strings.brightness),
-                    trailing: Wrap(
-                      alignment: WrapAlignment.end,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
-                      children: [
-                        SizedBox(
-                          height: 20,
-                          width: 200,
-                          child: Slider(
-                            value:
-                                appState.settingsState.brightnessLevel.value ??
-                                    1,
-                            onChanged: (double value) {
-                              appState.settingsState
-                                  .setBrightnessLevel([value]);
-                            },
-                          ),
-                        ),
-                        OutlinedButton(
-                          onPressed:
-                              appState.settingsState.brightnessAuto.value ==
-                                      true
-                                  ? null
-                                  : () => appState.settingsState
-                                      .setBrightnessAuto([true]),
-                          child: Text(Strings.auto.toUpperCase()),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-
                 // Features not implemented yet.
                 // Volume
                 ListTile(
