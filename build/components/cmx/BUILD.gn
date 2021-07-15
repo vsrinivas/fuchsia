@@ -159,6 +159,7 @@ group("cmx_allowlist") {
     "//src/lib/diagnostics/reader/*",
     "//src/lib/diagnostics/testing/*",
     "//src/lib/digest/test/*",
+    "//src/lib/elfldltl/*",
     "//src/lib/elflib/*",
     "//src/lib/fake-clock/*",
     "//src/lib/fdio/rust/*",

@@ -144,6 +144,11 @@ struct Layout<ElfClass::k64, Data> : public LayoutBase<Data> {
   static constexpr unsigned int kRelTypeBits = 32;
 };
 
+// Forward declarations (see note.h).
+struct ElfNote;
+template <ElfData Data>
+class ElfNoteSegment;
+
 // The various ELF data structure layouts differ by class (32-bit vs 64-bit).
 // But many use the same layout with certain fields being either 32 or 64 bits.
 // The layouts that actually differ in field order and the like are defined by
@@ -163,6 +168,9 @@ struct Elf : private Layout<Class, Data> {
   using size_type = typename Addr::value_type;
 
   using Addend = SignedField<size_type, kSwap>;
+
+  using Note = ElfNote;
+  using NoteSegment = ElfNoteSegment<kData>;
 
   struct Ehdr {
     constexpr bool Valid() const {

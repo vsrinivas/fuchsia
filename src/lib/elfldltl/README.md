@@ -35,7 +35,7 @@ as C++ struct types within the `elfldltl::Elf` template class, which is
 parameterized by class (32-bit vs 64-bit) and data format (byte order) with
 default template arguments matching the native platform being compiled for.
 
-## Field accessors
+### Field accessors
 
 ELF format data types are defined using a simple set of generic wrapper
 template types for defining fields, defined in
@@ -51,3 +51,16 @@ contexts where the C++ type is flexible, these implicit conversions may not be
 sufficient and these objects do not fully emulate an integer or `enum` type.
 So they also provide direct accessor methods via `field.get()` or `field()`
 (i.e. calling the field as a function of no arguments).
+
+## Note parser
+
+[`<lib/elfldltl/note.h>`](include/lib/elfldltl/note.h) provides a parser for
+the ELF note format found in `PT_NOTE` segments or `SHT_NOTE` sections.  It
+provides a convenient container-view / iterator API across a note segment in
+memory.  The "elements" of the virtual container provide easy access to the
+note name (vendor) and description (payload) bytes using `string_view` and
+`span` style types, and a field accessor for the 32-bit type field.  The note
+format is the same across 32-bit and 64-bit ELF files, so the note parser's
+template classes are actually parameterized only by the byte order.  But the
+canonical access to the API is via the `elfldltl::Elf` template class for the
+specific format variant, which has the `Note` and `NoteSegment` types.

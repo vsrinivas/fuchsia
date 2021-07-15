@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/cpp/cpp_fuzzer.gni")
 import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
 
@@ -16,6 +17,7 @@ zx_library("elfldltl") {
     "lib/elfldltl/constants.h",
     "lib/elfldltl/field.h",
     "lib/elfldltl/layout.h",
+    "lib/elfldltl/note.h",
   ]
 
   sources = []
@@ -39,6 +41,7 @@ source_set("unittests") {
   sources = [
     "field-tests.cc",
     "layout-tests.cc",
+    "note-tests.cc",
   ]
   deps = [
     ".",
@@ -51,10 +54,21 @@ fuchsia_unittest_package("elfldltl-tests") {
   deps = [ ":elfldltl-unittests" ]
 }
 
+cpp_fuzzer("note-fuzzer") {
+  sources = [ "note-fuzzer.cc" ]
+  deps = [ "." ]
+}
+
+fuzzer_package("elfldltl-fuzzers") {
+  fuzz_host = true
+  cpp_fuzzers = [ ":note-fuzzer" ]
+}
+
 group("tests") {
   testonly = true
 
   deps = [
+    ":elfldltl-fuzzers",
     ":elfldltl-tests",
     ":elfldltl-unittests($host_toolchain)",
   ]
