@@ -4,10 +4,16 @@
 
 use anyhow::{Context as _, Error};
 use fuchsia_async::{self as fasync, DurationExt, Timer};
-use fuchsia_framebuffer::{FrameBuffer, FrameUsage, ImageId, Message, PixelFormat};
+use fuchsia_framebuffer::{
+    FrameBuffer, FrameCollectionBuilder, FrameUsage, ImageId, ImageInCollection, Message,
+    PixelFormat,
+};
 use fuchsia_zircon::DurationNum;
 use futures::{channel::mpsc::unbounded, StreamExt};
 use std::{cell::RefCell, rc::Rc};
+
+const BUFFER_COUNT: usize = 2;
+const BUFFER_COLLECTION_ID: u64 = 1;
 
 fn to_565(pixel: &[u8; 4]) -> [u8; 2] {
     let red = pixel[0] >> 3;
@@ -40,15 +46,23 @@ fn test_main() -> Result<(), Error> {
             .context("Failed to create framebuffer, perhaps a root presenter is already running")?;
 
         let config = fb.get_config();
+        let frame_collection_builder = FrameCollectionBuilder::new(
+            config.width,
+            config.height,
+            config.format.into(),
+            FrameUsage::Cpu,
+            BUFFER_COUNT,
+        )
+        .expect("frame_collection_builder");
+        let config = fb.get_config();
+        let mut frame_collection =
+            frame_collection_builder.build(BUFFER_COLLECTION_ID, &config, true, &mut fb).await?;
 
-        fb.allocate_frames(2, config.format).await?;
-
-        let image_ids: Vec<ImageId> = fb.get_image_ids().into_iter().collect();
-
-        let (image_sender, mut image_receiver) = unbounded::<u64>();
+        let image_ids: Vec<ImageId> = frame_collection.get_image_ids().into_iter().collect();
+        let (image_sender, mut image_receiver) = unbounded::<ImageInCollection>();
 
         let image_id_1 = image_ids[0];
-        let frame = fb.get_frame_mut(image_id_1);
+        let frame = frame_collection.get_frame_mut(image_id_1);
 
         let grey = [0x80, 0x80, 0x80, 0xFF];
         if config.format != PixelFormat::Rgb565 {
@@ -57,8 +71,8 @@ fn test_main() -> Result<(), Error> {
             frame.fill_rectangle(0, 0, config.width, config.height, &to_565(&grey));
         }
 
-        fb.flush_frame(image_id_1)?;
-        fb.present_frame(image_id_1, Some(image_sender), true)?;
+        frame.flush()?;
+        fb.present_frame(frame, Some(image_sender), true)?;
 
         let image_id_2 = image_ids[1];
 
@@ -68,15 +82,15 @@ fn test_main() -> Result<(), Error> {
         fasync::Task::local(async move {
             receiver.next().await;
             let mut fb = fb_ptr.borrow_mut();
-            let frame2 = fb.get_frame_mut(image_id_2);
+            let frame2 = frame_collection.get_frame_mut(image_id_2);
             let white = [0x0ff, 0xff, 0xff, 0xFF];
             if config.format != PixelFormat::Rgb565 {
                 frame2.fill_rectangle(0, 0, config.width, config.height, &white);
             } else {
                 frame2.fill_rectangle(0, 0, config.width, config.height, &to_565(&white));
             }
-            fb.flush_frame(image_id_2).expect("flush_frame");
-            fb.present_frame(image_id_2, None, true).expect("frame2 present to succeed");
+            frame2.flush().expect("flush");
+            fb.present_frame(frame2, None, true).expect("frame2 present to succeed");
             image_receiver.next().await;
             test_sender.unbounded_send(TestResult::TestPassed).unwrap();
         })

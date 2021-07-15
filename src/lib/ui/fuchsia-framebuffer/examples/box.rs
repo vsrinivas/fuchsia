@@ -5,42 +5,24 @@
 use anyhow::{Context as _, Error};
 use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_framebuffer::{
-    to_565, Config, Frame, FrameBuffer, FrameSet, FrameUsage, ImageId, Message, PixelFormat,
+    to_565, Config, Frame, FrameBuffer, FrameCollection, FrameCollectionBuilder, FrameSet,
+    FrameUsage, ImageId, ImageInCollection, Message, PixelFormat,
 };
 use fuchsia_zircon::DurationNum;
 use futures::{channel::mpsc::unbounded, future, StreamExt, TryFutureExt};
 use std::{
     cell::RefCell,
     collections::BTreeSet,
-    env,
-    io::{self, Read},
     rc::Rc,
-    thread,
-    time::Instant,
+    time::{Duration, Instant},
 };
-
-/// Convenience function that can be called from main and causes the Fuchsia process being
-/// run over ssh to be terminated when the user hits control-C.
-pub fn wait_for_close() {
-    if let Some(argument) = env::args().next() {
-        if !argument.starts_with("/tmp") {
-            return;
-        }
-    }
-
-    thread::spawn(move || loop {
-        let mut input = [0; 1];
-        match io::stdin().read_exact(&mut input) {
-            Ok(()) => {}
-            Err(_) => {
-                std::process::exit(0);
-            }
-        }
-    });
-}
 
 struct FrameManager {
     frame_set: FrameSet,
+    frame_collection: Option<FrameCollection>,
+    owned: bool,
+    collection_id: u64,
+    start: Instant,
 }
 
 // this buffering approach will only work with two images, since
@@ -49,15 +31,28 @@ struct FrameManager {
 const BUFFER_COUNT: usize = 2;
 
 impl FrameManager {
-    pub async fn new(fb: &mut FrameBuffer) -> Result<FrameManager, Error> {
-        // this buffering approach will only work with two images, since
-        // as soon as it is released by the display controller it is prepared
-        // for use again and their can only be one prepared image.
+    async fn make_frames(
+        width: u32,
+        height: u32,
+        collection_id: u64,
+        fb: &mut FrameBuffer,
+    ) -> Result<(FrameCollection, FrameSet), Error> {
+        let config = fb.get_config();
+        let frame_collection_builder = FrameCollectionBuilder::new(
+            width,
+            height,
+            config.format.into(),
+            FrameUsage::Cpu,
+            BUFFER_COUNT,
+        )?;
+        let config = fb.get_config();
+        let mut frame_collection =
+            frame_collection_builder.build(collection_id, &config, true, fb).await?;
         let mut available = BTreeSet::new();
         let config = fb.get_config();
-        let image_ids = fb.get_image_ids();
+        let image_ids = frame_collection.get_image_ids();
         for image_id in image_ids {
-            let frame = fb.get_frame_mut(image_id);
+            let frame = frame_collection.get_frame_mut(image_id);
             let black = [0x00, 0x00, 0x00, 0xFF];
             if config.format != PixelFormat::Rgb565 {
                 frame.fill_rectangle(0, 0, config.width, config.height, &black);
@@ -66,18 +61,39 @@ impl FrameManager {
             }
             available.insert(image_id);
         }
-        let frame_set = FrameSet::new(available);
-        Ok(FrameManager { frame_set })
+        Ok((frame_collection, FrameSet::new(collection_id, available)))
+    }
+
+    pub async fn new(fb: &mut FrameBuffer) -> Result<FrameManager, Error> {
+        // this buffering approach will only work with two images, since
+        // as soon as it is released by the display controller it is prepared
+        // for use again and their can only be one prepared image.
+        let collection_id = 10;
+        let config = fb.get_config();
+        let (frame_collection, frame_set) =
+            Self::make_frames(config.width, config.height, collection_id, fb).await?;
+        Ok(FrameManager {
+            frame_set,
+            frame_collection: Some(frame_collection),
+            owned: true,
+            collection_id,
+            start: Instant::now(),
+        })
     }
 
     pub fn present_prepared(
         &mut self,
         fb: &mut FrameBuffer,
-        sender: Option<futures::channel::mpsc::UnboundedSender<ImageId>>,
+        sender: Option<futures::channel::mpsc::UnboundedSender<ImageInCollection>>,
     ) -> Result<bool, Error> {
         if let Some(prepared) = self.frame_set.prepared {
-            fb.flush_frame(prepared)?;
-            fb.present_frame(prepared, sender, true)?;
+            if self.owned {
+                if let Some(frame_collection) = self.frame_collection.as_mut() {
+                    let frame = frame_collection.get_frame(prepared);
+                    frame.flush()?;
+                    fb.present_frame(frame, sender, true)?;
+                }
+            }
             self.frame_set.mark_presented(prepared);
             Ok(true)
         } else {
@@ -85,27 +101,52 @@ impl FrameManager {
         }
     }
 
-    pub fn prepare_frame<F>(&mut self, fb: &mut FrameBuffer, f: F)
+    pub fn prepare_frame<F>(&mut self, _fb: &mut FrameBuffer, target: Instant, f: F)
     where
-        F: FnOnce(&mut Frame),
+        F: FnOnce(Duration, &mut Frame),
     {
-        if let Some(image_id) = self.frame_set.get_available_image() {
-            let frame = fb.get_frame_mut(image_id);
-            f(frame);
-            self.frame_set.mark_prepared(image_id);
-        } else {
-            println!("no free image to prepare");
+        if self.owned {
+            if let Some(image_id) = self.frame_set.get_available_image() {
+                if let Some(frame_collection) = self.frame_collection.as_mut() {
+                    let frame = frame_collection.get_frame_mut(image_id);
+                    let elapsed = target - self.start;
+                    f(elapsed, frame);
+                    self.frame_set.mark_prepared(image_id);
+                }
+            } else {
+                println!("no free image to prepare");
+            }
         }
     }
 
     pub fn frame_done_presenting(&mut self, image_id: ImageId) {
         self.frame_set.mark_done_presenting(image_id);
     }
+
+    pub async fn ownership_changed(&mut self, owned: bool, fb: &mut FrameBuffer) {
+        if owned != self.owned {
+            self.owned = owned;
+            if owned {
+                self.collection_id += 1;
+                let config = fb.get_config();
+                let (frame_collection, frame_set) =
+                    Self::make_frames(config.width, config.height, self.collection_id, fb)
+                        .await
+                        .expect("make_frames");
+                self.frame_set = frame_set;
+                self.frame_collection = Some(frame_collection);
+            } else {
+                let frame_collection = self.frame_collection.take();
+                frame_collection.expect("frame_collection").release(fb);
+            }
+        }
+    }
 }
 
 const FRAME_DELTA: u64 = 10_000_000;
 
-fn update(config: &Config, frame: &mut Frame, timestamp: u64) -> Result<(), Error> {
+fn update(config: &Config, frame: &mut Frame, duration: Duration) -> Result<(), Error> {
+    let timestamp = duration.as_nanos() as u64;
     let box_color = [0x80, 0x00, 0x80, 0xFF];
     let white = [0xFF, 0xFF, 0xFF, 0xFF];
     let box_size = 500;
@@ -132,10 +173,6 @@ fn update(config: &Config, frame: &mut Frame, timestamp: u64) -> Result<(), Erro
 fn main() -> Result<(), Error> {
     println!("box: started");
 
-    // this method is a hack that causes the application to terminate when
-    // control-c is called and it has been run via scp/ssh.
-    wait_for_close();
-
     let mut executor = fasync::LocalExecutor::new().context("Failed to create executor")?;
 
     executor.run_singlethreaded(async {
@@ -145,8 +182,6 @@ fn main() -> Result<(), Error> {
         // create a framebuffer
         let mut fb = FrameBuffer::new(FrameUsage::Cpu, None, None, Some(sender)).await?;
 
-        fb.allocate_frames(BUFFER_COUNT, PixelFormat::Argb8888).await?;
-
         // Find out the details of the display this frame buffer targets
         let config = fb.get_config();
 
@@ -154,14 +189,16 @@ fn main() -> Result<(), Error> {
         // and the display controller images they use.
         let frame_manager = Rc::new(RefCell::new(FrameManager::new(&mut fb).await?));
 
+        fb.configure_layer(&config, 0).expect("configure_layer");
+
         // prepare the first frame
-        frame_manager.borrow_mut().prepare_frame(&mut fb, |frame| {
-            update(&config, frame, 0).expect("update to work");
+        frame_manager.borrow_mut().prepare_frame(&mut fb, Instant::now(), |duration, frame| {
+            update(&config, frame, duration).expect("update to work");
         });
 
         // create an async channel sender/receiver pair to receive messages when
         // the image managed by a frame is no longer being displayed.
-        let (image_sender, mut image_receiver) = unbounded::<u64>();
+        let (image_sender, mut image_receiver) = unbounded::<ImageInCollection>();
 
         // Present the first image. Without this present, the display controller
         // will not send vsync messages.
@@ -172,18 +209,15 @@ fn main() -> Result<(), Error> {
 
         // Prepare a second image. There always wants to be a prepared image
         // to present at a fixed time after vsync.
-        frame_manager.borrow_mut().prepare_frame(&mut fb, |frame| {
-            update(&config, frame, 0).expect("update to work");
+        frame_manager.borrow_mut().prepare_frame(&mut fb, Instant::now(), |duration, frame| {
+            update(&config, frame, duration).expect("update to work");
         });
-
-        // keep track of the start time to use to animate the horizontal and
-        // vertical lines.
-        let start_time = Instant::now();
 
         // Create a clone of the Rc holding the frame manager to move into
         // the async block that receives messages about images being no longer
         // in use.
         let frame_manager_image = frame_manager.clone();
+        let frame_manager_ownership = frame_manager.clone();
 
         let fb_ptr = Rc::new(RefCell::new(fb));
         let fb_ptr2 = fb_ptr.clone();
@@ -192,7 +226,7 @@ fn main() -> Result<(), Error> {
         // image can prepared.
         fasync::Task::local(
             async move {
-                while let Some(image_id) = image_receiver.next().await {
+                while let Some(image_in_collection) = image_receiver.next().await {
                     // Grab a mutable reference. This is guaranteed to work
                     // since only one of this closure or the vsync closure can
                     // be in scope at once.
@@ -201,14 +235,13 @@ fn main() -> Result<(), Error> {
                     // Note the freed image and immediately prepare it. Since there
                     // are only two frames we are guaranteed that at most one can
                     // be free at one time.
-                    frame_manager.frame_done_presenting(image_id);
+                    frame_manager.frame_done_presenting(image_in_collection.image_id);
 
                     // Use elapsed time to animate the horizontal and vertical
                     // lines
-                    let time = Instant::now().duration_since(start_time).as_nanos() as u64;
                     let mut fb = fb_ptr.borrow_mut();
-                    frame_manager.prepare_frame(&mut fb, |frame| {
-                        update(&config, frame, time).expect("update to work");
+                    frame_manager.prepare_frame(&mut fb, Instant::now(), |duration, frame| {
+                        update(&config, frame, duration).expect("update to work");
                     });
                 }
                 Ok(())
@@ -222,33 +255,60 @@ fn main() -> Result<(), Error> {
         // Listen for vsync messages to schedule an update of the displayed image
         fasync::Task::local(
             async move {
-                let mut owned = false;
                 while let Some(message) = receiver.next().await {
-                    let mut fb = fb_ptr2.borrow_mut();
                     match message {
-                        Message::Ownership(in_owned) => owned = in_owned,
-                        Message::VSync(vsync_message) => {
-                            if owned {
-                                // Wait an arbitrary 10 milliseconds after vsync to present the
-                                // next prepared image.
-                                Timer::new(10_i64.millis().after_now()).await;
-
-                                // Grab a mutable reference. This is guaranteed to work
-                                // since only one of this closure or the vsync closure can
-                                // be in scope at once.
-                                let mut frame_manager = frame_manager.borrow_mut();
-
-                                // Present the previously prepared image. As a side effect,
-                                // the currently presented image will be eventually freed.
+                        Message::Ownership(in_owned) => {
+                            let mut frame_manager = frame_manager_ownership.borrow_mut();
+                            frame_manager
+                                .ownership_changed(in_owned, &mut fb_ptr2.borrow_mut())
+                                .await;
+                            if in_owned {
+                                frame_manager.prepare_frame(
+                                    &mut fb_ptr2.borrow_mut(),
+                                    Instant::now(),
+                                    |duration, frame| {
+                                        update(&config, frame, duration).expect("update to work");
+                                    },
+                                );
                                 frame_manager
-                                    .present_prepared(&mut fb, Some(image_sender.clone()))
-                                    .expect("FrameManager::present_prepared to work");
+                                    .present_prepared(
+                                        &mut fb_ptr2.borrow_mut(),
+                                        Some(image_sender.clone()),
+                                    )
+                                    .expect("present to work");
+                                frame_manager.prepare_frame(
+                                    &mut fb_ptr2.borrow_mut(),
+                                    Instant::now(),
+                                    |duration, frame| {
+                                        update(&config, frame, duration).expect("update to work");
+                                    },
+                                );
                             }
-                            fb.acknowledge_vsync(vsync_message.cookie).unwrap_or_else(
-                                |e: anyhow::Error| {
+                        }
+                        Message::VSync(vsync_message) => {
+                            // Wait an arbitrary 10 milliseconds after vsync to present the
+                            // next prepared image.
+                            Timer::new(10_i64.millis().after_now()).await;
+
+                            // Grab a mutable reference. This is guaranteed to work
+                            // since only one of this closure or the vsync closure can
+                            // be in scope at once.
+                            let mut frame_manager = frame_manager.borrow_mut();
+
+                            // Present the previously prepared image. As a side effect,
+                            // the currently presented image will be eventually freed.
+                            frame_manager
+                                .present_prepared(
+                                    &mut fb_ptr2.borrow_mut(),
+                                    Some(image_sender.clone()),
+                                )
+                                .expect("FrameManager::present_prepared to work");
+                            fb_ptr2
+                                .borrow_mut()
+                                .acknowledge_vsync(vsync_message.cookie)
+                                .unwrap_or_else(|e: anyhow::Error| {
                                     println!("acknowledge_vsync: error {:#?}", e);
-                                },
-                            );
+                                });
                         }
                     }
                 }

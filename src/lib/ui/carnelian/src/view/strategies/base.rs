@@ -86,6 +86,9 @@ pub(crate) trait ViewStrategy {
     fn handle_vsync_cookie(&mut self, _cookie: u64) {}
 
     fn render_requested(&mut self) {}
+
+    fn ownership_changed(&mut self, _owned: bool) {}
+    fn drop_display_resources(&mut self) {}
 }
 
 pub(crate) type ViewStrategyPtr = Box<dyn ViewStrategy>;
@@ -95,6 +98,7 @@ pub(crate) struct FrameBufferParams {
     pub frame_buffer: FrameBufferPtr,
     pub pixel_format: PixelFormat,
     pub display_rotation: DisplayRotation,
+    pub display_resource_release_delay: std::time::Duration,
 }
 
 pub(crate) struct ScenicParams {

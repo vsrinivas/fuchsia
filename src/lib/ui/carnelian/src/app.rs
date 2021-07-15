@@ -58,7 +58,7 @@ where
 pub struct Config {
     #[serde(default)]
     pub use_spinel: bool,
-    #[serde(deserialize_with = "deserialize_virtcon_mode")]
+    #[serde(default, deserialize_with = "deserialize_virtcon_mode")]
     pub virtcon_mode: Option<VirtconMode>,
 }
 
@@ -153,6 +153,14 @@ pub trait AppAssistant {
     fn get_keymap_name(&self) -> Option<String> {
         None
     }
+
+    /// How long should carnelian wait before releasing display resources when
+    /// it loses ownership of the display while running on the framebuffer. The default
+    /// value is five seconds, so that the resource will not be rapidly allocated
+    /// and deallocated when switching quickly between virtcon and the regular display.
+    fn get_display_resource_release_delay(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(5)
+    }
 }
 
 /// Reference to an application assistant.
@@ -164,6 +172,7 @@ pub type FrameBufferPtr = Rc<RefCell<FrameBuffer>>;
 /// Struct that implements module-wide responsibilities, currently limited
 /// to creating views on request.
 pub struct App {
+    config: Config,
     strategy: AppStrategyPtr,
     view_controllers: BTreeMap<ViewKey, ViewController>,
     next_key: ViewKey,
@@ -191,6 +200,7 @@ pub(crate) enum MessageInternal {
     RegisterDevice(DeviceId, hid_input_report::DeviceDescriptor),
     InputReport(DeviceId, ViewKey, hid_input_report::InputReport),
     OwnershipChanged(bool),
+    DropDisplayResources,
 }
 
 /// Future that returns an application assistant.
@@ -199,8 +209,14 @@ pub type AssistantCreator<'a> = LocalBoxFuture<'a, Result<AppAssistantPtr, Error
 pub type AssistantCreatorFunc = Box<dyn FnOnce(&AppContext) -> AssistantCreator<'_>>;
 
 impl App {
-    fn new(sender: InternalSender, strategy: AppStrategyPtr, assistant: AppAssistantPtr) -> App {
+    fn new(
+        config: Config,
+        sender: InternalSender,
+        strategy: AppStrategyPtr,
+        assistant: AppAssistantPtr,
+    ) -> App {
         App {
+            config,
             strategy,
             view_controllers: BTreeMap::new(),
             next_key: FIRST_VIEW_KEY,
@@ -213,7 +229,7 @@ impl App {
     /// Starts an application based on Carnelian. The `assistant` parameter will
     /// be used to create new views when asked to do so by the Fuchsia view system.
     pub fn run(assistant_creator_func: AssistantCreatorFunc) -> Result<(), Error> {
-        let config = Self::load_config().context("loading config failed in run")?;
+        let config = Self::load_config().expect("failed loading config");
         let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
         let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();
         let f = async {
@@ -222,7 +238,7 @@ impl App {
             let assistant = assistant_creator.await?;
             let strat =
                 create_app_strategy(&assistant, &config, FIRST_VIEW_KEY, &internal_sender).await?;
-            let mut app = App::new(internal_sender, strat, assistant);
+            let mut app = App::new(config, internal_sender, strat, assistant);
             app.app_init_common().await?;
             while let Some(message) = internal_receiver.next().await {
                 app.handle_message(message).await.expect("handle_message failed");
@@ -308,6 +324,9 @@ impl App {
             MessageInternal::OwnershipChanged(owned) => {
                 self.ownership_changed(owned);
             }
+            MessageInternal::DropDisplayResources => {
+                self.drop_display_resources();
+            }
         }
         Ok(())
     }
@@ -333,7 +352,7 @@ impl App {
             let strat =
                 create_app_strategy(&assistant, &config, FIRST_VIEW_KEY, &internal_sender).await?;
             strat.create_view_for_testing(&internal_sender)?;
-            let mut app = App::new(internal_sender, strat, assistant);
+            let mut app = App::new(config, internal_sender, strat, assistant);
             let mut frame_count = 0;
             app.app_init_common().await?;
             loop {
@@ -389,6 +408,12 @@ impl App {
     fn ownership_changed(&mut self, owned: bool) {
         for (_, view_controller) in &mut self.view_controllers {
             view_controller.ownership_changed(owned);
+        }
+    }
+
+    fn drop_display_resources(&mut self) {
+        for (_, view_controller) in &mut self.view_controllers {
+            view_controller.drop_display_resources();
         }
     }
 
@@ -460,7 +485,11 @@ impl App {
     }
 
     fn get_render_options(&self) -> RenderOptions {
-        self.assistant.get_render_options()
+        let mut render_options = self.assistant.get_render_options();
+        if self.config.use_spinel {
+            render_options.use_spinel = true;
+        }
+        render_options
     }
 
     pub(crate) fn image_freed(&mut self, view_id: ViewKey, image_id: u64, collection_id: u32) {

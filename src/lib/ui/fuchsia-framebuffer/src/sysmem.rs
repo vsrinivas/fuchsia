@@ -195,6 +195,10 @@ impl BufferCollectionAllocator {
         Ok(self.token.as_ref().expect("token in set_name").set_name(priority, name)?)
     }
 
+    pub fn set_pixel_type(&mut self, pixel_type: PixelFormatType) {
+        self.pixel_type = pixel_type;
+    }
+
     pub async fn allocate_buffers(
         &mut self,
         set_constraints: bool,

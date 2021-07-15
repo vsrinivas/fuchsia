@@ -23,7 +23,7 @@ use fidl_test_placeholders::{EchoMarker, EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{Event, Time};
 use futures::prelude::*;
-use std::{any::Any, f32::consts::PI};
+use std::{any::Any, f32::consts::PI, time::Duration};
 
 #[derive(Default)]
 struct SpinningSquareAppAssistant;
@@ -50,6 +50,10 @@ impl AppAssistant for SpinningSquareAppAssistant {
     ) -> Result<(), Error> {
         Self::create_echo_server(channel, false);
         Ok(())
+    }
+
+    fn get_display_resource_release_delay(&self) -> std::time::Duration {
+        Duration::new(0, 0)
     }
 }
 

@@ -65,7 +65,7 @@ impl Plumber {
             buffer_count,
         )?;
 
-        buffer_allocator.set_name(100, "CarnelianFramebuffer")?;
+        buffer_allocator.set_name(100, "CarnelianSurface")?;
 
         let buffer_collection_token = buffer_allocator.duplicate_token().await?;
         session.lock().register_buffer_collection(collection_id, buffer_collection_token)?;
@@ -100,7 +100,7 @@ impl Plumber {
             images.insert(image_id as u64, image);
         }
 
-        let frame_set = FrameSet::new(image_ids);
+        let frame_set = FrameSet::new(collection_id as u64, image_ids);
         Ok(Plumber {
             size,
             buffer_count,

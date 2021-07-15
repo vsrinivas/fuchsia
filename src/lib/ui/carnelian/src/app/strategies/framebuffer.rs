@@ -59,6 +59,7 @@ impl<'a> AppStrategy for FrameBufferAppStrategy<'a> {
             strategy_params.pixel_format,
             app_sender.clone(),
             strategy_params.frame_buffer.clone(),
+            strategy_params.display_resource_release_delay,
         )
         .await?;
         Ok(strat_ptr)

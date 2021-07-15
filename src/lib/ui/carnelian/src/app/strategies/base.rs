@@ -168,6 +168,7 @@ pub(crate) async fn create_app_strategy(
                     pixel_format: strat.get_pixel_format(),
                     size,
                     display_rotation: assistant.get_display_rotation(),
+                    display_resource_release_delay: assistant.get_display_resource_release_delay(),
                 },
             )))
             .unwrap_or_else(|err| panic!("unbounded send failed: {}", err));

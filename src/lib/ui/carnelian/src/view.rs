@@ -416,9 +416,14 @@ impl ViewController {
     }
 
     pub(crate) fn ownership_changed(&mut self, owned: bool) {
+        self.strategy.ownership_changed(owned);
         self.assistant
             .ownership_changed(owned)
             .unwrap_or_else(|e| println!("ownership_changed error: {}", e));
+    }
+
+    pub(crate) fn drop_display_resources(&mut self) {
+        self.strategy.drop_display_resources();
     }
 
     pub(crate) fn request_render(&mut self) {
