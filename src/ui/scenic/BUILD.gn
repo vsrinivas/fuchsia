@@ -64,6 +64,7 @@ group("tests") {
     ":input_unittests",
     ":scenic_unittests",
     ":scheduling_unittests",
+    ":screenshot_unittests",
     "integration_tests",
     "lib/focus/tests",
     "lib/gfx/tests",
@@ -274,6 +275,11 @@ fuchsia_unittest_package("scenic_unittests") {
 fuchsia_unittest_package("scheduling_unittests") {
   manifest = "meta/scheduling_unittests.cmx"
   deps = [ "lib/scheduling/tests:unittests" ] + scenic_test_deps
+}
+
+fuchsia_unittest_package("screenshot_unittests") {
+  manifest = "meta/screenshot_unittests.cmx"
+  deps = [ "lib/screenshot/tests:unittests" ] + scenic_test_deps
 }
 
 # For migration purposes only.  To be moved to src/ui/scenic/bin:scenic
