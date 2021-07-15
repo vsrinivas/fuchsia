@@ -44,7 +44,7 @@ class NetworkAddressService implements TaskService {
   @override
   void dispose() {
     _subscription?.cancel();
-    _watcher!.ctrl.close();
-    _proxy!.ctrl.close();
+    _watcher?.ctrl.close();
+    _proxy?.ctrl.close();
   }
 }

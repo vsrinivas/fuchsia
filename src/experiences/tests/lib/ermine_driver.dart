@@ -71,7 +71,10 @@ class ErmineDriver {
       }
 
       // Wait for the shell to be visible.
-      if (!await waitForOverlays()) {
+      if (!await waitForOverlays().catchError((e) {
+        print('$e: Failed to waitForOverlays');
+        return false;
+      })) {
         return false;
       }
 
@@ -86,7 +89,7 @@ class ErmineDriver {
       }
 
       return true;
-    }, timeout: Duration(minutes: 1));
+    }, timeout: Duration(minutes: 2));
   }
 
   /// Closes [FlutterDriverConnector] and performs cleanup.

@@ -75,18 +75,20 @@ void main() {
 
   // Injects a command into terminal. This assumes only one terminal
   // instance is running.
-  Future<bool> inject(String cmd,
-      {bool verify = true, Duration delay = Duration.zero}) {
-    return ermine.waitFor(() async {
-      await input.text(cmd);
-      await Future.delayed(delay);
-      await input.keyPress(kEnterKey);
-      await Future.delayed(delay);
+  Future<void> inject(String cmd,
+      {Duration delay = const Duration(seconds: 1)}) async {
+    await input.text(cmd);
+    await Future.delayed(delay);
 
-      // Wait for buffer to contain the injected command.
+    // Wait for buffer to contain the injected command.
+    await ermine.waitFor(() async {
       final buffer = await waitForBuffer();
       return buffer.contains(cmd);
     });
+
+    // Commit the command.
+    await input.keyPress(kEnterKey);
+    await Future.delayed(delay);
   }
 
   test('Launch and close two terminal instances', () async {
@@ -97,18 +99,17 @@ void main() {
 
     print('Launched 2 terminal instances');
 
-    // Close the first instance using keyboard shortcut.
-    await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
+    // Close the first instance by injecting 'exit\n'.
+    await waitForPrompt();
+    await inject('exit');
     await ermine.driver.waitUntilNoTransientCallbacks();
     await _waitForViews(componentUrl, 1, testForFocus: true);
 
     print('Closed first instance');
 
-    // Close the second instance by injecting 'exit\n'.
-    await waitForPrompt();
-    await input.text('exit');
-    await input.keyPress(kEnterKey);
-    await Future.delayed(Duration(seconds: 1));
+    // Close the second instance using keyboard shortcut.
+    await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
+    await ermine.driver.waitUntilNoTransientCallbacks();
     await _waitForViews(componentUrl, 0);
 
     print('Closed second instance');
@@ -121,7 +122,7 @@ void main() {
     await waitForPrompt();
 
     // Inject 'ping localhost' + ENTER
-    expect(await inject('ping localhost', delay: Duration(seconds: 3)), isTrue);
+    await inject('ping localhost', delay: Duration(seconds: 3));
 
     // Verify that terminal buffer contains result of ping.
     final result = await waitForBuffer();
@@ -136,7 +137,7 @@ void main() {
     await waitForPrompt();
 
     // Inject 'ls /hub' + ENTER
-    expect(await inject('ls /hub', delay: Duration(seconds: 2)), isTrue);
+    await inject('ls /hub', delay: Duration(seconds: 2));
 
     final result = await waitForBuffer();
     expect(result.contains('job'), isTrue);
@@ -150,17 +151,17 @@ void main() {
     await waitForPrompt();
 
     // Inject 'ls /' + ENTER
-    expect(await inject('ls /', delay: Duration(seconds: 2)), isTrue);
+    await inject('ls /', delay: Duration(seconds: 2));
 
     var result = await waitForBuffer();
     expect(result.contains('bin'), isTrue);
     expect(result.contains('boot'), isTrue);
 
     // Inject 'cd pkg' + ENTER
-    expect(await inject('cd /pkg', delay: Duration(seconds: 1)), isTrue);
+    await inject('cd /pkg');
 
     // Inject 'pwd' + ENTER
-    expect(await inject('pwd', delay: Duration(seconds: 1)), isTrue);
+    await inject('pwd');
 
     // Verify that terminal buffer contains result of ping.
     result = await waitForBuffer();
@@ -174,9 +175,7 @@ void main() {
     await waitForPrompt();
 
     // Inject 'dm reboot' + ENTER
-    await input.text('dm reboot');
-    await input.keyPress(kEnterKey);
-    await Future.delayed(Duration(seconds: 1));
+    await inject('dm reboot');
 
     // Now we wait for the sytem to reboot and reconnect. This logic is taken
     // from `sl4f.reboot()`.
