@@ -21,4 +21,9 @@ declare_args() {
   core_realm_package_name = "core-generic"
   core_realm_shards = []
   core_realm_restrict_persistent_storage = true
+
+  # Determines whether the fuchsia_async library used by many Rust targets will be compiled
+  # with TRACE level log statements that increase binary size a measurable amount.
+  # TODO(fxbug.dev/80742) move this to a toolchain to allow multiple products to build together
+  fuchsia_async_trace_level_logging = false
 }
