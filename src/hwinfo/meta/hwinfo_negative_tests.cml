@@ -1,0 +1,51 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//sdk/lib/syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "hwinfo_negative_tests_test_driver",
+            url: "fuchsia-pkg://fuchsia.com/hwinfo_negative_tests#meta/hwinfo_negative_tests_test_driver.cm",
+        },
+        {
+            name: "misc",
+            url: "fuchsia-pkg://fuchsia.com/hwinfo_negative_tests#meta/fake_factory_store_providers.cm",
+        },
+        {
+            name: "protocol",
+            url: "fuchsia-pkg://fuchsia.com/hwinfo_negative_tests#meta/hwinfo.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#hwinfo_negative_tests_test_driver",
+                "#misc",
+                "#protocol",
+            ],
+        },
+        {
+            protocol: "fuchsia.factory.MiscFactoryStoreProvider",
+            from: "#misc",
+            to: "#protocol",
+        },
+        {
+            protocol: [
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+            ],
+            from: "#protocol",
+            to: "#hwinfo_negative_tests_test_driver",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#hwinfo_negative_tests_test_driver",
+        },
+    ],
+}

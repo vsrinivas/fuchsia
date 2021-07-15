@@ -136,6 +136,10 @@
             url: "fuchsia-pkg://fuchsia.com/bt-avrcp#meta/bt-avrcp.cm",
             environment: "#universe-resolver-env",
         },
+        {
+            name: "hwinfo",
+            url: "fuchsia-pkg://fuchsia.com/hwinfo#meta/hwinfo.cm",
+        },
     ],
     capabilities: [
         // Note: `data`, `cache`, and `temp` storage capabilities are defined in a shard and
@@ -160,6 +164,12 @@
             protocol: "fuchsia.ssh.AuthorizedKeys",
             from: "#ssh-key-manager",
             to: "#appmgr",
+        },
+        {
+            protocol: "fuchsia.factory.MiscFactoryStoreProvider",
+            from: "#appmgr",
+            to: [ "#hwinfo" ],
+            dependency: "weak_for_migration",
         },
         {
             storage: "data",
@@ -391,6 +401,7 @@
                 "#diagnostics-persistence",
                 "#font_provider",
                 "#http-client",
+                "#hwinfo",
                 "#last_reboot",
                 "#log-stats",
                 "#pkg-cache",
@@ -424,6 +435,12 @@
             protocol: [ "fuchsia.kernel.VmexResource" ],
             from: "parent",
             to: "#starnix_manager",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#hwinfo",
+            subdir: "hwinfo",
         },
         {
             protocol: "fuchsia.diagnostics.persist.DataPersistence-wlan",
@@ -591,6 +608,15 @@
             from: "#appmgr",
             to: "#temperature-logger",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+            ],
+            from: "#hwinfo",
+            to: "#appmgr",
         },
         {
             directory: "minfs",

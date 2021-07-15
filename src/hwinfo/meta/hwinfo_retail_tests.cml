@@ -1,0 +1,59 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//sdk/lib/syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "hwinfo_retail_tests_test_driver",
+            url: "fuchsia-pkg://fuchsia.com/hwinfo_retail_tests#meta/hwinfo_retail_tests_test_driver.cm",
+        },
+        {
+            name: "misc",
+            url: "fuchsia-pkg://fuchsia.com/hwinfo_retail_tests#meta/fake_factory_store_providers.cm",
+        },
+        {
+            name: "device",
+            url: "fuchsia-pkg://fuchsia.com/hwinfo_retail_tests#meta/hwinfo.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#device",
+                "#hwinfo_retail_tests_test_driver",
+                "#misc",
+            ],
+        },
+        {
+            protocol: "fuchsia.factory.MiscFactoryStoreProvider",
+            from: "#misc",
+            to: [ "#device" ],
+        },
+        {
+            protocol: "fuchsia.hwinfo.Device",
+            from: "#device",
+            to: [ "#hwinfo_retail_tests_test_driver" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#misc" ],
+            subdir: "fake_factory_store_providers",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#device" ],
+            subdir: "hwinfo_retail_tests",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#hwinfo_retail_tests_test_driver",
+        },
+    ],
+}

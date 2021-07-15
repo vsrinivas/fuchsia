@@ -53,8 +53,23 @@ hwinfo_config("default_product_config") {
 
 fuchsia_component("hwinfo_component") {
   component_name = "hwinfo"
+  manifest = "meta/hwinfo.cml"
+  deps = [ ":hwinfo_bin" ]
+}
+
+fuchsia_component("legacy_hwinfo_component") {
+  component_name = "hwinfo"
   manifest = "meta/hwinfo.cmx"
   deps = [ ":hwinfo_bin" ]
+}
+
+fuchsia_package("fake_legacy_hwinfo") {
+  deps = [
+    ":legacy_hwinfo_component",
+    ":legacy_hwinfo_config",
+    ":legacy_hwinfo_factory_config",
+    "//src/factory/fake_factory_store_providers",
+  ]
 }
 
 fuchsia_package("hwinfo") {
@@ -73,8 +88,25 @@ template("hwinfo_integration_test") {
   fuchsia_component("${test_name}_hwinfo") {
     testonly = true
     component_name = "hwinfo"
-    manifest = "meta/hwinfo.cmx"
+    manifest = "meta/hwinfo.cml"
     deps = [ ":hwinfo_bin" ]
+  }
+
+  fuchsia_component("${test_name}_test_driver") {
+    testonly = true
+    manifest = "meta/${test_name}_test_driver.cml"
+    deps = invoker.deps
+  }
+
+  fuchsia_component("${test_name}_misc_cm") {
+    testonly = true
+    component_name = "fake_factory_store_providers"
+    manifest = "//src/factory/fake_factory_store_providers/meta/misc.cml"
+    if (test_name == "hwinfo_retail_tests") {
+      manifest =
+          "//src/factory/fake_factory_store_providers/meta/misc_retail.cml"
+    }
+    deps = [ "//src/factory/fake_factory_store_providers:bin" ]
   }
 
   fuchsia_test_component("${test_name}_component") {
@@ -86,7 +118,11 @@ template("hwinfo_integration_test") {
   fuchsia_test_package("${test_name}_package") {
     package_name = test_name
     test_components = [ ":${test_name}_component" ]
-    deps = [ ":${test_name}_hwinfo" ]
+    deps = [
+      ":${test_name}_hwinfo",
+      ":${test_name}_misc_cm",
+      ":${test_name}_test_driver",
+    ]
     if (defined(invoker.package_deps)) {
       deps += invoker.package_deps
     }
@@ -97,10 +133,7 @@ template("hwinfo_integration_test") {
 
   group(target_name) {
     testonly = true
-    deps = [
-      ":${test_name}_package",
-      "//src/factory/fake_factory_store_providers",
-    ]
+    deps = [ ":${test_name}_package" ]
   }
 }
 
@@ -159,7 +192,7 @@ rustc_test("hwinfo_retail_test") {
 }
 
 hwinfo_integration_test("hwinfo_positive_tests") {
-  manifest = "meta/hwinfo_positive_tests.cmx"
+  manifest = "meta/hwinfo_positive_tests.cml"
   deps = [ ":hwinfo_positive_test" ]
   package_deps = [
     ":hwinfo_tests_config",
@@ -168,7 +201,7 @@ hwinfo_integration_test("hwinfo_positive_tests") {
 }
 
 hwinfo_integration_test("hwinfo_negative_tests") {
-  manifest = "meta/hwinfo_negative_tests.cmx"
+  manifest = "meta/hwinfo_negative_tests.cml"
   deps = [ ":hwinfo_negative_test" ]
   package_deps = [
     ":hwinfo_tests_factory_config",
@@ -182,7 +215,7 @@ hwinfo_integration_test("hwinfo_negative_tests") {
 }
 
 hwinfo_integration_test("hwinfo_retail_tests") {
-  manifest = "meta/hwinfo_retail_tests.cmx"
+  manifest = "meta/hwinfo_retail_tests.cml"
   deps = [ ":hwinfo_retail_test" ]
   package_deps = [
     ":hwinfo_retail_tests_config",
@@ -214,6 +247,21 @@ config_data("hwinfo_retail_tests_factory_config") {
 
 config_data("hwinfo_retail_tests_config") {
   for_pkg = "hwinfo_retail_tests"
+
+  sources = [
+    "testdata/board_config.json",
+    "testdata/product_config.json",
+  ]
+}
+
+config_data("legacy_hwinfo_factory_config") {
+  for_pkg = "fake_legacy_hwinfo"
+
+  sources = [ "testdata/fuchsia.factory.MiscFactoryStoreProvider.config" ]
+}
+
+config_data("legacy_hwinfo_config") {
+  for_pkg = "fake_legacy_hwinfo"
 
   sources = [
     "testdata/board_config.json",

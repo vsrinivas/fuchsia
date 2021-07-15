@@ -55,7 +55,10 @@ cts_copy_to_sdk("build") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fuchsia-hwinfo-tests" ]
+  deps = [
+    ":fuchsia-hwinfo-tests",
+    "//src/hwinfo:fake_legacy_hwinfo",
+  ]
 }
 
 sdk_molecule("test_sdks") {

@@ -41,6 +41,7 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.exception.Handler",
+                "fuchsia.factory.MiscFactoryStoreProvider",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.hwinfo.Device",
@@ -316,6 +317,18 @@
             path: "/svc_for_sys/fuchsia.fonts.Provider",
         },
         {
+            protocol: "fuchsia.hwinfo.Product",
+            path: "/svc_for_sys/fuchsia.hwinfo.Product",
+        },
+        {
+            protocol: "fuchsia.hwinfo.Device",
+            path: "/svc_for_sys/fuchsia.hwinfo.Device",
+        },
+        {
+            protocol: "fuchsia.hwinfo.Board",
+            path: "/svc_for_sys/fuchsia.hwinfo.Board",
+        },
+        {
             protocol: "fuchsia.update.CommitStatusProvider",
             path: "/svc_for_sys/fuchsia.update.CommitStatusProvider",
         },
@@ -562,6 +575,7 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.exception.Handler",
+                "fuchsia.factory.MiscFactoryStoreProvider",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.hwinfo.Device",

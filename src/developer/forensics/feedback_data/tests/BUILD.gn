@@ -793,7 +793,7 @@ group("tests") {
     "//src/devices/sysmem/bin/sysmem_connector",
     "//src/diagnostics/archivist:archivist-for-embedding",
     "//src/graphics/bin/vulkan_loader",
-    "//src/hwinfo:tests",
+    "//src/hwinfo:fake_legacy_hwinfo",
     "//src/sys/pkg/bin/system-update-checker",
   ]
 
