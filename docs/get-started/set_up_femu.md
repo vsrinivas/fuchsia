@@ -76,7 +76,7 @@ enable KVM.
       ```
 
       If you see `KVM not working`, you may need to reboot your machine for
-      the permission change in Step 2 to take effect.
+      the permission change to take effect.
 
 * {macOS}
 

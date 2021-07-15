@@ -1,6 +1,6 @@
 # Explore Fuchsia {#explore-fuchsia}
 
-Once you have Fuchsia up an running on a device or emulator,
+Once you have Fuchsia up and running on a device or emulator,
 check out the following resources:
 
 *  [Run ffx commands](#run-ffx-commands).
