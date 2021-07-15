@@ -11,11 +11,16 @@ group("tests") {
     ":archivist-integration-tests",
     "logs-basic-integration",
     "logs-budget",
-    "logs-connector",
     "logs/cpp:test-spec",
     "logs/cpp:test-spec-structured",
     "v2:tests",
   ]
+
+  # TODO(fxbug.dev/79475): Flaky test disabled on coverage.
+  # Please fix the flake and remove the condition below.
+  if (!is_coverage) {
+    deps += [ "logs-connector" ]
+  }
 }
 
 # only depend on this via the above `tests` group so that fx test sees the tests
