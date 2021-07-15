@@ -437,9 +437,10 @@ class FakeDev {
     args.driver_search_paths.push_back("/boot/driver");
 
     ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
+    // TODO(https://fxbug.dev/80815): Stop requiring this recursive wait.
     fbl::unique_fd fd;
-    ASSERT_OK(
-        devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
+    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
+                                                            "sys/platform/00:00:2d/ramctl", &fd));
   }
 
   driver_integration_test::IsolatedDevmgr devmgr_;
