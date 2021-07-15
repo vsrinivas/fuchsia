@@ -2249,4 +2249,56 @@ TEST(Vmar, RangeOpCommitVmoPages2) {
             ZX_OK);
 }
 
+// Test that when performing a range op on a vmar with nested vmars that mappings not in the range
+// are correctly skipped (fxbug.dev/80034)
+TEST(Vmar, RangeOpDecommitNestedVmar) {
+  auto root_vmar = zx::vmar::root_self();
+
+  // Create a new vmar to manage that we will eventually call decommit on.
+
+  zx::vmar decommit_vmar;
+  uintptr_t addr;
+  ASSERT_EQ(root_vmar->allocate(ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                                0, zx_system_get_page_size() * 8, &decommit_vmar, &addr),
+            ZX_OK);
+
+  // Create a child vmar in our test vmar to hold our mappings.
+  zx::vmar child_vmar;
+  uint64_t child_addr;
+  ASSERT_EQ(
+      decommit_vmar.allocate(
+          ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+          zx_system_get_page_size() * 2, zx_system_get_page_size() * 4, &child_vmar, &child_addr),
+      ZX_OK);
+  EXPECT_EQ(addr + zx_system_get_page_size() * 2, child_addr);
+
+  // Place two mappings in the child vmar, use different vmos to ensure the mappings cannot get
+  // merged.
+  zx::vmo vmo1, vmo2;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo1));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo2));
+
+  uint64_t mapping1_addr, mapping2_addr;
+  ASSERT_OK(child_vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                           zx_system_get_page_size(), vmo1, 0, zx_system_get_page_size(),
+                           &mapping1_addr));
+  ASSERT_OK(child_vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                           zx_system_get_page_size() * 2, vmo2, 0, zx_system_get_page_size(),
+                           &mapping2_addr));
+
+  EXPECT_EQ(addr + zx_system_get_page_size() * 3, mapping1_addr);
+  EXPECT_EQ(addr + zx_system_get_page_size() * 4, mapping2_addr);
+
+  // Write some data to both mappings.
+  *(volatile char*)mapping1_addr = 42;
+  *(volatile char*)mapping2_addr = 64;
+  // Now decommit the second mapping from the decommit vmar. It should ignore mapping1.
+  EXPECT_OK(decommit_vmar.op_range(ZX_VMAR_OP_DECOMMIT, mapping2_addr, zx_system_get_page_size(),
+                                   nullptr, 0));
+  // mapping 2 should have deommitted and now read as zero.
+  EXPECT_EQ(*(volatile char*)mapping2_addr, 0);
+  // mapping 1 should have been untouchd.
+  EXPECT_EQ(*(volatile char*)mapping1_addr, 42);
+}
+
 }  // namespace
