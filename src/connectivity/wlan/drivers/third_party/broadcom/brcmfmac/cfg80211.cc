@@ -800,10 +800,6 @@ static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
     // Now that we're done with this scan_request we can remove it
     cfg->scan_request = nullptr;
 
-    if (status != BRCMF_E_STATUS_SUCCESS) {
-      BRCMF_WARN("Sending notification of failed scan: %d", status);
-    }
-
     switch (status) {
       case BRCMF_E_STATUS_SUCCESS:
         scan_result = WLAN_SCAN_RESULT_SUCCESS;
@@ -811,9 +807,11 @@ static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
       case BRCMF_E_STATUS_NEWASSOC:
         // In this case, the scan process has been interrupted by an assoc inside the firwmare.
       case BRCMF_E_STATUS_ABORT:
+        BRCMF_INFO("Sending notification of aborted scan: %d", status);
         scan_result = WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE;
         break;
       default:
+        BRCMF_WARN("Sending notification of failed scan: %d", status);
         scan_result = WLAN_SCAN_RESULT_INTERNAL_ERROR;
     }
     brcmf_signal_scan_end(ndev, ndev->scan_txn_id, scan_result);
@@ -2675,7 +2673,7 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
   }
 
   if (status == BRCMF_E_STATUS_ABORT) {
-    BRCMF_WARN("Firmware aborted escan: %d", e->reason);
+    BRCMF_INFO("Firmware aborted escan: %d", e->reason);
     goto chk_scan_end;
   }
 
