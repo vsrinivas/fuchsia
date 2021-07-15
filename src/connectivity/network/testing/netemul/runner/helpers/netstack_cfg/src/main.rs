@@ -4,11 +4,9 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
+    fidl::endpoints::Proxy as _,
     fidl_fuchsia_net,
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
-    fidl_fuchsia_netstack::{
-        InterfaceConfig, NetstackMarker, RouteTableEntry, RouteTableTransactionMarker,
-    },
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
@@ -41,6 +39,9 @@ struct Opt {
 
 const DEFAULT_METRIC: u32 = 100;
 
+// TODO(https://fxbug.dev/64310): Remove default port assumption once Netstack is aware of ports.
+const PORT0: u8 = 0;
+
 async fn config_netstack(opt: Opt) -> Result<(), Error> {
     log::info!("Configuring endpoint {}", opt.endpoint);
 
@@ -59,30 +60,71 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     log::info!("Got device connection.");
 
     // connect to netstack:
-    let netstack = client::connect_to_protocol::<NetstackMarker>()?;
+    let netstack = client::connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()?;
 
-    let mut cfg = InterfaceConfig {
-        name: opt.endpoint.clone(),
-        filepath: format!("/vdev/{}", opt.endpoint),
-        metric: DEFAULT_METRIC,
-    };
     let nicid = match device_connection {
-        fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(e) => netstack
-            .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, e)
-            .await
-            .with_context(|| format!("add_ethernet_device FIDL error ({:?})", cfg))?
-            .map_err(fuchsia_zircon::Status::from_raw)
-            .with_context(|| format!("add_ethernet_device error ({:?})", cfg))?,
-        fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(device) => todo!(
-            "(48860) Support NetworkDevice configuration. Got unexpected NetworkDevice {:?}",
-            device
-        ),
+        fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(e) => {
+            let mut cfg = fidl_fuchsia_netstack::InterfaceConfig {
+                name: opt.endpoint.clone(),
+                filepath: format!("/vdev/{}", opt.endpoint),
+                metric: DEFAULT_METRIC,
+            };
+            netstack
+                .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, e)
+                .await
+                .with_context(|| format!("add_ethernet_device FIDL error ({:?})", cfg))?
+                .map_err(fuchsia_zircon::Status::from_raw)
+                .with_context(|| format!("add_ethernet_device error ({:?})", cfg))?
+        }
+        fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(device_instance) => {
+            let device_instance =
+                device_instance.into_proxy().context("failed to create device instance proxy")?;
+            let (device, server_end) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::DeviceMarker>()
+                    .context("failed to create device proxy")?;
+            let () = device_instance.get_device(server_end).context("get_device failed")?;
+            let (port, server_end) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
+                    .context("failed to create port proxy")?;
+            let () = device.get_port(PORT0, server_end).context("get_port failed")?;
+            let (mac, server_end) = fidl::endpoints::create_endpoints::<
+                fidl_fuchsia_hardware_network::MacAddressingMarker,
+            >()
+            .context("failed to create mac endpoints")?;
+            let () = port.get_mac(server_end).context("get_mac failed")?;
+            let stack = client::connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()?;
+
+            let cfg = fidl_fuchsia_net_stack::InterfaceConfig {
+                name: Some(opt.endpoint.clone()),
+                topopath: None,
+                metric: Some(DEFAULT_METRIC),
+                ..fidl_fuchsia_net_stack::InterfaceConfig::EMPTY
+            };
+            let mut device_definition = fidl_fuchsia_net_stack::DeviceDefinition::Ethernet(
+                fidl_fuchsia_net_stack::EthernetDeviceDefinition {
+                    network_device: device
+                        .into_channel()
+                        .map_err(|device| {
+                            anyhow::anyhow!("can't get channel from device proxy {:?}", device)
+                        })?
+                        .into_zx_channel()
+                        .into(),
+                    mac,
+                },
+            );
+            let nicid = stack
+                .add_interface(cfg.clone(), &mut device_definition)
+                .await
+                .with_context(|| format!("add_interface FIDL error ({:?})", cfg))?
+                .map_err(|stack_error| {
+                    anyhow::anyhow!("add_interface error {:?} ({:?})", stack_error, cfg)
+                })?;
+            u32::try_from(nicid).with_context(|| format!("{} does not fit in a u32", nicid))?
+        }
     };
-    let nicid_u32 =
-        u32::try_from(nicid).with_context(|| format!("{} does not fit in a u32", nicid))?;
 
     let () =
-        netstack.set_interface_status(nicid_u32, true).context("error setting interface status")?;
+        netstack.set_interface_status(nicid, true).context("error setting interface status")?;
     log::info!("Added ethernet to stack.");
 
     // TODO(fxbug.dev/74595): Expose an option to preempt address autogeneration instead of
@@ -116,14 +158,14 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
                     valid_until: _,
                 } = address;
                 let fidl_fuchsia_netstack::NetErr { status, message } = netstack
-                    .remove_interface_address(nicid_u32, addr, *prefix_len)
+                    .remove_interface_address(nicid, addr, *prefix_len)
                     .await
                     .context("error removing interface address")?;
                 if status != fidl_fuchsia_netstack::Status::Ok {
                     return Err(anyhow::anyhow!(
                         "error removing link-local address {:?} on interface (id={}) with status = {:?}: {}",
                         addr,
-                        nicid_u32,
+                        nicid,
                         status,
                         message
                     ));
@@ -151,13 +193,13 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     if !subnets.is_empty() {
         for fidl_fuchsia_net::Subnet { addr, prefix_len } in &mut subnets {
             let fidl_fuchsia_netstack::NetErr { status, message } = netstack
-                .set_interface_address(nicid_u32, addr, *prefix_len)
+                .set_interface_address(nicid, addr, *prefix_len)
                 .await
                 .context("set interface address error")?;
             if status != fidl_fuchsia_netstack::Status::Ok {
                 return Err(anyhow::anyhow!(
                     "failed to set interface (id={}) address to {:?} with status = {:?}: {}",
-                    nicid_u32,
+                    nicid,
                     addr,
                     status,
                     message
@@ -200,7 +242,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         .into();
 
         let (route_proxy, server_end) =
-            fidl::endpoints::create_proxy::<RouteTableTransactionMarker>()
+            fidl::endpoints::create_proxy::<fidl_fuchsia_netstack::RouteTableTransactionMarker>()
                 .context("error creating route proxy")?;
         let () = netstack
             .start_route_table_transaction(server_end)
@@ -209,10 +251,10 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             .context("fidl error calling route_proxy.start_route_table_transaction")?
             .context("error starting route table transaction")?;
 
-        let mut entry = RouteTableEntry {
+        let mut entry = fidl_fuchsia_netstack::RouteTableEntry {
             destination: fidl_fuchsia_net::Subnet { addr: unspec_addr, prefix_len: 0 },
             gateway: Some(Box::new(gw_addr)),
-            nicid: nicid_u32,
+            nicid: nicid,
             metric: 0,
         };
         let () = route_proxy

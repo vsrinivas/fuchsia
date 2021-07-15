@@ -5,11 +5,11 @@
                 {
                     "endpoints": [
                         {
-                            "backing": "ETHERTAP",
+                            "backing": "NETWORK_DEVICE",
                             "name": "client-ep"
                         },
                         {
-                            "backing": "ETHERTAP",
+                            "backing": "NETWORK_DEVICE",
                             "name": "server-ep"
                         }
                     ],

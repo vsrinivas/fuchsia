@@ -117,7 +117,10 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
             .map_err(fuchsia_zircon::Status::from_raw)
             .context("add_ethernet_device error")?,
         DeviceConnection::NetworkDevice(netdevice) => {
-            todo!("(48860) Support and test NetworkDevice connections. Got unexpected NetworkDevice {:?}", netdevice);
+            panic!(
+                "got unexpected NetworkDevice {:?}; expected to have been configured with Ethernet",
+                netdevice
+            );
         }
     };
 
@@ -125,7 +128,8 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
     let fidl_fuchsia_net::Subnet { mut addr, prefix_len } = static_ip.clone().into();
     let _ = netstack.set_interface_address(nicid as u32, &mut addr, prefix_len).await?;
 
-    let interface_state = client::connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()?;
+    let interface_state =
+        client::connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()?;
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid.into()),

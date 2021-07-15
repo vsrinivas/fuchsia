@@ -71,7 +71,10 @@ async fn run_mock_guest(
             netstack.add_ethernet_device(&format!("/{}", ep_name), &mut cfg, eth_device).await?
         }
         fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
-            todo!("(48860) Support and test for NetworkDevice connections. Got unexpected NetworkDevice {:?}", netdevice)
+            panic!(
+                "got unexpected NetworkDevice {:?}; expected to have been configured with Ethernet",
+                netdevice
+            );
         }
     };
 
@@ -194,7 +197,10 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
             run_echo_server_ethernet(ep_name, e).await
         }
         fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
-            todo!("(48860) Support and test for NetworkDevice connections. Got unexpected NetworkDevice {:?}", netdevice)
+            panic!(
+                "got unexpected NetworkDevice {:?}; expected to have been configured with Ethernet",
+                netdevice
+            );
         }
     }
 }

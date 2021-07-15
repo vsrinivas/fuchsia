@@ -37,6 +37,11 @@ fuchsia_test_component("easy-netstack-cfg-test") {
   deps = [ "easy_netstack_cfg" ]
 }
 
+fuchsia_test_component("easy-netstack-cfg-netdevice-test") {
+  manifest = "meta/easy-netstack-cfg-netdevice-test.cmx"
+  deps = [ "easy_netstack_cfg" ]
+}
+
 fuchsia_test_component("env-build-test") {
   manifest = "meta/env-build-test.cmx"
   deps = [ "env_build" ]
@@ -121,6 +126,7 @@ fuchsia_test_component("model-unittest") {
 fuchsia_test_package("netemul-sandbox-test") {
   test_components = [
     ":dynamic-devices-test",
+    ":easy-netstack-cfg-netdevice-test",
     ":easy-netstack-cfg-test",
     ":env-build-test",
     ":inheritance-test",
