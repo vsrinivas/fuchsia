@@ -4,7 +4,7 @@
   "pkg/fidl_cpp/include/lib/fidl/cpp/event_sender.h": "6dd3aac8b622529daef12330dbb2e361",
   "pkg/fidl_cpp/include/lib/fidl/cpp/interface_ptr.h": "6a9d47bcabd33792dafebe19663feca0",
   "pkg/fidl_cpp/include/lib/fidl/cpp/interface_ptr_set.h": "f58f00673b293acbb674b9ec6f02b2dd",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/internal/header.h": "22c46d873082a5b99c497d15edc5921e",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/internal/header.h": "6fb669e0587e62ca54fb6bf1e198ad4e",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/implementation.h": "ed2073fa0d165d46d664021897c86167",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_handler.h": "22474478168e9bf7d07cf548c5380614",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_reader.h": "4921ca040168845c3a965b1d9a217617",

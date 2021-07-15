@@ -129,7 +129,7 @@ class Example_foo_Result final {
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
   friend ::fidl::Equality<::fidl::test::error::Example_foo_Result>;
-  Example_foo_Result(fit::result<int64_t, uint32_t>&& result) {
+  Example_foo_Result(fpromise::result<int64_t, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
       set_response(
@@ -138,16 +138,18 @@ class Example_foo_Result final {
       set_err(std::move(result.take_error()));
     }
   }
-  Example_foo_Result(fit::ok_result<int64_t>&& result)
-      : Example_foo_Result(fit::result<int64_t, uint32_t>(std::move(result))) {}
-  Example_foo_Result(fit::error_result<uint32_t>&& result)
-      : Example_foo_Result(fit::result<int64_t, uint32_t>(std::move(result))) {}
-  operator fit::result<int64_t, uint32_t>() && {
+  Example_foo_Result(fpromise::ok_result<int64_t>&& result)
+      : Example_foo_Result(
+            fpromise::result<int64_t, uint32_t>(std::move(result))) {}
+  Example_foo_Result(fpromise::error_result<uint32_t>&& result)
+      : Example_foo_Result(
+            fpromise::result<int64_t, uint32_t>(std::move(result))) {}
+  operator fpromise::result<int64_t, uint32_t>() && {
     if (is_err()) {
-      return fit::error(err());
+      return fpromise::error(err());
     }
     ::std::tuple<int64_t> value_tuple = std::move(response());
-    return fit::ok(std::move(std::get<0>(value_tuple)));
+    return fpromise::ok(std::move(std::get<0>(value_tuple)));
   }
 
  private:
