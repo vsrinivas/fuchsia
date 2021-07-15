@@ -43,15 +43,41 @@ AccessibilityView::AccessibilityView(
     fuchsia::ui::accessibility::view::RegistryPtr accessibility_view_registry,
     fuchsia::ui::scenic::ScenicPtr scenic)
     : accessibility_view_registry_(std::move(accessibility_view_registry)),
-      scenic_(std::move(scenic)),
-      session_(scenic_.get()) {
+      scenic_(std::move(scenic)) {
+  // Set up scenic session endpoints.
+  fuchsia::ui::scenic::SessionEndpoints endpoints;
+  fuchsia::ui::scenic::SessionPtr session;
+  endpoints.set_session(session.NewRequest());
+  endpoints.set_view_focuser(focuser_.NewRequest());
+  fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> session_listener;
+
+  // Wrap session for convenience and create valid session listener.
+  // NOTE: We need access to the session and session listener handles to set up
+  // the session endpoints (which are required to associate the focuser with the
+  // a11y view's ViewRef). The scenic::Session wrapper class does not give us access to both
+  // handles, so we need to instantiate the session and listener separately, and then transfer
+  // ownership to the session wrapper. Since the scenic::Session wrapper class does not have
+  // a default constructor, we need to hold it in a nullable type like unique_ptr.
+  session_ = std::make_unique<scenic::Session>(std::move(session), session_listener.NewRequest());
+
+  // Add session listener to endpoints.
+  endpoints.set_session_listener(session_listener.Bind());
+
+  // Create scenic session.
+  scenic_->CreateSessionT(std::move(endpoints), /* unused */ [] {});
+
   // Set up session listener event handler.
-  session_.set_event_handler(
+  session_->set_event_handler(
       [this](std::vector<fuchsia::ui::scenic::Event> events) { OnScenicEvent(std::move(events)); });
 
   accessibility_view_registry_.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Error from fuchsia::ui::accessibility::view::Registry"
                    << zx_status_get_string(status);
+  });
+
+  // Set up focuser error handler.
+  focuser_.set_error_handler([](zx_status_t error) {
+    FX_LOGS(WARNING) << "Focuser died with error " << zx_status_get_string(error);
   });
 
   // Create view token and view ref pairs for a11y view.
@@ -70,12 +96,12 @@ AccessibilityView::AccessibilityView(
   // add our view holder to the scene, because root presenter will try to route
   // input to the a11y view at that time. If the a11y view does not yet exist,
   // that step will fail.
-  a11y_view_.emplace(&session_, std::move(a11y_view_token), std::move(a11y_control_ref),
+  a11y_view_.emplace(session_.get(), std::move(a11y_view_token), std::move(a11y_control_ref),
                      std::move(a11y_view_ref), "A11y View");
 
   // TODO(fxbug.dev/77045): Switch to use SafePresenter.
   // Apply changes.
-  session_.Present(
+  session_->Present(
       /* presentation_time = */ 0,
       /* presentation_callback = */ [this, a11y_view_ref_copy = std::move(a11y_view_ref_copy),
                                      a11y_view_holder_token = std::move(a11y_view_holder_token)](
@@ -85,7 +111,7 @@ AccessibilityView::AccessibilityView(
             std::move(a11y_view_ref_copy), std::move(a11y_view_holder_token),
             [this](fuchsia::ui::views::ViewHolderToken proxy_view_holder_token) {
               // Create the proxy view holder and attach it to the scene.
-              proxy_view_holder_.emplace(&session_, std::move(proxy_view_holder_token),
+              proxy_view_holder_.emplace(session_.get(), std::move(proxy_view_holder_token),
                                          "Proxy View Holder");
               a11y_view_->AddChild(proxy_view_holder_.value());
 
@@ -94,12 +120,12 @@ AccessibilityView::AccessibilityView(
               // |OnScenicEvent| set the proxy view holder properties when the a11y
               // view is attached.
               if (a11y_view_properties_) {
-                session_.Enqueue(scenic::NewSetViewPropertiesCmd(proxy_view_holder_->id(),
-                                                                 *a11y_view_properties_));
+                session_->Enqueue(scenic::NewSetViewPropertiesCmd(proxy_view_holder_->id(),
+                                                                  *a11y_view_properties_));
               }
 
               // Apply changes.
-              session_.Present(
+              session_->Present(
                   /* presentation_time = */ 0,
                   /* presentation_callback = */ [this](fuchsia::images::PresentationInfo info) {
                     const bool old = is_initialized();
@@ -131,7 +157,7 @@ void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> ev
           // If the client view holder was already created, then we need to set
           // its properties.
           if (proxy_view_holder_) {
-            session_.Enqueue(
+            session_->Enqueue(
                 scenic::NewSetViewPropertiesCmd(proxy_view_holder_->id(), *a11y_view_properties_));
             changes_to_present = true;
           }
@@ -144,7 +170,7 @@ void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> ev
           // If the client view holder was already created, then we need to set
           // its properties.
           if (proxy_view_holder_) {
-            session_.Enqueue(
+            session_->Enqueue(
                 scenic::NewSetViewPropertiesCmd(proxy_view_holder_->id(), *a11y_view_properties_));
             changes_to_present = true;
           }
@@ -163,7 +189,7 @@ void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> ev
   }
 
   if (changes_to_present) {
-    session_.Present(
+    session_->Present(
         /* presentation_time = */ 0,
         /* presentation_callback = */ [this](fuchsia::images::PresentationInfo info) {
           const bool old = is_initialized();

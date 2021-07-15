@@ -242,6 +242,13 @@ void MockScenic::CreateSession(
   create_session_called_ = true;
 }
 
+void MockScenic::CreateSessionT(fuchsia::ui::scenic::SessionEndpoints endpoints,
+                                CreateSessionTCallback callback) {
+  mock_session_->Bind(std::move(*endpoints.mutable_session()),
+                      endpoints.mutable_session_listener()->Bind());
+  create_session_called_ = true;
+}
+
 fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> MockScenic::GetHandler(
     async_dispatcher_t* dispatcher) {
   return [this, dispatcher](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {

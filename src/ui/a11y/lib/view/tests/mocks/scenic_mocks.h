@@ -9,6 +9,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <set>
 #include <unordered_map>
@@ -158,10 +159,17 @@ class MockScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
   explicit MockScenic(MockSession* mock_session) : mock_session_(mock_session) {}
   ~MockScenic() override = default;
 
-  void NotImplemented_(const std::string& name) override {}
+  void NotImplemented_(const std::string& name) override {
+    FX_LOGS(ERROR) << "NotImplemented_" << name;
+  }
 
+  // |fuchsia::ui::scenic::Scenic|
   void CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
                      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
+
+  // |fuchsia::ui::scenic::Scenic|
+  void CreateSessionT(fuchsia::ui::scenic::SessionEndpoints endpoints,
+                      CreateSessionTCallback callback) override;
 
   fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler(
       async_dispatcher_t* dispatcher = nullptr);

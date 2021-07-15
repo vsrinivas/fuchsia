@@ -7,6 +7,7 @@
 
 #include <fuchsia/ui/accessibility/view/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/commands.h>
@@ -92,7 +93,10 @@ class AccessibilityView : public AccessibilityViewInterface {
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
   // Scenic session interface.
-  scenic::Session session_;
+  std::unique_ptr<scenic::Session> session_;
+
+  // Scenic focuser used to request focus chain updates in the a11y view's subtree.
+  fuchsia::ui::views::FocuserPtr focuser_;
 
   // Resources below must be declared after scenic session, because they
   // must be destroyed before the session is destroyed.
