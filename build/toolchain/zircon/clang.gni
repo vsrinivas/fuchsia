@@ -28,7 +28,7 @@ if (clang_tool_dir == "") {
         read_file("$_prebuilt_clang_dir/.versions/clang.cipd_version", "json")
     clang_version_string = _prebuilt_cipd_version.instance_id
   } else {
-    clang_tool_dir = rebased_clang_prefix
+    clang_tool_dir = clang_prefix
   }
 }
 
