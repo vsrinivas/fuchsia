@@ -192,7 +192,9 @@ class TestsManifestReader {
           // but invoking the test runner on their shared package name already
           // captures all tests. Therefore, any such sibling entry further down
           // `tests.json` will only result in duplicate work.
-          var handle = testDefinition.createExecutionHandle().handle;
+          var handle = testDefinition
+              .createExecutionHandle(parallelOverride: null)
+              .handle;
           if (seenPackages.contains(handle)) {
             numDuplicateTests += 1;
             testIsClaimed = true;

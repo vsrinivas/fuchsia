@@ -52,6 +52,7 @@ class Flags {
   // flags for v2 tests
   final List<String> testFilter;
   final String count;
+  final String parallel;
   final bool runDisabledTests;
 
   Flags({
@@ -83,6 +84,7 @@ class Flags {
     this.timeout = 0,
     this.testFilter,
     this.count,
+    this.parallel,
     this.runDisabledTests = false,
   });
 
@@ -120,6 +122,7 @@ class Flags {
         slowThreshold: int.parse(argResults['slow'] ?? '0'),
         timeout: int.parse(argResults['timeout'] ?? '0'),
         count: argResults['count'],
+        parallel: argResults['parallel'],
         runDisabledTests: argResults['also-run-disabled-tests']);
   }
 
@@ -151,6 +154,7 @@ class Flags {
   slowThreshold: $slowThreshold
   testFilter: $testFilter
   count: $count
+  parallel: $parallel
 >''';
 }
 
@@ -232,6 +236,8 @@ class TestsConfig {
     if (flags.count != null) {
       v2runnerTokens..add('--count')..add(flags.count);
     }
+    // We do not add the parallel option here, as it may also be specified via
+    // test spec. Instead, it is added later.
     if (flags.runDisabledTests) {
       v2runnerTokens.add('--also-run-disabled-tests');
     }

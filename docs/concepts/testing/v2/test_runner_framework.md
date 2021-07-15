@@ -167,10 +167,11 @@ fuchsia_test_package("my-test-pkg") {
 }
 ```
 
-If using `run-test-suite` to launch tests, pass this as an argument:
+To override the value specified in the test spec, pass the parallel option when
+invoking fx test:
 
 ```posix-terminal
-fx shell run-test-suite --parallel=5 <test_url>
+fx test --parallel=5 <test_url>
 ```
 
 ### Running test multiple times

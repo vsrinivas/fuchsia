@@ -216,8 +216,8 @@ abstract class OutputFormatter {
         '$verb ${_testResultEvents.length} tests with $numFailures $failures$verboseHint';
     if (numFailures == 0) {
       summary = '${addEmoji(Emoji.party)}  ${wrapWith(summary, [
-        green
-      ])} ${addEmoji(Emoji.party)}';
+            green
+          ])} ${addEmoji(Emoji.party)}';
     }
     buffer.addLines([summary]);
     if (_unrunnableTestEvents.isNotEmpty) {
@@ -392,7 +392,7 @@ class InfoFormatter extends OutputFormatter {
 
 List<String> infoPrint(TestDefinition testDefinition) {
   var command = testDefinition
-      .createExecutionHandle()
+      .createExecutionHandle(parallelOverride: null)
       .getInvocationTokens(const []).toString();
   return <String>[
     _isTruthy(command) ? 'command: $command' : null,

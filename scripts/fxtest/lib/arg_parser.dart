@@ -160,20 +160,25 @@ cycle, as "unsupported" tests are likely a problem with this
 command and not the tests.''')
   ..addMultiOption('test-filter',
       help: '''Runs specific test cases in v2 suite. Can be specified multiple
-      times to pass in multiple patterns. Run 'fx shell run-test-suite --help'
-      for more info about this flag.''',
+      times to pass in multiple patterns.
+      example: --test-filter glob1 --test-filter glob2''',
       splitCommas: false)
   ..addOption('count',
-      defaultsTo: null, help: '''Number of times to run the test. Run
-'fx shell run-test-suite --help' for more info about this flag.''')
+      defaultsTo: null,
+      help: '''Number of times to run the test. By default run 1 time. If
+      an iteration of test times out, no further iterations will
+      be executed.''')
+  ..addOption('parallel',
+      defaultsTo: null,
+      help: '''Maximum number of test cases to run in parallel. Overrides any
+      parallel option set in test specs.''')
   ..addFlag('also-run-disabled-tests',
       defaultsTo: false,
       help:
           '''Whether to also run tests that have been marked disabled/ignored by
-the test author. Run 'fx shell run-test-suite --help' for more info about this
-flag.''')
+      the test author.''')
   ..addOption('timeout',
       defaultsTo: '0',
-      help: '''Test timeout in seconds. Run 'fx shell run-test-suite --help' or
-'fx shell run-test-component --help' for more info about this flag.''')
+      help: '''Test timeout in seconds. The test is killed if not completed when
+      the timeout has elapsed.''')
   ..addFlag('verbose', abbr: 'v', defaultsTo: false, negatable: false);

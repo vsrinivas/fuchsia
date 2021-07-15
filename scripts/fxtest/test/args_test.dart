@@ -506,6 +506,20 @@ void main() {
       expect(testsConfig.runnerTokens[TestType.suite], contains('22'));
     });
 
+    test('with --parallel', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--parallel=10'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      expect(testsConfig.flags.parallel, '10');
+      expect(testsConfig.runnerTokens[TestType.suite],
+          isNot(contains('--test-filter')));
+      // shouldn't be added yet. TODO - figure out a nicer refactor here so that the flags are
+      // generated just once
+      expect(testsConfig.runnerTokens[TestType.suite],
+          isNot(contains('--parallel')));
+    });
+
     test('with --also-run-disabled-tests', () {
       var testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['--also-run-disabled-tests'],

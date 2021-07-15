@@ -68,6 +68,10 @@ class TestBundle {
   /// log restricting list.
   final bool shouldRestrictLogs;
 
+  /// Contains a parallel value specified by the user at invocation time if any.
+  /// Supercedes any parallel value stored in the test definition.
+  final String parallelOverride;
+
   static bool hasDeviceTests(List<TestBundle> testBundles) {
     return testBundles
         .any((e) => !hostTestTypes.contains(e.testDefinition.testType));
@@ -113,6 +117,7 @@ class TestBundle {
     @required this.workingDirectory,
     @required this.confidence,
     @required this.directoryBuilder,
+    @required this.parallelOverride,
     this.environment = const <String, String>{},
     this.extraFlags = const [],
     this.fxPath,
@@ -176,6 +181,7 @@ class TestBundle {
       testRunner: testRunnerBuilder(testsConfig),
       timeElapsedSink: timeElapsedSink,
       workingDirectory: workingDirectory,
+      parallelOverride: testsConfig.flags.parallel,
     );
   }
 
@@ -191,7 +197,8 @@ class TestBundle {
   /// Returns a stream of test events that send feedback to the user.
   Stream<TestEvent> run() async* {
     var testType = testDefinition.testType;
-    var executionHandle = testDefinition.createExecutionHandle();
+    var executionHandle = testDefinition.createExecutionHandle(
+        parallelOverride: parallelOverride);
     if (testType == TestType.unsupportedDeviceTest) {
       yield UnrunnableTestEvent(executionHandle.handle);
       return;

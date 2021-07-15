@@ -133,13 +133,15 @@ class TestDefinition {
     return PackageUrl.copyWithHash(other: packageUrl, hash: hash);
   }
 
-  ExecutionHandle createExecutionHandle() {
+  ExecutionHandle createExecutionHandle({String parallelOverride}) {
     switch (testType) {
       case TestType.component:
         return ExecutionHandle.component(decoratedPackageUrl.toString(), os);
       case TestType.suite:
         List<String> flags = [];
-        if (parallel != null) {
+        if (parallelOverride != null) {
+          flags.addAll(['--parallel', parallelOverride]);
+        } else if (parallel != null) {
           flags.addAll(['--parallel', parallel]);
         }
         return ExecutionHandle.suite(decoratedPackageUrl.toString(), os,

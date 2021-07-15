@@ -102,5 +102,35 @@ void main() {
         ].join(' '),
       );
     });
+
+    test(
+        'should assemble correct arguments for component suite tests with parallel override',
+        () {
+      const componentUrl =
+          'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cm';
+      final testDef = TestDefinition.fromJson(
+        {
+          'environments': [],
+          'test': {
+            'cpu': 'x64',
+            'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
+            'name': 'lib_tests',
+            'os': 'fuchsia',
+            'package_url': componentUrl,
+            'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json',
+            'parallel': 2,
+          }
+        },
+        buildDir: '/whatever',
+      );
+      final commandTokens = testDef
+          .createExecutionHandle(parallelOverride: '5')
+          .getInvocationTokens([]);
+      expect(
+        commandTokens.fullCommand,
+        ['fx', 'shell', 'run-test-suite', '--parallel 5', componentUrl]
+            .join(' '),
+      );
+    });
   });
 }
