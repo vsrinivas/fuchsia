@@ -12,15 +12,18 @@
 
 #include <memory>
 
+#include "src/lib/fsl/socket/socket_drainer.h"
+
 class InputReader;
 class OutputWriter;
 
-class SerialConsole {
+// Reads/writes from the terminal to/from the given socket.
+class GuestConsole {
  public:
-  SerialConsole(async::Loop* loop);
-  SerialConsole(SerialConsole&& o);
+  explicit GuestConsole(async::Loop* loop);
+  GuestConsole(GuestConsole&& o) noexcept;
 
-  ~SerialConsole();
+  ~GuestConsole();
 
   void Start(zx::socket socket);
 

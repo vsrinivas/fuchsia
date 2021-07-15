@@ -106,19 +106,19 @@ class OutputWriter : public fsl::SocketDrainer::Client {
   fsl::SocketDrainer socket_drainer_{this};
 };
 
-SerialConsole::SerialConsole(async::Loop* loop)
+GuestConsole::GuestConsole(async::Loop* loop)
     : loop_(loop),
       input_reader_(std::make_unique<InputReader>()),
       output_writer_(std::make_unique<OutputWriter>(loop)) {}
 
-SerialConsole::SerialConsole(SerialConsole&& o)
+GuestConsole::GuestConsole(GuestConsole&& o) noexcept
     : loop_(o.loop_),
       input_reader_(std::move(o.input_reader_)),
       output_writer_(std::move(o.output_writer_)) {}
 
-SerialConsole::~SerialConsole() = default;
+GuestConsole::~GuestConsole() = default;
 
-void SerialConsole::Start(zx::socket socket) {
+void GuestConsole::Start(zx::socket socket) {
   input_reader_->Start(zx::unowned_socket(socket));
   output_writer_->Start(std::move(socket));
 }
@@ -139,7 +139,7 @@ zx_status_t handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
     return status;
   }
 
-  SerialConsole console(loop);
+  GuestConsole console(loop);
   console.Start(std::move(socket));
 
   return loop->Run();

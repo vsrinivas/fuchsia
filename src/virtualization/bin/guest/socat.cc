@@ -45,7 +45,7 @@ class HostVsockAcceptor : public fuchsia::virtualization::HostVsockAcceptor {
 
  private:
   uint32_t port_;
-  SerialConsole console_;
+  GuestConsole console_;
 };
 
 // Connect the the vsock endpoint of the given environment.
@@ -109,7 +109,7 @@ zx_status_t handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port, a
     return status;
   }
 
-  SerialConsole console(loop);
+  GuestConsole console(loop);
   console.Start(std::move(socket));
 
   return loop->Run();

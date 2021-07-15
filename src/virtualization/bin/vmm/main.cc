@@ -211,7 +211,7 @@ int main(int argc, char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to connect console device";
       return status;
     }
-    status = console.Start(guest.object(), guest_controller.SerialSocket(), launcher.get(),
+    status = console.Start(guest.object(), guest_controller.ConsoleSocket(), launcher.get(),
                            device_loop.dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start console device";

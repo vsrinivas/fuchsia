@@ -17,9 +17,14 @@ class GuestImpl : public fuchsia::virtualization::Guest {
 
   zx_status_t AddPublicService(sys::ComponentContext* context);
 
-  // Extracts the socket handle to be used for the host end of serial
-  // communication. The other end of this socket will be provided to clients
-  // via |GetSerial|.
+  // Return the host side of the guest's console socket.
+  //
+  // The other end of this socket will be provided to clients via |GetConsole|.
+  zx::socket ConsoleSocket();
+
+  // Return the host side of the guest's low-level serial socket.
+  //
+  // The other end of this socket will be provided to clients via |GetSerial|.
   zx::socket SerialSocket();
 
   // |fuchsia::virtualization::Guest|
@@ -29,8 +34,13 @@ class GuestImpl : public fuchsia::virtualization::Guest {
  private:
   fidl::BindingSet<fuchsia::virtualization::Guest> bindings_;
 
-  zx::socket socket_;
-  zx::socket remote_socket_;
+  // Host/client end of the serial socket.
+  zx::socket serial_socket_;
+  zx::socket remote_serial_socket_;
+
+  // Host/client end of the console socket.
+  zx::socket console_socket_;
+  zx::socket remote_console_socket_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_GUEST_IMPL_H_

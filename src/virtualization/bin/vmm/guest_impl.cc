@@ -14,18 +14,26 @@ static zx::socket duplicate(const zx::socket& socket) {
 }
 
 GuestImpl::GuestImpl() {
-  zx_status_t status = zx::socket::create(0, &socket_, &remote_socket_);
-  FX_CHECK(status == ZX_OK) << "Failed to create socket";
+  zx_status_t status = zx::socket::create(0, &serial_socket_, &remote_serial_socket_);
+  FX_CHECK(status == ZX_OK) << "Failed to create serial socket";
+
+  status = zx::socket::create(0, &console_socket_, &remote_console_socket_);
+  FX_CHECK(status == ZX_OK) << "Failed to create console socket";
 }
 
 zx_status_t GuestImpl::AddPublicService(sys::ComponentContext* context) {
   return context->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
-zx::socket GuestImpl::SerialSocket() { return duplicate(socket_); }
+zx::socket GuestImpl::SerialSocket() { return duplicate(serial_socket_); }
 
-void GuestImpl::GetSerial(GetSerialCallback callback) { callback(duplicate(remote_socket_)); }
+zx::socket GuestImpl::ConsoleSocket() { return duplicate(console_socket_); }
+
+void GuestImpl::GetSerial(GetSerialCallback callback) {
+  callback(duplicate(remote_serial_socket_));
+}
 
 void GuestImpl::GetConsole(GetConsoleCallback callback) {
-  callback(fuchsia::virtualization::Guest_GetConsole_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  callback(fuchsia::virtualization::Guest_GetConsole_Result::WithResponse(
+      fuchsia::virtualization::Guest_GetConsole_Response{duplicate(remote_console_socket_)}));
 }

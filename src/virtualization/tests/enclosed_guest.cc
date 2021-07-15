@@ -165,22 +165,35 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
   RunLoopUntil(
       GetLoop(), [&launch_complete]() { return launch_complete; }, deadline);
 
-  logger.Start("Connecting to guest serial", zx::sec(10));
-  zx::socket serial_socket;
-  guest_->GetSerial([&serial_socket](zx::socket s) { serial_socket = std::move(s); });
-  bool socket_valid = RunLoopUntil(
-      GetLoop(), [&serial_socket] { return serial_socket.is_valid(); }, deadline);
-  if (!socket_valid) {
-    FX_LOGS(ERROR) << "Timed out waiting to connect to guest's serial.";
+  // Connect to guest console.
+  logger.Start("Connecting to guest console", zx::sec(10));
+  std::optional<fuchsia::virtualization::Guest_GetConsole_Result> get_console_result;
+  guest_->GetConsole(
+      [&get_console_result](fuchsia::virtualization::Guest_GetConsole_Result result) {
+        get_console_result = std::move(result);
+      });
+  bool success = RunLoopUntil(
+      GetLoop(), [&get_console_result] { return get_console_result.has_value(); }, deadline);
+  if (!success) {
+    FX_LOGS(ERROR) << "Timed out waiting to connect to guest's console";
     return ZX_ERR_TIMED_OUT;
   }
-  console_ = std::make_unique<GuestConsole>(std::make_unique<ZxSocket>(std::move(serial_socket)));
+  if (get_console_result->is_err()) {
+    FX_PLOGS(ERROR, get_console_result->err()) << "Failed to open guest console";
+    return get_console_result->err();
+  }
+  console_ = std::make_unique<GuestConsole>(
+      std::make_unique<ZxSocket>(std::move(get_console_result->response().socket)));
+
+  // Wait for output to appear on the console.
+  logger.Start("Waiting for output to appear on guest console", zx::sec(10));
   status = console_->Start(deadline);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Error connecting to guest's console: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Error waiting for output on guest console: " << zx_status_get_string(status);
     return status;
   }
 
+  // Poll the system for all services to come up.
   logger.Start("Waiting for system to become ready", zx::sec(10));
   status = WaitForSystemReady(deadline);
   if (status != ZX_OK) {

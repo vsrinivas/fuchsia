@@ -66,12 +66,18 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
     // Start a GuestConsole.  When the console starts, it waits until it
     // receives some sensible output from the guest to ensure that the guest is
     // usable.
-    zx::socket socket;
-    guest->GetSerial([&socket](zx::socket s) { socket = std::move(s); });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&socket] { return socket.is_valid(); },
-                                          deadline - zx::clock::get_monotonic()));
+    std::optional<fuchsia::virtualization::Guest_GetConsole_Result> get_console_result;
+    guest->GetConsole(
+        [&get_console_result](fuchsia::virtualization::Guest_GetConsole_Result result) {
+          get_console_result = std::move(result);
+        });
+    ASSERT_TRUE(
+        RunLoopWithTimeoutOrUntil([&get_console_result] { return get_console_result.has_value(); },
+                                  deadline - zx::clock::get_monotonic()));
+    ASSERT_TRUE(!get_console_result->is_err());
 
-    GuestConsole serial(std::make_unique<ZxSocket>(std::move(socket)));
+    GuestConsole serial(
+        std::make_unique<ZxSocket>(std::move(get_console_result->response().socket)));
     zx_status_t status = serial.Start(deadline);
     ASSERT_EQ(status, ZX_OK);
 

@@ -545,13 +545,15 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
       .and_then([](const fuchsia::virtualization::GuestPtr& guest_controller)
                     -> fpromise::promise<zx::socket, SandboxResult> {
         fpromise::bridge<zx::socket, SandboxResult> bridge;
-        guest_controller->GetSerial(
-            [completer = std::move(bridge.completer)](zx::socket socket) mutable {
-              if (!socket.is_valid()) {
+        guest_controller->GetConsole(
+            [completer = std::move(bridge.completer)](
+                fuchsia::virtualization::Guest_GetConsole_Result result) mutable {
+              if (result.is_err()) {
                 completer.complete_error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
                                                        "Could not create guest socket connection"));
+                return;
               }
-              completer.complete_ok(std::move(socket));
+              completer.complete_ok(std::move(result.response().socket));
             });
 
         return bridge.consumer.promise();
