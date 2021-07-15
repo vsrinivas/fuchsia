@@ -1405,3 +1405,16 @@
   reviewers: ['geb@google.com', 'thatguy@google.com', 'hjfreyer@google.com', 'shayba@google.com']
   submitted: '2021-05-21'
   reviewed: '2021-06-30'
+
+- name: 'RFC-0109'
+  title: 'Fast UDP sockets'
+  short_description: 'Implement network UDP socket data transport using zircon sockets.'
+  authors: ['tamird@google.com']
+  file: '0109_socket_datagram_socket.md'
+  area: ['Networking']
+  issue: ['']
+  gerrit_change_id: ['544642']
+  status: 'Socializing'
+  reviewers: ['maniscalco@google.com', 'brunodalbo@google.com', 'abarth@google.com', 'iyerm@google.com']
+  submitted: '2021-06-17'
+  reviewed: '2021-06-25'

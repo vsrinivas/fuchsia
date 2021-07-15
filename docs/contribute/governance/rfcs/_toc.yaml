@@ -229,3 +229,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0107_dynamic_offers.md
 - title: "RFC-0108: Component binder protocol"
   path: /docs/contribute/governance/rfcs/0108_component_binder_protocol.md
+- title: "RFC-0109: Fast UDP sockets"
+  path: /docs/contribute/governance/rfcs/0109_socket_datagram_socket.md
