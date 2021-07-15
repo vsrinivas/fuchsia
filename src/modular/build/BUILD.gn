@@ -7,7 +7,7 @@ import("//build/config.gni")
 # to persist configuration provided to it in /config_override.
 config_data("allow_persistent_config_override") {
   for_pkg = "basemgr"
-  sources = [ "allow_persistent_config_override.config" ]
+  sources = [ "allow_persistent_config_override" ]
   outputs = [ "allow_persistent_config_override" ]
 
   # We should never allow persistent configs on a production, user-facing build.
