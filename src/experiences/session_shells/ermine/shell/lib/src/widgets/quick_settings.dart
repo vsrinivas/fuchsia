@@ -161,14 +161,14 @@ class _ListSettings extends StatelessWidget {
                         ),
                       ],
                     ),
-                    trailing: OutlinedButton(
-                      onPressed: appState.settingsState.brightnessAuto.value ==
-                              true
-                          ? null
-                          : () =>
-                              appState.settingsState.setBrightnessAuto([true]),
-                      child: Text(Strings.auto.toUpperCase()),
-                    ),
+                    trailing:
+                        appState.settingsState.brightnessAuto.value == true
+                            ? Text(Strings.auto.toUpperCase())
+                            : OutlinedButton(
+                                onPressed: () => appState.settingsState
+                                    .setBrightnessAuto([true]),
+                                child: Text(Strings.auto.toUpperCase()),
+                              ),
                   );
                 }),
                 // Feedback
