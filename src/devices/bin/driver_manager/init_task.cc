@@ -47,7 +47,8 @@ void InitTask::Run() {
     if (status == ZX_OK) {
       status = device_->coordinator->MakeVisible(device_);
     } else if (device_->state() != Device::State::kDead) {
-      LOGF(ERROR, "Init task failed, scheduling removal of device %p '%s': %s", device_.get(),
+      // TODO(https://fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
+      LOGF(WARNING, "Init task failed, scheduling removal of device %p '%s': %s", device_.get(),
            device_->name().data(), zx_status_get_string(status));
       device_->coordinator->ScheduleDriverHostRequestedRemove(device_, true /* do_unbind */);
     }

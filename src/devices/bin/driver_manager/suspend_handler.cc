@@ -155,7 +155,8 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
       // TODO: unroll suspend
       // do not continue to suspend as this indicates a driver suspend
       // problem and should show as a bug
-      LOGF(ERROR, "Failed to suspend: %s", zx_status_get_string(status));
+      // TODO(https://fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
+      LOGF(WARNING, "Failed to suspend: %s", zx_status_get_string(status));
       flags_ = SuspendHandler::Flags::kRunning;
       if (suspend_callback_) {
         suspend_callback_(status);
