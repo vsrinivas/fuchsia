@@ -40,7 +40,6 @@ path after the '=' is the source file (rebased to the root build directory).
 from collections import defaultdict
 import argparse
 import json
-import os
 import sys
 
 
@@ -114,12 +113,14 @@ def main():
             else:
                 merged_config[category] = values
 
+    # Use the same options as //scripts/style/json-fmt.py.
     json.dump(
         merged_config,
         args.merged,
-        indent=2,
+        indent=4,
         separators=(',', ': '),
         sort_keys=True)
+    args.merged.write('\n')
 
     # Write the depfile, which is a Makefile format file that has a single output
     # (the merged file) and lists all input files as dependencies.

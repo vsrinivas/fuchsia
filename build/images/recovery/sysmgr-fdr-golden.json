@@ -1,34 +1,34 @@
 {
-  "apps": [
-    "fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg.cmx",
-    "fuchsia-pkg://fuchsia.com/system_recovery#meta/system_recovery.cmx",
-    "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx"
-  ],
-  "critical_components": [
-    "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-    "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx"
-  ],
-  "services": {
-    "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
-    "fuchsia.net.dhcpv6.ClientProvider": "fuchsia-pkg://fuchsia.com/dhcpv6-client#meta/dhcpv6-client.cmx",
-    "fuchsia.net.filter.Filter": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-    "fuchsia.net.name.LookupAdmin": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
-    "fuchsia.net.neighbor.Controller": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-    "fuchsia.net.neighbor.View": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-    "fuchsia.net.routes.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-    "fuchsia.net.stack.Log": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-    "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
-    "fuchsia.wlan.device.service.DeviceService": "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx"
-  },
-  "update_dependencies": [
-    "fuchsia.posix.socket.Provider",
-    "fuchsia.net.dhcpv6.ClientProvider",
-    "fuchsia.net.NameLookup",
-    "fuchsia.net.name.LookupAdmin",
-    "fuchsia.bogus.DoesNotExist"
-  ]
+    "apps": [
+        "fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg.cmx",
+        "fuchsia-pkg://fuchsia.com/system_recovery#meta/system_recovery.cmx",
+        "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx"
+    ],
+    "critical_components": [
+        "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx"
+    ],
+    "services": {
+        "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
+        "fuchsia.net.dhcpv6.ClientProvider": "fuchsia-pkg://fuchsia.com/dhcpv6-client#meta/dhcpv6-client.cmx",
+        "fuchsia.net.filter.Filter": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "fuchsia.net.name.LookupAdmin": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
+        "fuchsia.net.neighbor.Controller": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "fuchsia.net.neighbor.View": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "fuchsia.net.routes.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "fuchsia.net.stack.Log": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
+        "fuchsia.wlan.device.service.DeviceService": "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx"
+    },
+    "update_dependencies": [
+        "fuchsia.posix.socket.Provider",
+        "fuchsia.net.dhcpv6.ClientProvider",
+        "fuchsia.net.NameLookup",
+        "fuchsia.net.name.LookupAdmin",
+        "fuchsia.bogus.DoesNotExist"
+    ]
 }
