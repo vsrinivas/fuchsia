@@ -77,16 +77,6 @@ enum class RootJobBehavior {
   kShutdown,
 };
 
-// Describes the source of a boot option.
-enum class OptionSource {
-  // The option was never set, and its default value is being used.
-  kDefault,
-  // The option was set from a ZBI item.
-  kZbi,
-  // The option was explicitly set through a command line option.
-  kCmdLine,
-};
-
 // List of command lines argument names that are explicitly referenced in code.
 // TODO(fxb/74740): remove all usages of this.
 constexpr std::string_view kForceWatchdogDisabledName = "kernel.force-watchdog-disabled";

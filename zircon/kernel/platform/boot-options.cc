@@ -28,14 +28,6 @@ void ParseBootOptions(ktl::string_view cmdline) {
   // complaints about unrecognized options.
   NullFile null;
   FILE complain{&null};
-
-  // Because we don't know if we have looked at the zbi entries yet, the best thing is
-  // to recheck the zbi if no entry in the command line is found, whenever the serial is being
-  // parsed.
-  if (gBootOptionsInstance.serial_source == OptionSource::kDefault) {
-    gBootOptionsInstance.serial_source = OptionSource::kZbi;
-  }
-
   gBootOptionsInstance.SetMany(cmdline, &complain);
 
   // Note: it is intentional that we build up `gBootOptions` before

@@ -124,6 +124,7 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
+static constexpr const char kSerial[] = "kernel.serial";
 static constexpr const char kShell[] = "kernel.shell";
 static constexpr const char kSmpHt[] = "kernel.smp.ht";
 static constexpr const char kSmpMaxCpus[] = "kernel.smp.maxcpus";

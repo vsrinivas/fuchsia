@@ -63,7 +63,6 @@ void PhysMain(void* zbi, arch::EarlyTicks ticks) {
   // Initialize kernel.serial from whatever we chose based on ZBI items.
   static BootOptions boot_opts;
   boot_opts.serial = uart.uart();
-  boot_opts.serial_source = OptionSource::kZbi;
 
   // Now process command line items from the ZBI to set boot options.  This is
   // a separate loop so that kernel.serial settings override any ZBI item that
