@@ -46,11 +46,13 @@ impl<T> SharedResolver<T> {
     }
 
     fn read(&self) -> Rc<T> {
-        self.0.read().clone()
+        let Self(inner) = self;
+        inner.read().clone()
     }
 
     fn write(&self, other: Rc<T>) {
-        *self.0.write() = other;
+        let Self(inner) = self;
+        *inner.write() = other;
     }
 }
 
@@ -78,7 +80,8 @@ impl QueryStats {
 
     async fn finish_query(&self, start_time: fasync::Time, error: Option<&ResolveErrorKind>) {
         let now = fasync::Time::now();
-        let past_queries = &mut *self.inner.lock().await;
+        let Self { inner } = self;
+        let past_queries = &mut *inner.lock().await;
 
         let current_window = if let Some(window) = past_queries.back_mut() {
             if now - window.start >= STAT_WINDOW_DURATION {
@@ -1309,12 +1312,12 @@ mod tests {
                     .expect("failed to create routes.StateProxy");
 
             let (sender, recv) = mpsc::channel(MAX_PARALLEL_REQUESTS);
+            let Self { shared_resolver, config_state: _, stats } = self;
             let ((), (), (), ()) = futures::future::try_join4(
-                run_name_lookup(&self.shared_resolver, name_lookup_stream, sender),
+                run_name_lookup(shared_resolver, name_lookup_stream, sender),
                 f(name_lookup_proxy).map(Ok),
                 routes_stream.try_for_each(|req| futures::future::ok(handle_routes(req))),
-                create_ip_lookup_fut(&self.shared_resolver, self.stats.clone(), routes_proxy, recv)
-                    .map(Ok),
+                create_ip_lookup_fut(shared_resolver, stats.clone(), routes_proxy, recv).map(Ok),
             )
             .await
             .expect("Error running lookup future");
@@ -1328,8 +1331,9 @@ mod tests {
             let (lookup_admin_proxy, lookup_admin_stream) =
                 fidl::endpoints::create_proxy_and_stream::<fname::LookupAdminMarker>()
                     .expect("failed to create AdminResolverProxy");
+            let Self { shared_resolver, config_state, stats: _ } = self;
             let ((), ()) = futures::future::try_join(
-                run_lookup_admin(&self.shared_resolver, &self.config_state, lookup_admin_stream)
+                run_lookup_admin(shared_resolver, config_state, lookup_admin_stream)
                     .map_err(anyhow::Error::from),
                 f(lookup_admin_proxy).map(Ok),
             )
