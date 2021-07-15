@@ -1,0 +1,14 @@
+# Copyright 2021 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+source_set("tests") {
+  # TODO: testonly = true
+  sources = [ "virtual_alloc_tests.cc" ]
+  deps = [
+    "//zircon/kernel/lib/unittest",
+    "//zircon/kernel/lib/virtual_alloc:virtual_alloc_headers",
+  ]
+}

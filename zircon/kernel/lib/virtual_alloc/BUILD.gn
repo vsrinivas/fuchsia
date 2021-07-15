@@ -1,0 +1,43 @@
+# Copyright 2021 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/cpp/library_headers.gni")
+
+declare_args() {
+  # Set the page size shift of the host. This is used when running the allocator
+  # in a host environment where page size constants may not exist. If this does
+  # not much the actual host page size then a run time error will occur.
+  virtual_alloc_host_size_shift = 12
+}
+
+library_headers("virtual_alloc_headers") {
+  headers = [ "lib/virtual_alloc.h" ]
+  public_deps = [
+    "//zircon/system/ulib/bitmap",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zxc",
+  ]
+}
+
+source_set("virtual_alloc") {
+  sources = [ "virtual_alloc.cc" ]
+  public_deps = [ ":virtual_alloc_headers" ]
+  deps = [ "//sdk/lib/fit" ]
+
+  if (is_host) {
+    # Building for the host implies we are running tests and so we want to force the assert level
+    # high to ensure any internal debug checks are enabled.
+    defines = [
+      "ZX_ASSERT_LEVEL=2",
+      "HOST_PAGE_SIZE_SHIFT=$virtual_alloc_host_size_shift",
+    ]
+  } else if (is_kernel) {
+    deps += [ "tests" ]
+
+    # Crypto headers are needed as a transitive dependency on being able to include vm_aspace.h
+    public_deps += [ "//zircon/kernel/lib/crypto:headers" ]
+  }
+}
