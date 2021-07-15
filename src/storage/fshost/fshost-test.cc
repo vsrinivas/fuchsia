@@ -25,10 +25,10 @@
 
 #include "fs-manager.h"
 #include "fshost-fs-provider.h"
-#include "metrics.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/storage/fshost/block-watcher.h"
+#include "src/storage/fshost/metrics_cobalt.h"
 
 namespace fshost {
 namespace {
@@ -72,7 +72,7 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
   fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin);
 
   zx::channel dir_request, lifecycle_request;
-  FsManager manager(nullptr, std::make_unique<FsHostMetrics>(MakeCollector()));
+  FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
   ASSERT_OK(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
@@ -115,7 +115,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
   ASSERT_TRUE(admin_endpoints.is_ok());
   fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin);
 
-  FsManager manager(nullptr, std::make_unique<FsHostMetrics>(MakeCollector()));
+  FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
   ASSERT_OK(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),

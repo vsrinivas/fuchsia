@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "metrics.h"
+#include "src/storage/fshost/metrics_cobalt.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/sync/completion.h>
@@ -16,6 +16,8 @@
 
 #include <cobalt-client/cpp/metric_options.h>
 
+#include "src/lib/storage/vfs/cpp/metrics/cobalt_metrics.h"
+
 namespace fshost {
 namespace {
 cobalt_client::MetricOptions MakeMetricOptions(fs_metrics::Event event) {
@@ -26,7 +28,7 @@ cobalt_client::MetricOptions MakeMetricOptions(fs_metrics::Event event) {
 }
 }  // namespace
 
-FsHostMetrics::FsHostMetrics(std::unique_ptr<cobalt_client::Collector> collector)
+FsHostMetricsCobalt::FsHostMetricsCobalt(std::unique_ptr<cobalt_client::Collector> collector)
     : collector_(std::move(collector)) {
   if (!collector_) {
     return;
@@ -40,7 +42,7 @@ FsHostMetrics::FsHostMetrics(std::unique_ptr<cobalt_client::Collector> collector
   thread_ = std::thread([this] { Run(); });
 }
 
-FsHostMetrics::~FsHostMetrics() {
+FsHostMetricsCobalt::~FsHostMetricsCobalt() {
   if (!thread_.joinable()) {
     return;
   }
@@ -52,19 +54,19 @@ FsHostMetrics::~FsHostMetrics() {
   thread_.join();
 }
 
-void FsHostMetrics::Detach() {
+void FsHostMetricsCobalt::Detach() {
   if (thread_.joinable()) {
     thread_.detach();
   }
 }
 
-void FsHostMetrics::LogMinfsCorruption() {
+void FsHostMetricsCobalt::LogMinfsCorruption() {
   if (collector_) {
     counters_[fs_metrics::Event::kDataCorruption]->Increment();
   }
 }
 
-void FsHostMetrics::Flush() {
+void FsHostMetricsCobalt::Flush() {
   {
     std::lock_guard<std::mutex> lock(mutex_);
     flush_ = true;
@@ -72,7 +74,7 @@ void FsHostMetrics::Flush() {
   condition_.notify_all();
 }
 
-void FsHostMetrics::Run() {
+void FsHostMetricsCobalt::Run() {
   if (collector_ == nullptr) {
     return;
   }
@@ -95,6 +97,11 @@ void FsHostMetrics::Run() {
       timeout_time = std::chrono::hours(24 * 30);
     }
   }
+}
+
+std::unique_ptr<FsHostMetrics> DefaultMetrics() {
+  return std::make_unique<FsHostMetricsCobalt>(
+      std::make_unique<cobalt_client::Collector>(fs_metrics::kCobaltProjectId));
 }
 
 }  // namespace fshost

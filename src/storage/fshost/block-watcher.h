@@ -7,6 +7,7 @@
 
 #include <fuchsia/fshost/llcpp/fidl.h>
 
+#include <condition_variable>
 #include <memory>
 
 #include <fbl/span.h>

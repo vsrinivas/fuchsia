@@ -13,18 +13,18 @@
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <gtest/gtest.h>
 
-#include "fs-manager.h"
-#include "fshost-fs-provider.h"
-#include "metrics.h"
 #include "src/lib/testing/predicates/status.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/fshost/block-watcher.h"
+#include "src/storage/fshost/fs-manager.h"
+#include "src/storage/fshost/fshost-fs-provider.h"
+#include "src/storage/fshost/metrics_cobalt.h"
 
 namespace fshost {
 namespace {
 
 std::unique_ptr<FsHostMetrics> MakeMetrics() {
-  return std::make_unique<FsHostMetrics>(std::make_unique<cobalt_client::Collector>(
+  return std::make_unique<FsHostMetricsCobalt>(std::make_unique<cobalt_client::Collector>(
       std::make_unique<cobalt_client::InMemoryLogger>()));
 }
 

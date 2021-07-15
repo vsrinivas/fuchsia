@@ -31,7 +31,6 @@
 #include <ostream>
 #include <thread>
 
-#include <cobalt-client/cpp/collector.h>
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zbi-bootfs/zbi-bootfs.h>
@@ -39,7 +38,6 @@
 #include "block-watcher.h"
 #include "fs-manager.h"
 #include "metrics.h"
-#include "src/lib/storage/vfs/cpp/metrics/cobalt_metrics.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/fshost/deprecated-loader-service.h"
@@ -242,10 +240,7 @@ int Main(bool disable_block_watcher) {
   zx::channel dir_request(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
 
-  auto metrics = config.is_set(Config::kNoMetrics)
-                     ? std::make_unique<FsHostMetrics>(nullptr)
-                     : std::make_unique<FsHostMetrics>(std::make_unique<cobalt_client::Collector>(
-                           fs_metrics::kCobaltProjectId));
+  auto metrics = DefaultMetrics();
   metrics->Detach();
   FsManager fs_manager(boot_args, std::move(metrics));
 

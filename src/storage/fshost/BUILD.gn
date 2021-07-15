@@ -114,11 +114,16 @@ source_set("inspect") {
 }
 
 source_set("metrics") {
+  sources = [ "metrics.h" ]
+}
+
+source_set("metrics_cobalt") {
   sources = [
-    "metrics.cc",
-    "metrics.h",
+    "metrics_cobalt.cc",
+    "metrics_cobalt.h",
   ]
   public_deps = [
+    ":metrics",
     "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/cobalt-client",
@@ -129,6 +134,11 @@ source_set("metrics") {
     "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
     "//zircon/system/ulib/cobalt-client",
   ]
+}
+
+source_set("metrics_stub") {
+  sources = [ "metrics_stub.cc" ]
+  deps = [ ":metrics" ]
 }
 
 source_set("block-watcher") {
@@ -147,7 +157,6 @@ source_set("block-watcher") {
   public_deps = [
     ":fshost-registry",
     ":launcher",
-    ":metrics",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//sdk/lib/fit",
@@ -222,7 +231,6 @@ executable("fshost") {
   deps = [
     ":block-watcher",
     ":fshost-registry",
-    ":metrics",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_c",
@@ -230,11 +238,16 @@ executable("fshost") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_c",
     "//src/lib/storage/fs_management",
-    "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zbi-bootfs",
   ]
+
+  if (bootfs_only) {
+    deps += [ ":metrics_stub" ]
+  } else {
+    deps += [ ":metrics_cobalt" ]
+  }
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
@@ -251,7 +264,7 @@ test("fshost_test") {
   deps = [
     ":block-watcher",
     ":fshost-registry",
-    ":metrics",
+    ":metrics_cobalt",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fit-promise",
@@ -323,7 +336,7 @@ fuchsia_unittest_component("fshost-inspect-test") {
 test("fshost_metrics_test") {
   sources = [ "metrics-test.cc" ]
   deps = [
-    ":metrics",
+    ":metrics_cobalt",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
@@ -352,6 +365,7 @@ test("fshost_integration_test") {
   ]
   deps = [
     ":block-watcher",
+    ":metrics_cobalt",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
@@ -509,10 +523,6 @@ template("fshost_config") {
       contents += [ "apply-limits-to-ramdisk" ]
     }
 
-    if (defined(invoker.no_metrics) && invoker.no_metrics) {
-      contents += [ "no-metrics" ]
-    }
-
     output_conversion = "list lines"
     outputs = [ "config/fshost" ]
   }
@@ -530,9 +540,6 @@ fshost_config("no_minfs_zxcrypt") {
 # will only attach a driver to the first device that appears to have a GUID partition scheme.
 fshost_config("gpt_all") {
   gpt_all = true
-  if (bootfs_only) {
-    no_metrics = true
-  }
 }
 
 # Writes default configuration plus any changes to global variables.

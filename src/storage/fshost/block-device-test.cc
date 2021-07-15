@@ -25,7 +25,7 @@
 #include "src/storage/fshost/extract-metadata.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
-#include "src/storage/fshost/metrics.h"
+#include "src/storage/fshost/metrics_cobalt.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/testing/ram_disk.h"
 
@@ -60,7 +60,7 @@ class CorruptionEventCounter : public cobalt_client::InMemoryLogger {
 std::unique_ptr<FsHostMetrics> MakeMetrics(std::atomic<uint32_t>* corruption_count) {
   std::unique_ptr<CorruptionEventCounter> logger_ptr =
       std::make_unique<CorruptionEventCounter>(corruption_count);
-  return std::make_unique<FsHostMetrics>(
+  return std::make_unique<FsHostMetricsCobalt>(
       std::make_unique<cobalt_client::Collector>(std::move(logger_ptr)));
 }
 

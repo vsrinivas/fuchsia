@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "metrics.h"
-
 #include <lib/async-testing/test_loop.h>
 
 #include <memory>
@@ -15,6 +13,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
+#include "src/storage/fshost/metrics_cobalt.h"
 
 namespace fshost {
 namespace {
@@ -51,7 +50,7 @@ cobalt_client::MetricOptions MakeMetricOptionsFromId(uint32_t metric_id) {
 constexpr auto kCorruptionMetricId = static_cast<EventIntType>(fs_metrics::Event::kDataCorruption);
 
 TEST_F(MetricsTest, LogMinfsDataCorruption) {
-  FsHostMetrics metrics(std::move(collector_));
+  FsHostMetricsCobalt metrics(std::move(collector_));
   ASSERT_EQ(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
             logger_->counters().end());
   metrics.LogMinfsCorruption();
@@ -68,7 +67,7 @@ TEST_F(MetricsTest, LogMinfsDataCorruption) {
 }
 
 TEST_F(MetricsTest, MultipleFlushWorks) {
-  FsHostMetrics metrics(std::move(collector_));
+  FsHostMetricsCobalt metrics(std::move(collector_));
   metrics.LogMinfsCorruption();
 
   // Logger is not working
@@ -88,7 +87,7 @@ TEST_F(MetricsTest, MultipleFlushWorks) {
   logger_->fail_logging(false);
   metrics.Flush();
 
-  // After FsHostMetrics flush. Metrics should be available now.
+  // After calling flush, metrics should be available now.
   // Block till counters change. Timed sleep without while loop is not sufficient because
   // it make make test flake in virtual environment.
   // The test may timeout and fail if the counter is never seen.
@@ -101,7 +100,7 @@ TEST_F(MetricsTest, MultipleFlushWorks) {
 }
 
 TEST_F(MetricsTest, FlushDoesNotHangIfLoggerNotWorking) {
-  FsHostMetrics metrics(std::move(collector_));
+  FsHostMetricsCobalt metrics(std::move(collector_));
   metrics.LogMinfsCorruption();
 
   // Logger is not working
@@ -126,12 +125,12 @@ TEST_F(MetricsTest, FlushDoesNotHangIfLoggerNotWorking) {
 }
 
 TEST_F(MetricsTest, DestroyImmediatelySucceeds) {
-  FsHostMetrics metrics(std::move(collector_));
+  FsHostMetricsCobalt metrics(std::move(collector_));
   metrics.LogMinfsCorruption();
 }
 
 TEST_F(MetricsTest, SuccessWithNullCollector) {
-  FsHostMetrics metrics(nullptr);
+  FsHostMetricsCobalt metrics(nullptr);
   metrics.LogMinfsCorruption();
   // Sleep allows some time for thread to run.
   sleep(1);

@@ -84,9 +84,6 @@ const char Config::kUseDefaultLoader[] = "use-default-loader";
 // Wait for data before launching pkgfs.
 const char Config::kWaitForData[] = "wait-for-data";
 
-// Don't log metrics to Cobalt.
-const char Config::kNoMetrics[] = "no-metrics";
-
 Config::Options Config::ReadOptions(std::istream& stream) {
   Options options;
   for (std::string line; std::getline(stream, line);) {
