@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netdevice
@@ -55,6 +56,24 @@ func (ch *dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.Li
 }
 
 func (*dispatcherChan) DeliverOutboundPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
+}
+
+var _ SessionConfigFactory = (*MockSessionConfigFactory)(nil)
+
+type MockSessionConfigFactory struct {
+	factory        SimpleSessionConfigFactory
+	txHeaderLength uint16
+	txTailLength   uint16
+}
+
+func (c *MockSessionConfigFactory) MakeSessionConfig(deviceInfo network.DeviceInfo, portStatus network.PortStatus) (SessionConfig, error) {
+	config, err := c.factory.MakeSessionConfig(deviceInfo, portStatus)
+	if err == nil {
+		config.TxHeaderLength = c.txHeaderLength
+		config.TxTailLength = c.txTailLength
+	}
+
+	return config, err
 }
 
 const TunMtu uint32 = 2048
@@ -302,69 +321,120 @@ func TestClient_WritePacket(t *testing.T) {
 func TestWritePacket(t *testing.T) {
 	ctx := context.Background()
 
-	tunDev, client := createTunClientPair(t, ctx)
-
-	client.SetOnLinkClosed(func() {})
-	client.SetOnLinkOnlineChanged(func(bool) {})
-
-	linkEndpoint := ethernet.New(client)
-
-	dispatcher := make(dispatcherChan)
-	linkEndpoint.Attach(&dispatcher)
-
-	if err := client.Up(); err != nil {
-		t.Fatalf("failed to start client %s", err)
-	}
-	tunMac := getTunMac()
-	otherMac := getOtherMac()
-	const protocol = tcpip.NetworkProtocolNumber(45)
-	const pktBody = "bar"
-	var r stack.RouteInfo
-	r.LocalLinkAddress = tcpip.LinkAddress(tunMac.Octets[:])
-	r.RemoteLinkAddress = tcpip.LinkAddress(otherMac.Octets[:])
-	if err := linkEndpoint.WritePacket(
-		r,
-		protocol,
-		stack.NewPacketBuffer(stack.PacketBufferOptions{
-			ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
-			Data:               buffer.View(pktBody).ToVectorisedView(),
-		}),
-	); err != nil {
-		t.Fatalf("WritePacket failed: %s", err)
-	}
-	readFrameResult, err := tunDev.ReadFrame(ctx)
-	if err != nil {
-		t.Fatalf("failed to read frame from tun device: %s", err)
-	}
-	if readFrameResult.Which() == tun.DeviceReadFrameResultErr {
-		t.Fatalf("failed to read frame from tun: %s", zx.Status(readFrameResult.Err))
-	}
-	if readFrameResult.Response.Frame.FrameType != network.FrameTypeEthernet {
-		t.Errorf("unexpected response frame type: got %d, want: %d", readFrameResult.Response.Frame.FrameType, network.FrameTypeEthernet)
-	}
-	data := readFrameResult.Response.Frame.Data
-
-	expect := func() []byte {
-		b := make([]byte, 0, TunMinTxLength)
-		b = append(b, otherMac.Octets[:]...)
-		b = append(b, tunMac.Octets[:]...)
-		ethType := [2]byte{0, 0}
-		binary.BigEndian.PutUint16(ethType[:], uint16(protocol))
-		b = append(b, ethType[:]...)
-		b = append(b, []byte(pktBody)...)
-		if len(b) < TunMinTxLength {
-			b = b[:TunMinTxLength]
-		}
-		return b
-	}()
-	if !bytes.Equal(data, expect) {
-		t.Fatalf("delivered packet mismatch. Wanted %x,  got: %x", expect, data)
+	tests := []struct {
+		name           string
+		txHeaderLength uint16
+		txTailLength   uint16
+	}{
+		{
+			name: "default",
+		},
+		{
+			name:           "nonzero head + tail lengths",
+			txHeaderLength: 2,
+			txTailLength:   3,
+		},
 	}
 
-	if err := tunDev.Close(); err != nil {
-		t.Fatalf("tunDev.Close() failed: %s", err)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tunDev := createTunWithOnline(t, ctx, true)
+			netdev, mac := connectProtos(t, ctx, tunDev)
+			client, err := NewMacAddressingClient(
+				ctx,
+				netdev,
+				mac,
+				&MockSessionConfigFactory{
+					factory:        SimpleSessionConfigFactory{},
+					txHeaderLength: test.txHeaderLength,
+					txTailLength:   test.txTailLength,
+				},
+			)
+			if err != nil {
+				t.Fatalf("NewMacAddressingClient failed: %s", err)
+			}
+
+			t.Cleanup(func() {
+				if err := client.Close(); err != nil {
+					t.Errorf("client close failed: %s", err)
+				}
+			})
+
+			client.SetOnLinkClosed(func() {})
+			client.SetOnLinkOnlineChanged(func(bool) {})
+
+			linkEndpoint := ethernet.New(client)
+
+			dispatcher := make(dispatcherChan)
+			linkEndpoint.Attach(&dispatcher)
+
+			if err := client.Up(); err != nil {
+				t.Fatalf("failed to start client %s", err)
+			}
+			tunMac := getTunMac()
+			otherMac := getOtherMac()
+			const protocol = tcpip.NetworkProtocolNumber(45)
+			const pktBody = "bar"
+			var r stack.RouteInfo
+			r.LocalLinkAddress = tcpip.LinkAddress(tunMac.Octets[:])
+			r.RemoteLinkAddress = tcpip.LinkAddress(otherMac.Octets[:])
+			if err := linkEndpoint.WritePacket(
+				r,
+				protocol,
+				stack.NewPacketBuffer(stack.PacketBufferOptions{
+					ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
+					Data:               buffer.View(pktBody).ToVectorisedView(),
+				}),
+			); err != nil {
+				t.Fatalf("WritePacket failed: %s", err)
+			}
+			readFrameResult, err := tunDev.ReadFrame(ctx)
+			if err != nil {
+				t.Fatalf("failed to read frame from tun device: %s", err)
+			}
+			if readFrameResult.Which() == tun.DeviceReadFrameResultErr {
+				t.Fatalf("failed to read frame from tun: %s", zx.Status(readFrameResult.Err))
+			}
+			if readFrameResult.Response.Frame.FrameType != network.FrameTypeEthernet {
+				t.Errorf("unexpected response frame type: got %d, want: %d", readFrameResult.Response.Frame.FrameType, network.FrameTypeEthernet)
+			}
+			data := readFrameResult.Response.Frame.Data
+
+			expect := func() []byte {
+				b := make([]byte, 0, TunMinTxLength)
+				b = append(b, otherMac.Octets[:]...)
+				b = append(b, tunMac.Octets[:]...)
+				ethType := [2]byte{0, 0}
+				binary.BigEndian.PutUint16(ethType[:], uint16(protocol))
+				b = append(b, ethType[:]...)
+				b = append(b, []byte(pktBody)...)
+				if len(b) < TunMinTxLength {
+					b = b[:TunMinTxLength]
+				}
+				return b
+			}()
+			if !bytes.Equal(data, expect) {
+				t.Fatalf("delivered packet mismatch. Wanted %x,  got: %x", expect, data)
+			}
+
+			if err := tunDev.Close(); err != nil {
+				t.Fatalf("tunDev.Close() failed: %s", err)
+			}
+
+			// The Tx descriptors are allocated sequentially after the Rx descriptors.
+			// Therefore, the first Tx descriptor has index == count(rx descriptors).
+			for i := client.config.RxDescriptorCount; i < (client.config.RxDescriptorCount + client.config.TxDescriptorCount); i++ {
+				descriptor := client.getDescriptor(i)
+				if got, want := descriptor.head_length, test.txHeaderLength; uint16(got) != want {
+					t.Errorf("got Tx head_length = %d, want = %d", got, want)
+				}
+				if got, want := descriptor.tail_length, test.txTailLength; uint16(got) != want {
+					t.Errorf("got Tx tail_length = %d, want = %d", got, want)
+				}
+			}
+			client.Wait()
+		})
 	}
-	client.Wait()
 }
 
 func TestReceivePacket(t *testing.T) {

@@ -123,7 +123,7 @@ func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtoc
 	return c.handler.ProcessWrite(pkts, func(descriptorIndex *uint16, pkt *stack.PacketBuffer) {
 		descriptor := c.getDescriptor(*descriptorIndex)
 		// Reset descriptor to default values before filling it.
-		c.resetDescriptor(descriptor)
+		c.resetTxDescriptor(descriptor)
 
 		data := c.getDescriptorData(descriptor)
 		n := 0
@@ -259,7 +259,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			}))
 
 			// This entry is going back to the driver; it can be reused.
-			c.resetDescriptor(descriptor)
+			c.resetRxDescriptor(descriptor)
 		}); err != nil {
 			detachWithError(fmt.Errorf("RX loop: %w", err))
 		}
@@ -402,10 +402,28 @@ func (c *Client) getDescriptorData(desc *bufferDescriptor) []byte {
 	return c.data.GetData(offset, uint64(desc.data_length))
 }
 
-// resetDescriptor resets the the descriptor's fields that a device
-// implementation could have changed, it can be used for either Tx or Rx.
-func (c *Client) resetDescriptor(descriptor *bufferDescriptor) {
+// resetTxDescriptor resets the the descriptor's fields that a device
+// implementation could have changed. It should only be used for
+// Tx buffers.
+func (c *Client) resetTxDescriptor(descriptor *bufferDescriptor) {
 	*descriptor = bufferDescriptor{
+		info_type:   C.uint(network.InfoTypeNoInfo),
+		offset:      descriptor.offset,
+		head_length: C.ushort(c.config.TxHeaderLength),
+		// Note: we assert that BufferLength > TxHeaderLength + TxTailLength when
+		// the session config is created, so we don't have to worry about overflow
+		// here.
+		data_length: C.uint(c.config.BufferLength - uint32(c.config.TxHeaderLength) - uint32(c.config.TxTailLength)),
+		tail_length: C.ushort(c.config.TxTailLength),
+	}
+}
+
+// resetRxDescriptor resets the the descriptor's fields that a device
+// implementation could have changed. It should only be used for
+// Rx buffers.
+func (c *Client) resetRxDescriptor(descriptor *bufferDescriptor) {
+	*descriptor = bufferDescriptor{
+		info_type:   C.uint(network.InfoTypeNoInfo),
 		offset:      descriptor.offset,
 		data_length: C.uint(c.config.BufferLength),
 	}
@@ -433,11 +451,6 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 		return nil, fmt.Errorf("incomplete DeviceInfo: %#v", deviceInfo)
 	}
 
-	config, err := sessionConfigFactory.MakeSessionConfig(&deviceInfo)
-	if err != nil {
-		return nil, fmt.Errorf("session configuration factory failed: %w", err)
-	}
-
 	portRequest, port, err := network.NewPortWithCtxInterfaceRequest()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create port request: %w", err)
@@ -452,6 +465,16 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 	}
 	if !(portInfo.HasId() && portInfo.HasClass() && portInfo.HasRxTypes() && portInfo.HasTxTypes()) {
 		return nil, fmt.Errorf("incomplete PortInfo: %#v", portInfo)
+	}
+
+	portStatus, err := port.GetStatus(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create get port status: %w", err)
+	}
+
+	config, err := sessionConfigFactory.MakeSessionConfig(deviceInfo, portStatus)
+	if err != nil {
+		return nil, fmt.Errorf("session configuration factory failed: %w", err)
 	}
 
 	if len(config.RxFrames) == 0 {
@@ -559,10 +582,9 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 	for i := uint16(0); i < c.config.RxDescriptorCount; i++ {
 		descriptor := c.getDescriptor(descriptorIndex)
 		*descriptor = bufferDescriptor{
-			info_type:   C.uint(network.InfoTypeNoInfo),
-			offset:      C.ulong(vmoOffset),
-			data_length: C.uint(c.config.BufferLength),
+			offset: C.ulong(vmoOffset),
 		}
+		c.resetRxDescriptor(descriptor)
 		c.handler.PushInitialRx(descriptorIndex)
 		vmoOffset += uint64(c.config.BufferStride)
 		descriptorIndex++
@@ -570,10 +592,9 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 	for i := uint16(0); i < c.config.TxDescriptorCount; i++ {
 		descriptor := c.getDescriptor(descriptorIndex)
 		*descriptor = bufferDescriptor{
-			info_type:   C.uint(network.InfoTypeNoInfo),
-			offset:      C.ulong(vmoOffset),
-			data_length: C.uint(c.config.BufferLength),
+			offset: C.ulong(vmoOffset),
 		}
+		c.resetTxDescriptor(descriptor)
 		c.handler.PushInitialTx(descriptorIndex)
 		vmoOffset += uint64(c.config.BufferStride)
 		descriptorIndex++
