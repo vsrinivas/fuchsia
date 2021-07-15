@@ -21,12 +21,12 @@ build_api_module("cts_artifacts") {
 
 cts_artifacts("cts_data_files") {
   data = [
-    "sdk/cts/data/test_manifest.json",
+    "data/test_manifest.json",
 
     # TODO(fxb/80700): Combine the ABI and API targets, and add these LICENSE files in //sdk:cts.
-    "LICENSE",
-    "AUTHORS",
-    "PATENTS",
+    "../../LICENSE",
+    "../../AUTHORS",
+    "../../PATENTS",
   ]
 }
 

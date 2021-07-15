@@ -5,7 +5,11 @@
 # Collects build outputs and data files for inclusion in the CTS archive.
 #
 # This is a helper template that declares metadata for the cts_artifacts
-# build api module. See //sdk/cts:cts_artifacts.
+# build api module. See //sdk/cts:cts_artifacts. Package archives and data
+# files are copied to the root of $root_gen_dir/cts. For example:
+#
+#   package_archives = [//my/pkg.far] generates $root_gen_dir/cts/pkg.far
+#   data = [my/data/file.txt] generates $root_gen_dir/cts/file.txt
 #
 # Parameters
 #
@@ -15,7 +19,9 @@
 #    Type: list(label)
 #
 #  data (optional)
-#    A list of data files to include.
+#    A list of metadata files to include. Filepaths are relative to the
+#    target directory. This should not be used for source files: the directory
+#    structure is not preserved in the output.
 #    Type: list(string)
 #
 #  testonly
@@ -26,22 +32,42 @@ template("cts_artifacts") {
       cts_artifacts = []
     }
 
+    _cts_artifacts_dir = "$root_gen_dir/cts"
+
     deps = []
+
+    # Copies all package archives into _cts_artifacts_dir.
     if (defined(invoker.package_archives)) {
-      foreach(a, invoker.package_archives) {
-        foreach(o, get_target_outputs(a)) {
-          metadata.cts_artifacts += [ string_replace(o, "//", "", 1) ]
+      copy_archives_target_name = "copy_${target_name}_archives"
+      copy(copy_archives_target_name) {
+        sources = []
+        foreach(a, invoker.package_archives) {
+          sources += get_target_outputs(a)
         }
-        deps += [ a ]
+        outputs = [ "$_cts_artifacts_dir/{{source_file_part}}" ]
+        deps = invoker.package_archives
       }
+
+      foreach(o, get_target_outputs(":$copy_archives_target_name")) {
+        metadata.cts_artifacts += [ string_replace(o, "//", "", 1) ]
+      }
+
+      deps += [ ":$copy_archives_target_name" ]
     }
 
-    data = []
+    # Copies all data files into _cts_artifacts_dir.
     if (defined(invoker.data)) {
-      foreach(d, invoker.data) {
-        metadata.cts_artifacts += [ string_replace(d, "//", "", 1) ]
-        data += [ d ]
+      copy_data_target_name = "copy_${target_name}_data"
+      copy(copy_data_target_name) {
+        sources = invoker.data
+        outputs = [ "$_cts_artifacts_dir/{{source_file_part}}" ]
       }
+
+      foreach(o, get_target_outputs(":$copy_data_target_name")) {
+        metadata.cts_artifacts += [ string_replace(o, "//", "", 1) ]
+      }
+
+      deps += [ ":$copy_data_target_name" ]
     }
   }
 }
