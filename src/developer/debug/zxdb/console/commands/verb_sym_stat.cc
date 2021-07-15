@@ -171,12 +171,12 @@ Err RunVerbSymStat(ConsoleContext* context, const Command& cmd) {
   SystemSymbols* system_symbols = context->session()->system().GetSymbols();
   OutputBuffer out;
 
-  // Force an update of the symbol index.
-  system_symbols->build_id_index().ClearCache();
-
   if (cmd.HasSwitch(kDumpIndexSwitch)) {
     DumpBuildIdIndex(system_symbols, &out);
   } else {
+    // Force an update of the symbol index.
+    system_symbols->build_id_index().ClearCache();
+
     DumpIndexOverview(system_symbols, &out);
 
     // Process symbol status (if any).
