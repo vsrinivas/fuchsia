@@ -99,9 +99,5 @@ void main() {
     await fuchsiaViewsService.destroyView(42);
     expect(invokedMethod.method, 'View.dispose');
     expect(invokedMethod.arguments, <String, dynamic>{'viewId': 42});
-
-    await fuchsiaViewsService.requestFocus(42);
-    expect(invokedMethod.method, 'View.requestFocus');
-    expect(invokedMethod.arguments, <String, dynamic>{'viewRef': 42});
   });
 }

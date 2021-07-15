@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/services.dart';
@@ -101,23 +100,5 @@ class FuchsiaViewsService {
       'viewId': viewId,
     };
     return platformViewChannel.invokeMethod('View.dispose', args);
-  }
-
-  /// Requests that focus be transferred to the remote Scene represented by
-  /// this connection.
-  Future<void> requestFocus(int viewRef) async {
-    final args = <String, dynamic>{
-      'viewRef': viewRef,
-    };
-
-    final result =
-        await platformViewChannel.invokeMethod('View.requestFocus', args);
-    // Throw OSError if result is non-zero.
-    if (result != 0) {
-      throw OSError(
-        'Failed to request focus for view: $viewRef with $result',
-        result,
-      );
-    }
   }
 }

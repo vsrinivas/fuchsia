@@ -52,14 +52,14 @@ void main() {
         .setMockMethodCallHandler((call) async {
       expect(call.arguments, null);
 
-      if (call.method == 'HostView.getNextFocusState') {
+      if (call.method == 'View.focus.getNext') {
         // Wait for streams to be ready before advancing the focus index.
         await lock.lockExclusive();
         if (++focusIndex < focuses.length) {
           return focuses[focusIndex];
         }
         completer.complete();
-      } else if (call.method == 'HostView.getCurrentFocusState') {
+      } else if (call.method == 'View.focus.getCurrent') {
         return focuses[focusIndex];
       } else {
         fail('Invalid method!');
@@ -112,7 +112,7 @@ void main() {
       return Future.value(0);
     });
     await FocusState.instance.requestFocus(42);
-    expect(invokedMethod.method, 'View.requestFocus');
+    expect(invokedMethod.method, 'View.focus.request');
     expect(invokedMethod.arguments, <String, dynamic>{'viewRef': 42});
   });
 }

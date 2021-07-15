@@ -23,7 +23,7 @@ class FocusState {
   /// Gets the current focus state of the root viewRef.
   Future<bool> isFocused() async =>
       await FuchsiaViewsService.instance.platformViewChannel
-          .invokeMethod('HostView.getCurrentFocusState') as bool;
+          .invokeMethod('View.focus.getCurrent') as bool;
 
   /// Listen for focus state events on the host viewRef. When listening, users
   /// will get the current focus state, followed by any future focus states.
@@ -48,7 +48,7 @@ class FocusState {
   // We need to make sure that these calls are not duplicated.
   static Stream<bool> _watchFocusState() async* {
     yield await FuchsiaViewsService.instance.platformViewChannel
-        .invokeMethod('HostView.getNextFocusState') as bool;
+        .invokeMethod('View.focus.getNext') as bool;
     yield* _watchFocusState();
   }
 
@@ -60,7 +60,7 @@ class FocusState {
     };
 
     final result = await FuchsiaViewsService.instance.platformViewChannel
-        .invokeMethod('View.requestFocus', args);
+        .invokeMethod('View.focus.request', args);
     // Throw OSError if result is non-zero.
     if (result != 0) {
       throw OSError(
