@@ -42,7 +42,8 @@ type Record struct {
 	// Unqualified type name.
 	Name string
 	// List of fields. Struct and table records can have any number of fields.
-	// Union records should have exactly one field.
+	// Union records should have one field set, or no fields set to indicate the
+	// union is default initialized (not all backends support this).
 	Fields []Field
 }
 

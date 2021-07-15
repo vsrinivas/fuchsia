@@ -418,3 +418,475 @@ success("UnionEnvelopeInlining_HandleValue_Inlined") {
         v1, v2 = [#0]
     }
 }
+
+encode_failure("RequiredFlexibleValueUnionZeroOrdinalNoPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go and Dart.
+    // C and LLCPP cannot construct unknown variants.
+    bindings_denylist = [go, dart, c, llcpp],
+    value = TestFlexibleXUnionInStruct {
+        xu: SampleXUnion {
+            0: {
+                bytes = [],
+            }
+        }
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("RequiredFlexibleValueUnionZeroOrdinalWithPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go and Dart.
+    // C and LLCPP cannot construct unknown variants.
+    bindings_denylist = [go, dart, c, llcpp],
+    value = TestFlexibleXUnionInStruct {
+        xu: SampleXUnion {
+            0: {
+                bytes = [repeat(0xab):20, padding:4],
+            }
+        }
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("RequiredFlexibleResourceUnionZeroOrdinalNoPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go and Dart.
+    // C and LLCPP cannot construct unknown variants.
+    bindings_denylist = [go, dart, c, llcpp],
+    value = TestFlexibleResourceXUnionInStruct {
+        xu: SampleResourceXUnion {
+            0: {
+                bytes = [],
+            }
+        }
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("RequiredFlexibleResourceUnionZeroOrdinalWithPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go and Dart.
+    // C and LLCPP cannot construct unknown variants.
+    bindings_denylist = [go, dart, c, llcpp],
+    value = TestFlexibleResourceXUnionInStruct {
+        xu: SampleResourceXUnion {
+            0: {
+                bytes = [repeat(0xab):20, padding:4],
+            }
+        }
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("OptionalFlexibleValueUnionZeroOrdinalNoPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go and Dart.
+    // C and LLCPP cannot construct unknown variants.
+    bindings_denylist = [go, dart, c, llcpp],
+    value = TestOptionalFlexibleXUnionInStruct {
+        xu: SampleXUnion {
+            0: {
+                bytes = [],
+            }
+        }
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go and Dart.
+    // C and LLCPP cannot construct unknown variants.
+    bindings_denylist = [go, dart, c, llcpp],
+    value = TestOptionalFlexibleXUnionInStruct {
+        xu: SampleXUnion {
+            0: {
+                bytes = [repeat(0xab):20, padding:4],
+            }
+        }
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("OptionalFlexibleResourceUnionZeroOrdinalNoPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go and Dart.
+    // C and LLCPP cannot construct unknown variants.
+    bindings_denylist = [go, dart, c, llcpp],
+    value = TestOptionalFlexibleResourceXUnionInStruct {
+        xu: SampleResourceXUnion {
+            0: {
+                bytes = [],
+            }
+        }
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("OptionalFlexibleResourceUnionZeroOrdinalWithPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go and Dart.
+    // C and LLCPP cannot construct unknown variants.
+    bindings_denylist = [go, dart, c, llcpp],
+    value = TestOptionalFlexibleResourceXUnionInStruct {
+        xu: SampleResourceXUnion {
+            0: {
+                bytes = [repeat(0xab):20, padding:4],
+            }
+        }
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+decode_failure("RequiredStrictValueUnionZeroOrdinalNoPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go],
+    type = TestStrictXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):4, repeat(0x00):8, // envelope
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):2, repeat(0):2, // envelope
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+decode_failure("RequiredStrictValueUnionZeroOrdinalWithPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go],
+    type = TestStrictXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):2, repeat(0):2, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
+
+decode_failure("RequiredStrictResourceUnionZeroOrdinalNoPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go],
+    type = TestStrictResourceXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):4, repeat(0x00):8, // envelope
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):2, repeat(0):2, // envelope
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+decode_failure("RequiredStrictResourceUnionZeroOrdinalWithPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go],
+    type = TestStrictResourceXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):2, repeat(0):2, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
+
+decode_failure("RequiredFlexibleValueUnionZeroOrdinalNoPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go],
+    type = TestFlexibleXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):4, repeat(0x00):8, // envelope
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):2, repeat(0):2, // envelope
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+decode_failure("RequiredFlexibleValueUnionZeroOrdinalWithPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go],
+    type = TestFlexibleXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):2, repeat(0):2, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
+
+decode_failure("RequiredFlexibleResourceUnionZeroOrdinalNoPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go],
+    type = TestFlexibleResourceXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):4, repeat(0x00):8, // envelope
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):2, repeat(0):2, // envelope
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+decode_failure("RequiredFlexibleResourceUnionZeroOrdinalWithPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go],
+    type = TestFlexibleResourceXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):2, repeat(0):2, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
+
+success("OptionalStrictValueUnionZeroOrdinalNoPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go, transformer],
+    value = TestOptionalStrictXUnionInStruct {
+        xu: null,
+    },
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):4, repeat(0x00):8, // envelope
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):2, repeat(0):2, // envelope
+        ],
+    },
+}
+
+decode_failure("OptionalStrictValueUnionZeroOrdinalWithPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go],
+    type = TestOptionalStrictXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):2, repeat(0):2, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
+
+success("OptionalStrictResourceUnionZeroOrdinalNoPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go, transformer],
+    value = TestOptionalStrictResourceXUnionInStruct {
+        xu: null,
+    },
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):4, repeat(0x00):8, // envelope
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):2, repeat(0):2, // envelope
+        ],
+    },
+}
+
+decode_failure("OptionalStrictResourceUnionZeroOrdinalWithPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go],
+    type = TestOptionalStrictResourceXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):2, repeat(0):2, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
+
+success("OptionalFlexibleValueUnionZeroOrdinalNoPayload") {
+    bindings_denylist = [transformer],
+    value = TestOptionalFlexibleXUnionInStruct {
+        xu: null,
+    },
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):4, repeat(0x00):8, // envelope
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):2, repeat(0):2, // envelope
+        ],
+    },
+}
+
+decode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go],
+    type = TestOptionalFlexibleXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):2, repeat(0):2, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
+
+success("OptionalFlexibleResourceUnionZeroOrdinalNoPayload") {
+    bindings_denylist = [transformer],
+    value = TestOptionalFlexibleResourceXUnionInStruct {
+        xu: null,
+    },
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):4, repeat(0x00):8, // envelope
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):2, repeat(0):2, // envelope
+        ],
+    },
+}
+
+decode_failure("OptionalFlexibleResourceUnionZeroOrdinalWithPayload") {
+    // TODO(fxbug.dev/7805): Fix in Go.
+    bindings_denylist = [go],
+    type = TestOptionalFlexibleResourceXUnionInStruct,
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(24):4, num(0):2, repeat(0):2, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
+
+encode_failure("RequiredStrictValueUnionDefaultInitialized") {
+    bindings_allowlist = [go, hlcpp, llcpp],
+    value = TestStrictXUnionInStruct {
+        xu: SampleStrictXUnion {},
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("RequiredStrictResourceUnionDefaultInitialized") {
+    bindings_allowlist = [go, hlcpp, llcpp],
+    value = TestStrictResourceXUnionInStruct {
+        xu: SampleStrictResourceXUnion {},
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("RequiredFlexibleValueUnionDefaultInitialized") {
+    // TODO(fxbug.dev/7805): Enable in Go.
+    bindings_allowlist = [hlcpp, llcpp],
+    value = TestFlexibleXUnionInStruct {
+        xu: SampleXUnion {},
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("RequiredFlexibleResourceUnionDefaultInitialized") {
+    // TODO(fxbug.dev/7805): Enable in Go.
+    bindings_allowlist = [hlcpp, llcpp],
+    value = TestFlexibleResourceXUnionInStruct {
+        xu: SampleResourceXUnion {},
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("OptionalStrictValueUnionDefaultInitialized") {
+    // TODO(fxbug.dev/7805): Enable in HLCPP and LLCPP.
+    bindings_allowlist = [go],
+    value = TestOptionalStrictXUnionInStruct {
+        xu: SampleStrictXUnion {},
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("OptionalStrictResourceUnionDefaultInitialized") {
+    // TODO(fxbug.dev/7805): Enable in HLCPP and LLCPP.
+    bindings_allowlist = [go],
+    value = TestOptionalStrictResourceXUnionInStruct {
+        xu: SampleStrictResourceXUnion {},
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("OptionalFlexibleValueUnionDefaultInitialized") {
+    // TODO(fxbug.dev/7805): Enable in HLCPP, LLCPP, and Go.
+    bindings_allowlist = [],
+    value = TestOptionalFlexibleXUnionInStruct {
+        xu: SampleXUnion {},
+    },
+    err = UNION_FIELD_NOT_SET,
+}
+
+encode_failure("OptionalFlexibleResourceUnionDefaultInitialized") {
+    // TODO(fxbug.dev/7805): Enable in HLCPP, LLCPP, and Go.
+    bindings_allowlist = [],
+    value = TestOptionalFlexibleResourceXUnionInStruct {
+        xu: SampleResourceXUnion {},
+    },
+    err = UNION_FIELD_NOT_SET,
+}

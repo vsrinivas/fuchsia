@@ -78,6 +78,12 @@ union SampleStrictXUnion {
     3: SimpleTable st;
 };
 
+resource union SampleStrictResourceXUnion {
+    1: uint32 u;
+    2: SimpleUnion su;
+    3: SimpleTable st;
+};
+
 struct TestInlineXUnionInStruct {
     string before;
     SampleXUnion xu;
@@ -94,12 +100,32 @@ struct TestStrictXUnionInStruct {
     SampleStrictXUnion xu;
 };
 
+resource struct TestStrictResourceXUnionInStruct {
+    SampleStrictResourceXUnion xu;
+};
+
 struct TestFlexibleXUnionInStruct {
     SampleXUnion xu;
 };
 
 resource struct TestFlexibleResourceXUnionInStruct {
     SampleResourceXUnion xu;
+};
+
+struct TestOptionalStrictXUnionInStruct {
+    SampleStrictXUnion? xu;
+};
+
+resource struct TestOptionalStrictResourceXUnionInStruct {
+    SampleStrictResourceXUnion? xu;
+};
+
+struct TestOptionalFlexibleXUnionInStruct {
+    SampleXUnion? xu;
+};
+
+resource struct TestOptionalFlexibleResourceXUnionInStruct {
+    SampleResourceXUnion? xu;
 };
 
 // TODO(fxbug.dev/36441): Allow bindings to compile on host with handles.

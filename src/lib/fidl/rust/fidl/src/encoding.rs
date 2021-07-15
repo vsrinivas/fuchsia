@@ -3161,6 +3161,9 @@ macro_rules! fidl_union {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 encoder.debug_check_bounds::<Self>(offset);
                 let mut ordinal = self.ordinal();
+                if ordinal == 0 {
+                    return Err($crate::Error::UnknownUnionTag);
+                }
                 // Encode ordinal
                 ordinal.encode(encoder, offset, recursion_depth)?;
                 match self {
