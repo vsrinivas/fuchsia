@@ -34,6 +34,8 @@ class ConditionVariable {
 
   void Broadcast() { cnd_broadcast(&cond_); }
 
+  cnd_t* get() { return &cond_; }
+
  private:
   cnd_t cond_;
 };

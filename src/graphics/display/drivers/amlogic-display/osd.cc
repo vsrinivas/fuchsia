@@ -18,6 +18,7 @@
 #include <zircon/pixelformat.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+#include <zircon/utc.h>
 
 #include <algorithm>
 #include <cmath>
@@ -78,19 +79,33 @@ constexpr uint32_t kAfbcColorReorderG = 2;
 constexpr uint32_t kAfbcColorReorderB = 3;
 constexpr uint32_t kAfbcColorReorderA = 4;
 
+constexpr zx::duration kRdmaActiveCondWaitTimeout = zx::sec(1);
+constexpr zx::duration kRdmaRegisterDumpTimeout = zx::sec(2);
+
 }  // namespace
 
 void Osd::WaitForRdmaIdle() {
-  zx::time dump_deadline = zx::deadline_after(zx::sec(2));
+  zx::time dump_deadline = zx::deadline_after(kRdmaRegisterDumpTimeout);
+  zx::unowned_clock utc_clock(zx_utc_reference_get());
   bool dumped = false;
   auto stat_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
-  while (rdma_active_ &&
-         (stat_reg.RequestLatched() || stat_reg.ChannelDone(kRdmaChannel))) {
+  while (stat_reg.RequestLatched(kRdmaChannel) || stat_reg.ChannelDone(kRdmaChannel)) {
     if (!dumped && zx::clock::get_monotonic() > dump_deadline) {
+      DISP_INFO("vsync blocked too long waiting for RDMA; dumping registers");
       dumped = true;
       Dump();
     }
-    rdma_active_cnd_.Wait(&rdma_lock_);
+
+    zx::time_utc now;
+    if (utc_clock->read(now.get_address()) != ZX_OK) {
+      DISP_ERROR("failed to read UTC clock");
+      return;
+    }
+
+    // TODO(fxbug.dev/80821): Migrate this driver to use std::condition_variable instead.
+    struct timespec deadline = (now + kRdmaActiveCondWaitTimeout).to_timespec();
+    cnd_timedwait(rdma_active_cnd_.get(), rdma_lock_.GetInternal(), &deadline);
+
     stat_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
   }
 }
@@ -98,7 +113,9 @@ void Osd::WaitForRdmaIdle() {
 uint64_t Osd::GetLastImageApplied() {
   ZX_DEBUG_ASSERT(initialized_);
   fbl::AutoLock lock(&rdma_lock_);
-  WaitForRdmaIdle();
+  if (rdma_active_) {
+    WaitForRdmaIdle();
+  }
   return latest_applied_config_;
 }
 
@@ -425,23 +442,23 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
     auto offset0_1 = (config->cc_flags & COLOR_CONVERSION_PREOFFSET
                           ? (FloatToFixed2_10(config->cc_preoffsets[0]) << 16 |
                              FloatToFixed2_10(config->cc_preoffsets[1]) << 0)
-                      : 0);
+                          : 0);
     SetRdmaTableValue(next_table_idx, IDX_MATRIX_PRE_OFFSET0_1, offset0_1);
     auto offset2 = (config->cc_flags & COLOR_CONVERSION_PREOFFSET
-                    ? (FloatToFixed2_10(config->cc_preoffsets[2]) << 0)
-                    : 0);
+                        ? (FloatToFixed2_10(config->cc_preoffsets[2]) << 0)
+                        : 0);
     SetRdmaTableValue(next_table_idx, IDX_MATRIX_PRE_OFFSET2, offset2);
     // TODO(b/182481217): remove when this bug is closed.
     DISP_SPEW("pre offset0_1=%u offset2=%u\n", offset0_1, offset2);
 
     // Load PostOffset values (or 0 if none entered)
     offset0_1 = (config->cc_flags & COLOR_CONVERSION_POSTOFFSET
-                 ? (FloatToFixed2_10(config->cc_postoffsets[0]) << 16 |
-                    FloatToFixed2_10(config->cc_postoffsets[1]) << 0)
-                 : 0);
+                     ? (FloatToFixed2_10(config->cc_postoffsets[0]) << 16 |
+                        FloatToFixed2_10(config->cc_postoffsets[1]) << 0)
+                     : 0);
     offset2 = (config->cc_flags & COLOR_CONVERSION_PREOFFSET
-               ? (FloatToFixed2_10(config->cc_postoffsets[2]) << 0)
-               : 0);
+                   ? (FloatToFixed2_10(config->cc_postoffsets[2]) << 0)
+                   : 0);
     SetRdmaTableValue(next_table_idx, IDX_MATRIX_OFFSET0_1, offset0_1);
     SetRdmaTableValue(next_table_idx, IDX_MATRIX_OFFSET2, offset2);
     // TODO(b/182481217): remove when this bug is closed.
@@ -488,8 +505,8 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
     SetRdmaTableValue(next_table_idx, IDX_MATRIX_COEF20_21, coef20_21);
     SetRdmaTableValue(next_table_idx, IDX_MATRIX_COEF22, coef22);
     // TODO(b/182481217): remove when this bug is closed.
-    DISP_SPEW("ccm 00_01=%xu 02_12=%xu 11_12=%xu 20_21=%u 22=%xu\n",
-              coef00_01, coef02_10, coef11_12, coef20_21, coef22);
+    DISP_SPEW("ccm 00_01=%xu 02_12=%xu 11_12=%xu 20_21=%u 22=%xu\n", coef00_01, coef02_10,
+              coef11_12, coef20_21, coef22);
   } else {
     // Disable color conversion engine
     SetRdmaTableValue(next_table_idx, IDX_MATRIX_EN_CTRL,
@@ -819,6 +836,8 @@ void Osd::FlushAfbcRdmaTable() const {
 
 // TODO(fxbug.dev/57633): stop all channels for safer reloads.
 void Osd::StopRdma() {
+  DISP_INFO("Stopping RDMA");
+
   fbl::AutoLock l(&rdma_lock_);
 
   // Grab a copy of active DMA channels before clearing it
