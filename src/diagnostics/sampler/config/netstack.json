@@ -22,25 +22,25 @@
             "event_codes": [],
             "metric_id": 30,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters:PacketsSent"
+            "selector": "netstack.cmx:Networking Stat Counters/NICs/Tx:Packets"
         },
         {
             "event_codes": [],
             "metric_id": 31,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters:PacketsReceived"
+            "selector": "netstack.cmx:Networking Stat Counters/NICs/Rx:Packets"
         },
         {
             "event_codes": [],
             "metric_id": 32,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters:BytesSent"
+            "selector": "netstack.cmx:Networking Stat Counters/NICs/Tx:Bytes"
         },
         {
             "event_codes": [],
             "metric_id": 33,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters:BytesReceived"
+            "selector": "netstack.cmx:Networking Stat Counters/NICs/Rx:Bytes"
         },
         {
             "event_codes": [],

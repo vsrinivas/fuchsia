@@ -324,6 +324,7 @@ func Main() {
 	ns := &Netstack{
 		dnsConfig:          dns.MakeServersConfig(stk.Clock()),
 		stack:              stk,
+		stats:              stats{Stats: stk.Stats()},
 		nicRemovedHandlers: []NICRemovedHandler{&ndpDisp.dynamicAddressSourceTracker, f},
 	}
 
@@ -344,7 +345,6 @@ func Main() {
 
 	dnsWatchers := newDnsServerWatcherCollection(ns.dnsConfig.GetServersCacheAndChannel)
 
-	ns.stats.init(ns)
 	appCtx.OutgoingService.AddDiagnostics("counters", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{

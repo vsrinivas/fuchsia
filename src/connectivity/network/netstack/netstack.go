@@ -58,23 +58,11 @@ func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
 	return onLinkV6Route(nicID, header.IPv6LinkLocalPrefix.Subnet())
 }
 
-var _ statCounter = (funcCounter)(nil)
-
-type funcCounter func() uint64
-
-func (f funcCounter) Value(...string) uint64 {
-	return f()
-}
-
 type stats struct {
 	tcpip.Stats
 	SocketCount      tcpip.StatCounter
 	SocketsCreated   tcpip.StatCounter
 	SocketsDestroyed tcpip.StatCounter
-	PacketsSent      funcCounter
-	PacketsReceived  funcCounter
-	BytesSent        funcCounter
-	BytesReceived    funcCounter
 	DHCPv6           struct {
 		NoConfiguration    tcpip.StatCounter
 		ManagedAddress     tcpip.StatCounter
@@ -85,43 +73,6 @@ type stats struct {
 		GlobalSLAACOnly                     tcpip.StatCounter
 		DHCPv6ManagedAddressOnly            tcpip.StatCounter
 		GlobalSLAACAndDHCPv6ManagedAddress  tcpip.StatCounter
-	}
-}
-
-func (s *stats) init(ns *Netstack) {
-	s.Stats = ns.stack.Stats()
-	// TODO(https://fxbug.dev/76062): Implement netstack-global counters.
-	s.PacketsSent = func() uint64 {
-		nicInfos := ns.stack.NICInfo()
-		var c uint64 = 0
-		for _, info := range nicInfos {
-			c += info.Stats.Tx.Packets.Value()
-		}
-		return c
-	}
-	s.PacketsReceived = func() uint64 {
-		nicInfos := ns.stack.NICInfo()
-		var c uint64 = 0
-		for _, info := range nicInfos {
-			c += info.Stats.Rx.Packets.Value()
-		}
-		return c
-	}
-	s.BytesSent = func() uint64 {
-		nicInfos := ns.stack.NICInfo()
-		var c uint64 = 0
-		for _, info := range nicInfos {
-			c += info.Stats.Tx.Bytes.Value()
-		}
-		return c
-	}
-	s.BytesReceived = func() uint64 {
-		nicInfos := ns.stack.NICInfo()
-		var c uint64 = 0
-		for _, info := range nicInfos {
-			c += info.Stats.Rx.Bytes.Value()
-		}
-		return c
 	}
 }
 
