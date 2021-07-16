@@ -61,52 +61,48 @@ impl FsNodeOps for TmpfsDirectory {
         Ok(Box::new(NullFile))
     }
 
-    fn lookup(
-        &self,
-        _node: &FsNode,
-        _name: &FsStr,
-        _info: &mut FsNodeInfo,
-    ) -> Result<Box<dyn FsNodeOps>, Errno> {
+    fn lookup(&self, _parent: &FsNode, _child: FsNode) -> Result<FsNodeHandle, Errno> {
         Err(ENOENT)
     }
 
-    fn mkdir(
-        &self,
-        _node: &FsNode,
-        _name: &FsStr,
-        _info: &mut FsNodeInfo,
-    ) -> Result<Box<dyn FsNodeOps>, Errno> {
-        Ok(Box::new(TmpfsDirectory { fs: self.fs.clone() }))
+    fn mkdir(&self, _parent: &FsNode, mut child: FsNode) -> Result<FsNodeHandle, Errno> {
+        child.set_ops(TmpfsDirectory { fs: self.fs.clone() });
+        let child = child.into_handle();
+        self.fs.upgrade().map(|fs| fs.lock().register(&child));
+        Ok(child)
     }
 
-    fn mknod(
-        &self,
-        _node: &FsNode,
-        _name: &FsStr,
-        info: &mut FsNodeInfo,
-    ) -> Result<Box<dyn FsNodeOps>, Errno> {
-        match info.mode.fmt() {
-            FileMode::IFREG => Ok(Box::new(TmpfsFileNode::new(self.fs.clone())?)),
-            FileMode::IFIFO => Ok(Box::new(TmpfsFifoNode::new(self.fs.clone()))),
-            _ => Err(EACCES),
+    fn mknod(&self, _parent: &FsNode, mut child: FsNode) -> Result<FsNodeHandle, Errno> {
+        match child.info_mut().mode.fmt() {
+            FileMode::IFREG => child.set_ops(TmpfsFileNode::new(self.fs.clone())?),
+            FileMode::IFIFO => child.set_ops(TmpfsFifoNode::new(self.fs.clone())),
+            _ => return Err(EACCES),
         }
+        let child = child.into_handle();
+        self.fs.upgrade().map(|fs| fs.lock().register(&child));
+        Ok(child)
     }
 
     fn mksymlink(
         &self,
+        _node: &FsNode,
+        mut child: FsNode,
         target: &FsStr,
-        info: &mut FsNodeInfo,
-    ) -> Result<Box<dyn FsNodeOps>, Errno> {
-        assert!(info.mode.fmt() == FileMode::IFLNK);
-        Ok(Box::new(SymlinkNode::new(self.fs.clone(), target)))
+    ) -> Result<FsNodeHandle, Errno> {
+        assert!(child.info_mut().mode.fmt() == FileMode::IFLNK);
+        child.set_ops(SymlinkNode::new(self.fs.clone(), target));
+        let child = child.into_handle();
+        self.fs.upgrade().map(|fs| fs.lock().register(&child));
+        Ok(child)
     }
 
-    fn unlink(&self, _node: &FsNode, _name: &FsStr, _kind: UnlinkKind) -> Result<(), Errno> {
+    fn unlink(
+        &self,
+        _parent: &FsNode,
+        _child: &FsNodeHandle,
+        _kind: UnlinkKind,
+    ) -> Result<(), Errno> {
         Ok(())
-    }
-
-    fn initialize(&self, node: &FsNodeHandle) {
-        self.fs.upgrade().map(|fs| fs.lock().register(node));
     }
 
     fn unlinked(&self, node: &FsNodeHandle) {
@@ -134,10 +130,6 @@ impl FsNodeOps for TmpfsFileNode {
         Ok(Box::new(VmoFileObject::new(self.vmo.clone())))
     }
 
-    fn initialize(&self, node: &FsNodeHandle) {
-        self.fs.upgrade().map(|fs| fs.lock().register(node));
-    }
-
     fn unlinked(&self, node: &FsNodeHandle) {
         self.fs.upgrade().map(|fs| fs.lock().unregister(node));
     }
@@ -160,10 +152,6 @@ impl TmpfsFifoNode {
 impl FsNodeOps for TmpfsFifoNode {
     fn open(&self, _node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Pipe::open(&self.pipe, flags))
-    }
-
-    fn initialize(&self, node: &FsNodeHandle) {
-        self.fs.upgrade().map(|fs| fs.lock().register(node));
     }
 
     fn unlinked(&self, node: &FsNodeHandle) {

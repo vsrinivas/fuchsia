@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use once_cell::sync::OnceCell;
-use parking_lot::{RwLock, RwLockReadGuard, RwLockUpgradableReadGuard, RwLockWriteGuard};
+use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
@@ -23,7 +23,7 @@ pub struct FsNode {
     /// The FsNode is created with this OnceCell empty in order to hold the
     /// slot in the children map during initialization. After initialization,
     /// this OnceCell is populated with the FsNodeOps returned by the parent.
-    ops: OnceCell<Box<dyn FsNodeOps>>,
+    ops: Option<Box<dyn FsNodeOps>>,
 
     /// The tasks waiting on signals (e.g., POLLIN, POLLOUT) from this FsNode.
     pub observers: ObserverList,
@@ -59,10 +59,9 @@ pub struct FsNode {
     /// FsNodes are added to this cache when they are looked up and removed
     /// when they are no longer referenced.
     ///
-    /// This cache can also include partially initialized nodes that are in
-    /// the process of being looked up. If the lookup fails, the nodes will
-    /// be dropped from the cache.
-    children: RwLock<HashMap<FsString, Weak<FsNode>>>,
+    /// This may include empty OnceCells for nodes that are in the process of being initialized. If
+    /// initialization fails, the nodes will be dropped from the cache.
+    children: RwLock<HashMap<FsString, OnceCell<Weak<FsNode>>>>,
 }
 
 pub type FsNodeHandle = Arc<FsNode>;
@@ -94,58 +93,43 @@ pub enum UnlinkKind {
 }
 
 pub trait FsNodeOps: Send + Sync {
-    /// Open a session with this node.
+    /// Open a FileObject for this node.
     ///
     /// The returned FileOps will be used to create a FileObject, which might
     /// be assigned an FdNumber.
     fn open(&self, node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno>;
 
-    /// Find an existing child node with the given name.
+    /// Find an existing child node and populate the child parameter. Return the node.
     ///
-    /// If this function does not return an error, this function must populate
-    /// the mode field of the given FsNodeInfo to reflect the type of node
-    /// found.
-    fn lookup(
-        &self,
-        _node: &FsNode,
-        _name: &FsStr,
-        _info: &mut FsNodeInfo,
-    ) -> Result<Box<dyn FsNodeOps>, Errno> {
+    /// The child parameter is an empty node. Operations other than initialize may panic before
+    /// initialize is called.
+    fn lookup(&self, _node: &FsNode, _child: FsNode) -> Result<FsNodeHandle, Errno> {
         Err(ENOTDIR)
     }
 
-    /// Create a child node with the given name.
+    /// Create and return the given child node.
     ///
     /// The mode field of the FsNodeInfo indicates what kind of child to
     /// create.
     ///
     /// This function is never called with FileMode::IFDIR. The mkdir function
     /// is used to create directories instead.
-    fn mknod(
-        &self,
-        _node: &FsNode,
-        _name: &FsStr,
-        _info: &mut FsNodeInfo,
-    ) -> Result<Box<dyn FsNodeOps>, Errno> {
+    fn mknod(&self, _node: &FsNode, _child: FsNode) -> Result<FsNodeHandle, Errno> {
         Err(ENOTDIR)
     }
 
-    /// Create a subdirectory with the given name.
-    fn mkdir(
-        &self,
-        _node: &FsNode,
-        _name: &FsStr,
-        _info: &mut FsNodeInfo,
-    ) -> Result<Box<dyn FsNodeOps>, Errno> {
+    /// Create and return the given child node as a subdirectory.
+    fn mkdir(&self, _node: &FsNode, _child: FsNode) -> Result<FsNodeHandle, Errno> {
         Err(ENOTDIR)
     }
 
     /// Creates a symlink with the given `target` path.
     fn mksymlink(
         &self,
+        _node: &FsNode,
+        _child: FsNode,
         _target: &FsStr,
-        _info: &mut FsNodeInfo,
-    ) -> Result<Box<dyn FsNodeOps>, Errno> {
+    ) -> Result<FsNodeHandle, Errno> {
         Err(ENOTDIR)
     }
 
@@ -158,14 +142,14 @@ pub trait FsNodeOps: Send + Sync {
     ///
     /// The UnlinkKind parameter indicates whether the caller intends to unlink
     /// a directory or a non-directory child.
-    fn unlink(&self, _node: &FsNode, _name: &FsStr, _kind: UnlinkKind) -> Result<(), Errno> {
+    fn unlink(
+        &self,
+        _node: &FsNode,
+        _child: &FsNodeHandle,
+        _kind: UnlinkKind,
+    ) -> Result<(), Errno> {
         Err(ENOTDIR)
     }
-
-    /// This node was added to the FsNode cache.
-    ///
-    /// The callee should perform any initialization needed.
-    fn initialize(&self, _node: &FsNodeHandle) {}
 
     /// This node was unlinked from its parent.
     ///
@@ -203,16 +187,16 @@ impl FsNode {
         device: DeviceHandle,
     ) -> FsNodeHandle {
         let ops: Box<dyn FsNodeOps> = Box::new(ops);
-        FsNode::new(OnceCell::from(ops), mode, device, None, FsString::new())
+        Arc::new(FsNode::new(Some(ops), mode, device, None, FsString::new()))
     }
 
     fn new(
-        ops: OnceCell<Box<dyn FsNodeOps>>,
+        ops: Option<Box<dyn FsNodeOps>>,
         mode: FileMode,
         device: DeviceHandle,
         parent: Option<FsNodeHandle>,
         local_name: FsString,
-    ) -> FsNodeHandle {
+    ) -> FsNode {
         let now = fuchsia_runtime::utc_time();
         let info = FsNodeInfo {
             inode_num: device.allocate_inode_number(),
@@ -223,7 +207,7 @@ impl FsNode {
             time_modify: now,
             ..Default::default()
         };
-        Arc::new(Self {
+        Self {
             ops,
             observers: ObserverList::default(),
             device,
@@ -231,7 +215,7 @@ impl FsNode {
             local_name,
             children: RwLock::new(HashMap::new()),
             info: RwLock::new(info),
-        })
+        }
     }
 
     /// The name that this node's parent calls this node.
@@ -249,7 +233,11 @@ impl FsNode {
     fn ops(&self) -> &dyn FsNodeOps {
         // Empty nodes are never returned to users of the FsNode API, so most uses of the ops field
         // can assume it is non-empty.
-        &**self.ops.get().unwrap()
+        &**self.ops.as_ref().unwrap()
+    }
+
+    pub fn set_ops(&mut self, ops: impl FsNodeOps + 'static) {
+        self.ops = Some(Box::new(ops));
     }
 
     pub fn open(self: &FsNodeHandle, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
@@ -257,15 +245,7 @@ impl FsNode {
     }
 
     pub fn component_lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        let (node, _) = self.create_child(name, |node| {
-            let mut info = node.info_mut();
-            let ops = self.ops().lookup(&self, name, &mut info)?;
-            assert!(
-                info.mode & FileMode::IFMT != FileMode::EMPTY,
-                "FsNodeOps::lookup did not populate the FileMode in FsNodeInfo."
-            );
-            Ok(ops)
-        })?;
+        let (node, _) = self.create_child(name, |child| self.ops().lookup(&self, child))?;
         Ok(node)
     }
 
@@ -283,23 +263,22 @@ impl FsNode {
         mk_callback: F,
     ) -> Result<FsNodeHandle, Errno>
     where
-        F: FnOnce(RwLockWriteGuard<'_, FsNodeInfo>) -> Result<Box<dyn FsNodeOps>, Errno>,
+        F: FnOnce(FsNode) -> Result<FsNodeHandle, Errno>,
     {
         assert!(mode & FileMode::IFMT != FileMode::EMPTY, "mknod called without node type.");
-        let (node, exists) = self.create_child(name, |node| {
-            let mut info = node.info_mut();
+        let (node, exists) = self.create_child(name, |mut child| {
+            let info = child.info.get_mut();
             info.mode = mode;
             if mode.is_blk() || mode.is_chr() {
                 info.rdev = dev;
             }
-            mk_callback(info)
+            mk_callback(child)
         })?;
         if exists {
             return Err(EEXIST);
         }
-        node.ops().initialize(&node);
         let now = fuchsia_runtime::utc_time();
-        let mut info = self.info_mut();
+        let mut info = self.info_write();
         info.time_access = now;
         info.time_modify = now;
         Ok(node)
@@ -308,8 +287,8 @@ impl FsNode {
     #[cfg(test)]
     pub fn mkdir(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
         // TODO: apply_umask
-        self.create_node(name, FileMode::IFDIR | FileMode::ALLOW_ALL, 0, |mut info| {
-            self.ops().mkdir(&self, name, &mut info)
+        self.create_node(name, FileMode::IFDIR | FileMode::ALLOW_ALL, 0, |node| {
+            self.ops().mkdir(&self, node)
         })
     }
 
@@ -319,11 +298,11 @@ impl FsNode {
         mode: FileMode,
         dev: dev_t,
     ) -> Result<FsNodeHandle, Errno> {
-        self.create_node(name, mode, dev, |mut info| {
+        self.create_node(name, mode, dev, |node| {
             if mode.is_dir() {
-                self.ops().mkdir(&self, name, &mut info)
+                self.ops().mkdir(&self, node)
             } else {
-                self.ops().mknod(&self, name, &mut info)
+                self.ops().mknod(&self, node)
             }
         })
     }
@@ -333,8 +312,8 @@ impl FsNode {
         name: &FsStr,
         target: &FsStr,
     ) -> Result<FsNodeHandle, Errno> {
-        self.create_node(name, FileMode::IFLNK | FileMode::ALLOW_ALL, 0, |mut info| {
-            self.ops().mksymlink(target, &mut info)
+        self.create_node(name, FileMode::IFLNK | FileMode::ALLOW_ALL, 0, |node| {
+            self.ops().mksymlink(&self, node, target)
         })
     }
 
@@ -345,17 +324,16 @@ impl FsNode {
     pub fn unlink(self: &FsNodeHandle, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
         let child = {
             let mut children = self.children.write();
-            let child = children.remove(name).ok_or(ENOENT)?.upgrade().unwrap();
+            let child =
+                children.get(name).and_then(OnceCell::get).ok_or(ENOENT)?.upgrade().unwrap();
             // TODO: Check _kind against the child's mode.
-            self.ops().unlink(self, name, kind).map_err(|e| {
-                children.insert(name.to_owned(), Arc::downgrade(&child));
-                e
-            })?;
+            self.ops().unlink(self, &child, kind)?;
+            children.remove(name);
             child
         };
         // We hold a reference to child until we have released the children
         // lock so that we do not trigger a deadlock in the Drop trait for
-        // Fsnode, which attempts to remove the FsNode from its parent's child
+        // FsNode, which attempts to remove the FsNode from its parent's child
         // list.
         child.ops().unlinked(&child);
         Ok(())
@@ -390,9 +368,11 @@ impl FsNode {
     pub fn info(&self) -> RwLockReadGuard<'_, FsNodeInfo> {
         self.info.read()
     }
-
-    pub fn info_mut(&self) -> RwLockWriteGuard<'_, FsNodeInfo> {
+    pub fn info_write(&self) -> RwLockWriteGuard<'_, FsNodeInfo> {
         self.info.write()
+    }
+    pub fn info_mut(&mut self) -> &mut FsNodeInfo {
+        self.info.get_mut()
     }
 
     fn create_child<F>(
@@ -401,29 +381,51 @@ impl FsNode {
         init_fn: F,
     ) -> Result<(FsNodeHandle, bool), Errno>
     where
-        F: FnOnce(&FsNode) -> Result<Box<dyn FsNodeOps>, Errno>,
+        F: FnOnce(FsNode) -> Result<FsNodeHandle, Errno>,
     {
-        let children = self.children.upgradable_read();
-        let child = children.get(name).and_then(|child| child.upgrade());
-        let child = child.unwrap_or_else(|| {
+        let mut child_cell;
+        let mut children_read_guard;
+        {
+            children_read_guard = self.children.read();
+            child_cell = children_read_guard.get(name);
+        }
+        if child_cell.is_none() {
+            std::mem::drop(children_read_guard);
+            let mut children_write_guard = self.children.write();
+            children_write_guard.entry(name.to_vec()).or_insert(OnceCell::new());
+            children_read_guard = RwLockWriteGuard::downgrade(children_write_guard);
+            child_cell = children_read_guard.get(name);
+        }
+        let child_cell = child_cell.unwrap();
+
+        let mut new_child_handle = None;
+        let weak_child = child_cell.get_or_try_init(|| {
             let child = FsNode::new(
-                OnceCell::new(),
+                None,
                 FileMode::EMPTY,
                 Arc::clone(&self.device),
                 Some(Arc::clone(self)),
                 name.to_vec(),
             );
-            let mut children = RwLockUpgradableReadGuard::upgrade(children);
-            children.insert(child.local_name.clone(), Arc::downgrade(&child));
-            child
-        });
-
-        let mut exists = true;
-        child.ops.get_or_try_init(|| {
-            exists = false;
-            init_fn(&child)
+            let child = init_fn(child)?;
+            assert!(
+                child.info().mode & FileMode::IFMT != FileMode::EMPTY,
+                "FsNodeOps initialization did not populate the FileMode in FsNodeInfo."
+            );
+            let weak_child = Arc::downgrade(&child);
+            // Stash the Arc so it doesn't get immediately freed
+            new_child_handle = Some(child);
+            Ok(weak_child)
         })?;
-        Ok((child, exists))
+        if let Some(child) = new_child_handle {
+            Ok((child, false))
+        } else {
+            Ok((weak_child.upgrade().unwrap(), true))
+        }
+    }
+
+    pub fn into_handle(self) -> FsNodeHandle {
+        Arc::new(self)
     }
 
     // This function is only useful for tests and has some oddities.
@@ -438,13 +440,22 @@ impl FsNode {
         self.children
             .read()
             .values()
-            .map(|child| child.upgrade().unwrap().local_name().to_owned())
+            .filter_map(|child| {
+                child.get().and_then(Weak::upgrade).map(|c| c.local_name().to_owned())
+            })
             .collect()
     }
 
     fn internal_remove_child(&self, child: &mut FsNode) {
         // possible deadlock? this is called from Drop, so we need to be careful about dropping any
         // FsNodeHandle while locking the children.
+
+        // This avoids a deadlock: FsNode construction read-locks children which would make the
+        // following write lock fail, but we can check and avoid taking a write lock in that case.
+        if self.children.read().get(child.local_name()).and_then(OnceCell::get).is_none() {
+            return;
+        }
+
         self.children.write().remove(child.local_name());
     }
 }

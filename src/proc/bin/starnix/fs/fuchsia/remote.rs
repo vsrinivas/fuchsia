@@ -65,13 +65,8 @@ impl FsNodeOps for RemoteNode {
         Ok(Box::new(RemoteFileObject { zxio: Arc::clone(&self.zxio) }))
     }
 
-    fn lookup(
-        &self,
-        _node: &FsNode,
-        name: &FsStr,
-        info: &mut FsNodeInfo,
-    ) -> Result<Box<dyn FsNodeOps>, Errno> {
-        let name = std::str::from_utf8(name).map_err(|_| {
+    fn lookup(&self, _parent: &FsNode, mut child: FsNode) -> Result<FsNodeHandle, Errno> {
+        let name = std::str::from_utf8(child.local_name()).map_err(|_| {
             warn!("bad utf8 in pathname! remote filesystems can't handle this");
             EINVAL
         })?;
@@ -81,9 +76,10 @@ impl FsNodeOps for RemoteNode {
         // TODO: It's unfortunate to have another round-trip. We should be able
         // to set the mode based on the information we get during open.
         let attrs = zxio.attr_get().map_err(Errno::from_status_like_fdio)?;
-        update_into_from_attrs(info, attrs);
+        update_into_from_attrs(child.info_mut(), attrs);
 
-        Ok(Box::new(RemoteNode { zxio, rights: self.rights }))
+        child.set_ops(RemoteNode { zxio, rights: self.rights });
+        Ok(child.into_handle())
     }
 
     fn truncate(&self, _node: &FsNode, length: u64) -> Result<(), Errno> {
@@ -92,7 +88,7 @@ impl FsNodeOps for RemoteNode {
 
     fn update_info<'a>(&self, node: &'a FsNode) -> Result<RwLockReadGuard<'a, FsNodeInfo>, Errno> {
         let attrs = self.zxio.attr_get().map_err(Errno::from_status_like_fdio)?;
-        let mut info = node.info_mut();
+        let mut info = node.info_write();
         update_into_from_attrs(&mut info, attrs);
         Ok(RwLockWriteGuard::downgrade(info))
     }

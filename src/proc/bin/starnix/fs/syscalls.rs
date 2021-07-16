@@ -422,7 +422,7 @@ pub fn sys_fchmodat(
         return Err(EINVAL);
     }
     let node = lookup_node_at(&ctx.task, dir_fd, user_path)?;
-    node.info_mut().mode = mode;
+    node.info_write().mode = mode;
     Ok(SUCCESS)
 }
 

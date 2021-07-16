@@ -32,10 +32,6 @@ impl FsNodeOps for SymlinkNode {
         Ok(self.target.clone())
     }
 
-    fn initialize(&self, node: &FsNodeHandle) {
-        self.fs.upgrade().map(|fs| fs.lock().register(node));
-    }
-
     fn unlinked(&self, node: &FsNodeHandle) {
         self.fs.upgrade().map(|fs| fs.lock().unregister(node));
     }

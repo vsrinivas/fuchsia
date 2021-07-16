@@ -33,7 +33,7 @@ impl FileOps for VmoFileObject {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let mut info = file.node().info_mut();
+        let mut info = file.node().info_write();
         let file_length = info.size;
         let want_read = UserBuffer::get_total_length(data);
         let to_read =
@@ -53,7 +53,7 @@ impl FileOps for VmoFileObject {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let mut info = file.node().info_mut();
+        let mut info = file.node().info_write();
         let want_write = UserBuffer::get_total_length(data);
         let write_end = offset + want_write;
         let mut update_content_size = false;

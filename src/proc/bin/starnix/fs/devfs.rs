@@ -35,15 +35,11 @@ impl FsNodeOps for DevfsDirectory {
         Ok(Box::new(NullFile))
     }
 
-    fn lookup(
-        &self,
-        _node: &FsNode,
-        name: &FsStr,
-        info: &mut FsNodeInfo,
-    ) -> Result<Box<dyn FsNodeOps>, Errno> {
-        if name == b"null" {
-            info.mode = FileMode::IFCHR | FileMode::ALLOW_ALL;
-            Ok(Box::new(DevNullFileNode))
+    fn lookup(&self, _parent: &FsNode, mut child: FsNode) -> Result<FsNodeHandle, Errno> {
+        if child.local_name() == b"null" {
+            child.info_mut().mode = FileMode::IFCHR | FileMode::ALLOW_ALL;
+            child.set_ops(DevNullFileNode);
+            Ok(child.into_handle())
         } else {
             Err(ENOENT)
         }

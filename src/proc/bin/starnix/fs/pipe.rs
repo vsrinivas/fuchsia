@@ -255,7 +255,7 @@ impl Pipe {
 pub fn new_pipe(kernel: &Kernel) -> (FileHandle, FileHandle) {
     let pipe = Pipe::new();
     let node = Anon::new_node(kernel, AnonNodeType::Pipe);
-    node.info_mut().blksize = ATOMIC_IO_BYTES;
+    node.info_write().blksize = ATOMIC_IO_BYTES;
 
     let open = |flags: OpenFlags| {
         let ops = Pipe::open(&pipe, flags);
