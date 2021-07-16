@@ -378,7 +378,7 @@ pub fn sys_wait4(
     if !user_wstatus.is_null() {
         // TODO(fxb/76976): Return proper status.
         let status = match exit_code {
-            Some(exit_code) => exit_code & 0xff << 8,
+            Some(exit_code) => (exit_code & 0xff) << 8,
             _ => 0,
         };
         not_implemented!("wait4 does not set signal info in wstatus");

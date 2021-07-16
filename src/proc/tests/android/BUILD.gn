@@ -151,6 +151,9 @@ gvisor_test_component("clock_getres_test") {
 gvisor_test_component("clock_gettime_test") {
 }
 
+gvisor_test_component("exit_test") {
+}
+
 gvisor_test_component("getrandom_test") {
 }
 
@@ -185,6 +188,7 @@ fuchsia_test_package("test_android_distro") {
     ":brk_test",
     ":clock_getres_test",
     ":clock_gettime_test",
+    ":exit_test",
     ":getrandom_test",
     ":kill_test",
     ":pipe_test",
