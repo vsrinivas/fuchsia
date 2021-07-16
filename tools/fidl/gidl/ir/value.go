@@ -15,7 +15,7 @@ import (
 // - `uint64` for nonnegative integers (of any size), bits, and enums
 // - `float64` or `RawFloat` for floating point numbers (of any size)
 // - `bool` for booleans
-// - `Handle` for handles
+// - `Handle` or `HandleWithRights` for handles
 // - `Record` for structs, tables, and unions
 // - `[]Value` for slices of values
 // - `nil` for null values (only allowed for nullable types)

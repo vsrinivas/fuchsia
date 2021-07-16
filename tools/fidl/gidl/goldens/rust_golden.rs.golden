@@ -833,12 +833,15 @@ HandleDef{
 	}).collect();
 	let value = &mut conformance::GoldenNullableHandleStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) });
-	// Re-encode purely for the side effect of linearizing the handles.
-	let mut linear_handles = unsafe { disown_vec(Vec::<HandleDisposition<'static>>::new()) };
-	let linear_handles = linear_handles.as_mut();
-	Encoder::encode_with_context(_V1_CONTEXT, &mut Vec::new(), linear_handles, value)
-		.expect("Failed to re-encode the successfully decoded value");
+	// Forget handles before dropping the expected value, to avoid double closing them.
+	struct ForgetHandles(conformance::GoldenNullableHandleStruct);
+	impl std::ops::Drop for ForgetHandles {
+		fn drop(&mut self) {
+			std::mem::forget(std::mem::replace(&mut self.0.v, Handle::invalid().into()));
+		}
+	}
+	let expected_value = ForgetHandles(conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) });
+	assert_eq!(value, &expected_value.0);
 }
 
 #[test]

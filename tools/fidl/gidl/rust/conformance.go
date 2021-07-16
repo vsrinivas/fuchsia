@@ -86,13 +86,18 @@ fn test_{{ .Name }}_decode() {
 	}).collect();
 	let value = &mut {{ .ValueType }}::new_empty();
 	Decoder::decode_with_context({{ .Context }}, bytes, &mut handle_infos, value).unwrap();
+	{{- if .ForgetHandles }}
+	// Forget handles before dropping the expected value, to avoid double closing them.
+	struct ForgetHandles({{ .ValueType }});
+	impl std::ops::Drop for ForgetHandles {
+		fn drop(&mut self) {
+			{{ .ForgetHandles }}
+		}
+	}
+	let expected_value = ForgetHandles({{ .Value }});
+	assert_eq!(value, &expected_value.0);
+	{{- else }}
 	assert_eq!(value, &{{ .Value }});
-	{{- if .HandleDefs }}
-	// Re-encode purely for the side effect of linearizing the handles.
-	let mut linear_handles = unsafe { disown_vec(Vec::<HandleDisposition<'static>>::new()) };
-	let linear_handles = linear_handles.as_mut();
-	Encoder::encode_with_context({{ .Context }}, &mut Vec::new(), linear_handles, value)
-		.expect("Failed to re-encode the successfully decoded value");
 	{{- end }}
 }
 {{ end }}
@@ -171,7 +176,7 @@ type encodeSuccessCase struct {
 }
 
 type decodeSuccessCase struct {
-	Name, Context, HandleDefs, ValueType, Value, Bytes, Handles string
+	Name, Context, HandleDefs, ValueType, Value, Bytes, Handles, ForgetHandles string
 }
 
 type encodeFailureCase struct {
@@ -246,18 +251,22 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		}
 		valueType := declName(decl)
 		value := visit(decodeSuccess.Value, decl)
+		// Start with "self.0" because this code is placed in a drop(&mut self)
+		// function, where self is a wrapper around valueType.
+		forgetHandles := buildForgetHandles("self.0", decodeSuccess.Value, decl)
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				Context:    encodingContext(encoding.WireFormat),
-				HandleDefs: buildHandleDefs(decodeSuccess.HandleDefs),
-				ValueType:  valueType,
-				Value:      value,
-				Bytes:      buildBytes(encoding.Bytes),
-				Handles:    buildHandles(encoding.Handles),
+				Name:          testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				Context:       encodingContext(encoding.WireFormat),
+				HandleDefs:    buildHandleDefs(decodeSuccess.HandleDefs),
+				ValueType:     valueType,
+				Value:         value,
+				Bytes:         buildBytes(encoding.Bytes),
+				Handles:       buildHandles(encoding.Handles),
+				ForgetHandles: forgetHandles,
 			})
 		}
 	}
