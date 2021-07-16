@@ -11,6 +11,7 @@ import("//build/compiled_action.gni")
 import("//build/components/fuchsia_system_package.gni")
 import("//build/dist/resource.gni")
 import("//build/images/args.gni")
+import("//build/images/assembly/generated_board_config.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
@@ -606,282 +607,31 @@ action("create_config") {
   outputs = [ files.assembly_config ]
 }
 
-#####
-# Generate the board config
-#
-# This is all generated from GN args.  Some values are stubs.
-#
-# TODO(fxbug.dev/77866):  Move all of these to checked-in files.
-
-# This is copied from //build/images/BUILD.gn
-use_esp = target_cpu != "arm64" && !use_vboot
-
-# Determine if either the EMMC or NAND FVM should be built and its parameters.
-build_emmc_fvm = false
-build_nand_fvm = false
-if (fvm_partition != "" && !bootfs_only) {
-  fvm_compression = false
-  if (fvm_fastboot_compression != "default") {
-    fvm_compression = fvm_fastboot_compression
-  }
-  if (fvm_emmc_partition_size != false) {
-    build_emmc_fvm = true
-  } else if (fvm_ftl_nand_block_count != false) {
-    build_nand_fvm = true
+# Select the correct vbmeta and salt depending on if it is bootfs_only or not.
+if (use_vbmeta) {
+  if (bootfs_only) {
+    vbmeta_label = "//build/images/bringup:bringup.vbmeta"
+    vbmeta_file = "$root_build_dir/bringup.vbmeta"
   } else {
-    assert(
-        false,
-        "|fvm_partition| is specified. But failed to determine the target format.")
+    vbmeta_label = "//build/images:fuchsia.vbmeta"
+    vbmeta_file = "$root_build_dir/fuchsia.vbmeta"
+  }
+  vbmeta_salt = rebase_path("${vbmeta_file}.salt", root_build_dir)
+}
+
+generated_board_config("board_config") {
+  output_path = files.board_config
+  if (use_vbmeta) {
+    deps = [ vbmeta_label ]
+    salt_file = vbmeta_salt
   }
 }
 
-generated_file(labels.board_config) {
-  testonly = true
-  public_deps = [ recovery_label ]
-  if (use_esp) {
-    public_deps += [ "//build/images:esp" ]
-  }
-  outputs = [ files.board_config ]
-  output_conversion = "json"
-
-  contents = {
-    board_name = board_name
-    arch = target_cpu
-    zbi = {
-      partition = zircon_a_partition
-      if (custom_signing_script != "" || use_vboot) {
-        name = "zbi.signed"
-      } else {
-        name = "zbi"
-      }
-      max_size = 0
-      compression = zbi_compression
-
-      if (use_vboot) {
-        # Set up the vboot script and its arguments.
-        # Assembly always passes the -z and -o switches too.
-        signing_script = {
-          tool = rebase_path(vboot_action.script, root_build_dir)
-          extra_arguments = vboot_action.args
-        }
-      }
-
-      backstop_file =
-          rebase_path(build_info_files.minimum_utc_stamp, root_build_dir)
-    }
-    if (use_vbmeta) {
-      vbmeta = {
-        partition = vbmeta_a_partition
-        kernel_partition = "zircon"
-        key = rebase_path(avb_key, root_build_dir)
-        key_metadata = rebase_path(avb_atx_metadata, root_build_dir)
-        additional_descriptor_files =
-            rebase_path(board_extra_vbmeta_descriptors, root_build_dir)
-
-        # TODO(aaronwood) - Remove when no longer matching against other impl.
-        salt = file_args.fuchsia_vbmeta_salt
-      }
-    }
-
-    blobfs = {
-      layout = blob_layout_format
-      include_update_package = product_include_updates_in_blobfs
-    }
-
-    if (uses_base_package) {
-      fvm = {
-        partition = fvm_partition
-        slice_size = fvm_slice_size
-        reserved_slices = fvm_reserved_slices
-
-        if (fvm_max_disk_size != false) {
-          max_disk_size = fvm_max_disk_size
-        }
-
-        # Generated a fastboot-supported FVM if needed.
-        if (build_emmc_fvm || build_nand_fvm) {
-          fastboot = {
-            # Format for EMMC.
-            if (build_emmc_fvm) {
-              Emmc = {
-                if (fvm_compression != false) {
-                  compression = fvm_compression
-                }
-                length = fvm_emmc_partition_size
-              }
-            } else {
-              Nand = {
-                if (fvm_compression != false) {
-                  compression = fvm_compression
-                }
-                page_size = fvm_ftl_nand_page_size
-                oob_size = fvm_ftl_nand_oob_size
-                pages_per_block = fvm_ftl_nand_pages_per_block
-                block_count = fvm_ftl_nand_block_count
-              }
-            }
-          }
-        }
-
-        filesystems = [
-          {
-            MinFS = {
-              path = rebase_path(files.prev_minfs, root_build_dir)
-              name = "data"
-
-              # Set the minimum inodes.
-              if (minfs_product_minimum_inodes != false) {
-                minimum_inodes = minfs_product_minimum_inodes
-              } else if (minfs_board_minimum_inodes != false) {
-                minimum_inodes = minfs_board_minimum_inodes
-              }
-
-              # Set the minimum data bytes.
-              if (minfs_product_minimum_data_bytes != false) {
-                minimum_data_bytes = minfs_product_minimum_data_bytes
-              } else if (minfs_board_minimum_data_bytes != false) {
-                minimum_data_bytes = minfs_board_minimum_data_bytes
-              }
-
-              # Set the maximum bytes.
-              if (minfs_product_maximum_bytes != false) {
-                maximum_bytes = minfs_product_maximum_bytes
-              } else if (minfs_board_maximum_bytes != false) {
-                maximum_bytes = minfs_board_maximum_bytes
-              }
-            }
-          },
-          {
-            BlobFS = {
-              name = "blob"
-
-              # Set the minimum inodes.
-              if (blobfs_product_minimum_inodes != false) {
-                minimum_inodes = blobfs_product_minimum_inodes
-              } else if (blobfs_board_minimum_inodes != false) {
-                minimum_inodes = blobfs_board_minimum_inodes
-              }
-
-              # Set the minimum data bytes.
-              if (blobfs_product_minimum_data_bytes != false) {
-                minimum_data_bytes = blobfs_product_minimum_data_bytes
-              } else if (blobfs_board_minimum_data_bytes != false) {
-                minimum_data_bytes = blobfs_board_minimum_data_bytes
-              }
-
-              # Set the maximum bytes.
-              if (blobfs_product_maximum_bytes != false) {
-                maximum_bytes = blobfs_product_maximum_bytes
-              } else if (blobfs_board_maximum_bytes != false) {
-                maximum_bytes = blobfs_board_maximum_bytes
-              }
-            }
-          },
-        ]
-      }
-    }
-
-    # For each firmware item we have as a bootloader, add the correct entry
-    # for it into the board config.
-    bootloaders = []
-    foreach(firmware, firmware_prebuilts) {
-      bootloaders += [
-        {
-          # These can be used unchanged.
-          forward_variables_from(firmware,
-                                 [
-                                   "partition",
-                                   "type",
-                                 ])
-          if (defined(type) && type != "") {
-            name = "firmware_${firmware.type}"
-          } else {
-            name = "firmware"
-          }
-
-          # The source has an optional suffix, which we need to add if present.
-          source =
-              rebase_path("${firmware.path}${firmware_prebuilts_path_suffix}",
-                          root_build_dir)
-        },
-      ]
-    }
-
-    # This is copied from //build/images/BUILD.gn, and should be moved to board
-    # config files, and not generated.
-    if (use_esp) {
-      bootloaders += [
-        {
-          type = "esp"
-          name = "bootloader"
-          partition = "bootloader"
-          source =
-              rebase_path("${root_build_dir}/fuchsia.esp.blk", root_build_dir)
-        },
-      ]
-    }
-
-    # Recovery varies by product, and needs to be moved out of board config and
-    # into its own configuration item for `ffx assembly image`
-    #
-    # TODO(fxbug.dev/77535)
-    #
-    recovery = {
-      # Inspect the recovery label's name, as the in-tree recovery and zedboot
-      # builds have different naming behavior.
-      #
-      # This different naming behavior is an artifact of the current build
-      # process and GN logic, and can all go away after `ffx assembly` is the
-      # only implementation used in-tree.
-      #
-      # At that time, these are always:
-      #  name = "recovery"
-      #  zbi = <path to ZBI that contains recovery>
-
-      # Use the `name` variable for this, because all vars that we use in this
-      # scope will end up in the generated JSON, so let's not use any temporary
-      # vars and just mutate the fields we need to have in the final until they
-      # have the right values.
-      #
-
-      # Get the 'name' field of the recovery implementation's GN target.
-      #  e.g. "zedboot" for "//build/images:zedboot"
-      name = get_label_info(recovery_label, "name")
-
-      if (name == "zedboot") {
-        # Zedboot's name is different depending on if, and how, it's post-
-        # processed for booting by the board's bootloaders.
-        if (custom_signing_script != "") {
-          name = "zedboot.signed"
-          zbi = "zedboot.zbi.signed"
-        } else if (use_vboot) {
-          name = "zedboot.signed"
-          zbi = "zedboot.vboot"
-        } else {
-          zbi = "zedboot.zbi"
-        }
-
-        if (use_vbmeta) {
-          vbmeta = "zedboot.vbmeta"
-        }
-      } else {
-        # All recovery options result in a "recovery.zbi", not the default of
-        # "${name}.zbi", and need to be named "recovery" in the update package.
-        name = "recovery"
-        zbi = "recovery.zbi"
-
-        if (use_vbmeta) {
-          vbmeta = "recovery.vbmeta"
-        }
-      }
-    }
-  }
-
-  # If vbmeta was used, and a salt file is defined, add the fuchsia vbmeta
-  # label to deps.
-  if (use_vbmeta) {
-    public_deps += [ dep_labels.fuchsia_vbmeta ]
-  }
+# Determine if a fastboot-supported FVM should be generated.
+build_fastboot_fvm = false
+if (fvm_partition != "" && !bootfs_only &&
+    (fvm_emmc_partition_size != false || fvm_ftl_nand_block_count != false)) {
+  build_fastboot_fvm = true
 }
 
 #####
@@ -894,8 +644,8 @@ ffx_action("images") {
 
   testonly = true
   deps = [
+    ":board_config",
     ":create_config",
-    dep_labels.board_config,
   ]
 
   args = []
@@ -940,7 +690,7 @@ ffx_action("images") {
       files.gen_update_meta_package,
     ]
 
-    if (build_emmc_fvm || build_nand_fvm) {
+    if (build_fastboot_fvm) {
       outputs += [ files.fastboot_fvm ]
     }
   }
@@ -1041,10 +791,7 @@ group("output_validation_checks") {
       ":update_pkg_meta_package_matches",
     ]
   }
-  if (build_emmc_fvm) {
-    deps += [ ":fastboot_fvm_matches" ]
-  }
-  if (build_nand_fvm) {
+  if (build_fastboot_fvm) {
     deps += [ ":fastboot_fvm_matches" ]
   }
   deps += [
@@ -1289,7 +1036,7 @@ if (uses_base_package) {
     second = files.sparse_blob_fvm
   }
 
-  if (build_emmc_fvm || build_nand_fvm) {
+  if (build_fastboot_fvm) {
     verify_files_match("fastboot_fvm_matches") {
       testonly = true
       deps = [
