@@ -22,7 +22,6 @@ mod style;
 use buffer_layout::TileSlice;
 pub use buffer_layout::{BufferLayout, BufferLayoutBuilder, Flusher, Rect};
 
-use dashmap::{mapref::entry::Entry, DashMap};
 pub use style::{BlendMode, Fill, FillRule, Gradient, GradientBuilder, GradientType, Style};
 
 const LAST_BYTE_MASK: i32 = 0b1111_1111;
@@ -622,7 +621,7 @@ impl Painter {
 
     fn is_unchanged<P: LayerProps>(
         &mut self,
-        mut entry: Entry<'_, (usize, usize), usize>,
+        layers: &mut Option<u16>,
         segments: &[CompactSegment],
         props: &P,
     ) -> bool {
@@ -630,19 +629,16 @@ impl Painter {
 
         let (segment_layers, is_unchanged) = reduce_layers_is_unchanged(segments, props, false);
 
-        let total_layers = queue_layers + segment_layers;
+        let total_layers = (queue_layers + segment_layers) as u16;
         let is_unchanged = is_unchanged
             & self.queue.iter().all(|cover_carry| props.is_unchanged(cover_carry.layer));
 
-        match entry {
-            Entry::Occupied(ref mut occupied) => {
-                let old_layers = mem::replace(occupied.get_mut(), total_layers);
-                old_layers == total_layers && is_unchanged
-            }
-            Entry::Vacant(vacant) => {
-                vacant.insert(total_layers);
-                false
-            }
+        if let Some(layers) = layers {
+            let old_layers = mem::replace(layers, total_layers);
+            old_layers == total_layers && is_unchanged
+        } else {
+            *layers = Some(total_layers);
+            false
         }
     }
 
@@ -728,7 +724,7 @@ impl Painter {
         mut segments: &[CompactSegment],
         props: &P,
         clear_color: [f32; 4],
-        layers_per_tile: Option<&DashMap<(usize, usize), usize>>,
+        mut layers_per_tile: Option<&mut [Option<u16>]>,
         flusher: Option<&dyn Flusher>,
         row: ChunksExactMut<'_, TileSlice>,
         crop: Option<Rect>,
@@ -801,8 +797,9 @@ impl Painter {
                     .unwrap_or(&[]);
 
             let is_unchanged = layers_per_tile
+                .as_mut()
                 .map(|layers_per_tile| {
-                    self.is_unchanged(layers_per_tile.entry((i, j)), current_segments, props)
+                    self.is_unchanged(&mut layers_per_tile[i], current_segments, props)
                 })
                 .unwrap_or_default();
 

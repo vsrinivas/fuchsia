@@ -8,7 +8,6 @@ use std::{
     slice::{self, ChunksExactMut},
 };
 
-use dashmap::DashMap;
 use fuchsia_trace::duration;
 use rayon::prelude::*;
 
@@ -122,12 +121,25 @@ pub struct BufferLayout {
 }
 
 impl BufferLayout {
-    fn par_tile_rows(&mut self, f: impl Fn(usize, ChunksExactMut<'_, TileSlice>) + Send + Sync) {
+    fn par_tile_rows<F>(&mut self, layers_per_tile: Option<&mut [Option<u16>]>, f: F)
+    where
+        F: Fn(usize, ChunksExactMut<'_, TileSlice>, Option<&mut [Option<u16>]>) + Send + Sync,
+    {
         let row_len = self.row_len;
-        self.layout
-            .par_chunks_mut(row_len * TILE_SIZE)
-            .enumerate()
-            .for_each(|(j, row)| f(j, row.chunks_exact_mut(row.len() / row_len)));
+        if let Some(layers_per_tile) = layers_per_tile {
+            self.layout
+                .par_chunks_mut(row_len * TILE_SIZE)
+                .zip_eq(layers_per_tile.par_chunks_mut(row_len))
+                .enumerate()
+                .for_each(|(j, (row, layers_per_tile))| {
+                    f(j, row.chunks_exact_mut(row.len() / row_len), Some(layers_per_tile))
+                });
+        } else {
+            self.layout
+                .par_chunks_mut(row_len * TILE_SIZE)
+                .enumerate()
+                .for_each(|(j, row)| f(j, row.chunks_exact_mut(row.len() / row_len), None));
+        }
     }
 
     #[inline]
@@ -138,7 +150,7 @@ impl BufferLayout {
     pub fn print<S: LayerProps>(
         &mut self,
         buffer: &mut [[u8; 4]],
-        layers_per_tile: Option<&DashMap<(usize, usize), usize>>,
+        layers_per_tile: Option<&mut [Option<u16>]>,
         flusher: Option<&dyn Flusher>,
         mut segments: &[CompactSegment],
         clear_color: [f32; 4],
@@ -160,7 +172,7 @@ impl BufferLayout {
             segments = &segments[..=end];
         }
 
-        self.par_tile_rows(|j, row| {
+        self.par_tile_rows(layers_per_tile, |j, row, layers_per_tile| {
             if let Some(rect) = &crop {
                 if !rect.vertical.contains(&j) {
                     return;

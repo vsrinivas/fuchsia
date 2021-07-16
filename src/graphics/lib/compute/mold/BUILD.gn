@@ -12,7 +12,6 @@ rustc_library("mold") {
   edition = "2018"
   deps = [
     "//src/graphics/lib/compute/surpass",
-    "//third_party/rust_crates:dashmap",
     "//third_party/rust_crates:rustc-hash",
   ]
 

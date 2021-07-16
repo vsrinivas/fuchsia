@@ -7,8 +7,6 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use dashmap::DashMap;
-
 pub use surpass::painter::Flusher;
 use surpass::painter::{BufferLayout, BufferLayoutBuilder};
 
@@ -36,14 +34,14 @@ impl Buffer<'_> {
 #[derive(Clone, Debug)]
 pub struct BufferLayerCache {
     pub(crate) id: u8,
-    pub(crate) layers_per_tile: Rc<DashMap<(usize, usize), usize>>,
+    pub(crate) layers_per_tile: Rc<RefCell<Vec<Option<u16>>>>,
     pub(crate) buffers_with_caches: Weak<RefCell<SmallBitSet>>,
 }
 
 impl BufferLayerCache {
     pub fn clear(&self) {
         if Weak::upgrade(&self.buffers_with_caches).is_some() {
-            self.layers_per_tile.clear();
+            self.layers_per_tile.borrow_mut().fill(None);
         }
     }
 }

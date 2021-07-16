@@ -9,7 +9,7 @@ use surpass::{
     self,
     painter::{BufferLayout, LayerProps, Props, Rect},
     rasterizer::{self, Rasterizer},
-    LinesBuilder,
+    LinesBuilder, TILE_SIZE,
 };
 
 use crate::{
@@ -161,6 +161,19 @@ impl Composition {
         background_color: [f32; 4],
         crop: Option<Rect>,
     ) {
+        if let Some(buffer_layer_cache) = buffer.layer_cache.as_ref() {
+            let tiles_width = (buffer.width + (TILE_SIZE - 1)) / TILE_SIZE;
+            let buffer_height = buffer.buffer.len() / buffer.width;
+            let tiles_height = (buffer_height + (TILE_SIZE - 1)) / TILE_SIZE;
+
+            let tiles_len = tiles_width * tiles_height;
+
+            if buffer_layer_cache.layers_per_tile.borrow().len() != tiles_len {
+                buffer_layer_cache.layers_per_tile.borrow_mut().resize(tiles_len, None);
+                buffer_layer_cache.clear();
+            }
+        }
+
         self.remove_disabled();
 
         for (layer_id, layer) in &self.layers {
@@ -237,10 +250,14 @@ impl Composition {
                 })
                 .unwrap_or(0);
             let segments = rasterizer.segments().get(0..=last_segment).unwrap_or(&[]);
+            let mut layers_per_tile = buffer
+                .layer_cache
+                .as_ref()
+                .map(|buffer_layer_cache| buffer_layer_cache.layers_per_tile.borrow_mut());
 
             layout.print(
                 &mut buffer.buffer,
-                buffer.layer_cache.as_ref().map(|cache| &*cache.layers_per_tile),
+                layers_per_tile.as_mut().map(|layers_per_tile| layers_per_tile.as_mut_slice()),
                 buffer.flusher.as_ref().map(|flusher| &**flusher),
                 segments,
                 background_color,
