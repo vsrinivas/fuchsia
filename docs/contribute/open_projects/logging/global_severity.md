@@ -33,22 +33,35 @@ Entry-level knowledge of editing `BUILD.gn` files is required.
 Pick an entry from [max_severity_fuchsia.json][max-severity-json].
 For instance:
 
-```
+```json
       {
-         "url": "fuchsia-pkg://fuchsia.com/logging-cpp-tests#meta/logging_cpp_unittests.cmx",
-         "max_severity": "FATAL"
+           "max_severity": "FATAL"
+           "url": "fuchsia-pkg://fuchsia.com/audio_core_unittests#meta/audio_core_unittests.cmx"
       },
 ```
 
-You'll be deleting this part, and setting a similar configuration where
-`logging_cpp_unittests.cmx` is used as needed.
-
 ### Doing a task
 
-Find the definition for the associated test, such as by looking for a `BUILD.gn`
-file that includes the strings `"logging-cpp-tests"` or
-`"logging_cpp_unittests.cmx"`. Add the `max_severity` setting to mirror what you
-deleted from `max_severity_fuchsia.json`, according to [the guide][logs-tests].
+You'll be deleting this part, and setting a similar configuration on the build
+definition for the test above.
+
+```gn
+fuchsia_test_package("audio_core_unittests") {
+  test_specs = {
+      log_settings = {
+        max_severity = "FATAL"
+      }
+  }
+  ...
+}
+```
+
+You may also refer to [the guide][logs-tests].
+
+Note that while most tests are defined with the `fuchsia_test_package()`
+template, some tests are defined with other wrapper templates. Often times the
+wrappers accept `test_specs` and forward them to the underlying
+`fuchsia_test_package` template.
 
 ### Completing a task
 
@@ -56,6 +69,7 @@ Find reviewers by OWNERS and merge your change.
 
 ## Examples
 
+*   [555759: [log] Move intl_services log severity config to test definition](https://fuchsia-review.googlesource.com/c/fuchsia/+/555759)
 *   [410049: [blobfs] blobfs stress tests v1](https://fuchsia-review.googlesource.com/c/fuchsia/+/410049)
 *   [436337: [network/tests] Split up integration test binary](https://fuchsia-review.googlesource.com/c/fuchsia/+/436337)
 *   [426214: [isolated-ota] Refactor into a library for integration tests.](https://fuchsia-review.googlesource.com/c/fuchsia/+/426214)
