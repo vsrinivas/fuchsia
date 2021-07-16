@@ -609,15 +609,15 @@ class VmMapping final : public VmAddressRegionOrMapping,
     return object_offset_;
   }
   // Intended to be used from VmEnumerator callbacks where the aspace_->lock() will be held.
-  fbl::RefPtr<VmObject> vmo_locked() const { return object_; }
-  fbl::RefPtr<VmObject> vmo() const;
+  fbl::RefPtr<VmObject> vmo_locked() const TA_REQ(lock()) { return object_; }
+  fbl::RefPtr<VmObject> vmo() const TA_EXCL(lock());
 
   // Convenience wrapper for vmo()->DecommitRange() with the necessary
   // offset modification and locking.
-  zx_status_t DecommitRange(size_t offset, size_t len);
+  zx_status_t DecommitRange(size_t offset, size_t len) TA_EXCL(lock());
 
   // Map in pages from the underlying vm object, optionally committing pages as it goes
-  zx_status_t MapRange(size_t offset, size_t len, bool commit);
+  zx_status_t MapRange(size_t offset, size_t len, bool commit) TA_EXCL(lock());
   zx_status_t MapRangeLocked(size_t offset, size_t len, bool commit) TA_REQ(lock());
 
   // Unmap a subset of the region of memory in the containing address space,

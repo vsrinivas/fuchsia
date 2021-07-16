@@ -484,7 +484,8 @@ namespace {
 class AspaceVmoDumper final : public VmEnumerator {
  public:
   explicit AspaceVmoDumper(pretty::SizeUnit format_unit) : format_unit_(format_unit) {}
-  bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth) final {
+  bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth) final
+      TA_REQ(map->lock()) TA_REQ(vmar->lock()) {
     auto vmo = map->vmo_locked();
     DumpVmObject(*vmo, format_unit_, ZX_HANDLE_INVALID,
                  /* rights */ 0u,
@@ -840,7 +841,7 @@ class AspaceVmoEnumerator final
       : RestartableVmEnumerator(max), vmos_(vmos) {}
 
   static void MakeMappingEntry(const VmMapping* map, const VmAddressRegion* vmar, uint depth,
-                               zx_info_vmo_t* entry) {
+                               zx_info_vmo_t* entry) TA_REQ(map->lock()) {
     // We're likely to see the same VMO a couple times in a given
     // address space (e.g., somelib.so mapped as r--, r-x), but leave it
     // to userspace to do deduping.
