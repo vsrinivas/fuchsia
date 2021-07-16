@@ -54,10 +54,25 @@ async fn test_experiment_not_enabled() -> Result<()> {
     })
     .await?;
 
-    ensure!(stdout.lines().count() == 0);
+    ensure!(
+        stdout.lines().count() == 0,
+        "stdout unexpectedly contains output: {}; stderr: {}",
+        stdout,
+        stderr
+    );
     ensure!(!status.success());
-    ensure!(stderr.contains("experimental subcommand"));
-    ensure!(stderr.contains("selftest.experiment"));
+    ensure!(
+        stderr.contains("experimental subcommand"),
+        "stderr is unexpected: {}; stdout: {}",
+        stderr,
+        stdout
+    );
+    ensure!(
+        stderr.contains("selftest.experiment"),
+        "stderr is unexpected: {}; stdout: {}",
+        stderr,
+        stdout
+    );
 
     Ok(())
 }
@@ -76,7 +91,7 @@ async fn test_experiment_enabled() -> Result<()> {
     })
     .await?;
 
-    ensure!(stderr.lines().count() == 0);
+    ensure!(stderr.lines().count() == 0, "stderr is unexpected: {:?}", stderr);
     ensure!(status.success());
 
     Ok(())
@@ -174,10 +189,10 @@ async fn test_target_get_ssh_address_timeout() -> Result<()> {
     })
     .await?;
 
-    ensure!(stdout.lines().count() == 0);
+    ensure!(stdout.lines().count() == 0, "stdout is unexpected: {}; stderr: {}", stdout, stderr);
     // stderr names the target, and says timeout.
-    ensure!(stderr.contains("noexist"));
-    ensure!(stderr.contains("Timeout"));
+    ensure!(stderr.contains("noexist"), "stderr is unexpected: {}; stdout: {}", stderr, stdout);
+    ensure!(stderr.contains("Timeout"), "stderr is unexpected: {}; stdout: {}", stderr, stdout);
 
     Ok(())
 }
@@ -199,7 +214,7 @@ async fn test_target_get_ssh_address_target_includes_port() -> Result<()> {
     let stderr = String::from_utf8(out.stderr.clone()).context("convert from utf8")?;
 
     ensure!(stdout.contains(":22"), "expected stdout to contain ':22', got {:?}", out);
-    ensure!(stderr.lines().count() == 0);
+    ensure!(stderr.lines().count() == 0, "stderr is unexpected: {}", stderr);
     // TODO: establish a good way to assert against the whole target address.
 
     Ok(())
@@ -220,15 +235,15 @@ async fn test_manual_target_add_get_ssh_address() -> Result<()> {
     })
     .await?;
 
-    ensure!(stdout.contains("[::1]:8022"));
-    ensure!(stderr.lines().count() == 0);
+    ensure!(stdout.contains("[::1]:8022"), "stdout is unexpected: {}; stderr: {}", stdout, stderr);
+    ensure!(stderr.lines().count() == 0, "stderr is unexpected: {}; stdout: {}", stderr, stdout);
     // TODO: establish a good way to assert against the whole target address.
 
     Ok(())
 }
 
 async fn test_manual_target_add_get_ssh_address_late_add() -> Result<()> {
-    let isolate = Isolate::new("target-add-get-ssh-address")?;
+    let isolate = Isolate::new("target-add-get-ssh-address-late-add")?;
 
     let mut cmd = isolate.ffx(&["--target", "[::1]:8022", "target", "get-ssh-address", "-t", "10"]);
     let task = fuchsia_async::unblock(move || {
@@ -246,8 +261,8 @@ async fn test_manual_target_add_get_ssh_address_late_add() -> Result<()> {
 
     let (stdout, stderr) = task.await?;
 
-    ensure!(stdout.contains("[::1]:8022"));
-    ensure!(stderr.lines().count() == 0);
+    ensure!(stdout.contains("[::1]:8022"), "stdout is unexpected: {}; stderr: {}", stdout, stderr);
+    ensure!(stderr.lines().count() == 0, "stderr is unexpected: {}; stdout: {}", stderr, stdout);
     // TODO: establish a good way to assert against the whole target address.
 
     Ok(())
