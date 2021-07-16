@@ -169,7 +169,9 @@ impl<'a, K, V> MergeLayerIterator<'a, K, V> {
     }
 
     async fn advance(&mut self) -> Result<(), Error> {
-        self.iter_mut().advance().await?;
+        if let MergeItem::Iter = self.item {
+            self.iter_mut().advance().await?;
+        }
         self.set_item_from_iter();
         Ok(())
     }
@@ -187,11 +189,12 @@ impl<'a, K, V> MergeLayerIterator<'a, K, V> {
 
     // This function exists so that we can advance multiple iterators concurrently using, say,
     // try_join!.
-    async fn maybe_discard(&mut self, op: &ItemOp<K, V>) -> Result<(), Error> {
-        if let ItemOp::Discard = op {
-            self.advance().await?;
+    async fn maybe_advance(&mut self, op: &ItemOp<K, V>) -> Result<(), Error> {
+        if let ItemOp::Keep = op {
+            Ok(())
+        } else {
+            self.advance().await
         }
-        Ok(())
     }
 
     fn erase(&mut self) {
@@ -337,45 +340,122 @@ pub struct MergerIterator<'a, 'b, K, V> {
 
 impl<'a, 'b, K: Key + NextKey + OrdLowerBound, V: Value> MergerIterator<'a, 'b, K, V> {
     async fn seek(&mut self, bound: Bound<&K>) -> Result<(), Error> {
-        match bound {
-            Bound::Unbounded => self.advance_impl(None, Bound::Unbounded).await,
-            Bound::Included(key) => loop {
-                self.advance_impl(Some(key), bound).await?;
-                // It's possible that after merging, the emitted key is less than the search
-                // key, so in that case we need to keep advancing.
-                match self.get() {
-                    Some(item) if item.key.cmp_upper_bound(key) == Ordering::Less => {}
-                    _ => return Ok(()),
-                }
-            },
+        let next_key = match bound {
+            Bound::Unbounded => None,
+            Bound::Included(key) => Some(key),
             Bound::Excluded(_) => panic!("Excluded bounds not supported!"),
-        }
+        };
+
+        self.push_iterators(next_key, bound).await?;
+        self.advance_impl(bound).await
     }
 
     // Merges items from an array of layers using the provided merge function. The merge function is
     // repeatedly provided the lowest and the second lowest element, if one exists. In cases where
     // the two lowest elements compare equal, the element with the lowest layer (i.e. whichever
-    // comes first in the layers array) will come first.  If next_key is set, the merger will stop
-    // querying more layers as soon as a key is encountered that equals or precedes it.  If next_key
-    // is None, then all layers are queried.  next_key_bound is the bound to search for if another
-    // layer does need to be consulted.  See the comment for the NextKey trait.
-    async fn advance_impl(
-        &mut self,
-        next_key: Option<&K>,
-        next_key_bound: Bound<&K>,
-    ) -> Result<(), Error> {
-        if let Some(iterator) = self.item.take_iterator() {
-            iterator.advance().await?;
-            if iterator.is_some() {
-                self.heap.push(iterator);
+    // comes first in the layers array) will come first.  `next_key_bound` is a bound for the next
+    // key we expect.
+    async fn advance_impl(&mut self, next_key_bound: Bound<&K>) -> Result<(), Error> {
+        loop {
+            loop {
+                if self.heap.is_empty() {
+                    self.item = CurrentItem::None;
+                    return Ok(());
+                }
+                let lowest = self.heap.pop().unwrap();
+                let maybe_second_lowest = self.heap.pop();
+                if let Some(second_lowest) = maybe_second_lowest {
+                    let result = (self.merge_fn)(&lowest, &second_lowest);
+                    if self.trace {
+                        writeln!(
+                            self.history,
+                            "merge {:?}, {:?} -> {:?}",
+                            lowest.item(),
+                            second_lowest.item(),
+                            result
+                        )
+                        .unwrap();
+                    }
+                    match result {
+                        MergeResult::EmitLeft => {
+                            self.heap.push(second_lowest);
+                            self.item = CurrentItem::Iterator(lowest);
+                            break;
+                        }
+                        MergeResult::Other { emit, left, right } => {
+                            try_join!(
+                                lowest.maybe_advance(&left),
+                                second_lowest.maybe_advance(&right)
+                            )?;
+                            self.update_item(lowest, left);
+                            self.update_item(second_lowest, right);
+                            if let Some(emit) = emit {
+                                self.item = CurrentItem::Item(emit);
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    self.item = CurrentItem::Iterator(lowest);
+                    break;
+                }
+            }
+
+            // If the item we're about to yield isn't within `next_key_bound`, ignore it and
+            // continue.  To see how this would happen, imagine the following scenario:
+            //
+            //       0          10          20            30
+            //       +----------+
+            //   0   |          |
+            //       +----------+-----------+
+            //   1   |                      |
+            //       +----------------------+-------------+
+            //   2   |                                    |
+            //       +------------------------------------+
+            //
+            // If we are to seek for 0..1 and then iterate over what we find, we expect the sequence
+            // 0..10, 10..20, 20..30.  After the first seek, we should only consult iterator 0.  For
+            // the first advance, we will consult iterator 1 but we need to merge the 0..20 element
+            // with the 0..10 element which we already emitted.  To make this work, we push the
+            // 0..10 item back on the heap (see advance) and then merge, but that will yield the
+            // 0..10 entry again, so here we need to skip over it, and then merge again, at which
+            // point we should see the 10..20 entry as expected.
+            match next_key_bound {
+                Bound::Included(key)
+                    if self.get().unwrap().key.cmp_upper_bound(key) == Ordering::Less => {}
+                Bound::Excluded(key)
+                    if self.get().unwrap().key.cmp_upper_bound(key) != Ordering::Greater => {}
+                _ => return Ok(()),
+            }
+            if let Some(iterator) = self.item.take_iterator() {
+                iterator.advance().await?;
+                if iterator.is_some() {
+                    self.heap.push(iterator);
+                }
             }
         }
-        while !self.pending_iterators.is_empty()
+    }
+
+    // Returns whether more iterators are required for the given `next_key`.  See push_iterators.
+    fn needs_more_iterators(&self, next_key: Option<&K>) -> bool {
+        !self.pending_iterators.is_empty()
             && (self.heap.is_empty()
                 || next_key.is_none()
                 || self.heap.peek().unwrap().key().cmp_lower_bound(next_key.as_ref().unwrap())
                     == Ordering::Greater)
-        {
+    }
+
+    // Pushes additional iterators onto the heap until we are confident that the top element will
+    // yield what we are looking for.  If next_key is set, we will stop pushing iterators as soon as
+    // a key is encountered that equals or precedes it.  If next_key is None, then all layers are
+    // pushed.  next_key_bound is the bound to search for if another layer does need to be
+    // consulted.  See the comment for the NextKey trait.
+    async fn push_iterators(
+        &mut self,
+        next_key: Option<&K>,
+        next_key_bound: Bound<&K>,
+    ) -> Result<(), Error> {
+        while self.needs_more_iterators(next_key) {
             let iter = self.pending_iterators.pop().unwrap();
             let sub_iter = iter.layer.as_ref().unwrap().seek(next_key_bound).await?;
             if self.trace {
@@ -393,46 +473,6 @@ impl<'a, 'b, K: Key + NextKey + OrdLowerBound, V: Value> MergerIterator<'a, 'b, 
                 self.heap.push(iter);
             }
         }
-        while !self.heap.is_empty() {
-            let lowest = self.heap.pop().unwrap();
-            let maybe_second_lowest = self.heap.pop();
-            if let Some(second_lowest) = maybe_second_lowest {
-                let result = (self.merge_fn)(&lowest, &second_lowest);
-                if self.trace {
-                    writeln!(
-                        self.history,
-                        "merge {:?}, {:?} -> {:?}",
-                        lowest.item(),
-                        second_lowest.item(),
-                        result
-                    )
-                    .unwrap();
-                }
-                match result {
-                    MergeResult::EmitLeft => {
-                        self.heap.push(second_lowest);
-                        self.item = CurrentItem::Iterator(lowest);
-                        return Ok(());
-                    }
-                    MergeResult::Other { emit, left, right } => {
-                        try_join!(
-                            lowest.maybe_discard(&left),
-                            second_lowest.maybe_discard(&right)
-                        )?;
-                        self.update_item(lowest, left);
-                        self.update_item(second_lowest, right);
-                        if let Some(emit) = emit {
-                            self.item = CurrentItem::Item(emit);
-                            return Ok(());
-                        }
-                    }
-                }
-            } else {
-                self.item = CurrentItem::Iterator(lowest);
-                return Ok(());
-            }
-        }
-        self.item = CurrentItem::None;
         Ok(())
     }
 
@@ -477,7 +517,44 @@ impl<'a, K: Key + NextKey + OrdLowerBound, V: Value> LayerIterator<K, V>
                 }
             }
         }
-        self.advance_impl(next_key.as_ref(), next_key_bound).await
+
+        // Advance the iterator for the current item and push it onto the heap, and also push any
+        // additional iterators onto the heap (by calling push_iterators).
+        if let Some(iterator) = self.item.take_iterator() {
+            if self.needs_more_iterators(next_key.as_ref()) {
+                let existing_item = iterator.item().cloned();
+                iterator.advance().await?;
+                match &next_key {
+                    Some(next_key)
+                        if iterator.is_some()
+                            && iterator.key().cmp_lower_bound(next_key) != Ordering::Greater =>
+                    {
+                        // In this case, the key immediately following is a good candidate, and all
+                        // we need to do is merge it with existing iterators; we shouldn't need to
+                        // consult with any more iterators.
+                    }
+                    _ => {
+                        // We are going to need to consult more iterators so we need to go back to
+                        // the previous item so that we can merge with it.  See the comment in
+                        // advance_impl.
+                        iterator.replace(existing_item);
+
+                        // We must push other iterators here before pushing iterator onto the heap
+                        // because we know `iterator` would end up at the top of the heap.
+                        self.push_iterators(next_key.as_ref(), next_key_bound).await?;
+                    }
+                }
+            } else {
+                iterator.advance().await?;
+            }
+            if iterator.is_some() {
+                self.heap.push(iterator);
+            }
+        } else {
+            self.push_iterators(next_key.as_ref(), next_key_bound).await?;
+        }
+
+        self.advance_impl(next_key_bound).await
     }
 
     fn get(&self) -> Option<ItemRef<'_, K, V>> {
@@ -1267,5 +1344,50 @@ mod tests {
         let iter = merger.seek(Bound::Included(&TestKey(0..3))).await.expect("seek failed");
         let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_overlapping_keys() {
+        let skip_lists =
+            [SkipListLayer::new(100), SkipListLayer::new(100), SkipListLayer::new(100)];
+        let items = [
+            Item::new(TestKey(0..10), 1),
+            Item::new(TestKey(0..20), 2),
+            Item::new(TestKey(0..30), 3),
+        ];
+        skip_lists[0].insert(items[0].clone()).await;
+        skip_lists[1].insert(items[1].clone()).await;
+        skip_lists[2].insert(items[2].clone()).await;
+        let mut merger = Merger::new(&skip_lists.into_layer_refs(), |left, right| {
+            let result = if left.key().0.end <= right.key().0.start {
+                MergeResult::EmitLeft
+            } else {
+                if left.key() == &TestKey(0..30) && right.key() == &TestKey(10..20) {
+                    MergeResult::Other {
+                        emit: Some(Item::new(TestKey(0..10), 1)),
+                        left: Replace(Item::new(TestKey(10..30), 1)),
+                        right: Keep,
+                    }
+                } else {
+                    MergeResult::Other {
+                        emit: None,
+                        left: Keep,
+                        right: Replace(Item::new(TestKey(left.key().0.end..right.key().0.end), 1)),
+                    }
+                }
+            };
+            result
+        });
+        let mut iter = merger.seek(Bound::Included(&TestKey(0..1))).await.expect("seek failed");
+        let ItemRef { key, .. } = iter.get().expect("missing item");
+        assert_eq!(key, &TestKey(0..10));
+        iter.advance().await.expect("advance failed");
+        let ItemRef { key, .. } = iter.get().expect("missing item");
+        assert_eq!(key, &TestKey(10..20));
+        iter.advance().await.expect("advance failed");
+        let ItemRef { key, .. } = iter.get().expect("missing item");
+        assert_eq!(key, &TestKey(20..30));
+        iter.advance().await.expect("advance failed");
+        assert_eq!(iter.get(), None);
     }
 }

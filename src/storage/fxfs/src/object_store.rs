@@ -890,7 +890,9 @@ mod tests {
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
+                directory::Directory,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
+                fsck::fsck,
                 record::{AttributeKey, ExtentValue, ObjectKey, ObjectKeyData, ObjectValue},
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore,
@@ -1204,6 +1206,39 @@ mod tests {
             None
         );
         assert!(!has_deleted_extent_records(root_store.clone(), child_id).await);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_overlapping_extents_in_different_layers() {
+        let fs = test_filesystem().await;
+        let store = fs.root_store();
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let object = root_directory
+            .create_child_file(&mut transaction, "test")
+            .await
+            .expect("create_child_file failed");
+        transaction.commit().await.expect("commit failed");
+
+        let buf = object.allocate_buffer(16384);
+        object.write(0, buf.as_ref()).await.expect("write failed");
+
+        store.flush().await.expect("flush failed");
+
+        object.write(0, buf.subslice(0..4096)).await.expect("write failed");
+
+        // At this point, we should have an extent for 0..16384 in a layer that has been flushed,
+        // and an extent for 0..4096 that partially overwrites it.  Writing to 0..16384 should
+        // overwrite both of those extents.
+        object.write(0, buf.as_ref()).await.expect("write failed");
+
+        fsck(&fs).await.expect("fsck failed");
     }
 }
 
