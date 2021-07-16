@@ -623,6 +623,7 @@ fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<fsys::ChildDe
             url: Some(child.url.clone().into()),
             startup: Some(child.startup.clone().into()),
             environment: extract_environment_ref(child.environment.as_ref()).map(|e| e.into()),
+            on_terminate: child.on_terminate.as_ref().map(|r| r.clone().into()),
             ..fsys::ChildDecl::EMPTY
         });
     }
@@ -1509,6 +1510,7 @@ mod tests {
                         url: Some("fuchsia-pkg://logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
+                        on_terminate: None,
                         ..fsys::ChildDecl::EMPTY
                     },
                     fsys::ChildDecl {
@@ -1516,6 +1518,7 @@ mod tests {
                         url: Some("fuchsia-pkg://netstack.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
+                        on_terminate: None,
                         ..fsys::ChildDecl::EMPTY
                     }
                 ]),
@@ -1659,6 +1662,7 @@ mod tests {
                         url: Some("fuchsia-pkg://logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
+                        on_terminate: None,
                         ..fsys::ChildDecl::EMPTY
                     }
                 ]),
@@ -1671,6 +1675,76 @@ mod tests {
                     }
                 ]),
                 ..fsys::ComponentDecl::EMPTY
+            },
+        },
+    }}
+
+    test_compile_with_features! { FeatureSet::from(vec![Feature::OnTerminate]), {
+        test_compile_children => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                    {
+                        "name": "gmail",
+                        "url": "https://www.google.com/gmail",
+                        "startup": "eager",
+                    },
+                    {
+                        "name": "echo",
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
+                        "startup": "lazy",
+                        "on_terminate": "reboot",
+                        "environment": "#myenv",
+                    },
+                ],
+                "environments": [
+                    {
+                        "name": "myenv",
+                        "extends": "realm",
+                    },
+                ],
+            }),
+            output = fsys::ComponentDecl {
+                children: Some(vec![
+                    fsys::ChildDecl {
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
+                        on_terminate: None,
+                        ..fsys::ChildDecl::EMPTY
+                    },
+                    fsys::ChildDecl {
+                        name: Some("gmail".to_string()),
+                        url: Some("https://www.google.com/gmail".to_string()),
+                        startup: Some(fsys::StartupMode::Eager),
+                        environment: None,
+                        on_terminate: None,
+                        ..fsys::ChildDecl::EMPTY
+                    },
+                    fsys::ChildDecl {
+                        name: Some("echo".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: Some("myenv".to_string()),
+                        on_terminate: Some(fsys::OnTerminate::Reboot),
+                        ..fsys::ChildDecl::EMPTY
+                    }
+                ]),
+                environments: Some(vec![
+                    fsys::EnvironmentDecl {
+                        name: Some("myenv".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::Realm),
+                        runners: None,
+                        resolvers: None,
+                        stop_timeout_ms: None,
+                        ..fsys::EnvironmentDecl::EMPTY
+                    }
+                ]),
+                ..default_component_decl()
             },
         },
     }}
@@ -2241,6 +2315,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
+                        on_terminate: None,
                         ..fsys::ChildDecl::EMPTY
                     }
                 ]),
@@ -2761,6 +2836,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
+                        on_terminate: None,
                         ..fsys::ChildDecl::EMPTY
                     },
                     fsys::ChildDecl {
@@ -2768,6 +2844,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
+                        on_terminate: None,
                         ..fsys::ChildDecl::EMPTY
                     },
                 ]),
@@ -2777,70 +2854,6 @@ mod tests {
                         durability: Some(fsys::Durability::Persistent),
                         environment: None,
                         ..fsys::CollectionDecl::EMPTY
-                    }
-                ]),
-                ..default_component_decl()
-            },
-        },
-
-        test_compile_children => {
-            input = json!({
-                "children": [
-                    {
-                        "name": "logger",
-                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-                    },
-                    {
-                        "name": "gmail",
-                        "url": "https://www.google.com/gmail",
-                        "startup": "eager",
-                    },
-                    {
-                        "name": "echo",
-                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
-                        "startup": "lazy",
-                        "environment": "#myenv",
-                    },
-                ],
-                "environments": [
-                    {
-                        "name": "myenv",
-                        "extends": "realm",
-                    },
-                ],
-            }),
-            output = fsys::ComponentDecl {
-                children: Some(vec![
-                    fsys::ChildDecl {
-                        name: Some("logger".to_string()),
-                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
-                        startup: Some(fsys::StartupMode::Lazy),
-                        environment: None,
-                        ..fsys::ChildDecl::EMPTY
-                    },
-                    fsys::ChildDecl {
-                        name: Some("gmail".to_string()),
-                        url: Some("https://www.google.com/gmail".to_string()),
-                        startup: Some(fsys::StartupMode::Eager),
-                        environment: None,
-                        ..fsys::ChildDecl::EMPTY
-                    },
-                    fsys::ChildDecl {
-                        name: Some("echo".to_string()),
-                        url: Some("fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm".to_string()),
-                        startup: Some(fsys::StartupMode::Lazy),
-                        environment: Some("myenv".to_string()),
-                        ..fsys::ChildDecl::EMPTY
-                    }
-                ]),
-                environments: Some(vec![
-                    fsys::EnvironmentDecl {
-                        name: Some("myenv".to_string()),
-                        extends: Some(fsys::EnvironmentExtends::Realm),
-                        runners: None,
-                        resolvers: None,
-                        stop_timeout_ms: None,
-                        ..fsys::EnvironmentDecl::EMPTY
                     }
                 ]),
                 ..default_component_decl()
@@ -3027,6 +3040,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
+                        on_terminate: None,
                         ..fsys::ChildDecl::EMPTY
                     }
                 ]),
@@ -3473,6 +3487,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
+                        on_terminate: None,
                         ..fsys::ChildDecl::EMPTY
                     },
                     fsys::ChildDecl {
@@ -3480,6 +3495,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
+                        on_terminate: None,
                         ..fsys::ChildDecl::EMPTY
                     },
                 ]),

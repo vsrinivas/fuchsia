@@ -725,6 +725,7 @@ mod tests {
                 url: "ignored:///child".to_string(),
                 startup: fsys::StartupMode::Lazy,
                 environment: None,
+                on_terminate: None,
             }],
             ..default_component_decl()
         };
@@ -751,6 +752,7 @@ mod tests {
                 url: "ignored:///child".to_string(),
                 startup: fsys::StartupMode::Lazy,
                 environment: None,
+                on_terminate: None,
             }],
             ..default_component_decl()
         };
@@ -775,6 +777,7 @@ mod tests {
                 url: "ignored:///child".to_string(),
                 startup: fsys::StartupMode::Lazy,
                 environment: None,
+                on_terminate: None,
             }],
             ..default_component_decl()
         };
@@ -792,12 +795,14 @@ mod tests {
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let decl = ComponentDecl {
             offers: vec![
@@ -1038,12 +1043,14 @@ mod tests {
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let decl = ComponentDecl {
             offers: vec![
@@ -1088,12 +1095,14 @@ mod tests {
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let decl = ComponentDecl {
             offers: vec![
@@ -1147,18 +1156,21 @@ mod tests {
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_c = ChildDecl {
             name: "childC".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let decl = ComponentDecl {
             offers: vec![
@@ -1211,18 +1223,21 @@ mod tests {
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_c = ChildDecl {
             name: "childC".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let decl = ComponentDecl {
             offers: vec![
@@ -1282,18 +1297,21 @@ mod tests {
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_c = ChildDecl {
             name: "childC".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let decl = ComponentDecl {
             offers: vec![
@@ -1354,30 +1372,35 @@ mod tests {
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_c = ChildDecl {
             name: "childC".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_d = ChildDecl {
             name: "childD".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_e = ChildDecl {
             name: "childE".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let decl = ComponentDecl {
             offers: vec![
@@ -1470,6 +1493,7 @@ mod tests {
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         // This declaration is invalid because the offer target doesn't exist
         let decl = ComponentDecl {
@@ -1495,6 +1519,7 @@ mod tests {
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         // This declaration is invalid because the offer target doesn't exist
         let decl = ComponentDecl {
@@ -1527,6 +1552,7 @@ mod tests {
                 url: "ignored:///child".to_string(),
                 startup: fsys::StartupMode::Lazy,
                 environment: None,
+                on_terminate: None,
             }],
             uses: vec![UseDecl::Protocol(UseProtocolDecl {
                 source: UseSource::Child("childA".to_string()),
@@ -1559,12 +1585,14 @@ mod tests {
                     url: "ignored:///child".to_string(),
                     startup: fsys::StartupMode::Lazy,
                     environment: None,
+                    on_terminate: None,
                 },
                 ChildDecl {
                     name: "childB".to_string(),
                     url: "ignored:///child".to_string(),
                     startup: fsys::StartupMode::Lazy,
                     environment: None,
+                    on_terminate: None,
                 },
             ],
             uses: vec![UseDecl::Protocol(UseProtocolDecl {
@@ -1600,6 +1628,7 @@ mod tests {
                 url: "ignored:///child".to_string(),
                 startup: fsys::StartupMode::Lazy,
                 environment: None,
+                on_terminate: None,
             }],
             uses: vec![UseDecl::Protocol(UseProtocolDecl {
                 source: UseSource::Child("childA".to_string()),
@@ -1632,12 +1661,14 @@ mod tests {
                     url: "ignored:///child".to_string(),
                     startup: fsys::StartupMode::Lazy,
                     environment: None,
+                    on_terminate: None,
                 },
                 ChildDecl {
                     name: "childB".to_string(),
                     url: "ignored:///child".to_string(),
                     startup: fsys::StartupMode::Lazy,
                     environment: None,
+                    on_terminate: None,
                 },
             ],
             uses: vec![
@@ -1672,12 +1703,14 @@ mod tests {
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         };
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Resolver(OfferResolverDecl {

@@ -425,6 +425,7 @@ async fn use_in_collection() {
             url: "test:///c".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         },
     )
     .await;
@@ -436,6 +437,7 @@ async fn use_in_collection() {
             url: "test:///d".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         },
     )
     .await;
@@ -524,6 +526,7 @@ async fn use_in_collection_not_offered() {
             url: "test:///c".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         },
     )
     .await;
@@ -699,6 +702,7 @@ async fn use_runner_from_environment_in_collection() {
                 url: "test:///b".to_string(),
                 startup: fsys::StartupMode::Lazy,
                 environment: None,
+                on_terminate: None,
             },
         )
         .await;
@@ -1206,6 +1210,7 @@ async fn use_with_destroyed_parent() {
             url: "test:///b".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         },
     )
     .await;

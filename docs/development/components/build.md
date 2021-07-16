@@ -1066,30 +1066,30 @@ You are free to choose whichever one you prefer.
 
 Note: see more information in [provide data files to components][provide-data].
 
-## Unstable features {#unstable-features}
+## Restricted features {#restricted-features}
 
-When a new component manifest feature is under active development, the
-Component Framework team may wish to experiment with the API or implementation
-before committing to supporting the new feature. The CML compiler (`cmc`)
-controls access to these unstable features through an opt-in property in your
-component build rule.
+When a new component manifest feature is under active development, or a feature
+is intended for a narrow audience, the Component Framework team may wish to
+restrict who may use the feature. The CML compiler (`cmc`) controls access to
+these restricted features through an opt-in property in your component build
+rule.
 
-In order to use an unstable feature, add the `unstable_features` property:
+In order to use an restricted feature, add the `restricted_features` property:
 
 ```gn
 fuchsia_component("my-component") {
   manifest = "meta/my-component.cml"
-  # This component opts-in to the unstable "services" feature.
-  unstable_features = [ "services" ]
+  # This component opts-in to the restricted "services" feature.
+  restricted_features = [ "services" ]
   deps = [ ... ]
 }
 ```
 
-Use of unstable features are restricted to an allowlist.
+Use of restricted features are restricted to an allowlist.
 You must add your component to the allowlist for the feature in
-[`//tools/cmc/build/unstable_features/BUILD.gn`][allowlist].
+[`//tools/cmc/build/restricted_features/BUILD.gn`][allowlist].
 
-[allowlist]: /tools/cmc/build/unstable_features/BUILD.gn
+[allowlist]: /tools/cmc/build/restricted_features/BUILD.gn
 [components-migration]: /docs/contribute/open_projects/components/migration.md
 [cpp-syslog]: /docs/development/languages/c-cpp/logging.md#component_manifest_dependency
 [executable]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_executable

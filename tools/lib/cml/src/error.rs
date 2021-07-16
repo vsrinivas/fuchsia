@@ -39,8 +39,8 @@ pub enum Error {
     },
     Internal(String),
     Utf8(Utf8Error),
-    /// An unstable feature was used without opting-in.
-    UnstableFeature(String),
+    /// A restricted feature was used without opting-in.
+    RestrictedFeature(String),
 }
 
 impl error::Error for Error {}
@@ -130,9 +130,9 @@ impl fmt::Display for Error {
             }
             Error::Internal(err) => write!(f, "Internal error: {}", err),
             Error::Utf8(err) => write!(f, "UTF8 error: {}", err),
-            Error::UnstableFeature(feature) => write!(
+            Error::RestrictedFeature(feature) => write!(
                 f,
-                "Use of unstable feature \"{}\". To opt-in, see https://fuchsia.dev/fuchsia-src/development/components/v2/unstable_features",
+                "Use of restricted feature \"{}\". To opt-in, see https://fuchsia.dev/fuchsia-src/development/components/build?hl=en#restricted-features",
                 feature
             ),
         }

@@ -115,6 +115,7 @@ pub mod tests {
                     url: "bad-scheme://sdf".to_string(),
                     startup: fsys::StartupMode::Eager,
                     environment: None,
+                    on_terminate: None,
                 })
                 .build(),
         )];
@@ -138,6 +139,7 @@ pub mod tests {
                     url: "bad-scheme://sdf".to_string(),
                     startup: fsys::StartupMode::Eager,
                     environment: None,
+                    on_terminate: None,
                 })
                 .build(),
         )];

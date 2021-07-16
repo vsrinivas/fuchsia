@@ -37,6 +37,7 @@ pub fn new_child_decl(name: &String, url: &String) -> ChildDecl {
         url: url.to_string(),
         startup: StartupMode::Lazy,
         environment: None,
+        on_terminate: None,
     }
 }
 

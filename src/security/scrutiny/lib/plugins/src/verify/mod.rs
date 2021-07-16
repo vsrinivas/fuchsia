@@ -68,7 +68,13 @@ mod tests {
     }
 
     fn new_child_decl(name: String, url: String) -> ChildDecl {
-        ChildDecl { name, url, startup: fsys2::StartupMode::Lazy, environment: None }
+        ChildDecl {
+            name,
+            url,
+            startup: fsys2::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        }
     }
 
     fn new_component_decl(children: Vec<ChildDecl>) -> ComponentDecl {

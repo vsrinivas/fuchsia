@@ -53,14 +53,14 @@ fuchsia_component("services-cmp") {
   testonly = true
   component_name = "services"
   manifest = "meta/services.cml"
-  unstable_features = [ "services" ]
+  restricted_features = [ "services" ]
 }
 
 fuchsia_component("branch-cmp") {
   testonly = true
   component_name = "branch"
   manifest = "meta/branch.cml"
-  unstable_features = [ "services" ]
+  restricted_features = [ "services" ]
   deps = [ ":branch-bin" ]
 }
 
@@ -68,7 +68,7 @@ fuchsia_component("provider-a-cmp") {
   testonly = true
   component_name = "provider-a"
   manifest = "meta/provider-a.cml"
-  unstable_features = [ "services" ]
+  restricted_features = [ "services" ]
   deps = [ ":provider-bin" ]
 }
 
@@ -76,7 +76,7 @@ fuchsia_component("provider-b-cmp") {
   testonly = true
   component_name = "provider-b"
   manifest = "meta/provider-b.cml"
-  unstable_features = [ "services" ]
+  restricted_features = [ "services" ]
   deps = [ ":provider-bin" ]
 }
 

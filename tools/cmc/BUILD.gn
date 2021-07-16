@@ -92,7 +92,7 @@ rustc_binary("cmc_integration_test_bin") {
 fuchsia_component("example_component") {
   testonly = true
   check_references = false
-  unstable_features = [ "services" ]
+  restricted_features = [ "services" ]
   component_name = "example"
   manifest = "meta/example.cml"
 }

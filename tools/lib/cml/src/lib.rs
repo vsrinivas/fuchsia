@@ -26,7 +26,8 @@ use {
 };
 
 pub use cm_types::{
-    DependencyType, Durability, Name, ParseError, Path, RelativePath, StartupMode, StorageId, Url,
+    DependencyType, Durability, Name, OnTerminate, ParseError, Path, RelativePath, StartupMode,
+    StorageId, Url,
 };
 
 lazy_static! {
@@ -1231,6 +1232,7 @@ pub struct Child {
     pub url: Url,
     #[serde(default)]
     pub startup: StartupMode,
+    pub on_terminate: Option<OnTerminate>,
     pub environment: Option<EnvironmentRef>,
 }
 

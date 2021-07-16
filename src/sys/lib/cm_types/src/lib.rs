@@ -551,10 +551,7 @@ impl<'de> de::Deserialize<'de> for UrlScheme {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum Durability {
-    /// The instance exists until it is explicitly destroyed.
     Persistent,
-    /// The instance exists until its containing realm is stopped or it is
-    /// explicitly destroyed.
     Transient,
     /// An instance is started on creation and exists until it stops.
     SingleRun,
@@ -568,10 +565,7 @@ symmetrical_enums!(Durability, fsys::Durability, Persistent, Transient, SingleRu
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum StartupMode {
-    /// Start the component instance only if another component instance binds to
-    /// it.
     Lazy,
-    /// Start the component instance as soon as its parent starts.
     Eager,
 }
 
@@ -580,6 +574,24 @@ symmetrical_enums!(StartupMode, fsys::StartupMode, Lazy, Eager);
 impl Default for StartupMode {
     fn default() -> Self {
         Self::Lazy
+    }
+}
+
+/// A component instance's recovery policy. See [`OnTerminate`].
+///
+/// [`OnTerminate`]: ../../fidl_fuchsia_sys2/enum.OnTerminate.html
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum OnTerminate {
+    None,
+    Reboot,
+}
+
+symmetrical_enums!(OnTerminate, fsys::OnTerminate, None, Reboot);
+
+impl Default for OnTerminate {
+    fn default() -> Self {
+        Self::None
     }
 }
 

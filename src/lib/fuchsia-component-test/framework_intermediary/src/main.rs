@@ -394,6 +394,7 @@ impl RealmNode {
                     url,
                     startup: fsys::StartupMode::Lazy,
                     environment: None,
+                    on_terminate: None,
                 });
             }
             ffrb::Component::LegacyUrl(url) => {
@@ -841,7 +842,13 @@ impl RealmNode {
                     if node.eager { fsys::StartupMode::Eager } else { fsys::StartupMode::Lazy };
                 let environment = node.environment.clone();
                 let url = node.commit(registry.clone(), new_path, package_dir.clone()).await?;
-                self.decl.children.push(cm_rust::ChildDecl { name, url, startup, environment });
+                self.decl.children.push(cm_rust::ChildDecl {
+                    name,
+                    url,
+                    startup,
+                    environment,
+                    on_terminate: None,
+                });
             }
 
             let decl = self.decl.native_into_fidl();
@@ -1248,6 +1255,7 @@ mod tests {
             url: "fuchsia-pkg://b".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         });
 
         assert_eq!(
@@ -1287,6 +1295,7 @@ mod tests {
                 url: "fuchsia-pkg://b".to_string(),
                 startup: fsys::StartupMode::Lazy,
                 environment: None,
+                on_terminate: None,
             }],
             ..cm_rust::ComponentDecl::default()
         };
@@ -1352,6 +1361,7 @@ mod tests {
                 url: "fuchsia-pkg://c".to_string(),
                 startup: fsys::StartupMode::Lazy,
                 environment: None,
+                on_terminate: None,
             }],
             ..cm_rust::ComponentDecl::default()
         };
@@ -1393,6 +1403,7 @@ mod tests {
                 url: "fuchsia-pkg://c".to_string(),
                 startup: fsys::StartupMode::Eager,
                 environment: None,
+                on_terminate: None,
             }]
         );
     }
@@ -1855,12 +1866,14 @@ mod tests {
                             url: "fuchsia-pkg://a".to_string(),
                             startup: fsys::StartupMode::Lazy,
                             environment: None,
+                            on_terminate: None,
                         },
                         cm_rust::ChildDecl {
                             name: "b".to_string(),
                             url: "fuchsia-pkg://b".to_string(),
                             startup: fsys::StartupMode::Eager,
                             environment: None,
+                            on_terminate: None,
                         },
                     ],
                     ..cm_rust::ComponentDecl::default()
@@ -2021,6 +2034,7 @@ mod tests {
                             url: "fuchsia-pkg://b".to_string(),
                             startup: fsys::StartupMode::Lazy,
                             environment: None,
+                            on_terminate: None,
                         }],
                         ..cm_rust::ComponentDecl::default()
                     },
@@ -2107,12 +2121,14 @@ mod tests {
                                 url: "fuchsia-pkg://a".to_string(),
                                 startup: fsys::StartupMode::Lazy,
                                 environment: None,
+                                on_terminate: None,
                             },
                             cm_rust::ChildDecl {
                                 name: "c".to_string(),
                                 url: "fuchsia-pkg://c".to_string(),
                                 startup: fsys::StartupMode::Eager,
                                 environment: None,
+                                on_terminate: None,
                             },
                         ],
                         ..cm_rust::ComponentDecl::default()
@@ -2244,18 +2260,21 @@ mod tests {
                             url: "fuchsia-pkg://a".to_string(),
                             startup: fsys::StartupMode::Eager,
                             environment: None,
+                            on_terminate: None,
                         },
                         cm_rust::ChildDecl {
                             name: "b".to_string(),
                             url: "fuchsia-pkg://b".to_string(),
                             startup: fsys::StartupMode::Lazy,
                             environment: None,
+                            on_terminate: None,
                         },
                         cm_rust::ChildDecl {
                             name: "c".to_string(),
                             url: "fuchsia-pkg://c".to_string(),
                             startup: fsys::StartupMode::Eager,
                             environment: None,
+                            on_terminate: None,
                         },
                     ],
                     ..cm_rust::ComponentDecl::default()
@@ -2364,6 +2383,7 @@ mod tests {
                             url: "fuchsia-pkg://a-b".to_string(),
                             startup: fsys::StartupMode::Lazy,
                             environment: None,
+                            on_terminate: None,
                         }],
                         ..cm_rust::ComponentDecl::default()
                     },
@@ -2476,6 +2496,7 @@ mod tests {
                             url: "fuchsia-pkg://b".to_string(),
                             startup: fsys::StartupMode::Eager,
                             environment: None,
+                            on_terminate: None,
                         }],
                         ..cm_rust::ComponentDecl::default()
                     },

@@ -9,3 +9,8 @@ group("services") {
     "//tools/cmc:*",
   ]
 }
+
+# The allowlist of components that can use the "on_terminate" feature in CML.
+group("on_terminate") {
+  visibility = [ "//tools/cmc:*" ]
+}

@@ -180,6 +180,7 @@ async fn use_in_collection_from_parent() {
             url: "test:///c".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         },
     )
     .await;
@@ -352,6 +353,7 @@ async fn use_in_collection_from_grandparent() {
             url: "test:///c".to_string(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         },
     )
     .await;

@@ -20,9 +20,9 @@ import("//tools/cmc/build/expect_includes.gni")
 #     [boolean] Whether to check against expect_includes() in deps.
 #     Default: true
 #
-#   unstable_features (optional)
-#     [list of strings] The set of unstable CML features to allow.
-#     The set of features is allowlisted here: //tools/cmc/build/unstable_features/BUILD.gn
+#   restricted_features (optional)
+#     [list of strings] The set of restricted CML features to allow.
+#     The set of features is allowlisted here: //tools/cmc/build/restricted/BUILD.gn
 #     where each feature name is represented by a group of the same name.
 #
 #   experimental_force_runner (optional)
@@ -102,17 +102,18 @@ template("cm") {
              rebase_path(depfile, root_build_dir),
            ] + include_paths
 
-    # Opt-in to the requested unstable_features.
-    if (defined(invoker.unstable_features) && invoker.unstable_features != []) {
-      args += [ "--features" ] + invoker.unstable_features
+    # Opt-in to the requested restricted_features.
+    if (defined(invoker.restricted_features) &&
+        invoker.restricted_features != []) {
+      args += [ "--features" ] + invoker.restricted_features
 
       if (!defined(deps)) {
         deps = []
       }
 
       # Add a dependency on the feature's allowlist.
-      foreach(feature, invoker.unstable_features) {
-        deps += [ "//tools/cmc/build/unstable_features:" + feature ]
+      foreach(feature, invoker.restricted_features) {
+        deps += [ "//tools/cmc/build/restricted_features:" + feature ]
       }
     }
 

@@ -155,6 +155,7 @@ impl ChildDeclBuilder {
             url: String::new(),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         })
     }
 
@@ -178,6 +179,12 @@ impl ChildDeclBuilder {
     /// Sets the ChildDecl's startup mode.
     pub fn startup(mut self, startup: fsys::StartupMode) -> Self {
         self.0.startup = startup;
+        self
+    }
+
+    /// Sets the ChildDecl's on_terminate action.
+    pub fn on_terminate(mut self, on_terminate: fsys::OnTerminate) -> Self {
+        self.0.on_terminate = Some(on_terminate);
         self
     }
 

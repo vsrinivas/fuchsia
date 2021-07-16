@@ -272,6 +272,7 @@ pub fn validate_child(child: &fsys::ChildDecl) -> Result<(), ErrorList> {
     if child.startup.is_none() {
         errors.push(Error::missing_field("ChildDecl", "startup"));
     }
+    // Allow `on_terminate` to be unset since the default is almost always desired.
     if child.environment.is_some() {
         check_name(child.environment.as_ref(), "ChildDecl", "environment", &mut errors);
     }
@@ -2251,6 +2252,7 @@ mod tests {
                             name: Some(name.to_string()),
                             url: Some(format!("fuchsia-pkg://fuchsia.com/pkg#meta/{}.cm", name)),
                             startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
                             environment: None,
                             ..ChildDecl::EMPTY
                         }
@@ -2310,6 +2312,7 @@ mod tests {
                             name: Some(name.to_string()),
                             url: Some(format!("fuchsia-pkg://fuchsia.com/pkg#meta/{}.cm", name)),
                             startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
                             environment: None,
                             ..ChildDecl::EMPTY
                         }
@@ -2827,6 +2830,7 @@ mod tests {
                             name: Some("child".to_string()),
                             url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
                             startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
                             ..ChildDecl::EMPTY
                         }
                     ]),
@@ -2894,6 +2898,7 @@ mod tests {
                             name: Some("child".to_string()),
                             url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
                             startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
                             ..ChildDecl::EMPTY
                         }
                     ]),
@@ -3338,6 +3343,7 @@ mod tests {
                     name: Some("logger".to_string()),
                     url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
                     startup: Some(StartupMode::Lazy),
+                    on_terminate: None,
                     environment: None,
                     ..ChildDecl::EMPTY
                 }]);
@@ -4447,6 +4453,7 @@ mod tests {
                     name: Some("logger".to_string()),
                     url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
                     startup: Some(StartupMode::Lazy),
+                    on_terminate: None,
                     environment: None,
                     ..ChildDecl::EMPTY
                 }]);
@@ -4494,6 +4501,7 @@ mod tests {
                         name: Some("logger".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(StartupMode::Lazy),
+                        on_terminate: None,
                         environment: None,
                         ..ChildDecl::EMPTY
                     },
@@ -4573,6 +4581,7 @@ mod tests {
                         name: Some("netstack".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(StartupMode::Lazy),
+                        on_terminate: None,
                         environment: None,
                         ..ChildDecl::EMPTY
                     },
@@ -4757,6 +4766,7 @@ mod tests {
                         name: Some("netstack".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(StartupMode::Eager),
+                        on_terminate: None,
                         environment: None,
                         ..ChildDecl::EMPTY
                     },
@@ -4978,6 +4988,7 @@ mod tests {
                         name: Some("child".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
                         startup: Some(StartupMode::Lazy),
+                        on_terminate: None,
                         ..ChildDecl::EMPTY
                     }
                 ]);
@@ -5057,6 +5068,7 @@ mod tests {
                         name: Some("child".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
                         startup: Some(StartupMode::Lazy),
+                        on_terminate: None,
                         ..ChildDecl::EMPTY
                     }
                 ]);
@@ -5105,6 +5117,7 @@ mod tests {
                         name: Some("netstack".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(StartupMode::Eager),
+                        on_terminate: None,
                         environment: None,
                         ..ChildDecl::EMPTY
                     },
@@ -5153,6 +5166,7 @@ mod tests {
                         name: Some(name.to_string()),
                         url: Some(format!("fuchsia-pkg://fuchsia.com/pkg#meta/{}.cm", name)),
                         startup: Some(StartupMode::Lazy),
+                        on_terminate: None,
                         environment: None,
                         ..ChildDecl::EMPTY
                     }
@@ -5453,6 +5467,7 @@ mod tests {
                 decl.children = Some(vec![ChildDecl {
                     name: Some("child".to_string()),
                     startup: Some(StartupMode::Lazy),
+                    on_terminate: None,
                     url: Some("fuchsia-pkg://child".to_string()),
                     environment: Some("env".to_string()),
                     ..ChildDecl::EMPTY
@@ -5489,6 +5504,7 @@ mod tests {
                 decl.children = Some(vec![ChildDecl {
                     name: Some("child".to_string()),
                     startup: Some(StartupMode::Lazy),
+                    on_terminate: None,
                     url: Some("fuchsia-pkg://child".to_string()),
                     environment: Some("env".to_string()),
                     ..ChildDecl::EMPTY
@@ -5526,6 +5542,7 @@ mod tests {
                     ChildDecl {
                         name: Some("a".to_string()),
                         startup: Some(StartupMode::Lazy),
+                        on_terminate: None,
                         url: Some("fuchsia-pkg://child-a".to_string()),
                         environment: None,
                         ..ChildDecl::EMPTY
@@ -5533,6 +5550,7 @@ mod tests {
                     ChildDecl {
                         name: Some("b".to_string()),
                         startup: Some(StartupMode::Lazy),
+                        on_terminate: None,
                         url: Some("fuchsia-pkg://child-b".to_string()),
                         environment: Some("env".to_string()),
                         ..ChildDecl::EMPTY
@@ -5705,6 +5723,7 @@ mod tests {
                         name: Some("netstack".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(StartupMode::Lazy),
+                        on_terminate: None,
                         environment: None,
                         ..ChildDecl::EMPTY
                     },
@@ -5752,6 +5771,7 @@ mod tests {
                     name: None,
                     url: None,
                     startup: None,
+                    on_terminate: None,
                     environment: None,
                     ..ChildDecl::EMPTY
                 }]);
@@ -5761,6 +5781,7 @@ mod tests {
                 Error::missing_field("ChildDecl", "name"),
                 Error::missing_field("ChildDecl", "url"),
                 Error::missing_field("ChildDecl", "startup"),
+                // `on_terminate` is allowed to be None
             ])),
         },
         test_validate_children_invalid_identifiers => {
@@ -5770,6 +5791,7 @@ mod tests {
                     name: Some("^bad".to_string()),
                     url: Some("bad-scheme&://blah".to_string()),
                     startup: Some(StartupMode::Lazy),
+                    on_terminate: None,
                     environment: None,
                     ..ChildDecl::EMPTY
                 }]);
@@ -5787,6 +5809,7 @@ mod tests {
                     name: Some("a".repeat(1025)),
                     url: Some(format!("fuchsia-pkg://{}", "a".repeat(4083))),
                     startup: Some(StartupMode::Lazy),
+                    on_terminate: None,
                     environment: Some("a".repeat(1025)),
                     ..ChildDecl::EMPTY
                 }]);
@@ -5806,6 +5829,7 @@ mod tests {
                     name: Some("foo".to_string()),
                     url: Some("fuchsia-pkg://foo".to_string()),
                     startup: Some(StartupMode::Lazy),
+                    on_terminate: None,
                     environment: Some("test_env".to_string()),
                     ..ChildDecl::EMPTY
                 }]);
@@ -6178,6 +6202,7 @@ mod tests {
                     name: Some("child".to_string()),
                     url: Some("test:///child".to_string()),
                     startup: Some(StartupMode::Eager),
+                    on_terminate: None,
                     environment: None,
                     ..ChildDecl::EMPTY
                 }]);

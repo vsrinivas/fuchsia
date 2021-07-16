@@ -506,6 +506,7 @@ pub struct ChildDecl {
     pub name: String,
     pub url: String,
     pub startup: fsys::StartupMode,
+    pub on_terminate: Option<fsys::OnTerminate>,
     pub environment: Option<String>,
 }
 
@@ -609,6 +610,7 @@ fidl_translations_identical!(u32);
 fidl_translations_identical!(bool);
 fidl_translations_identical!(String);
 fidl_translations_identical!(fsys::StartupMode);
+fidl_translations_identical!(fsys::OnTerminate);
 fidl_translations_identical!(fsys::Durability);
 fidl_translations_identical!(fsys::Object);
 fidl_translations_identical!(fdata::Dictionary);
@@ -1664,6 +1666,7 @@ mod tests {
                          url: Some("fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm"
                                    .to_string()),
                          startup: Some(fsys::StartupMode::Lazy),
+                         on_terminate: None,
                          environment: None,
                          ..fsys::ChildDecl::EMPTY
                      },
@@ -1671,6 +1674,7 @@ mod tests {
                          name: Some("gtest".to_string()),
                          url: Some("fuchsia-pkg://fuchsia.com/gtest#meta/gtest.cm".to_string()),
                          startup: Some(fsys::StartupMode::Lazy),
+                         on_terminate: Some(fsys::OnTerminate::None),
                          environment: None,
                          ..fsys::ChildDecl::EMPTY
                      },
@@ -1679,6 +1683,7 @@ mod tests {
                          url: Some("fuchsia-pkg://fuchsia.com/echo#meta/echo.cm"
                                    .to_string()),
                          startup: Some(fsys::StartupMode::Eager),
+                         on_terminate: Some(fsys::OnTerminate::Reboot),
                          environment: Some("test_env".to_string()),
                          ..fsys::ChildDecl::EMPTY
                      },
@@ -1936,18 +1941,21 @@ mod tests {
                             name: "netstack".to_string(),
                             url: "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm".to_string(),
                             startup: fsys::StartupMode::Lazy,
+                            on_terminate: None,
                             environment: None,
                         },
                         ChildDecl {
                             name: "gtest".to_string(),
                             url: "fuchsia-pkg://fuchsia.com/gtest#meta/gtest.cm".to_string(),
                             startup: fsys::StartupMode::Lazy,
+                            on_terminate: Some(fsys::OnTerminate::None),
                             environment: None,
                         },
                         ChildDecl {
                             name: "echo".to_string(),
                             url: "fuchsia-pkg://fuchsia.com/echo#meta/echo.cm".to_string(),
                             startup: fsys::StartupMode::Eager,
+                            on_terminate: Some(fsys::OnTerminate::Reboot),
                             environment: Some("test_env".to_string()),
                         },
                     ],

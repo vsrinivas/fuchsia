@@ -470,7 +470,7 @@ mod tests {
     }
 
     fn new_child_decl(name: String, url: String, environment: Option<String>) -> ChildDecl {
-        ChildDecl { name, url, startup: StartupMode::Lazy, environment }
+        ChildDecl { name, url, startup: StartupMode::Lazy, environment, on_terminate: None }
     }
 
     fn new_environment_decl(

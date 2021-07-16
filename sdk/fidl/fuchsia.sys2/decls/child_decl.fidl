@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.sys2;
 
 using fuchsia.component;
@@ -31,6 +30,11 @@ table ChildDecl {
     /// [a-z0-9-_.].
     4: fuchsia.component.name environment;
 
+    /// The action to take if this component instance terminates unexpectedly.
+    ///
+    /// May be unset, in which case defaults to `NONE`.
+    5: OnTerminate on_terminate;
+
     // TODO(fxbug.dev/4051): Provide a way to supply parameters to the child, possibly
     // as command-line arguments, by URL, or maybe in some other way which is
     // orthogonal to other inputs to mitigate confused deputy issues.  Perhaps
@@ -45,4 +49,16 @@ enum StartupMode {
     /// supported for statically declared children -- a dynamic instance may only be
     /// started by binding to it.
     EAGER = 1;
+};
+
+/// Describes the action to take if this component instance terminates
+/// unexpectedly.
+enum OnTerminate {
+    /// No action, the default
+    NONE = 0;
+
+    /// Trigger a graceful system reboot if the component terminates for any
+    /// reason. This is a specialized feature gated by Component Framework
+    /// security policy.
+    REBOOT = 1;
 };

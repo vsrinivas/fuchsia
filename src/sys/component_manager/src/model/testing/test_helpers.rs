@@ -453,6 +453,7 @@ impl ActionsTest {
             url: format!("test:///{}", name),
             startup: fsys::StartupMode::Lazy,
             environment: None,
+            on_terminate: None,
         }
         .native_into_fidl();
         let child_args =

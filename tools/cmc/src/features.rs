@@ -26,7 +26,7 @@ impl FeatureSet {
         if self.has(&feature) {
             Ok(())
         } else {
-            Err(Error::UnstableFeature(feature.to_string()))
+            Err(Error::RestrictedFeature(feature.to_string()))
         }
     }
 }
@@ -42,6 +42,8 @@ impl From<Vec<Feature>> for FeatureSet {
 pub enum Feature {
     /// Enables unified services support in CML.
     Services,
+    /// Enables setting the `on_terminate` option in CML.
+    OnTerminate,
 }
 
 impl FromStr for Feature {
@@ -49,6 +51,7 @@ impl FromStr for Feature {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "services" => Ok(Feature::Services),
+            "on_terminate" => Ok(Feature::OnTerminate),
             _ => Err(format!("unrecognized feature \"{}\"", s)),
         }
     }
@@ -58,6 +61,7 @@ impl fmt::Display for Feature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
             Feature::Services => "services",
+            Feature::OnTerminate => "on_terminate",
         })
     }
 }
@@ -69,11 +73,13 @@ mod tests {
     #[test]
     fn feature_is_parsed() {
         assert_eq!(Feature::Services, "services".parse::<Feature>().unwrap());
+        assert_eq!(Feature::OnTerminate, "on_terminate".parse::<Feature>().unwrap());
     }
 
     #[test]
     fn feature_is_printed() {
         assert_eq!("services", Feature::Services.to_string());
+        assert_eq!("on_terminate", Feature::OnTerminate.to_string());
     }
 
     #[test]
@@ -88,7 +94,7 @@ mod tests {
     #[test]
     fn feature_set_check() {
         let set = FeatureSet::empty();
-        assert_matches!(set.check(Feature::Services), Err(Error::UnstableFeature(f)) if f == "services");
+        assert_matches!(set.check(Feature::Services), Err(Error::RestrictedFeature(f)) if f == "services");
 
         let set = FeatureSet::from(vec![Feature::Services]);
         assert_matches!(set.check(Feature::Services), Ok(()));

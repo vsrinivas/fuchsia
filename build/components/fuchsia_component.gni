@@ -78,9 +78,9 @@ import("//tools/cmc/build/cmx.gni")
 #     Type: boolean
 #     Default: true
 #
-#   unstable_features (optional)
-#     The set of unstable CML features to allow. Only applicable to v2 components.
-#     The set of features is allowlisted here: //tools/cmc/build/unstable_features/BUILD.gn
+#   restricted_features (optional)
+#     The set of restricted CML features to allow. Only applicable to v2 components.
+#     The set of features is allowlisted here: //tools/cmc/build/restricted_features/BUILD.gn
 #     where each feature name is represented by a group of the same name.
 #     Type: list of strings
 #     Default: []
@@ -135,7 +135,7 @@ template("fuchsia_component") {
                            [
                              "deps",
                              "manifest",
-                             "unstable_features",
+                             "restricted_features",
                              "testonly",
                              "visibility",
                              "experimental_force_runner",

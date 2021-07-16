@@ -287,6 +287,9 @@ impl<'a> ValidationContext<'a> {
         child: &'a cml::Child,
         strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
     ) -> Result<(), Error> {
+        if child.on_terminate.is_some() {
+            self.features.check(Feature::OnTerminate)?;
+        }
         if let Some(environment_ref) = &child.environment {
             match environment_ref {
                 cml::EnvironmentRef::Named(environment_name) => {
@@ -3153,11 +3156,6 @@ mod tests {
                         "url": "https://www.google.com/gmail",
                         "startup": "eager",
                     },
-                    {
-                        "name": "echo",
-                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
-                        "startup": "lazy",
-                    },
                 ]
             }),
             Ok(())
@@ -4793,7 +4791,7 @@ mod tests {
                     { "service": "my.service.Service" },
                 ],
             }),
-            Err(Error::UnstableFeature(s)) if s == "services"
+            Err(Error::RestrictedFeature(s)) if s == "services"
         ),
         test_cml_offer_service_without_feature(
             json!({
@@ -4808,7 +4806,7 @@ mod tests {
                     { "name": "child", "url": "fuchsia-pkg://child" }
                 ],
             }),
-            Err(Error::UnstableFeature(s)) if s == "services"
+            Err(Error::RestrictedFeature(s)) if s == "services"
         ),
         test_cml_expose_service_without_feature(
             json!({
@@ -4822,7 +4820,7 @@ mod tests {
                     { "name": "child", "url": "fuchsia-pkg://child" }
                 ],
             }),
-            Err(Error::UnstableFeature(s)) if s == "services"
+            Err(Error::RestrictedFeature(s)) if s == "services"
         ),
         test_cml_capability_service_without_feature(
             json!({
@@ -4830,7 +4828,53 @@ mod tests {
                     { "service": "my.service.Service" },
                 ]
             }),
-            Err(Error::UnstableFeature(s)) if s == "services"
+            Err(Error::RestrictedFeature(s)) if s == "services"
+        ),
+    }
+
+    // Tests the use of on_terminate when the "on_terminate" feature is set.
+    test_validate_cml_with_feature! { FeatureSet::from(vec![Feature::OnTerminate]), {
+        test_cml_children_on_terminate(
+            json!({
+                "children": [
+                    {
+                        "name": "echo",
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
+                        "startup": "lazy",
+                        "on_terminate": "reboot",
+                    },
+                ]
+            }),
+            Ok(())
+        ),
+        test_cml_children_bad_on_terminate(
+            json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "on_terminate": "zzz",
+                    },
+                ],
+            }),
+            Err(Error::Parse { err, .. }) if &err == "unknown variant `zzz`, expected `none` or `reboot`"
+        ),
+    }}
+
+    // Tests that the use of on_terminate fail when the "on_terminate" feature is not set.
+    test_validate_cml! {
+        test_cml_children_on_terminate_without_feature(
+            json!({
+                "children": [
+                    {
+                        "name": "echo",
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
+                        "startup": "lazy",
+                        "on_terminate": "none",
+                    },
+                ]
+            }),
+            Err(Error::RestrictedFeature(s)) if s == "on_terminate"
         ),
     }
 

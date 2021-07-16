@@ -431,6 +431,7 @@ pub mod tests {
                 url: format!("test:///a"),
                 startup: fsys::StartupMode::Lazy,
                 environment: None,
+                on_terminate: None,
             };
             resolved_state
                 .add_child_for_test(

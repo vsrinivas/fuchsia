@@ -51,9 +51,9 @@ import("fuchsia_package.gni")
 #     The component manifest.
 #     Type: path
 #
-#   unstable_features (optional)
-#     The set of unstable CML features to allow. Only applicable to v2 components.
-#     The set of features is allowlisted here: //tools/cmc/build/unstable_features/BUILD.gn
+#   restricted_features (optional)
+#     The set of restricted CML features to allow. Only applicable to v2 components.
+#     The set of features is allowlisted here: //tools/cmc/build/restricted_features/BUILD.gn
 #     where each feature name is represented by a group of the same name.
 #     Type: list of strings
 #     Default: []
@@ -81,7 +81,7 @@ template("fuchsia_package_with_single_component") {
                            [
                              "deps",
                              "manifest",
-                             "unstable_features",
+                             "restricted_features",
                              "testonly",
                            ])
     component_name = component_name

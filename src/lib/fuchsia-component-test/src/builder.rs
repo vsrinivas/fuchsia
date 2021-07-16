@@ -1328,12 +1328,14 @@ mod tests {
                             url: "fuchsia-pkg://a".to_string(),
                             startup: fsys::StartupMode::Lazy,
                             environment: None,
+                            on_terminate: None,
                         },
                         ChildDecl {
                             name: "b".to_string(),
                             url: "fuchsia-pkg://b".to_string(),
                             startup: fsys::StartupMode::Eager,
                             environment: None,
+                            on_terminate: None,
                         },
                     ],
                     ..ComponentDecl::default()
@@ -1516,6 +1518,7 @@ mod tests {
                             url: "fuchsia-pkg://b".to_string(),
                             startup: fsys::StartupMode::Eager,
                             environment: None,
+                            on_terminate: None,
                         }],
                         ..ComponentDecl::default()
                     },
@@ -1589,12 +1592,14 @@ mod tests {
                                 url: "fuchsia-pkg://a".to_string(),
                                 startup: fsys::StartupMode::Lazy,
                                 environment: None,
+                                on_terminate: None,
                             },
                             ChildDecl {
                                 name: "c".to_string(),
                                 url: "fuchsia-pkg://c".to_string(),
                                 startup: fsys::StartupMode::Eager,
                                 environment: None,
+                                on_terminate: None,
                             },
                         ],
                         ..ComponentDecl::default()
@@ -1714,18 +1719,21 @@ mod tests {
                             url: "fuchsia-pkg://a".to_string(),
                             startup: fsys::StartupMode::Eager,
                             environment: None,
+                            on_terminate: None,
                         },
                         ChildDecl {
                             name: "b".to_string(),
                             url: "fuchsia-pkg://b".to_string(),
                             startup: fsys::StartupMode::Lazy,
                             environment: None,
+                            on_terminate: None,
                         },
                         ChildDecl {
                             name: "c".to_string(),
                             url: "fuchsia-pkg://c".to_string(),
                             startup: fsys::StartupMode::Eager,
                             environment: None,
+                            on_terminate: None,
                         },
                     ],
                     ..ComponentDecl::default()
@@ -1820,6 +1828,7 @@ mod tests {
                             url: "fuchsia-pkg://a-b".to_string(),
                             startup: fsys::StartupMode::Lazy,
                             environment: None,
+                            on_terminate: None,
                         }],
                         ..ComponentDecl::default()
                     },
