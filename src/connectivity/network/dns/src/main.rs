@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_net::{self as fnet, NameLookupRequest, NameLookupRequestStream},
     fidl_fuchsia_net_ext as net_ext,
     fidl_fuchsia_net_name::{LookupAdminRequest, LookupAdminRequestStream},
-    fuchsia_async as fasync,
+    fidl_fuchsia_net_routes as fnet_routes, fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_inspect, fuchsia_zircon as zx,
     futures::{
@@ -432,7 +432,7 @@ async fn handle_lookup_ip<T: ResolverLookup>(
 async fn handle_lookup_ip2<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
     stats: Arc<QueryStats>,
-    routes: &fidl_fuchsia_net_routes::StateProxy,
+    routes: &fnet_routes::StateProxy,
     hostname: String,
     options: fnet::LookupIpOptions2,
 ) -> Result<fnet::LookupResult, fnet::LookupError> {
@@ -452,7 +452,7 @@ async fn handle_lookup_ip2<T: ResolverLookup>(
 
 async fn sort_preferred_addresses(
     mut addrs: Vec<fnet::IpAddress>,
-    routes: &fidl_fuchsia_net_routes::StateProxy,
+    routes: &fnet_routes::StateProxy,
 ) -> Result<Vec<fnet::IpAddress>, fnet::LookupError> {
     let mut addrs_info = futures::future::try_join_all(
         addrs
@@ -461,18 +461,20 @@ async fn sort_preferred_addresses(
             .drain(..)
             .map(|mut addr| async move {
                 let source_addr = match routes.resolve(&mut addr).await? {
-                    Ok(fidl_fuchsia_net_routes::Resolved::Direct(
-                        fidl_fuchsia_net_routes::Destination { source_address, .. },
-                    ))
-                    | Ok(fidl_fuchsia_net_routes::Resolved::Gateway(
-                        fidl_fuchsia_net_routes::Destination { source_address, .. },
-                    )) => source_address,
+                    Ok(fnet_routes::Resolved::Direct(fnet_routes::Destination {
+                        source_address,
+                        ..
+                    }))
+                    | Ok(fnet_routes::Resolved::Gateway(fnet_routes::Destination {
+                        source_address,
+                        ..
+                    })) => source_address,
                     // If resolving routes returns an error treat it as an
                     // unreachable address.
                     Err(e) => {
                         debug!(
                             "fuchsia.net.routes/State.resolve({}) failed {}",
-                            fidl_fuchsia_net_ext::IpAddress::from(addr),
+                            net_ext::IpAddress::from(addr),
                             zx::Status::from_raw(e)
                         );
                         None
@@ -705,7 +707,7 @@ async fn handle_lookup_hostname<T: ResolverLookup>(
     }
 }
 
-/// IP lookup variants from [`fidl_fuchsia_net::NameLookupRequest`].
+/// IP lookup variants from [`fnet::NameLookupRequest`].
 enum IpLookupRequest {
     LookupIp {
         hostname: String,
@@ -763,7 +765,7 @@ const MAX_PARALLEL_REQUESTS: usize = 256;
 fn create_ip_lookup_fut<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
     stats: Arc<QueryStats>,
-    routes: fidl_fuchsia_net_routes::StateProxy,
+    routes: fnet_routes::StateProxy,
     recv: mpsc::Receiver<IpLookupRequest>,
 ) -> impl futures::Future<Output = ()> + '_ {
     recv.for_each_concurrent(MAX_PARALLEL_REQUESTS, move |request| {
@@ -958,9 +960,8 @@ async fn main() -> Result<(), Error> {
     let _query_stats_inspect_node = add_query_stats_inspect(inspector.root(), stats.clone());
     let () = inspect_runtime::serve(inspector, &mut fs)?;
 
-    let routes =
-        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_routes::StateMarker>()
-            .context("failed to connect to fuchsia.net.routes/State")?;
+    let routes = fuchsia_component::client::connect_to_protocol::<fnet_routes::StateMarker>()
+        .context("failed to connect to fuchsia.net.routes/State")?;
 
     let _: &mut ServiceFsDir<'_, _> = fs
         .dir("svc")
@@ -1008,11 +1009,11 @@ mod tests {
 
     use dns::test_util::*;
     use dns::DEFAULT_PORT;
-    use fidl_fuchsia_net_ext::IntoExt as _;
     use fuchsia_inspect::{assert_data_tree, testing::NonZeroUintProperty, tree_assertion};
     use futures::future::TryFutureExt as _;
     use matches::assert_matches;
     use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, std_ip, std_ip_v4, std_ip_v6};
+    use net_ext::IntoExt as _;
     use net_types::ip::Ip as _;
     use pin_utils::pin_mut;
     use trust_dns_proto::{
@@ -1060,7 +1061,7 @@ mod tests {
         );
         let stats = Arc::new(QueryStats::new());
         let (routes_proxy, routes_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_routes::StateMarker>()
+            fidl::endpoints::create_proxy_and_stream::<fnet_routes::StateMarker>()
                 .expect("failed to create routes.StateProxy");
         let routes_fut =
             routes_stream.try_for_each(|req| -> futures::future::Ready<Result<(), fidl::Error>> {
@@ -1301,14 +1302,14 @@ mod tests {
         where
             Fut: futures::Future<Output = ()>,
             F: FnOnce(fnet::NameLookupProxy) -> Fut,
-            R: Fn(fidl_fuchsia_net_routes::StateRequest),
+            R: Fn(fnet_routes::StateRequest),
         {
             let (name_lookup_proxy, name_lookup_stream) =
                 fidl::endpoints::create_proxy_and_stream::<fnet::NameLookupMarker>()
                     .expect("failed to create NameLookupProxy");
 
             let (routes_proxy, routes_stream) =
-                fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_routes::StateMarker>()
+                fidl::endpoints::create_proxy_and_stream::<fnet_routes::StateMarker>()
                     .expect("failed to create routes.StateProxy");
 
             let (sender, recv) = mpsc::channel(MAX_PARALLEL_REQUESTS);
@@ -1912,7 +1913,7 @@ mod tests {
             );
             let stats = Arc::new(QueryStats::new());
             let (routes_proxy, _routes_stream) =
-                fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_routes::StateMarker>()
+                fidl::endpoints::create_proxy_and_stream::<fnet_routes::StateMarker>()
                     .expect("failed to create routes.StateProxy");
             async move { create_ip_lookup_fut(&resolver, stats.clone(), routes_proxy, recv).await }
                 .fuse()
@@ -2108,26 +2109,26 @@ mod tests {
             std_ip!("2001::2"),
         ];
         let (routes_proxy, routes_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_routes::StateMarker>()
+            fidl::endpoints::create_proxy_and_stream::<fnet_routes::StateMarker>()
                 .expect("failed to create routes.StateProxy");
         let routes_fut = routes_stream.map(|r| r.context("stream FIDL error")).try_for_each(
-            |fidl_fuchsia_net_routes::StateRequest::Resolve { destination, responder }| {
+            |fnet_routes::StateRequest::Resolve { destination, responder }| {
                 let mut result = TEST_IPS
                     .iter()
                     .enumerate()
                     .find_map(|(i, (dst, src))| {
                         if *dst == destination && src.is_some() {
-                            let inner = fidl_fuchsia_net_routes::Destination {
+                            let inner = fnet_routes::Destination {
                                 address: Some(*dst),
                                 source_address: *src,
-                                ..fidl_fuchsia_net_routes::Destination::EMPTY
+                                ..fnet_routes::Destination::EMPTY
                             };
                             // Send both Direct and Gateway resolved routes to show we
                             // don't care about that part.
                             if i % 2 == 0 {
-                                Some(fidl_fuchsia_net_routes::Resolved::Direct(inner))
+                                Some(fnet_routes::Resolved::Direct(inner))
                             } else {
-                                Some(fidl_fuchsia_net_routes::Resolved::Gateway(inner))
+                                Some(fnet_routes::Resolved::Gateway(inner))
                             }
                         } else {
                             None
@@ -2148,7 +2149,7 @@ mod tests {
             let addrs = addrs
                 .into_iter()
                 .map(|a| {
-                    let fidl_fuchsia_net_ext::IpAddress(a) = a.into();
+                    let net_ext::IpAddress(a) = a.into();
                     a
                 })
                 .collect::<Vec<_>>();
@@ -2162,25 +2163,21 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_lookupip2() {
         fn map_ip<T: Into<IpAddr>>(addr: T) -> fnet::IpAddress {
-            fidl_fuchsia_net_ext::IpAddress(addr.into()).into()
+            net_ext::IpAddress(addr.into()).into()
         }
         // Routes handler will say that only IPV6_HOST is reachable.
-        let routes_handler =
-            |fidl_fuchsia_net_routes::StateRequest::Resolve { destination, responder }| {
-                let mut response = if destination == map_ip(IPV6_HOST) {
-                    Ok(fidl_fuchsia_net_routes::Resolved::Direct(
-                        fidl_fuchsia_net_routes::Destination {
-                            address: Some(destination),
-                            source_address: Some(destination),
-                            ..fidl_fuchsia_net_routes::Destination::EMPTY
-                        },
-                    ))
-                } else {
-                    Err(zx::Status::ADDRESS_UNREACHABLE.into_raw())
-                };
-                let () =
-                    responder.send(&mut response).expect("failed to send Resolve FIDL response");
+        let routes_handler = |fnet_routes::StateRequest::Resolve { destination, responder }| {
+            let mut response = if destination == map_ip(IPV6_HOST) {
+                Ok(fnet_routes::Resolved::Direct(fnet_routes::Destination {
+                    address: Some(destination),
+                    source_address: Some(destination),
+                    ..fnet_routes::Destination::EMPTY
+                }))
+            } else {
+                Err(zx::Status::ADDRESS_UNREACHABLE.into_raw())
             };
+            let () = responder.send(&mut response).expect("failed to send Resolve FIDL response");
+        };
         TestEnvironment::new()
             .run_lookup_with_routes_handler(
                 |proxy| async move {
@@ -2193,86 +2190,84 @@ mod tests {
                     assert_eq!(
                         lookup_ip(
                             REMOTE_IPV4_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 {
-                                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
-                            }
+                            fnet::LookupIpOptions2 { ..fnet::LookupIpOptions2::EMPTY }
                         )
                         .await,
-                        Err(fidl_fuchsia_net::LookupError::InvalidArgs)
+                        Err(fnet::LookupError::InvalidArgs)
                     );
                     // No IP addresses to look.
                     assert_eq!(
                         lookup_ip(
                             REMOTE_IPV4_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 {
+                            fnet::LookupIpOptions2 {
                                 ipv4_lookup: Some(false),
                                 ipv6_lookup: Some(false),
-                                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
+                                ..fnet::LookupIpOptions2::EMPTY
                             }
                         )
                         .await,
-                        Err(fidl_fuchsia_net::LookupError::InvalidArgs)
+                        Err(fnet::LookupError::InvalidArgs)
                     );
                     // No results for an IPv4 only host.
                     assert_eq!(
                         lookup_ip(
                             REMOTE_IPV4_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 {
+                            fnet::LookupIpOptions2 {
                                 ipv4_lookup: Some(false),
                                 ipv6_lookup: Some(true),
-                                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
+                                ..fnet::LookupIpOptions2::EMPTY
                             }
                         )
                         .await,
-                        Err(fidl_fuchsia_net::LookupError::NotFound)
+                        Err(fnet::LookupError::NotFound)
                     );
                     // Successfully resolve IPv4.
                     assert_eq!(
                         lookup_ip(
                             REMOTE_IPV4_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 {
+                            fnet::LookupIpOptions2 {
                                 ipv4_lookup: Some(true),
                                 ipv6_lookup: Some(true),
-                                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
+                                ..fnet::LookupIpOptions2::EMPTY
                             }
                         )
                         .await,
-                        Ok(fidl_fuchsia_net::LookupResult {
+                        Ok(fnet::LookupResult {
                             addresses: Some(vec![map_ip(IPV4_HOST)]),
-                            ..fidl_fuchsia_net::LookupResult::EMPTY
+                            ..fnet::LookupResult::EMPTY
                         })
                     );
                     // Successfully resolve IPv4 + IPv6 (no sorting).
                     assert_eq!(
                         lookup_ip(
                             REMOTE_IPV4_IPV6_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 {
+                            fnet::LookupIpOptions2 {
                                 ipv4_lookup: Some(true),
                                 ipv6_lookup: Some(true),
-                                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
+                                ..fnet::LookupIpOptions2::EMPTY
                             }
                         )
                         .await,
-                        Ok(fidl_fuchsia_net::LookupResult {
+                        Ok(fnet::LookupResult {
                             addresses: Some(vec![map_ip(IPV4_HOST), map_ip(IPV6_HOST)]),
-                            ..fidl_fuchsia_net::LookupResult::EMPTY
+                            ..fnet::LookupResult::EMPTY
                         })
                     );
                     // Successfully resolve IPv4 + IPv6 (with sorting).
                     assert_eq!(
                         lookup_ip(
                             REMOTE_IPV4_IPV6_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 {
+                            fnet::LookupIpOptions2 {
                                 ipv4_lookup: Some(true),
                                 ipv6_lookup: Some(true),
                                 sort_addresses: Some(true),
-                                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
+                                ..fnet::LookupIpOptions2::EMPTY
                             }
                         )
                         .await,
-                        Ok(fidl_fuchsia_net::LookupResult {
+                        Ok(fnet::LookupResult {
                             addresses: Some(vec![map_ip(IPV6_HOST), map_ip(IPV4_HOST)]),
-                            ..fidl_fuchsia_net::LookupResult::EMPTY
+                            ..fnet::LookupResult::EMPTY
                         })
                     );
                 },
