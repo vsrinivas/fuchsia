@@ -161,7 +161,7 @@ zx_status_t device_open_protocol_session_multibindable(const zx_device_t* dev, u
 }
 
 __EXPORT
-zx_off_t device_get_size(zx_device_t* device) { return ZX_ERR_NOT_SUPPORTED; }
+zx_off_t device_get_size(zx_device_t* device) { return device->GetSize(); }
 
 __EXPORT
 void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag) {

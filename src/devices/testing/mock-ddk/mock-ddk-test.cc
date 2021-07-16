@@ -478,3 +478,16 @@ TEST(MockDdk, LoadFirmware) {
   ASSERT_EQ(firmware_result.value().size(), kFirmware.size());
   ASSERT_BYTES_EQ(firmware_result.value().data(), kFirmware.data(), kFirmware.size());
 }
+
+TEST(MockDdk, SetSize) {
+  auto parent = MockDevice::FakeRootParent();  // Hold on to the parent during the test.
+
+  // Initially, the size will be 0.
+  EXPECT_EQ(device_get_size(parent.get()), 0);
+
+  // So we size in the parent:
+  parent->SetSize(32);
+
+  // Size should be 32 after being set.
+  EXPECT_EQ(device_get_size(parent.get()), 32);
+}

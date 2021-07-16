@@ -75,7 +75,6 @@ struct ProtocolEntry {
 // Any automatic responses from the DDK
 // The following libdriver calls:
 //   device_open_protocol_session_multibindable
-//   device_get_size
 //   device_state_clr_set
 //   device_get_profile
 //   device_get_deadline_profile
@@ -144,6 +143,10 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   void ChildPreReleaseOp(void* child_ctx);
   bool HasUnbindOp() { return ops_->unbind != nullptr; }
 
+  // Size is often set for the parent of a device, to be available when the device
+  // calls device_get_size
+  void SetSize(size_t size);
+
   // Metadata is often set for the parent of a device, to be available when the device
   // calls device_get_metadata
   void SetMetadata(uint32_t type, const void* data, size_t data_length);
@@ -195,6 +198,7 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   void SetFirmware(std::string firmware, std::string_view path = {});
 
  private:
+  constexpr static zx_protocol_device_t kDefaultOps = {};
   // |ctx| must outlive |*out_dev|.  This is managed in the full binary by creating
   // the DriverHostContext in main() (having essentially a static lifetime).
   MockDevice(device_add_args_t* args, MockDevice* parent);
@@ -220,6 +224,9 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   friend zx_status_t device_get_fragment_protocol(zx_device_t* device, const char* fragment_name,
                                                   uint32_t proto_id, void* protocol);
 
+  zx_off_t GetSize();
+  friend zx_off_t device_get_size(zx_device_t* device);
+
   // device_get_metadata calls GetMetadata:
   zx_status_t GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual);
   friend zx_status_t device_get_metadata(zx_device_t* device, uint32_t type, void* buf,
@@ -241,13 +248,15 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   std::unordered_map<std::string, std::list<mock_ddk::ProtocolEntry>> protocols_;
   std::unordered_map<std::string_view, std::vector<uint8_t>> firmware_;
 
+  size_t size_ = 0;
+
   // Map of metadata set by SetMetadata.
   std::unordered_map<uint32_t, std::pair<const void*, size_t>> metadata_;
 
   // parent in the device tree
   MockDevice* parent_ = nullptr;  // This will default to a nullptr, for the root parent.
 
-  const zx_protocol_device_t* ops_ = nullptr;
+  const zx_protocol_device_t* ops_ = &kDefaultOps;
   // reserved for driver use; will not be touched by MockDevice
   void* ctx_ = nullptr;
 
