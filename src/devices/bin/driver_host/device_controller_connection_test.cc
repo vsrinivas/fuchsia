@@ -80,7 +80,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
     DeviceControllerConnectionTest(
         DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
         fidl::WireSharedClient<fuchsia_device_manager::Coordinator> coordinator_client,
-        fidl::Client<fuchsia_device_manager::DeviceController>& local)
+        fidl::WireSharedClient<fuchsia_device_manager::DeviceController>& local)
         : DeviceControllerConnection(ctx, std::move(dev), std::move(coordinator_client)),
           local_(local) {}
 
@@ -89,7 +89,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
       // processing BindDriver.  Close the other half of the channel, so the reply below will fail
       // from ZX_ERR_PEER_CLOSED.
       completer_ = completer.ToAsync();
-      local_.Unbind();
+      local_.AsyncTeardown();
     }
 
     void UnboundDone() {
@@ -101,11 +101,11 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
     }
 
    private:
-    fidl::Client<fuchsia_device_manager::DeviceController>& local_;
+    fidl::WireSharedClient<fuchsia_device_manager::DeviceController>& local_;
     std::optional<BindDriverCompleter::Async> completer_;
   };
 
-  fidl::Client client(std::move(device_local2), ctx.loop().dispatcher());
+  fidl::WireSharedClient client(std::move(device_local2), ctx.loop().dispatcher());
   fidl::WireSharedClient<fuchsia_device_manager::Coordinator> coordinator;
   auto conn = std::make_unique<DeviceControllerConnectionTest>(&ctx, std::move(dev),
                                                                std::move(coordinator), client);
@@ -115,25 +115,12 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
                                        ctx.loop().dispatcher());
   ASSERT_OK(ctx.loop().RunUntilIdle());
 
-  class EventHandler
-      : public fidl::WireAsyncEventHandler<fuchsia_device_manager::DeviceController> {
-   public:
-    explicit EventHandler(DeviceControllerConnectionTest* connection) : connection_(connection) {}
-
-    bool unbound() const { return unbound_; }
-
-    void Unbound(fidl::UnbindInfo info) override {
-      unbound_ = true;
-      connection_->UnboundDone();
-    }
-
-   private:
-    DeviceControllerConnectionTest* const connection_;
-    bool unbound_ = false;
-  };
-
-  auto event_handler = std::make_shared<EventHandler>(conn_ref);
-  client = fidl::Client(std::move(device_local), ctx.loop().dispatcher(), event_handler);
+  bool unbound = false;
+  client = fidl::WireSharedClient(std::move(device_local), ctx.loop().dispatcher(),
+                                  fidl::ObserveTeardown([&unbound, conn_ref] {
+                                    unbound = true;
+                                    conn_ref->UnboundDone();
+                                  }));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(0, 0, &vmo));
@@ -143,7 +130,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   ASSERT_OK(result.status());
 
   ASSERT_OK(ctx.loop().RunUntilIdle());
-  ASSERT_TRUE(event_handler->unbound());
+  ASSERT_TRUE(unbound);
 }
 
 // Verify we do not abort when an expected PEER_CLOSED comes in.
@@ -220,7 +207,7 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
                                        ctx.loop().dispatcher());
   ASSERT_OK(ctx.loop().RunUntilIdle());
 
-  fidl::Client client(std::move(device_ends->client), ctx.loop().dispatcher());
+  fidl::WireClient client(std::move(device_ends->client), ctx.loop().dispatcher());
 
   bool unbind_successful = false;
   auto result = client->Unbind(
@@ -234,7 +221,7 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   ASSERT_EQ(my_dev->flags(), DEV_FLAG_DEAD);
   ASSERT_TRUE(unbind_successful);
 
-  client.Unbind();
+  client = {};
 
   {
     fbl::AutoLock lock(&ctx.api_lock());
