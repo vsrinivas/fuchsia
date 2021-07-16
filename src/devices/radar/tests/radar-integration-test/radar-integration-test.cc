@@ -108,23 +108,24 @@ TEST_F(RadarIntegrationTest, BurstSize) {
 }
 
 TEST_F(RadarIntegrationTest, Reconnect) {
-  fidl::Client<BurstReader> client;
-  ASSERT_NO_FAILURES(MakeRadarClient(&client));
+  fidl::Client<BurstReader> client1;
+  ASSERT_NO_FAILURES(MakeRadarClient(&client1));
 
   {
-    const auto result = client->GetBurstSize_Sync();
+    const auto result = client1->GetBurstSize_Sync();
     ASSERT_OK(result.status());
     EXPECT_EQ(result->burst_size, kBurstSize);
   }
 
   // Unbind and close our end of the channel. We should eventually be able to reconnect, after the
   // driver has cleaned up after the last client.
-  client.WaitForChannel().channel().reset();
+  client1.WaitForChannel().channel().reset();
 
-  ASSERT_NO_FAILURES(MakeRadarClient(&client));
+  fidl::Client<BurstReader> client2;
+  ASSERT_NO_FAILURES(MakeRadarClient(&client2));
 
   {
-    const auto result = client->GetBurstSize_Sync();
+    const auto result = client2->GetBurstSize_Sync();
     ASSERT_OK(result.status());
     EXPECT_EQ(result->burst_size, kBurstSize);
   }
