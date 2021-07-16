@@ -6,8 +6,10 @@
 
 #include <fuchsia/hardware/badblock/cpp/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
+#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <lib/ddk/metadata.h>
-#include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fake_ddk/fidl-helper.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
@@ -16,6 +18,8 @@
 
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 constexpr uint32_t kPageSize = 1024;
 constexpr uint32_t kOobSize = 8;
@@ -26,58 +30,15 @@ constexpr uint32_t kEccBits = 10;
 
 nand_info_t kInfo = {kPageSize, kNumPages, kNumBlocks, kEccBits, kOobSize, 0, {}};
 
-// We inject a special context as parent so that we can store the device.
-struct Context {
-  nand::SkipBlockDevice* dev = nullptr;
-};
-
-class Binder : public fake_ddk::Bind {
- public:
-  zx_status_t DeviceRemove(zx_device_t* dev) override {
-    Context* context = reinterpret_cast<Context*>(dev);
-    if (context->dev) {
-      context->dev->DdkRelease();
-    }
-    context->dev = nullptr;
-    return ZX_OK;
-  }
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    *out = parent;
-    Context* context = reinterpret_cast<Context*>(parent);
-    context->dev = reinterpret_cast<nand::SkipBlockDevice*>(args->ctx);
-
-    if (args && args->ops) {
-      if (args->ops->message) {
-        zx_status_t status;
-        if ((status = fidl_.SetMessageOp(args->ctx, args->ops->message)) < 0) {
-          return status;
-        }
-      }
-    }
-    return ZX_OK;
-  }
-  zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
-                                void* protocol) override {
-    auto out = reinterpret_cast<fake_ddk::Protocol*>(protocol);
-    auto itr = protocols_.find(proto_id);
-    if (itr == protocols_.end()) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    *out = itr->second;
-    return ZX_OK;
-  }
-};
-
 // Fake for the nand protocol.
 class FakeNand : public ddk::NandProtocol<FakeNand> {
  public:
-  FakeNand() : proto_({&nand_protocol_ops_, this}) {
+  FakeNand() {
     ASSERT_OK(mapper_.CreateAndMap(kNumBlocks * kNumPages * kPageSize,
                                    ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
   }
 
-  const nand_protocol_t* proto() const { return &proto_; }
+  nand_protocol_ops_t* proto_ops() { return &nand_protocol_ops_; }
 
   void set_result(zx_status_t result) { result_.push_back(result); }
 
@@ -174,7 +135,6 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
 
  private:
   size_t call_ = 0;
-  nand_protocol_t proto_;
   nand_info_t nand_info_ = kInfo;
   fbl::Vector<zx_status_t> result_;
   size_t num_nand_pages_ = kNumPages * kNumBlocks;
@@ -187,9 +147,9 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
 // Fake for the bad block protocol.
 class FakeBadBlock : public ddk::BadBlockProtocol<FakeBadBlock> {
  public:
-  FakeBadBlock() : proto_({&bad_block_protocol_ops_, this}) {}
+  FakeBadBlock() {}
 
-  const bad_block_protocol_t* proto() const { return &proto_; }
+  bad_block_protocol_ops_t* proto_ops() { return &bad_block_protocol_ops_; }
 
   void set_result(zx_status_t result) { result_ = result; }
 
@@ -215,20 +175,32 @@ class FakeBadBlock : public ddk::BadBlockProtocol<FakeBadBlock> {
 
  private:
   fbl::Vector<uint32_t> grown_bad_blocks_;
-  bad_block_protocol_t proto_;
   zx_status_t result_ = ZX_OK;
 };
 
 class SkipBlockTest : public zxtest::Test {
  protected:
   SkipBlockTest() {
-    ddk_.SetProtocol(ZX_PROTOCOL_NAND, nand_.proto());
-    ddk_.SetProtocol(ZX_PROTOCOL_BAD_BLOCK, bad_block_.proto());
-    ddk_.SetSize(kPageSize * kNumPages * kNumBlocks);
-    ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
+    fake_parent().AddProtocol(ZX_PROTOCOL_NAND, &nand_, nand_.proto_ops());
+    fake_parent().AddProtocol(ZX_PROTOCOL_BAD_BLOCK, &bad_block_, bad_block_.proto_ops());
+    fake_parent().SetSize(kPageSize * kNumPages * kNumBlocks);
+    fake_parent().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
   }
 
-  ~SkipBlockTest() { ddk_.DeviceRemove(parent()); }
+  void InitializeFidlClient() {
+    if (!client_) {
+      auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_skipblock::SkipBlock>();
+      ASSERT_OK(endpoints.status_value());
+      ASSERT_EQ(fake_parent().child_count(), 1);
+      fidl_messenger_.SetMessageOp(
+          fake_parent().GetLatestChild(),
+          [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+            return static_cast<MockDevice*>(ctx)->MessageOp(msg, txn);
+          },
+          endpoints->server.TakeChannel());
+      client_.emplace(std::move(endpoints->client));
+    }
+  }
 
   void CreatePayload(size_t size, zx::vmo* out) {
     zx::vmo vmo;
@@ -240,10 +212,7 @@ class SkipBlockTest : public zxtest::Test {
   }
 
   void Write(nand::ReadWriteOperation op, bool* bad_block_grown, zx_status_t expected = ZX_OK) {
-    if (!client_) {
-      client_.emplace(std::move(ddk().FidlClient()));
-    }
-
+    ASSERT_NO_FAILURES(InitializeFidlClient());
     auto result = client_->Write(std::move(op));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result.value().status, expected);
@@ -251,9 +220,7 @@ class SkipBlockTest : public zxtest::Test {
   }
 
   void Read(nand::ReadWriteOperation op, zx_status_t expected = ZX_OK) {
-    if (!client_) {
-      client_.emplace(std::move(ddk().FidlClient()));
-    }
+    ASSERT_NO_FAILURES(InitializeFidlClient());
     auto result = client_->Read(std::move(op));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result.value().status, expected);
@@ -261,9 +228,7 @@ class SkipBlockTest : public zxtest::Test {
 
   void WriteBytes(nand::WriteBytesOperation op, bool* bad_block_grown,
                   zx_status_t expected = ZX_OK) {
-    if (!client_) {
-      client_.emplace(std::move(ddk().FidlClient()));
-    }
+    ASSERT_NO_FAILURES(InitializeFidlClient());
     auto result = client_->WriteBytes(std::move(op));
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().status, expected);
@@ -271,18 +236,14 @@ class SkipBlockTest : public zxtest::Test {
   }
 
   void WriteBytesWithoutErase(nand::WriteBytesOperation op, zx_status_t expected = ZX_OK) {
-    if (!client_) {
-      client_.emplace(std::move(ddk().FidlClient()));
-    }
+    ASSERT_NO_FAILURES(InitializeFidlClient());
     auto result = client_->WriteBytesWithoutErase(std::move(op));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result.value().status, expected);
   }
 
   void GetPartitionInfo(nand::PartitionInfo* out, zx_status_t expected = ZX_OK) {
-    if (!client_) {
-      client_.emplace(std::move(ddk().FidlClient()));
-    }
+    ASSERT_NO_FAILURES(InitializeFidlClient());
 
     auto result = client_->GetPartitionInfo();
     ASSERT_OK(result.status());
@@ -304,16 +265,19 @@ class SkipBlockTest : public zxtest::Test {
     }
   }
 
-  zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(&ctx_); }
-  nand::SkipBlockDevice& dev() { return *ctx_.dev; }
-  Binder& ddk() { return ddk_; }
+  nand::SkipBlockDevice& dev() {
+    return *fake_parent().GetLatestChild()->GetDeviceContext<nand::SkipBlockDevice>();
+  }
+  MockDevice* parent() { return fake_parent_.get(); }
+  MockDevice& fake_parent() { return *fake_parent_.get(); }
   FakeNand& nand() { return nand_; }
   FakeBadBlock& bad_block() { return bad_block_; }
 
  private:
   const uint32_t count_ = 1;
-  Context ctx_ = {};
-  Binder ddk_;
+  std::shared_ptr<MockDevice> fake_parent_ = MockDevice::FakeRootParent();
+  // |fidl_messenger_| must destruct before |fake_parent_| to avoid use after free.
+  fake_ddk::FidlMessenger fidl_messenger_;
   FakeNand nand_;
   FakeBadBlock bad_block_;
   std::optional<fidl::WireSyncClient<fuchsia_hardware_skipblock::SkipBlock>> client_;
@@ -470,8 +434,8 @@ TEST_F(SkipBlockTest, ReadFailure) {
 
 TEST_F(SkipBlockTest, ReadMultipleCopies) {
   const uint32_t count_ = 4;
-  ddk().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
-  ddk().SetSize(kPageSize * kNumPages * 8);
+  fake_parent().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
+  fake_parent().SetSize(kPageSize * kNumPages * 8);
   nand().set_block_count(8);
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
@@ -496,8 +460,8 @@ TEST_F(SkipBlockTest, ReadMultipleCopies) {
 
 TEST_F(SkipBlockTest, ReadMultipleCopiesNoneSucceeds) {
   const uint32_t count_ = 4;
-  ddk().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
-  ddk().SetSize(kPageSize * kNumPages * 4);
+  fake_parent().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
+  fake_parent().SetSize(kPageSize * kNumPages * 4);
   nand().set_block_count(4);
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
@@ -775,7 +739,7 @@ TEST_F(SkipBlockTest, GetPartitionInfo) {
 // blocks are marked bad, and blocks 2 and 7 become the new "physical" copies of logical block 1.
 TEST_F(SkipBlockTest, WriteMultipleCopies) {
   const uint32_t count_ = 2;
-  ddk().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
+  fake_parent().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
   // Erase Block 1
@@ -819,7 +783,7 @@ TEST_F(SkipBlockTest, WriteMultipleCopies) {
 // and 3 and 8 becomes the new "physical" copies of logical block 2.
 TEST_F(SkipBlockTest, WriteMultipleCopiesMultipleBlocks) {
   const uint32_t count_ = 2;
-  ddk().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
+  fake_parent().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
   // Erase Block 1.
@@ -872,8 +836,8 @@ TEST_F(SkipBlockTest, WriteMultipleCopiesMultipleBlocks) {
 // successfully, the write request succeeds. We validate all failed blocks are bad blocks grown.
 TEST_F(SkipBlockTest, WriteMultipleCopiesOneSucceeds) {
   const uint32_t count_ = 4;
-  ddk().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
-  ddk().SetSize(kPageSize * kNumPages * 4);
+  fake_parent().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
+  fake_parent().SetSize(kPageSize * kNumPages * 4);
   nand().set_block_count(4);
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
@@ -917,8 +881,8 @@ TEST_F(SkipBlockTest, WriteMultipleCopiesOneSucceeds) {
 // overall write also fails and all failed blocks are grown bad blocks.
 TEST_F(SkipBlockTest, WriteMultipleCopiesNoneSucceeds) {
   const uint32_t count_ = 4;
-  ddk().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
-  ddk().SetSize(kPageSize * kNumPages * 4);
+  fake_parent().SetMetadata(DEVICE_METADATA_PRIVATE, &count_, sizeof(count_));
+  fake_parent().SetSize(kPageSize * kNumPages * 4);
   nand().set_block_count(4);
   ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
