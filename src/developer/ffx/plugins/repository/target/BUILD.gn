@@ -9,6 +9,7 @@ ffx_plugin("ffx_repository_target") {
   edition = "2018"
   plugin_deps = [
     "deregister:ffx_repository_target_deregister",
+    "list:ffx_repository_target_list",
     "register:ffx_repository_target_register",
   ]
 
