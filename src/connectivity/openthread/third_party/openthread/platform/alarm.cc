@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <openthread-config-fuchsia.h>
 
 #include <openthread/platform/alarm-micro.h>
 #include <openthread/platform/alarm-milli.h>
@@ -25,7 +26,6 @@ extern "C" void otPlatAlarmMilliStartAt(otInstance *instance, uint32_t t0, uint3
   OT_UNUSED_VARIABLE(instance);
 
   alarm.SetMilliSecAlarm(t0 + dt);
-
   if (alarm.GetOtStackCallBackPtr()) {
     alarm.GetOtStackCallBackPtr()->PostDelayedAlarmTask(zx::duration(ZX_MSEC(dt)));
   }
