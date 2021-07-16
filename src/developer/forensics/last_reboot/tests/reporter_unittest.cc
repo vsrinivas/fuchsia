@@ -79,9 +79,6 @@ class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<
  protected:
   void SetUpCrashReporterServer(std::unique_ptr<stubs::CrashReporterBase> server) {
     crash_reporter_server_ = std::move(server);
-    if (crash_reporter_server_) {
-      InjectServiceProvider(crash_reporter_server_.get());
-    }
   }
 
   void WriteZirconRebootLogContents(const std::string& contents) {
@@ -101,7 +98,7 @@ class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<
   }
 
   void ReportOn(const feedback::RebootLog& reboot_log) {
-    Reporter reporter(dispatcher(), services(), &cobalt_);
+    Reporter reporter(dispatcher(), services(), &cobalt_, crash_reporter_server_.get());
     reporter.ReportOn(reboot_log, /*delay=*/zx::sec(0));
     RunLoopUntilIdle();
   }

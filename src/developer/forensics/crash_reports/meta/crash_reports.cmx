@@ -1,27 +1,16 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/connectivity/network/lib/net_interfaces/client.shard.cmx"
+        "//src/connectivity/network/lib/net_interfaces/client.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/crash_reports"
     },
     "sandbox": {
         "features": [
-            "build-info",
-            "config-data",
             "isolated-cache-storage",
+            "isolated-persistent-storage",
             "isolated-temp"
-        ],
-        "services": [
-            "fuchsia.feedback.DataProvider",
-            "fuchsia.feedback.DeviceIdProvider",
-            "fuchsia.metrics.MetricEventLoggerFactory",
-            "fuchsia.net.NameLookup",
-            "fuchsia.net.http.Loader",
-            "fuchsia.posix.socket.Provider",
-            "fuchsia.settings.Privacy",
-            "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }
 }

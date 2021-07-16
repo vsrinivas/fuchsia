@@ -5,6 +5,7 @@
 #include "src/developer/forensics/last_reboot/reporter.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
@@ -28,11 +29,11 @@ constexpr char kHasReportedOnPath[] = "/tmp/has_reported_on_reboot_log.txt";
 }  // namespace
 
 Reporter::Reporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                   cobalt::Logger* cobalt)
+                   cobalt::Logger* cobalt, fuchsia::feedback::CrashReporter* crash_reporter)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
-      crash_reporter_(dispatcher, services),
-      cobalt_(cobalt) {}
+      cobalt_(cobalt),
+      crash_reporter_(crash_reporter) {}
 
 void Reporter::ReportOn(const feedback::RebootLog& reboot_log, zx::duration crash_reporting_delay) {
   if (files::IsFile(kHasReportedOnPath)) {
@@ -86,34 +87,41 @@ fuchsia::feedback::CrashReport CreateCrashReport(const feedback::RebootLog& rebo
                                                     const zx::duration delay) {
   auto report = CreateCrashReport(reboot_log);
 
-  delayed_crash_reporting_.Reset([this, report = std::move(report)]() mutable {
-    crash_reporter_->File(std::move(report), [this](::fpromise::result<void, zx_status_t> result) {
-      if (crash_reporter_.IsAlreadyDone()) {
-        return;
-      }
+  ::fpromise::bridge<void, Error> bridge;
 
-      if (result.is_error()) {
-        crash_reporter_.CompleteError(Error::kBadValue);
-      } else {
-        crash_reporter_.CompleteOk();
-      }
-    });
+  auto completer =
+      std::make_shared<::fpromise::completer<void, Error>>(std::move(bridge.completer));
+
+  delayed_crash_reporting_.Reset([this, report = std::move(report), completer]() mutable {
+    crash_reporter_->File(std::move(report),
+                          [completer](::fpromise::result<void, zx_status_t> result) {
+                            if (!*completer) {
+                              return;
+                            }
+
+                            if (result.is_error()) {
+                              completer->complete_error(Error::kBadValue);
+                            } else {
+                              completer->complete_ok();
+                            }
+                          });
   });
 
   if (const zx_status_t status = async::PostDelayedTask(
           dispatcher_, [cb = delayed_crash_reporting_.callback()] { cb(); }, delay);
       status != ZX_OK) {
-    crash_reporter_.CompleteError(Error::kAsyncTaskPostFailure);
+    completer->complete_error(Error::kAsyncTaskPostFailure);
   }
 
-  return crash_reporter_.WaitForDone().then([this](const ::fpromise::result<void, Error>& result) {
-    delayed_crash_reporting_.Cancel();
-    if (result.is_error()) {
-      FX_LOGS(WARNING) << "Failed to file a crash report: " << ToString(result.error());
-    }
+  return bridge.consumer.promise_or(::fpromise::error(Error::kLogicError))
+      .then([this](const ::fpromise::result<void, Error>& result) {
+        delayed_crash_reporting_.Cancel();
+        if (result.is_error()) {
+          FX_LOGS(WARNING) << "Failed to file a crash report: " << ToString(result.error());
+        }
 
-    return ::fpromise::ok();
-  });
+        return ::fpromise::ok();
+      });
 }
 
 }  // namespace last_reboot

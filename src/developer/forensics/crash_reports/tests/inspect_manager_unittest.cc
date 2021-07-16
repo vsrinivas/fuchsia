@@ -75,8 +75,7 @@ TEST_F(InspectManagerTest, InitialInspectTree) {
                                                            NodeMatches(NameMatches("queue")),
                                                            NodeMatches(NameMatches("reports")),
                                                            NodeMatches(NameMatches("settings")),
-                                                       }))),
-                                                 NodeMatches(NameMatches("fidl")))));
+                                                       }))))));
 }
 
 TEST_F(InspectManagerTest, Succeed_AddReport_UniqueReports) {

@@ -17,7 +17,6 @@
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/utils/inspect_node_manager.h"
-#include "src/developer/forensics/utils/inspect_protocol_stats.h"
 #include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/fxl/macros.h"
 
@@ -40,12 +39,6 @@ class InspectManager {
 
   // Records the current size of the queue of pending reports.
   void SetQueueSize(uint64_t size);
-
-  // Updates stats related to fuchsia.feedback.CrashReportingProductRegister.
-  void UpdateCrashRegisterProtocolStats(InspectProtocolStatsUpdateFn update);
-
-  // Updates stats related to fuchsia.feedback.CrashReporter.
-  void UpdateCrashReporterProtocolStats(InspectProtocolStatsUpdateFn update);
 
   // Upserts the mapping component URL to Product that a client registered.
   void UpsertComponentToProductMapping(const std::string& component_url, const Product& product);
@@ -152,8 +145,6 @@ class InspectManager {
   Settings settings_;
   Store store_;
   Queue queue_;
-  InspectProtocolStats crash_register_stats_;
-  InspectProtocolStats crash_reporter_stats_;
 
   // Maps a local report ID to a |Report|.
   std::map<std::string, Report> reports_;

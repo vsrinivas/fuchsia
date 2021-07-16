@@ -23,13 +23,17 @@
 namespace forensics::feedback {
 
 // Returns a promise that migrates all data out the Feedback components.
-::fpromise::promise<void, Error> MigrateData(async_dispatcher_t* dispatcher,
-                                             const std::shared_ptr<sys::ServiceDirectory>& services,
-                                             const std::optional<MigrationLog>& migration_log,
-                                             zx::duration timeout);
+::fpromise::promise<std::tuple<::fpromise::result<void, Error>, ::fpromise::result<void, Error>>>
+MigrateData(async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
+            const std::optional<MigrationLog>& migration_log, zx::duration timeout);
 
 // Returns a promise that migrates data out of last_reboot.
 ::fpromise::promise<void, Error> MigrateLastRebootData(
+    async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
+    const fbl::unique_fd& data_fd, const fbl::unique_fd& cache_fd, zx::duration timeout);
+
+// Returns a promise that migrates data out of crash_reports.
+::fpromise::promise<void, Error> MigrateCrashReportsData(
     async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
     const fbl::unique_fd& data_fd, const fbl::unique_fd& cache_fd, zx::duration timeout);
 

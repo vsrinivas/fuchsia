@@ -1,12 +1,11 @@
 {
     include: [
-        "//src/connectivity/network/lib/net_interfaces/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/last_reboot_unittest_exe",
+        binary: "bin/default_annotations_unittest_exe",
     },
     use: [
         {

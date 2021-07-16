@@ -2,38 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//src/developer/forensics/crash_reports/*" ]
+visibility = [ "//src/developer/forensics/*" ]
 
 ###############################################################################
 # SOURCES
 ###############################################################################
-source_set("main_service") {
-  sources = [
-    "main_service.cc",
-    "main_service.h",
-  ]
-
-  public_deps = [
-    ":config",
-    ":constants",
-    ":crash_register",
-    ":crash_reporter",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/crash_reports/info",
-    "//src/lib/fxl",
-    "//src/lib/timekeeper",
-    "//zircon/public/lib/async",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/files",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 source_set("annotation_map") {
   sources = [ "annotation_map.h" ]
 
@@ -162,6 +135,24 @@ source_set("crash_server") {
   ]
 }
 
+source_set("default_annotations") {
+  sources = [
+    "default_annotations.cc",
+    "default_annotations.h",
+  ]
+  public_deps = [
+    ":annotation_map",
+    "//src/developer/forensics/feedback:constants",
+    "//src/developer/forensics/utils:errors",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+    "//src/lib/fxl",
+  ]
+}
+
 source_set("errors") {
   sources = [ "errors.h" ]
 
@@ -192,12 +183,9 @@ source_set("main") {
   ]
 
   deps = [
-    ":constants",
-    ":main_service",
-    "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/crash_reports/info",
-    "//src/developer/forensics/utils/component",
+    "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
+    "//src/developer/forensics/feedback/migration/shell:main",
   ]
 
   visibility += [ "//src/developer/forensics:*" ]

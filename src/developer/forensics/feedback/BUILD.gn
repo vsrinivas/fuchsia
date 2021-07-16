@@ -11,17 +11,37 @@ group("tests") {
   deps = [
     "migration:tests",
     "reboot_log/tests",
-    "tests:feedback-tests",
+    "tests",
   ]
 }
 
 ###############################################################################
 # SOURCES
 ###############################################################################
+source_set("config") {
+  sources = [
+    "config.cc",
+    "config.h",
+  ]
+
+  public_deps = [
+    ":constants",
+    "//src/developer/forensics/crash_reports:config",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+  ]
+}
+
 source_set("constants") {
   sources = [ "constants.h" ]
 
-  public_deps = [ "//zircon/public/lib/zx" ]
+  public_deps = [
+    "//src/developer/forensics/utils:storage_size",
+    "//zircon/public/lib/zx",
+  ]
 }
 
 source_set("main") {
@@ -31,11 +51,13 @@ source_set("main") {
   ]
 
   deps = [
+    ":config",
     ":constants",
     ":main_service",
     ":namespace_init",
     "reboot_log",
     "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/crash_reports:default_annotations",
     "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
     "//src/developer/forensics/feedback/migration/utils",
     "//src/developer/forensics/utils/component",
@@ -46,6 +68,8 @@ source_set("main") {
 
 source_set("main_service") {
   sources = [
+    "crash_reports.cc",
+    "crash_reports.h",
     "last_reboot.cc",
     "last_reboot.h",
     "main_service.cc",
@@ -53,11 +77,20 @@ source_set("main_service") {
   ]
 
   public_deps = [
+    ":constants",
     "reboot_log",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/forensics/crash_reports:annotation_map",
+    "//src/developer/forensics/crash_reports:config",
+    "//src/developer/forensics/crash_reports:crash_register",
+    "//src/developer/forensics/crash_reports:crash_reporter",
+    "//src/developer/forensics/crash_reports:crash_server",
+    "//src/developer/forensics/crash_reports:log_tags",
+    "//src/developer/forensics/crash_reports:snapshot_manager",
+    "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/last_reboot:last_reboot_info_provider",
     "//src/developer/forensics/last_reboot:reboot_watcher",
     "//src/developer/forensics/last_reboot:reporter",

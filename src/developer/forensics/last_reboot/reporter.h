@@ -16,7 +16,6 @@
 
 #include "src/developer/forensics/feedback/reboot_log/reboot_log.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
-#include "src/developer/forensics/utils/fidl/oneshot_ptr.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 
 namespace forensics {
@@ -27,7 +26,7 @@ class Reporter {
  public:
   // fuchsia.feedback.CrashReporter is expected to be in |services|.
   Reporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-           cobalt::Logger* cobalt);
+           cobalt::Logger* cobalt, fuchsia::feedback::CrashReporter* crash_reporter);
 
   void ReportOn(const feedback::RebootLog& reboot_log, zx::duration crash_reporting_delay);
 
@@ -38,8 +37,8 @@ class Reporter {
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
 
-  fidl::OneShotPtr<fuchsia::feedback::CrashReporter> crash_reporter_;
   cobalt::Logger* cobalt_;
+  fuchsia::feedback::CrashReporter* crash_reporter_;
 
   // We wrap the delayed task we post on the async loop to delay the crash reporting in a
   // CancelableClosure so we can cancel it if we are done another way.

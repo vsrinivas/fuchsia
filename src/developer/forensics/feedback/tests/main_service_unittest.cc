@@ -24,6 +24,7 @@ using inspect::testing::NameMatches;
 using inspect::testing::NodeMatches;
 using inspect::testing::PropertyList;
 using inspect::testing::UintIs;
+using ::testing::IsSupersetOf;
 using ::testing::UnorderedElementsAreArray;
 
 class MainServiceTest : public UnitTestFixture {
@@ -37,8 +38,18 @@ class MainServiceTest : public UnitTestFixture {
                 .reboot_log = RebootLog(RebootReason::kUserRequest, "reboot log", zx::sec(100)),
                 .graceful_reboot_reason_write_path = "n/a",
                 .oom_crash_reporting_delay = zx::sec(1),
+            },
+            CrashReports::Options{
+                .config = {},
+                .snapshot_manager_max_annotations_size = StorageSize::Bytes(0),
+                .snapshot_manager_max_archives_size = StorageSize::Bytes(0),
+                .snapshot_manager_window_duration = zx::sec(0),
+                .build_version = ErrorOr<std::string>("build_version"),
+                .default_annotations = {},
             }) {
     AddHandler(main_service_.GetHandler<fuchsia::feedback::LastRebootInfoProvider>());
+    AddHandler(main_service_.GetHandler<fuchsia::feedback::CrashReporter>());
+    AddHandler(main_service_.GetHandler<fuchsia::feedback::CrashReportingProductRegister>());
   }
 
  private:
@@ -58,13 +69,23 @@ TEST_F(MainServiceTest, LastReboot) {
   EXPECT_TRUE(called);
   EXPECT_THAT(
       InspectTree(),
-      ChildrenMatch(UnorderedElementsAreArray({
+      ChildrenMatch(IsSupersetOf({
           AllOf(NodeMatches(NameMatches("fidl")),
                 ChildrenMatch(UnorderedElementsAreArray({
                     NodeMatches(AllOf(NameMatches("fuchsia.feedback.LastRebootInfoProvider"),
                                       PropertyList(UnorderedElementsAreArray({
                                           UintIs("total_num_connections", 1u),
                                           UintIs("current_num_connections", 1u),
+                                      })))),
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 0u),
+                                          UintIs("current_num_connections", 0u),
+                                      })))),
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 0u),
+                                          UintIs("current_num_connections", 0u),
                                       })))),
                 }))),
       })));
@@ -73,10 +94,93 @@ TEST_F(MainServiceTest, LastReboot) {
   RunLoopUntilIdle();
   EXPECT_THAT(
       InspectTree(),
-      ChildrenMatch(UnorderedElementsAreArray({
+      ChildrenMatch(IsSupersetOf({
           AllOf(NodeMatches(NameMatches("fidl")),
                 ChildrenMatch(UnorderedElementsAreArray({
                     NodeMatches(AllOf(NameMatches("fuchsia.feedback.LastRebootInfoProvider"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 1u),
+                                          UintIs("current_num_connections", 0u),
+                                      })))),
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 0u),
+                                          UintIs("current_num_connections", 0u),
+                                      })))),
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 0u),
+                                          UintIs("current_num_connections", 0u),
+                                      })))),
+                }))),
+      })));
+}
+
+TEST_F(MainServiceTest, CrashReports) {
+  fuchsia::feedback::CrashReporterPtr crash_reporter_ptr_;
+  services()->Connect(crash_reporter_ptr_.NewRequest(dispatcher()));
+
+  fuchsia::feedback::CrashReportingProductRegisterPtr crash_reporting_product_register_ptr_;
+  services()->Connect(crash_reporting_product_register_ptr_.NewRequest(dispatcher()));
+
+  bool crash_reporter_called = false;
+  crash_reporter_ptr_->File(
+      std::move(fuchsia::feedback::CrashReport().set_program_name("program_name")),
+      [&](::fpromise::result<void, zx_status_t>) { crash_reporter_called = true; });
+
+  bool crash_reporting_product_register_called = false;
+  crash_reporting_product_register_ptr_->UpsertWithAck(
+      "component_url",
+      std::move(fuchsia::feedback::CrashReportingProduct()
+                    .set_name("product_name")
+                    .set_version("product_version")),
+      [&]() { crash_reporting_product_register_called = true; });
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(crash_reporter_called);
+  EXPECT_TRUE(crash_reporting_product_register_called);
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(IsSupersetOf({
+          AllOf(NodeMatches(NameMatches("fidl")),
+                ChildrenMatch(UnorderedElementsAreArray({
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.LastRebootInfoProvider"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 0u),
+                                          UintIs("current_num_connections", 0u),
+                                      })))),
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 1u),
+                                          UintIs("current_num_connections", 1u),
+                                      })))),
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 1u),
+                                          UintIs("current_num_connections", 1u),
+                                      })))),
+                }))),
+      })));
+
+  crash_reporter_ptr_.Unbind();
+  crash_reporting_product_register_ptr_.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(IsSupersetOf({
+          AllOf(NodeMatches(NameMatches("fidl")),
+                ChildrenMatch(UnorderedElementsAreArray({
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.LastRebootInfoProvider"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 0u),
+                                          UintIs("current_num_connections", 0u),
+                                      })))),
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("total_num_connections", 1u),
+                                          UintIs("current_num_connections", 0u),
+                                      })))),
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
                                       PropertyList(UnorderedElementsAreArray({
                                           UintIs("total_num_connections", 1u),
                                           UintIs("current_num_connections", 0u),

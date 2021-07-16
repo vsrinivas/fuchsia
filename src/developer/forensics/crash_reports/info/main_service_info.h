@@ -22,12 +22,6 @@ struct MainServiceInfo {
   // Exposes the static configuration of the agent.
   void ExposeConfig(const Config& config);
 
-  // Updates stats related to fuchsia.feedback.CrashReportingProductRegister.
-  void UpdateCrashRegisterProtocolStats(InspectProtocolStatsUpdateFn update);
-
-  // Updates stats related to fuchsia.feedback.CrashReporter.
-  void UpdateCrashReporterProtocolStats(InspectProtocolStatsUpdateFn update);
-
  private:
   std::shared_ptr<InfoContext> context_;
 };

@@ -47,10 +47,11 @@ class LastRebootTest : public UnitTestFixture {
  protected:
   void SetUpCrashReporterServer(std::unique_ptr<stubs::CrashReporterBase> crash_reporter_server) {
     crash_reporter_server_ = std::move(crash_reporter_server);
-    InjectServiceProvider(crash_reporter_server_.get());
   }
 
   cobalt::Logger* Cobalt() { return &cobalt_; }
+
+  fuchsia::feedback::CrashReporter* CrashReporter() { return crash_reporter_server_.get(); }
 
   stubs::RebootMethodsWatcherRegisterBase* RebootWatcherRegisterServer() {
     return reboot_watcher_register_server_.get();
@@ -76,7 +77,7 @@ TEST_F(LastRebootTest, FirstInstance) {
           .is_fatal = IsFatal(reboot_log.RebootReason()),
       }));
 
-  LastReboot last_reboot(dispatcher(), services(), Cobalt(),
+  LastReboot last_reboot(dispatcher(), services(), Cobalt(), CrashReporter(),
                          LastReboot::Options{
                              .is_first_instance = true,
                              .reboot_log = reboot_log,
@@ -100,7 +101,7 @@ TEST_F(LastRebootTest, IsNotFirstInstance) {
 
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
 
-  LastReboot last_reboot(dispatcher(), services(), Cobalt(),
+  LastReboot last_reboot(dispatcher(), services(), Cobalt(), CrashReporter(),
                          LastReboot::Options{
                              .is_first_instance = false,
                              .reboot_log = reboot_log,
@@ -118,7 +119,7 @@ TEST_F(LastRebootTest, ReportsOnReboot) {
   const zx::duration oom_crash_reporting_delay = zx::sec(90);
   const RebootLog reboot_log(RebootReason::kOOM, "reboot log", zx::sec(1));
 
-  LastReboot last_reboot(dispatcher(), services(), Cobalt(),
+  LastReboot last_reboot(dispatcher(), services(), Cobalt(), CrashReporter(),
                          LastReboot::Options{
                              .is_first_instance = false,
                              .reboot_log = reboot_log,

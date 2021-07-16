@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/forensics/feedback/crash_reports.h"
 #include "src/developer/forensics/feedback/last_reboot.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/component/component.h"
@@ -32,20 +33,27 @@ class MainService {
  public:
   MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
               timekeeper::Clock* clock, inspect::Node* inspect_root,
-              LastReboot::Options last_reboot_options);
+              LastReboot::Options last_reboot_options, CrashReports::Options crash_reports_options);
 
   template <typename Protocol>
   ::fidl::InterfaceRequestHandler<Protocol> GetHandler();
 
+  void ShutdownImminent();
+
  private:
   async_dispatcher_t* dispatcher_;
   std::shared_ptr<sys::ServiceDirectory> services_;
+  timekeeper::Clock* clock_;
+  inspect::Node* inspect_root_;
   cobalt::Logger cobalt_;
 
+  CrashReports crash_reports_;
   LastReboot last_reboot_;
 
   InspectNodeManager inspect_node_manager_;
   InspectProtocolStats last_reboot_info_provider_stats_;
+  InspectProtocolStats crash_reporter_stats_;
+  InspectProtocolStats crash_reporting_product_register_stats_;
 };
 
 }  // namespace forensics::feedback

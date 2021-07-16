@@ -2,8 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/copy-forensics-valid-crash-reports-override-config#meta/crash_reports.cmx",
-                "fuchsia.feedback.CrashReportingProductRegister": "fuchsia-pkg://fuchsia.com/copy-forensics-valid-crash-reports-override-config#meta/crash_reports.cmx",
+                "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/copy-forensics#meta/feedback.cmx",
+                "fuchsia.feedback.CrashReportingProductRegister": "fuchsia-pkg://fuchsia.com/copy-forensics#meta/feedback.cmx",
                 "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/fake-data-provider#meta/fake_data_provider.cmx",
                 "fuchsia.feedback.DeviceIdProvider": "fuchsia-pkg://fuchsia.com/fake-device-id-provider#meta/fake_device_id_provider.cmx",
                 "fuchsia.metrics.MetricEventLoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
@@ -18,7 +18,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/crash_reports_integration_test_exe"
+        "binary": "bin/feedback_integration_test_exe"
     },
     "sandbox": {
         "services": [

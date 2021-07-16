@@ -10,14 +10,24 @@ namespace forensics::feedback {
 
 MainService::MainService(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
-                         inspect::Node* inspect_root, LastReboot::Options last_reboot_options)
+                         inspect::Node* inspect_root, LastReboot::Options last_reboot_options,
+                         CrashReports::Options crash_reports_options)
     : dispatcher_(dispatcher),
       services_(services),
+      clock_(clock),
+      inspect_root_(inspect_root),
       cobalt_(dispatcher, services, clock),
-      last_reboot_(dispatcher_, services_, &cobalt_, last_reboot_options),
+      crash_reports_(dispatcher_, services_, clock_, inspect_root_, crash_reports_options),
+      last_reboot_(dispatcher_, services_, &cobalt_, crash_reports_.CrashReporter(),
+                   last_reboot_options),
       inspect_node_manager_(inspect_root),
       last_reboot_info_provider_stats_(&inspect_node_manager_,
-                                       "/fidl/fuchsia.feedback.LastRebootInfoProvider") {}
+                                       "/fidl/fuchsia.feedback.LastRebootInfoProvider"),
+      crash_reporter_stats_(&inspect_node_manager_, "/fidl/fuchsia.feedback.CrashReporter"),
+      crash_reporting_product_register_stats_(
+          &inspect_node_manager_, "/fidl/fuchsia.feedback.CrashReportingProductRegister") {}
+
+void MainService::ShutdownImminent() { crash_reports_.ShutdownImminent(); }
 
 template <>
 ::fidl::InterfaceRequestHandler<fuchsia::feedback::LastRebootInfoProvider>
@@ -28,6 +38,27 @@ MainService::GetHandler() {
       last_reboot_info_provider_stats_.CloseConnection();
     });
   };
+}
+
+template <>
+::fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter> MainService::GetHandler() {
+  return [this](::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
+    crash_reporter_stats_.NewConnection();
+    crash_reports_.Handle(std::move(request),
+                          [this](zx_status_t) { crash_reporter_stats_.CloseConnection(); });
+  };
+}
+
+template <>
+::fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReportingProductRegister>
+MainService::GetHandler() {
+  return
+      [this](::fidl::InterfaceRequest<fuchsia::feedback::CrashReportingProductRegister> request) {
+        crash_reporting_product_register_stats_.NewConnection();
+        crash_reports_.Handle(std::move(request), [this](zx_status_t) {
+          crash_reporting_product_register_stats_.CloseConnection();
+        });
+      };
 }
 
 }  // namespace forensics::feedback

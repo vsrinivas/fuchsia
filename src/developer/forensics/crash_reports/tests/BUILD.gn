@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config.gni")
 
 visibility = [ ":*" ]
 
@@ -103,25 +102,6 @@ executable("crash_reporter_unittest_exe") {
   ]
 }
 
-executable("crash_reports_integration_test_exe") {
-  testonly = true
-
-  sources = [ "crash_reports_integration_test.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.mem",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/testing/fakes:cobalt",
-    "//src/developer/forensics/utils/cobalt",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 executable("crash_server_unittest_exe") {
   testonly = true
 
@@ -143,30 +123,17 @@ executable("crash_server_unittest_exe") {
   ]
 }
 
-executable("main_service_unittest_exe") {
+executable("default_annotations_unittest_exe") {
   testonly = true
 
-  # "main_service_unittest" is rather generic for the default_output_dir that
-  # is set to root_out_dir so instead we write the binary to target_out_dir.
-  output_dir = target_out_dir
-
-  sources = [ "main_service_unittest.cc" ]
+  sources = [ "default_annotations_unittest.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/crash_reports:constants",
-    "//src/developer/forensics/crash_reports:main_service",
-    "//src/developer/forensics/crash_reports/info",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:cobalt",
-    "//src/developer/forensics/testing/stubs:device_id_provider",
-    "//src/developer/forensics/testing/stubs:network_reachability_provider",
-    "//src/lib/timekeeper:testing",
+    "//src/developer/forensics/crash_reports:default_annotations",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
   ]
 }
 
@@ -331,25 +298,6 @@ resource("test_data") {
 }
 
 ###############################################################################
-# CONFIGS
-###############################################################################
-config_data("invalid_override_config") {
-  for_pkg = "copy-forensics-invalid-crash-reports-override-config"
-
-  sources = [ "configs/invalid_override.json" ]
-
-  outputs = [ "crash_reports/override_config.json" ]
-}
-
-config_data("valid_override_config") {
-  for_pkg = "copy-forensics-valid-crash-reports-override-config"
-
-  sources = [ "configs/valid_override.json" ]
-
-  outputs = [ "crash_reports/override_config.json" ]
-}
-
-###############################################################################
 # COMPONENTS
 ###############################################################################
 fuchsia_component("annotation_map_unittest") {
@@ -384,42 +332,20 @@ fuchsia_component("crash_reporter_unittest") {
   deps = [ ":crash_reporter_unittest_exe" ]
 }
 
-fuchsia_component("crash_reports_integration_test") {
-  testonly = true
-
-  manifest = "meta/crash_reports_integration_test.cmx"
-
-  deps = [ ":crash_reports_integration_test_exe" ]
-}
-
-fuchsia_component("crash_reports_integration_test_invalid_override_config") {
-  testonly = true
-
-  manifest = "meta/crash_reports_integration_test_invalid_override_config.cmx"
-
-  deps = [
-    ":crash_reports_integration_test_exe",
-    ":invalid_override_config",
-  ]
-}
-
-fuchsia_component("crash_reports_integration_test_valid_override_config") {
-  testonly = true
-
-  manifest = "meta/crash_reports_integration_test_valid_override_config.cmx"
-
-  deps = [
-    ":crash_reports_integration_test_exe",
-    ":valid_override_config",
-  ]
-}
-
 fuchsia_component("crash_server_unittest") {
   testonly = true
 
   manifest = "meta/crash_server_unittest.cmx"
 
   deps = [ ":crash_server_unittest_exe" ]
+}
+
+fuchsia_component("default_annotations_unittest") {
+  testonly = true
+
+  manifest = "meta/default_annotations_unittest.cml"
+
+  deps = [ ":default_annotations_unittest_exe" ]
 }
 
 fuchsia_component("reporting_policy_watcher_unittest") {
@@ -436,14 +362,6 @@ fuchsia_component("inspect_manager_unittest") {
   manifest = "meta/inspect_manager_unittest.cmx"
 
   deps = [ ":inspect_manager_unittest_exe" ]
-}
-
-fuchsia_component("main_service_unittest") {
-  testonly = true
-
-  manifest = "meta/main_service_unittest.cmx"
-
-  deps = [ ":main_service_unittest_exe" ]
 }
 
 fuchsia_component("queue_unittest") {
@@ -503,13 +421,10 @@ fuchsia_test_package("crash-reports-tests") {
     ":config_unittest",
     ":crash_register_unittest",
     ":crash_reporter_unittest",
-    ":crash_reports_integration_test",
-    ":crash_reports_integration_test_invalid_override_config",
-    ":crash_reports_integration_test_valid_override_config",
     ":crash_server_unittest",
+    ":default_annotations_unittest",
     ":reporting_policy_watcher_unittest",
     ":inspect_manager_unittest",
-    ":main_service_unittest",
     ":queue_unittest",
     ":report_util_unittest",
     ":sized_data_reader_unittest",
@@ -536,18 +451,6 @@ group("tests") {
 
     # To run the Crashpad tests.
     "//third_party/crashpad:tests",
-
-    # Packages for the components that we are injecting in the integration tests.
-    "//src/cobalt/bin/testing/mock_cobalt",
-    "//src/connectivity/network/netstack",
-    "//src/developer/forensics:copy-pkg",
-    "//src/developer/forensics:copy-pkg-invalid-crash-reports-override-config",
-    "//src/developer/forensics:copy-pkg-valid-crash-reports-override-config",
-    "//src/developer/forensics/testing/fakes:fake-data-provider",
-    "//src/developer/forensics/testing/fakes:fake-device-id-provider",
-    "//src/diagnostics/archivist",
-    "//src/sys/pkg/bin/system-update-checker",
-    "//src/sys/time/timekeeper",
   ]
 
   visibility += [ "//src/developer/forensics:tests" ]

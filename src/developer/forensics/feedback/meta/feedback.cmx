@@ -11,15 +11,24 @@
             "log"
         ],
         "features": [
+            "build-info",
+            "config-data",
             "isolated-cache-storage",
             "isolated-persistent-storage",
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.feedback.CrashReporter",
+            "fuchsia.feedback.DataProvider",
+            "fuchsia.feedback.DeviceIdProvider",
+            "fuchsia.feedback.internal.CrashReportsDirectoryMigrator",
             "fuchsia.feedback.internal.LastRebootDirectoryMigrator",
             "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
-            "fuchsia.metrics.MetricEventLoggerFactory"
+            "fuchsia.metrics.MetricEventLoggerFactory",
+            "fuchsia.net.NameLookup",
+            "fuchsia.net.http.Loader",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.settings.Privacy",
+            "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }
 }

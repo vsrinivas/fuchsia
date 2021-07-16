@@ -44,10 +44,7 @@ InspectManager::Report::Report(const std::string& program_name,
 }
 
 InspectManager::InspectManager(inspect::Node* root_node, timekeeper::Clock* clock)
-    : node_manager_(root_node),
-      clock_(clock),
-      crash_register_stats_(&node_manager_, "/fidl/fuchsia.feedback.CrashReportingProductRegister"),
-      crash_reporter_stats_(&node_manager_, "/fidl/fuchsia.feedback.CrashReporter") {
+    : node_manager_(root_node), clock_(clock) {
   node_manager_.Get("/config/crash_server");
   node_manager_.Get("/crash_reporter/queue");
   node_manager_.Get("/crash_reporter/reports");
@@ -156,14 +153,6 @@ void InspectManager::SetQueueSize(const uint64_t size) {
   } else {
     queue_.size.Set(size);
   }
-}
-
-void InspectManager::UpdateCrashRegisterProtocolStats(InspectProtocolStatsUpdateFn update) {
-  std::invoke(update, crash_register_stats_);
-}
-
-void InspectManager::UpdateCrashReporterProtocolStats(InspectProtocolStatsUpdateFn update) {
-  std::invoke(update, crash_reporter_stats_);
 }
 
 bool InspectManager::Contains(const std::string& local_report_id) {

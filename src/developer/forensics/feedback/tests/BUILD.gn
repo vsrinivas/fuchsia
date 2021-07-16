@@ -3,10 +3,44 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/config.gni")
 
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
+executable("config_unittest_exe") {
+  testonly = true
+
+  sources = [ "config_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback:config",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("feedback_integration_test_exe") {
+  testonly = true
+
+  sources = [ "feedback_integration_test.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.mem",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/testing/fakes:cobalt",
+    "//src/developer/forensics/utils/cobalt",
+    "//src/lib/fsl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 executable("last_reboot_unittest_exe") {
   testonly = true
 
@@ -71,8 +105,69 @@ executable("namespace_init_unittest_exe") {
 }
 
 ###############################################################################
+# CONFIGS
+###############################################################################
+config_data("invalid_crash_reports_override_config") {
+  for_pkg = "copy-forensics-invalid-crash-reports-override-config"
+
+  sources = [ "configs/invalid_crash_reports_override.json" ]
+
+  outputs = [ "crash_reports/override_config.json" ]
+}
+
+config_data("valid_crash_reports_override_config") {
+  for_pkg = "copy-forensics-valid-crash-reports-override-config"
+
+  sources = [ "configs/valid_crash_reports_override.json" ]
+
+  outputs = [ "crash_reports/override_config.json" ]
+}
+
+###############################################################################
 # COMPONENTS
 ###############################################################################
+fuchsia_component("config_unittest") {
+  testonly = true
+
+  manifest = "meta/config_unittest.cml"
+
+  deps = [ ":config_unittest_exe" ]
+}
+
+fuchsia_component("feedback_integration_test") {
+  testonly = true
+
+  manifest = "meta/feedback_integration_test.cmx"
+
+  deps = [ ":feedback_integration_test_exe" ]
+}
+
+fuchsia_component(
+    "feedback_integration_test_invalid_crash_reports_override_config") {
+  testonly = true
+
+  manifest =
+      "meta/feedback_integration_test_invalid_crash_reports_override_config.cmx"
+
+  deps = [
+    ":feedback_integration_test_exe",
+    ":invalid_crash_reports_override_config",
+  ]
+}
+
+fuchsia_component(
+    "feedback_integration_test_valid_crash_reports_override_config") {
+  testonly = true
+
+  manifest =
+      "meta/feedback_integration_test_valid_crash_reports_override_config.cmx"
+
+  deps = [
+    ":feedback_integration_test_exe",
+    ":valid_crash_reports_override_config",
+  ]
+}
+
 fuchsia_component("last_reboot_unittest") {
   testonly = true
 
@@ -107,8 +202,31 @@ fuchsia_test_package("feedback-tests") {
     }
   }
   test_components = [
+    ":config_unittest",
+    ":feedback_integration_test",
+    ":feedback_integration_test_invalid_crash_reports_override_config",
+    ":feedback_integration_test_valid_crash_reports_override_config",
     ":last_reboot_unittest",
     ":main_service_unittest",
     ":namespace_init_unittest",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  # Packages for the components that we are injecting in the integration tests.
+  deps = [
+    ":feedback-tests",
+    "//src/cobalt/bin/testing/mock_cobalt",
+    "//src/connectivity/network/netstack",
+    "//src/developer/forensics:copy-pkg",
+    "//src/developer/forensics:copy-pkg-invalid-crash-reports-override-config",
+    "//src/developer/forensics:copy-pkg-valid-crash-reports-override-config",
+    "//src/developer/forensics/testing/fakes:fake-data-provider",
+    "//src/developer/forensics/testing/fakes:fake-device-id-provider",
+    "//src/diagnostics/archivist",
+    "//src/sys/pkg/bin/system-update-checker",
+    "//src/sys/time/timekeeper",
   ]
 }

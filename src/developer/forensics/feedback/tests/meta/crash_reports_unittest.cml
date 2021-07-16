@@ -6,12 +6,6 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/last_reboot_unittest_exe",
+        binary: "bin/crash_reports_unittest_exe",
     },
-    use: [
-        {
-            storage: "tmp",
-            path: "/tmp",
-        },
-    ],
 }
