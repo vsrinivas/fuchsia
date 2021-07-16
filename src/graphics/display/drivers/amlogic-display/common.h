@@ -24,10 +24,10 @@
 #define WRITE32_REG(x, a, v) WRITE32_##x##_REG(a, v)
 #define READ32_REG(x, a) READ32_##x##_REG(a)
 
-#define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define DISP_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define DISP_SPEW(fmt, ...) zxlogf(TRACE, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define DISP_TRACE zxlogf(INFO, "[%s %d]", __func__, __LINE__)
+#define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define DISP_INFO(fmt, ...) zxlogf(INFO, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define DISP_SPEW(fmt, ...) zxlogf(TRACE, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define DISP_TRACE zxlogf(INFO, "[%s %d] ", __func__, __LINE__)
 
 // Should match display_mmios table in board driver
 enum {

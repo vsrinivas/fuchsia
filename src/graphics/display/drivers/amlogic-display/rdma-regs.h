@@ -53,12 +53,12 @@ class RdmaStatusReg : public hwreg::RegisterBase<RdmaStatusReg, uint32_t> {
   DEF_FIELD(7, 0, req_latch);
   static auto Get() { return hwreg::RegisterAddr<RdmaStatusReg>(VPU_RDMA_STATUS); }
 
-  bool RequestLatched() const {
-    return req_latch() != 0;
+  bool RequestLatched(uint8_t chan) const {
+    return req_latch() & (1 << (chan + 1));
   }
 
   bool ChannelDone(uint8_t chan) const {
-    return done() & (1 << (chan+1));
+    return done() & (1 << (chan + 1));
   }
 
   static bool ChannelDone(uint8_t chan, ddk::MmioBuffer* mmio) {
