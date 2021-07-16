@@ -10,19 +10,20 @@ use std::sync::{Arc, Weak};
 use super::*;
 use crate::devices::*;
 use crate::fs::pipe::Pipe;
+use crate::fs::SymlinkNode;
 use crate::types::*;
 
 #[derive(Default)]
-struct TmpfsState {
+pub struct TmpfsState {
     nodes: HashMap<ino_t, FsNodeHandle>,
 }
 
 impl TmpfsState {
-    fn register(&mut self, node: &FsNodeHandle) {
+    pub fn register(&mut self, node: &FsNodeHandle) {
         self.nodes.insert(node.info().inode_num, Arc::clone(node));
     }
 
-    fn unregister(&mut self, node: &FsNodeHandle) {
+    pub fn unregister(&mut self, node: &FsNodeHandle) {
         self.nodes.remove(&node.info().inode_num);
     }
 }
@@ -89,6 +90,15 @@ impl FsNodeOps for TmpfsDirectory {
             FileMode::IFIFO => Ok(Box::new(TmpfsFifoNode::new(self.fs.clone()))),
             _ => Err(EACCES),
         }
+    }
+
+    fn mksymlink(
+        &self,
+        target: &FsStr,
+        info: &mut FsNodeInfo,
+    ) -> Result<Box<dyn FsNodeOps>, Errno> {
+        assert!(info.mode.fmt() == FileMode::IFLNK);
+        Ok(Box::new(SymlinkNode::new(self.fs.clone(), target)))
     }
 
     fn unlink(&self, _node: &FsNode, _name: &FsStr, _kind: UnlinkKind) -> Result<(), Errno> {

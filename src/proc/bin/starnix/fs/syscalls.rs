@@ -311,11 +311,18 @@ pub fn sys_readlinkat(
     ctx: &SyscallContext<'_>,
     dir_fd: FdNumber,
     user_path: UserCString,
-    _buffer: UserAddress,
-    _buffer_size: usize,
+    buffer: UserAddress,
+    buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    let _ = lookup_node_at(&ctx.task, dir_fd, user_path)?;
-    Err(EINVAL)
+    // TODO: This will likely have to change once symlinks are followed.
+    let node = lookup_node_at(&ctx.task, dir_fd, user_path)?;
+    let link = node.readlink()?;
+
+    // Cap the returned length at buffer_size.
+    let length = std::cmp::min(buffer_size, link.len());
+    ctx.task.mm.write_memory(buffer, &link[..length])?;
+
+    Ok(length.into())
 }
 
 pub fn sys_readlink(
@@ -491,6 +498,34 @@ pub fn sys_ioctl(
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     file.ioctl(&ctx.task, request, in_addr, out_addr)
+}
+
+pub fn sys_symlinkat(
+    ctx: &SyscallContext<'_>,
+    user_target: UserCString,
+    new_dir_fd: FdNumber,
+    user_path: UserCString,
+) -> Result<SyscallResult, Errno> {
+    let mut buf = [0u8; PATH_MAX as usize];
+    let target = ctx.task.mm.read_c_string(user_target, &mut buf)?;
+    if target.len() == 0 {
+        return Err(ENOENT);
+    }
+
+    let mut buf = [0u8; PATH_MAX as usize];
+    let path = ctx.task.mm.read_c_string(user_path, &mut buf)?;
+    if path.len() == 0 {
+        return Err(ENOENT);
+    }
+
+    lookup_parent_at(ctx.task, new_dir_fd, user_path, |parent, basename| {
+        let stat = parent.node.stat()?;
+        if stat.st_mode & S_IWUSR == 0 {
+            return Err(EACCES);
+        }
+        parent.symlink(basename, target)
+    })?;
+    Ok(SUCCESS)
 }
 
 #[cfg(test)]

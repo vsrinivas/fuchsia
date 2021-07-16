@@ -140,6 +140,20 @@ pub trait FsNodeOps: Send + Sync {
         Err(ENOTDIR)
     }
 
+    /// Creates a symlink with the given `target` path.
+    fn mksymlink(
+        &self,
+        _target: &FsStr,
+        _info: &mut FsNodeInfo,
+    ) -> Result<Box<dyn FsNodeOps>, Errno> {
+        Err(ENOTDIR)
+    }
+
+    /// Reads the symlink from this node.
+    fn readlink<'a>(&'a self) -> Result<FsString, Errno> {
+        Err(EINVAL)
+    }
+
     /// Remove the child with the given name, if the child exists.
     ///
     /// The UnlinkKind parameter indicates whether the caller intends to unlink
@@ -255,18 +269,22 @@ impl FsNode {
         Ok(node)
     }
 
-    #[cfg(test)]
-    pub fn mkdir(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        // TODO: apply_umask
-        self.mknod(name, FileMode::IFDIR | FileMode::ALLOW_ALL, 0)
-    }
-
-    pub fn mknod(
+    /// Creates a new `FsNode` with the given `name`, `mode`, and `dev`.
+    ///
+    /// `create_function` is called once the node has been created and initialized: this is a good
+    /// time to "initialize" the node's `FsNodeOps` (e.g., self.ops().mkdir(...)).
+    ///
+    /// If the node already exists, `mk_callback` is not called, and an error is generated.
+    pub fn create_node<F>(
         self: &FsNodeHandle,
         name: &FsStr,
         mode: FileMode,
         dev: dev_t,
-    ) -> Result<FsNodeHandle, Errno> {
+        mk_callback: F,
+    ) -> Result<FsNodeHandle, Errno>
+    where
+        F: FnOnce(RwLockWriteGuard<'_, FsNodeInfo>) -> Result<Box<dyn FsNodeOps>, Errno>,
+    {
         assert!(mode & FileMode::IFMT != FileMode::EMPTY, "mknod called without node type.");
         let (node, exists) = self.create_child(name, |node| {
             let mut info = node.info_mut();
@@ -274,11 +292,7 @@ impl FsNode {
             if mode.is_blk() || mode.is_chr() {
                 info.rdev = dev;
             }
-            if mode.is_dir() {
-                self.ops().mkdir(&self, name, &mut info)
-            } else {
-                self.ops().mknod(&self, name, &mut info)
-            }
+            mk_callback(info)
         })?;
         if exists {
             return Err(EEXIST);
@@ -289,6 +303,43 @@ impl FsNode {
         info.time_access = now;
         info.time_modify = now;
         Ok(node)
+    }
+
+    #[cfg(test)]
+    pub fn mkdir(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+        // TODO: apply_umask
+        self.create_node(name, FileMode::IFDIR | FileMode::ALLOW_ALL, 0, |mut info| {
+            self.ops().mkdir(&self, name, &mut info)
+        })
+    }
+
+    pub fn mknod(
+        self: &FsNodeHandle,
+        name: &FsStr,
+        mode: FileMode,
+        dev: dev_t,
+    ) -> Result<FsNodeHandle, Errno> {
+        self.create_node(name, mode, dev, |mut info| {
+            if mode.is_dir() {
+                self.ops().mkdir(&self, name, &mut info)
+            } else {
+                self.ops().mknod(&self, name, &mut info)
+            }
+        })
+    }
+
+    pub fn mksymlink(
+        self: &FsNodeHandle,
+        name: &FsStr,
+        target: &FsStr,
+    ) -> Result<FsNodeHandle, Errno> {
+        self.create_node(name, FileMode::IFLNK | FileMode::ALLOW_ALL, 0, |mut info| {
+            self.ops().mksymlink(target, &mut info)
+        })
+    }
+
+    pub fn readlink(&self) -> Result<FsString, Errno> {
+        self.ops().readlink()
     }
 
     pub fn unlink(self: &FsNodeHandle, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {

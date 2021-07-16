@@ -166,6 +166,9 @@ gvisor_test_component("sigprocmask_test") {
 gvisor_test_component("sigaltstack_test") {
 }
 
+gvisor_test_component("symlink_test") {
+}
+
 fuchsia_test_package("test_android_distro") {
   deps = [
     ":android_system_image",
@@ -185,6 +188,7 @@ fuchsia_test_package("test_android_distro") {
     ":sigaction_test",
     ":sigprocmask_test",
     ":sigaltstack_test",
+    ":symlink_test",
     ":syscalls_test",
   ]
 

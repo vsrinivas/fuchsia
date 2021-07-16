@@ -183,6 +183,7 @@ pub fn dispatch_syscall(
         set_tid_address[1],
         setitimer[3],
         sigaltstack[2],
+        symlinkat[3],
         tgkill[3],
         truncate[2],
         umask[1],

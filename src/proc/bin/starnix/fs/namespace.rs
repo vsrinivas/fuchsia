@@ -104,11 +104,24 @@ impl NamespaceNode {
         Ok(FileObject::new(self.node.open(flags)?, self.clone(), flags))
     }
 
-    pub fn mknod(&self, name: &FsStr, mode: FileMode, dev: dev_t) -> Result<NamespaceNode, Errno> {
+    pub fn create_node<F>(&self, name: &FsStr, mk_callback: F) -> Result<NamespaceNode, Errno>
+    where
+        F: FnOnce() -> Result<FsNodeHandle, Errno>,
+    {
+        // TODO: Figure out what these errors should be, and if they are consistent across
+        // callsites. If so, checks can be removed from, for example, sys_symlinkat.
         if name.is_empty() || name == b"." || name == b".." {
             return Err(EEXIST);
         }
-        Ok(self.with_new_node(self.node.mknod(name, mode, dev)?))
+        Ok(self.with_new_node(mk_callback()?))
+    }
+
+    pub fn mknod(&self, name: &FsStr, mode: FileMode, dev: dev_t) -> Result<NamespaceNode, Errno> {
+        self.create_node(name, || self.node.mknod(name, mode, dev))
+    }
+
+    pub fn symlink(&self, name: &FsStr, target: &FsStr) -> Result<NamespaceNode, Errno> {
+        self.create_node(name, || self.node.mksymlink(name, target))
     }
 
     pub fn unlink(&self, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {

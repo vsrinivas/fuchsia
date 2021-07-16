@@ -1,0 +1,9 @@
+{
+    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
+    program: {
+        binary: "system/bin/symlink_test",
+        args: [ "--gunit_filter=-SymlinkTest.CannotCreateSymlinkInReadOnlyDir:SymlinkTest.PwriteToSymlink:SymlinkTest.PreadFromSymlink:SymlinkTest.CanEvaluateLink:SymlinkTest.SymlinkAtDegradedPermissions:SymlinkTest.ReadlinkAtDegradedPermissions:SymlinkTest.ChmodSymlink:SymlinkTest.FollowUpdatesATime:AbsAndRelTarget/*" ],
+        root: "root",
+        mount: [ "/tmp:tmpfs" ],
+    },
+}
