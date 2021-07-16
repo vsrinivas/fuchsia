@@ -608,43 +608,11 @@ async fn read_dirents_per_package_source(root_dir: DirectoryProxy) {
     )
     .await;
     assert_read_dirents_no_overflow(
-        &io_util::directory::open_directory(&root_dir, "dir/dir", 0).await.expect("open dir/dir"),
-        vec![
-            DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
-            DirEntry { name: "file".to_string(), kind: DirentKind::File },
-        ],
-    )
-    .await;
-    assert_read_dirents_no_overflow(
-        &io_util::directory::open_directory(&root_dir, "dir/dir/dir", 0)
-            .await
-            .expect("open dir/dir/dir"),
-        vec![DirEntry { name: "file".to_string(), kind: DirentKind::File }],
-    )
-    .await;
-    assert_read_dirents_no_overflow(
         &io_util::directory::open_directory(&root_dir, "meta/dir", 0).await.expect("open meta/dir"),
         vec![
             DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
             DirEntry { name: "file".to_string(), kind: DirentKind::File },
         ],
-    )
-    .await;
-    assert_read_dirents_no_overflow(
-        &io_util::directory::open_directory(&root_dir, "meta/dir/dir", 0)
-            .await
-            .expect("open meta/dir/dir"),
-        vec![
-            DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
-            DirEntry { name: "file".to_string(), kind: DirentKind::File },
-        ],
-    )
-    .await;
-    assert_read_dirents_no_overflow(
-        &io_util::directory::open_directory(&root_dir, "meta/dir/dir/dir", 0)
-            .await
-            .expect("open meta/dir/dir/dir"),
-        vec![DirEntry { name: "file".to_string(), kind: DirentKind::File }],
     )
     .await;
 }
@@ -713,7 +681,7 @@ async fn rewind_per_package_source(root_dir: DirectoryProxy) {
     }
 
     // Handle non-overflow cases.
-    for path in ["dir", "dir/dir", "dir/dir/dir", "meta/dir", "meta/dir/dir", "meta/dir/dir/dir"] {
+    for path in ["dir", "meta/dir"] {
         assert_rewind_no_overflow(
             &io_util::directory::open_directory(&root_dir, path, 0).await.unwrap(),
         )
