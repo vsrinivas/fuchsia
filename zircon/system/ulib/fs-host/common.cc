@@ -209,7 +209,7 @@ zx_status_t FsCreator::ParseManifestLine(FILE* manifest, const char* dir_path, c
     *new_line = '\0';
   }
 
-  if (depfile_.is_valid()) {
+  if (depfile_) {
     // Add source to depfile
     AppendDepfile(src);
   }
@@ -392,7 +392,7 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
     buf[len++] = '.';
     buf[len++] = 'd';
 
-    depfile_.reset(open(buf, O_CREAT | O_TRUNC | O_WRONLY, 0644));
+    depfile_.reset(fopen(buf, "w"));
     if (!depfile_) {
       fprintf(stderr, "error: cannot open '%s'\n", buf);
       return ZX_ERR_IO;
@@ -450,10 +450,9 @@ zx_status_t FsCreator::AppendDepfile(const char* str) {
   buf[len++] = ' ';
 
   std::lock_guard<std::mutex> lock(depfile_lock_);
-
   // this code makes assumptions about the size of atomic writes on target
   // platforms which currently hold true, but are not part of e.g. POSIX.
-  ssize_t result = write(depfile_.get(), buf, len);
+  ssize_t result = fwrite(buf, 1, len, depfile_.get());
   if (result < 0 || static_cast<size_t>(result) != len) {
     fprintf(stderr, "error: depfile append error\n");
     return ZX_ERR_IO;

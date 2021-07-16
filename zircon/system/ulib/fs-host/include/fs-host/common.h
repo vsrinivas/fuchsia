@@ -65,7 +65,9 @@ class FsCreator {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(FsCreator);
 
-  FsCreator(uint64_t data_blocks) : data_blocks_(data_blocks) {}
+  FsCreator(uint64_t data_blocks) :
+    data_blocks_(data_blocks),
+    depfile_(nullptr, [](FILE* fp) { if (fp) { fclose(fp); } }) {}
   virtual ~FsCreator() {}
 
   // Process the command line arguments and run the specified command.
@@ -163,7 +165,7 @@ class FsCreator {
   bool read_only_{false};
   bool compress_{false};
   std::mutex depfile_lock_;
-  fbl::unique_fd depfile_;
+  std::unique_ptr<FILE, void(*)(FILE*)> depfile_;
 
   JsonRecorder json_recorder_;
 };
