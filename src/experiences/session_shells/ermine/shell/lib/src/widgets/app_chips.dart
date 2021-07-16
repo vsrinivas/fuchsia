@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:ermine/src/states/app_state.dart';
-import 'package:ermine/src/states/view_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 
@@ -23,19 +22,69 @@ class AppChips extends StatelessWidget {
             itemCount: _app.views.length,
             itemBuilder: (context, index) {
               final view = _app.views[index];
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  (_app.topView.value == view)
-                      ? _TopViewIndicator()
-                      : SizedBox(width: 8),
-                  Expanded(
-                    child: Center(
-                      child: _AppChip(_app, view, _getIconPath(view.title)),
+              return ListTile(
+                minLeadingWidth: 0,
+                horizontalTitleGap: 0,
+                contentPadding: EdgeInsets.zero,
+
+                // Active view indicator.
+                leading: Container(
+                  width: 36,
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: 8,
+                    height: 54.0,
+                    color: _app.topView.value == view
+                        ? Theme.of(context).colorScheme.onSurface
+                        : null,
+                  ),
+                ),
+
+                // Icon and title.
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: Image.asset(
+                        _getIconPath(view.title),
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      iconSize: 48,
+                      splashRadius: 8,
+                      tooltip: view.title,
+                      onPressed: () => _app.switchView([view]),
+                    ),
+                    Tooltip(
+                      message: view.title,
+                      child: Text(
+                        view.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Close button.
+                trailing: Container(
+                  width: 36,
+                  alignment: Alignment.topLeft,
+                  child: Focus(
+                    // Prevent close button from automatically gaining focus.
+                    // Requires pointer to press it.
+                    descendantsAreFocusable: false,
+                    child: IconButton(
+                      icon: Icon(Icons.close),
+                      constraints: BoxConstraints.tight(Size(18, 18)),
+                      padding: EdgeInsets.all(0),
+                      iconSize: 16,
+                      splashRadius: 8,
+                      onPressed: view.close,
                     ),
                   ),
-                  SizedBox(width: 8),
-                ],
+                ),
+
+                onTap: () => _app.switchView([view]),
               );
             },
             separatorBuilder: (context, index) => const SizedBox(height: 32),
@@ -52,70 +101,4 @@ class AppChips extends StatelessWidget {
     );
     return entry['icon'] ?? 'images/Default-icon-2x.png';
   }
-}
-
-class _TopViewIndicator extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 8,
-        height: 54.0,
-        color: Theme.of(context).colorScheme.onSurface,
-      );
-}
-
-class _AppChip extends StatelessWidget {
-  final AppState _app;
-  final ViewState _view;
-  final String _iconPath;
-
-  const _AppChip(this._app, this._view, this._iconPath);
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: () {
-          _app.switchView([_view]);
-          _app.hideOverlay();
-        },
-        child: Wrap(
-          direction: Axis.vertical,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 16,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(width: 24),
-                Image.asset(
-                  _iconPath,
-                  width: 48,
-                  height: 48,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(Icons.close),
-                  constraints: BoxConstraints.tight(Size(18, 18)),
-                  padding: EdgeInsets.all(0),
-                  iconSize: 16,
-                  splashRadius: 8,
-                  onPressed: _view.close,
-                ),
-              ],
-            ),
-            SizedBox(
-              width: 140,
-              child: Center(
-                child: Tooltip(
-                  message: _view.title,
-                  child: Text(
-                    _view.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
 }
