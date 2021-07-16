@@ -96,61 +96,71 @@ impl LogFilterCriteria {
         Self { monikers, exclude_monikers, min_severity: min_severity, filters, excludes }
     }
 
-    fn matches_filter(f: &str, log: &LogsData) -> bool {
-        return log.msg().as_ref().unwrap_or(&"").contains(f)
-            || log.moniker.contains(f)
-            || log.metadata.component_url.as_ref().unwrap_or(&"".to_string()).contains(f);
+    fn matches_filter_string(filter_string: &str, message: &str, log: &LogsData) -> bool {
+        return message.contains(filter_string)
+            || log.moniker.contains(filter_string)
+            || log.metadata.component_url.as_ref().map_or(false, |s| s.contains(filter_string));
+    }
+
+    fn match_filters_to_log_data(&self, data: &LogsData, msg: &str) -> bool {
+        if data.metadata.severity < self.min_severity {
+            return false;
+        }
+
+        if !self.filters.is_empty()
+            && !self.filters.iter().any(|f| Self::matches_filter_string(f, msg, &data))
+        {
+            return false;
+        }
+
+        if self.excludes.iter().any(|f| Self::matches_filter_string(f, msg, &data)) {
+            return false;
+        }
+
+        let parsed_moniker = match parse_path_to_moniker(&data.moniker) {
+            Ok(m) => m,
+            Err(e) => {
+                log::warn!("got a broken moniker '{}' in a log entry: {}", &data.moniker, e);
+                return true;
+            }
+        };
+
+        let pos_match_results =
+            match_moniker_against_component_selectors(&parsed_moniker, &self.monikers);
+        match pos_match_results {
+            Err(ref e) => {
+                log::warn!("got a bad selector in log matcher: {}", e)
+            }
+            Ok(result) => {
+                if !self.monikers.is_empty() && result.is_empty() {
+                    return false;
+                }
+            }
+        }
+
+        let neg_match_results =
+            match_moniker_against_component_selectors(&parsed_moniker, &self.exclude_monikers);
+        match neg_match_results {
+            Err(ref e) => {
+                log::warn!("got a bad selector in log matcher: {}", e)
+            }
+            Ok(result) => {
+                if !(self.exclude_monikers.is_empty() || result.is_empty()) {
+                    return false;
+                }
+            }
+        }
+
+        true
     }
 
     fn matches(&self, entry: &LogEntry) -> bool {
         match entry {
             LogEntry { data: LogData::TargetLog(data), .. } => {
-                if self.filters.len() > 0
-                    && !self.filters.iter().any(|m| Self::matches_filter(m, &data))
-                {
-                    return false;
-                }
-
-                if self.excludes.iter().any(|m| Self::matches_filter(m, &data)) {
-                    return false;
-                }
-
-                if data.metadata.severity < self.min_severity {
-                    return false;
-                }
-
-                let parsed_moniker = match parse_path_to_moniker(&data.moniker) {
-                    Ok(m) => m,
-                    Err(e) => {
-                        log::warn!(
-                            "got a broken moniker '{}' in a log entry: {}",
-                            &data.moniker,
-                            e
-                        );
-                        return true;
-                    }
-                };
-
-                let pos_match_results =
-                    match_moniker_against_component_selectors(&parsed_moniker, &self.monikers);
-                if let Err(ref e) = pos_match_results {
-                    log::warn!("got a bad selector in log matcher: {}", e);
-                } else if !self.monikers.is_empty() && pos_match_results.unwrap().is_empty() {
-                    return false;
-                }
-
-                let neg_match_results = match_moniker_against_component_selectors(
-                    &parsed_moniker,
-                    &self.exclude_monikers,
-                );
-                if let Err(ref e) = neg_match_results {
-                    log::warn!("got a bad selector in log matcher: {}", e);
-                } else if !(self.exclude_monikers.is_empty()
-                    || neg_match_results.unwrap().is_empty())
-                {
-                    return false;
-                }
-                true
+                self.match_filters_to_log_data(data, data.msg().unwrap_or(""))
+            }
+            LogEntry { data: LogData::SymbolizedTargetLog(data, message), .. } => {
+                self.match_filters_to_log_data(data, message)
             }
             _ => true,
         }
@@ -874,6 +884,68 @@ mod test {
             .build()
             .into()
         )));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_criteria_message_severity_symbolized_log() {
+        let cmd = LogCommand {
+            filter: vec!["included".to_string()],
+            exclude: vec!["not this".to_string()],
+            min_severity: Severity::Error,
+            ..empty_dump_command()
+        };
+        let criteria = LogFilterCriteria::from(&cmd);
+
+        assert!(criteria.matches(&make_log_entry(LogData::SymbolizedTargetLog(
+            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                timestamp_nanos: 0.into(),
+                component_url: Some(String::default()),
+                moniker: "included/moniker".to_string(),
+                severity: diagnostics_data::Severity::Error,
+                size_bytes: 1,
+            })
+            .set_message("not this")
+            .build(),
+            "included".to_string()
+        ))));
+
+        assert!(criteria.matches(&make_log_entry(LogData::SymbolizedTargetLog(
+            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                timestamp_nanos: 0.into(),
+                component_url: Some(String::default()),
+                moniker: "included/moniker".to_string(),
+                severity: diagnostics_data::Severity::Error,
+                size_bytes: 1,
+            })
+            .set_message("some message")
+            .build(),
+            "some message".to_string()
+        ))));
+
+        assert!(!criteria.matches(&make_log_entry(LogData::SymbolizedTargetLog(
+            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                timestamp_nanos: 0.into(),
+                component_url: Some(String::default()),
+                moniker: "included/moniker".to_string(),
+                severity: diagnostics_data::Severity::Warn,
+                size_bytes: 1,
+            })
+            .set_message("not this")
+            .build(),
+            "included".to_string()
+        ))));
+        assert!(!criteria.matches(&make_log_entry(LogData::SymbolizedTargetLog(
+            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                timestamp_nanos: 0.into(),
+                component_url: Some(String::default()),
+                moniker: "included/moniker".to_string(),
+                severity: diagnostics_data::Severity::Error,
+                size_bytes: 1,
+            })
+            .set_message("included")
+            .build(),
+            "not this".to_string()
+        ))));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
