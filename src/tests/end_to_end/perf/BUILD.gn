@@ -181,7 +181,6 @@ if (is_host) {
 group("package_deps") {
   testonly = true
   public_deps = [
-    "//src/connectivity/network/tests/benchmarks",
     "//src/diagnostics/archivist/bench",
     "//src/diagnostics/lib/selectors/bench",
     "//src/lib/diagnostics/inspect:benchmarks",
@@ -189,6 +188,12 @@ group("package_deps") {
     "//src/tests/benchmarks:kernel-boot-benchmarks",
     "//src/tests/benchmarks/fidl:benchmarks",
     "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode",
+
+    # Many tests use sl4f to communicate with the target.
+    "//src/testing/sl4f",
+
+    # These are used by netstack benchmarks.
+    "//src/connectivity/network/tests/benchmarks",
     "//third_party/iperf",
 
     # These are used by garnet_input_latency_benchmarks.
@@ -210,7 +215,7 @@ group("package_deps") {
 group("test") {
   testonly = true
 
-  deps = []
+  deps = [ ":package_deps" ]
 
   foreach(target_name, test_list) {
     deps += [ ":$target_name($host_toolchain)" ]
