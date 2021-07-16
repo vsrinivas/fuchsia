@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
@@ -22,6 +23,9 @@ const (
 
 	// Printed to the serial console when ready to accept user input.
 	consoleCursor = "\n$"
+
+	// Timeout for reads and writes from a SerialSocket.
+	socketIOTimeout = 2 * time.Minute
 )
 
 var diagnosticCmds = []Command{
@@ -33,6 +37,28 @@ var diagnosticCmds = []Command{
 	// Invoke the threads command twice to identify hanging processes.
 	{[]string{"threads", "--all-processes"}, 5 * time.Minute},
 	{[]string{"threads", "--all-processes"}, 5 * time.Minute},
+}
+
+type SerialSocket struct {
+	net.Conn
+
+	// It's only safe for one goroutine at a time to read or write from the
+	// socket at a time.
+	mu sync.Mutex
+}
+
+func (s *SerialSocket) Read(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Conn.SetReadDeadline(time.Now().Add(socketIOTimeout))
+	return s.Conn.Read(p)
+}
+
+func (s *SerialSocket) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Conn.SetWriteDeadline(time.Now().Add(socketIOTimeout))
+	return s.Conn.Write(p)
 }
 
 // Open opens a new serial port using defaults.
@@ -60,14 +86,15 @@ func asSerialCmd(cmd []string) string {
 }
 
 // NewSocket opens a connection on the provided `socketPath`.
-func NewSocket(ctx context.Context, socketPath string) (io.ReadWriteCloser, error) {
+func NewSocket(ctx context.Context, socketPath string) (*SerialSocket, error) {
 	if socketPath == "" {
 		return nil, fmt.Errorf("serialSocketPath not set")
 	}
-	socket, err := net.Dial("unix", socketPath)
+	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open serial socket connection: %v", err)
 	}
+	socket := &SerialSocket{Conn: conn}
 	// Trigger a new cursor print by sending a newline. This may do nothing if the
 	// system was not ready to process input, but in that case it will print a
 	// new cursor anyways when it is ready to receive input.
