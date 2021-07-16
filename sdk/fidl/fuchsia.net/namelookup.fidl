@@ -2,20 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.net;
-
-/// The maximum number of IPs returned by a lookup.
-const uint64 MAX_LOOKUP_IPS = 256;
-
-struct IpAddressInfo {
-    /// All of the IPv4 addresses for the requested hostname.
-    vector<Ipv4Address>:MAX_LOOKUP_IPS ipv4_addrs;
-    /// All of the IPv6 addresses for the requested hostname.
-    vector<Ipv6Address>:MAX_LOOKUP_IPS ipv6_addrs;
-    /// The canonical name of the requested hostname (usually the DNS CNAME record, if one exists).
-    string:256? canonical_name;
-};
 
 enum LookupError {
     /// No result was found for this query.
@@ -28,15 +15,6 @@ enum LookupError {
     INVALID_ARGS = 3;
     /// The lookup failed due to an internal error.
     INTERNAL_ERROR = 4;
-};
-
-bits LookupIpOptions : uint8 {
-    /// If the lookup should return IPv4 addresses.
-    V4_ADDRS = 0b001;
-    /// If the lookup should return IPv6 addresses.
-    V6_ADDRS = 0b010;
-    /// If the lookup should return a canonical_name, if one exists.
-    CNAME_LOOKUP = 0b100;
 };
 
 /// Lookup operation options.
@@ -60,7 +38,7 @@ table LookupResult {
     ///
     /// If sorting was requested, `addresses` is sorted in order of preference, most preferred
     /// destination address first.
-    1: vector<IpAddress>:MAX_LOOKUP_IPS addresses;
+    1: vector<IpAddress>:MAX addresses;
 };
 
 /// The maximum length of a hostname, as per [RFC 1035 section 2.3.4](https://tools.ietf.org/html/rfc1035#section-2.3.4).
@@ -80,11 +58,6 @@ alias Hostname = string:MAX_HOSTNAME_SIZE;
 // TODO(https://fxbug.dev/49741): Move to fuchsia.net.name once build unification is done.
 [Discoverable]
 protocol NameLookup {
-    /// Look up a list of IP addresses by hostname.
-    ///
-    /// If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
-    [Deprecated = "Use LookupIp2"]
-    LookupIp(Hostname hostname, LookupIpOptions options) -> (IpAddressInfo addr) error LookupError;
     /// Lookup a list of IP addresses by hostname.
     ///
     /// If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.

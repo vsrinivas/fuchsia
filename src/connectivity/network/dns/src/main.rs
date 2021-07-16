@@ -403,32 +403,6 @@ async fn lookup_ip_inner<T: ResolverLookup>(
     })
 }
 
-async fn handle_lookup_ip<T: ResolverLookup>(
-    resolver: &SharedResolver<T>,
-    stats: Arc<QueryStats>,
-    hostname: String,
-    options: fnet::LookupIpOptions,
-) -> Result<fnet::IpAddressInfo, fnet::LookupError> {
-    let mode = LookupMode {
-        ipv4_lookup: options.contains(fnet::LookupIpOptions::V4Addrs),
-        ipv6_lookup: options.contains(fnet::LookupIpOptions::V6Addrs),
-    };
-    let response = lookup_ip_inner("LookupIp", resolver, stats, hostname, mode).await?;
-    let mut result =
-        fnet::IpAddressInfo { ipv4_addrs: vec![], ipv6_addrs: vec![], canonical_name: None };
-    for address in response.into_iter() {
-        match address {
-            fnet::IpAddress::Ipv4(ipv4) => {
-                result.ipv4_addrs.push(ipv4);
-            }
-            fnet::IpAddress::Ipv6(ipv6) => {
-                result.ipv6_addrs.push(ipv6);
-            }
-        }
-    }
-    Ok(result)
-}
-
 async fn handle_lookup_ip2<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
     stats: Arc<QueryStats>,
@@ -709,11 +683,6 @@ async fn handle_lookup_hostname<T: ResolverLookup>(
 
 /// IP lookup variants from [`fnet::NameLookupRequest`].
 enum IpLookupRequest {
-    LookupIp {
-        hostname: String,
-        options: fnet::LookupIpOptions,
-        responder: fnet::NameLookupLookupIpResponder,
-    },
     LookupIp2 {
         hostname: String,
         options: fnet::LookupIpOptions2,
@@ -729,14 +698,6 @@ async fn run_name_lookup<T: ResolverLookup>(
     let result = stream
         .try_for_each_concurrent(None, |request| async {
             match request {
-                NameLookupRequest::LookupIp { hostname, options, responder } => {
-                    let () = sender
-                        .clone()
-                        .send(IpLookupRequest::LookupIp { hostname, options, responder })
-                        .await
-                        .expect("receiver should not be closed");
-                    Ok(())
-                }
                 NameLookupRequest::LookupIp2 { hostname, options, responder } => {
                     let () = sender
                         .clone()
@@ -774,16 +735,9 @@ fn create_ip_lookup_fut<T: ResolverLookup>(
         async move {
             #[derive(Debug)]
             enum IpLookupResult {
-                LookupIp(Result<fnet::IpAddressInfo, fnet::LookupError>),
                 LookupIp2(Result<fnet::LookupResult, fnet::LookupError>),
             }
             let (lookup_result, send_result) = match request {
-                IpLookupRequest::LookupIp { hostname, options, responder } => {
-                    let mut lookup_result =
-                        handle_lookup_ip(resolver, stats.clone(), hostname, options).await;
-                    let send_result = responder.send(&mut lookup_result);
-                    (IpLookupResult::LookupIp(lookup_result), send_result)
-                }
                 IpLookupRequest::LookupIp2 { hostname, options, responder } => {
                     let mut lookup_result =
                         handle_lookup_ip2(resolver, stats.clone(), &routes, hostname, options)
@@ -1012,8 +966,7 @@ mod tests {
     use fuchsia_inspect::{assert_data_tree, testing::NonZeroUintProperty, tree_assertion};
     use futures::future::TryFutureExt as _;
     use matches::assert_matches;
-    use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, std_ip, std_ip_v4, std_ip_v6};
-    use net_ext::IntoExt as _;
+    use net_declare::{fidl_ip, std_ip, std_ip_v4, std_ip_v6};
     use net_types::ip::Ip as _;
     use pin_utils::pin_mut;
     use trust_dns_proto::{
@@ -1027,8 +980,8 @@ mod tests {
 
     use super::*;
 
-    const IPV4_LOOPBACK: fnet::Ipv4Address = fidl_ip_v4!("127.0.0.1");
-    const IPV6_LOOPBACK: fnet::Ipv6Address = fidl_ip_v6!("::1");
+    const IPV4_LOOPBACK: fnet::IpAddress = fidl_ip!("127.0.0.1");
+    const IPV6_LOOPBACK: fnet::IpAddress = fidl_ip!("::1");
     const LOCAL_HOST: &str = "localhost.";
 
     // IPv4 address returned by mock lookup.
@@ -1086,35 +1039,20 @@ mod tests {
     async fn check_lookup_ip(
         proxy: &fnet::NameLookupProxy,
         host: &str,
-        option: fnet::LookupIpOptions,
-        expected: Result<fnet::IpAddressInfo, fnet::LookupError>,
+        option: fnet::LookupIpOptions2,
+        expected: Result<fnet::LookupResult, fnet::LookupError>,
     ) {
-        let res = proxy.lookup_ip(host, option).await.expect("failed to lookup ip");
+        let res = proxy.lookup_ip2(host, option).await.expect("failed to lookup ip");
         assert_eq!(res, expected);
     }
 
     async fn check_lookup_hostname(
         proxy: &fnet::NameLookupProxy,
         mut addr: fnet::IpAddress,
-        expected: Result<String, fnet::LookupError>,
+        expected: Result<&str, fnet::LookupError>,
     ) {
         let res = proxy.lookup_hostname(&mut addr).await.expect("failed to lookup hostname");
-        assert_eq!(res, expected);
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_lookupip_invalid_option() {
-        let (proxy, fut) = setup_namelookup_service().await;
-
-        let ((), ()) = futures::future::join(fut, async move {
-            // IP Lookup localhost with invalid option.
-            let res = proxy
-                .lookup_ip(LOCAL_HOST, fnet::LookupIpOptions::CnameLookup)
-                .await
-                .expect("failed to LookupIp");
-            assert_eq!(res, Err(fnet::LookupError::InvalidArgs));
-        })
-        .await;
+        assert_eq!(res.as_deref(), expected.as_deref());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1125,11 +1063,14 @@ mod tests {
             check_lookup_ip(
                 &proxy,
                 LOCAL_HOST,
-                fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
-                Ok(fnet::IpAddressInfo {
-                    ipv4_addrs: vec![IPV4_LOOPBACK],
-                    ipv6_addrs: vec![IPV6_LOOPBACK],
-                    canonical_name: None,
+                fnet::LookupIpOptions2 {
+                    ipv4_lookup: Some(true),
+                    ipv6_lookup: Some(true),
+                    ..fnet::LookupIpOptions2::EMPTY
+                },
+                Ok(fnet::LookupResult {
+                    addresses: Some(vec![IPV4_LOOPBACK, IPV6_LOOPBACK]),
+                    ..fnet::LookupResult::EMPTY
                 }),
             )
             .await;
@@ -1138,11 +1079,10 @@ mod tests {
             check_lookup_ip(
                 &proxy,
                 LOCAL_HOST,
-                fnet::LookupIpOptions::V4Addrs,
-                Ok(fnet::IpAddressInfo {
-                    ipv4_addrs: vec![IPV4_LOOPBACK],
-                    ipv6_addrs: vec![],
-                    canonical_name: None,
+                fnet::LookupIpOptions2 { ipv4_lookup: Some(true), ..fnet::LookupIpOptions2::EMPTY },
+                Ok(fnet::LookupResult {
+                    addresses: Some(vec![IPV4_LOOPBACK]),
+                    ..fnet::LookupResult::EMPTY
                 }),
             )
             .await;
@@ -1151,11 +1091,10 @@ mod tests {
             check_lookup_ip(
                 &proxy,
                 LOCAL_HOST,
-                fnet::LookupIpOptions::V6Addrs,
-                Ok(fnet::IpAddressInfo {
-                    ipv4_addrs: vec![],
-                    ipv6_addrs: vec![IPV6_LOOPBACK],
-                    canonical_name: None,
+                fnet::LookupIpOptions2 { ipv6_lookup: Some(true), ..fnet::LookupIpOptions2::EMPTY },
+                Ok(fnet::LookupResult {
+                    addresses: Some(vec![IPV6_LOOPBACK]),
+                    ..fnet::LookupResult::EMPTY
                 }),
             )
             .await;
@@ -1167,8 +1106,7 @@ mod tests {
     async fn test_lookuphostname_localhost() {
         let (proxy, fut) = setup_namelookup_service().await;
         let ((), ()) = futures::future::join(fut, async move {
-            check_lookup_hostname(&proxy, IPV4_LOOPBACK.into_ext(), Ok(String::from(LOCAL_HOST)))
-                .await
+            check_lookup_hostname(&proxy, IPV4_LOOPBACK, Ok(LOCAL_HOST)).await
         })
         .await;
     }
@@ -1343,6 +1281,10 @@ mod tests {
         }
     }
 
+    fn map_ip<T: Into<IpAddr>>(addr: T) -> fnet::IpAddress {
+        net_ext::IpAddress(addr.into()).into()
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_lookupip_remotehost_ipv4() {
         TestEnvironment::new()
@@ -1351,11 +1293,14 @@ mod tests {
                 check_lookup_ip(
                     &proxy,
                     REMOTE_IPV4_HOST,
-                    fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
-                    Ok(fnet::IpAddressInfo {
-                        ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_HOST.octets() }],
-                        ipv6_addrs: vec![],
-                        canonical_name: None,
+                    fnet::LookupIpOptions2 {
+                        ipv4_lookup: Some(true),
+                        ipv6_lookup: Some(true),
+                        ..fnet::LookupIpOptions2::EMPTY
+                    },
+                    Ok(fnet::LookupResult {
+                        addresses: Some(vec![map_ip(IPV4_HOST)]),
+                        ..fnet::LookupResult::EMPTY
                     }),
                 )
                 .await;
@@ -1364,11 +1309,13 @@ mod tests {
                 check_lookup_ip(
                     &proxy,
                     REMOTE_IPV4_HOST,
-                    fnet::LookupIpOptions::V4Addrs,
-                    Ok(fnet::IpAddressInfo {
-                        ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_HOST.octets() }],
-                        ipv6_addrs: vec![],
-                        canonical_name: None,
+                    fnet::LookupIpOptions2 {
+                        ipv4_lookup: Some(true),
+                        ..fnet::LookupIpOptions2::EMPTY
+                    },
+                    Ok(fnet::LookupResult {
+                        addresses: Some(vec![map_ip(IPV4_HOST)]),
+                        ..fnet::LookupResult::EMPTY
                     }),
                 )
                 .await;
@@ -1377,7 +1324,10 @@ mod tests {
                 check_lookup_ip(
                     &proxy,
                     REMOTE_IPV4_HOST,
-                    fnet::LookupIpOptions::V6Addrs,
+                    fnet::LookupIpOptions2 {
+                        ipv6_lookup: Some(true),
+                        ..fnet::LookupIpOptions2::EMPTY
+                    },
                     Err(fnet::LookupError::NotFound),
                 )
                 .await;
@@ -1393,11 +1343,14 @@ mod tests {
                 check_lookup_ip(
                     &proxy,
                     REMOTE_IPV6_HOST,
-                    fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
-                    Ok(fnet::IpAddressInfo {
-                        ipv4_addrs: vec![],
-                        ipv6_addrs: vec![fnet::Ipv6Address { addr: IPV6_HOST.octets() }],
-                        canonical_name: None,
+                    fnet::LookupIpOptions2 {
+                        ipv4_lookup: Some(true),
+                        ipv6_lookup: Some(true),
+                        ..fnet::LookupIpOptions2::EMPTY
+                    },
+                    Ok(fnet::LookupResult {
+                        addresses: Some(vec![map_ip(IPV6_HOST)]),
+                        ..fnet::LookupResult::EMPTY
                     }),
                 )
                 .await;
@@ -1406,7 +1359,10 @@ mod tests {
                 check_lookup_ip(
                     &proxy,
                     REMOTE_IPV6_HOST,
-                    fnet::LookupIpOptions::V4Addrs,
+                    fnet::LookupIpOptions2 {
+                        ipv4_lookup: Some(true),
+                        ..fnet::LookupIpOptions2::EMPTY
+                    },
                     Err(fnet::LookupError::NotFound),
                 )
                 .await;
@@ -1415,11 +1371,13 @@ mod tests {
                 check_lookup_ip(
                     &proxy,
                     REMOTE_IPV6_HOST,
-                    fnet::LookupIpOptions::V6Addrs,
-                    Ok(fnet::IpAddressInfo {
-                        ipv4_addrs: vec![],
-                        ipv6_addrs: vec![fnet::Ipv6Address { addr: IPV6_HOST.octets() }],
-                        canonical_name: None,
+                    fnet::LookupIpOptions2 {
+                        ipv6_lookup: Some(true),
+                        ..fnet::LookupIpOptions2::EMPTY
+                    },
+                    Ok(fnet::LookupResult {
+                        addresses: Some(vec![map_ip(IPV6_HOST)]),
+                        ..fnet::LookupResult::EMPTY
                     }),
                 )
                 .await;
@@ -1431,12 +1389,7 @@ mod tests {
     async fn test_lookup_hostname() {
         TestEnvironment::new()
             .run_lookup(|proxy| async move {
-                check_lookup_hostname(
-                    &proxy,
-                    fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_HOST.octets() }),
-                    Ok(String::from(REMOTE_IPV4_HOST)),
-                )
-                .await;
+                check_lookup_hostname(&proxy, map_ip(IPV4_HOST), Ok(REMOTE_IPV4_HOST)).await;
             })
             .await;
     }
@@ -1447,12 +1400,7 @@ mod tests {
     async fn test_lookup_hostname_multi() {
         TestEnvironment::new()
             .run_lookup(|proxy| async move {
-                check_lookup_hostname(
-                    &proxy,
-                    fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_HOST.octets() }),
-                    Ok(String::from(REMOTE_IPV6_HOST)),
-                )
-                .await;
+                check_lookup_hostname(&proxy, map_ip(IPV6_HOST), Ok(REMOTE_IPV6_HOST)).await;
             })
             .await;
     }
@@ -1484,7 +1432,10 @@ mod tests {
             env.shared_resolver.read().config.name_servers().to_vec(),
             vec![DHCP_SERVER, NDP_SERVER, DHCPV6_SERVER]
                 .into_iter()
-                .map(|s| net_ext::SocketAddress::from(s).0)
+                .map(|s| {
+                    let net_ext::SocketAddress(s) = s.into();
+                    s
+                })
                 .flat_map(|x| to_server_configs(x).to_vec().into_iter())
                 .collect::<Vec<_>>()
         );
@@ -1612,11 +1563,13 @@ mod tests {
                 check_lookup_ip(
                     &proxy,
                     REMOTE_IPV4_HOST,
-                    fnet::LookupIpOptions::V4Addrs,
-                    Ok(fnet::IpAddressInfo {
-                        ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_HOST.octets() }],
-                        ipv6_addrs: vec![],
-                        canonical_name: None,
+                    fnet::LookupIpOptions2 {
+                        ipv4_lookup: Some(true),
+                        ..fnet::LookupIpOptions2::EMPTY
+                    },
+                    Ok(fnet::LookupResult {
+                        addresses: Some(vec![map_ip(IPV4_HOST)]),
+                        ..fnet::LookupResult::EMPTY
                     }),
                 )
                 .await;
@@ -1628,7 +1581,10 @@ mod tests {
                 check_lookup_ip(
                     &proxy,
                     REMOTE_IPV4_HOST,
-                    fnet::LookupIpOptions::V6Addrs,
+                    fnet::LookupIpOptions2 {
+                        ipv6_lookup: Some(true),
+                        ..fnet::LookupIpOptions2::EMPTY
+                    },
                     Err(fnet::LookupError::NotFound),
                 )
                 .await;
@@ -1867,18 +1823,22 @@ mod tests {
                 // Don't await on this future because we are using these
                 // requests to collect FIDL responders in order to send test
                 // requests later, and will not respond to these requests.
-                let _: fidl::client::QueryResponseFut<fnet::NameLookupLookupIpResult> =
-                    name_lookup_proxy.lookup_ip(
+                let _: fidl::client::QueryResponseFut<fnet::NameLookupLookupIp2Result> =
+                    name_lookup_proxy.lookup_ip2(
                         LOCAL_HOST,
-                        fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
+                        fnet::LookupIpOptions2 {
+                            ipv4_lookup: Some(true),
+                            ipv6_lookup: Some(true),
+                            ..fnet::LookupIpOptions2::EMPTY
+                        },
                     );
             }
             // Terminate the stream so its items can be collected below.
             drop(name_lookup_proxy);
             let requests = name_lookup_stream
                 .map(|request| match request.expect("channel error") {
-                    NameLookupRequest::LookupIp { hostname, options, responder } => {
-                        IpLookupRequest::LookupIp { hostname, options, responder }
+                    NameLookupRequest::LookupIp2 { hostname, options, responder } => {
+                        IpLookupRequest::LookupIp2 { hostname, options, responder }
                     }
                     req => panic!("Expected NameLookupRequest::LookupIp request, found {:?}", req),
                 })
@@ -2162,9 +2122,6 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lookupip2() {
-        fn map_ip<T: Into<IpAddr>>(addr: T) -> fnet::IpAddress {
-            net_ext::IpAddress(addr.into()).into()
-        }
         // Routes handler will say that only IPV6_HOST is reachable.
         let routes_handler = |fnet_routes::StateRequest::Resolve { destination, responder }| {
             let mut response = if destination == map_ip(IPV6_HOST) {
