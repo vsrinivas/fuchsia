@@ -597,9 +597,18 @@ encode_success("EncodeArrayOfVectorOfEventInUnion") {
 
             repeat(0xff):4, padding:4,
         ],
+        v2 = [
+            num(1):8,
+            num(24):4, num(1):2, num(0):2,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
     },
     handle_dispositions = {
-        v1 = [
+        v1, v2 = [
             { #0, type: event, rights: basic },
         ],
     },
@@ -628,9 +637,18 @@ encode_success("EncodeVectorOfArrayOfEventInUnion") {
 
             repeat(0xff):4, padding:4,
         ],
+        v2 = [
+            num(1):8,
+            num(24):4, num(1):2, num(0):2,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
     },
     handle_dispositions = {
-        v1 = [
+        v1, v2 = [
             { #0, type: event, rights: basic },
         ],
     },
@@ -912,9 +930,18 @@ decode_success("DecodeArrayOfVectorOfEventInUnionExtraRights") {
 
             repeat(0xff):4, padding:4,
         ],
+        v2 = [
+            num(1):8,
+            num(24):4, num(1):2, num(0):2,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
     },
     handles = {
-        v1 = [
+        v1, v2 = [
             #0,
         ],
     },
@@ -942,9 +969,18 @@ decode_failure("DecodeArrayOfVectorOfEventInUnionHasTooFewRights") {
 
             repeat(0xff):4, padding:4,
         ],
+        v2 = [
+            num(1):8,
+            num(24):4, num(1):2, num(0):2,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
     },
     handles = {
-        v1 = [
+        v1, v2 = [
             #0,
         ],
     },
@@ -973,9 +1009,18 @@ decode_failure("DecodeArrayOfVectorOfEventInUnionType") {
 
             repeat(0xff):4, padding:4,
         ],
+        v2 = [
+            num(1):8,
+            num(24):4, num(1):2, num(0):2,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
     },
     handles = {
-        v1 = [
+        v1, v2 = [
             #0,
         ],
     },

@@ -332,6 +332,7 @@ decode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
 }
 
 success("RecursiveOptionalAndUnionUnderLimit") {
+    bindings_denylist = [transformer],
     value = RecursiveOptionalAndUnionStruct { // 0
     u: RecursiveOptionalAndUnion { // 0
     recursive_optional: RecursiveOptionalStruct { // 1
@@ -408,7 +409,13 @@ success("RecursiveOptionalAndUnionUnderLimit") {
             repeat(0xff):8, // union data
             repeat(0xff):248, // 1 - 31
             repeat(0x00):8, // 32
-        ]
+        ],
+        v2 = [
+            num(1):4, padding:4, // ordinal, padding
+            num(256):4, num(0):2, num(0):2, // num bytes, num handles, inlined?
+            repeat(0xff):248, // 1 - 31
+            repeat(0x00):8, // 32
+        ],
     }
 }
 
@@ -496,7 +503,13 @@ decode_failure("RecursiveOptionalAndUnionExceedLimit") {
             repeat(0xff):8, // union data
             repeat(0xff):256, // 1 - 32
             repeat(0x00):8, // 33
-        ]
+        ],
+        v2 = [
+            num(1):4, padding:4, // ordinal, padding
+            num(264):4, num(0):2, num(0):2, // num bytes, num handles, inlined?
+            repeat(0xff):256, // 1 - 32
+            repeat(0x00):8, // 33
+        ],
     },
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }
