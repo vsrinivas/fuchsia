@@ -138,6 +138,33 @@ The example above renders the following:
 
 <pre class="prettyprint"><code><var>PORT</var></code></pre>
 
+## Comments {#comments}
+
+Fuchsia.dev supports single-line and multi-line comments in Markdown and HTML.
+The comments do not display on published pages. These comments are useful to alert
+contributors if your document contains [includecode](#include-code) or [MathJax](#mathjax).
+
+Note: If you use HTML commenting syntax (for example, `<!-- comment -->`), your comments
+are visible to readers in the HTML page source.
+
+### Single-line comments
+
+<pre class="prettyprint lang-html">{% verbatim %}
+{# To see the fully rendered MathJax equations on this page,
+  see the published page at https://fuchsia.dev/<YOUR_PUBLISHED_PAGE>#}{% endverbatim %}
+</pre>
+
+### Multi-line comments
+
+To use a multi-line comment on fuchsia.dev:
+
+Wrap each line with <code>&#123;# ... #}</code>. This works in both HTML and Markdown:
+
+<pre class="prettyprint lang-html">{% verbatim %}
+&#123;# I wonder how drivers are doing? #}
+&#123;# I hear they are awesome! #}{% endverbatim %}
+</pre>
+
 ## Custom attributes {#custom-attributes}
 
 Fuchsia.dev allows you to set custom HTML attributes
@@ -166,7 +193,6 @@ Syntax              |Description
 `attribute='value'` | Sets an attribute name and value pair for the element; use
 :                   : a space to separate pairs.
 
-
 *   {Markdown}
 
     ```none {:.devsite-disable-click-to-copy}
@@ -179,6 +205,69 @@ Syntax              |Description
     ```html
     <p class="customClass" id="custom_id" attribute="value">This is a Markdown paragraph.</p>
     ```
+
+## Definition lists
+
+To create a definition list in Markdown, list the term on a single line, then
+precede every definition with a colon (`:`) on a new line below the definition.
+
+*  {Markdown}
+
+   ```none {:.devsite-disable-click-to-copy}
+   Apple
+   : A fruit
+   : A tech company
+
+   Orange
+   : A citrus fruit
+
+       A definition can also contain other block or inline elements. This is a
+       paragraph within the same definition as "A citrus fruit". Elements
+       within must be indented four spaces to be recognized as part of the
+       preceding definition.
+
+   : A color
+   ```
+
+*  {Generated HTML}
+
+   ```html
+   <dl>
+     <dt>Apple</dt>
+     <dd>A fruit</dd>
+     <dd>A tech company</dd>
+
+     <dt>Orange</dt>
+     <dd>
+       <p>A citrus fruit</p>
+       <p>
+         A definition can also contain other block or inline elements. This is
+         a paragraph within the same definition as "A citrus fruit". Elements
+         within must be indented four spaces to be recognized as part of the
+         preceding definition.
+       </p>
+     </dd>
+     <dd>
+       <p>A color</p>
+     </dd>
+   </dl>
+   ```
+
+*  {Rendered}
+
+   Apple
+   : A fruit
+   : A tech company
+
+   Orange
+   : A citrus fruit
+
+       A definition can also contain other block or inline elements. This is a
+       paragraph within the same definition as "A citrus fruit". Elements
+       within must be indented four spaces to be recognized as part of the
+       preceding definition.
+
+   : A color
 
 ## Emphasis and strong {#emphasis-and-strong}
 
@@ -380,15 +469,68 @@ Each of the following will produce a horizontal rule:
 ---------------------------------------
 ```
 
+## Images
+
+Markdown uses an image syntax that is intended to resemble the syntax
+for links, allowing for two styles: inline and reference.
+
+Every image has the following properties:
+
+* Starting exclamation mark: `!`.
+* Set of square brackets, containing the `alt` attribute text.
+* Set of parentheses, containing the URL or path to the image, and an
+  optional `title` attribute enclosed in double or single quotes.
+* Set of optional classes using [custom attribute syntax](#custom-attributes) `{: .my-custom-css-class}`
+
+### Inline syntax
+
+The following are valid inline image syntax:
+
+```none {:.devsite-disable-click-to-copy}
+![Alt text](/docs/images/benchmarking/test_suite_example.png)
+
+![Alt text](/docs/images/benchmarking/test_suite_example.png "Optional title")
+
+![Alt text](/docs/images/benchmarking/test_suite_example.png "Optional title"){: .my-custom-css-class}
+```
+
+### Reference syntax
+
+The following is reference-style image syntax:
+
+```none {:.devsite-disable-click-to-copy}
+![Alt text][{{ '<var>' }}ID{{ '</var>' }}]
+```
+
+Where {{ '<var>' }}ID{{ '</var>' }} is the name of a defined image reference.
+Image references are defined using syntax identical to link references:
+
+<pre>{% verbatim %}[<var>ID</var>]: docs/images/benchmarking/test_suite_example.png  "Optional title attribute"{% endverbatim %}</pre>
+
+### Custom syntax
+
+You can specify the width of a Markdown image using the following syntax:
+
+```none {:.devsite-disable-click-to-copy}
+![Alt text](/docs/images/benchmarking/test_suite_example.png){: width="123"}
+```
+
 ## Include code {#include-code}
 
 The `includecode` tag includes a region of text from another file, especially a region of source code.
+The tag can also generate a downloadable file within the text, instead of including the
+text in the document.
 
 You can use this tag to insert a portion of source code into a document, and maintain that
 source code as a runnable file.
 
-The `includecode` tag can also generate a downloadable file within the text, instead of including the
-text in the document.
+Note: `includecode` is only visible on published fuchsia.dev pages. To inform your reader about the
+use of `includecode` in your document, add a Markdown comment to the top of your document.
+<pre class="prettyprint lang-html">{% verbatim %}
+{# To see the fully rendered includecode file on this page,
+  see the published page at https://fuchsia.dev/&lt;PATH_TO_YOUR_DOCUMENT&gt;#}{% endverbatim %}
+</pre>
+See [comments](#comments) for more information.
 
 The `gerrit_repo+path` parameter refers to a repository and path hosted on Gerrit or Git.
 The `repo` is in the format `instance or repository` and `path` is in the format of `path/to/file`.
@@ -587,52 +729,6 @@ The following are optional parameters for `includecode`:
     </tbody>
   </table>
 
-## Images
-
-Markdown uses an image syntax that is intended to resemble the syntax
-for links, allowing for two styles: inline and reference.
-
-Every image has the following properties:
-
-* Starting exclamation mark: `!`.
-* Set of square brackets, containing the `alt` attribute text.
-* Set of parentheses, containing the URL or path to the image, and an
-  optional `title` attribute enclosed in double or single quotes.
-* Set of optional classes using [custom attribute syntax](#custom-attributes) `{: .my-custom-css-class}`
-
-### Inline syntax
-
-The following are valid inline image syntax:
-
-```none {:.devsite-disable-click-to-copy}
-![Alt text](/docs/images/benchmarking/test_suite_example.png)
-
-![Alt text](/docs/images/benchmarking/test_suite_example.png "Optional title")
-
-![Alt text](/docs/images/benchmarking/test_suite_example.png "Optional title"){: .my-custom-css-class}
-```
-
-### Reference syntax
-
-The following is reference-style image syntax:
-
-```none {:.devsite-disable-click-to-copy}
-![Alt text][{{ '<var>' }}ID{{ '</var>' }}]
-```
-
-Where {{ '<var>' }}ID{{ '</var>' }} is the name of a defined image reference.
-Image references are defined using syntax identical to link references:
-
-<pre>{% verbatim %}[<var>ID</var>]: docs/images/benchmarking/test_suite_example.png  "Optional title attribute"{% endverbatim %}</pre>
-
-### Custom syntax
-
-You can specify the width of a Markdown image using the following syntax:
-
-```none {:.devsite-disable-click-to-copy}
-![Alt text](/docs/images/benchmarking/test_suite_example.png){: width="123"}
-```
-
 ## Inline code
 
 You can indicate code within a Markdown paragraph by wrapping text with backtick
@@ -684,7 +780,6 @@ element tag such as:
 ## Links
 
 Fuchsia.dev supports three style of links: *inline*, *reference*, and *external*. In all styles, the link text is delimited by `[]` (square brackets).
-
 ### Inline links
 
 To create an inline link, use a set of regular parentheses immediately
@@ -961,7 +1056,7 @@ numbers in your ordered lists or use `1.` for automatic numbering. See the examp
    8. Parish
 
 
-### Multi-level ordered Lists
+### Multi-level ordered lists
 
 You can create multi-level ordered lists; the second-level markers must precede by at least four spaces.
 
@@ -998,69 +1093,75 @@ You can create multi-level ordered lists; the second-level markers must precede 
    1. McHale
        1. Celtics
 
+## MathJax {#mathjax}
 
-## Definition lists
+The `<devsite-mathjax>` custom element allows you to display mathematical notation in
+fuchsia.dev content using [MathJax 2.7][mathjax]{:.external}. MathJax utilizes LaTeX syntax to create
+mathematical notion. See the [LaTeX syntax guide][latex-guide]{:.external} to learn more.
 
-To create a definition list in Markdown, list the term on a single line, then
-precede every definition with a colon (`:`) on a new line below the definition.
+Note: MathJax is only visible on published fuchsia.dev pages. To inform your reader about the
+use of MathJax in your document, add a Markdown comment to the top of your document. See
+[comments](#comments) for examples.
 
-*  {Markdown}
+### Usage
 
-   ```none {:.devsite-disable-click-to-copy}
-   Apple
-   : A fruit
-   : A tech company
+To utilize MathJax in your document, you must include the custom element one time in your document:
 
-   Orange
-   : A citrus fruit
+Note: When writing your published page path, replace `/docs/` with `/fuchsia-src/`.
 
-       A definition can also contain other block or inline elements. This is a
-       paragraph within the same definition as "A citrus fruit". Elements
-       within must be indented four spaces to be recognized as part of the
-       preceding definition.
+```html
+  {% verbatim %}{# To see the fully rendered MathJax equations on this page,
+  see the published page at https://fuchsia.dev/<PATH_TO_YOUR_DOCUMENT>#}{% endverbatim %}
+  <devsite-mathjax config="TeX-AMS-MML_SVG"></devsite-mathjax>
+```
 
-   : A color
-   ```
+After including the custom element, you can write mathematical notion inside of a `$$` block or `$` inline.
 
-*  {Generated HTML}
+### Standalone block
 
-   ```html
-   <dl>
-     <dt>Apple</dt>
-     <dd>A fruit</dd>
-     <dd>A tech company</dd>
+* {Markdown}
 
-     <dt>Orange</dt>
-     <dd>
-       <p>A citrus fruit</p>
-       <p>
-         A definition can also contain other block or inline elements. This is
-         a paragraph within the same definition as "A citrus fruit". Elements
-         within must be indented four spaces to be recognized as part of the
-         preceding definition.
-       </p>
-     </dd>
-     <dd>
-       <p>A color</p>
-     </dd>
-   </dl>
-   ```
+  ```html
+  <!-- <devsite-mathjax config="TeX-AMS-MML_SVG"></devsite-mathjax> -->
 
-*  {Rendered}
+  <div>
+    $$
+    R_{\mu\nu}-\frac{1}{2}Rg_{\mu\nu}+\Lambda{g_{\mu\nu}} = \frac{8\pi{G}}{c^4}{T_{\mu\nu}}
+    $$
+  </div>
+  ```
 
-   Apple
-   : A fruit
-   : A tech company
+* {Rendered}
 
-   Orange
-   : A citrus fruit
+  <devsite-mathjax config="TeX-AMS-MML_SVG"></devsite-mathjax>
 
-       A definition can also contain other block or inline elements. This is a
-       paragraph within the same definition as "A citrus fruit". Elements
-       within must be indented four spaces to be recognized as part of the
-       preceding definition.
+  <div>
+  $$
+  R_{\mu\nu}-\frac{1}{2}Rg_{\mu\nu}+\Lambda{g_{\mu\nu}} =
+  \frac{8\pi{G}}{c^4}{T_{\mu\nu}}
+  $$
+  </div>
 
-   : A color
+### Inline
+
+* {Markdown}
+
+  ```html
+  <!--Included only one time previously-->
+  <devsite-mathjax config="TeX-AMS-MML_SVG"></devsite-mathjax>
+
+  The area of a circle can be computed using the equation $ A = \pi{r^2} $,
+  where $ r $ is the radius of the circle, and $ \pi $ is the mathematical
+  constant that is approximately equal to 3.14159.
+  ```
+
+* {Rendered}
+
+  <devsite-mathjax config="TeX-AMS-MML_SVG"></devsite-mathjax>
+
+  The area of a circle can be computed using the equation $ A = \pi{r^2} $,
+  where $ r $ is the radius of the circle, and $ \pi $ is the mathematical
+  constant that is approximately equal to 3.14159.
 
 ## Paragraphs
 
@@ -1147,3 +1248,5 @@ in the example below:
 
 [specify-the-language-of-my-code]: https://github.com/google/code-prettify#how-do-i-specify-the-language-of-my-code
 [python-regex-doc]: https://docs.python.org/2/library/re.html
+[mathjax]: https://docs.mathjax.org/en/v2.7-latest/index.html
+[latex-guide]: https://en.wikibooks.org/wiki/LaTeX/Mathematics
