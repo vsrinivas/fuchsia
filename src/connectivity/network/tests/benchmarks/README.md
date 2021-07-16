@@ -14,4 +14,11 @@ These are benchmarks that are focused on benchmarking duration of
 specific socket related system calls from the test application.
 
 These can be run manually with:
-fx run-e2e-tests netstack_benchmarks_test
+```
+fx test --e2e netstack_benchmarks_test
+```
+
+Your `fx set` line should contain:
+```
+--with //src/tests/end_to_end/perf:test
+```
