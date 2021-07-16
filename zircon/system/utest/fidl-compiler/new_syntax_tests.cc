@@ -569,6 +569,7 @@ type t2 = strict t1;
 TEST(NewSyntaxTests, GoodTypeDeclOfAnonymousLayouts) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowAnonymousLayouts);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = struct {
@@ -648,6 +649,7 @@ alias AliasOfDecl = TypeDecl;
 TEST(NewSyntaxTests, GoodTypeParameters) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowAnonymousLayouts);
   TestLibrary library(R"FIDL(
 library example;
 type Inner = struct{};
@@ -699,6 +701,7 @@ type TypeDecl = struct {
 TEST(NewSyntaxTests, GoodLayoutMemberConstraints) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowAnonymousLayouts);
 
   // TODO(fxbug.dev/65978): a number of fields in this struct declaration have
   //  been commented out until their respective features (client/server_end)
@@ -985,6 +988,7 @@ type TypeDecl= struct {
 TEST(NewSyntaxTests, GoodConstraintsOnUnions) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowAnonymousLayouts);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1265,6 +1269,7 @@ type Foo = struct {
 TEST(NewSyntaxTests, BadParameterizedAnonymousLayout) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowAnonymousLayouts);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1558,6 +1563,18 @@ protocol MyProtocol {
   auto response = method.maybe_response_payload;
   EXPECT_TRUE(response->kind == fidl::flat::Decl::Kind::kStruct);
   ASSERT_EQ(response->members.size(), 1);
+}
+
+TEST(NewSyntaxTests, BadAnonymousLayoutUsageWithoutFlag) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Outer = struct { inner struct {}; };
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAnonymousLayout);
 }
 
 }  // namespace

@@ -17,6 +17,7 @@ class ExperimentalFlags {
     kOldSyntaxOnly = 0b10,
     kAllowNewSyntax = 0b100,
     kNewSyntaxOnly = 0b1000,
+    kAllowAnonymousLayouts = 0b10000,
   };
 
   ExperimentalFlags() : flags_(0) {}
