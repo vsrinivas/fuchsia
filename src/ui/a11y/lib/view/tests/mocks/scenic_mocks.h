@@ -154,9 +154,35 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
   std::unordered_map<uint32_t, RectangleAttributes> rectangles_;
 };
 
+class MockScenicFocuser : public fuchsia::ui::views::Focuser {
+ public:
+  MockScenicFocuser() : binding_(this) {}
+
+  ~MockScenicFocuser() override = default;
+
+  void Bind(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> request);
+
+  // |fuchsia::ui::views::Focuser|
+  void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override;
+
+  bool focus_request_received() const { return focus_request_received_; }
+  fuchsia::ui::views::ViewRef focused_view_ref() { return std::move(focused_view_ref_); }
+  void invoke_callback(fuchsia::ui::views::Focuser_RequestFocus_Result result) {
+    callback_(std::move(result));
+  }
+
+ private:
+  fidl::Binding<fuchsia::ui::views::Focuser> binding_;
+  bool focus_request_received_ = false;
+  fuchsia::ui::views::ViewRef focused_view_ref_;
+  RequestFocusCallback callback_;
+};
+
 class MockScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
  public:
-  explicit MockScenic(MockSession* mock_session) : mock_session_(mock_session) {}
+  // Default |mock_focuser| to nullptr, because the focuser is rarely used.
+  explicit MockScenic(MockSession* mock_session, MockScenicFocuser* mock_focuser = nullptr)
+      : mock_session_(mock_session), mock_focuser_(mock_focuser) {}
   ~MockScenic() override = default;
 
   void NotImplemented_(const std::string& name) override {
@@ -179,6 +205,7 @@ class MockScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
  private:
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
   MockSession* mock_session_;
+  MockScenicFocuser* mock_focuser_;
   bool create_session_called_;
 };
 

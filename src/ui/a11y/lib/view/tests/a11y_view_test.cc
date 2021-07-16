@@ -61,7 +61,8 @@ class AccessibilityViewTest : public gtest::TestLoopFixture {
     gtest::TestLoopFixture::SetUp();
 
     mock_session_ = std::make_unique<MockSession>();
-    mock_scenic_ = std::make_unique<MockScenic>(mock_session_.get());
+    mock_focuser_ = std::make_unique<MockScenicFocuser>();
+    mock_scenic_ = std::make_unique<MockScenic>(mock_session_.get(), mock_focuser_.get());
 
     auto [client_view_token, client_view_holder_token] = scenic::ViewTokenPair::New();
     fidl::Clone(client_view_holder_token, &client_view_holder_token_);
@@ -78,6 +79,7 @@ class AccessibilityViewTest : public gtest::TestLoopFixture {
  protected:
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<MockSession> mock_session_;
+  std::unique_ptr<MockScenicFocuser> mock_focuser_;
   std::unique_ptr<MockScenic> mock_scenic_;
   std::unique_ptr<FakeAccessibilityViewRegistry> fake_accessibility_view_registry_;
   fuchsia::ui::views::ViewHolderToken client_view_holder_token_;
@@ -214,6 +216,38 @@ TEST_F(AccessibilityViewTest, InvokesRegisteredCallbacks) {
 
   EXPECT_TRUE(scene_ready);
   EXPECT_TRUE(scene_ready_2);
+}
+
+TEST_F(AccessibilityViewTest, TestFocuser) {
+  fuchsia::ui::scenic::ScenicPtr scenic =
+      context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+  fuchsia::ui::accessibility::view::RegistryPtr registry =
+      context_provider_.context()->svc()->Connect<fuchsia::ui::accessibility::view::Registry>();
+  a11y::AccessibilityView a11y_view(std::move(registry), std::move(scenic));
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(mock_scenic_->create_session_called());
+
+  // Create a dummy ViewRef on which to request focus.
+  fuchsia::ui::views::ViewRef view_ref;
+  zx::eventpair eventpair_peer;
+  FX_CHECK(zx::eventpair::create(0u, &view_ref.reference, &eventpair_peer) == ZX_OK);
+  auto koid = a11y::GetKoid(view_ref);
+
+  // Request focus.
+  a11y_view.RequestFocus(std::move(view_ref), [](bool result) { EXPECT_TRUE(result); });
+
+  RunLoopUntilIdle();
+
+  // Verify that the correct view ref was focused.
+  EXPECT_TRUE(mock_focuser_->focus_request_received());
+  auto focused_view_ref = mock_focuser_->focused_view_ref();
+  EXPECT_EQ(a11y::GetKoid(focused_view_ref), koid);
+
+  // Verify that the callback passed to RequestFocus() was invoked with result
+  // == true.
+  mock_focuser_->invoke_callback({});
 }
 
 }  // namespace

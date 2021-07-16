@@ -437,4 +437,17 @@ bool ViewManager::MarkViewReadyForInjection(zx_koid_t koid, bool ready) {
   return true;
 }
 
+void ViewManager::RequestFocus(zx_koid_t koid,
+                               ViewFocuserInterface::RequestFocusCallback callback) {
+  FX_DCHECK(a11y_view_);
+
+  auto view_ref = ViewRefClone(koid);
+  if (!view_ref.has_value()) {
+    FX_LOGS(WARNING) << "Requested focus for invalid koid: " << koid;
+    return;
+  }
+
+  a11y_view_->RequestFocus(std::move(*view_ref), std::move(callback));
+}
+
 }  // namespace a11y

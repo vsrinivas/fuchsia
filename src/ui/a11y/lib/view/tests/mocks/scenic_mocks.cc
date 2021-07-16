@@ -246,6 +246,11 @@ void MockScenic::CreateSessionT(fuchsia::ui::scenic::SessionEndpoints endpoints,
                                 CreateSessionTCallback callback) {
   mock_session_->Bind(std::move(*endpoints.mutable_session()),
                       endpoints.mutable_session_listener()->Bind());
+
+  if (mock_focuser_) {
+    mock_focuser_->Bind(std::move(*endpoints.mutable_view_focuser()));
+  }
+
   create_session_called_ = true;
 }
 
@@ -254,6 +259,17 @@ fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> MockScenic::GetHandle
   return [this, dispatcher](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
     bindings_.AddBinding(this, std::move(request), dispatcher);
   };
+}
+
+void MockScenicFocuser::Bind(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> request) {
+  binding_.Bind(std::move(request));
+}
+
+void MockScenicFocuser::RequestFocus(fuchsia::ui::views::ViewRef view_ref,
+                                     RequestFocusCallback callback) {
+  focused_view_ref_ = std::move(view_ref);
+  callback_ = std::move(callback);
+  focus_request_received_ = true;
 }
 
 }  // namespace accessibility_test

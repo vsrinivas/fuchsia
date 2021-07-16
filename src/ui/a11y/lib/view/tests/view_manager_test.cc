@@ -67,6 +67,7 @@ class ViewManagerTest : public gtest::TestLoopFixture {
         std::move(dummy_view_ref);
 
     accessibility_view->set_view_ref(std::move(accessibility_view_view_ref));
+    mock_a11y_view_ = accessibility_view.get();
 
     view_manager_ = std::make_unique<a11y::ViewManager>(
         std::move(tree_service_factory_), std::move(view_semantics_factory),
@@ -111,6 +112,7 @@ class ViewManagerTest : public gtest::TestLoopFixture {
   MockViewSemanticsFactory* view_semantics_factory_;
   MockAnnotationViewFactory* annotation_view_factory_;
   input_test::MockInjector* mock_injector_;
+  MockAccessibilityView* mock_a11y_view_;
 };
 
 TEST_F(ViewManagerTest, ProviderGetsNotifiedOfSemanticsEnabled) {
@@ -492,6 +494,12 @@ TEST_F(ViewManagerTest, InjectorManagerTest) {
   EXPECT_TRUE(mock_injector_->on_event_called());
   view_manager_->MarkViewReadyForInjection(semantic_provider_->koid(), false);
   EXPECT_FALSE(view_manager_->InjectEventIntoView(event, semantic_provider_->koid()));
+}
+
+TEST_F(ViewManagerTest, ViewFocuserTest) {
+  view_manager_->RequestFocus(semantic_provider_->koid(), [](bool) { /* unused */ });
+  auto focused_view_ref = mock_a11y_view_->focused_view_ref();
+  EXPECT_EQ(a11y::GetKoid(focused_view_ref), semantic_provider_->koid());
 }
 
 }  // namespace
