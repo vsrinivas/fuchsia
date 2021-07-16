@@ -199,11 +199,15 @@ extern "C" void platformRadioDeinit(void) { sRadioSpinel.Deinit(); }
 extern "C" otError otPlatDiagProcess(otInstance *a_instance, uint8_t a_args_length, char *a_args[],
                                      char *a_output, size_t a_output_max_len) {
   OT_UNUSED_VARIABLE(a_instance);
-  OT_UNUSED_VARIABLE(a_args_length);
-  OT_UNUSED_VARIABLE(a_args);
-  OT_UNUSED_VARIABLE(a_output);
-  OT_UNUSED_VARIABLE(a_output_max_len);
-  return OT_ERROR_NOT_IMPLEMENTED;
+  char cmd[OPENTHREAD_CONFIG_DIAG_CMD_LINE_BUFFER_SIZE] = {'\0'};
+  char *cur = cmd;
+  char *end = cmd + sizeof(cmd);
+
+  for (uint8_t index = 0; (index < a_args_length) && (cur < end); index++) {
+    cur += snprintf(cur, static_cast<size_t>(end - cur), "%s ", a_args[index]);
+  }
+
+  return sRadioSpinel.PlatDiagProcess(cmd, a_output, a_output_max_len);
 }
 
 extern "C" void otPlatDiagModeSet(bool a_mode) {
