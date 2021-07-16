@@ -15,6 +15,7 @@ use lowpan_driver_common::AsyncConditionWait;
 use lowpan_driver_common::{FutureExt as _, ZxResult};
 use spinel_pack::TryOwnedUnpack;
 use spinel_pack::EUI64;
+use std::collections::HashSet;
 
 pub struct ApiTaskLock<'a> {
     #[allow(unused)]
@@ -430,6 +431,43 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                 driver_state.mesh_local_addr = value;
                 std::mem::drop(driver_state);
                 self.driver_state_change.trigger();
+            }
+
+            Prop::Ipv6(PropIpv6::MulticastAddressTable) => {
+                let value = Vec::<McastTableEntry>::try_unpack_from_slice(value)?
+                    .into_iter()
+                    .map(|x| x.0)
+                    .collect::<HashSet<_>>();
+
+                let mut driver_state = self.driver_state.lock();
+
+                fx_log_info!("Multicast table update: {:#?}", value);
+
+                if value != driver_state.mcast_table {
+                    for changed_group in driver_state.mcast_table.symmetric_difference(&value) {
+                        if value.contains(changed_group) {
+                            if let Err(err) = self.net_if.join_mcast_group(&changed_group) {
+                                fx_log_err!(
+                                    "Unable to join multicast group `{:?}`: {:?}",
+                                    changed_group,
+                                    err
+                                );
+                            }
+                        } else {
+                            if let Err(err) = self.net_if.leave_mcast_group(&changed_group) {
+                                fx_log_err!(
+                                    "Unable to leave multicast group `{:?}`: {:?}",
+                                    changed_group,
+                                    err
+                                );
+                            }
+                        }
+                    }
+
+                    driver_state.mcast_table = value;
+                    std::mem::drop(driver_state);
+                    self.driver_state_change.trigger();
+                }
             }
 
             Prop::Ipv6(PropIpv6::AddressTable) => {

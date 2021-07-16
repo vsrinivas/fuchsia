@@ -21,6 +21,8 @@ use fuchsia_component::client::{connect_channel_to_protocol, connect_to_protocol
 use fuchsia_zircon as zx;
 use futures::stream::BoxStream;
 use parking_lot::Mutex;
+use std::convert::TryInto;
+use std::net::{Ipv6Addr, UdpSocket};
 
 const IPV6_MIN_MTU: u32 = 1280;
 
@@ -29,6 +31,7 @@ pub struct TunNetworkInterface {
     tun_dev: ftun::DeviceProxy,
     stack: fnetstack::StackProxy,
     stack_sync: Mutex<fnetstack::StackSynchronousProxy>,
+    mcast_socket: UdpSocket,
     id: u64,
 }
 
@@ -99,8 +102,9 @@ impl TunNetworkInterface {
         let (client, server) = zx::Channel::create()?;
         connect_channel_to_protocol::<fnetstack::StackMarker>(server)?;
         let stack_sync = Mutex::new(fnetstack::StackSynchronousProxy::new(client));
+        let mcast_socket = UdpSocket::bind((Ipv6Addr::LOCALHOST, 0)).context("UdpSocket::bind")?;
 
-        Ok(TunNetworkInterface { tun_dev, stack, stack_sync, id })
+        Ok(TunNetworkInterface { tun_dev, stack, stack_sync, mcast_socket, id })
     }
 }
 
@@ -204,6 +208,23 @@ impl NetworkInterface for TunNetworkInterface {
         Ok(())
     }
 
+    /// Has the interface join the given multicast group.
+    fn join_mcast_group(&self, addr: &std::net::Ipv6Addr) -> Result<(), Error> {
+        fx_log_info!("TunNetworkInterface: Joining multicast group: {:?}", addr);
+        self.mcast_socket.join_multicast_v6(addr, self.id.try_into().unwrap())?;
+        Ok(())
+    }
+
+    /// Has the interface leave the given multicast group.
+    fn leave_mcast_group(&self, addr: &std::net::Ipv6Addr) -> Result<(), Error> {
+        fx_log_info!(
+            "TunNetworkInterface: Leaving multicast group: {:?} (CURRENTLY IGNORED)",
+            addr
+        );
+        self.mcast_socket.leave_multicast_v6(addr, self.id.try_into().unwrap())?;
+        Ok(())
+    }
+
     fn take_event_stream(&self) -> BoxStream<'_, Result<NetworkInterfaceEvent, Error>> {
         let enabled_stream = futures::stream::try_unfold((), move |()| async move {
             loop {
@@ -229,8 +250,8 @@ impl NetworkInterface for TunNetworkInterface {
         let init_state =
             EventState { prev_prop: Properties::EMPTY, watcher: None, next_events: Vec::default() };
 
-        let if_event_stream =
-            futures::stream::try_unfold(init_state, move |mut state| async move {
+        let if_event_stream = futures::stream::try_unfold(init_state, move |mut state| {
+            async move {
                 if state.watcher.is_none() {
                     let fnif_state = connect_to_protocol::<StateMarker>()?;
                     let (watcher, req) = create_proxy::<WatcherMarker>()?;
@@ -306,7 +327,8 @@ impl NetworkInterface for TunNetworkInterface {
                         _ => continue,
                     }
                 }
-            });
+            }
+        });
 
         futures::stream::select(enabled_stream, if_event_stream).boxed()
     }

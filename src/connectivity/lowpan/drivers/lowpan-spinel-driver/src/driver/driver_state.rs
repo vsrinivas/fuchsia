@@ -9,6 +9,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use fidl_fuchsia_lowpan::Identity;
 use spinel_pack::EUI64;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::ops::Deref;
 
@@ -45,6 +46,8 @@ pub(super) struct DriverState {
     /// The current set of addresses configured for this interface.
     pub(super) address_table: AddressTable,
 
+    pub(super) mcast_table: HashSet<std::net::Ipv6Addr>,
+
     /// On-Mesh Networks.
     pub(super) on_mesh_nets: OnMeshNets,
 
@@ -76,6 +79,7 @@ impl Clone for DriverState {
             preferred_net_type: self.preferred_net_type.clone(),
             identity: self.identity.clone(),
             address_table: self.address_table.clone(),
+            mcast_table: self.mcast_table.clone(),
             on_mesh_nets: self.on_mesh_nets.clone(),
             external_routes: self.external_routes.clone(),
             link_local_addr: self.link_local_addr.clone(),
@@ -99,6 +103,7 @@ impl PartialEq for DriverState {
             && self.identity.raw_name.eq(&other.identity.raw_name)
             && self.identity.xpanid.eq(&other.identity.xpanid)
             && self.address_table.eq(&other.address_table)
+            && self.mcast_table.eq(&other.mcast_table)
             && self.on_mesh_nets.eq(&other.on_mesh_nets)
             && self.external_routes.eq(&other.external_routes)
             && self.link_local_addr.eq(&other.link_local_addr)
@@ -120,6 +125,7 @@ impl Default for DriverState {
             preferred_net_type: Default::default(),
             identity: Identity::EMPTY,
             address_table: Default::default(),
+            mcast_table: Default::default(),
             on_mesh_nets: Default::default(),
             external_routes: Default::default(),
             link_local_addr: std::net::Ipv6Addr::UNSPECIFIED,

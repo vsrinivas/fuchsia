@@ -61,6 +61,12 @@ pub trait NetworkInterface: Send + Sync {
     //       `Driver::on_prop_value_is`, which is also synchronous.
     fn remove_external_route(&self, addr: &Subnet) -> Result<(), Error>;
 
+    /// Has the interface join the given multicast group.
+    fn join_mcast_group(&self, addr: &std::net::Ipv6Addr) -> Result<(), Error>;
+
+    /// Has the interface leave the given multicast group.
+    fn leave_mcast_group(&self, addr: &std::net::Ipv6Addr) -> Result<(), Error>;
+
     /// Gets the event stream for this network interface.
     ///
     /// Calling this method more than once will cause a panic.
@@ -132,6 +138,16 @@ impl NetworkInterface for DummyNetworkInterface {
 
     fn remove_external_route(&self, addr: &Subnet) -> Result<(), Error> {
         fx_log_info!("External Route Removed: {:?}", addr);
+        Ok(())
+    }
+
+    fn join_mcast_group(&self, addr: &std::net::Ipv6Addr) -> Result<(), Error> {
+        fx_log_info!("Joining multicast group: {:?}", addr);
+        Ok(())
+    }
+
+    fn leave_mcast_group(&self, addr: &std::net::Ipv6Addr) -> Result<(), Error> {
+        fx_log_info!("Leaving multicast group: {:?}", addr);
         Ok(())
     }
 

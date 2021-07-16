@@ -3,47 +3,121 @@
 // found in the LICENSE file.
 
 use super::*;
-use crate::prelude::*;
 use crate::spinel::*;
 
 use crate::spinel::Subnet;
 use anyhow::{Context as _, Error};
 use futures::prelude::*;
 use lowpan_driver_common::FutureExt;
+use packet::ParsablePacket;
+use packet_formats::icmp::mld::MldPacket;
+use packet_formats::icmp::{IcmpParseArgs, Icmpv6Packet};
+use packet_formats::ip::{IpPacket, Ipv6Proto};
+use packet_formats::ipv6::Ipv6Packet;
 
 impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
-    fn outbound_packet_pump(&self) -> impl TryStream<Ok = (), Error = Error> + Send + '_ {
-        futures::stream::try_unfold((), move |()| async move {
-            // Get the outbound network packet from netstack
-            let packet = self.net_if.outbound_packet_from_stack().await?;
+    async fn intercept_from_host(&self, mut packet_bytes: &[u8]) -> bool {
+        if let Ok(packet) = Ipv6Packet::parse(&mut packet_bytes, ()) {
+            match packet.proto() {
+                Ipv6Proto::Icmpv6 => {
+                    let args = IcmpParseArgs::new(packet.src_ip(), packet.dst_ip());
+                    match Icmpv6Packet::parse(&mut packet_bytes, args) {
+                        Ok(Icmpv6Packet::Mld(MldPacket::MulticastListenerReport(msg))) => {
+                            let group =
+                                std::net::Ipv6Addr::from(msg.body().group_addr.ipv6_bytes());
 
-            traceln!("Outbound packet from netstack: {}", hex::encode(&packet));
-
-            let target_stream = {
-                let driver_state = self.driver_state.lock();
-                if driver_state.assisting_state.should_route_to_insecure(packet.as_slice()) {
-                    fx_log_info!(
-                        "outbound_packet_pump: Forwarding commissioning packet to OpenThread stack: {:?}",
-                        Ipv6PacketDebug(packet.as_slice())
-                    );
-                    PropStream::NetInsecure
-                } else {
-                    PropStream::Net
+                            if {
+                                let driver_state = self.driver_state.lock();
+                                !driver_state.mcast_table.contains(&group)
+                            } {
+                                fx_log_info!("Adding multicast group {} to NCP", group);
+                                if let Err(err) = self
+                                    .frame_handler
+                                    .send_request(CmdPropValueInsert(
+                                        Prop::Ipv6(PropIpv6::MulticastAddressTable),
+                                        group.clone(),
+                                    ))
+                                    .await
+                                {
+                                    fx_log_warn!(
+                                        "Unable to add multicast address {} to NCP: {:?}",
+                                        group,
+                                        err
+                                    );
+                                }
+                            }
+                        }
+                        Ok(Icmpv6Packet::Mld(MldPacket::MulticastListenerDone(msg))) => {
+                            let group =
+                                std::net::Ipv6Addr::from(msg.body().group_addr.ipv6_bytes());
+                            if {
+                                let driver_state = self.driver_state.lock();
+                                driver_state.mcast_table.contains(&group)
+                            } {
+                                fx_log_info!("Removing multicast group {} from NCP", group);
+                                if let Err(err) = self
+                                    .frame_handler
+                                    .send_request(CmdPropValueRemove(
+                                        Prop::Ipv6(PropIpv6::MulticastAddressTable),
+                                        group.clone(),
+                                    ))
+                                    .await
+                                {
+                                    fx_log_warn!(
+                                        "Unable to remove multicast address {} from NCP: {:?}",
+                                        group,
+                                        err
+                                    );
+                                }
+                            }
+                        }
+                        Ok(_) => {}
+                        Err(err) => {
+                            fx_log_err!("Unable to parse ICMPv6 packet: {:?}", err);
+                        }
+                    }
                 }
+                _ => {}
             }
-            .into();
+        }
 
-            // Send the outbound network packet to the NCP.
-            let _ = self
-                .frame_handler
-                .send_request_ignore_response(CmdPropValueSet(
-                    target_stream,
-                    NetworkPacket { packet: &packet, metadata: &[] },
-                ))
-                .await;
+        false
+    }
 
-            // Continue processing.
-            Ok(Some(((), ())))
+    fn outbound_packet_pump(&self) -> impl TryStream<Ok = (), Error = Error> + Send + '_ {
+        futures::stream::try_unfold((), move |()| {
+            async move {
+                // Get the outbound network packet from netstack
+                let packet = self.net_if.outbound_packet_from_stack().await?;
+
+                if !self.intercept_from_host(packet.as_slice()).await {
+                    let target_stream = {
+                        let driver_state = self.driver_state.lock();
+                        if driver_state.assisting_state.should_route_to_insecure(packet.as_slice()) {
+                            fx_log_info!(
+                                "outbound_packet_pump: Forwarding commissioning packet to OpenThread stack: {:?}",
+                                Ipv6PacketDebug(packet.as_slice())
+                            );
+                            PropStream::NetInsecure
+                        } else {
+                            PropStream::Net
+                        }
+                    }
+                    .into();
+
+                    // Send the outbound network packet to the NCP.
+                    let _ = self
+                        .frame_handler
+                        .send_request_ignore_response(CmdPropValueSet(
+                            target_stream,
+                            NetworkPacket { packet: &packet, metadata: &[] },
+                        ))
+                        .await;
+                }
+
+                // Continue processing.
+                Ok(Some(((), ())))
+            }
         })
     }
 

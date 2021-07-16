@@ -22,6 +22,7 @@
             "fuchsia.net.interfaces.State",
             "fuchsia.net.stack.Stack",
             "fuchsia.net.tun.Control",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Launcher"
         ]
     }

@@ -302,6 +302,11 @@ impl From<fidl_fuchsia_lowpan::Ipv6Subnet> for Subnet {
     }
 }
 
+/// A spinel multicast entry from SPINEL_PROP_IPV6_MULTICAST_ADDRESS_TABLE
+#[spinel_packed("6")]
+#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+pub struct McastTableEntry(pub std::net::Ipv6Addr);
+
 /// A spinel address table entry from SPINEL_PROP_IPV6_ADDRESS_TABLE
 #[spinel_packed("DLL")]
 #[derive(Clone, Eq)]
