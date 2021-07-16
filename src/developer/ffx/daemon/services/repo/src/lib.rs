@@ -13,6 +13,7 @@ use {
     fidl_fuchsia_pkg_rewrite::{EngineMarker, LiteralRule, Rule},
     fuchsia_async as fasync,
     futures::{FutureExt as _, StreamExt as _},
+    itertools::Itertools as _,
     pkg::repository::{Repository, RepositoryManager, RepositoryServer, LISTEN_PORT},
     serde_json::{self, Value},
     services::prelude::*,
@@ -29,6 +30,7 @@ const REPOSITORY_MANAGER_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.Repositor
 const REWRITE_SERVICE_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.rewrite.Engine";
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_PACKAGES: i64 = 512;
+const MAX_REGISTERED_TARGETS: i64 = 512;
 
 struct ServerInfo {
     server: RepositoryServer,
@@ -576,6 +578,41 @@ impl FidlService for Repo {
                 .detach();
                 Ok(())
             }
+            bridge::RepositoryRegistryRequest::ListRegisteredTargets { iterator, .. } => {
+                let mut stream = iterator.into_stream()?;
+                let mut values = self
+                    .registered_targets
+                    .lock()
+                    .await
+                    .values()
+                    .cloned()
+                    .map(|x| x.into())
+                    .chunks(MAX_REGISTERED_TARGETS as usize)
+                    .into_iter()
+                    .map(|chunk| chunk.collect::<Vec<_>>())
+                    .collect::<Vec<_>>()
+                    .into_iter();
+
+                fasync::Task::spawn(async move {
+                    while let Some(request) = stream.next().await {
+                        match request {
+                            Ok(bridge::RepositoryTargetsIteratorRequest::Next { responder }) => {
+                                if let Err(err) = responder.send(&mut values.next().unwrap_or_else(Vec::new).into_iter()) {
+                                    log::warn!(
+                                        "Error responding to RepositoryTargetsIterator request: {:#?}",
+                                        err
+                                    );
+                                }
+                            }
+                            Err(err) => {
+                                log::warn!("Error in RepositoryTargetsIterator request stream: {:#?}", err)
+                            }
+                        }
+                    }
+                })
+                .detach();
+                Ok(())
+            }
         }
     }
 
@@ -838,6 +875,12 @@ mod tests {
             .build();
 
         let proxy = add_repo(&daemon).await;
+
+        let (client, server) = fidl::endpoints::create_endpoints().unwrap();
+        proxy.list_registered_targets(server).unwrap();
+        let client = client.into_proxy().unwrap();
+        assert_eq!(0, client.next().await.unwrap().len());
+
         proxy
             .register_target(bridge::RepositoryTarget {
                 repo_name: Some(REPO_NAME.to_string()),
@@ -854,6 +897,17 @@ mod tests {
             vec![Event::Add { repo: test_repo_config() }]
         );
 
+        let (client, server) = fidl::endpoints::create_endpoints().unwrap();
+        proxy.list_registered_targets(server).unwrap();
+        let client = client.into_proxy().unwrap();
+        let registered = client.next().await.unwrap();
+        assert_eq!(0, client.next().await.unwrap().len());
+        let mut registered = registered.into_iter();
+        let (registered, end) = (registered.next().unwrap(), registered.next());
+        assert!(end.is_none());
+        assert_eq!(Some(TARGET_NODENAME.to_string()), registered.target_identifier);
+        assert_eq!(Some(REPO_NAME.to_string()), registered.repo_name);
+
         proxy
             .deregister_target(REPO_NAME, Some(TARGET_NODENAME))
             .await
@@ -864,6 +918,11 @@ mod tests {
             events.lock().unwrap().drain(..).collect::<Vec<_>>(),
             vec![Event::Remove { repo_url: format!("fuchsia-pkg://{}", REPO_NAME) }]
         );
+
+        let (client, server) = fidl::endpoints::create_endpoints().unwrap();
+        proxy.list_registered_targets(server).unwrap();
+        let client = client.into_proxy().unwrap();
+        assert_eq!(0, client.next().await.unwrap().len());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

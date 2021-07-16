@@ -56,6 +56,9 @@ protocol RepositoryRegistry {
 
     /// List the packages in the repository named `name`.
     ListPackages(string:MAX_NAME name, request<RepositoryPackagesIterator> iterator) -> () error RepositoryError;
+
+    /// Get a list associating repositories with the targets they have been registered to.
+    ListRegisteredTargets(request<RepositoryTargetsIterator> iterator);
 };
 
 struct RepositoryConfig {
@@ -69,6 +72,10 @@ protocol RepositoryIterator {
 
 protocol RepositoryPackagesIterator {
     Next() -> (vector<RepositoryPackage>:MAX packages);
+};
+
+protocol RepositoryTargetsIterator {
+    Next() -> (vector<RepositoryTarget>:MAX registrations);
 };
 
 table RepositoryPackage {
