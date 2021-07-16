@@ -2,98 +2,99 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::mem;
+use std::{cmp::Ordering, iter::FromIterator, mem};
 
-use surpass;
-
-use surpass::painter::Props;
+use rustc_hash::FxHashMap;
+use surpass::{self, painter::Props};
 
 const IDENTITY: &[f32; 6] = &[1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
-const MAX_LAYER: usize = u16::MAX as usize;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct LayerId(pub(crate) u16);
 
-fn outer(index: usize) -> usize {
-    index >> 6
+#[derive(Clone, Copy, Debug)]
+struct End {
+    index: u16,
+    other: u16,
 }
 
-fn inner(index: usize) -> usize {
-    index & 0x3F
-}
+impl End {
+    pub fn next(self) -> Option<Self> {
+        match self.index.cmp(&self.other) {
+            Ordering::Less => Some(Self { index: self.index + 1, ..self }),
+            Ordering::Equal => None,
+            Ordering::Greater => Some(Self { index: self.index - 1, ..self }),
+        }
+    }
 
-fn to_index(outer: usize, inner: usize) -> usize {
-    (outer << 6) + inner
-}
-
-fn increment(index: usize) -> usize {
-    index + 1 & MAX_LAYER
+    pub fn other(self) -> Self {
+        Self { index: self.other, other: self.index }
+    }
 }
 
 #[derive(Debug)]
-pub(crate) struct LayerIdSet {
-    bit_set: Vec<u64>,
-    index: usize,
+pub struct IdSet {
+    free_ranges: FxHashMap<u16, u16>,
 }
 
-impl LayerIdSet {
+impl IdSet {
     pub fn new() -> Self {
-        Self { bit_set: vec![0; (MAX_LAYER + 1) >> 6], index: 0 }
+        Self { free_ranges: FxHashMap::from_iter([(0, u16::MAX), (u16::MAX, 0)]) }
     }
 
-    fn set(&mut self, index: usize, value: bool) {
-        let outer_index = outer(index);
-        let inner_index = inner(index);
-
-        let slot = &mut self.bit_set[outer_index];
-        let mask = 0x1 << inner_index as u64;
-
-        if value {
-            *slot |= mask;
-        } else {
-            *slot &= !mask;
-        }
+    fn first(&self) -> Option<End> {
+        self.free_ranges.iter().next().map(|(&index, &other)| End { index, other })
     }
 
-    fn next_free_slot(&self) -> Option<usize> {
-        let index = self.index;
-        let mut outer_index = outer(index);
+    fn get(&self, index: u16) -> Option<End> {
+        self.free_ranges.get(&index).map(|&other| End { index, other })
+    }
 
-        if self.bit_set[outer_index] != u64::max_value() {
-            let inner_index = inner(index);
-            let new_index = (!self.bit_set[outer_index]).trailing_zeros() as usize;
+    fn insert(&mut self, end: End) {
+        self.free_ranges.insert(end.index, end.other);
+    }
 
-            if new_index >= inner_index {
-                return Some(to_index(outer_index, new_index));
-            }
-        }
+    fn remove(&mut self, end: End) {
+        self.free_ranges.remove(&end.index);
+    }
 
-        outer_index = increment(outer_index);
+    pub fn acquire(&mut self) -> Option<u16> {
+        self.first().map(|end| {
+            self.remove(end);
 
-        let mut slots = self.bit_set[outer_index..]
-            .iter()
-            .chain(self.bit_set[..outer_index].iter())
-            .enumerate();
-
-        slots.find_map(|(delta, &slot)| {
-            if slot == u64::max_value() {
-                return None;
+            if let Some(next) = end.next() {
+                self.insert(next);
+                self.insert(next.other());
             }
 
-            Some(to_index(outer_index + delta, (!slot).trailing_zeros() as usize) & MAX_LAYER)
+            end.index
         })
     }
 
-    pub fn create_id(&mut self) -> Option<LayerId> {
-        self.next_free_slot().map(|index| {
-            self.index = increment(index);
-            self.set(index, true);
-            LayerId(index as u16)
-        })
-    }
+    pub fn release(&mut self, index: u16) {
+        let left = index.checked_sub(1).and_then(|index| self.get(index));
+        let right = index.checked_add(1).and_then(|index| self.get(index));
 
-    pub fn remove(&mut self, id: LayerId) {
-        self.set(id.0 as usize, false);
+        match (left, right) {
+            (Some(left), Some(right)) => {
+                // Connect ranges by filling the gap.
+                self.remove(left);
+                self.remove(right);
+
+                let new_end = End { index: left.other, other: right.other };
+                self.insert(new_end);
+                self.insert(new_end.other());
+            }
+            (Some(end), None) | (None, Some(end)) => {
+                // Enlarge range with id.
+                self.remove(end);
+
+                let new_end = End { index, ..end };
+                self.insert(new_end);
+                self.insert(new_end.other());
+            }
+            (None, None) => self.insert(End { index, other: index }),
+        }
     }
 }
 
@@ -244,88 +245,47 @@ impl Layer {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
 
-    #[test]
-    fn layer_id_get_set() {
-        fn get(layer_id_set: &LayerIdSet, index: usize) -> bool {
-            let outer_index = outer(index);
-            let inner_index = inner(index);
+    const ID_SET_SIZE: u16 = 8;
 
-            let slot = layer_id_set.bit_set[outer_index];
-
-            (slot >> inner_index as u64) & 0x1 == 0x1
-        }
-
-        let mut layer_id_set = LayerIdSet::new();
-
-        for &id in [0, 63, 64, 65_535].iter() {
-            assert!(!get(&layer_id_set, id));
-
-            layer_id_set.set(id, true);
-            assert!(get(&layer_id_set, id));
-
-            layer_id_set.set(id, false);
-            assert!(!get(&layer_id_set, id));
-        }
+    fn set() -> IdSet {
+        IdSet { free_ranges: FxHashMap::from_iter([(0, ID_SET_SIZE - 1), (ID_SET_SIZE - 1, 0)]) }
     }
 
     #[test]
-    fn layer_id_next_free_slot_same_slot() {
-        let mut layer_id_set = LayerIdSet::new();
-        layer_id_set.bit_set[0] = 0x3FF;
+    fn acquire_all() {
+        let mut set = set();
 
-        assert_eq!(layer_id_set.next_free_slot(), Some(10));
-    }
-
-    #[test]
-    fn layer_id_next_free_slot_next_slot() {
-        let mut layer_id_set = LayerIdSet::new();
-        layer_id_set.bit_set[0] = u64::max_value();
-        layer_id_set.bit_set[1] = 0x3FF;
-
-        assert_eq!(layer_id_set.next_free_slot(), Some(64 + 10));
-    }
-
-    #[test]
-    fn layer_id_next_free_slot_wrap_around() {
-        let mut layer_id_set = LayerIdSet::new();
-
-        for slot in &mut layer_id_set.bit_set {
-            *slot = u64::max_value();
+        for _ in 0..ID_SET_SIZE {
+            assert!(set.acquire().is_some());
         }
 
-        layer_id_set.bit_set[1] = 0x3FF;
-        layer_id_set.index = 128;
-
-        assert_eq!(layer_id_set.next_free_slot(), Some(64 + 10));
+        assert!(set.acquire().is_none());
     }
 
     #[test]
-    fn layer_id_create_first_and_last() {
-        let mut layer_id_set = LayerIdSet::new();
+    fn acquire_release() {
+        let mut set = set();
+        let mut removed = HashSet::new();
 
-        for slot in &mut layer_id_set.bit_set {
-            *slot = u64::max_value();
+        for i in 0..ID_SET_SIZE - 1 {
+            for _ in i..ID_SET_SIZE {
+                removed.insert(set.acquire().unwrap());
+            }
+
+            assert_eq!(removed.len(), (ID_SET_SIZE - i) as usize);
+
+            for index in removed.drain() {
+                set.release(index);
+            }
+
+            assert!(set.acquire().is_some());
         }
 
-        layer_id_set.bit_set[0] = u64::max_value() ^ 0x1;
-        *layer_id_set.bit_set.last_mut().unwrap() &= u64::max_value() >> 1;
-        layer_id_set.index = 1;
-
-        assert_eq!(layer_id_set.create_id(), Some(LayerId(MAX_LAYER as u16)));
-        assert_eq!(layer_id_set.create_id(), Some(LayerId(0)));
-        assert_eq!(layer_id_set.create_id(), None);
-    }
-
-    #[test]
-    fn layer_id_next_free_slot_full() {
-        let mut layer_id_set = LayerIdSet::new();
-
-        for slot in &mut layer_id_set.bit_set {
-            *slot = u64::max_value();
-        }
-
-        assert_eq!(layer_id_set.next_free_slot(), None);
+        assert!(set.acquire().is_some());
+        assert!(set.acquire().is_none());
     }
 }

@@ -14,7 +14,7 @@ use surpass::{
 
 use crate::{
     buffer::{Buffer, BufferLayerCache},
-    layer::{Layer, LayerId, LayerIdSet, SmallBitSet},
+    layer::{IdSet, Layer, LayerId, SmallBitSet},
     path::{Path, PathSegments},
 };
 
@@ -32,7 +32,7 @@ pub struct Composition {
     builder: Option<LinesBuilder>,
     rasterizer: Rasterizer,
     layers: FxHashMap<u16, Layer>,
-    layer_ids: LayerIdSet,
+    layer_ids: IdSet,
     orders_to_layers: FxHashMap<u16, u16>,
     layouts: FxHashMap<(*mut [u8; 4], usize), BufferLayout>,
     buffers_with_caches: Rc<RefCell<SmallBitSet>>,
@@ -45,7 +45,7 @@ impl Composition {
             builder: Some(LinesBuilder::new()),
             rasterizer: Rasterizer::new(),
             layers: FxHashMap::default(),
-            layer_ids: LayerIdSet::new(),
+            layer_ids: IdSet::new(),
             orders_to_layers: FxHashMap::default(),
             layouts: FxHashMap::default(),
             buffers_with_caches: Rc::new(RefCell::new(SmallBitSet::default())),
@@ -57,7 +57,7 @@ impl Composition {
     }
 
     pub fn create_layer(&mut self) -> Option<LayerId> {
-        self.layer_ids.create_id()
+        self.layer_ids.acquire().map(LayerId)
     }
 
     fn insert_segments(&mut self, layer_id: LayerId, segments: PathSegments<'_>) -> &mut Layer {
@@ -138,7 +138,7 @@ impl Composition {
             let layer_ids = &mut self.layer_ids;
             self.layers.retain(|&layer_id, layer| {
                 if !layer.inner.is_enabled {
-                    layer_ids.remove(LayerId(layer_id));
+                    layer_ids.release(layer_id);
                 }
 
                 layer.inner.is_enabled
