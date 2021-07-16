@@ -25,6 +25,14 @@ struct JsonDriver {
     driver_url: String,
 }
 
+fn ignore_peer_closed(err: fidl::Error) -> Result<(), fidl::Error> {
+    if err.is_closed() {
+        Ok(())
+    } else {
+        Err(err)
+    }
+}
+
 /// Wraps all hosted protocols into a single type that can be matched against
 /// and dispatched.
 enum IncomingRequest {
@@ -161,7 +169,7 @@ impl Indexer {
     fn load_base_repo(&mut self, base_repo: BaseRepo) {
         self.base_repo = Some(base_repo);
         while let Some(waiter) = self.base_waiters.pop() {
-            match waiter.send() {
+            match waiter.send().or_else(ignore_peer_closed) {
                 Err(e) => log::error!("Error sending to base_waiter: {:?}", e),
                 Ok(_) => continue,
             }
@@ -209,16 +217,21 @@ async fn run_index_server(
                     if indexer.borrow().base_repo.is_none() {
                         responder
                             .send(&mut Err(Status::NOT_FOUND.into_raw()))
-                            .context("error sending response")?;
+                            .or_else(ignore_peer_closed)
+                            .context("error responding to MatchDriver with no base_repo")?;
                     } else {
                         responder
                             .send(&mut indexer.borrow().match_driver(args).await)
-                            .context("error sending response")?;
+                            .or_else(ignore_peer_closed)
+                            .context("error responding to MatchDriver")?;
                     }
                 }
                 DriverIndexRequest::WaitForBaseDrivers { responder } => {
                     if indexer.borrow().base_repo.is_some() {
-                        responder.send().context("error sending response")?;
+                        responder
+                            .send()
+                            .or_else(ignore_peer_closed)
+                            .context("error responding to WaitForBaseDrivers")?;
                     } else {
                         indexer.borrow_mut().base_waiters.push(responder);
                     }
@@ -299,7 +312,7 @@ async fn main() -> Result<(), anyhow::Error> {
                             run_index_server(index.clone(), stream).await
                         }
                     }
-                    .unwrap_or_else(|e| log::error!("{:?}", e))
+                    .unwrap_or_else(|e| log::error!("Error running index_server: {:?}", e))
                 })
                 .await;
         },
