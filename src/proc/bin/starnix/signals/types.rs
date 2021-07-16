@@ -32,7 +32,7 @@ impl From<u32> for UncheckedSignal {
 }
 
 /// The `Signal` struct represents a valid signal.
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Signal {
     /// The signal number, guaranteed to be a value between 1..=NUM_SIGNALS.
     pub number: u32,

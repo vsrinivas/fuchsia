@@ -17,11 +17,6 @@ pub enum SyscallResult {
     /// The associated `i32` represents the task's exit code.
     Exit(i32),
 
-    /// The task group exited as a result of the syscall.
-    ///
-    /// The associated `i32` represents the task's exit code.
-    ExitGroup(i32),
-
     /// The syscall completed successfully. The associated `u64` is the return value from the
     /// syscall.
     Success(u64),

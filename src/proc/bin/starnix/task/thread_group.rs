@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon::{self as zx, AsHandleRef, Task as zxTask};
-use log::warn;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::Arc;
 
+use crate::signals::signal_handling::send_checked_signal;
 use crate::signals::types::*;
 use crate::task::*;
 use crate::types::*;
@@ -63,6 +63,8 @@ pub struct ThreadGroup {
     /// for a given signal.
     // TODO: Move into signal_state.
     pub signal_actions: RwLock<SignalActions>,
+
+    zombie_leader: Mutex<Option<Arc<Task>>>,
 }
 
 impl PartialEq for ThreadGroup {
@@ -83,7 +85,15 @@ impl ThreadGroup {
             tasks: RwLock::new(tasks),
             signal_state: RwLock::new(SignalState::default()),
             signal_actions: RwLock::new(SignalActions::default()),
+            zombie_leader: Mutex::new(None),
         }
+    }
+
+    pub fn exit(&self) {
+        // TODO: Set the error_code on the Zircon process object. Currently missing a way
+        //       to do this in Zircon. Might be easier in the new execution model.
+        self.process.kill().expect("Failed to terminate process.");
+        // TODO: Should we wait for the process to actually terminate?
     }
 
     pub fn add(&self, task: &Task) {
@@ -91,17 +101,34 @@ impl ThreadGroup {
         tasks.insert(task.id);
     }
 
-    pub fn remove(&self, task: &Task) {
-        let kill_process = {
-            let mut tasks = self.tasks.write();
-            self.kernel.pids.write().remove_task(task.id);
-            tasks.remove(&task.id);
-            tasks.is_empty()
-        };
-        if kill_process {
-            if let Err(e) = self.process.kill() {
-                warn!("Failed to kill process: {}", e);
+    fn remove_internal(&self, task: &Arc<Task>) -> bool {
+        let mut tasks = self.tasks.write();
+        self.kernel.pids.write().remove_task(task.id);
+        tasks.remove(&task.id);
+
+        if task.id == self.leader {
+            *self.zombie_leader.lock() = Some(Arc::clone(task));
+        }
+
+        tasks.is_empty()
+    }
+
+    pub fn remove(&self, task: &Arc<Task>) {
+        if self.remove_internal(task) {
+            let zombie_leader =
+                self.zombie_leader.lock().take().expect("Failed to capture zombie leader.");
+
+            if let Some(parent) = zombie_leader.get_task(zombie_leader.parent) {
+                parent.zombie_tasks.write().push(zombie_leader.clone());
+                // TODO: Should this be zombie_leader.exit_signal?
+                send_checked_signal(&parent, Signal::SIGCHLD);
             }
+
+            let waiters = self.kernel.scheduler.write().remove_exit_waiters(zombie_leader.id);
+            for waiter in waiters {
+                waiter.wake();
+            }
+
             self.kernel.pids.write().remove_thread_group(self.leader);
         }
     }

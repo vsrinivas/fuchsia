@@ -4,7 +4,7 @@
 
 use crate::not_implemented;
 use crate::signals::{Signal, SignalAction, UncheckedSignal};
-use crate::syscalls::{SyscallContext, SyscallResult, SUCCESS};
+use crate::syscalls::SyscallContext;
 use crate::task::{Scheduler, Task};
 use crate::types::*;
 use crate::types::{pid_t, sigaction_t, Errno, UserAddress};
@@ -124,17 +124,18 @@ pub fn restore_from_signal_handler(ctx: &mut SyscallContext<'_>) {
     *ctx.task.saved_signal_mask.lock() = None;
 }
 
-pub fn send_signal(
-    task: &Task,
-    unchecked_signal: &UncheckedSignal,
-) -> Result<SyscallResult, Errno> {
+pub fn send_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Result<(), Errno> {
     // 0 is a sentinel value used to do permission checks.
     let sentinel_signal = UncheckedSignal::from(0);
     if *unchecked_signal == sentinel_signal {
-        return Ok(SUCCESS);
+        return Ok(());
     }
 
-    let signal = Signal::try_from(unchecked_signal)?;
+    send_checked_signal(task, Signal::try_from(unchecked_signal)?);
+    Ok(())
+}
+
+pub fn send_checked_signal(task: &Task, signal: Signal) {
     let mut scheduler = task.thread_group.kernel.scheduler.write();
     scheduler.add_pending_signal(task.id, signal.clone());
 
@@ -143,8 +144,6 @@ pub fn send_signal(
         // the task returns from the suspend (from the perspective of user space).
         wake(task.id, &mut scheduler);
     }
-
-    Ok(SUCCESS)
 }
 
 /// Dequeues and handles a pending signal for `ctx.task`.

@@ -9,8 +9,6 @@ use std::ffi::CString;
 use crate::mm::*;
 use crate::not_implemented;
 use crate::runner::*;
-use crate::signals::signal_handling::send_signal;
-use crate::signals::UncheckedSignal;
 use crate::strace;
 use crate::syscalls::*;
 use crate::types::*;
@@ -37,14 +35,9 @@ pub fn sys_clone(
     }
 
     if flags & (CLONE_THREAD as u64) != 0 {
-        spawn_task(task_owner, registers, |_| {
-            // TODO: Do threads need a task_complete callback?
-        });
+        spawn_task(task_owner, registers, |_| {});
     } else {
-        let task = ctx.task.clone();
-        spawn_task(task_owner, registers, move |_| {
-            let _ = send_signal(&task, &UncheckedSignal::from(SIGCHLD));
-        });
+        spawn_task(task_owner, registers, |_| {});
     }
 
     Ok(tid.into())
@@ -133,16 +126,17 @@ pub fn sys_getegid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
     Ok(ctx.task.creds.egid.into())
 }
 
-pub fn sys_exit(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
-    info!(target: "exit", "exit: tid={} error_code={}", ctx.task.get_tid(), error_code);
-    *ctx.task.exit_code.lock() = Some(error_code);
-    Ok(SyscallResult::Exit(error_code))
+pub fn sys_exit(ctx: &SyscallContext<'_>, exit_code: i32) -> Result<SyscallResult, Errno> {
+    info!(target: "exit", "exit: tid={} exit_code={}", ctx.task.id, exit_code);
+    *ctx.task.exit_code.lock() = Some(exit_code);
+    Ok(SyscallResult::Exit(exit_code))
 }
 
-pub fn sys_exit_group(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
-    info!(target: "exit", "exit_group: pid={} error_code={}", ctx.task.get_pid(), error_code);
-    *ctx.task.exit_code.lock() = Some(error_code);
-    Ok(SyscallResult::ExitGroup(error_code))
+pub fn sys_exit_group(ctx: &SyscallContext<'_>, exit_code: i32) -> Result<SyscallResult, Errno> {
+    info!(target: "exit", "exit_group: pid={} exit_code={}", ctx.task.thread_group.leader, exit_code);
+    *ctx.task.exit_code.lock() = Some(exit_code);
+    ctx.task.thread_group.exit();
+    Ok(SyscallResult::Exit(exit_code))
 }
 
 pub fn sys_sched_getscheduler(

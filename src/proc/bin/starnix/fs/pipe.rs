@@ -10,7 +10,7 @@ use std::sync::Arc;
 use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::mm::PAGE_SIZE;
-use crate::signals::{signal_handling::send_signal, *};
+use crate::signals::{signal_handling::send_checked_signal, *};
 use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
@@ -193,7 +193,7 @@ impl Pipe {
 
     fn write(&mut self, task: &Task, it: &mut UserBufferIterator<'_>) -> Result<usize, Errno> {
         if self.reader_count == 0 {
-            send_signal(task, &UncheckedSignal::from(SIGPIPE))?;
+            send_checked_signal(task, Signal::SIGPIPE);
             return Err(EPIPE);
         }
 

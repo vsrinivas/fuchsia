@@ -285,7 +285,8 @@ pub fn sys_tgkill(
         return Err(EPERM);
     }
 
-    send_signal(&target, &unchecked_signal)
+    send_signal(&target, &unchecked_signal)?;
+    Ok(SUCCESS)
 }
 
 pub fn sys_rt_sigreturn(ctx: &mut SyscallContext<'_>) -> Result<SyscallResult, Errno> {
@@ -349,7 +350,7 @@ pub fn sys_wait4(
     let zombie_task = ctx.task.get_zombie_task(pid);
 
     let (pid, exit_code) = match zombie_task {
-        Some(task_owner) => (task_owner.task.id, task_owner.task.exit_code.lock().clone()),
+        Some(task) => (task.id, task.exit_code.lock().clone()),
         None => {
             ctx.task
                 .thread_group
@@ -360,11 +361,12 @@ pub fn sys_wait4(
             ctx.task.waiter.wait()?;
             // It would be an error for more than one task to remove the zombie task,
             // so `expect` that it is present.
-            let task_owner = ctx
+            let task = ctx
                 .task
                 .get_zombie_task(pid)
                 .expect("Waited for task to exit, but it is not present in zombie tasks.");
-            (task_owner.task.id, task_owner.task.clone().exit_code.lock().clone())
+            let exit_code = task.exit_code.lock().clone();
+            (task.id, exit_code)
         }
     };
 
