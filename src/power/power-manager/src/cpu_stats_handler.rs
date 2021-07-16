@@ -26,7 +26,7 @@ use std::rc::Rc;
 ///
 /// Handles Messages:
 ///     - GetNumCpus
-///     - GetTotalCpuLoad
+///     - GetCpuLoads
 ///
 /// Sends Messages: N/A
 ///
@@ -137,20 +137,23 @@ impl CpuStatsHandler {
         Ok(MessageReturn::GetNumCpus(stats.actual_num_cpus as u32))
     }
 
-    async fn handle_get_total_cpu_load(&self) -> Result<MessageReturn, PowerManagerError> {
-        fuchsia_trace::duration!("power_manager", "CpuStatsHandler::handle_get_total_cpu_load");
+    async fn handle_get_cpu_loads(&self) -> Result<MessageReturn, PowerManagerError> {
+        fuchsia_trace::duration!("power_manager", "CpuStatsHandler::handle_get_cpu_loads");
         let new_stats = self.get_idle_stats().await?;
-        let load = Self::calculate_total_cpu_load(&self.cpu_idle_stats.borrow(), &new_stats);
+        let loads = Self::calculate_cpu_loads(&self.cpu_idle_stats.borrow(), &new_stats);
+        self.cpu_idle_stats.replace(new_stats);
 
-        self.inspect.log_cpu_load(load as f64);
+        // Log the total load to Inspect / tracing
+        let total_load: f32 = loads.iter().sum();
+        self.inspect.log_total_cpu_load(total_load as f64);
         fuchsia_trace::instant!(
             "power_manager",
             "CpuStatsHandler::total_cpu_load",
             fuchsia_trace::Scope::Thread,
-            "load" => load as f64
+            "load" => total_load as f64
         );
-        self.cpu_idle_stats.replace(new_stats);
-        Ok(MessageReturn::GetTotalCpuLoad(load))
+
+        Ok(MessageReturn::GetCpuLoads(loads))
     }
 
     /// Gets the CPU idle stats, then populates them into the CpuIdleStats struct format that we
@@ -181,54 +184,39 @@ impl CpuStatsHandler {
         Ok(idle_stats)
     }
 
-    /// Calculates the sum of the load of all CPUs in the system. Per-CPU load is measured as
-    /// a value from 0.0 to 1.0. Therefore the total load is a value from 0.0 to [num_cpus].
+    /// Calculates the load of all CPUs in the system. Per-CPU load is measured as a value from 0.0
+    /// to 1.0.
     ///     old_idle: the starting idle stats
     ///     new_idle: the ending idle stats
-    fn calculate_total_cpu_load(old_idle: &CpuIdleStats, new_idle: &CpuIdleStats) -> f32 {
-        fuchsia_trace::duration!("power_manager", "CpuStatsHandler::calculate_total_cpu_load");
+    fn calculate_cpu_loads(old_idle: &CpuIdleStats, new_idle: &CpuIdleStats) -> Vec<f32> {
+        fuchsia_trace::duration!("power_manager", "CpuStatsHandler::calculate_cpu_loads");
         if old_idle.idle_times.len() != new_idle.idle_times.len() {
-            fuchsia_trace::instant!(
-                "power_manager",
-                "CpuStatsHandler::cpu_count_changed",
-                fuchsia_trace::Scope::Thread,
-                "old_stats" => format!("{:?}", old_idle).as_str(),
-                "new_stats" => format!("{:?}", new_idle).as_str()
-            );
             error!(
                 "Number of CPUs changed (old={}; new={})",
                 old_idle.idle_times.len(),
                 new_idle.idle_times.len()
             );
-            return 0.0;
+            return vec![0.0];
         }
 
-        let mut total_load = 0.0;
-        for i in 0..old_idle.idle_times.len() as usize {
-            total_load += Self::calculate_cpu_load(i, old_idle, new_idle);
-        }
-        total_load
-    }
-
-    /// Calculates the CPU load for the nth CPU from two idle stats readings. Per-CPU load is
-    /// measured as a value from 0.0 to 1.0.
-    ///     cpu_num: the CPU number for which to calculate load. This indexes into the
-    ///              old_idle and new_idle idle_times vector
-    ///     old_idle: the starting idle stats
-    ///     new_idle: the ending idle stats
-    fn calculate_cpu_load(cpu_num: usize, old_idle: &CpuIdleStats, new_idle: &CpuIdleStats) -> f32 {
-        let total_time_delta = new_idle.timestamp.0 - old_idle.timestamp.0;
-        if total_time_delta <= 0 {
+        let total_time_delta = new_idle.timestamp - old_idle.timestamp;
+        if total_time_delta.0 <= 0 {
             error!(
-                "Expected positive total_time_delta, got: {} (start={}; end={})",
-                total_time_delta, old_idle.timestamp.0, new_idle.timestamp.0
+                "Expected positive total_time_delta, got: {:?} (start={:?}; end={:?})",
+                total_time_delta, old_idle.timestamp, new_idle.timestamp
             );
-            return 0.0;
+            return vec![0.0];
         }
 
-        let idle_time_delta = new_idle.idle_times[cpu_num].0 - old_idle.idle_times[cpu_num].0;
-        let busy_time = total_time_delta - idle_time_delta;
-        busy_time as f32 / total_time_delta as f32
+        old_idle
+            .idle_times
+            .iter()
+            .zip(new_idle.idle_times.iter())
+            .map(|(old_idle_time, new_idle_time)| {
+                let busy_time = total_time_delta.0 - (new_idle_time.0 - old_idle_time.0);
+                busy_time as f32 / total_time_delta.0 as f32
+            })
+            .collect()
     }
 }
 
@@ -253,7 +241,7 @@ impl InspectData {
         InspectData { cpu_loads }
     }
 
-    fn log_cpu_load(&self, load: f64) {
+    fn log_total_cpu_load(&self, load: f64) {
         inspect_log!(self.cpu_loads.borrow_mut(), load: load);
     }
 }
@@ -267,7 +255,7 @@ impl Node for CpuStatsHandler {
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
             Message::GetNumCpus => self.handle_get_num_cpus().await,
-            Message::GetTotalCpuLoad => self.handle_get_total_cpu_load().await,
+            Message::GetCpuLoads => self.handle_get_cpu_loads().await,
             _ => Err(PowerManagerError::Unsupported),
         }
     }
@@ -276,9 +264,14 @@ impl Node for CpuStatsHandler {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::types::Seconds;
+    use async_utils::PollExt;
     use fuchsia_async as fasync;
+    use fuchsia_zircon::DurationNum;
     use futures::TryStreamExt;
     use inspect::assert_data_tree;
+    use std::collections::VecDeque;
+    use std::ops::Add;
 
     const TEST_NUM_CORES: u32 = 4;
 
@@ -367,33 +360,51 @@ pub mod tests {
         }
     }
 
-    /// Tests that the node correctly calculates CPU load (1.0 * NUM_CORES in the test confguration)
-    /// as a response to the 'GetTotalCpuLoad' message.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_handle_get_cpu_load() {
-        let node = setup_simple_test_node().await;
+    /// Tests that the node correctly calculates CPU loads for all CPUs as a response to the
+    /// 'GetCpuLoads' message.
+    #[test]
+    fn test_handle_get_cpu_loads() {
+        // Use executor so we can advance the fake time
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
-        if let MessageReturn::GetTotalCpuLoad(load) =
-            node.handle_message(&Message::GetTotalCpuLoad).await.unwrap()
-        {
-            // In test configuration, CpuStats is set to always report "0" idle time, which
-            // corresponds to 100% load. So total load should be 1.0 * TEST_NUM_CORES.
-            assert_eq!(load, TEST_NUM_CORES as f32);
-        } else {
-            assert!(false);
-        }
+        // Fake idle times that will be fed into the node. These idle times mean the node will first
+        // see idle times of 0 for both CPUs, then idle times of 1s and 2s on the next poll.
+        let mut fake_idle_times: VecDeque<Vec<Nanoseconds>> = vec![
+            vec![Seconds(0.0).into(), Seconds(0.0).into()],
+            vec![Seconds(1.0).into(), Seconds(2.0).into()],
+        ]
+        .into();
+
+        let node = executor
+            .run_until_stalled(&mut Box::pin(setup_test_node(move || {
+                fake_idle_times.pop_front().unwrap()
+            })))
+            .unwrap();
+
+        // Move fake time forward by 4s. This total time delta combined with the `fake_idle_times`
+        // data mean the CPU loads should be reported as 0.75 and 0.25.
+        executor.set_fake_time(executor.now().add(4.seconds()));
+        executor
+            .run_until_stalled(&mut Box::pin(async {
+                match node.handle_message(&Message::GetCpuLoads).await {
+                    Ok(MessageReturn::GetCpuLoads(loads)) => {
+                        assert_eq!(loads, vec![0.75, 0.5]);
+                    }
+                    e => panic!("Unexpected message response: {:?}", e),
+                }
+            }))
+            .unwrap();
     }
 
-    /// Tests the CPU load calculation function. Test values are used as input (representing
+    /// Tests the calculate_cpu_loads function. Test values are used as input (representing
     /// the total time delta and idle times of four total CPUs), and the result is compared
     /// against expected output for these test values:
-    ///     CPU 1: 20ns idle / 100ns total = 0.2 load
-    ///     CPU 2: 40ns idle / 100ns total = 0.4 load
-    ///     CPU 3: 60ns idle / 100ns total = 0.6 load
-    ///     CPU 4: 80ns idle / 100ns total = 0.8 load
-    ///     Total load: 2.0
+    ///     CPU 0: 20ns idle / 100ns total = 0.8 load
+    ///     CPU 1: 40ns idle / 100ns total = 0.6 load
+    ///     CPU 2: 60ns idle / 100ns total = 0.4 load
+    ///     CPU 3: 80ns idle / 100ns total = 0.2 load
     #[test]
-    fn test_calculate_total_cpu_load() {
+    fn test_calculate_cpu_loads() {
         let idle_sample_1 = CpuIdleStats {
             timestamp: Nanoseconds(0),
             idle_times: vec![Nanoseconds(0), Nanoseconds(0), Nanoseconds(0), Nanoseconds(0)],
@@ -404,9 +415,8 @@ pub mod tests {
             idle_times: vec![Nanoseconds(20), Nanoseconds(40), Nanoseconds(60), Nanoseconds(80)],
         };
 
-        let calculated_load =
-            CpuStatsHandler::calculate_total_cpu_load(&idle_sample_1, &idle_sample_2);
-        assert_eq!(calculated_load, 2.0)
+        let calculated_loads = CpuStatsHandler::calculate_cpu_loads(&idle_sample_1, &idle_sample_2);
+        assert_eq!(calculated_loads, vec![0.8, 0.6, 0.4, 0.2])
     }
 
     /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
@@ -431,7 +441,7 @@ pub mod tests {
             .unwrap();
 
         // For each message, the node will query CPU load and log the sample into Inspect
-        node.handle_message(&Message::GetTotalCpuLoad).await.unwrap();
+        node.handle_message(&Message::GetCpuLoads).await.unwrap();
 
         assert_data_tree!(
             inspector,

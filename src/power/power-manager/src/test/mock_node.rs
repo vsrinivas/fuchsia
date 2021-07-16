@@ -197,8 +197,8 @@ mod tests {
         let mock_node = mock_maker.make(
             "MockNode",
             vec![(
-                MessageMatcher::Eq(Message::GetTotalCpuLoad),
-                Ok(MessageReturn::GetTotalCpuLoad(4.0)),
+                MessageMatcher::Eq(Message::GetCpuLoads),
+                Ok(MessageReturn::GetCpuLoads(vec![1.0])),
             )],
         );
         let _ = mock_node.handle_message(&Message::GetNumCpus).await;
@@ -246,10 +246,7 @@ mod tests {
         let mut mock_maker = MockNodeMaker::new();
         let _mock_node = mock_maker.make(
             "MockNode",
-            vec![(
-                MessageMatcher::Eq(Message::GetTotalCpuLoad),
-                Ok(MessageReturn::GetTotalCpuLoad(4.0)),
-            )],
+            vec![(MessageMatcher::Eq(Message::GetNumCpus), Ok(MessageReturn::GetNumCpus(1)))],
         );
     }
 

@@ -364,7 +364,7 @@ pub mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
         let node = setup_test_node(|| Celsius(0.0), zx::Duration::from_millis(0));
-        match node.handle_message(&Message::GetTotalCpuLoad).await {
+        match node.handle_message(&Message::GetCpuLoads).await {
             Err(PowerManagerError::Unsupported) => {}
             e => panic!("Unexpected return value: {:?}", e),
         }

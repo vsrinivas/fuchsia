@@ -419,7 +419,7 @@ mod tests {
         .build(&node_futures)
         .await
         .unwrap();
-        match node.handle_message(&Message::GetTotalCpuLoad).await {
+        match node.handle_message(&Message::GetCpuLoads).await {
             Err(PowerManagerError::Unsupported) => {}
             e => panic!("Unexpected return value: {:?}", e),
         }

@@ -32,7 +32,7 @@ use std::rc::Rc;
 ///     - SetMaxPowerConsumption
 ///
 /// Sends Messages:
-///     - GetTotalCpuLoad
+///     - GetCpuLoads
 ///     - GetPerformanceState
 ///     - SetPerformanceState
 ///
@@ -303,7 +303,7 @@ pub struct CpuControlHandler {
     current_p_state_index: Cell<usize>,
 
     /// The node which will provide CPU load information. It is expected that this node responds to
-    /// the GetTotalCpuLoad message.
+    /// the GetCpuLoads message.
     cpu_stats_handler: Rc<dyn Node>,
 
     /// The node to be used for CPU performance state control. It is expected that this node
@@ -328,10 +328,10 @@ impl CpuControlHandler {
             "CpuControlHandler::get_load",
             "driver" => self.cpu_driver_path.as_str()
         );
-        match self.send_message(&self.cpu_stats_handler, &Message::GetTotalCpuLoad).await {
-            Ok(MessageReturn::GetTotalCpuLoad(load)) => Ok(load),
-            Ok(r) => Err(format_err!("GetTotalCpuLoad had unexpected return value: {:?}", r)),
-            Err(e) => Err(format_err!("GetTotalCpuLoad failed: {:?}", e)),
+        match self.send_message(&self.cpu_stats_handler, &Message::GetCpuLoads).await {
+            Ok(MessageReturn::GetCpuLoads(loads)) => Ok(loads.iter().sum()),
+            Ok(r) => Err(format_err!("GetCpuLoads had unexpected return value: {:?}", r)),
+            Err(e) => Err(format_err!("GetCpuLoads failed: {:?}", e)),
         }
     }
 
@@ -705,9 +705,9 @@ pub mod tests {
             // The CpuControlHandler node queries the current CPU load each time it receives a
             // SetMaxPowerConsumption message
             vec![
-                (msg_eq!(GetTotalCpuLoad), msg_ok_return!(GetTotalCpuLoad(4.0))),
-                (msg_eq!(GetTotalCpuLoad), msg_ok_return!(GetTotalCpuLoad(4.0))),
-                (msg_eq!(GetTotalCpuLoad), msg_ok_return!(GetTotalCpuLoad(4.0))),
+                (msg_eq!(GetCpuLoads), msg_ok_return!(GetCpuLoads(vec![1.0; 4]))),
+                (msg_eq!(GetCpuLoads), msg_ok_return!(GetCpuLoads(vec![1.0; 4]))),
+                (msg_eq!(GetCpuLoads), msg_ok_return!(GetCpuLoads(vec![1.0; 4]))),
             ],
         );
         let devhost_node = mock_maker.make(
@@ -794,8 +794,8 @@ pub mod tests {
             // The CpuControlHandler node queries the current CPU load each time it receives a
             // SetMaxPowerConsumption message
             vec![
-                (msg_eq!(GetTotalCpuLoad), msg_ok_return!(GetTotalCpuLoad(4.0))),
-                (msg_eq!(GetTotalCpuLoad), msg_ok_return!(GetTotalCpuLoad(4.0))),
+                (msg_eq!(GetCpuLoads), msg_ok_return!(GetCpuLoads(vec![1.0; 4]))),
+                (msg_eq!(GetCpuLoads), msg_ok_return!(GetCpuLoads(vec![1.0; 4]))),
             ],
         );
         let devhost_node = mock_maker.make(

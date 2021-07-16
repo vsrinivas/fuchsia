@@ -15,13 +15,12 @@ pub enum Message {
     /// Get the number of CPUs in the system
     GetNumCpus,
 
-    /// Get the total CPU load which is the sum of the load of all CPUs in the system. Per-CPU load
-    /// is reported as a value between 0.0 - 1.0 and is calculated by dividing the total time a
-    /// CPU spent not idle during a duration by the total time elapsed during the same duration,
-    /// where the duration is defined as the time since the previous GetTotalCpuLoad call. The
-    /// first call returns a load of 0.0 because the time duration required to calculate load is
-    /// undefined without a second call.
-    GetTotalCpuLoad,
+    /// Get the current load from each CPU in the system as a vector of values in the range [0.0 -
+    /// 1.0]. Load is calculated by dividing the total time a CPU spent not idle during a duration
+    /// by the total time elapsed during the same duration, where the duration is defined as the
+    /// time since the previous GetCpuLoads call. The returned vector will have NUM_CPUS elements,
+    /// where NUM_CPUS is the value returned by the GetNumCpus message.
+    GetCpuLoads,
 
     /// Instruct the node to limit the power consumption of its corresponding component (e.g., CPU)
     /// Arg: the max number of watts that the component should be allowed to consume
@@ -70,9 +69,10 @@ pub enum MessageReturn {
     /// Arg: the number of CPUs in the system
     GetNumCpus(u32),
 
-    /// Arg: the sum of the load from all CPUs in the system. The value is defined as
-    /// 0.0 - [number_cpus]. The first call will return a load of 0.0.
-    GetTotalCpuLoad(f32),
+    /// Arg: the current load from each CPU in the system as a vector of values in the range [0.0 -
+    /// 1.0]. The returned vector will have NUM_CPUS elements, where NUM_CPUS is the value returned
+    /// by the GetNumCpus message.
+    GetCpuLoads(Vec<f32>),
 
     /// Arg: the max number of watts that the component will use. This number should typically be at
     /// or below the number that was specified in the Message, but there may be cases where it
