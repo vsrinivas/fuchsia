@@ -5,7 +5,7 @@ This document was last reviewed for accuracy on: 2019-10-31
 Inspect is a library for exposing structured, hierarchical
 diagnostics information from components at runtime.  Full
 documentation for the Component Inspection project can be found
-[here](https://fuchsia.dev/fuchsia-src/development/inspect).
+[here](https://fuchsia.dev/fuchsia-src/development/diagnostics/inspect).
 
 ## Using
 
@@ -15,7 +15,7 @@ GN target and using `#include <lib/inspect/cpp/inspect.h>`.
 Our quickstart guide is available
 [here](https://fuchsia.dev/fuchsia-src/development/inspect/quickstart.md).
 
-Inspect data may be read from components using the 
+Inspect data may be read from components using the
 [iquery](https://fuchsia.dev/fuchsia-src/development/inspect/iquery.md)
 tool.
 
