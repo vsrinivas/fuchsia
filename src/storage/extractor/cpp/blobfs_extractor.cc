@@ -154,6 +154,12 @@ zx::status<> FsWalker::WalkSegments() const {
     std::cerr << "FAIL: Add nodemap" << std::endl;
     return status;
   }
+  if (auto status = extractor_.AddBlocks(blobfs::JournalStartBlock(info_),
+                                         blobfs::JournalBlocks(info_), properties);
+      status.is_error()) {
+    std::cerr << "FAIL: Add journal" << std::endl;
+    return status;
+  }
   return zx::ok();
 }
 
