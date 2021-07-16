@@ -243,6 +243,8 @@ assoc_values!(VmoOp, [
     CACHE_INVALIDATE = sys::ZX_VMO_OP_CACHE_INVALIDATE;
     CACHE_CLEAN =      sys::ZX_VMO_OP_CACHE_CLEAN;
     CACHE_CLEAN_INVALIDATE = sys::ZX_VMO_OP_CACHE_CLEAN_INVALIDATE;
+    ZERO =             sys::ZX_VMO_OP_ZERO;
+    TRY_LOCK =         sys::ZX_VMO_OP_TRY_LOCK;
 ]);
 
 unsafe_handle_properties!(object: Vmo,
@@ -483,5 +485,19 @@ mod tests {
         let content = b"abcdef";
         assert!(vmo.write(content, 0).is_ok());
         assert_eq!(vmo.get_content_size().unwrap(), 0);
+    }
+
+    #[test]
+    fn vmo_zero() {
+        let vmo = Vmo::create(16).unwrap();
+        let content = b"0123456789abcdef";
+        assert!(vmo.write(content, 0).is_ok());
+        let mut buf = vec![0u8; 16];
+        assert!(vmo.read(&mut buf[..], 0).is_ok());
+        assert_eq!(&buf[..], content);
+
+        assert!(vmo.op_range(VmoOp::ZERO, 0, 16).is_ok());
+        assert!(vmo.read(&mut buf[..], 0).is_ok());
+        assert_eq!(&buf[..], &[0u8; 16]);
     }
 }
