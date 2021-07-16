@@ -528,11 +528,32 @@ pub fn sys_symlinkat(
     Ok(SUCCESS)
 }
 
+pub fn sys_dup(ctx: &SyscallContext<'_>, oldfd: FdNumber) -> Result<SyscallResult, Errno> {
+    let newfd = ctx.task.files.duplicate(oldfd, None, FdFlags::empty())?;
+    Ok(newfd.into())
+}
+
+pub fn sys_dup3(
+    ctx: &SyscallContext<'_>,
+    oldfd: FdNumber,
+    newfd: FdNumber,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    if oldfd == newfd {
+        return Err(EINVAL);
+    }
+    let valid_flags = FdFlags::from_bits(flags).ok_or(EINVAL)?;
+
+    ctx.task.files.duplicate(oldfd, Some(newfd), valid_flags)?;
+    Ok(newfd.into())
+}
+
 #[cfg(test)]
 mod tests {
 
     use super::*;
     use fuchsia_async as fasync;
+    use std::sync::Arc;
 
     use crate::testing::*;
 
@@ -566,6 +587,62 @@ mod tests {
 
         // Check for overflow.
         assert_eq!(sys_lseek(&ctx, fd, i64::MAX, SeekOrigin::CUR as u32), Err(EOVERFLOW));
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sys_dup() -> Result<(), Errno> {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let file_handle = task_owner.task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
+        let files = &task_owner.task.files;
+        let oldfd = files.add(file_handle)?;
+        let syscall_result = sys_dup(&ctx, oldfd)?;
+        let newfd;
+        if let SyscallResult::Success(value) = syscall_result {
+            newfd = FdNumber::from_raw(value as i32);
+        } else {
+            return Err(EBADF);
+        }
+
+        assert_ne!(oldfd, newfd);
+        assert!(Arc::ptr_eq(&files.get(oldfd).unwrap(), &files.get(newfd).unwrap()));
+
+        assert_eq!(sys_dup(&ctx, FdNumber::from_raw(3)), Err(EBADF));
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sys_dup3() -> Result<(), Errno> {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let file_handle = task_owner.task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
+        let files = &task_owner.task.files;
+        let oldfd = files.add(file_handle)?;
+        let newfd = FdNumber::from_raw(2);
+        sys_dup3(&ctx, oldfd, newfd, FdFlags::CLOEXEC.bits())?;
+
+        assert_ne!(oldfd, newfd);
+        assert!(Arc::ptr_eq(&files.get(oldfd).unwrap(), &files.get(newfd).unwrap()));
+        assert_eq!(files.get_fd_flags(oldfd).unwrap(), FdFlags::empty());
+        assert_eq!(files.get_fd_flags(newfd).unwrap(), FdFlags::CLOEXEC);
+
+        assert_eq!(sys_dup3(&ctx, oldfd, oldfd, FdFlags::CLOEXEC.bits()), Err(EINVAL));
+
+        // Pass invalid flags.
+        let invalid_flags = 1234;
+        assert_eq!(sys_dup3(&ctx, oldfd, newfd, invalid_flags), Err(EINVAL));
+
+        // Makes sure that dup closes the old file handle before the fd points
+        // to the new file handle.
+        let second_file_handle =
+            task_owner.task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
+        let different_file_fd = files.add(second_file_handle)?;
+        assert!(!Arc::ptr_eq(&files.get(oldfd).unwrap(), &files.get(different_file_fd).unwrap()));
+        sys_dup3(&ctx, oldfd, different_file_fd, FdFlags::CLOEXEC.bits())?;
+        assert!(Arc::ptr_eq(&files.get(oldfd).unwrap(), &files.get(different_file_fd).unwrap()));
 
         Ok(())
     }

@@ -51,8 +51,12 @@ impl FdTable {
     }
 
     pub fn insert(&self, fd: FdNumber, file: FileHandle) {
+        self.insert_with_flags(fd, file, FdFlags::empty())
+    }
+
+    pub fn insert_with_flags(&self, fd: FdNumber, file: FileHandle, flags: FdFlags) {
         let mut table = self.table.write();
-        table.insert(fd, FdTableEntry::new(file, FdFlags::empty()));
+        table.insert(fd, FdTableEntry::new(file, flags));
     }
 
     pub fn add(&self, file: FileHandle) -> Result<FdNumber, Errno> {
@@ -61,12 +65,35 @@ impl FdTable {
 
     pub fn add_with_flags(&self, file: FileHandle, flags: FdFlags) -> Result<FdNumber, Errno> {
         let mut table = self.table.write();
-        let mut fd = FdNumber::from_raw(0);
-        while table.contains_key(&fd) {
-            fd = FdNumber::from_raw(fd.raw() + 1);
-        }
+        let fd = self.get_lowest_available_fd(&*table);
         table.insert(fd, FdTableEntry::new(file, flags));
         Ok(fd)
+    }
+
+    // Duplicates a file handle.
+    // If newfd does not contain a value, a new FdNumber is allocated. Returns the new FdNumber.
+    pub fn duplicate(
+        &self,
+        oldfd: FdNumber,
+        newfd: Option<FdNumber>,
+        flags: FdFlags,
+    ) -> Result<FdNumber, Errno> {
+        // Drop the file object only after releasing the writer lock in case
+        // the close() function on the FileOps calls back into the FdTable.
+        let _removed_file;
+        let result = {
+            let mut table = self.table.write();
+            let file = table.get(&oldfd).map(|entry| entry.file.clone()).ok_or(EBADF)?;
+            let fd = if let Some(fd) = newfd {
+                _removed_file = table.remove(&fd);
+                fd
+            } else {
+                self.get_lowest_available_fd(&*table)
+            };
+            table.insert(fd, FdTableEntry::new(file, flags));
+            Ok(fd)
+        };
+        result
     }
 
     pub fn get(&self, fd: FdNumber) -> Result<FileHandle, Errno> {
@@ -75,8 +102,13 @@ impl FdTable {
     }
 
     pub fn close(&self, fd: FdNumber) -> Result<(), Errno> {
-        let mut table = self.table.write();
-        table.remove(&fd).ok_or(EBADF).map(|_| {})
+        // Drop the file object only after releasing the writer lock in case
+        // the close() function on the FileOps calls back into the FdTable.
+        let removed = {
+            let mut table = self.table.write();
+            table.remove(&fd)
+        };
+        removed.ok_or(EBADF).map(|_| {})
     }
 
     pub fn get_fd_flags(&self, fd: FdNumber) -> Result<FdFlags, Errno> {
@@ -92,6 +124,14 @@ impl FdTable {
                 entry.flags = flags;
             })
             .ok_or(EBADF)
+    }
+
+    fn get_lowest_available_fd(&self, table: &HashMap<FdNumber, FdTableEntry>) -> FdNumber {
+        let mut fd = FdNumber::from_raw(0);
+        while table.contains_key(&fd) {
+            fd = FdNumber::from_raw(fd.raw() + 1);
+        }
+        fd
     }
 }
 

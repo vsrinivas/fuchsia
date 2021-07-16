@@ -127,6 +127,8 @@ pub fn dispatch_syscall(
         clock_getres[2],
         clone[5],
         close[1],
+        dup[1],
+        dup3[3],
         execve[3],
         exit[1],
         exit_group[1],
