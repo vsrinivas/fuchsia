@@ -214,7 +214,7 @@ static_assert(ZX_IS_PAGE_ALIGNED(HEAP_GROW_SIZE), "");
 // down to 2**HEAP_ALLOC_VIRTUAL_BITS or less. As such the heap can grow by more
 // than this many bits at once, but not so many as it must fall into the next
 // bucket.
-#define HEAP_ALLOC_VIRTUAL_BITS 20
+#define HEAP_ALLOC_VIRTUAL_BITS 21
 
 // HEAP_LARGE_ALLOC_BYTES limits size of any single allocation.
 //
@@ -230,7 +230,7 @@ static_assert(ZX_IS_PAGE_ALIGNED(HEAP_GROW_SIZE), "");
 // slightly less than this.
 //
 // See also |HEAP_GROW_SIZE|.
-#define HEAP_LARGE_ALLOC_BYTES ((size_t(1) << HEAP_ALLOC_VIRTUAL_BITS) + sizeof(header_t))
+#define HEAP_LARGE_ALLOC_BYTES ((size_t(1) << HEAP_ALLOC_VIRTUAL_BITS) - kHeapGrowOverhead)
 
 // Buckets for allocations.  The smallest 15 buckets are 8, 16, 24, etc. up to
 // 120 bytes.  After that we round up to the nearest size that can be written
@@ -258,11 +258,6 @@ typedef struct header_struct {
   size_t size;
 } header_t;
 
-// When we grow the heap we have to have somewhere in the freelist to put the
-// resulting freelist entry, so the freelist has to have a certain number of
-// buckets.
-static_assert(HEAP_GROW_SIZE <= HEAP_LARGE_ALLOC_BYTES);
-
 // When the heap is grown the requested internal usable size will be increased
 // by this amount before allocating from the OS. This can be factored into
 // any heap_grow requested to precisely control the OS allocation amount.
@@ -271,6 +266,11 @@ constexpr size_t kHeapGrowOverhead = sizeof(header_t) * 2;
 // Precalculated version of HEAP_GROW_SIZE that takes into account the grow
 // overhead.
 constexpr size_t kHeapUsableGrowSize = HEAP_GROW_SIZE - kHeapGrowOverhead;
+
+// When we grow the heap we have to have somewhere in the freelist to put the
+// resulting freelist entry, so the freelist has to have a certain number of
+// buckets.
+static_assert(HEAP_GROW_SIZE <= HEAP_LARGE_ALLOC_BYTES);
 
 typedef struct free_struct {
   header_t header;
