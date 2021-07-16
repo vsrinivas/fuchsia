@@ -23,6 +23,7 @@ use {
         pin::Pin,
         sync::Arc,
         task::{Context, Poll},
+        time::SystemTime,
     },
     tuf::{
         interchange::Json,
@@ -110,6 +111,11 @@ impl RepositoryBackend for FileSystemRepository {
         watcher.watch(&self.repo_path, RecursiveMode::NonRecursive)?;
 
         Ok(WatchStream { _watcher: watcher, receiver }.boxed())
+    }
+
+    async fn target_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {
+        let file_path = sanitize_path(&self.repo_path, path)?;
+        Ok(Some(async_fs::metadata(&file_path).await?.modified()?))
     }
 
     fn get_tuf_repo(&self) -> Result<Box<(dyn RepositoryProvider<Json> + 'static)>, Error> {
@@ -243,6 +249,18 @@ mod tests {
         drop(f);
 
         assert_matches!(read(&repo, "empty").await, Ok(body) if body == b"");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_timestamp() {
+        let d = tempfile::tempdir().unwrap();
+        let repo = FileSystemRepository::new(d.path().to_path_buf());
+
+        let f = File::create(d.path().join("empty")).unwrap();
+        let mtime = f.metadata().unwrap().modified().unwrap();
+        drop(f);
+
+        assert_eq!(mtime, repo.target_modification_time("empty").await.unwrap().unwrap());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

@@ -23,6 +23,7 @@ use {
             atomic::{AtomicUsize, Ordering},
             Arc,
         },
+        time::SystemTime,
     },
     tuf::{
         client::{Client, Config, DefaultTranslator},
@@ -375,6 +376,9 @@ pub trait RepositoryBackend: std::fmt::Debug {
     fn watch(&self) -> anyhow::Result<BoxStream<'static, ()>> {
         Err(anyhow::anyhow!("Watching not supported for this repo type"))
     }
+
+    /// Get the modification time of a path in this repository if available.
+    async fn target_modification_time(&self, path: &str) -> anyhow::Result<Option<SystemTime>>;
 
     /// Produces the backing TUF [RepositoryProvider] for this repository.
     fn get_tuf_repo(&self) -> Result<Box<dyn RepositoryProvider<Json>>, Error>;

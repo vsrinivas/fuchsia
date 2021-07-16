@@ -6,7 +6,7 @@ use {
     super::{Error, FileSystemRepository, RepositoryBackend, RepositorySpec, Resource},
     anyhow::Result,
     futures::stream::BoxStream,
-    std::path::PathBuf,
+    std::{path::PathBuf, time::SystemTime},
     tuf::{interchange::Json, repository::RepositoryProvider},
 };
 
@@ -45,5 +45,9 @@ impl RepositoryBackend for PmRepository {
 
     fn get_tuf_repo(&self) -> Result<Box<(dyn RepositoryProvider<Json> + 'static)>, Error> {
         self.repo.get_tuf_repo()
+    }
+
+    async fn target_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {
+        self.repo.target_modification_time(path).await
     }
 }
