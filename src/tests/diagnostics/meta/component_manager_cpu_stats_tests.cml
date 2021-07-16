@@ -35,7 +35,7 @@
             "<component_manager>:root/cpu_stats/recent_usage:* WHERE [a] Or(Count(a) == 3, Count(a) == 6)",
 
             // Component manager exposes cpu stats processing times.
-            "<component_manager>:root/cpu_stats:processing_times_ns WHERE [a] Not(Missing(a))",
+            "<component_manager>:root/cpu_stats:processing_times_ns WHERE [a] UnhandledType(a)",
         ],
     },
 }

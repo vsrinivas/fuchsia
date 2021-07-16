@@ -13,8 +13,8 @@
             // Appmgr exposes recent usage consisting of 6 measurements.
             "core/appmgr:root/cpu_stats/recent_usage:* WHERE [a] Count(a) == 6",
 
-            // Appmgr exposes stats on measurement time.
-            "core/appmgr:root/cpu_stats:process_time_ns",
+            // Appmgr exposes stats on measurement time. (Histograms are unhandled.)
+            "core/appmgr:root/cpu_stats:process_time_ns WHERE [a] UnhandledType(a)",
 
             // Appmgr exposes the number of tracked tasks.
             "core/appmgr:root/cpu_stats:task_count WHERE [a] a > 0",

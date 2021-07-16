@@ -28,6 +28,9 @@ pub enum Metric {
     /// Eval contains an arithmetic expression,
     // TODO(cphoenix): Parse and validate this at load-time.
     Eval(String),
+    // Directly specify a value that's hard to generate, for example Problem::UnhandledType.
+    #[cfg(test)]
+    Hardcoded(MetricValue),
 }
 
 impl<'de> Deserialize<'de> for Metric {
@@ -51,6 +54,8 @@ impl std::fmt::Display for Metric {
         match self {
             Metric::Selector(s) => write!(f, "{:?}", s),
             Metric::Eval(s) => write!(f, "{}", s),
+            #[cfg(test)]
+            Metric::Hardcoded(value) => write!(f, "{:?}", value),
         }
     }
 }
@@ -99,6 +104,7 @@ pub enum Function {
     SyslogHas,
     BootlogHas,
     Missing,
+    UnhandledType,
     Problem,
     Annotation,
     Lambda,
@@ -135,31 +141,21 @@ impl Lambda {
                 .map(|param| match param {
                     Expression::Variable(name) => {
                         if name.includes_namespace() {
-                            Err(MetricValue::Problem(Problem::Missing(
-                                "Namespaces not allowed in function params".to_string(),
-                            )))
+                            Err(syntax_error("Namespaces not allowed in function params"))
                         } else {
                             Ok(name.original_name().to_string())
                         }
                     }
-                    _ => Err(MetricValue::Problem(Problem::Missing(
-                        "Function params must be valid identifier names".to_string(),
-                    ))),
+                    _ => Err(syntax_error("Function params must be valid identifier names")),
                 })
                 .collect::<Result<Vec<_>, _>>(),
-            _ => {
-                return Err(MetricValue::Problem(Problem::Missing(
-                    "Function params must be a vector of names".to_string(),
-                )))
-            }
+            _ => return Err(syntax_error("Function params must be a vector of names")),
         }
     }
 
     fn as_metric_value(definition: &Vec<Expression>) -> MetricValue {
         if definition.len() != 2 {
-            return MetricValue::Problem(Problem::Missing(
-                "Function needs two parameters, list of params and expression".to_string(),
-            ));
+            return syntax_error("Function needs two parameters, list of params and expression");
         }
         let parameters = match Self::valid_parameters(&definition[0]) {
             Ok(names) => names,
@@ -221,8 +217,24 @@ where
 }
 
 // Construct Problem() metric from a message
-fn missing(message: &str) -> MetricValue {
-    MetricValue::Problem(Problem::Missing(message.to_string()))
+fn missing(message: impl AsRef<str>) -> MetricValue {
+    MetricValue::Problem(Problem::Missing(message.as_ref().to_string()))
+}
+
+fn syntax_error(message: impl AsRef<str>) -> MetricValue {
+    MetricValue::Problem(Problem::SyntaxError(message.as_ref().to_string()))
+}
+
+fn value_error(message: impl AsRef<str>) -> MetricValue {
+    MetricValue::Problem(Problem::ValueError(message.as_ref().to_string()))
+}
+
+fn internal_bug(message: impl AsRef<str>) -> MetricValue {
+    MetricValue::Problem(Problem::InternalBug(message.as_ref().to_string()))
+}
+
+fn unhandled_type(message: impl AsRef<str>) -> MetricValue {
+    MetricValue::Problem(Problem::UnhandledType(message.as_ref().to_string()))
 }
 
 pub fn safe_float_to_int(float: f64) -> Option<i64> {
@@ -252,7 +264,7 @@ fn first_usable_value(values: impl Iterator<Item = MetricValue>) -> MetricValue 
     if found_empty {
         return MetricValue::Vector(vec![]);
     }
-    // This will be improved when we get structured output and structured errors.
+    // TODO(fxbug.dev/58922): Improve and simplify the error semantics
     return missing("Every value was missing");
 }
 
@@ -277,31 +289,25 @@ impl<'a> MetricState<'a> {
             return fetcher.fetch(name);
         }
         if variable.includes_namespace() {
-            return MetricValue::Problem(Problem::Missing(format!(
+            return syntax_error(format!(
                 "Name {} not in test values and refers outside the file",
                 name
-            )));
+            ));
         }
         match self.metrics.get(namespace) {
-            None => {
-                return MetricValue::Problem(Problem::Missing(format!(
-                    "BUG! Bad namespace '{}'",
-                    namespace
-                )))
-            }
+            None => return internal_bug(format!("BUG! Bad namespace '{}'", namespace)),
             Some(metric_map) => match metric_map.get(name) {
                 None => {
-                    return MetricValue::Problem(Problem::Missing(format!(
-                        "Metric '{}' Not Found in '{}'",
-                        name, namespace
-                    )))
+                    return syntax_error(format!("Metric '{}' Not Found in '{}'", name, namespace))
                 }
                 Some(metric) => match metric {
-                    Metric::Selector(_) => MetricValue::Problem(Problem::Missing(format!(
+                    Metric::Selector(_) => missing(format!(
                         "Selector {} can't be used in tests; please supply a value",
                         name
-                    ))),
+                    )),
                     Metric::Eval(expression) => self.evaluate_value(namespace, &expression),
+                    #[cfg(test)]
+                    Metric::Hardcoded(value) => value.clone(),
                 },
             },
         }
@@ -317,18 +323,13 @@ impl<'a> MetricState<'a> {
     ) -> MetricValue {
         if let Some((real_namespace, real_name)) = name.name_parts(namespace) {
             match self.metrics.get(real_namespace) {
-                None => {
-                    return MetricValue::Problem(Problem::Missing(format!(
-                        "Bad namespace '{}'",
-                        real_namespace
-                    )))
-                }
+                None => return syntax_error(format!("Bad namespace '{}'", real_namespace)),
                 Some(metric_map) => match metric_map.get(real_name) {
                     None => {
-                        return MetricValue::Problem(Problem::Missing(format!(
+                        return syntax_error(format!(
                             "Metric '{}' Not Found in '{}'",
                             real_name, real_namespace
-                        )))
+                        ))
                     }
                     Some(metric) => match metric {
                         Metric::Selector(selectors) => first_usable_value(
@@ -337,14 +338,13 @@ impl<'a> MetricState<'a> {
                         Metric::Eval(expression) => {
                             self.evaluate_value(real_namespace, &expression)
                         }
+                        #[cfg(test)]
+                        Metric::Hardcoded(value) => value.clone(),
                     },
                 },
             }
         } else {
-            return MetricValue::Problem(Problem::Missing(format!(
-                "Bad name '{}'",
-                name.original_name()
-            )));
+            return syntax_error(format!("Bad name '{}'", name.original_name()));
         }
     }
 
@@ -364,21 +364,21 @@ impl<'a> MetricState<'a> {
     /// Fetch or compute the value of a Metric expression from an action.
     pub fn eval_action_metric(&self, namespace: &str, metric: &Metric) -> MetricValue {
         match metric {
-            Metric::Selector(_) => MetricValue::Problem(Problem::Missing(
-                "Selectors aren't allowed in action triggers".to_owned(),
-            )),
+            Metric::Selector(_) => {
+                syntax_error("Selectors aren't allowed in action triggers".to_owned())
+            }
             Metric::Eval(string) => {
                 unwrap_for_math(&self.evaluate_value(namespace, string)).clone()
             }
+            #[cfg(test)]
+            Metric::Hardcoded(value) => value.clone(),
         }
     }
 
     fn evaluate_value(&self, namespace: &str, expression: &str) -> MetricValue {
         match parse::parse_expression(expression) {
             Ok(expr) => self.evaluate(namespace, &expr),
-            Err(e) => {
-                MetricValue::Problem(Problem::Missing(format!("Expression parse error\n{}", e)))
-            }
+            Err(e) => syntax_error(format!("Expression parse error\n{}", e)),
         }
     }
 
@@ -386,12 +386,7 @@ impl<'a> MetricState<'a> {
     pub fn evaluate_math(expr: &str) -> MetricValue {
         let parsed = match parse::parse_expression(expr) {
             Ok(p) => p,
-            Err(err) => {
-                return MetricValue::Problem(Problem::Missing(format!(
-                    "Failed to parse '{}': {}",
-                    expr, err
-                )))
-            }
+            Err(err) => return syntax_error(format!("Failed to parse '{}': {}", expr, err)),
         };
         let values = HashMap::new();
         let fetcher = Fetcher::TrialData(TrialDataFetcher::new(&values));
@@ -429,6 +424,7 @@ impl<'a> MetricState<'a> {
                 self.log_contains(function, namespace, operands)
             }
             Function::Missing => self.is_missing(namespace, operands),
+            Function::UnhandledType => self.is_unhandled_type(namespace, operands),
             Function::Problem => self.is_problem(namespace, operands),
             Function::Annotation => self.annotation(namespace, operands),
             Function::Lambda => Lambda::as_metric_value(operands),
@@ -452,10 +448,10 @@ impl<'a> MetricState<'a> {
 
     fn regex(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
         if operands.len() != 2 {
-            return MetricValue::Problem(Problem::Missing(
+            return syntax_error(
                 "StringMatches(metric, regex) needs one string metric and one string regex"
                     .to_string(),
-            ));
+            );
         }
 
         let (value, regex) = match (
@@ -464,19 +460,14 @@ impl<'a> MetricState<'a> {
         ) {
             (MetricValue::String(value), MetricValue::String(regex)) => (value, regex),
             _ => {
-                return MetricValue::Problem(Problem::Missing(
-                    "Arguments to StringMatches must be strings".to_string(),
-                ));
+                return syntax_error("Arguments to StringMatches must be strings".to_string());
             }
         };
 
         let regex = match Regex::new(&regex) {
             Ok(v) => v,
             Err(_) => {
-                return MetricValue::Problem(Problem::Missing(format!(
-                    "Could not parse `{}` as regex",
-                    regex
-                )));
+                return syntax_error(format!("Could not parse `{}` as regex", regex));
             }
         };
 
@@ -489,7 +480,7 @@ impl<'a> MetricState<'a> {
 
     fn now(&self, operands: &'a [Expression]) -> MetricValue {
         if !operands.is_empty() {
-            return missing("Now() requires no operands.");
+            return syntax_error("Now() requires no operands.");
         }
         match self.now {
             Some(time) => MetricValue::Int(time),
@@ -529,12 +520,12 @@ impl<'a> MetricState<'a> {
 
         let parameters = &lambda.parameters;
         if parameters.len() != args.len() {
-            return MetricValue::Problem(Problem::Missing(format!(
+            return syntax_error(format!(
                 "Function has {} parameters and needs {} arguments, but has {}.",
                 parameters.len(),
                 parameters.len(),
                 args.len()
-            )));
+            ));
         }
         let mut bindings = HashMap::new();
         for (name, value) in parameters.iter().zip(args.iter()) {
@@ -548,13 +539,22 @@ impl<'a> MetricState<'a> {
         &self,
         namespace: &str,
         operands: &'a [Expression],
-    ) -> Result<(Box<Lambda>, Vec<MetricValue>), ()> {
+        function_name: &str,
+    ) -> Result<(Box<Lambda>, Vec<MetricValue>), MetricValue> {
         if operands.len() == 0 {
-            return Err(());
+            return Err(syntax_error(format!(
+                "{} needs a function in its first argument",
+                function_name
+            )));
         }
         let lambda = match self.evaluate(namespace, &operands[0]) {
             MetricValue::Lambda(lambda) => lambda,
-            _ => return Err(()),
+            _ => {
+                return Err(syntax_error(format!(
+                    "{} needs a function in its first argument",
+                    function_name
+                )))
+            }
         };
         let arguments =
             operands[1..].iter().map(|expr| self.evaluate(namespace, expr)).collect::<Vec<_>>();
@@ -563,31 +563,32 @@ impl<'a> MetricState<'a> {
 
     /// This implements the Apply() function.
     fn apply(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
-        let (lambda, arguments) = match self.unpack_lambda(namespace, operands) {
+        let (lambda, arguments) = match self.unpack_lambda(namespace, operands, "Apply") {
             Ok((lambda, arguments)) => (lambda, arguments),
-            Err(()) => return missing("Apply needs a function in its first argument."),
+            Err(problem) => return problem,
         };
         if arguments.len() < 1 {
-            return missing("Apply needs a vector in its second argument.");
+            return syntax_error("Apply needs a second argument (a vector).");
         }
         if arguments.len() > 1 {
-            return missing("Apply only accepts one vector argument.");
+            return syntax_error("Apply only accepts one vector argument.");
         }
 
         match &arguments[0] {
             MetricValue::Vector(apply_args) => {
                 self.apply_lambda(namespace, &lambda, &apply_args.iter().collect::<Vec<_>>())
             }
-            _ => return missing("Apply only accepts a vector as an argument."),
+            _ => return value_error("Apply only accepts a vector as an argument."),
         }
     }
 
     /// This implements the Map() function.
     fn map(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
-        let (lambda, arguments) = match self.unpack_lambda(namespace, operands) {
+        let (lambda, arguments) = match self.unpack_lambda(namespace, operands, "Map") {
             Ok((lambda, arguments)) => (lambda, arguments),
-            Err(()) => return missing("Map needs a function in its first argument."),
+            Err(problem) => return problem,
         };
+        // TODO(cphoenix): Clean this up - replace the next 25 lines with a for loop
         let vector_args = arguments
             .iter()
             .filter(|item| match item {
@@ -629,24 +630,24 @@ impl<'a> MetricState<'a> {
 
     /// This implements the Fold() function.
     fn fold(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
-        let (lambda, arguments) = match self.unpack_lambda(namespace, operands) {
+        let (lambda, arguments) = match self.unpack_lambda(namespace, operands, "Fold") {
             Ok((lambda, arguments)) => (lambda, arguments),
-            Err(()) => return missing("Fold needs a function as the first argument."),
+            Err(problem) => return problem,
         };
         if arguments.is_empty() {
-            return missing("Fold needs a second argument, a vector");
+            return syntax_error("Fold needs a second argument, a vector");
         }
         let vector = match &arguments[0] {
             MetricValue::Vector(items) => items,
-            _ => return missing("Second argument of Fold must be a vector"),
+            _ => return value_error("Second argument of Fold must be a vector"),
         };
         let (first, rest) = match arguments.len() {
             1 => match vector.split_first() {
                 Some(first_rest) => first_rest,
-                None => return missing("Fold needs at least one value"),
+                None => return value_error("Fold needs at least one value"),
             },
             2 => (&arguments[1], &vector[..]),
-            _ => return missing("Fold needs (function, vec) or (function, vec, start)"),
+            _ => return syntax_error("Fold needs (function, vec) or (function, vec, start)"),
         };
         let mut result = first.clone();
         for item in rest {
@@ -657,12 +658,12 @@ impl<'a> MetricState<'a> {
 
     /// This implements the Filter() function.
     fn filter(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
-        let (lambda, arguments) = match self.unpack_lambda(namespace, operands) {
+        let (lambda, arguments) = match self.unpack_lambda(namespace, operands, "Filter") {
             Ok((lambda, arguments)) => (lambda, arguments),
-            Err(()) => return missing("Filter needs a function"),
+            Err(problem) => return problem,
         };
         if arguments.len() != 1 {
-            return missing("Filter needs (function, vector)");
+            return syntax_error("Filter needs (function, vector)");
         }
         let result = match &arguments[0] {
             MetricValue::Vector(items) => items
@@ -670,16 +671,14 @@ impl<'a> MetricState<'a> {
                 .filter_map(|item| match self.apply_lambda(namespace, &lambda, &[&item]) {
                     MetricValue::Bool(true) => Some(item.clone()),
                     MetricValue::Bool(false) => None,
-                    MetricValue::Problem(Problem::Missing(message)) => {
-                        Some(MetricValue::Problem(Problem::Missing(message.clone())))
-                    }
-                    bad_type => Some(MetricValue::Problem(Problem::Missing(format!(
-                        "Bad value {:?} from filter function should be true, false, or Missing",
+                    MetricValue::Problem(problem) => Some(MetricValue::Problem(problem.clone())),
+                    bad_type => Some(value_error(format!(
+                        "Bad value {:?} from filter function should be Boolean",
                         bad_type
-                    )))),
+                    ))),
                 })
                 .collect(),
-            _ => return missing("Filter second argument must be a vector"),
+            _ => return syntax_error("Filter second argument must be a vector"),
         };
         MetricValue::Vector(result)
     }
@@ -687,39 +686,53 @@ impl<'a> MetricState<'a> {
     /// This implements the Count() function.
     fn count(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
         if operands.len() != 1 {
-            return missing("Count requires one argument, a vector");
+            return syntax_error("Count requires one argument, a vector");
         }
+        // TODO(fxbug.dev/58922): Refactor all the arg-sanitizing boilerplate into one function
         match self.evaluate(namespace, &operands[0]) {
             MetricValue::Vector(items) => {
-                match items
-                    .iter()
-                    .find(|item| matches!(item, MetricValue::Problem(Problem::Missing(_))))
-                {
-                    // TODO(57073): When we get structured Missing, combine all Missing values, not just the first.
-                    Some(missing) => missing.clone(),
-                    None => MetricValue::Int(items.len() as i64),
-                }
+                let errors = items
+                    .clone()
+                    .into_iter()
+                    .filter_map(|item| match item {
+                        MetricValue::Problem(problem) => Some(problem),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>();
+                return match errors.len() {
+                    0 => MetricValue::Int(items.len() as i64),
+                    1 => MetricValue::Problem(errors[0].clone()),
+                    _ => MetricValue::Problem(Problem::Multiple(
+                        errors
+                            .iter()
+                            .map(|e| {
+                                let p: Problem = e.clone(); // Without this, clone() gives another &Problem
+                                p
+                            })
+                            .collect(),
+                    )),
+                };
             }
-            bad => MetricValue::Problem(Problem::Missing(format!(
-                "Count only works on vectors, not {}",
-                bad
-            ))),
+            bad => value_error(format!("Count only works on vectors, not {}", bad)),
         }
     }
 
     /// This implements the time-conversion functions.
     fn time(&self, namespace: &str, operands: &[Expression], multiplier: i64) -> MetricValue {
         if operands.len() != 1 {
-            return missing("Time conversion needs 1 numeric argument");
+            return syntax_error("Time conversion needs 1 numeric argument");
         }
         match self.evaluate(namespace, &operands[0]) {
             MetricValue::Int(value) => MetricValue::Int(value * multiplier),
             MetricValue::Float(value) => match safe_float_to_int(value * (multiplier as f64)) {
-                None => missing("Time conversion needs 1 numeric argument"),
+                None => value_error(format!(
+                    "Time conversion needs 1 numeric argument; couldn't convert {}",
+                    value
+                )),
                 Some(value) => MetricValue::Int(value),
             },
             MetricValue::Problem(oops) => return MetricValue::Problem(oops),
-            _ => missing("Time conversion needs 1 numeric argument"),
+            bad => value_error(format!("Time conversion needs 1 numeric argument, not {}", bad)),
         }
     }
 
@@ -736,9 +749,7 @@ impl<'a> MetricState<'a> {
 
     fn annotation(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
         if operands.len() != 1 {
-            return MetricValue::Problem(Problem::Missing(
-                "Annotation() needs 1 string argument".to_string(),
-            ));
+            return syntax_error("Annotation() needs 1 string argument");
         }
         match self.evaluate(namespace, &operands[0]) {
             MetricValue::String(string) => match &self.fetcher {
@@ -746,9 +757,7 @@ impl<'a> MetricState<'a> {
                 Fetcher::FileData(fetcher) => fetcher.annotations,
             }
             .fetch(&string),
-            _ => MetricValue::Problem(Problem::Missing(
-                "Annotation() needs a string argument".to_string(),
-            )),
+            _ => value_error("Annotation() needs a string argument"),
         }
     }
 
@@ -763,31 +772,21 @@ impl<'a> MetricState<'a> {
                 Function::KlogHas => fetcher.klog,
                 Function::SyslogHas => fetcher.syslog,
                 Function::BootlogHas => fetcher.bootlog,
-                _ => {
-                    return MetricValue::Problem(Problem::Missing(
-                        "Internal error, log_contains with non-log function".to_string(),
-                    ))
-                }
+                _ => return internal_bug("Internal error, log_contains with non-log function"),
             },
             Fetcher::FileData(fetcher) => match log_type {
                 Function::KlogHas => fetcher.klog,
                 Function::SyslogHas => fetcher.syslog,
                 Function::BootlogHas => fetcher.bootlog,
-                _ => {
-                    return MetricValue::Problem(Problem::Missing(
-                        "Internal error, log_contains with non-log function".to_string(),
-                    ))
-                }
+                _ => return internal_bug("Internal error, log_contains with non-log function"),
             },
         };
         if operands.len() != 1 {
-            return MetricValue::Problem(Problem::Missing(
-                "Log matcher must use exactly 1 argument, an RE string.".into(),
-            ));
+            return syntax_error("Log matcher must use exactly 1 argument, an RE string.");
         }
         match self.evaluate(namespace, &operands[0]) {
             MetricValue::String(re) => MetricValue::Bool(log_data.contains(&re)),
-            _ => MetricValue::Problem(Problem::Missing("Log matcher needs a string (RE).".into())),
+            _ => value_error("Log matcher needs a string (RE)."),
         }
     }
 
@@ -798,21 +797,17 @@ impl<'a> MetricState<'a> {
         operands: &Vec<Expression>,
     ) -> MetricValue {
         if operands.len() != 2 {
-            return MetricValue::Problem(Problem::Missing(format!(
-                "Bad arg list {:?} for binary operator",
-                operands
-            )));
+            return syntax_error(format!("Bad arg list {:?} for binary operator", operands));
         }
         let operand_values = map_vec(&operands, |operand| self.evaluate(namespace, operand));
         let args = map_vec_r(&operand_values, |operand| unwrap_for_math(operand));
         match (args[0], args[1]) {
-            // We forward ::Missing for better error messaging.
-            (MetricValue::Problem(Problem::Missing(reason)), _) => {
-                MetricValue::Problem(Problem::Missing(reason.to_string()))
+            // TODO(fxbug.dev/58922): Refactor all the arg-sanitizing boilerplate into one function
+            (MetricValue::Problem(p1), MetricValue::Problem(p2)) => {
+                MetricValue::Problem(Problem::Multiple(vec![p1.clone(), p2.clone()]))
             }
-            (_, MetricValue::Problem(Problem::Missing(reason))) => {
-                MetricValue::Problem(Problem::Missing(reason.to_string()))
-            }
+            (MetricValue::Problem(p), _) => MetricValue::Problem(p.clone()),
+            (_, MetricValue::Problem(p)) => MetricValue::Problem(p.clone()),
             _ => MetricValue::Bool(function(args[0], args[1])),
         }
     }
@@ -825,19 +820,13 @@ impl<'a> MetricState<'a> {
         short_circuit_behavior: ShortCircuitBehavior,
     ) -> MetricValue {
         if operands.len() == 0 {
-            return MetricValue::Problem(Problem::Missing(
-                "No operands in boolean expression".into(),
-            ));
+            return syntax_error("No operands in boolean expression");
         }
         let first = self.evaluate(namespace, &operands[0]);
         let mut result: bool = match unwrap_for_math(&first) {
             MetricValue::Bool(value) => *value,
-            MetricValue::Problem(Problem::Missing(reason)) => {
-                return MetricValue::Problem(Problem::Missing(reason.to_string()));
-            }
-            bad => {
-                return MetricValue::Problem(Problem::Missing(format!("{:?} is not boolean", bad)))
-            }
+            MetricValue::Problem(p) => return MetricValue::Problem(p.clone()),
+            bad => return value_error(format!("{:?} is not boolean", bad)),
         };
         for operand in operands[1..].iter() {
             match (result, short_circuit_behavior) {
@@ -852,15 +841,8 @@ impl<'a> MetricState<'a> {
             let nth = self.evaluate(namespace, operand);
             result = match unwrap_for_math(&nth) {
                 MetricValue::Bool(value) => function(result, *value),
-                MetricValue::Problem(reason) => {
-                    return MetricValue::Problem(reason.clone());
-                }
-                bad => {
-                    return MetricValue::Problem(Problem::Missing(format!(
-                        "{:?} is not boolean",
-                        bad
-                    )))
-                }
+                MetricValue::Problem(p) => return MetricValue::Problem(p.clone()),
+                bad => return value_error(format!("{:?} is not boolean", bad)),
             }
         }
         MetricValue::Bool(result)
@@ -868,29 +850,66 @@ impl<'a> MetricState<'a> {
 
     fn not_bool(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
         if operands.len() != 1 {
-            return MetricValue::Problem(Problem::Missing(format!(
+            return syntax_error(format!(
                 "Wrong number of arguments ({}) for unary bool operator",
                 operands.len()
-            )));
+            ));
         }
         match unwrap_for_math(&self.evaluate(namespace, &operands[0])) {
             MetricValue::Bool(true) => MetricValue::Bool(false),
             MetricValue::Bool(false) => MetricValue::Bool(true),
-            MetricValue::Problem(Problem::Missing(reason)) => {
-                return MetricValue::Problem(Problem::Missing(reason.to_string()));
-            }
-            bad => return MetricValue::Problem(Problem::Missing(format!("{:?} not boolean", bad))),
+            MetricValue::Problem(p) => return MetricValue::Problem(p.clone()),
+            bad => return value_error(format!("{:?} not boolean", bad)),
         }
     }
 
+    // Returns Bool true if the given metric is Unhandled, or a vector with one Unhandled (which
+    // may be returned by fetch()), or a Multiple containing only Unhandled.
+    // Returns false if the metric is a non-Problem value.
+    // Propagates non-Unhandled Problems.
+    fn is_unhandled_type(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+        if operands.len() != 1 {
+            return syntax_error(format!(
+                "Wrong number of operands for UnhandledType(): {}",
+                operands.len()
+            ));
+        }
+        let value = self.evaluate(namespace, &operands[0]);
+        MetricValue::Bool(match value {
+            MetricValue::Problem(Problem::UnhandledType(_)) => true,
+            MetricValue::Problem(Problem::Multiple(ref problems)) => {
+                if problems.iter().filter(|p| matches!(p, Problem::UnhandledType(_))).count()
+                    == problems.len()
+                {
+                    true
+                } else {
+                    return value.clone();
+                }
+            }
+
+            // TODO(fxbug.dev/58922): Well-designed errors and special cases, not hacks
+            // is_unhandled_type() returns false on an empty vector, while is_missing() returns
+            // true as a special case. So these functions can't easily be refactored. When 58922 is
+            // completed this logic will be a lot simpler and more consistent.
+            MetricValue::Vector(contents) if contents.len() == 1 => match contents[0] {
+                MetricValue::Problem(Problem::UnhandledType(_)) => true,
+                MetricValue::Problem(ref problem) => return MetricValue::Problem(problem.clone()),
+                _ => false,
+            },
+            MetricValue::Problem(problem) => return MetricValue::Problem(problem.clone()),
+            _ => false,
+        })
+    }
+
     // Returns Bool true if the given metric is Missing, false if the metric has a value. Propagates
-    // non-Missing errors.
+    // non-Missing errors. Special case: An empty vector, or a vector containing one Missing,
+    // counts as Missing.
     fn is_missing(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
         if operands.len() != 1 {
-            return MetricValue::Problem(Problem::Missing(format!(
+            return syntax_error(format!(
                 "Wrong number of operands for Missing(): {}",
                 operands.len()
-            )));
+            ));
         }
         let value = self.evaluate(namespace, &operands[0]);
         MetricValue::Bool(match value {
@@ -909,8 +928,10 @@ impl<'a> MetricState<'a> {
             MetricValue::Vector(contents) if contents.len() == 0 => true,
             MetricValue::Vector(contents) if contents.len() == 1 => match contents[0] {
                 MetricValue::Problem(Problem::Missing(_)) => true,
+                MetricValue::Problem(ref problem) => return MetricValue::Problem(problem.clone()),
                 _ => false,
             },
+            MetricValue::Problem(problem) => return MetricValue::Problem(problem.clone()),
             _ => false,
         })
     }
@@ -919,10 +940,10 @@ impl<'a> MetricState<'a> {
     // non-Missing errors.
     fn is_problem(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
         if operands.len() != 1 {
-            return MetricValue::Problem(Problem::Missing(format!(
+            return syntax_error(format!(
                 "Wrong number of operands for Problem(): {}",
                 operands.len()
-            )));
+            ));
         }
         let value = self.evaluate(namespace, &operands[0]);
         MetricValue::Bool(match value {
@@ -959,20 +980,6 @@ pub(crate) mod test {
                     println!("Non problem type {:?}", oops);
                     assert!(false, "Non-Problem type");
                 }
-            }
-        };
-    }
-
-    /// Missing should never equal anything, even an identical Missing. Code (tests) can use
-    /// assert_missing!(MetricValue::Problem(Problem::Missing("foo".to_string())), "foo") to test error messages.
-    #[macro_export]
-    macro_rules! assert_missing {
-        ($missing:expr, $message:expr) => {
-            match $missing {
-                MetricValue::Problem(Problem::Missing(actual_message)) => {
-                    assert_eq!(&actual_message, $message)
-                }
-                _ => assert!(false, "Non-Missing type"),
             }
         };
     }
@@ -1070,17 +1077,17 @@ pub(crate) mod test {
             MetricValue::String("chromebook-x64".to_string())
         );
         assert_eq!(state.evaluate_value("", "Annotation('answer')"), MetricValue::Int(42));
-        assert_missing!(
+        assert_problem!(
             state.evaluate_value("", "Annotation('bogus')"),
-            "Key 'bogus' not found in annotations"
+            "Missing: Key 'bogus' not found in annotations"
         );
-        assert_missing!(
+        assert_problem!(
             state.evaluate_value("", "Annotation('bogus', 'Double bogus')"),
-            "Annotation() needs 1 string argument"
+            "SyntaxError: Annotation() needs 1 string argument"
         );
-        assert_missing!(
+        assert_problem!(
             state.evaluate_value("", "Annotation(42)"),
-            "Annotation() needs a string argument"
+            "ValueError: Annotation() needs a string argument"
         );
         Ok(())
     }
@@ -1103,6 +1110,7 @@ pub(crate) mod test {
             [
                 ("is42".to_string(), Metric::Eval("42".to_string())),
                 ("isOk".to_string(), Metric::Eval("'OK'".to_string())),
+                ("unhandled".to_string(), Metric::Hardcoded(unhandled_type("Unhandled"))),
             ]
             .iter()
             .cloned()
@@ -1158,23 +1166,23 @@ pub(crate) mod test {
         assert_eq!(state.evaluate_value("root", "isOk"), MetricValue::String("OK".to_string()));
 
         // Missing value
-        assert_missing!(
+        assert_problem!(
             state.evaluate_value("root", "missing"),
-            "Metric 'missing' Not Found in 'root'"
+            "SyntaxError: Metric 'missing' Not Found in 'root'"
         );
 
         // Booleans short circuit
-        assert_missing!(
+        assert_problem!(
             state.evaluate_value("root", "Or(is42 != 42, missing)"),
-            "Metric 'missing' Not Found in 'root'"
+            "SyntaxError: Metric 'missing' Not Found in 'root'"
         );
         assert_eq!(
             state.evaluate_value("root", "Or(is42 == 42, missing)"),
             MetricValue::Bool(true)
         );
-        assert_missing!(
+        assert_problem!(
             state.evaluate_value("root", "And(is42 == 42, missing)"),
-            "Metric 'missing' Not Found in 'root'"
+            "SyntaxError: Metric 'missing' Not Found in 'root'"
         );
 
         assert_eq!(
@@ -1182,24 +1190,71 @@ pub(crate) mod test {
             MetricValue::Bool(false)
         );
 
-        // Missing checks
+        // Missing() checks
         assert_eq!(state.evaluate_value("root", "Missing(is42)"), MetricValue::Bool(false));
-        assert_eq!(state.evaluate_value("root", "Missing(missing)"), MetricValue::Bool(true));
+        // An unknown variable is a SyntaxError, not a Missing(), and Missing() won't catch it.
+        assert_problem!(
+            state.evaluate_value("root", "Missing(not_found)"),
+            "SyntaxError: Metric 'not_found' Not Found in 'root'"
+        );
         assert_eq!(
             state.evaluate_value("root", "And(Not(Missing(is42)), is42 == 42)"),
             MetricValue::Bool(true)
         );
-        assert_eq!(
-            state.evaluate_value("root", "And(Not(Missing(missing)), missing == 'Hello')"),
-            MetricValue::Bool(false)
+        assert_problem!(
+            state.evaluate_value("root", "And(Not(Missing(not_found)), not_found == 'Hello')"),
+            "SyntaxError: Metric 'not_found' Not Found in 'root'"
         );
         assert_eq!(
             state.evaluate_value("root", "Or(Missing(is42), is42 < 42)"),
             MetricValue::Bool(false)
         );
+        assert_problem!(
+            state.evaluate_value("root", "Or(Missing(not_found), not_found == 'Hello')"),
+            "SyntaxError: Metric 'not_found' Not Found in 'root'"
+        );
+        assert_eq!(state.evaluate_value("root", "Missing([])"), MetricValue::Bool(true));
+
+        // UnhandledType() checks
+        assert_eq!(state.evaluate_value("root", "UnhandledType(is42)"), MetricValue::Bool(false));
+        // An unknown variable is a SyntaxError, not a Missing(), and Missing() won't catch it.
+        assert_problem!(
+            state.evaluate_value("root", "UnhandledType(not_found)"),
+            "SyntaxError: Metric 'not_found' Not Found in 'root'"
+        );
         assert_eq!(
-            state.evaluate_value("root", "Or(Missing(missing), missing == 'Hello')"),
+            state.evaluate_value("root", "And(Not(UnhandledType(is42)), is42 == 42)"),
             MetricValue::Bool(true)
+        );
+        assert_eq!(
+            state.evaluate_value("root", "UnhandledType(unhandled)"),
+            MetricValue::Bool(true)
+        );
+        assert_eq!(state.evaluate_value("root", "UnhandledType([])"), MetricValue::Bool(false));
+
+        // Problem() checks
+        assert_eq!(state.evaluate_value("root", "Problem(is42)"), MetricValue::Bool(false));
+        // An unknown variable is a SyntaxError, not a Missing()
+        assert_eq!(state.evaluate_value("root", "Problem(not_found)"), MetricValue::Bool(true));
+        assert_eq!(
+            state.evaluate_value("root", "And(Not(Problem(is42)), is42 == 42)"),
+            MetricValue::Bool(true)
+        );
+        assert_eq!(
+            state.evaluate_value("root", "And(Not(Problem(not_found)), not_found == 'Hello')"),
+            MetricValue::Bool(false)
+        );
+        assert_eq!(
+            state.evaluate_value("root", "Or(Problem(is42), is42 < 42)"),
+            MetricValue::Bool(false)
+        );
+        assert_eq!(
+            state.evaluate_value("root", "Or(Problem(not_found), not_found == 'Hello')"),
+            MetricValue::Bool(true)
+        );
+        assert_problem!(
+            state.evaluate_value("root", "Or(not_found == 'Hello', Problem(not_found))"),
+            "SyntaxError: Metric 'not_found' Not Found in 'root'"
         );
 
         // Ensure evaluation for action converts vector values.
@@ -1236,12 +1291,12 @@ pub(crate) mod test {
             ),
             MetricValue::Bool(false)
         );
-        assert_missing!(
+        assert_problem!(
             state.eval_action_metric(
                 "root",
                 &Metric::Eval("StringMatches('abcd', '[[')".to_string())
             ),
-            "Could not parse `[[` as regex"
+            "SyntaxError: Could not parse `[[` as regex"
         );
     }
 
@@ -1271,11 +1326,11 @@ pub(crate) mod test {
         let state_missing =
             MetricState::new(&metrics, Fetcher::FileData(FileDataFetcher::new(&files)), None);
         let now_expression = parse::parse_expression("Now()").unwrap();
-        assert_missing!(MetricState::evaluate_math("Now()"), "No valid time available");
+        assert_problem!(MetricState::evaluate_math("Now()"), "Missing: No valid time available");
         assert_eq!(state_1234.evaluate_expression(&now_expression), MetricValue::Int(1234));
-        assert_missing!(
+        assert_problem!(
             state_missing.evaluate_expression(&now_expression),
-            "No valid time available"
+            "Missing: No valid time available"
         );
         Ok(())
     }

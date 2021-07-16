@@ -1,21 +1,25 @@
 {
+    select: {
+        missing: "INSPECT:invalid-moniker:path-not:found",
+    },
     eval: {
+        // We need to generate "Problem::SyntaxError" and "Problem::Missing" for some of the tests
+        syntax_error: "variable_will_not_be_found",
+
         // Vectors are equal if their members are equal. Heterogenous types are OK.
         basics_ok1: "[1, 2, 'c'] == [1, 2, 'c']",
 
         // Unequal vectors are in fact evaluated unequal.
         basics_ok2: "[1, 2, 'c'] != [1, 2, 'd']",
-
-        // We need to generate "Missing" for some of the tests
-        //missing: "1 + 'a'",
         basics_ok3: "Missing(missing)",
 
-        // "Missing" always causes "Missing"
-        basics_ok4: "Missing(missing == missing)",
+        // "Missing" doesn't compare equal, it throws an error"
+        basics_ok4: "Problem(missing == missing)",
 
         // A vector containing Missing is Missing (returned when a selector can't match its moniker)
         basics_ok5: "Missing( [missing] )",
-        basics_ok: "And(basics_ok1, basics_ok2, basics_ok3, basics_ok4, basics_ok5)",
+        basics_ok6: "Problem(syntax_error)",
+        basics_ok: "And(basics_ok1, basics_ok2, basics_ok3, basics_ok4, basics_ok5, basics_ok6)",
         double: "Fn([a], a * 2)",
         map_ok1: "Map(double, [1, 2, 3]) == [2, 4, 6]",
         zip2: "Fn([a, b], [a, b])",
@@ -29,8 +33,8 @@
         fold_ok: "And(fold_ok1, fold_ok2)",
         count_ok1: "Count([1, 'b', 2 == 2]) == 3",
         count_ok2: "Count([]) == 0",
-        count_ok3: "Missing(Count(5))",
-        count_ok4: "Missing(Count([1, 'b', 2 == 2, missing]))",
+        count_ok3: "Problem(Count(5))",
+        count_ok4: "Problem(Count([1, 'b', 2 == 2, missing]))",
         count_ok: "And(count_ok1, count_ok2, count_ok3, count_ok4)",
         even: "Fn([a], a // 2 * 2 == a)",
         filter_ok1: "Filter(even, [1, 2, 3, 4, 5]) == [2, 4]",
@@ -54,7 +58,7 @@
         // The gauges really help in debugging this file.
         basics: {
             type: "Gauge",
-            value: "[basics_ok, basics_ok1, basics_ok2, basics_ok3, basics_ok4, basics_ok5]",
+            value: "[basics_ok, basics_ok1, basics_ok2, basics_ok3, basics_ok4, basics_ok5, basics_ok6]",
         },
         map: {
             type: "Gauge",

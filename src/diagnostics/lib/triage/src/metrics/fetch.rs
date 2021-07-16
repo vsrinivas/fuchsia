@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{MetricValue, Problem},
+    super::{missing, syntax_error, MetricValue},
     crate::config::{DataFetcher, DiagnosticData, Source},
     anyhow::{anyhow, bail, Context, Error, Result},
     diagnostics_hierarchy::DiagnosticsHierarchy,
@@ -144,10 +144,7 @@ impl<'a> TrialDataFetcher<'a> {
     pub(crate) fn fetch(&self, name: &str) -> MetricValue {
         match self.values.get(name) {
             Some(value) => MetricValue::from(value),
-            None => MetricValue::Problem(Problem::Missing(format!(
-                "Value {} not overridden in test",
-                name
-            ))),
+            None => syntax_error(format!("Value {} not overridden in test", name)),
         }
     }
 
@@ -263,10 +260,7 @@ impl KeyValueFetcher {
     pub fn fetch(&self, key: &str) -> MetricValue {
         match self.map.get(key) {
             Some(value) => MetricValue::from(value),
-            None => MetricValue::Problem(Problem::Missing(format!(
-                "Key '{}' not found in annotations",
-                key
-            ))),
+            None => missing(format!("Key '{}' not found in annotations", key)),
         }
     }
 }
@@ -420,10 +414,10 @@ impl InspectFetcher {
             }
         }
         if !found_component {
-            return Ok(vec![MetricValue::Problem(Problem::Missing(format!(
+            return Ok(vec![missing(format!(
                 "No component found matching selector {}",
                 selector_string.to_string()
-            )))]);
+            ))]);
         }
         if values.is_empty() {
             return Ok(Vec::new());
@@ -434,10 +428,7 @@ impl InspectFetcher {
     pub fn fetch(&self, selector: &SelectorString) -> Vec<MetricValue> {
         match self.try_fetch(selector.body()) {
             Ok(v) => v,
-            Err(e) => vec![MetricValue::Problem(Problem::Missing(format!(
-                "Fetch {:?} -> {}",
-                selector, e
-            )))],
+            Err(e) => vec![syntax_error(format!("Fetch {:?} -> {}", selector, e))],
         }
     }
 
@@ -445,10 +436,7 @@ impl InspectFetcher {
     fn fetch_str(&self, selector_str: &str) -> Vec<MetricValue> {
         match SelectorString::try_from(selector_str.to_owned()) {
             Ok(selector) => self.fetch(&selector),
-            Err(e) => vec![MetricValue::Problem(Problem::Missing(format!(
-                "Bad selector {}: {}",
-                selector_str, e
-            )))],
+            Err(e) => vec![syntax_error(format!("Bad selector {}: {}", selector_str, e))],
         }
     }
 }
@@ -459,7 +447,7 @@ mod test {
         super::*,
         crate::{
             assert_problem,
-            metrics::{variable::VariableName, Metric, MetricState},
+            metrics::{variable::VariableName, Metric, MetricState, Problem},
         },
         anyhow::Error,
         serde_json::Value as JsonValue,
@@ -526,15 +514,6 @@ mod test {
         };
     }
 
-    // Unlike the assert_missing macro, this matches any Missing() regardless of its payload
-    // message. It flags `message` if `value` is not Missing(_).
-    fn require_missing(value: MetricValue, message: &'static str) {
-        match value {
-            MetricValue::Problem(Problem::Missing(_)) => {}
-            _ => assert!(false, "{}", message),
-        }
-    }
-
     #[test]
     fn test_file_fetch() {
         assert_eq!(
@@ -561,7 +540,7 @@ mod test {
         assert_eq!(FOO_42_AB_7_TRIAL_FETCHER.fetch("foo"), MetricValue::Int(42));
         assert_problem!(
             FOO_42_AB_7_TRIAL_FETCHER.fetch("oops"),
-            "Missing: Value oops not overridden in test"
+            "SyntaxError: Value oops not overridden in test"
         );
     }
 
@@ -605,7 +584,7 @@ mod test {
         );
         assert_problem!(
             file_state.evaluate_variable("bar_file", variable!("oops_plus_one")),
-            "Missing: Metric 'oops' Not Found in 'bar_file'"
+            "SyntaxError: Metric 'oops' Not Found in 'bar_file'"
         );
         assert_eq!(
             file_state.evaluate_variable("bar_file", variable!("bar")),
@@ -641,15 +620,15 @@ mod test {
         );
         assert_problem!(
             file_state.evaluate_variable("other_file", variable!("bar_plus_one")),
-            "Missing: Metric 'bar_plus_one' Not Found in 'other_file'"
+            "SyntaxError: Metric 'bar_plus_one' Not Found in 'other_file'"
         );
         assert_problem!(
             file_state.evaluate_variable("missing_file", variable!("bar_plus_one")),
-            "Missing: Bad namespace 'missing_file'"
+            "SyntaxError: Bad namespace 'missing_file'"
         );
         assert_problem!(
             file_state.evaluate_variable("bar_file", variable!("other_file::bar_plus_one")),
-            "Missing: Metric 'bar_plus_one' Not Found in 'other_file'"
+            "SyntaxError: Metric 'bar_plus_one' Not Found in 'other_file'"
         );
     }
 
@@ -684,10 +663,10 @@ mod test {
         );
         // foo can shadow eval as well as selector.
         assert_eq!(trial_state.evaluate_variable("a", variable!("foo")), MetricValue::Int(42));
-        // A value that's not there should be "Missing" (e.g. not crash)
-        require_missing(
+        // A value that's not there should be "SyntaxError" (e.g. not crash)
+        assert_problem!(
             trial_state.evaluate_variable("foo_file", variable!("oops_plus_one")),
-            "Trial found nonexistent name",
+            "SyntaxError: Metric 'oops' Not Found in 'foo_file'"
         );
         // a::b ignores the "b" in file "a" and uses "a::b" from values.
         assert_eq!(
@@ -695,9 +674,9 @@ mod test {
             MetricValue::Int(8)
         );
         // a::c should return Missing, not look up c in file a.
-        require_missing(
+        assert_problem!(
             trial_state.evaluate_variable("foo_file", variable!("ac_plus_one")),
-            "Trial should not have read c from file a",
+            "SyntaxError: Name a::c not in test values and refers outside the file"
         );
     }
 
@@ -749,7 +728,7 @@ mod test {
                 };
             }
             assert_wrong!("INSPET:*/foo/*:root:dataInt",
-                "Missing: Bad selector INSPET:*/foo/*:root:dataInt: Invalid selector type \'INSPET\' - must be INSPECT");
+                "SyntaxError: Bad selector INSPET:*/foo/*:root:dataInt: Invalid selector type \'INSPET\' - must be INSPECT");
             assert_eq!(
                 inspect.fetch_str("INSPECT:*/foo/*:root:dataInt"),
                 vec![MetricValue::Int(5)]
@@ -768,7 +747,7 @@ mod test {
                 "Missing: No component found matching selector */fo/*:root.dataInt"
             );
             assert_wrong!("INSPECT:*/foo/*:root:data:Int",
-                "Missing: Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Selector format requires at least 2 subselectors delimited by a `:`.");
+                "SyntaxError: Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Selector format requires at least 2 subselectors delimited by a `:`.");
             assert_eq!(inspect.fetch_str("INSPECT:*/foo/*:root/kid:dataInt"), vec![]);
             assert_eq!(inspect.fetch_str("INSPECT:*/bar/*:base/array:dataInt"), vec![]);
             assert_eq!(

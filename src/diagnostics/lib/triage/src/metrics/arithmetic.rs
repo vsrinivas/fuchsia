@@ -17,10 +17,10 @@ pub fn calculate(function: &MathFunction, operands: &Vec<MetricValue>) -> Metric
     match function {
         MathFunction::Min | MathFunction::Max if operands.len() > 0 => {}
         MathFunction::Min | MathFunction::Max => {
-            return super::missing("No operands in math expression");
+            return super::syntax_error("No operands in math expression");
         }
         _ if operands.len() == 2 => {}
-        _ => return super::missing("Internal bug. Function needs 2 arguments."),
+        _ => return super::internal_bug("Internal bug. Function needs 2 arguments."),
     }
     let operands = match promote_type(operands) {
         Ok(operands) => (operands),
@@ -32,13 +32,13 @@ pub fn calculate(function: &MathFunction, operands: &Vec<MetricValue>) -> Metric
             MathFunction::Sub => operands[0] - operands[1],
             MathFunction::Mul => operands[0] * operands[1],
             MathFunction::FloatDiv | MathFunction::IntDiv if operands[1] == 0.0 => {
-                return super::missing("Division by zero")
+                return super::value_error("Division by zero")
             }
             MathFunction::FloatDiv => operands[0] / operands[1],
             MathFunction::IntDiv => {
                 return match super::safe_float_to_int(operands[0] / operands[1]) {
                     Some(int) => MetricValue::Int(int),
-                    None => super::missing("Non-numeric division result"),
+                    None => super::value_error("Non-numeric division result"),
                 }
             }
             MathFunction::Greater => return MetricValue::Bool(operands[0] > operands[1]),
@@ -53,7 +53,7 @@ pub fn calculate(function: &MathFunction, operands: &Vec<MetricValue>) -> Metric
             MathFunction::Sub => operands[0] - operands[1],
             MathFunction::Mul => operands[0] * operands[1],
             MathFunction::FloatDiv | MathFunction::IntDiv if operands[1] == 0 => {
-                return super::missing("Division by zero")
+                return super::value_error("Division by zero")
             }
             MathFunction::FloatDiv => {
                 return MetricValue::Float(operands[0] as f64 / operands[1] as f64)

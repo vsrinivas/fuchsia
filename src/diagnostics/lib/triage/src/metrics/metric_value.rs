@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::Lambda,
+    super::{unhandled_type, Lambda},
     diagnostics_hierarchy::{ArrayContent, Property as DiagnosticProperty},
     serde::Deserialize,
     serde_json::Value as JsonValue,
@@ -33,7 +33,13 @@ pub enum Problem {
     /// Multiple errors were encountered in evaluating the expression.
     Multiple(Vec<Problem>),
     /// An unknown (not supported yet) value that is present but cannot be used in computation.
-    Unhandled(String),
+    UnhandledType(String),
+    /// An error in the grammar or semantics of a .triage file, usually detectable by inspection.
+    SyntaxError(String),
+    /// An incorrect type for an operation.
+    ValueError(String),
+    /// An internal bug; these should never be seen in the wild.
+    InternalBug(String),
 }
 
 impl PartialEq for MetricValue {
@@ -103,10 +109,10 @@ impl From<DiagnosticProperty> for MetricValue {
             DiagnosticProperty::DoubleArray(_name, ArrayContent::Buckets(_))
             | DiagnosticProperty::IntArray(_name, ArrayContent::Buckets(_))
             | DiagnosticProperty::UintArray(_name, ArrayContent::Buckets(_)) => {
-                Self::Problem(Problem::Unhandled("Histogram is not supported".to_owned()))
+                unhandled_type("Histogram is not supported")
             }
             DiagnosticProperty::StringList(_name, _list) => {
-                Self::Problem(Problem::Unhandled("StringList is not supported".to_owned()))
+                unhandled_type("StringList is not supported")
             }
         }
     }
@@ -121,7 +127,7 @@ impl From<JsonValue> for MetricValue {
             JsonValue::Array(values) => {
                 Self::Vector(values.into_iter().map(|v| Self::from(v)).collect())
             }
-            _ => Self::Problem(Problem::Unhandled("Unsupported JSON type".to_owned())),
+            _ => unhandled_type("Unsupported JSON type"),
         }
     }
 }
@@ -139,13 +145,13 @@ impl From<&JsonValue> for MetricValue {
                 } else if value.is_f64() {
                     Self::Float(value.as_f64().unwrap())
                 } else {
-                    Self::Problem(Problem::Unhandled("Unable to convert JSON number".to_owned()))
+                    unhandled_type("Unable to convert JSON number")
                 }
             }
             JsonValue::Array(values) => {
                 Self::Vector(values.iter().map(|v| Self::from(v)).collect())
             }
-            _ => Self::Problem(Problem::Unhandled("Unsupported JSON type".to_owned())),
+            _ => unhandled_type("Unsupported JSON type"),
         }
     }
 }
@@ -155,13 +161,16 @@ impl std::fmt::Debug for Problem {
         match &*self {
             Problem::Missing(s) => write!(f, "Missing: {}", s),
             Problem::Multiple(problems) => {
-                write!(f, "MultipleErrors: ")?;
+                write!(f, "MultipleErrors: [")?;
                 for problem in problems.iter() {
                     write!(f, "{:?}; ", problem)?;
                 }
                 write!(f, "]")
             }
-            Problem::Unhandled(s) => write!(f, "Unhandled: {}", s),
+            Problem::SyntaxError(s) => write!(f, "SyntaxError: {}", s),
+            Problem::ValueError(s) => write!(f, "ValueError: {}", s),
+            Problem::InternalBug(s) => write!(f, "InternalBug: {}", s),
+            Problem::UnhandledType(s) => write!(f, "UnhandledType: {}", s),
         }
     }
 }
@@ -280,8 +289,37 @@ pub(crate) mod test {
         );
         assert_eq!(format!("{}", MetricValue::Bytes(vec![1u8, 2u8])), "Bytes([1, 2])");
         assert_eq!(
-            format!("{}", MetricValue::Problem(Problem::Missing("Where is Waldo?".to_string()))),
-            "Missing: Where is Waldo?"
+            format!("{}", MetricValue::Problem(Problem::Missing("Where is Foo?".to_string()))),
+            "Missing: Where is Foo?"
+        );
+        assert_eq!(
+            format!("{}", MetricValue::Problem(Problem::ValueError("Where is Foo?".to_string()))),
+            "ValueError: Where is Foo?"
+        );
+        assert_eq!(
+            format!("{}", MetricValue::Problem(Problem::SyntaxError("Where is Foo?".to_string()))),
+            "SyntaxError: Where is Foo?"
+        );
+        assert_eq!(
+            format!("{}", MetricValue::Problem(Problem::InternalBug("Where is Foo?".to_string()))),
+            "InternalBug: Where is Foo?"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                MetricValue::Problem(Problem::UnhandledType("Where is Foo?".to_string()))
+            ),
+            "UnhandledType: Where is Foo?"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                MetricValue::Problem(Problem::Multiple(vec![
+                    Problem::SyntaxError("Where is Foo?".to_string()),
+                    Problem::ValueError("Where is Bar?".to_string()),
+                ]))
+            ),
+            "MultipleErrors: [SyntaxError: Where is Foo?; ValueError: Where is Bar?; ]"
         );
     }
 
@@ -332,7 +370,7 @@ pub(crate) mod test {
         test_from_to!(JsonValue::Array, MetricValue::Vector, json_vec, metric_vec);
         assert_problem!(
             MetricValue::from(JsonValue::Object(serde_json::Map::new())),
-            "Unhandled: Unsupported JSON type"
+            "UnhandledType: Unsupported JSON type"
         );
     }
 
@@ -404,7 +442,7 @@ pub(crate) mod test {
             .expect("create histogram");
         assert_problem!(
             DiagnosticProperty::UintArray("foo".to_string(), diagnostic_array).into(),
-            "Unhandled: Histogram is not supported"
+            "UnhandledType: Histogram is not supported"
         );
 
         let diagnostic_array =
@@ -412,7 +450,7 @@ pub(crate) mod test {
                 .expect("create histogram");
         assert_problem!(
             DiagnosticProperty::IntArray("foo".to_string(), diagnostic_array).into(),
-            "Unhandled: Histogram is not supported"
+            "UnhandledType: Histogram is not supported"
         );
 
         let diagnostic_array =
@@ -420,7 +458,7 @@ pub(crate) mod test {
                 .expect("create histogram");
         assert_problem!(
             DiagnosticProperty::DoubleArray("foo".to_string(), diagnostic_array).into(),
-            "Unhandled: Histogram is not supported"
+            "UnhandledType: Histogram is not supported"
         );
     }
 }

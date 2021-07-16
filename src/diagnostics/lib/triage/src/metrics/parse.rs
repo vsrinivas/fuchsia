@@ -4,7 +4,7 @@
 
 use {
     crate::metrics::{
-        variable::VariableName, Expression, Function, MathFunction, MetricValue, Problem,
+        internal_bug, variable::VariableName, Expression, Function, MathFunction, MetricValue,
     },
     anyhow::{format_err, Error},
     nom::{
@@ -217,6 +217,7 @@ fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseErr
             function!("KlogHas", KlogHas),
             function!("BootlogHas", BootlogHas),
             function!("Missing", Missing),
+            function!("UnhandledType", UnhandledType),
             function!("Problem", Problem),
             function!("Annotation", Annotation),
         )),
@@ -378,15 +379,12 @@ fn build_expression<'a>(mut items: Vec<Expression>, mut operators: Vec<Function>
     // reverse the vec's before we start.
     items.reverse();
     operators.reverse();
-    let mut res = items.pop().unwrap_or(Expression::Value(MetricValue::Problem(Problem::Missing(
-        "Bug in parser: zero items".to_string(),
-    ))));
+    let mut res =
+        items.pop().unwrap_or(Expression::Value(internal_bug("Bug in parser: zero items")));
     for _i in 0..operators.len() {
         let args = vec![
             res,
-            items.pop().unwrap_or(Expression::Value(MetricValue::Problem(Problem::Missing(
-                "Bug in parser: too few items".to_string(),
-            )))),
+            items.pop().unwrap_or(Expression::Value(internal_bug("Bug in parser: too few items"))),
         ];
         res = Expression::Function(operators.pop().unwrap(), args);
     }
@@ -826,17 +824,17 @@ mod test {
     fn parser_boolean_functions_args() -> Result<(), Error> {
         assert_eq!(eval!("And(2>1)"), MetricValue::Bool(true));
         assert_eq!(eval!("And(2>1, 2>1, 2>1)"), MetricValue::Bool(true));
-        assert_problem!(eval!("And()"), "Missing: No operands in boolean expression");
+        assert_problem!(eval!("And()"), "SyntaxError: No operands in boolean expression");
         assert_eq!(eval!("Or(2>1)"), MetricValue::Bool(true));
         assert_eq!(eval!("Or(2>1, 2>1, 2>1)"), MetricValue::Bool(true));
-        assert_problem!(eval!("Or()"), "Missing: No operands in boolean expression");
+        assert_problem!(eval!("Or()"), "SyntaxError: No operands in boolean expression");
         assert_problem!(
             eval!("Not(2>1, 2>1)"),
-            "Missing: Wrong number of arguments (2) for unary bool operator"
+            "SyntaxError: Wrong number of arguments (2) for unary bool operator"
         );
         assert_problem!(
             eval!("Not()"),
-            "Missing: Wrong number of arguments (0) for unary bool operator"
+            "SyntaxError: Wrong number of arguments (0) for unary bool operator"
         );
         Ok(())
     }
@@ -847,8 +845,8 @@ mod test {
         assert_eq!(eval!("Min(2, 5, 3, -1)"), MetricValue::Int(-1));
         assert_eq!(eval!("Min(2)"), MetricValue::Int(2));
         assert_eq!(eval!("Max(2)"), MetricValue::Int(2));
-        assert_problem!(eval!("Max()"), "Missing: No operands in math expression");
-        assert_problem!(eval!("Min()"), "Missing: No operands in math expression");
+        assert_problem!(eval!("Max()"), "SyntaxError: No operands in math expression");
+        assert_problem!(eval!("Min()"), "SyntaxError: No operands in math expression");
         Ok(())
     }
 
@@ -866,11 +864,17 @@ mod test {
         // Negative values are fine.
         assert_eq!(eval!("Seconds(-0.5)"), MetricValue::Int(-500_000_000));
         // Non-numeric or bad arg combinations return Problem.
-        assert_problem!(eval!("Hours()"), "Missing: Time conversion needs 1 numeric argument");
-        assert_problem!(eval!("Hours(2, 3)"), "Missing: Time conversion needs 1 numeric argument");
-        assert_problem!(eval!("Hours('a')"), "Missing: Time conversion needs 1 numeric argument");
-        assert_problem!(eval!("1.0/0.0"), "Missing: Division by zero");
-        assert_problem!(eval!("Hours(1.0/0.0)"), "Missing: Division by zero");
+        assert_problem!(eval!("Hours()"), "SyntaxError: Time conversion needs 1 numeric argument");
+        assert_problem!(
+            eval!("Hours(2, 3)"),
+            "SyntaxError: Time conversion needs 1 numeric argument"
+        );
+        assert_problem!(
+            eval!("Hours('a')"),
+            "ValueError: Time conversion needs 1 numeric argument, not String(a)"
+        );
+        assert_problem!(eval!("1.0/0.0"), "ValueError: Division by zero");
+        assert_problem!(eval!("Hours(1.0/0.0)"), "ValueError: Division by zero");
         Ok(())
     }
 
@@ -928,7 +932,7 @@ mod test {
         let time = state.evaluate_expression(&now_expression);
         let no_time = state.evaluate_expression(&parse_expression("Now(5)")?);
         assert_eq!(time, i(2000));
-        assert_problem!(no_time, "Missing: Now() requires no operands.");
+        assert_problem!(no_time, "SyntaxError: Now() requires no operands.");
         Ok(())
     }
 
