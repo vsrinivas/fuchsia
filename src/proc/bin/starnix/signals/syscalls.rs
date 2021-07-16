@@ -347,10 +347,8 @@ pub fn sys_wait4(
         return Err(EINVAL);
     }
 
-    let zombie_task = ctx.task.get_zombie_task(pid);
-
-    let (pid, exit_code) = match zombie_task {
-        Some(task) => (task.id, task.exit_code.lock().clone()),
+    let zombie_task = match ctx.task.get_zombie_task(pid) {
+        Some(zombie_task) => zombie_task,
         None => {
             ctx.task
                 .thread_group
@@ -361,12 +359,9 @@ pub fn sys_wait4(
             ctx.task.waiter.wait()?;
             // It would be an error for more than one task to remove the zombie task,
             // so `expect` that it is present.
-            let task = ctx
-                .task
+            ctx.task
                 .get_zombie_task(pid)
-                .expect("Waited for task to exit, but it is not present in zombie tasks.");
-            let exit_code = task.exit_code.lock().clone();
-            (task.id, exit_code)
+                .expect("Waited for task to exit, but it is not present in zombie tasks.")
         }
     };
 
@@ -379,7 +374,7 @@ pub fn sys_wait4(
 
     if !user_wstatus.is_null() {
         // TODO(fxb/76976): Return proper status.
-        let status = match exit_code {
+        let status = match zombie_task.exit_code {
             Some(exit_code) => (exit_code & 0xff) << 8,
             _ => 0,
         };
@@ -387,7 +382,7 @@ pub fn sys_wait4(
         ctx.task.mm.write_object(user_wstatus, &status)?;
     }
 
-    Ok(pid.into())
+    Ok(zombie_task.id.into())
 }
 
 #[cfg(test)]

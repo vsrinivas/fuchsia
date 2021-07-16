@@ -32,13 +32,14 @@ impl FdTableEntry {
     }
 }
 
+#[derive(Default)]
 pub struct FdTable {
     table: RwLock<HashMap<FdNumber, FdTableEntry>>,
 }
 
 impl FdTable {
     pub fn new() -> Arc<FdTable> {
-        Arc::new(FdTable { table: RwLock::new(HashMap::new()) })
+        Arc::new(FdTable::default())
     }
 
     pub fn fork(&self) -> Arc<FdTable> {

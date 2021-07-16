@@ -64,7 +64,7 @@ pub struct ThreadGroup {
     // TODO: Move into signal_state.
     pub signal_actions: RwLock<SignalActions>,
 
-    zombie_leader: Mutex<Option<Arc<Task>>>,
+    zombie_leader: Mutex<Option<ZombieTask>>,
 }
 
 impl PartialEq for ThreadGroup {
@@ -107,7 +107,7 @@ impl ThreadGroup {
         tasks.remove(&task.id);
 
         if task.id == self.leader {
-            *self.zombie_leader.lock() = Some(Arc::clone(task));
+            *self.zombie_leader.lock() = Some(task.as_zombie());
         }
 
         tasks.is_empty()
@@ -115,16 +115,16 @@ impl ThreadGroup {
 
     pub fn remove(&self, task: &Arc<Task>) {
         if self.remove_internal(task) {
-            let zombie_leader =
+            let zombie =
                 self.zombie_leader.lock().take().expect("Failed to capture zombie leader.");
 
-            if let Some(parent) = zombie_leader.get_task(zombie_leader.parent) {
-                parent.zombie_tasks.write().push(zombie_leader.clone());
+            if let Some(parent) = self.kernel.pids.read().get_task(zombie.parent) {
+                parent.zombie_tasks.write().push(zombie);
                 // TODO: Should this be zombie_leader.exit_signal?
                 send_checked_signal(&parent, Signal::SIGCHLD);
             }
 
-            let waiters = self.kernel.scheduler.write().remove_exit_waiters(zombie_leader.id);
+            let waiters = self.kernel.scheduler.write().remove_exit_waiters(self.leader);
             for waiter in waiters {
                 waiter.wake();
             }

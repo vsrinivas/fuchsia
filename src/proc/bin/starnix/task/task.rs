@@ -33,6 +33,13 @@ impl ops::Drop for TaskOwner {
     }
 }
 
+pub struct ZombieTask {
+    pub id: pid_t,
+    pub parent: pid_t,
+    pub exit_code: Option<i32>,
+    // TODO: Do we need exit_signal?
+}
+
 pub struct Task {
     pub id: pid_t,
 
@@ -91,7 +98,7 @@ pub struct Task {
     pub exit_code: Mutex<Option<i32>>,
 
     /// Child tasks that have exited, but not yet been `waited` on.
-    pub zombie_tasks: RwLock<Vec<Arc<Task>>>,
+    pub zombie_tasks: RwLock<Vec<ZombieTask>>,
 }
 
 impl Task {
@@ -512,15 +519,19 @@ impl Task {
         false
     }
 
+    pub fn as_zombie(&self) -> ZombieTask {
+        ZombieTask { id: self.id, parent: self.parent, exit_code: *self.exit_code.lock() }
+    }
+
     /// Removes and returns any zombie task with the specified `pid`, if such a zombie exists.
     ///
     /// If pid == -1, an arbitrary zombie task is returned.
-    pub fn get_zombie_task(&self, pid: pid_t) -> Option<Arc<Task>> {
+    pub fn get_zombie_task(&self, pid: pid_t) -> Option<ZombieTask> {
         let mut zombie_tasks = self.zombie_tasks.write();
         if pid == -1 {
             zombie_tasks.pop()
         } else {
-            if let Some(position) = zombie_tasks.iter().position(|task| task.id == pid) {
+            if let Some(position) = zombie_tasks.iter().position(|zombie| zombie.id == pid) {
                 Some(zombie_tasks.remove(position))
             } else {
                 None

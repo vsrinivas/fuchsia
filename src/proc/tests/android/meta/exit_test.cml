@@ -2,7 +2,6 @@
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
         binary: "system/bin/exit_test",
-        args: [ "--gunit_filter=*.Success:*.Failure" ],
         root: "root",
     },
 }
