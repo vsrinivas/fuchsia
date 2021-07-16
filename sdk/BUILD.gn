@@ -597,7 +597,6 @@ sdk_molecule("ddk_host_tools") {
 sdk_molecule("banjo") {
   visibility = [ ":*" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_sdk($fidl_toolchain)",
     "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_sdk($fidl_toolchain)",
     "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_sdk($fidl_toolchain)",
     "//sdk/banjo/fuchsia.hardware.serialimpl:fuchsia.hardware.serialimpl_sdk($fidl_toolchain)",
@@ -615,7 +614,10 @@ sdk_molecule("bind") {
 
 sdk_molecule("ddk_fidl") {
   visibility = [ ":*" ]
-  deps = [ "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_sdk($fidl_toolchain)" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_sdk($fidl_toolchain)",
+  ]
 }
 
 # An experimental SDK for developing drivers.
