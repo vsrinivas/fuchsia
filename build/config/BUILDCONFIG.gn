@@ -658,6 +658,27 @@ declare_args() {
 # NOTE: This template needs to be defined before some of the templates below so
 # that it takes effect when these templates directly or indirectly expand
 # action() or action_foreach().
+#
+# Each wrapped action() or action_foreach() rule takes the same arguments as
+# the built-in versions, plus the following ones:
+#
+#   hermetic_deps:
+#     Type: boolean
+#     Required: no
+#     Default: true
+#     Description: A flag that can be set to false to indicate that this
+#       target doesn't list its inputs and outputs properly (even using
+#       a depfile). These are problematic for incremental builds and
+#       should be minimized.
+#
+#   repeatable:
+#     Type: boolean
+#     Required: no
+#     Default: true
+#     Description: If the 'check_repeatability' build argument is set to true,
+#       each command will be run twice. Setting this argument to 'false' will
+#       however disable this behaviour to the current target.
+#
 foreach(_target_type,
         [
           "action",
@@ -675,6 +696,8 @@ foreach(_target_type,
                              "*",
                              [
                                "args",
+                               "hermetic_deps",
+                               "repeatable",
                                "script",
                                "testonly",
                                "visibility",
