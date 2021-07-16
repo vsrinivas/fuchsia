@@ -85,6 +85,8 @@ class NL_DLL_EXPORT ConfigurationManagerDelegateImpl : public ConfigurationManag
   WEAVE_ERROR GetAndStorePairingCode();
   // Stores the manufacturer device cert into the configuration store.
   WEAVE_ERROR GetAndStoreMfrDeviceCert();
+  // Stores the manufacturing date into the configuration store.
+  WEAVE_ERROR GetAndStoreManufacturingDate();
   // Acquires the weave device ID from the file |path| in the factory partition
   // and stores it in |factory_device_id|.
   zx_status_t GetDeviceIdFromFactory(const char* path, uint64_t* factory_device_id);
@@ -94,6 +96,7 @@ class NL_DLL_EXPORT ConfigurationManagerDelegateImpl : public ConfigurationManag
 
   fuchsia::buildinfo::ProviderSyncPtr buildinfo_provider_;
   fuchsia::hwinfo::DeviceSyncPtr hwinfo_device_;
+  fuchsia::hwinfo::ProductSyncPtr hwinfo_product_;
   fuchsia::factory::WeaveFactoryStoreProviderSyncPtr factory_store_provider_;
   fuchsia::weave::FactoryDataManagerSyncPtr weave_factory_data_manager_;
 

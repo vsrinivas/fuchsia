@@ -16,6 +16,7 @@
             "fuchsia.buildinfo.Provider",
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.hwinfo.Device",
+            "fuchsia.hwinfo.Product",
             "fuchsia.lowpan.device.Lookup",
             "fuchsia.net.NameLookup",
             "fuchsia.net.interfaces.State",

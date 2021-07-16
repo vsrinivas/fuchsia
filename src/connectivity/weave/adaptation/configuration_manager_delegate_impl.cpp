@@ -63,6 +63,9 @@ constexpr int kWeaveDeviceIdMaxLength = 16;
 // Maximum size of Weave certificate.
 constexpr int kWeaveCertificateMaxLength = UINT16_MAX;
 
+// Maximum size of a YYYY-MM-DD date string.
+constexpr size_t kMaxDateStringSize = 10;
+
 // Storage path for data files.
 const std::string kDataPath = "/data/";
 
@@ -86,6 +89,8 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::Init() {
       << "Failed to connect to buildinfo device service.";
   FX_CHECK(context->svc()->Connect(hwinfo_device_.NewRequest()) == ZX_OK)
       << "Failed to connect to hwinfo device service.";
+  FX_CHECK(context->svc()->Connect(hwinfo_product_.NewRequest()) == ZX_OK)
+      << "Failed to connect to hwinfo product service.";
   FX_CHECK(context->svc()->Connect(weave_factory_data_manager_.NewRequest()) == ZX_OK)
       << "Failed to connect to weave factory data manager service.";
   FX_CHECK(context->svc()->Connect(factory_store_provider_.NewRequest()) == ZX_OK)
@@ -130,6 +135,11 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::Init() {
   }
 
   err = GetAndStorePairingCode();
+  if (err != WEAVE_NO_ERROR && err != WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
+    return err;
+  }
+
+  err = GetAndStoreManufacturingDate();
   if (err != WEAVE_NO_ERROR && err != WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
     return err;
   }
@@ -418,6 +428,23 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreMfrDeviceCert() {
   }
 
   return impl_->StoreManufacturerDeviceCertificate(reinterpret_cast<uint8_t*>(mfr_cert), out_size);
+}
+
+WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreManufacturingDate() {
+  fuchsia::hwinfo::ProductInfo product_info;
+  zx_status_t status = hwinfo_product_->GetInfo(&product_info);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to retrieve product hwinfo.";
+    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+  }
+
+  if (!product_info.has_build_date()) {
+    FX_LOGS(WARNING) << "Manufacturing date not supplied.";
+    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+  }
+
+  size_t date_size = std::min(product_info.build_date().size(), kMaxDateStringSize);
+  return impl_->StoreManufacturingDate(product_info.build_date().data(), date_size);
 }
 
 zx_status_t ConfigurationManagerDelegateImpl::GetPrivateKeyForSigning(
