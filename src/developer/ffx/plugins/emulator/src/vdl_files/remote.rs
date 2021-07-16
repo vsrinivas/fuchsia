@@ -232,7 +232,7 @@ impl VDLFiles {
                     .arg(format!("{}:localhost:8080", port))
                     .arg("-o")
                     .arg("ExitOnForwardFailure=yes")
-                    .arg("cd ~/fuchsia && xvfb-run ./.jiri_root/bin/fx emu -x 8080 -t 'curl -s -X POST https://networktraversal.googleapis.com/v1alpha/iceconfig?key=AIzaSyBl6TgfdN6FKAQ3nK2GvKNcKNjWLeRGVYQ'")
+                    .arg("cd ~/fuchsia && xvfb-run ./.jiri_root/bin/fx emu -x 8080")
                     .stdin(Stdio::inherit())
                     .stdout(Stdio::inherit())
                     .stderr(Stdio::inherit())
