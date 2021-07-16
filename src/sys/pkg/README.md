@@ -25,7 +25,7 @@ Updated: March 2021
 
 #### Key Dependencies
 
-*   [rust-tuf](https://fuchsia.googlesource.com/third_party/rust-mirrors/rust-tuf/)
+*   [rust-tuf](https://fuchsia.googlesource.com/third_party/rust_crates/mirrors/rust-tuf/)
 *   [go-tuf](https://fuchsia.googlesource.com/third_party/go-tuf/)
 *   [hyper](https://github.com/hyperium/hyper)
 *   [rustls](https://github.com/ctz/rustls).

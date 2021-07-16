@@ -11,7 +11,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("rustyline") {
   name = "rustyline"
   edition = "2015"
-  source_root = "//third_party/rust-mirrors/rustyline/src/lib.rs"
+  source_root = "//third_party/rust_crates/mirrors/rustyline/src/lib.rs"
   configs -= [ "//build/config/rust:2018_idioms" ]
   deps = [
     "//third_party/rust_crates:libc",
@@ -29,25 +29,26 @@ rustc_library("rustyline") {
   }
 
   sources = [
-    "//third_party/rust-mirrors/rustyline/src/completion.rs",
-    "//third_party/rust-mirrors/rustyline/src/config.rs",
-    "//third_party/rust-mirrors/rustyline/src/edit.rs",
-    "//third_party/rust-mirrors/rustyline/src/error.rs",
-    "//third_party/rust-mirrors/rustyline/src/highlight.rs",
-    "//third_party/rust-mirrors/rustyline/src/hint.rs",
-    "//third_party/rust-mirrors/rustyline/src/history.rs",
-    "//third_party/rust-mirrors/rustyline/src/keymap.rs",
-    "//third_party/rust-mirrors/rustyline/src/keys.rs",
-    "//third_party/rust-mirrors/rustyline/src/kill_ring.rs",
-    "//third_party/rust-mirrors/rustyline/src/lib.rs",
-    "//third_party/rust-mirrors/rustyline/src/line_buffer.rs",
-    "//third_party/rust-mirrors/rustyline/src/tty/mod.rs",
-    "//third_party/rust-mirrors/rustyline/src/undo.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/completion.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/config.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/edit.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/error.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/highlight.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/hint.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/history.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/keymap.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/keys.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/kill_ring.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/lib.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/line_buffer.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/tty/mod.rs",
+    "//third_party/rust_crates/mirrors/rustyline/src/undo.rs",
   ]
 
   if (current_os == "fuchsia") {
-    sources += [ "//third_party/rust-mirrors/rustyline/src/tty/fuchsia.rs" ]
+    sources +=
+        [ "//third_party/rust_crates/mirrors/rustyline/src/tty/fuchsia.rs" ]
   } else {
-    sources += [ "//third_party/rust-mirrors/rustyline/src/tty/unix.rs" ]
+    sources += [ "//third_party/rust_crates/mirrors/rustyline/src/tty/unix.rs" ]
   }
 }

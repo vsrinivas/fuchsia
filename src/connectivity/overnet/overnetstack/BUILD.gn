@@ -32,13 +32,13 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust-mirrors/quiche",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates/mirrors/quiche",
   ]
 
   sources = [
@@ -52,9 +52,9 @@ rustc_binary("bin") {
 # and private keys into the overnetstack package. Design and implement security.
 resource("certificates") {
   sources = [
-    "//third_party/rust-mirrors/quiche/examples/cert.crt",
-    "//third_party/rust-mirrors/quiche/examples/cert.key",
-    "//third_party/rust-mirrors/quiche/examples/rootca.crt",
+    "//third_party/rust_crates/mirrors/quiche/examples/cert.crt",
+    "//third_party/rust_crates/mirrors/quiche/examples/cert.key",
+    "//third_party/rust_crates/mirrors/quiche/examples/rootca.crt",
   ]
   outputs = [ "data/{{source_file_part}}" ]
 }

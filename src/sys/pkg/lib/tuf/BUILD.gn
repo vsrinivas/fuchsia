@@ -7,32 +7,32 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 common_sources = [
-  "//third_party/rust-mirrors/rust-tuf/src/client.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/crypto.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/error.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/format_hex.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/interchange/cjson/mod.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/interchange/cjson/pretty.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/interchange/cjson/shims.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/interchange/mod.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/lib.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/metadata.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/repo_builder.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/repository.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/repository/ephemeral.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/repository/error_repo.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/repository/file_system.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/repository/http.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/repository/track_repo.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/tuf.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/util.rs",
-  "//third_party/rust-mirrors/rust-tuf/src/verify.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/client.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/crypto.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/error.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/format_hex.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/interchange/cjson/mod.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/interchange/cjson/pretty.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/interchange/cjson/shims.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/interchange/mod.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/lib.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/metadata.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/repo_builder.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/repository.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/repository/ephemeral.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/repository/error_repo.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/repository/file_system.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/repository/http.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/repository/track_repo.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/tuf.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/util.rs",
+  "//third_party/rust_crates/mirrors/rust-tuf/src/verify.rs",
 ]
 
 rustc_library("tuf") {
   edition = "2018"
 
-  source_root = "//third_party/rust-mirrors/rust-tuf/src/lib.rs"
+  source_root = "//third_party/rust_crates/mirrors/rust-tuf/src/lib.rs"
 
   configs -= [ "//build/config/rust:2018_idioms" ]
 
@@ -67,7 +67,7 @@ rustc_library("tuf") {
 rustc_test("tuf_lib_test") {
   edition = "2018"
 
-  source_root = "//third_party/rust-mirrors/rust-tuf/src/lib.rs"
+  source_root = "//third_party/rust_crates/mirrors/rust-tuf/src/lib.rs"
 
   configs -= [ "//build/config/rust:2018_idioms" ]
 
@@ -101,21 +101,21 @@ rustc_test("tuf_lib_test") {
   sources = common_sources
 
   inputs = [
-    "//third_party/rust-mirrors/rust-tuf/tests/rsa/rsa-4096.pkcs1.der",
-    "//third_party/rust-mirrors/rust-tuf/tests/rsa/rsa-2048.pk8.der",
-    "//third_party/rust-mirrors/rust-tuf/tests/ed25519/ed25519-1",
-    "//third_party/rust-mirrors/rust-tuf/tests/rsa/rsa-2048.pkcs1.der",
-    "//third_party/rust-mirrors/rust-tuf/tests/rsa/rsa-2048.spki.der",
-    "//third_party/rust-mirrors/rust-tuf/tests/ed25519/ed25519-1.spki.der",
-    "//third_party/rust-mirrors/rust-tuf/tests/rsa/rsa-4096.spki.der",
-    "//third_party/rust-mirrors/rust-tuf/tests/ed25519/ed25519-5.pk8.der",
-    "//third_party/rust-mirrors/rust-tuf/tests/ed25519/ed25519-3.pk8.der",
-    "//third_party/rust-mirrors/rust-tuf/tests/ed25519/ed25519-1.pub",
-    "//third_party/rust-mirrors/rust-tuf/tests/rsa/rsa-4096.pk8.der",
-    "//third_party/rust-mirrors/rust-tuf/tests/ed25519/ed25519-4.pk8.der",
-    "//third_party/rust-mirrors/rust-tuf/tests/ed25519/ed25519-1.pk8.der",
-    "//third_party/rust-mirrors/rust-tuf/tests/ed25519/ed25519-2.pk8.der",
-    "//third_party/rust-mirrors/rust-tuf/tests/ed25519/ed25519-6.pk8.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/rsa/rsa-4096.pkcs1.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/rsa/rsa-2048.pk8.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/ed25519/ed25519-1",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/rsa/rsa-2048.pkcs1.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/rsa/rsa-2048.spki.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/ed25519/ed25519-1.spki.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/rsa/rsa-4096.spki.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/ed25519/ed25519-5.pk8.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/ed25519/ed25519-3.pk8.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/ed25519/ed25519-1.pub",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/rsa/rsa-4096.pk8.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/ed25519/ed25519-4.pk8.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/ed25519/ed25519-1.pk8.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/ed25519/ed25519-2.pk8.der",
+    "//third_party/rust_crates/mirrors/rust-tuf/tests/ed25519/ed25519-6.pk8.der",
   ]
 }
 

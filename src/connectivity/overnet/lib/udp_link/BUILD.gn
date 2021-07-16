@@ -14,10 +14,10 @@ rustc_library("udp_link") {
     "//src/connectivity/overnet/lib/core",
     "//src/connectivity/overnet/lib/quic",
     "//src/lib/fuchsia-async",
-    "//third_party/rust-mirrors/quiche",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates/mirrors/quiche",
   ]
 
   sources = [

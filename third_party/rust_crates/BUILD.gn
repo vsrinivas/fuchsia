@@ -7853,7 +7853,7 @@ rust_library("rouille-v3_0_0") {
 
 rust_library("rust-crypto-v0_2_36") {
   crate_name = "crypto"
-  crate_root = "//third_party/rust-mirrors/rust-crypto/src/lib.rs"
+  crate_root = "//third_party/rust_crates/mirrors/rust-crypto/src/lib.rs"
   output_name = "crypto-6b666b5d7cfb935b"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -8658,7 +8658,8 @@ rust_library("serde_json-v1_0_59") {
 
 rust_library("serde_json5-v0_1_0") {
   crate_name = "serde_json5"
-  crate_root = "//third_party/rust-mirrors/serde_json5/third_party/src/lib.rs"
+  crate_root =
+      "//third_party/rust_crates/mirrors/serde_json5/third_party/src/lib.rs"
   output_name = "serde_json5-c6c8351d886fc9d3"
   configs -= [
     "//build/config/rust:edition_2018",

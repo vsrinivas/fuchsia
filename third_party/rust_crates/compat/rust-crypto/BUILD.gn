@@ -4,7 +4,7 @@
 
 # C parts of rust-crypto
 
-crypto_crate = "../../../rust-mirrors/rust-crypto"
+crypto_crate = "../../../rust_crates/mirrors/rust-crypto"
 
 config("rust-crypto-config") {
   cflags_c = [

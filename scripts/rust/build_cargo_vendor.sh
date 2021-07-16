@@ -28,5 +28,5 @@ export RUSTC="$RUST_BASE/bin/rustc"
 export CARGO_TARGET_DIR="$ROOT_DIR/out/cargo-vendor"
 
 mkdir -p $CARGO_TARGET_DIR
-cd "$ROOT_DIR/third_party/rust-mirrors/cargo-vendor"
+cd "$ROOT_DIR/third_party/rust_crates/mirrors/cargo-vendor"
 $CARGO build
