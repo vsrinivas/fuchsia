@@ -21,7 +21,9 @@ std::map<std::string, std::string> formatted_output_;
 
 void InitializeContents() {
   for (auto element : Examples::map()) {
-    TestLibrary library(element.first, element.second);
+    fidl::ExperimentalFlags experimental_flags;
+    experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+    TestLibrary library(element.first, element.second, experimental_flags);
     std::unique_ptr<fidl::raw::File> ast;
     library.Parse(&ast);
 
@@ -38,7 +40,9 @@ TEST(FormatterTests, GoodIdempotenceTest) {
 
   for (auto element : formatted_output_) {
     printf("testing %s\n", element.first.c_str());
-    TestLibrary library(element.first, element.second);
+    fidl::ExperimentalFlags experimental_flags;
+    experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+    TestLibrary library(element.first, element.second, experimental_flags);
     std::unique_ptr<fidl::raw::File> ast;
     EXPECT_TRUE(library.Parse(&ast));
 

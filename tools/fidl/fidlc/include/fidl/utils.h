@@ -45,6 +45,9 @@ matchers(Ts...) -> matchers<Ts...>;
 
 using reporter::Reporter;
 
+// TODO(fxbug.dev/70247): Delete this
+bool HasDeprecatedSyntaxToken(const fidl::SourceFile& source_file);
+
 constexpr char kWhitespaceChars[] = " \t\n\v\f\r";
 constexpr char kWhitespaceNoNewlineChars[] = " \t\v\f\r";
 
