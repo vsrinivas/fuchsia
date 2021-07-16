@@ -170,12 +170,18 @@ impl Package {
         (
             BlobContents {
                 merkle: self.meta_far_merkle,
-                contents: self.meta_far().unwrap().bytes().collect::<Result<Vec<u8>, _>>().unwrap(),
+                contents: io::BufReader::new(self.meta_far().unwrap())
+                    .bytes()
+                    .collect::<Result<Vec<u8>, _>>()
+                    .unwrap(),
             },
             self.content_blob_files()
                 .map(|blob_file| BlobContents {
                     merkle: blob_file.merkle,
-                    contents: blob_file.file.bytes().collect::<Result<Vec<u8>, _>>().unwrap(),
+                    contents: io::BufReader::new(blob_file.file)
+                        .bytes()
+                        .collect::<Result<Vec<u8>, _>>()
+                        .unwrap(),
                 })
                 .collect(),
         )
