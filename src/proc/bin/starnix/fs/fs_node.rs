@@ -243,8 +243,7 @@ impl FsNode {
     }
 
     pub fn component_lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        let node = self.get_or_create_empty_child(name);
-        node.initialize(|name| {
+        let (node, _) = self.create_child(name, |node| {
             let mut info = node.info_mut();
             let ops = self.ops().lookup(&self, name, &mut info)?;
             assert!(
@@ -269,8 +268,7 @@ impl FsNode {
         dev: dev_t,
     ) -> Result<FsNodeHandle, Errno> {
         assert!(mode & FileMode::IFMT != FileMode::EMPTY, "mknod called without node type.");
-        let node = self.get_or_create_empty_child(name);
-        let exists = node.initialize(|name| {
+        let (node, exists) = self.create_child(name, |node| {
             let mut info = node.info_mut();
             info.mode = mode;
             if mode.is_blk() || mode.is_chr() {
@@ -346,34 +344,35 @@ impl FsNode {
         self.info.write()
     }
 
-    fn get_or_create_empty_child(self: &FsNodeHandle, name: &FsStr) -> FsNodeHandle {
+    fn create_child<F>(
+        self: &FsNodeHandle,
+        name: &FsStr,
+        init_fn: F,
+    ) -> Result<(FsNodeHandle, bool), Errno>
+    where
+        F: FnOnce(&FsNode) -> Result<Box<dyn FsNodeOps>, Errno>,
+    {
         let children = self.children.upgradable_read();
         let child = children.get(name).and_then(|child| child.upgrade());
-        if let Some(child) = child {
-            return child;
-        }
-        let child = FsNode::new(
-            OnceCell::new(),
-            FileMode::EMPTY,
-            Arc::clone(&self.device),
-            Some(Arc::clone(self)),
-            name.to_vec(),
-        );
-        let mut children = RwLockUpgradableReadGuard::upgrade(children);
-        children.insert(child.local_name.clone(), Arc::downgrade(&child));
-        child
-    }
+        let child = child.unwrap_or_else(|| {
+            let child = FsNode::new(
+                OnceCell::new(),
+                FileMode::EMPTY,
+                Arc::clone(&self.device),
+                Some(Arc::clone(self)),
+                name.to_vec(),
+            );
+            let mut children = RwLockUpgradableReadGuard::upgrade(children);
+            children.insert(child.local_name.clone(), Arc::downgrade(&child));
+            child
+        });
 
-    fn initialize<F>(&self, init_fn: F) -> Result<bool, Errno>
-    where
-        F: FnOnce(&FsStr) -> Result<Box<dyn FsNodeOps>, Errno>,
-    {
         let mut exists = true;
-        self.ops.get_or_try_init(|| {
+        child.ops.get_or_try_init(|| {
             exists = false;
-            init_fn(&self.local_name)
+            init_fn(&child)
         })?;
-        Ok(exists)
+        Ok((child, exists))
     }
 
     // This function is only useful for tests and has some oddities.
