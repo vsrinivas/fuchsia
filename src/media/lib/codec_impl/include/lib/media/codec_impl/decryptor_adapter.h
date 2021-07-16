@@ -22,6 +22,32 @@
 
 class DecryptorAdapter : public CodecAdapter {
  public:
+  struct EncryptionParams {
+    std::string scheme;
+    std::vector<uint8_t> key_id;
+    std::vector<uint8_t> init_vector;
+    std::optional<fuchsia::media::EncryptionPattern> pattern;
+    std::vector<fuchsia::media::SubsampleEntry> subsamples;
+  };
+
+  struct InputBuffer {
+    const uint8_t* data;
+    uint32_t data_length;
+  };
+
+  struct ClearOutputBuffer {
+    uint8_t* data;
+    uint32_t data_length;
+  };
+
+  struct SecureOutputBuffer {
+    zx::unowned_vmo vmo;
+    uint32_t data_offset;
+    uint32_t data_length;
+  };
+
+  using OutputBuffer = std::variant<ClearOutputBuffer, SecureOutputBuffer>;
+
   explicit DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events);
   explicit DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                             inspect::Node inspect_node);
@@ -70,39 +96,13 @@ class DecryptorAdapter : public CodecAdapter {
   DecryptorAdapter& operator=(const DecryptorAdapter&) = delete;
   DecryptorAdapter& operator=(DecryptorAdapter&&) = delete;
 
- protected:
-  struct EncryptionParams {
-    std::string scheme;
-    std::vector<uint8_t> key_id;
-    std::vector<uint8_t> init_vector;
-    std::optional<fuchsia::media::EncryptionPattern> pattern;
-    std::vector<fuchsia::media::SubsampleEntry> subsamples;
-  };
-
-  struct InputBuffer {
-    const uint8_t* data;
-    uint32_t data_length;
-  };
-
-  struct ClearOutputBuffer {
-    uint8_t* data;
-    uint32_t data_length;
-  };
-
-  struct SecureOutputBuffer {
-    zx::unowned_vmo vmo;
-    uint32_t data_offset;
-    uint32_t data_length;
-  };
-
-  using OutputBuffer = std::variant<ClearOutputBuffer, SecureOutputBuffer>;
-
   // Decryptor interface
   virtual std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
                                                              const InputBuffer& input,
                                                              const OutputBuffer& output,
                                                              CodecPacket* output_packet) = 0;
 
+ protected:
   // GetSecureOutputMemoryConstraints
   //
   // If the specialized Decryptor supports working with secure memory, it should override this
