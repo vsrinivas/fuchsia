@@ -55,8 +55,8 @@ pub fn run(rules: &str, libraries: &[String], tests: &str) -> Result<bool, TestE
 
 impl TestSuite {
     fn run(&self, rules: &str, libraries: &[String]) -> Result<bool, TestError> {
-        let bind_rules =
-            compiler::compile(rules, libraries, false, false).map_err(TestError::CompilerError)?;
+        let bind_rules = compiler::compile_bind(rules, libraries, false, false, false)
+            .map_err(TestError::CompilerError)?;
 
         for test in &self.specs {
             let mut device_specification = DeviceSpecification::new();

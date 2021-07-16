@@ -7,11 +7,11 @@
 use anyhow::{anyhow, Context, Error};
 use bind::bytecode_encoder::encode_v1::encode_to_string_v1;
 use bind::bytecode_encoder::encode_v2::encode_to_string_v2;
-use bind::compiler::{self, BindRules, SymbolicInstruction, SymbolicInstructionInfo};
+use bind::compiler::{self, BindRules, CompiledBindRules};
 use bind::debugger::offline_debugger;
 use bind::parser::bind_library;
 use bind::{linter, test};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fmt::Write;
 use std::fs::File;
@@ -176,7 +176,7 @@ fn handle_command(command: Command) -> Result<(), Error> {
             let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
             let input = options.input.ok_or(anyhow!("The debug command requires an input."))?;
             let rules = read_file(&input)?;
-            let bind_rules = compiler::compile(&rules, &includes, options.lint, false)?;
+            let bind_rules = compiler::compile_bind(&rules, &includes, options.lint, false, false)?;
 
             let device = read_file(&device_file)?;
             let binds = offline_debugger::debug_from_str(&bind_rules, &device)?;
@@ -264,48 +264,41 @@ fn handle_compile(
         Box::new(io::stdout())
     };
 
-    let rules;
-    let bind_rules = if !disable_autobind {
+    let rules_str;
+    let compiled_bind_rules = if !disable_autobind {
         let input = input.ok_or(anyhow!("An input is required when disable_autobind is false."))?;
-        rules = read_file(&input)?;
+        rules_str = read_file(&input)?;
         let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
-        compiler::compile(&rules, &includes, lint, use_new_bytecode)?
+        compiler::compile(&rules_str, &includes, lint, disable_autobind, use_new_bytecode)?
     } else if let Some(input) = input {
         // Autobind is disabled but there are some bind rules for manual binding.
-        rules = read_file(&input)?;
+        rules_str = read_file(&input)?;
         let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
-        let mut bind_rules = compiler::compile(&rules, &includes, lint, use_new_bytecode)?;
-        bind_rules.instructions.insert(0, SymbolicInstructionInfo::disable_autobind());
-        bind_rules
+        let compiled_bind_rules =
+            compiler::compile(&rules_str, &includes, lint, disable_autobind, use_new_bytecode)?;
+        compiled_bind_rules
     } else {
-        // Autobind is disabled and there are no bind rules. Emit only the autobind check.
-        // Since the new bytecode format doesn't support match instructions, only add the
-        // UnconditionalBind instruction to the old bytecode.
-        let instructions = if use_new_bytecode {
-            vec![SymbolicInstructionInfo::disable_autobind()]
-        } else {
-            vec![
-                SymbolicInstructionInfo::disable_autobind(),
-                SymbolicInstructionInfo {
-                    location: None,
-                    instruction: SymbolicInstruction::UnconditionalBind,
-                },
-            ]
-        };
-
-        BindRules {
-            instructions: instructions,
-            symbol_table: HashMap::new(),
-            use_new_bytecode: use_new_bytecode,
-        }
+        CompiledBindRules::empty_bind_rules(disable_autobind, use_new_bytecode)
     };
 
     if output_bytecode {
-        let bytecode = bind_rules.encode_to_bytecode()?;
+        let bytecode = compiled_bind_rules.encode_to_bytecode()?;
         output_writer.write_all(bytecode.as_slice()).context("Failed to write to output file")?;
     } else {
-        let template = write_bind_template(bind_rules)?;
-        output_writer.write_all(template.as_bytes()).context("Failed to write to output file")?;
+        match compiled_bind_rules {
+            CompiledBindRules::Bind(bind_rules) => {
+                let template = write_bind_template(bind_rules)?;
+                output_writer
+                    .write_all(template.as_bytes())
+                    .context("Failed to write to output file")?;
+            }
+            CompiledBindRules::CompositeBind(_) => {
+                // TODO(fxb/80368): Generate header for composite bind.
+                unimplemented!(
+                    "Code generation not implemented for composite bind rules. See fxb/80368"
+                );
+            }
+        }
     };
 
     Ok(())
@@ -456,6 +449,8 @@ fn handle_generate(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bind::compiler::{SymbolicInstruction, SymbolicInstructionInfo};
+    use std::collections::HashMap;
 
     fn get_test_fidl_template(ast: bind_library::Ast) -> Vec<String> {
         write_fidl_template(ast)
@@ -468,11 +463,11 @@ mod tests {
 
     #[test]
     fn zero_instructions_v1() {
-        let bind_rules = BindRules {
+        let bind_rules = CompiledBindRules::Bind(BindRules {
             instructions: vec![],
             symbol_table: HashMap::new(),
             use_new_bytecode: false,
-        };
+        });
 
         let bytecode = bind_rules.encode_to_bytecode().unwrap();
         assert!(bytecode.is_empty());
@@ -490,14 +485,14 @@ mod tests {
 
     #[test]
     fn one_instruction_v1() {
-        let bind_rules = BindRules {
+        let bind_rules = CompiledBindRules::Bind(BindRules {
             instructions: vec![SymbolicInstructionInfo {
                 location: None,
                 instruction: SymbolicInstruction::UnconditionalBind,
             }],
             symbol_table: HashMap::new(),
             use_new_bytecode: false,
-        };
+        });
 
         let bytecode = bind_rules.encode_to_bytecode().unwrap();
         assert_eq!(bytecode, vec![0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -519,11 +514,11 @@ mod tests {
 
     #[test]
     fn zero_instructions_v2() {
-        let bind_rules = BindRules {
+        let bind_rules = CompiledBindRules::Bind(BindRules {
             instructions: vec![],
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
-        };
+        });
         assert_eq!(
             bind_rules.encode_to_bytecode().unwrap(),
             vec![
@@ -548,14 +543,14 @@ mod tests {
 
     #[test]
     fn one_instruction_v2() {
-        let bind_rules = BindRules {
+        let bind_rules = CompiledBindRules::Bind(BindRules {
             instructions: vec![SymbolicInstructionInfo {
                 location: None,
                 instruction: SymbolicInstruction::UnconditionalAbort,
             }],
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
-        };
+        });
         assert_eq!(
             bind_rules.encode_to_bytecode().unwrap(),
             vec![
@@ -584,7 +579,7 @@ mod tests {
 
     #[test]
     fn disable_autobind() {
-        let bind_rules = BindRules {
+        let bind_rules = CompiledBindRules::Bind(BindRules {
             instructions: vec![
                 SymbolicInstructionInfo::disable_autobind(),
                 SymbolicInstructionInfo {
@@ -594,7 +589,7 @@ mod tests {
             ],
             symbol_table: HashMap::new(),
             use_new_bytecode: false,
-        };
+        });
 
         let bytecode = bind_rules.encode_to_bytecode().unwrap();
         assert_eq!(bytecode[..12], [2, 0, 0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -753,5 +748,38 @@ mod tests {
         let template = write_fidl_template(ast);
 
         assert!(template.is_err());
+    }
+
+    #[test]
+    fn composite_bind() {
+        let composite_bind_rules = "composite wallcreeper;
+            primary node {
+                fuchsia.BIND_PROTOCOL == 1;
+            }
+            node {
+                fuchsia.BIND_PROTOCOL == 2;
+            }";
+
+        let compiled_bind_rules =
+            compiler::compile(&composite_bind_rules, &vec![], false, false, true).unwrap();
+
+        assert_eq!(
+            compiled_bind_rules.encode_to_bytecode().unwrap(),
+            vec![
+                0x42, 0x49, 0x4e, 0x44, 0x02, 0x00, 0x00, 0x00, // BIND header
+                0x53, 0x59, 0x4e, 0x42, 0x10, 0x00, 0x00, 0x00, // SYMB header
+                0x01, 0x00, 0x00, 0x00, // "wallcreeper" ID
+                0x77, 0x61, 0x6c, 0x6c, 0x63, 0x72, 0x65, 0x65, // "wallcree"
+                0x70, 0x65, 0x72, 0x00, // "per"
+                0x43, 0x4f, 0x4d, 0x50, 0x24, 0x00, 0x00, 0x00, // COMP header
+                0x01, 0x00, 0x00, 0x00, // Device name ID
+                0x50, 0x0b, 0x00, 0x00, 0x00, // Primary node header
+                0x01, 0x01, 0x01, 0x00, 0x00, 0x00, // BIND_PROTOCOL ==
+                0x01, 0x01, 0x00, 0x00, 0x00, // 1
+                0x51, 0x0b, 0x00, 0x00, 0x00, // Node header
+                0x01, 0x01, 0x01, 0x00, 0x00, 0x00, // // BIND_PROTOCOL ==
+                0x01, 0x02, 0x00, 0x00, 0x00 // 2
+            ]
+        );
     }
 }

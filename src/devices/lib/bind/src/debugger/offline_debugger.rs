@@ -4,8 +4,7 @@
 
 use crate::bytecode_encoder::encode_v1::encode_symbol;
 use crate::compiler::instruction::{InstructionDebug, RawAstLocation};
-use crate::compiler::{self, BindRules, SymbolicInstruction};
-use crate::compiler::{Symbol, SymbolTable};
+use crate::compiler::{self, BindRules, Symbol, SymbolTable, SymbolicInstruction};
 use crate::debugger::device_specification::{DeviceSpecification, Property};
 use crate::errors::UserError;
 use crate::parser::bind_rules::{Condition, ConditionOp, Statement};
@@ -518,6 +517,15 @@ mod test {
     use crate::parser::bind_rules::{Condition, ConditionOp, Statement};
     use crate::parser::common::{CompoundIdentifier, Span};
 
+    fn compile<'a>(symbol_table: SymbolTable, statements: Vec<Statement<'a>>) -> BindRules<'a> {
+        let instructions = compiler::compile_statements(statements, &symbol_table, false).unwrap();
+        BindRules {
+            instructions: instructions,
+            symbol_table: symbol_table,
+            use_new_bytecode: false,
+        }
+    }
+
     #[test]
     fn duplicate_key() {
         let symbol_table = HashMap::new();
@@ -548,8 +556,7 @@ mod test {
             make_identifier!("abc"),
             Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
         );
-        let bind_rules =
-            compiler::compile_statements(statements, symbol_table.clone(), false).unwrap();
+        let bind_rules = compile(symbol_table.clone(), statements);
 
         // Binds when the device has the correct property.
         let properties =
@@ -610,7 +617,7 @@ mod test {
             make_identifier!("abc"),
             Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
         );
-        let bind_rules = compiler::compile_statements(statements, symbol_table, false).unwrap();
+        let bind_rules = compile(symbol_table, statements);
 
         // Binds when the device has a different value for the property.
         let properties =
@@ -655,7 +662,7 @@ mod test {
             Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
         );
 
-        let bind_rules = compiler::compile_statements(statements, symbol_table, false).unwrap();
+        let bind_rules = compile(symbol_table, statements);
 
         // Binds when the device has one of the accepted values for the property.
         let properties =
@@ -768,7 +775,7 @@ mod test {
             Symbol::Key("xyz".to_string(), bind_library::ValueType::Number),
         );
 
-        let bind_rules = compiler::compile_statements(statements, symbol_table, false).unwrap();
+        let bind_rules = compile(symbol_table, statements);
 
         // Binds when the if clause is satisfied.
         let properties = vec![
@@ -855,7 +862,7 @@ mod test {
             Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
         );
 
-        let bind_rules = compiler::compile_statements(statements, symbol_table, false).unwrap();
+        let bind_rules = compile(symbol_table, statements);
 
         // Doesn't bind when abort statement is present.
         let properties =
@@ -930,7 +937,7 @@ mod test {
             Symbol::Key("VALUE".to_string(), bind_library::ValueType::Number),
         );
 
-        let bind_rules = compiler::compile_statements(statements, symbol_table, false).unwrap();
+        let bind_rules = compile(symbol_table, statements);
 
         // Binds when other properties are present as well.
         let properties = vec![
@@ -1002,7 +1009,7 @@ mod test {
             make_identifier!("pqr"),
             Symbol::Key("pqr".to_string(), bind_library::ValueType::Number),
         );
-        let bind_rules = compiler::compile_statements(statements, symbol_table, false).unwrap();
+        let bind_rules = compile(symbol_table, statements);
 
         // Aborts because if condition is true.
         let properties =

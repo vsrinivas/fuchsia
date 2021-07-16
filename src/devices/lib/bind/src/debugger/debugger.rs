@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::bytecode_encoder::encode_v1::{RawCondition, RawInstruction, RawOp};
-use crate::compiler::get_deprecated_key_identifiers;
+use crate::compiler;
 use crate::compiler::instruction::{DeviceProperty, RawAstLocation};
 use crate::ddk_bind_constants::{BIND_AUTOBIND, BIND_FLAGS, BIND_PROTOCOL};
 use crate::errors::UserError;
@@ -68,7 +68,7 @@ impl<'a> Debugger<'a> {
     ) -> Result<Self, DebuggerError> {
         let properties = Debugger::construct_property_map(properties)?;
         let output = Vec::new();
-        let deprecated_key_identifiers = get_deprecated_key_identifiers();
+        let deprecated_key_identifiers = compiler::get_deprecated_key_identifiers();
         Ok(Debugger { instructions, properties, output, deprecated_key_identifiers })
     }
 
@@ -384,9 +384,8 @@ mod test {
         statements: Vec<Statement>,
         symbol_table: SymbolTable,
     ) -> Vec<RawInstruction<[u32; 3]>> {
-        compile_statements(statements, symbol_table, false)
+        compile_statements(statements, &symbol_table, false)
             .unwrap()
-            .instructions
             .into_iter()
             .map(|symbolic| encode_instruction(symbolic.to_instruction()))
             .collect::<Result<Vec<_>, BindRulesEncodeError>>()

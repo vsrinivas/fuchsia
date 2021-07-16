@@ -5,9 +5,11 @@
 pub mod compiler;
 pub mod dependency_graph;
 pub mod instruction;
+pub mod symbol_table;
 
 pub use self::compiler::{
-    compile, compile_statements, get_deprecated_key_identifiers, BindRules, BindRulesDecodeError,
-    CompilerError, CompositeBindRules, Symbol, SymbolTable, SymbolicInstruction,
-    SymbolicInstructionInfo,
+    compile, compile_bind, compile_statements, BindRules, BindRulesDecodeError, CompiledBindRules,
+    CompilerError, CompositeBindRules, SymbolicInstruction, SymbolicInstructionInfo,
 };
+
+pub use self::symbol_table::{get_deprecated_key_identifiers, Symbol, SymbolTable};
