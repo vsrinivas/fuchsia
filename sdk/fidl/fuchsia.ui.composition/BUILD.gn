@@ -10,7 +10,6 @@ fidl("fuchsia.ui.composition") {
   sources = [
     "allocator.fidl",
     "flatland.fidl",
-    "screenshot.fidl",
   ]
 
   public_deps = [
