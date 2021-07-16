@@ -143,8 +143,10 @@ zx_status_t ServiceProviderDirImpl::Lookup(std::string_view name, fbl::RefPtr<fs
     return ZX_ERR_NOT_FOUND;
   }
   zx_status_t status = root_->Lookup(name, out);
-  if (status != ZX_OK) {
+  if (status != ZX_OK && service_not_available_warnings_logged_.find(service_name) ==
+                             service_not_available_warnings_logged_.end()) {
     FX_LOGS(WARNING) << ServiceNotAvailable(component_moniker_, service_name);
+    service_not_available_warnings_logged_.insert(service_name);
   }
   return status;
 }

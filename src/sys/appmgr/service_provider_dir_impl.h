@@ -107,6 +107,8 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
   std::vector<ServiceHandle> service_handles_;
   std::unordered_set<std::string> all_service_names_;
 
+  std::set<std::string> service_not_available_warnings_logged_;
+
   std::string component_moniker_ = kUnknownComponent;
   std::string component_url_ = kUnknownComponent;
   std::string component_id_ = "-1";
