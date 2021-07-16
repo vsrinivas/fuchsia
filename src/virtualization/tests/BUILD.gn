@@ -74,6 +74,21 @@ source_set("periodic_logger") {
   public_deps = [ "//zircon/public/lib/zx" ]
 }
 
+source_set("socket_logger") {
+  visibility = [ ":*" ]
+  sources = [
+    "socket_logger.cc",
+    "socket_logger.h",
+  ]
+  public_deps = [
+    ":logger",
+    "//src/lib/fsl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+}
+
 source_set("guest_console") {
   visibility = [
     "//src/connectivity/network/testing/netemul/*",
@@ -174,6 +189,7 @@ source_set("lib") {
   deps = [
     ":guest_console",
     ":periodic_logger",
+    ":socket_logger",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/fit-promise",

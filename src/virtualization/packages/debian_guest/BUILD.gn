@@ -45,9 +45,9 @@ guest_package("debian_guest") {
   cmdline = "root=/dev/vda rw"
   if (debian_guest_earlycon) {
     if (target_cpu == "x64") {
-      cmdline += " earlycon=uart,io,0x3f8"
+      cmdline += " earlycon=uart,io,0x3f8 console=tty0 keep_bootcon"
     } else if (target_cpu == "arm64") {
-      cmdline += " earlycon=pl011,0x808300000"
+      cmdline += " earlycon=pl011,0x808300000 console=tty0 keep_bootcon"
     } else {
       panic("Unsupported architecture ${target_cpu}")
     }

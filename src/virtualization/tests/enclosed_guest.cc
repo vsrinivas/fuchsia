@@ -165,6 +165,18 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
   RunLoopUntil(
       GetLoop(), [&launch_complete]() { return launch_complete; }, deadline);
 
+  // Connect to guest serial, and log it to the logger.
+  logger.Start("Connecting to guest serial", zx::sec(10));
+  zx::socket serial_socket;
+  guest_->GetSerial([&serial_socket](zx::socket socket) { serial_socket = std::move(socket); });
+  bool success = RunLoopUntil(
+      GetLoop(), [&serial_socket] { return serial_socket.is_valid(); }, deadline);
+  if (!success) {
+    FX_LOGS(ERROR) << "Timed out waiting to connect to guest's serial.";
+    return ZX_ERR_TIMED_OUT;
+  }
+  serial_logger_.emplace(&Logger::Get(), std::move(serial_socket));
+
   // Connect to guest console.
   logger.Start("Connecting to guest console", zx::sec(10));
   std::optional<fuchsia::virtualization::Guest_GetConsole_Result> get_console_result;
@@ -172,7 +184,7 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
       [&get_console_result](fuchsia::virtualization::Guest_GetConsole_Result result) {
         get_console_result = std::move(result);
       });
-  bool success = RunLoopUntil(
+  success = RunLoopUntil(
       GetLoop(), [&get_console_result] { return get_console_result.has_value(); }, deadline);
   if (!success) {
     FX_LOGS(ERROR) << "Timed out waiting to connect to guest's console";
@@ -223,7 +235,6 @@ zx_status_t EnclosedGuest::RunUtil(const std::string& util, const std::vector<st
 zx_status_t ZirconEnclosedGuest::LaunchInfo(std::string* url,
                                             fuchsia::virtualization::GuestConfig* cfg) {
   *url = kZirconGuestUrl;
-  cfg->mutable_cmdline_add()->push_back("kernel.serial=none");
   return ZX_OK;
 }
 
@@ -280,6 +291,29 @@ std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
 zx_status_t DebianEnclosedGuest::LaunchInfo(std::string* url,
                                             fuchsia::virtualization::GuestConfig* cfg) {
   *url = kDebianGuestUrl;
+
+  // Add early UART output from kernel.
+#if defined(__x86_64__)
+  cfg->mutable_cmdline_add()->push_back("earlycon=uart,io,0x3f8");
+#else
+  cfg->mutable_cmdline_add()->push_back("earlycon=pl011,0x808300000");
+#endif
+
+  // Tell Linux to keep the console in polling mode instead of trying to switch
+  // to a real UART driver. The latter assumes a working transmit interrupt,
+  // but we don't implement one yet.
+  //
+  // TODO(fxbug.dev/48616): Ideally, Machina's UART would support IRQs allowing
+  // us to just use the full UART driver.
+  cfg->mutable_cmdline_add()->push_back("keep_bootcon");
+
+  // Tell Linux to not try and use the UART as a console, but use the virtual
+  // console tty0 instead.
+  //
+  // TODO(fxbug.dev/48616): If Machina's UART had full IRQ support, using
+  // ttyS0 as a console would be fine.
+  cfg->mutable_cmdline_add()->push_back("console=tty0");
+
   return ZX_OK;
 }
 

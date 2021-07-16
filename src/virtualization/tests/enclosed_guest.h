@@ -17,6 +17,7 @@
 #include "src/virtualization/tests/fake_netstack.h"
 #include "src/virtualization/tests/fake_scenic.h"
 #include "src/virtualization/tests/guest_console.h"
+#include "src/virtualization/tests/socket_logger.h"
 #include "src/virtualization/third_party/vm_tools/vm_guest.grpc.pb.h"
 #include "src/virtualization/third_party/vm_tools/vm_host.grpc.pb.h"
 
@@ -118,6 +119,8 @@ class EnclosedGuest {
 
  private:
   async::Loop loop_;
+
+  // Guest services.
   std::shared_ptr<sys::ServiceDirectory> real_services_;
   fuchsia::sys::EnvironmentPtr real_env_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_environment_;
@@ -126,6 +129,8 @@ class EnclosedGuest {
   fuchsia::virtualization::GuestPtr guest_;
   FakeScenic fake_scenic_;
   FakeNetstack fake_netstack_;
+
+  std::optional<SocketLogger> serial_logger_;
   std::unique_ptr<GuestConsole> console_;
   uint32_t guest_cid_;
   bool ready_ = false;
