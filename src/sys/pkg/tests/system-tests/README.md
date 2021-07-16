@@ -44,7 +44,7 @@ You should be able to run the tests with:
 ```
 % $(fx get-build-dir)/host_x64/system_tests_upgrade \
   --ssh-private-key ~/.ssh/fuchsia_ed25519 \
-  --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
+  --downgrade-builder-name fuchsia/global.ci/core.x64-release-nuc_in_basic_envs \
   --upgrade-fuchsia-build-dir $FUCHSIA_BUILD_DIR
 ```
 
@@ -88,7 +88,7 @@ can be done by running:
 
 Or if you want to test a build, you can use:
 
-* `--builder-name fuchsia/global.ci/fuchsia-x64-release-build_only`, to test the
+* `--builder-name fuchsia/global.ci/core.x64-release-nuc_in_basic_envs`, to test the
   latest build published by that builder.
 * `--build-id 1234...` to test the specific build.
 
@@ -101,8 +101,8 @@ occurs. This can be done by running:
 ```
 % $(fx get-build-dir)/host_x64/system_tests_tracking \
   --ssh-private-key ~/.ssh/fuchsia_ed25519 \
-  --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
-  --upgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only
+  --downgrade-builder-name fuchsia/global.ci/core.x64-release-nuc_in_basic_envs \
+  --upgrade-builder-name fuchsia/global.ci/core.x64-release-nuc_in_basic_envs
 ```
 
 The `--downgrade-build*` argument is optional, and only necessary if you want to
@@ -124,7 +124,7 @@ for you. You can run it like this:
   -o ~/logs \
   --tty /dev/ttyUSB0 \
   $(fx get-build-dir)/host_x64/system_tests_upgrade \
-  --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
+  --downgrade-builder-name fuchsia/global.ci/core.x64-release-nuc_in_basic_envs \
   --upgrade-fuchsia-build-dir $(fx get-build-dir)
 ```
 
@@ -170,7 +170,7 @@ In a new terminal, run the tests. For example, to run the upgrade tests:
 ```
 % $(fx get-build-dir)/host_x64/system_tests_upgrade \
   --ssh-private-key ~/.ssh/fuchsia_ed25519 \
-  --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
+  --downgrade-builder-name fuchsia/global.ci/core.x64-release-nuc_in_basic_envs \
   --upgrade-fuchsia-build-dir $(fx get-build-dir) \
   --device fuchsia-5254-0063-5e7a
 ```
