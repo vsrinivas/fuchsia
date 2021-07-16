@@ -231,13 +231,13 @@ pub fn sys_faccessat(
     // Really, these checks should be done by the auth system once that
     // exists.
     let stat = node.stat()?;
-    if mode & X_OK != 0 && stat.st_mode & S_IRUSR == 0 {
+    if mode & X_OK != 0 && stat.st_mode & S_IXUSR == 0 {
         return Err(EACCES);
     }
     if mode & W_OK != 0 && stat.st_mode & S_IWUSR == 0 {
         return Err(EACCES);
     }
-    if mode & R_OK != 0 && stat.st_mode & S_IXUSR == 0 {
+    if mode & R_OK != 0 && stat.st_mode & S_IRUSR == 0 {
         return Err(EACCES);
     }
 

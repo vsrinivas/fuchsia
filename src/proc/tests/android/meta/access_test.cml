@@ -2,7 +2,7 @@
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
         binary: "system/bin/access_test",
-        args: [ "--gunit_filter=*.RelativeDir:*.AbsDir:*.RelDoesNotExist:*.AbsDoesNotExist:*.InvalidMode:*.InvalidName:*.UsrReadWriteExec" ],
+        args: [ "--gunit_filter=*.RelativeFile:*.RelativeDir:*.AbsFile:*.AbsDir:*.RelDoesNotExist:*.AbsDoesNotExist:*.InvalidMode:*.InvalidName:*.UsrReadWrite:*.UsrReadWriteExec" ],
         root: "root",
         mount: [ "/tmp:tmpfs" ],
     },
