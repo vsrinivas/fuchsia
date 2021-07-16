@@ -108,7 +108,8 @@ zx_status_t process_subshell(union node* n, const char* const* envp,
     // TODO(abarth): Including FDIO_SPAWN_DEFAULT_LDSVC doesn't fully make sense.
     // We should find a library loader that's appropriate for this program
     // rather than cloning the library loader used by the shell.
-    uint32_t flags = FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_NAMESPACE;
+    uint32_t flags = FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_NAMESPACE |
+                     FDIO_SPAWN_CLONE_UTC_CLOCK;
     return fdio_spawn_etc(job, flags, orig_arg0, argv, envp,
                           countof(actions), actions, process, err_msg);
 }
