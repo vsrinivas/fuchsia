@@ -7,8 +7,8 @@ The following example bitfield diagram is broken down into its component parts:
 
 ```
 .---------------------------------------------------------------.
-|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
-|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|         |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|
+|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|
 |---+---+-------+-----------------------+-----------------------|
 | O | R | Type  | Parent index          | Name index            |
 |---------------------------------------------------------------|
@@ -22,15 +22,18 @@ Type = {3,10}
 
 ## Top row
 
-In the top row, each column denotes the bit index. For example, the first “2” in the left-most
-column denotes that the space is reserved for the bits at index 0 and 1. The next “4” at index 2
-and 3, and so on. The first column with two numbers should be read as "10", the next "12", and so
-on.
+In the top row, each column denotes the starting bit index, and each
+space corresponds to two consecutive bits.
+
+For example, the first "0" in the left-most column denotes that the
+space is reserved for the bits at index 0 and 1. The next "2" at index
+2 and 3, and so on. The first column with two numbers should be read as
+"10", the next "12", and so on.
 
 ```
 .---------------------------------------------------------------.
-|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
-|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|         |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|
+|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|
 |---+-----------+-----------------------------------------------|
 ```
 
