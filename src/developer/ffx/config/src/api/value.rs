@@ -21,6 +21,7 @@ const ADDITIVE_RETURN_ERR: &str =
 const _ADDITIVE_LEVEL_ERR: &str =
     "Additive mode can only be used if config level is not specified.";
 
+#[derive(Debug)]
 pub struct ConfigValue(pub(crate) Option<Value>);
 
 pub trait ValueStrategy {
@@ -51,6 +52,12 @@ impl From<Option<Value>> for ConfigValue {
 }
 
 impl ValueStrategy for Value {
+    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        Box::new(move |value| -> Option<Value> { next(value) })
+    }
+
     fn validate_query(_query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
         Ok(())
     }

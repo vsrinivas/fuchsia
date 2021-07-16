@@ -61,6 +61,12 @@ impl<'a> From<(&'a str, ConfigLevel)> for ConfigQuery<'a> {
     }
 }
 
+impl<'a> From<(&'a String, ConfigLevel)> for ConfigQuery<'a> {
+    fn from(value: (&'a String, ConfigLevel)) -> Self {
+        ConfigQuery::from((value.0.as_str(), value.1))
+    }
+}
+
 impl<'a> From<(&'a str, &ConfigLevel)> for ConfigQuery<'a> {
     fn from(value: (&'a str, &ConfigLevel)) -> Self {
         ConfigQuery { name: Some(value.0), level: Some(*value.1), ..Default::default() }
