@@ -33,39 +33,20 @@ impl InfoReporter {
         Self { info_sink, stats_collector: StatsCollector::default() }
     }
 
-    pub fn report_scan_started(
-        &mut self,
-        req: fidl_mlme::ScanRequest,
-        join_scan: bool,
-        is_connected: bool,
-    ) {
-        if join_scan {
-            warn_if_err!(self.stats_collector.report_join_scan_started(req, is_connected));
-        } else {
-            if let Some(_) = self.stats_collector.report_discovery_scan_started(req, is_connected) {
-                warn!("[stats] evicting unfinished discovery scan attempt");
-            }
+    pub fn report_scan_started(&mut self, req: fidl_mlme::ScanRequest, is_connected: bool) {
+        if let Some(_) = self.stats_collector.report_discovery_scan_started(req, is_connected) {
+            warn!("[stats] evicting unfinished discovery scan attempt");
         }
     }
 
-    pub fn report_scan_ended<D, J>(&mut self, _txn_id: ScanTxnId, result: &scan::ScanResult<D, J>) {
-        match result {
-            scan::ScanResult::DiscoveryFinished { result, .. } => {
-                let (bss_list, scan_result) = convert_scan_result(result);
-                let stats = self.stats_collector.report_discovery_scan_ended(scan_result, bss_list);
-                warn_if_err!(stats);
-                if let Ok(stats) = stats {
-                    self.info_sink.send(InfoEvent::DiscoveryScanStats(stats));
-                }
+    pub fn report_scan_ended<D>(&mut self, _txn_id: ScanTxnId, result: &scan::ScanResult<D>) {
+        if let scan::ScanResult::DiscoveryFinished { result, .. } = result {
+            let (bss_list, scan_result) = convert_scan_result(result);
+            let stats = self.stats_collector.report_discovery_scan_ended(scan_result, bss_list);
+            warn_if_err!(stats);
+            if let Ok(stats) = stats {
+                self.info_sink.send(InfoEvent::DiscoveryScanStats(stats));
             }
-            scan::ScanResult::JoinScanFinished { result, .. } => {
-                let (bss_list, scan_result) = convert_scan_result(result);
-                // Join scan stats are collected as part of ConnectStats, which will be reported
-                // when the connect attempt finishes
-                let bss_count = bss_list.map(|bss_list| bss_list.len()).unwrap_or(0);
-                warn_if_err!(self.stats_collector.report_join_scan_ended(scan_result, bss_count));
-            }
-            scan::ScanResult::None => (),
         }
     }
 

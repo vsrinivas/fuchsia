@@ -31,18 +31,6 @@ pub(crate) struct StatsCollector {
 }
 
 impl StatsCollector {
-    pub fn report_join_scan_started(
-        &mut self,
-        req: fidl_mlme::ScanRequest,
-        is_connected: bool,
-    ) -> Result<(), StatsError> {
-        let now = now();
-        let pending_scan_stats =
-            PendingScanStats { scan_start_at: now, req, scan_start_while_connected: is_connected };
-        self.connect_stats()?.pending_scan_stats.replace(pending_scan_stats);
-        Ok(())
-    }
-
     /// Report the start of a new discovery scan so that StatsCollector will begin collecting
     /// stats for it. If there's an existing pending scan stats, evict and return it.
     pub fn report_discovery_scan_started(
@@ -73,16 +61,6 @@ impl StatsCollector {
             bss_count: bss_list.map(|bss_list| bss_list.len()).unwrap_or(0),
         };
         Ok(scan_stats)
-    }
-
-    pub fn report_join_scan_ended(
-        &mut self,
-        result: ScanResult,
-        bss_count: usize,
-    ) -> Result<(), StatsError> {
-        let stats = ScanEndStats { scan_end_at: now(), result, bss_count };
-        self.connect_stats()?.scan_end_stats.replace(stats);
-        Ok(())
     }
 
     /// Report the start of a new connect attempt so that StatsCollector will begin collecting
@@ -209,12 +187,6 @@ impl StatsCollector {
         Ok(ConnectStats {
             connect_start_at: pending_stats.connect_start_at,
             connect_end_at: now,
-            scan_start_stats: pending_stats.pending_scan_stats.map(|stats| ScanStartStats {
-                scan_start_at: stats.scan_start_at,
-                scan_type: stats.req.scan_type,
-                scan_start_while_connected: stats.scan_start_while_connected,
-            }),
-            scan_end_stats: pending_stats.scan_end_stats,
             auth_start_at: pending_stats.auth_start_at,
             auth_end_at: pending_stats.auth_end_at,
             assoc_start_at: pending_stats.assoc_start_at,
@@ -287,13 +259,6 @@ impl ConnectAttempts {
         let mut pending_stats = self.stats.take().ok_or(StatsError::NoPendingConnect)?;
         match result {
             ConnectResult::Failed(failure) => match failure {
-                ConnectFailure::ScanFailure(code) => {
-                    pending_stats.scan_end_stats.replace(ScanEndStats {
-                        scan_end_at: now,
-                        result: ScanResult::Failed(*code),
-                        bss_count: 0,
-                    });
-                }
                 ConnectFailure::AuthenticationFailure(..) => {
                     pending_stats.auth_end_at.replace(now);
                 }
@@ -335,8 +300,6 @@ pub(crate) struct PendingScanStats {
 
 pub(crate) struct PendingConnectStats {
     connect_start_at: zx::Time,
-    pending_scan_stats: Option<PendingScanStats>,
-    scan_end_stats: Option<ScanEndStats>,
     auth_start_at: Option<zx::Time>,
     auth_end_at: Option<zx::Time>,
     assoc_start_at: Option<zx::Time>,
@@ -353,8 +316,6 @@ impl PendingConnectStats {
     fn new(connect_start_at: zx::Time) -> Self {
         Self {
             connect_start_at,
-            pending_scan_stats: None,
-            scan_end_stats: None,
             auth_start_at: None,
             auth_end_at: None,
             assoc_start_at: None,
@@ -410,13 +371,6 @@ mod tests {
 
         assert_variant!(stats, Ok(stats) => {
             assert!(stats.connect_time().into_nanos() > 0);
-            assert_variant!(stats.join_scan_stats(), Some(scan_stats) => {
-                assert!(scan_stats.scan_time().into_nanos() > 0);
-                assert_eq!(scan_stats.scan_type, fidl_mlme::ScanTypes::Active);
-                assert_eq!(scan_stats.scan_start_while_connected, false);
-                assert_eq!(scan_stats.result, ScanResult::Success);
-                assert_eq!(scan_stats.bss_count, 1);
-            });
             assert!(stats.auth_time().is_some());
             assert!(stats.assoc_time().is_some());
             assert!(stats.rsna_time().is_some());
@@ -432,9 +386,6 @@ mod tests {
         let mut stats_collector = StatsCollector::default();
 
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
-        let scan_req = fake_scan_request();
-        assert!(stats_collector.report_join_scan_started(scan_req, false).is_ok());
-        assert!(stats_collector.report_join_scan_ended(ScanResult::Success, 1).is_ok());
         let bss = fake_bss!(Wpa2, ssid: SSID.to_vec());
         let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
         assert!(stats_collector.report_candidate_network(candidate_network).is_ok());
@@ -446,7 +397,6 @@ mod tests {
 
         assert_variant!(stats, Ok(stats) => {
             assert!(stats.connect_time().into_nanos() > 0);
-            assert!(stats.join_scan_stats().is_some());
             assert!(stats.auth_time().is_some());
             assert!(stats.assoc_time().is_none());
             assert!(stats.rsna_time().is_none());
@@ -596,8 +546,6 @@ mod tests {
 
         // Attempt to connect but fails
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
-        let scan_req = fake_scan_request();
-        assert!(stats_collector.report_join_scan_started(scan_req, false).is_ok());
         let failure = ConnectFailure::ScanFailure(fidl_mlme::ScanResultCode::InternalError).into();
         let stats = stats_collector.report_connect_finished(failure);
 
@@ -624,10 +572,6 @@ mod tests {
 
     #[test]
     fn test_no_pending_connect_stats() {
-        assert_variant!(
-            StatsCollector::default().report_join_scan_ended(ScanResult::Success, 1),
-            Err(StatsError::NoPendingConnect)
-        );
         let bss = fake_bss!(Wpa2, ssid: SSID.to_vec());
         let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
         assert_variant!(
@@ -664,9 +608,6 @@ mod tests {
         stats_collector: &mut StatsCollector,
     ) -> Result<ConnectStats, StatsError> {
         assert!(stats_collector.report_connect_started(SSID.to_vec()).is_none());
-        let scan_req = fake_scan_request();
-        assert!(stats_collector.report_join_scan_started(scan_req, false).is_ok());
-        assert!(stats_collector.report_join_scan_ended(ScanResult::Success, 1).is_ok());
         let bss = fake_bss!(Wpa2, ssid: SSID.to_vec());
         let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
         assert!(stats_collector.report_candidate_network(candidate_network).is_ok());

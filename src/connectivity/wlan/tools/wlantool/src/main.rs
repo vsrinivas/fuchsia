@@ -13,6 +13,7 @@ use fidl_fuchsia_wlan_internal as fidl_internal;
 use fidl_fuchsia_wlan_minstrel::Peer;
 use fidl_fuchsia_wlan_sme::{
     self as fidl_sme, ConnectResultCode, ConnectTransactionEvent, ScanTransactionEvent,
+    ScanTransactionEventStream,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
@@ -226,6 +227,40 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
 }
 
 async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
+    async fn try_get_bss_desc(
+        mut events: ScanTransactionEventStream,
+    ) -> Result<fidl_internal::BssDescription, Error> {
+        let mut bss_desc = None;
+        while let Some(event) = events
+            .try_next()
+            .await
+            .context("failed to fetch all results before the channel was closed")?
+        {
+            match event {
+                ScanTransactionEvent::OnResult { mut aps } => {
+                    if bss_desc.is_none() {
+                        // Write the first encountered `BssDescription`. Any additional information
+                        // is ignored.
+                        bss_desc = Some(aps.drain(0..).next().expect("empty scan result").bss_desc);
+                        // TODO(seanolson): Can the loop break here, or is it important to read the
+                        //                  stream until `OnFinished` (or `OnError`) is
+                        //                  encountered?
+                    }
+                }
+                ScanTransactionEvent::OnFinished {} => break,
+                ScanTransactionEvent::OnError { error } => {
+                    return Err(format_err!("failed to fetch scan result: {:?}", error));
+                }
+            }
+        }
+        bss_desc.ok_or_else(|| format_err!("failed to find BSS information for SSID"))
+    }
+
+    println!(
+        "The `connect` command performs an implicit scan. This behavior is DEPRECATED and in the \
+        future detailed BSS information will be required to connect! Use the `donut` tool to \
+        connect to networks using an SSID."
+    );
     let opts::ClientConnectCmd { iface_id, ssid, password, psk, phy, cbw, scan_type } = cmd;
     if ssid.len() > (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) {
         return Err(format_err!(
@@ -234,6 +269,7 @@ async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Re
             fidl_ieee80211::MAX_SSID_BYTE_LEN
         ));
     }
+    let ssid = ssid.as_bytes().to_vec();
     let credential = match make_credential(password, psk) {
         Ok(c) => c,
         Err(e) => {
@@ -243,9 +279,16 @@ async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Re
     };
     let sme = get_client_sme(wlan_svc, iface_id).await?;
     let (local, remote) = endpoints::create_proxy()?;
+    let mut req = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+        ssids: vec![ssid.clone()],
+        channels: vec![],
+    });
+    sme.scan(&mut req, remote).context("error sending scan request")?;
+    let bss_desc = try_get_bss_desc(local.take_event_stream()).await?;
+    let (local, remote) = endpoints::create_proxy()?;
     let mut req = fidl_sme::ConnectRequest {
-        ssid: ssid.as_bytes().to_vec(),
-        bss_desc: None,
+        ssid,
+        bss_desc,
         credential,
         radio_cfg: fidl_sme::RadioConfig {
             override_phy: phy.is_some(),

@@ -302,7 +302,7 @@ fn convert_bss_info(bss: BssInfo) -> fidl_sme::BssInfo {
         channel: bss.channel.to_fidl(),
         protection: bss.protection.into(),
         compatible: bss.compatible,
-        bss_desc: bss.bss_desc.map(Box::new),
+        bss_desc: bss.bss_desc,
     }
 }
 
@@ -466,8 +466,8 @@ mod tests {
         let results_fut = collect_scan(&proxy);
         pin_mut!(results_fut);
         assert_variant!(exec.run_until_stalled(&mut results_fut), Poll::Ready(results) => {
-            let sent_scan_results = scan_results.into_iter().map(|bss| bss.bss_desc.unwrap()).collect::<Vec<_>>();
-            let received_scan_results = results.into_iter().map(|bss| *bss.bss_desc.unwrap()).collect::<Vec<_>>();
+            let sent_scan_results = scan_results.into_iter().map(|bss| bss.bss_desc).collect::<Vec<_>>();
+            let received_scan_results = results.into_iter().map(|bss| bss.bss_desc).collect::<Vec<_>>();
             assert_eq!(sent_scan_results, received_scan_results);
         })
     }
@@ -581,7 +581,7 @@ mod tests {
             vht_cap: None,
             probe_resp_wsc: None,
             wmm_param: None,
-            bss_desc: Some(bss_desc),
+            bss_desc: bss_desc,
         };
         bss_info
     }

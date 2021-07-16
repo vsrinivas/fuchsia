@@ -14,6 +14,7 @@ use {
     },
     anyhow::Context,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_sme as fidl_sme,
 };
 
 #[rustfmt::skip]
@@ -186,6 +187,25 @@ pub enum FakeProtectionCfg {
     Eap,
 }
 
+impl From<fidl_sme::Protection> for FakeProtectionCfg {
+    fn from(protection: fidl_sme::Protection) -> Self {
+        match protection {
+            fidl_sme::Protection::Unknown => panic!("unknown protection"),
+            fidl_sme::Protection::Open => FakeProtectionCfg::Open,
+            fidl_sme::Protection::Wep => FakeProtectionCfg::Wep,
+            fidl_sme::Protection::Wpa1 => FakeProtectionCfg::Wpa1,
+            fidl_sme::Protection::Wpa1Wpa2PersonalTkipOnly => FakeProtectionCfg::Wpa1Wpa2TkipOnly,
+            fidl_sme::Protection::Wpa2PersonalTkipOnly => FakeProtectionCfg::Wpa2TkipOnly,
+            fidl_sme::Protection::Wpa1Wpa2Personal => FakeProtectionCfg::Wpa1Wpa2,
+            fidl_sme::Protection::Wpa2Personal => FakeProtectionCfg::Wpa2,
+            fidl_sme::Protection::Wpa2Wpa3Personal => FakeProtectionCfg::Wpa2Wpa3,
+            fidl_sme::Protection::Wpa3Personal => FakeProtectionCfg::Wpa3,
+            fidl_sme::Protection::Wpa2Enterprise => FakeProtectionCfg::Wpa2Enterprise,
+            fidl_sme::Protection::Wpa3Enterprise => FakeProtectionCfg::Wpa3Enterprise,
+        }
+    }
+}
+
 pub fn build_fake_bss_creator__(protection_cfg: FakeProtectionCfg) -> BssCreator {
     BssCreator {
         bssid: [7, 1, 2, 77, 53, 8],
@@ -241,15 +261,18 @@ fn derive_wpa1_vendor_ies(protection_cfg: FakeProtectionCfg) -> Option<Vec<u8>> 
 #[macro_export]
 macro_rules! fake_fidl_bss {
     ($protection_type:ident $(, $bss_key:ident: $bss_value:expr)* $(,)?) => {{
+        let protection = $crate::test_utils::fake_stas::FakeProtectionCfg::$protection_type;
+        $crate::fake_fidl_bss!(protection => protection $(, $bss_key: $bss_value)*)
+    }};
+    (protection => $protection_type:expr $(, $bss_key:ident: $bss_value:expr)* $(,)?) => {{
         let bss_creator = $crate::test_utils::fake_stas::BssCreator {
             $(
                 $bss_key: $bss_value,
             )*
-            ..$crate::test_utils::fake_stas::build_fake_bss_creator__($crate::test_utils::fake_stas::FakeProtectionCfg::$protection_type)
+            ..$crate::test_utils::fake_stas::build_fake_bss_creator__($protection_type.into())
         };
-        let fidl_bss = bss_creator.create_bss().expect("expect creating BSS to succeed");
-        fidl_bss
-    }}
+        bss_creator.create_bss().expect("expect creating BSS to succeed")
+    }};
 }
 
 #[macro_export]

@@ -57,8 +57,7 @@ impl ClientConfig {
             vht_cap: bss.raw_vht_cap(),
             probe_resp_wsc: bss.probe_resp_wsc(),
             wmm_param,
-            bss_desc: Some(bss.clone().to_fidl()),
-
+            bss_desc: bss.clone().to_fidl(),
             // Default to false since we didn't do compatibility check
             compatible: false,
         }
@@ -134,7 +133,7 @@ pub struct BssInfo {
     pub vht_cap: Option<fidl_internal::VhtCapabilities>,
     pub probe_resp_wsc: Option<wsc::ProbeRespWsc>,
     pub wmm_param: Option<ie::WmmParam>,
-    pub bss_desc: Option<fidl_internal::BssDescription>,
+    pub bss_desc: fidl_internal::BssDescription,
 }
 
 #[cfg(test)]
@@ -233,7 +232,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-                bss_desc: Some(bss_desc.to_fidl()),
+                bss_desc: bss_desc.to_fidl(),
             }
         );
 
@@ -270,7 +269,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: Some(wmm_param),
-                bss_desc: Some(bss_desc.to_fidl()),
+                bss_desc: bss_desc.to_fidl(),
             }
         );
 
@@ -304,7 +303,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-                bss_desc: Some(bss_desc.to_fidl()),
+                bss_desc: bss_desc.to_fidl(),
             },
         );
 
@@ -339,7 +338,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-                bss_desc: Some(bss_desc.to_fidl()),
+                bss_desc: bss_desc.to_fidl(),
             },
         );
     }

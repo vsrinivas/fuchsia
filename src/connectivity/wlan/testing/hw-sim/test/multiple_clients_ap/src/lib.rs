@@ -2,6 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxbug.dev/74991): This test should be implemented using the Policy API (instead of directly
+//                        interacting with SME). However, Policy cannot yet manage multiple client
+//                        interfaces. Parts of the test pause so that Policy can detect the SME
+//                        clients and request startup disconnects before the test continues to
+//                        manipulate their state. When the Policy API can be used, reimplement this
+//                        test with it (and remove the pauses).
+
 use {
     anyhow::format_err,
     fidl_fuchsia_wlan_common as fidl_common,
@@ -13,11 +20,11 @@ use {
     fuchsia_zircon::DurationNum,
     futures::{channel::oneshot, future, join, stream::TryStreamExt, FutureExt, TryFutureExt},
     pin_utils::pin_mut,
-    std::panic,
+    std::{panic, thread, time},
     wlan_common::{
         bss::Protection::Open,
         channel::{Cbw, Phy},
-        RadioConfig,
+        fake_fidl_bss, RadioConfig,
     },
     wlan_hw_sim::*,
 };
@@ -47,8 +54,8 @@ async fn connect(
     Err(format_err!("Server closed the ConnectTransaction channel before sending a response"))
 }
 
-/// Spawn two wlantap devices, one as client, the other AP. Verify the client connects to the AP
-/// and ethernet frames can reach each other from both ends.
+/// Spawn two client and one AP wlantap devices. Verify that both clients connect to the AP by
+/// sending ethernet frames.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn multiple_clients_ap() {
     init_syslog();
@@ -101,7 +108,12 @@ async fn multiple_clients_ap() {
     // Start client 1
     let mut client1_connect_req = ConnectRequest {
         ssid: SSID.to_vec(),
-        bss_desc: None,
+        bss_desc: fake_fidl_bss!(
+            Open,
+            ssid: SSID.to_vec(),
+            bssid: AP_MAC_ADDR.0,
+            chan: WLANCFG_DEFAULT_AP_CHANNEL,
+        ),
         credential: Credential::None(fidl_sme::Empty {}),
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
             .to_fidl(),
@@ -110,6 +122,7 @@ async fn multiple_clients_ap() {
     };
     let client1_connect_fut = connect(&client1_sme, &mut client1_connect_req);
     pin_mut!(client1_connect_fut);
+    thread::sleep(time::Duration::from_secs(3)); // Wait for the policy layer. See fxbug.dev/74991.
     let client1_fut = client1_helper
         .run_until_complete_or_timeout(
             std::i64::MAX.nanos(),
@@ -136,7 +149,12 @@ async fn multiple_clients_ap() {
     // Start client 2
     let mut client2_connect_req = ConnectRequest {
         ssid: SSID.to_vec(),
-        bss_desc: None,
+        bss_desc: fake_fidl_bss!(
+            Open,
+            ssid: SSID.to_vec(),
+            bssid: AP_MAC_ADDR.0,
+            chan: WLANCFG_DEFAULT_AP_CHANNEL,
+        ),
         credential: Credential::None(fidl_sme::Empty {}),
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
             .to_fidl(),
@@ -145,6 +163,7 @@ async fn multiple_clients_ap() {
     };
     let client2_connect_fut = connect(&client2_sme, &mut client2_connect_req);
     pin_mut!(client2_connect_fut);
+    thread::sleep(time::Duration::from_secs(3)); // Wait for the policy layer. See fxbug.dev/74991.
     let client2_fut = client2_helper
         .run_until_complete_or_timeout(
             std::i64::MAX.nanos(),

@@ -53,7 +53,7 @@ struct BssInfo {
     fuchsia.wlan.common.WlanChan channel;
     Protection protection;
     bool compatible;
-    fuchsia.wlan.internal.BssDescription? bss_desc;
+    fuchsia.wlan.internal.BssDescription bss_desc;
 };
 
 enum ScanErrorCode {
@@ -133,8 +133,7 @@ flexible union Credential {
 
 struct ConnectRequest {
     vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN ssid;
-    /// If provided, SME may connect directly to this BSS without a join scan.
-    fuchsia.wlan.internal.BssDescription? bss_desc;
+    fuchsia.wlan.internal.BssDescription bss_desc;
     /// Informs SME whether multiple candidates were available, for metrics.
     bool multiple_bss_candidates;
     Credential credential;

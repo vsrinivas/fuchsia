@@ -499,7 +499,7 @@ mod tests {
         },
         pin_utils::pin_mut,
         std::collections::HashMap,
-        wlan_common::assert_variant,
+        wlan_common::{assert_variant, fake_fidl_bss},
     };
 
     /// Only used to tell us what disconnect request was given to the IfaceManager so that we
@@ -575,9 +575,16 @@ mod tests {
             connect_req: client_types::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, Error> {
             let _ = self.disconnected_ifaces.pop();
+            let ssid = connect_req.target.network.ssid;
+            // SME needs BSS information to connect. If none is provided in the connect request,
+            // then static testing BSS information is used. Note that this differs from production
+            // behavior where join scans are issued as needed and network information is aggregated
+            // and stored.
+            let bss_desc =
+                connect_req.target.bss.unwrap_or_else(|| fake_fidl_bss!(Wpa2, ssid: ssid.clone()));
             let mut req = fidl_sme::ConnectRequest {
-                ssid: connect_req.target.network.ssid,
-                bss_desc: None,
+                ssid,
+                bss_desc,
                 credential: sme_credential_from_policy(&connect_req.target.credential),
                 radio_cfg: fidl_sme::RadioConfig {
                     override_phy: false,

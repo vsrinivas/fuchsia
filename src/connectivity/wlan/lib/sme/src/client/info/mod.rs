@@ -71,11 +71,6 @@ pub struct ConnectStats {
     pub connect_start_at: zx::Time,
     pub connect_end_at: zx::Time,
 
-    // Deprecated fields for when join scan is still in SME (and is part of connect)
-    // TODO(fxrev.dev/67559): Remove these scan stats fields.
-    pub scan_start_stats: Option<ScanStartStats>,
-    pub scan_end_stats: Option<ScanEndStats>,
-
     pub auth_start_at: Option<zx::Time>,
     pub auth_end_at: Option<zx::Time>,
 
@@ -156,33 +151,6 @@ pub struct ScanEndStats {
 impl ConnectStats {
     pub fn connect_time(&self) -> zx::Duration {
         self.connect_end_at - self.connect_start_at
-    }
-
-    /// Time from when SME receives connect request to when it starts servicing that request
-    /// (i.e. when join scan starts). This can happen when SME waits for existing scan to
-    /// finish before it can start a join scan.
-    ///
-    /// If connect request is canceled before it's serviced, return None.
-    pub fn connect_queued_time(&self) -> Option<zx::Duration> {
-        self.scan_start_stats.as_ref().map(|stats| stats.scan_start_at - self.connect_start_at)
-    }
-
-    pub fn connect_time_without_scan(&self) -> Option<zx::Duration> {
-        self.scan_end_stats.as_ref().map(|stats| self.connect_end_at - stats.scan_end_at)
-    }
-
-    pub fn join_scan_stats(&self) -> Option<ScanStats> {
-        match (&self.scan_end_stats, &self.scan_start_stats) {
-            (Some(end_stats), Some(start_stats)) => Some(ScanStats {
-                scan_start_at: start_stats.scan_start_at,
-                scan_end_at: end_stats.scan_end_at,
-                scan_type: start_stats.scan_type,
-                scan_start_while_connected: start_stats.scan_start_while_connected,
-                result: end_stats.result.clone(),
-                bss_count: end_stats.bss_count,
-            }),
-            _ => None,
-        }
     }
 
     pub fn auth_time(&self) -> Option<zx::Duration> {

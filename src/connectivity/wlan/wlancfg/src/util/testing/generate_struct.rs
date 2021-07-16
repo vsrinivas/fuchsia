@@ -30,9 +30,9 @@ pub fn generate_channel(channel: u8) -> fidl_common::WlanChan {
     }
 }
 
-pub fn generate_random_bss_desc() -> Option<Box<fidl_fuchsia_wlan_internal::BssDescription>> {
+pub fn generate_random_bss_desc() -> fidl_fuchsia_wlan_internal::BssDescription {
     let mut rng = rand::thread_rng();
-    Some(Box::new(fidl_fuchsia_wlan_internal::BssDescription {
+    fidl_fuchsia_wlan_internal::BssDescription {
         bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
         bss_type: fidl_fuchsia_wlan_internal::BssTypes::Personal,
         beacon_period: rng.gen::<u16>(),
@@ -43,7 +43,7 @@ pub fn generate_random_bss_desc() -> Option<Box<fidl_fuchsia_wlan_internal::BssD
         rssi_dbm: rng.gen::<i8>(),
         chan: generate_random_channel(),
         snr_db: rng.gen::<i8>(),
-    }))
+    }
 }
 
 pub fn generate_random_bss_info() -> fidl_sme::BssInfo {

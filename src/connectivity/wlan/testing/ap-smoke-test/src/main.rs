@@ -160,22 +160,18 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 }
 
                 let mut wlan_client_results = WlanClientResultsPerAP::new();
-
-                let scan_results_return =
-                    wlan_service_util::client::passive_scan(&wlan_client_iface.sme_proxy).await;
-
-                let scan_results = match scan_results_return {
-                    Ok(scan_results) => scan_results,
-                    Err(_) => {
-                        test_pass = false;
-                        wlan_client_results.found_ap_in_scan = false;
-                        continue;
-                    }
-                };
-
-                if scan_results.iter().find(|&ap| ap.ssid == target_ssid.to_vec()) != None {
-                    wlan_client_results.found_ap_in_scan = true;
-                }
+                fx_log_info!("iface {}: scanning", client_iface_id);
+                let networks =
+                    wlan_service_util::client::passive_scan(&wlan_client_iface.sme_proxy)
+                        .await
+                        .context("scan failed")?;
+                let bss_desc = networks
+                    .into_iter()
+                    .filter(|bss_info| bss_info.ssid.as_slice() == target_ssid)
+                    .map(|bss_info| bss_info.bss_desc)
+                    .next()
+                    .ok_or_else(|| format_err!("no BSS information found for SSID"))?;
+                wlan_client_results.found_ap_in_scan = true;
 
                 // Connect to network, if found in scan results
                 if wlan_client_results.found_ap_in_scan == true {
@@ -183,8 +179,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         &wlan_client_iface.sme_proxy,
                         target_ssid.to_vec(),
                         target_pwd.to_vec(),
-                        // TODO(fxbug.dev/66665): pass in a bss description or use Policy layer
-                        None,
+                        bss_desc,
                     )
                     .await;
 

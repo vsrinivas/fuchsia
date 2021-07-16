@@ -23,7 +23,7 @@ use {
         info::InfoReporter,
         protection::Protection,
         rsn::{get_wpa2_rsna, get_wpa3_rsna},
-        scan::{DiscoveryScan, JoinScan, ScanScheduler},
+        scan::{DiscoveryScan, ScanScheduler},
         state::{ClientState, ConnectCommand},
         wpa::get_legacy_wpa_association,
     },
@@ -35,27 +35,19 @@ use {
         InfoStream, MlmeRequest, MlmeStream, Ssid,
     },
     anyhow::{bail, format_err, Context as _},
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent, ScanRequest},
-    fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_inspect_contrib::{inspect_insert, inspect_log, log::InspectListClosure},
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
     futures::channel::{mpsc, oneshot},
     log::{error, info, warn},
-    std::{
-        iter::{Iterator, Peekable},
-        sync::Arc,
-    },
+    std::sync::Arc,
     wep_deprecated,
     wlan_common::{
         self,
         bss::{BssDescription, Protection as BssProtection},
-        format::{MacFmt as _, SsidFmt as _},
         hasher::WlanHasher,
-        mac::MacAddr,
         RadioConfig,
     },
-    wlan_inspect::wrappers::InspectWlanChan,
     wlan_rsn::auth,
 };
 
@@ -94,12 +86,6 @@ use self::internal::*;
 
 pub type TimeStream = timer::TimeStream<Event>;
 
-pub struct ConnectConfig {
-    responder: Responder<ConnectResult>,
-    credential: fidl_sme::Credential,
-    radio_cfg: RadioConfig,
-}
-
 // An automatically increasing sequence number that uniquely identifies a logical
 // connection attempt. For example, a new connection attempt can be triggered
 // by a DisassociateInd message from the MLME.
@@ -110,7 +96,7 @@ pub type ScanTxnId = u64;
 pub struct ClientSme {
     cfg: ClientConfig,
     state: Option<ClientState>,
-    scan_sched: ScanScheduler<Responder<BssDiscoveryResult>, ConnectConfig>,
+    scan_sched: ScanScheduler<Responder<BssDiscoveryResult>>,
     wmm_status_responders: Vec<Responder<fidl_sme::ClientSmeWmmStatusResult>>,
     context: Context,
 }
@@ -131,6 +117,8 @@ impl<T: Into<ConnectFailure>> From<T> for ConnectResult {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ConnectFailure {
     SelectNetworkFailure(SelectNetworkFailure),
+    // TODO(fxbug.dev/68531): SME no longer performs scans when connecting. Remove the
+    //                        `ScanFailure` variant.
     ScanFailure(fidl_mlme::ScanResultCode),
     JoinFailure(fidl_mlme::JoinResultCode),
     AuthenticationFailure(fidl_mlme::AuthenticateResultCode),
@@ -317,92 +305,50 @@ impl ClientSme {
         self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&mut self.context));
 
         let ssid = req.ssid;
-
-        match req.bss_desc {
-            Some(bss_desc) => {
-                let bss_desc = match BssDescription::from_fidl(*bss_desc) {
-                    Ok(bss_desc) => bss_desc,
-                    Err(e) => {
-                        error!("Failed converting FIDL BssDescription in ConnectRequest: {:?}", e);
-                        responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
-                        return receiver;
-                    }
-                };
-
-                info!(
-                    "Received ConnectRequest for {}",
-                    bss_desc.to_string(&self.context.inspect.hasher)
-                );
-
-                // We can connect directly now.
-                let viable_bss = match get_protection(
-                    &self.context.device_info,
-                    &self.cfg,
-                    &req.credential,
-                    &bss_desc,
-                    &self.context.inspect.hasher,
-                ) {
-                    Err(e) => {
-                        warn!("{:?}", e);
-                        responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
-                        return receiver;
-                    }
-                    Ok(protection) => ViableBss { bss: &bss_desc, protection },
-                };
-                let protection = viable_bss.protection;
-                let cmd = ConnectCommand {
-                    bss: Box::new(bss_desc.clone()),
-                    responder: Some(responder),
-                    protection,
-                    radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
-                };
-
-                self.context.info.report_connect_started(ssid);
-                self.context.info.report_candidate_network(info::CandidateNetwork {
-                    bss: bss_desc,
-                    multiple_bss_candidates: req.multiple_bss_candidates,
-                });
-                self.state = self.state.take().map(|state| state.connect(cmd, &mut self.context));
+        let bss_desc = match BssDescription::from_fidl(req.bss_desc) {
+            Ok(bss_desc) => bss_desc,
+            Err(e) => {
+                error!("Failed converting FIDL BssDescription in ConnectRequest: {:?}", e);
+                responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
+                return receiver;
             }
-            None => {
-                info!("Received ConnectRequest without BSS description. Initiating scan for targeted SSID");
+        };
 
-                // We want to default to Active scan so that for routers that support WSC, we can retrieve
-                // AP metadata from the probe response. However, for SoftMAC, we default to passive scan
-                // because we do not have a proper active scan implementation for DFS channels.
-                let scan_request = if self.context.is_softmac
-                    && req.deprecated_scan_type == fidl_common::ScanType::Passive
-                {
-                    fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {})
-                } else {
-                    fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-                        ssids: vec![],
-                        channels: vec![],
-                    })
-                };
-                let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(JoinScan {
-                    ssid: ssid.clone(),
-                    token: ConnectConfig {
-                        responder,
-                        credential: req.credential,
-                        radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
-                    },
-                    scan_request,
-                });
-                // If the new scan replaced an existing pending JoinScan, notify the existing transaction
-                if let Some(token) = canceled_token {
-                    report_connect_finished(
-                        Some(token.responder),
-                        &mut self.context,
-                        ConnectResult::Canceled,
-                    );
-                }
+        info!("Received ConnectRequest for {}", bss_desc.to_string(&self.context.inspect.hasher));
 
-                self.context.info.report_connect_started(ssid);
-                self.send_scan_request(req);
-            }
+        if !self.cfg.is_bss_compatible(&bss_desc, &self.context.device_info) {
+            warn!("BSS is incompatible");
+            responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
+            return receiver;
         }
+        // We can connect directly now.
+        let protection = match get_protection(
+            &self.context.device_info,
+            &self.cfg,
+            &req.credential,
+            &bss_desc,
+            &self.context.inspect.hasher,
+        ) {
+            Ok(protection) => protection,
+            Err(error) => {
+                warn!("{:?}", error);
+                responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
+                return receiver;
+            }
+        };
+        let cmd = ConnectCommand {
+            bss: Box::new(bss_desc.clone()),
+            responder: Some(responder),
+            protection,
+            radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
+        };
 
+        self.context.info.report_connect_started(ssid);
+        self.context.info.report_candidate_network(info::CandidateNetwork {
+            bss: bss_desc,
+            multiple_bss_candidates: req.multiple_bss_candidates,
+        });
+        self.state = self.state.take().map(|state| state.connect(cmd, &mut self.context));
         receiver
     }
 
@@ -430,17 +376,7 @@ impl ClientSme {
     }
 
     pub fn status(&self) -> Status {
-        let status = self.state.as_ref().expect("expected state to be always present").status();
-        if status.connecting_to.is_some() {
-            status
-        } else {
-            // If the association machine is not connecting to a network, but the scanner
-            // has a queued 'JoinScan', include the SSID we are trying to connect to
-            Status {
-                connecting_to: self.scan_sched.get_join_scan().map(|s| s.ssid.clone()),
-                ..status
-            }
-        }
+        self.state.as_ref().expect("expected state to be always present").status()
     }
 
     pub fn wmm_status(&mut self) -> oneshot::Receiver<fidl_sme::ClientSmeWmmStatusResult> {
@@ -452,21 +388,11 @@ impl ClientSme {
 
     fn send_scan_request(&mut self, req: Option<ScanRequest>) {
         if let Some(req) = req {
-            let is_join_scan = self.scan_sched.is_scanning_to_join();
             let is_connected = self.status().connected_to.is_some();
-            self.context.info.report_scan_started(
-                clone_scan_request(&req),
-                is_join_scan,
-                is_connected,
-            );
+            self.context.info.report_scan_started(clone_scan_request(&req), is_connected);
             self.context.mlme_sink.send(MlmeRequest::Scan(req));
         }
     }
-}
-
-struct ViableBss<'a> {
-    bss: &'a BssDescription,
-    protection: Protection,
 }
 
 impl super::Station for ClientSme {
@@ -487,123 +413,6 @@ impl super::Station for ClientSme {
                 self.send_scan_request(request);
                 match result {
                     scan::ScanResult::None => (),
-                    scan::ScanResult::JoinScanFinished { token, result: Ok(bss_list) }
-                        if bss_list.is_empty() =>
-                    {
-                        info!("Scan results:");
-                        warn!("  No Results");
-                        report_connect_finished(
-                            Some(token.responder),
-                            &mut self.context,
-                            SelectNetworkFailure::NoScanResultWithSsid.into(),
-                        );
-                        inspect_log_join_scan(
-                            &mut self.context,
-                            &bss_list,
-                            None,
-                            Some("no matching BSS found".to_string()),
-                        );
-                    }
-                    scan::ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
-                        info!("Scan results:");
-                        for bss in &bss_list {
-                            info!("  {}", bss.to_string(&self.context.inspect.hasher));
-                        }
-
-                        // Cloning this to appease borrow checker, because `self.context` is
-                        // borrowed mutably later on.
-                        let device_info = self.context.device_info.clone();
-                        let mut compatible_bss_iter = filter_to_compatible_bss(
-                            &bss_list,
-                            &self.cfg,
-                            &token.credential,
-                            &device_info,
-                        );
-
-                        if compatible_bss_iter.peek() == None {
-                            let warn_msg = "incompatible connect request for scan results";
-                            warn!("{}", warn_msg);
-                            report_connect_finished(
-                                Some(token.responder),
-                                &mut self.context,
-                                SelectNetworkFailure::IncompatibleConnectRequest.into(),
-                            );
-                            inspect_log_join_scan(
-                                &mut self.context,
-                                &bss_list,
-                                None,
-                                Some(warn_msg.to_string()),
-                            );
-                        } else {
-                            match filter_to_viable_bss(
-                                compatible_bss_iter,
-                                &self.context.device_info,
-                                &self.cfg,
-                                &token.credential,
-                                &self.context.inspect.hasher,
-                            )
-                            .max_by_key(|compatible_bss| compatible_bss.bss.candidacy())
-                            {
-                                None => {
-                                    // Report a SelectNetworkFailure if there are no compatible results.
-                                    let error_msg = "internal protection error";
-                                    error!("{}", error_msg);
-                                    report_connect_finished(
-                                        Some(token.responder),
-                                        &mut self.context,
-                                        SelectNetworkFailure::InternalProtectionError.into(),
-                                    );
-                                    inspect_log_join_scan(
-                                        &mut self.context,
-                                        &bss_list,
-                                        None,
-                                        Some(error_msg.to_string()),
-                                    );
-                                }
-                                Some(best_compatible_bss) => {
-                                    let best_bss = best_compatible_bss.bss;
-                                    let best_bssid = best_bss.bssid;
-                                    let best_bss_protection = best_compatible_bss.protection;
-
-                                    info!("Attempting to connect to:");
-                                    info!("  {}", best_bss.to_string(&self.context.inspect.hasher));
-
-                                    let candidate_network = info::CandidateNetwork {
-                                        bss: best_bss.clone(),
-                                        multiple_bss_candidates: bss_list.len() > 1,
-                                    };
-                                    self.context.info.report_candidate_network(candidate_network);
-                                    let cmd = ConnectCommand {
-                                        bss: Box::new(best_bss.clone()),
-                                        responder: Some(token.responder),
-                                        protection: best_bss_protection,
-                                        radio_cfg: token.radio_cfg,
-                                    };
-
-                                    self.state = self
-                                        .state
-                                        .take()
-                                        .map(|state| state.connect(cmd, &mut self.context));
-
-                                    inspect_log_join_scan(
-                                        &mut self.context,
-                                        &bss_list,
-                                        Some(best_bssid),
-                                        Some("attempt to connect".to_string()),
-                                    );
-                                }
-                            }
-                        }
-                    }
-                    scan::ScanResult::JoinScanFinished { token, result: Err(e) } => {
-                        inspect_log!(
-                            self.context.inspect.join_scan_events.lock(),
-                            result: format!("scan failure: {:?}", e),
-                        );
-                        error!("cannot join network because scan failed: {:?}", e);
-                        let result = ConnectFailure::ScanFailure(e).into();
-                        report_connect_finished(Some(token.responder), &mut self.context, result);
-                    }
                     scan::ScanResult::DiscoveryFinished { tokens, result } => {
                         let result = result.map(|bss_list| {
                             bss_list
@@ -663,33 +472,6 @@ impl super::Station for ClientSme {
     }
 }
 
-fn inspect_log_join_scan(
-    ctx: &mut Context,
-    bss_list: &[BssDescription],
-    candidate_bssid: Option<MacAddr>,
-    result_msg: Option<String>,
-) {
-    let inspect_bss = InspectListClosure(&bss_list, |node_writer, key, bss| {
-        inspect_insert!(node_writer, var key: {
-            bssid: bss.bssid.to_mac_string(),
-            bssid_hash: ctx.inspect.hasher.hash_mac_addr(&bss.bssid),
-            ssid: bss.ssid().to_ssid_string(),
-            ssid_hash: ctx.inspect.hasher.hash_ssid(bss.ssid()),
-            channel: InspectWlanChan(&bss.chan),
-            rssi_dbm: bss.rssi_dbm,
-        });
-    });
-    let hasher = &ctx.inspect.hasher;
-    inspect_log!(ctx.inspect.join_scan_events.lock(), {
-        bss_list: inspect_bss,
-        candidate_bss: {
-            bssid?: candidate_bssid.as_ref().map(|bssid| bssid.to_mac_string()),
-            bssid_hash?: candidate_bssid.map(|bssid| hasher.hash_mac_addr(&bssid)),
-        },
-        result?: &result_msg,
-    });
-}
-
 fn report_connect_finished(
     responder: Option<Responder<ConnectResult>>,
     context: &mut Context,
@@ -699,54 +481,6 @@ fn report_connect_finished(
         responder.respond(result.clone());
         context.info.report_connect_finished(result);
     }
-}
-
-/// Filter out any BssDescription in `bss_list` that is not compatible with
-/// 'device_info`, `client_config`, or `credential`. A BssDescription is
-/// not compatible if `client_config.is_bss_compatible()` returns `false`
-/// or if `protection()` returns a `Result::Err`.
-fn filter_to_compatible_bss<'a>(
-    bss_list: &'a Vec<BssDescription>,
-    client_config: &'a ClientConfig,
-    credential: &'a fidl_sme::Credential,
-    device_info: &'a DeviceInfo,
-) -> Peekable<impl Iterator<Item = &'a BssDescription>> {
-    bss_list
-        .iter()
-        .filter_map(move |bss| {
-            if !client_config.is_bss_compatible(bss, device_info) {
-                return None;
-            }
-            if let fidl_sme::Credential::None(_) = credential {
-                if bss.is_protected() {
-                    return None;
-                }
-            } else {
-                if !bss.is_protected() {
-                    return None;
-                }
-            }
-            Some(bss)
-        })
-        .peekable()
-}
-
-fn filter_to_viable_bss<'a>(
-    bss_iter: Peekable<impl Iterator<Item = &'a BssDescription>>,
-    device_info: &'a DeviceInfo,
-    client_config: &'a ClientConfig,
-    credential: &'a fidl_sme::Credential,
-    hasher: &'a WlanHasher,
-) -> impl Iterator<Item = ViableBss<'a>> {
-    bss_iter.filter_map(move |bss| {
-        match get_protection(device_info, client_config, credential, bss, hasher) {
-            Err(e) => {
-                warn!("{:?}", e);
-                None
-            }
-            Ok(protection) => Some(ViableBss { bss, protection }),
-        }
-    })
 }
 
 enum SelectedAssocType {
@@ -843,6 +577,7 @@ fn get_protection(
 mod tests {
     use super::*;
     use crate::Config as SmeConfig;
+    use fidl_fuchsia_wlan_common as fidl_common;
     use fidl_fuchsia_wlan_internal as fidl_internal;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_inspect as finspect;
@@ -1019,19 +754,16 @@ mod tests {
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
         // Issue a connect command and expect the status to change appropriately.
-        // We also check that the association machine state is still disconnected
-        // to make sure that the status comes from the scanner.
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
+        let bss_desc = fake_fidl_bss!(Open, ssid: b"foo".to_vec());
+        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), bss_desc, credential));
         assert_eq!(
             Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
             sme.status()
         );
 
-        // Push a fake scan result into SME. We should still be connecting to "foo",
-        // but the status should now come from the state machine and not from the scanner.
-        report_fake_scan_result(&mut sme, fake_fidl_bss!(Open, ssid: b"foo".to_vec()));
+        // We should still be connecting to "foo", but the status should now come from the state
+        // machine and not from the scanner.
         assert_eq!(Some(b"foo".to_vec()), sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(
             Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
@@ -1040,112 +772,12 @@ mod tests {
 
         // As soon as connect command is issued for "bar", the status changes immediately
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv2 = sme.on_connect_command(connect_req(b"bar".to_vec(), credential));
+        let bss_desc = fake_fidl_bss!(Open, ssid: b"bar".to_vec());
+        let _recv2 = sme.on_connect_command(connect_req(b"bar".to_vec(), bss_desc, credential));
         assert_eq!(
             Status { connected_to: None, connecting_to: Some(b"bar".to_vec()) },
             sme.status()
         );
-    }
-
-    #[test]
-    fn status_connecting_to_open_network_with_duplicate_ssid_in_scan_result() {
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
-        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
-        assert_eq!(
-            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
-            sme.status()
-        );
-
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
-
-        // Push a fake scan result into SME. We should still be connecting to "foo",
-        // but the status should now come from the state machine and not from the scanner.
-        sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult {
-                txn_id: 1,
-                bss: fidl_internal::BssDescription {
-                    bssid: [1; 6],
-                    rssi_dbm: -100,
-                    ..fake_fidl_bss!(Open, ssid: b"foo".to_vec())
-                },
-            },
-        });
-        sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult {
-                txn_id: 1,
-                bss: fidl_internal::BssDescription {
-                    bssid: [2; 6],
-                    rssi_dbm: -1,
-                    ..fake_fidl_bss!(Wpa2, ssid: b"foo".to_vec())
-                },
-            },
-        });
-        sme.on_mlme_event(MlmeEvent::OnScanEnd {
-            end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCode::Success },
-        });
-        // Despite the fact that the stronger signal strength network has the wrong security
-        // type, we should try to connect to the open network anyway.
-        assert_eq!(Some(b"foo".to_vec()), sme.state.as_ref().unwrap().status().connecting_to);
-        assert_eq!(
-            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
-            sme.status()
-        );
-
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
-    }
-
-    #[test]
-    fn status_connecting_to_protected_network_with_duplicate_ssid_in_scan_result() {
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
-        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
-
-        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
-        assert_eq!(
-            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
-            sme.status()
-        );
-
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
-
-        // Push fake scan results into SME with the same SSIDs and different security types.
-        sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult {
-                txn_id: 1,
-                bss: fidl_internal::BssDescription {
-                    bssid: [1; 6],
-                    rssi_dbm: -100,
-                    ..fake_fidl_bss!(Wpa2, ssid: b"foo".to_vec())
-                },
-            },
-        });
-        sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult {
-                txn_id: 1,
-                bss: fidl_internal::BssDescription {
-                    bssid: [2; 6],
-                    rssi_dbm: -1,
-                    ..fake_fidl_bss!(Open, ssid: b"foo".to_vec())
-                },
-            },
-        });
-        sme.on_mlme_event(MlmeEvent::OnScanEnd {
-            end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCode::Success },
-        });
-        // Despite the fact that the stronger signal strength network has the wrong security
-        // type, we should try to connect to the Wpa2 network anyway.
-        assert_eq!(Some(b"foo".to_vec()), sme.state.as_ref().unwrap().status().connecting_to);
-        assert_eq!(
-            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
-            sme.status()
-        );
-
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
     }
 
     #[test]
@@ -1161,53 +793,29 @@ mod tests {
         );
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
-        // Issue a connect command and verify that connecting_to status is changed for upper
-        // layer (but not underlying state machine) and a scan request is sent to MLME.
+        // Issue a connect command and expect the status to change appropriately.
         let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
-        let req = connect_req(b"foo".to_vec(), credential);
+        let bss_desc = fake_fidl_bss!(Wep, ssid: b"foo".to_vec());
+        let req = connect_req(b"foo".to_vec(), bss_desc, credential);
         let _recv = sme.on_connect_command(req);
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(
             Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
             sme.status()
         );
-
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
-
-        // Simulate scan end and verify that underlying state machine's status is changed,
-        // and a join request is sent to MLME.
-        report_fake_scan_result(&mut sme, fake_fidl_bss!(Wep, ssid: b"foo".to_vec()));
-        assert_eq!(Some(b"foo".to_vec()), sme.state.as_ref().unwrap().status().connecting_to);
-        assert_eq!(
-            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
-            sme.status()
-        );
-
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
     }
 
     #[test]
     fn connecting_to_wep_network_unsupported() {
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        let (mut sme, mut _mlme_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
-        // Issue a connect command and verify that connecting_to status is changed for upper
-        // layer (but not underlying state machine) and a scan request is sent to MLME.
+        // Issue a connect command and expect the status to change appropriately.
         let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
-        let req = connect_req(b"foo".to_vec(), credential);
-        let mut connect_fut = sme.on_connect_command(req);
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
-        assert_eq!(
-            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
-            sme.status()
-        );
-
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
-
-        // Simulate scan end and verify that underlying state machine's status is not changed,
-        report_fake_scan_result(&mut sme, fake_fidl_bss!(Wep, ssid: b"foo".to_vec()));
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
-        assert_connect_result_failed(&mut connect_fut);
+        let bss_desc = fake_fidl_bss!(Wep, ssid: b"foo".to_vec());
+        let req = connect_req(b"foo".to_vec(), bss_desc, credential);
+        let _recv = sme.on_connect_command(req);
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
     }
 
     #[test]
@@ -1215,23 +823,11 @@ mod tests {
         let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
-        // Issue a connect command and verify that connecting_to status is changed for upper
-        // layer (but not underlying state machine) and a scan request is sent to MLME.
+        // Issue a connect command and expect the status to change appropriately.
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let req = connect_req(b"foo".to_vec(), credential);
+        let bss_desc = fake_fidl_bss!(Wpa2, ssid: b"foo".to_vec());
+        let req = connect_req(b"foo".to_vec(), bss_desc, credential);
         let _recv = sme.on_connect_command(req);
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
-        assert_eq!(
-            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
-            sme.status()
-        );
-
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
-
-        // Simulate scan end and verify that underlying state machine's status is changed,
-        // and a join request is sent to MLME.
-        report_fake_scan_result(&mut sme, fake_fidl_bss!(Wpa2, ssid: b"foo".to_vec()));
-        assert_eq!(Some(b"foo".to_vec()), sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(
             Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
             sme.status()
@@ -1245,8 +841,7 @@ mod tests {
         let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
-        // Issue a connect command and verify that connecting_to status is changed for upper
-        // layer (but not underlying state machine) and a scan request is sent to MLME.
+        // Issue a connect command and expect the status to change appropriately.
 
         // IEEE Std 802.11-2016, J.4.2, Test case 1
         // PSK for SSID "IEEE" and password "password".
@@ -1258,20 +853,9 @@ mod tests {
             0x3a, 0xed, 0x76, 0x2e, 0x97, 0x10, 0xa1, 0x2e,
         ];
         let credential = fidl_sme::Credential::Psk(psk);
-        let req = connect_req(b"IEEE".to_vec(), credential);
+        let bss_desc = fake_fidl_bss!(Wpa2, ssid: b"IEEE".to_vec());
+        let req = connect_req(b"IEEE".to_vec(), bss_desc, credential);
         let _recv = sme.on_connect_command(req);
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
-        assert_eq!(
-            Status { connected_to: None, connecting_to: Some(b"IEEE".to_vec()) },
-            sme.status()
-        );
-
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
-
-        // Simulate scan end and verify that underlying state machine's status is changed,
-        // and a join request is sent to MLME.
-        report_fake_scan_result(&mut sme, fake_fidl_bss!(Wpa2, ssid: b"IEEE".to_vec()));
-        assert_eq!(Some(b"IEEE".to_vec()), sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(
             Status { connected_to: None, connecting_to: Some(b"IEEE".to_vec()) },
             sme.status()
@@ -1282,28 +866,14 @@ mod tests {
 
     #[test]
     fn connecting_password_supplied_for_unprotected_network() {
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        let (mut sme, mut _mlme_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let req = connect_req(b"foo".to_vec(), credential);
+        let bss_desc = fake_fidl_bss!(Open, ssid: b"foo".to_vec());
+        let req = connect_req(b"foo".to_vec(), bss_desc, credential);
         let mut connect_fut = sme.on_connect_command(req);
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
-        assert_eq!(
-            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
-            sme.status()
-        );
-
-        // Push a fake scan result into SME. We should not attempt to connect
-        // because a password was supplied for unprotected network. So both the
-        // SME client and underlying state machine should report not connecting
-        // anymore.
-        report_fake_scan_result(&mut sme, fake_fidl_bss!(Open, ssid: b"foo".to_vec()));
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
-
-        // No join request should be sent to MLME
-        assert_no_join(&mut mlme_stream);
 
         // User should get a message that connection failed
         assert_variant!(
@@ -1316,28 +886,14 @@ mod tests {
 
     #[test]
     fn connecting_psk_supplied_for_unprotected_network() {
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        let (mut sme, mut _mlme_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
         let credential = fidl_sme::Credential::Psk(b"somepass".to_vec());
-        let req = connect_req(b"foo".to_vec(), credential);
+        let bss_desc = fake_fidl_bss!(Open, ssid: b"foo".to_vec());
+        let req = connect_req(b"foo".to_vec(), bss_desc, credential);
         let mut connect_fut = sme.on_connect_command(req);
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
-        assert_eq!(
-            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
-            sme.status()
-        );
-
-        // Push a fake scan result into SME. We should not attempt to connect
-        // because a password was supplied for unprotected network. So both the
-        // SME client and underlying state machine should report not connecting
-        // anymore.
-        report_fake_scan_result(&mut sme, fake_fidl_bss!(Open, ssid: b"foo".to_vec()));
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
-
-        // No join request should be sent to MLME
-        assert_no_join(&mut mlme_stream);
 
         // User should get a message that connection failed
         assert_variant!(
@@ -1354,18 +910,9 @@ mod tests {
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let req = connect_req(b"foo".to_vec(), credential);
+        let bss_desc = fake_fidl_bss!(Wpa2, ssid: b"foo".to_vec());
+        let req = connect_req(b"foo".to_vec(), bss_desc, credential);
         let mut connect_fut = sme.on_connect_command(req);
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
-        assert_eq!(
-            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
-            sme.status()
-        );
-
-        // Push a fake scan result into SME. We should not attempt to connect
-        // because no password was supplied for a protected network.
-        report_fake_scan_result(&mut sme, fake_fidl_bss!(Wpa2, ssid: b"foo".to_vec()));
-        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
         // No join request should be sent to MLME
@@ -1387,7 +934,7 @@ mod tests {
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_desc = fake_fidl_bss!(Open, ssid: b"bssname".to_vec());
-        let req = connect_req_with_desc(b"bssname".to_vec(), bss_desc, credential);
+        let req = connect_req(b"bssname".to_vec(), bss_desc, credential);
         let mut connect_fut = sme.on_connect_command(req);
 
         assert_eq!(
@@ -1405,7 +952,7 @@ mod tests {
 
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss_desc = fake_fidl_bss!(Wpa2, ssid: b"bssname".to_vec());
-        let req = connect_req_with_desc(b"bssname".to_vec(), bss_desc, credential);
+        let req = connect_req(b"bssname".to_vec(), bss_desc, credential);
         let mut connect_fut = sme.on_connect_command(req);
 
         assert_eq!(
@@ -1423,7 +970,7 @@ mod tests {
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_desc = fake_fidl_bss!(Wpa2, ssid: b"bssname".to_vec());
-        let req = connect_req_with_desc(b"bssname".to_vec(), bss_desc, credential);
+        let req = connect_req(b"bssname".to_vec(), bss_desc, credential);
         let mut connect_fut = sme.on_connect_command(req);
 
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
@@ -1445,7 +992,7 @@ mod tests {
 
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss_desc = fake_fidl_bss!(Wpa3Enterprise, ssid: b"bssname".to_vec());
-        let req = connect_req_with_desc(b"bssname".to_vec(), bss_desc, credential);
+        let req = connect_req(b"bssname".to_vec(), bss_desc, credential);
         let mut connect_fut = sme.on_connect_command(req);
 
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
@@ -1461,30 +1008,17 @@ mod tests {
     }
 
     #[test]
-    fn connecting_no_scan_result_with_ssid() {
-        let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let mut connect_fut = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        let bss_desc = fake_fidl_bss!(Open, ssid: b"bar".to_vec());
-        report_fake_scan_result(&mut sme, bss_desc);
-
-        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
-            assert_eq!(failure, SelectNetworkFailure::NoScanResultWithSsid.into());
-        });
-    }
-
-    #[test]
     fn connecting_right_credential_type_no_privacy() {
         let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
 
         let credential = fidl_sme::Credential::Password(b"password".to_vec());
-        let mut connect_fut = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        let bss_desc = fidl_internal::BssDescription {
+        let bss_desc = fake_fidl_bss!(
+            Wpa2,
+            ssid: b"foo".to_vec(),
             cap: wlan_common::mac::CapabilityInfo(0).with_privacy(false).0,
-            ..fake_fidl_bss!(Wpa2, ssid: b"foo".to_vec())
-        };
-        report_fake_scan_result(&mut sme, bss_desc);
+        );
+        let mut connect_fut =
+            sme.on_connect_command(connect_req(b"foo".to_vec(), bss_desc, credential));
 
         assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
             assert_eq!(failure, SelectNetworkFailure::IncompatibleConnectRequest.into());
@@ -1496,12 +1030,14 @@ mod tests {
         let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
 
         let credential = fidl_sme::Credential::Password(b"pass".to_vec());
-        let mut connect_fut = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        let bss_desc = fake_fidl_bss!(Wpa2, ssid: b"foo".to_vec());
+        let mut connect_fut =
+            sme.on_connect_command(connect_req(b"foo".to_vec(), bss_desc, credential));
         let bss_desc = fake_fidl_bss!(Wpa2, ssid: b"foo".to_vec());
         report_fake_scan_result(&mut sme, bss_desc);
 
         assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
-            assert_eq!(failure, SelectNetworkFailure::InternalProtectionError.into());
+            assert_eq!(failure, SelectNetworkFailure::IncompatibleConnectRequest.into());
         });
     }
 
@@ -1510,8 +1046,10 @@ mod tests {
         let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let bss_desc = fake_fidl_bss!(Open, ssid: [65; 33].to_vec());
         // SSID is one byte too long
-        let mut connect_fut = sme.on_connect_command(connect_req([65; 33].to_vec(), credential));
+        let mut connect_fut =
+            sme.on_connect_command(connect_req([65; 33].to_vec(), bss_desc, credential));
 
         assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
             assert_eq!(failure, SelectNetworkFailure::NoScanResultWithSsid.into());
@@ -1522,10 +1060,19 @@ mod tests {
     fn new_connect_attempt_cancels_pending_connect() {
         let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
 
-        let req = connect_req(b"foo".to_vec(), fidl_sme::Credential::None(fidl_sme::Empty));
+        let bss_desc = fake_fidl_bss!(Open, ssid: b"foo".to_vec());
+        let req = connect_req(
+            b"foo".to_vec(),
+            bss_desc.clone(),
+            fidl_sme::Credential::None(fidl_sme::Empty),
+        );
         let mut connect_fut1 = sme.on_connect_command(req);
 
-        let req2 = connect_req(b"foo".to_vec(), fidl_sme::Credential::None(fidl_sme::Empty));
+        let req2 = connect_req(
+            b"foo".to_vec(),
+            bss_desc.clone(),
+            fidl_sme::Credential::None(fidl_sme::Empty),
+        );
         let mut connect_fut2 = sme.on_connect_command(req2);
 
         // User should get a message that first connection attempt is canceled
@@ -1534,7 +1081,8 @@ mod tests {
         // that connection attempt will be canceled even in the middle of joining the network
         report_fake_scan_result(&mut sme, fake_fidl_bss!(Open, ssid: b"foo".to_vec()));
 
-        let req3 = connect_req(b"foo".to_vec(), fidl_sme::Credential::None(fidl_sme::Empty));
+        let req3 =
+            connect_req(b"foo".to_vec(), bss_desc, fidl_sme::Credential::None(fidl_sme::Empty));
         let mut _connect_fut3 = sme.on_connect_command(req3);
 
         // Verify that second connection attempt is canceled as new connect request comes in
@@ -1549,7 +1097,7 @@ mod tests {
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_desc = fake_fidl_bss!(Open, ssid: b"bssname".to_vec());
         let bssid = bss_desc.bssid;
-        let mut req = connect_req_with_desc(b"bssname".to_vec(), bss_desc, credential);
+        let mut req = connect_req(b"bssname".to_vec(), bss_desc, credential);
         req.multiple_bss_candidates = false;
         let _connect_fut = sme.on_connect_command(req);
 
@@ -1572,45 +1120,14 @@ mod tests {
     }
 
     #[test]
-    fn test_info_event_complete_connect_with_old_join_scan() {
-        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-
-        let bss_desc = fake_fidl_bss!(Open, ssid: b"foo".to_vec());
-        let bssid = bss_desc.bssid;
-        report_fake_scan_result(&mut sme, bss_desc);
-
-        sme.on_mlme_event(create_join_conf(fidl_mlme::JoinResultCode::Success));
-        sme.on_mlme_event(create_auth_conf(bssid, fidl_mlme::AuthenticateResultCode::Success));
-        sme.on_mlme_event(create_assoc_conf(fidl_mlme::AssociateResultCode::Success));
-
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
-            let scan_stats = stats.join_scan_stats().expect("expect join scan stats");
-            assert!(!scan_stats.scan_start_while_connected);
-            assert!(scan_stats.scan_time().into_nanos() > 0);
-            assert_eq!(scan_stats.result, ScanResult::Success);
-            assert_eq!(scan_stats.bss_count, 1);
-            assert!(stats.auth_time().is_some());
-            assert!(stats.assoc_time().is_some());
-            assert!(stats.rsna_time().is_none());
-            assert!(stats.connect_time().into_nanos() > 0);
-            assert_eq!(stats.result, ConnectResult::Success);
-            assert!(stats.candidate_network.is_some());
-            assert!(stats.previous_disconnect_info.is_none());
-        });
-    }
-
-    #[test]
     fn test_info_event_failed_connect() {
         let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-
         let bss_desc = fake_fidl_bss!(Open, ssid: b"foo".to_vec());
+        let _recv =
+            sme.on_connect_command(connect_req(b"foo".to_vec(), bss_desc.clone(), credential));
+
         let bssid = bss_desc.bssid;
         report_fake_scan_result(&mut sme, bss_desc);
 
@@ -1620,7 +1137,6 @@ mod tests {
 
         let result = ConnectResult::Failed(ConnectFailure::AuthenticationFailure(auth_failure));
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
-            assert_eq!(stats.join_scan_stats().expect("no scan stats").result, ScanResult::Success);
             assert!(stats.auth_time().is_some());
             // no association time since requests already fails at auth step
             assert!(stats.assoc_time().is_none());
@@ -1633,102 +1149,18 @@ mod tests {
     }
 
     #[test]
-    fn test_info_event_connect_canceled_during_scan() {
-        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-
-        // Send another connect request, which should cancel first one
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
-            assert!(stats.scan_start_stats.is_some());
-            // Connect attempt cancels before scan is finished. Since we send stats right away,
-            // end stats is blank and a complete scan stats cannot be constructed.
-            assert!(stats.scan_end_stats.is_none());
-            assert!(stats.join_scan_stats().is_none());
-
-            assert!(stats.connect_time().into_nanos() > 0);
-            assert_eq!(stats.result, ConnectResult::Canceled);
-            assert!(stats.candidate_network.is_none());
-        });
-
-        // Old scan finishes. However, no join scan stats is sent
-        report_fake_scan_result(&mut sme, fake_fidl_bss!(Open, ssid: b"foo".to_vec()));
-        assert_variant!(info_stream.try_next(), Err(_));
-    }
-
-    #[test]
-    fn test_info_event_connect_canceled_post_scan() {
-        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-
-        report_fake_scan_result(&mut sme, fake_fidl_bss!(Open, ssid: b"foo".to_vec()));
-
-        // Send another connect request, which should cancel first one
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
-            assert_eq!(stats.join_scan_stats().expect("no scan stats").result, ScanResult::Success);
-            assert!(stats.connect_time().into_nanos() > 0);
-            assert_eq!(stats.result, ConnectResult::Canceled);
-            assert!(stats.candidate_network.is_some());
-        });
-    }
-
-    #[test]
     fn test_info_event_candidate_network_multiple_bss() {
         let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_desc = fake_fidl_bss!(Open, ssid: b"bssname".to_vec());
-        let req = connect_req_with_desc(b"bssname".to_vec(), bss_desc, credential);
+        let req = connect_req(b"bssname".to_vec(), bss_desc, credential);
         let _connect_fut = sme.on_connect_command(req);
 
         // Stop connecting attempt early since we just want to get ConnectStats
         sme.on_mlme_event(create_join_conf(fidl_mlme::JoinResultCode::JoinFailureTimeout));
 
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
-            assert_variant!(stats.candidate_network, Some(candidate_network) => {
-                assert!(candidate_network.multiple_bss_candidates);
-            });
-        });
-    }
-
-    #[test]
-    fn test_info_event_candidate_network_multiple_bss_old_join_scan_path() {
-        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-
-        let mut bss = fake_fidl_bss!(Open, ssid: b"foo".to_vec());
-        bss.bssid = [1; 6];
-        sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult { txn_id: 1, bss },
-        });
-        let mut bss = fake_fidl_bss!(Open, ssid: b"foo".to_vec());
-        bss.bssid = [3; 6];
-        sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult { txn_id: 1, bss },
-        });
-        // This scan result should not be counted since it's not the SSID we request
-        let bss = fake_fidl_bss!(Open, ssid: b"bar".to_vec());
-        sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult { txn_id: 1, bss },
-        });
-        sme.on_mlme_event(MlmeEvent::OnScanEnd {
-            end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCode::Success },
-        });
-
-        // Stop connecting attempt early since we just want to get ConnectStats
-        sme.on_mlme_event(create_join_conf(fidl_mlme::JoinResultCode::JoinFailureTimeout));
-
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
-            assert_eq!(stats.join_scan_stats().expect("no scan stats").bss_count, 2);
             assert_variant!(stats.candidate_network, Some(candidate_network) => {
                 assert!(candidate_network.multiple_bss_candidates);
             });
@@ -1785,46 +1217,6 @@ mod tests {
     }
 
     #[test]
-    fn test_on_connect_command_default_to_active_scan() {
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
-        sme.context.is_softmac = false;
-        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(req))) => {
-            assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
-        });
-    }
-
-    #[test]
-    fn test_on_connect_command_softmac_adhere_to_scan_type_arg_passive() {
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
-        sme.context.is_softmac = true;
-        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(req))) => {
-            assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Passive);
-        });
-    }
-
-    #[test]
-    fn test_on_connect_command_softmac_adhere_to_scan_type_arg_active() {
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
-        sme.context.is_softmac = true;
-        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
-
-        let mut req = connect_req(b"foo".to_vec(), fidl_sme::Credential::None(fidl_sme::Empty));
-        req.deprecated_scan_type = fidl_common::ScanType::Active;
-        let _recv = sme.on_connect_command(req);
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(req))) => {
-            assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
-        });
-    }
-
-    #[test]
     fn test_wmm_status_success() {
         let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
         let mut receiver = sme.wmm_status();
@@ -1876,29 +1268,14 @@ mod tests {
         }
     }
 
-    fn assert_connect_result_failed(connect_fut: &mut oneshot::Receiver<ConnectResult>) {
-        assert_variant!(connect_fut.try_recv(), Ok(Some(ConnectResult::Failed(..))));
-    }
-
-    fn connect_req(ssid: Ssid, credential: fidl_sme::Credential) -> fidl_sme::ConnectRequest {
-        fidl_sme::ConnectRequest {
-            ssid,
-            bss_desc: None,
-            credential,
-            radio_cfg: RadioConfig::default().to_fidl(),
-            deprecated_scan_type: fidl_common::ScanType::Passive,
-            multiple_bss_candidates: true,
-        }
-    }
-
-    fn connect_req_with_desc(
+    fn connect_req(
         ssid: Ssid,
         bss_desc: fidl_internal::BssDescription,
         credential: fidl_sme::Credential,
     ) -> fidl_sme::ConnectRequest {
         fidl_sme::ConnectRequest {
             ssid,
-            bss_desc: Some(Box::new(bss_desc)),
+            bss_desc,
             credential,
             radio_cfg: RadioConfig::default().to_fidl(),
             deprecated_scan_type: fidl_common::ScanType::Passive,

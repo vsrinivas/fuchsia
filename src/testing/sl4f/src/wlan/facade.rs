@@ -88,28 +88,39 @@ impl WlanFacade {
         // send the bss descriptions back to the test
         let mut hashmap = HashMap::new();
         for bss in results.drain(..) {
-            if let Some(bss_desc) = bss.bss_desc {
-                let entry = hashmap.entry(bss.ssid).or_insert(vec![]);
-                entry.push(bss_desc);
-            }
+            let entry = hashmap.entry(bss.ssid).or_insert(vec![]);
+            entry.push(Box::new(bss.bss_desc));
         }
 
         Ok(hashmap)
     }
 
+    // TODO(fxbug.dev/68531): Require a BSS description and remove the optional scan.
     pub async fn connect(
         &self,
         target_ssid: Vec<u8>,
         target_pwd: Vec<u8>,
         target_bss_desc: Option<Box<fidl_internal::BssDescription>>,
     ) -> Result<bool, Error> {
+        let target_bss_desc = target_bss_desc.unwrap_or(
+            self.scan_for_bss_info()
+                .await?
+                .remove(&target_ssid)
+                .and_then(|bss_descs| bss_descs.into_iter().next())
+                .context("No suitable BSS found")?,
+        );
         // get the first client interface
         let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
             .await
             .context("Connect: failed to get client iface sme proxy")?;
 
-        wlan_service_util::client::connect(&sme_proxy, target_ssid, target_pwd, target_bss_desc)
-            .await
+        wlan_service_util::client::connect(
+            &sme_proxy,
+            target_ssid,
+            target_pwd,
+            target_bss_desc.as_ref().clone(),
+        )
+        .await
     }
 
     /// Destroys a WLAN interface by input interface ID.

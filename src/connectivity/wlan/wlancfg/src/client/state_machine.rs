@@ -289,7 +289,7 @@ struct ConnectingOptions {
 type MultipleBssCandidates = bool;
 enum SmeOperation {
     ConnectResult(Result<(fidl_sme::ConnectResultCode, Box<types::Bssid>), anyhow::Error>),
-    ScanResult(Option<(Box<fidl_internal::BssDescription>, MultipleBssCandidates)>),
+    ScanResult(Option<(fidl_internal::BssDescription, MultipleBssCandidates)>),
 }
 
 async fn handle_connecting_error_and_retry(
@@ -443,7 +443,7 @@ async fn connecting_state<'a>(
                         .map_err(|e| ExitReason(Err(format_err!("Failed to create proxy: {:?}", e))))?;
                     let mut sme_connect_request = fidl_sme::ConnectRequest {
                         ssid: options.connect_request.target.network.ssid.clone(),
-                        bss_desc: Some(bss_info.0),
+                        bss_desc: bss_info.0,
                         multiple_bss_candidates: bss_info.1,
                         credential: sme_credential_from_policy(&options.connect_request.target.credential),
                         radio_cfg: RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl(),
@@ -859,7 +859,7 @@ mod tests {
                 },
                 credential: Credential::Password("five0".as_bytes().to_vec()),
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -1305,7 +1305,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(false),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -1691,7 +1691,7 @@ mod tests {
                 network: next_network_identifier,
                 credential: next_credential,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -1831,7 +1831,7 @@ mod tests {
                 network: next_network_identifier,
                 credential: next_credential,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
@@ -1924,7 +1924,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2059,7 +2059,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2112,7 +2112,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc2.clone(),
+                bss: Some(bss_desc2.clone()),
                 multiple_bss_candidates: Some(false),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -2258,7 +2258,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2418,14 +2418,14 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request,
-            bssid: bss_desc.as_ref().unwrap().bssid,
+            bssid: bss_desc.bssid,
         };
         let initial_state = connected_state(test_values.common_options, options);
         let fut = run_state_machine(initial_state);
@@ -2549,14 +2549,14 @@ mod tests {
                 network: types::NetworkIdentifier { ssid: network_ssid, type_: security },
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RetryAfterFailedConnectAttempt,
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_desc.as_ref().unwrap().bssid,
+            bssid: bss_desc.bssid,
         };
         let sme_fut = test_values.sme_req_stream.into_future();
         pin_mut!(sme_fut);
@@ -2590,7 +2590,7 @@ mod tests {
             .disconnect_list
             .get_recent(zx::Time::ZERO);
         assert_variant!(disconnects.as_slice(), [disconnect] => {
-            assert_eq!(disconnect.bssid, bss_desc.expect("BSS description missing BSSID").bssid);
+            assert_eq!(disconnect.bssid, bss_desc.bssid);
         });
     }
 
@@ -2725,7 +2725,7 @@ mod tests {
             .disconnect_list
             .get_recent(zx::Time::ZERO);
         assert_variant!(disconnects.as_slice(), [disconnect] => {
-            assert_eq!(disconnect.bssid, bss_desc.expect("BSS description missing BSSID").bssid);
+            assert_eq!(disconnect.bssid, bss_desc.bssid);
         });
     }
 
@@ -2744,14 +2744,14 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_desc.as_ref().unwrap().bssid,
+            bssid: bss_desc.bssid,
         };
         let initial_state = connected_state(test_values.common_options, options);
         let fut = run_state_machine(initial_state);
@@ -2820,14 +2820,14 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_desc.as_ref().unwrap().bssid,
+            bssid: bss_desc.bssid,
         };
         let initial_state = connected_state(test_values.common_options, options);
         let fut = run_state_machine(initial_state);
@@ -2874,7 +2874,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: second_bss_desc.clone(),
+                bss: Some(second_bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
@@ -3020,7 +3020,7 @@ mod tests {
                 },
                 credential: Credential::Password("Anything".as_bytes().to_vec()),
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -3046,7 +3046,7 @@ mod tests {
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_desc.as_ref().unwrap().bssid,
+            bssid: bss_desc.bssid,
         };
         let initial_state = connected_state(common_options, options);
         let fut = run_state_machine(initial_state);
@@ -3196,14 +3196,14 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_desc.as_ref().unwrap().bssid,
+            bssid: bss_desc.bssid,
         };
         let initial_state = connected_state(test_values.common_options, options);
         let fut = run_state_machine(initial_state);
@@ -3336,7 +3336,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
@@ -3601,7 +3601,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: bss_desc.clone(),
+                bss: Some(bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,

@@ -1234,7 +1234,7 @@ mod tests {
         wlan_common::{
             assert_variant,
             channel::{Cbw, Phy},
-            RadioConfig,
+            fake_fidl_bss, RadioConfig,
         },
     };
 
@@ -1259,7 +1259,7 @@ mod tests {
                 network,
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss: generate_random_bss_desc(),
+                bss: Some(generate_random_bss_desc()),
                 multiple_bss_candidates: Some(true),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -1980,7 +1980,7 @@ mod tests {
                         network: network_id.clone().into(),
                         credential,
                         observed_in_passive_scan: Some(true),
-                        bss: generate_random_bss_desc(),
+                        bss: Some(generate_random_bss_desc()),
                         multiple_bss_candidates: Some(true),
                     },
                     reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2075,7 +2075,7 @@ mod tests {
                 network,
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss: generate_random_bss_desc(),
+                bss: Some(generate_random_bss_desc()),
                 multiple_bss_candidates: None,
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2103,7 +2103,7 @@ mod tests {
                 network: network.clone(),
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss: generate_random_bss_desc(),
+                bss: Some(generate_random_bss_desc()),
                 multiple_bss_candidates: Some(true),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -4941,7 +4941,7 @@ mod tests {
                         cbw: fidl_fuchsia_wlan_common::Cbw::Cbw20,
                         secondary80: 0,
                     },
-                    bss_desc: None,
+                    bss_desc: fake_fidl_bss!(Open, bssid: [20, 30, 40, 50, 60, 70]),
                 }],
                 compatibility: client_types::Compatibility::Supported,
             }];
@@ -5060,7 +5060,7 @@ mod tests {
                         cbw: fidl_fuchsia_wlan_common::Cbw::Cbw20,
                         secondary80: 0,
                     },
-                    bss_desc: None,
+                    bss_desc: fake_fidl_bss!(Open, bssid: [20, 30, 40, 50, 60, 70]),
                 }],
                 compatibility: client_types::Compatibility::Supported,
             }];

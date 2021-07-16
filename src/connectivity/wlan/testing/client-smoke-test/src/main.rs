@@ -101,18 +101,17 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         for (iface_id, wlan_iface) in test_results.iface_objects.iter_mut() {
             // first check if we can get scan results
             fx_log_info!("iface {}: scanning", iface_id);
-            let scan_result = wlan_service_util::client::passive_scan(&wlan_iface.sme_proxy).await;
-            match scan_result {
-                Ok(results) => {
-                    wlan_iface.scan_success = true;
-                    for entry in results.into_iter() {
-                        if entry.ssid == opt.target_ssid.as_bytes().to_vec() {
-                            wlan_iface.scan_found_target_ssid = true;
-                        }
-                    }
-                }
-                Err(e) => fx_log_warn!("scan failed: {}", e),
-            };
+            let networks = wlan_service_util::client::passive_scan(&wlan_iface.sme_proxy)
+                .await
+                .context("scan failed")?;
+            let bss_desc = networks
+                .into_iter()
+                .filter(|bss_info| bss_info.ssid.as_slice() == opt.target_ssid.as_bytes())
+                .map(|bss_info| bss_info.bss_desc)
+                .next()
+                .ok_or_else(|| format_err!("no BSS information found for SSID"))?;
+            wlan_iface.scan_success = true;
+            wlan_iface.scan_found_target_ssid = true;
 
             let mut requires_disconnect = false;
             // first check if we are connected to the target network already
@@ -126,8 +125,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     &wlan_iface.sme_proxy,
                     opt.target_ssid.as_bytes().to_vec(),
                     opt.target_pwd.as_bytes().to_vec(),
-                    // TODO(fxbug.dev/66665): pass in a bss description or use Policy layer
-                    None,
+                    bss_desc,
                 )
                 // TODO(fxbug.dev/29881): when this bug is fixed, consider removing this timeout
                 .on_timeout(WLAN_CONNECT_TIMEOUT_SECONDS.seconds().after_now(), || {
@@ -384,7 +382,7 @@ async fn can_download_data(http_svc: &http::LoaderProxy) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl_fuchsia_wlan_common as fidl_common};
+    use {super::*, fidl_fuchsia_wlan_common as fidl_common, wlan_common::fake_fidl_bss};
 
     /// Test to verify a connection will be triggered for an SSID that is not already connected.
     /// This is called with stay connected true and a different target SSID.
@@ -451,10 +449,11 @@ mod tests {
     }
 
     fn create_bssinfo_using_ssid<S: ToString>(ssid: Option<S>) -> Option<Box<fidl_sme::BssInfo>> {
-        ssid.map(|s| {
-            let bss_info: fidl_sme::BssInfo = fidl_sme::BssInfo {
+        ssid.map(|ssid| {
+            let ssid = ssid.to_string().as_bytes().to_vec();
+            Box::new(fidl_sme::BssInfo {
                 bssid: [0, 1, 2, 3, 4, 5],
-                ssid: s.to_string().as_bytes().to_vec(),
+                ssid: ssid.clone(),
                 rssi_dbm: -30,
                 snr_db: 0,
                 channel: fidl_common::WlanChan {
@@ -464,9 +463,12 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa2Personal,
                 compatible: true,
-                bss_desc: None,
-            };
-            Box::new(bss_info)
+                bss_desc: fake_fidl_bss!(
+                    Wpa2,
+                    ssid: ssid,
+                    bssid: [0, 1, 2, 3, 4, 5],
+                ),
+            })
         })
     }
 }

@@ -99,7 +99,7 @@ pub struct Bss {
     /// Compatible with this device's network stack.
     pub compatible: bool,
     /// The BSS description with information that SME needs for connecting.
-    pub bss_desc: Option<Box<fidl_internal::BssDescription>>,
+    pub bss_desc: fidl_internal::BssDescription,
 }
 
 /// Data for connecting to a specific network and keeping track of what is connected to.
@@ -107,10 +107,11 @@ pub struct Bss {
 pub struct ConnectionCandidate {
     pub network: NetworkIdentifier,
     pub credential: config_management::Credential,
-    pub bss: Option<Box<fidl_internal::BssDescription>>,
-    /// Temporarily an Option<>, since this information comes from a scan, and scans are not always
-    /// performed in the Policy layer right now. TODO(53899) Remove the optionality once all scans
-    /// are done at the Policy layer.
+    // TODO(fxbug.dev/72906): Move these optional fields into a `struct` that makes it clear that
+    //                        this information is related and derived from latent scans. In
+    //                        `ConnectionCandidate`, replace these fields with a single optional
+    //                        field of the new `struct`.
+    pub bss: Option<fidl_internal::BssDescription>,
     pub observed_in_passive_scan: Option<bool>,
     pub multiple_bss_candidates: Option<bool>,
 }

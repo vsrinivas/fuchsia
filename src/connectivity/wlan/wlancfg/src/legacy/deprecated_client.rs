@@ -91,9 +91,13 @@ fn extract_current_ap(status: &fidl_sme::ClientStatusResponse) -> Option<Box<dep
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::legacy::Iface, fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync, futures::task::Poll,
-        pin_utils::pin_mut, wlan_common::assert_variant,
+        super::*,
+        crate::legacy::Iface,
+        fidl::endpoints::create_proxy,
+        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
+        futures::task::Poll,
+        pin_utils::pin_mut,
+        wlan_common::{assert_variant, fake_fidl_bss},
     };
 
     struct TestValues {
@@ -242,7 +246,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
-                        bss_desc: None,
+                        bss_desc: fake_fidl_bss!(Open, ssid: ssid.as_bytes().to_vec()),
                     }))
                 }).expect("could not send sme response")
             }
