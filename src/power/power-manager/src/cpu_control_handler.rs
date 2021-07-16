@@ -15,7 +15,9 @@ use fuchsia_inspect::{self as inspect, Property};
 use serde_derive::Deserialize;
 use serde_json as json;
 use std::cell::Cell;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 /// Node: CpuControlHandler
@@ -212,6 +214,10 @@ impl<'a> CpuControlHandlerBuilder<'a> {
         .context("Failed getting CPU params")?;
         inspect_data.set_cpu_control_params(&cpu_control_params);
 
+        let mut hasher = DefaultHasher::new();
+        self.cpu_driver_path.hash(&mut hasher);
+        let trace_counter_id = hasher.finish();
+
         let node = Rc::new(CpuControlHandler {
             cpu_driver_path: self.cpu_driver_path,
             cpu_control_params,
@@ -220,6 +226,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
             cpu_dev_handler_node: self.cpu_dev_handler_node,
             _cpu_ctrl_proxy: proxy,
             inspect: inspect_data,
+            trace_counter_id,
         });
 
         // Initialize current P-state index
@@ -273,6 +280,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
             "power_manager",
             "CpuControlHandlerBuilder::received_cpu_params",
             fuchsia_trace::Scope::Thread,
+            "driver" => cpu_driver_path.as_str(),
             "valid" => 1,
             "p_states" => format!("{:?}", params.p_states).as_str(),
             "capacitance" => params.capacitance.0,
@@ -307,6 +315,9 @@ pub struct CpuControlHandler {
 
     /// A struct for managing Component Inspection data
     inspect: InspectData,
+
+    /// Identifies trace counters between CpuControlHandler instances for different drivers.
+    trace_counter_id: u64,
 }
 
 impl CpuControlHandler {
@@ -372,8 +383,8 @@ impl CpuControlHandler {
             fuchsia_trace::counter!(
                 "power_manager",
                 "CpuControlHandler last_load",
-                0,
-                "last_load" => last_load
+                self.trace_counter_id,
+                self.cpu_driver_path.as_str() => last_load
             );
 
             // TODO(pshickel): Eventually we'll need a way to query the load only from the cores we
@@ -452,8 +463,8 @@ impl CpuControlHandler {
         fuchsia_trace::counter!(
             "power_manager",
             "CpuControlHandler p_state",
-            0,
-            "P-state index" => p_state_index as u32
+            self.trace_counter_id,
+            self.cpu_driver_path.as_str() => p_state_index as u32
         );
 
         Ok(MessageReturn::SetMaxPowerConsumption(estimated_power))
