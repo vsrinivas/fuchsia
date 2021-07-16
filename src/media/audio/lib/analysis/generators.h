@@ -78,12 +78,12 @@ AudioBuffer<SampleFormat> GenerateCosineAudio(TypedFormat<SampleFormat> format, 
   FX_CHECK(freq * 2.0 <= static_cast<double>(num_frames))
       << "Buffer too short--requested frequency will be aliased";
 
-  // freq is defined as: cosine recurs exactly 'freq' times within buf_size.
-  const double mult = 2.0 * M_PI / static_cast<double>(num_frames) * freq;
-
   AudioBuffer out(format, num_frames);
   for (int64_t frame = 0; frame < num_frames; ++frame) {
-    auto val = magn * std::cos(mult * static_cast<double>(frame) + phase);
+    // This is 2*PI * freq * (frame/num_frames), reordered for _slightly_ better precision
+    double angle = static_cast<double>(frame * 2) * freq / static_cast<double>(num_frames) * M_PI;
+    double val = magn * std::cos(angle + phase);
+
     switch (SampleFormat) {
       case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
         val = round(val) + 0x80;
