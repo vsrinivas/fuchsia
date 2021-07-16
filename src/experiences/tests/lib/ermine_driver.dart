@@ -66,7 +66,10 @@ class ErmineDriver {
       }
 
       // Wait for Ermine to start.
-      if (!await isRunning(ermineUrl)) {
+      if (!await isRunning(ermineUrl).catchError((e) {
+        print('$e: Failed wait for isRunning');
+        return false;
+      })) {
         return false;
       }
 
