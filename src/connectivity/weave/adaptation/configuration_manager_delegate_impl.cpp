@@ -155,9 +155,11 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetDeviceId(uint64_t& device_id) {
                                          &out_size);
   if (err == WEAVE_NO_ERROR) {
     err = GetDeviceIdFromFactory(path, &device_id);
-    FX_CHECK(err == WEAVE_NO_ERROR) << "Failed getting device id from factory at path: " << path;
-    impl_->StoreManufacturerDeviceId(device_id);
-    return err;
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "Failed getting device id from factory at path: " << path;
+      return err;
+    }
+    return impl_->StoreManufacturerDeviceId(device_id);
   }
 
   err = GetDeviceIdFromFactory(path, &device_id);

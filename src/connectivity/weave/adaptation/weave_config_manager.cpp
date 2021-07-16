@@ -34,11 +34,11 @@ WeaveConfigManager::WeaveConfigManager(std::string path) : config_store_path_(st
   json::JSONParser json_parser_;
   if (files::IsFile(config_store_path_)) {
     config_ = json_parser_.ParseFromFile(config_store_path_);
+    FX_DCHECK(!json_parser_.HasError())
+        << "Failed to load configuration: " << json_parser_.error_str();
   } else {
     config_.SetObject();
   }
-  FX_CHECK(!json_parser_.HasError())
-      << "Failed to load configuration: " << json_parser_.error_str();
 }
 
 WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, bool* value) const {
