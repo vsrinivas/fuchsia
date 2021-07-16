@@ -217,7 +217,13 @@ impl VolumeController {
                 stream.stream_type,
                 StreamVolumeControl::create(
                     &audio_service,
-                    *stream,
+                    if stream.stream_type == AudioStreamType::Interruption {
+                        // Alarm as AudioStreamType::Interruption needs to play at
+                        // AudioStreamType::Background render usage volume level.
+                        AudioStream { stream_type: AudioStreamType::Background, ..*stream }
+                    } else {
+                        *stream
+                    },
                     Some(Arc::new(move || {
                         // When the StreamVolumeControl exits early, inform the
                         // proxy we have exited. The proxy will then cleanup this
