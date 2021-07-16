@@ -101,39 +101,38 @@ impl MetricsService {
         custom_dimensions: BTreeMap<&str, String>,
         batch_collector: Option<&mut MetricsEventBatch>,
     ) -> Result<()> {
-        match self.state.status {
-            MetricsStatus::NewToTool | MetricsStatus::OptedIn => {
-                let body = make_body_with_hash(
-                    &self.state.app_name,
-                    Some(&self.state.build_version),
-                    &self.state.ga_product_code,
-                    category,
-                    action,
-                    label,
-                    custom_dimensions,
-                    self.uuid_as_str(),
-                );
-                match batch_collector {
-                    None => {
-                        let client = new_https_client();
-                        let req = Request::builder()
-                            .method(Method::POST)
-                            .uri(GA_URL)
-                            .body(Body::from(body))?;
-                        let res = client.request(req).await;
-                        match res {
-                            Ok(res) => log::info!("Analytics response: {}", res.status()),
-                            Err(e) => log::debug!("Error posting analytics: {}", e),
-                        }
-                        Ok(())
+        if self.inner_is_opted_in() {
+            let body = make_body_with_hash(
+                &self.state.app_name,
+                Some(&self.state.build_version),
+                &self.state.ga_product_code,
+                category,
+                action,
+                label,
+                custom_dimensions,
+                self.uuid_as_str(),
+            );
+            match batch_collector {
+                None => {
+                    let client = new_https_client();
+                    let req = Request::builder()
+                        .method(Method::POST)
+                        .uri(GA_URL)
+                        .body(Body::from(body))?;
+                    let res = client.request(req).await;
+                    match res {
+                        Ok(res) => log::info!("Analytics response: {}", res.status()),
+                        Err(e) => log::debug!("Error posting analytics: {}", e),
                     }
-                    Some(bc) => {
-                        bc.add_event_string(body);
-                        Ok(())
-                    }
+                    Ok(())
+                }
+                Some(bc) => {
+                    bc.add_event_string(body);
+                    Ok(())
                 }
             }
-            _ => Ok(()),
+        } else {
+            Ok(())
         }
     }
 
@@ -151,38 +150,37 @@ impl MetricsService {
         fatal: Option<&bool>,
         batch_collector: Option<&mut MetricsEventBatch>,
     ) -> Result<()> {
-        match self.state.status {
-            MetricsStatus::NewToTool | MetricsStatus::OptedIn => {
-                let body = make_crash_body_with_hash(
-                    &self.state.app_name,
-                    Some(&self.state.build_version),
-                    &self.state.ga_product_code,
-                    description,
-                    fatal,
-                    BTreeMap::new(),
-                    self.uuid_as_str(),
-                );
-                match batch_collector {
-                    None => {
-                        let client = new_https_client();
-                        let req = Request::builder()
-                            .method(Method::POST)
-                            .uri(GA_URL)
-                            .body(Body::from(body))?;
-                        let res = client.request(req).await;
-                        match res {
-                            Ok(res) => log::info!("Analytics response: {}", res.status()),
-                            Err(e) => log::debug!("Error posting analytics: {}", e),
-                        }
-                        Ok(())
+        if self.inner_is_opted_in() {
+            let body = make_crash_body_with_hash(
+                &self.state.app_name,
+                Some(&self.state.build_version),
+                &self.state.ga_product_code,
+                description,
+                fatal,
+                BTreeMap::new(),
+                self.uuid_as_str(),
+            );
+            match batch_collector {
+                None => {
+                    let client = new_https_client();
+                    let req = Request::builder()
+                        .method(Method::POST)
+                        .uri(GA_URL)
+                        .body(Body::from(body))?;
+                    let res = client.request(req).await;
+                    match res {
+                        Ok(res) => log::info!("Analytics response: {}", res.status()),
+                        Err(e) => log::debug!("Error posting analytics: {}", e),
                     }
-                    Some(bc) => {
-                        bc.add_event_string(body);
-                        Ok(())
-                    }
+                    Ok(())
+                }
+                Some(bc) => {
+                    bc.add_event_string(body);
+                    Ok(())
                 }
             }
-            _ => Ok(()),
+        } else {
+            Ok(())
         }
     }
 
@@ -197,65 +195,68 @@ impl MetricsService {
         custom_dimensions: BTreeMap<&str, String>,
         batch_collector: Option<&mut MetricsEventBatch>,
     ) -> Result<()> {
-        match self.state.status {
-            MetricsStatus::NewToTool | MetricsStatus::OptedIn => {
-                let body = make_timing_body_with_hash(
-                    &self.state.app_name,
-                    Some(&self.state.build_version),
-                    &self.state.ga_product_code,
-                    category,
-                    time,
-                    variable,
-                    label,
-                    custom_dimensions,
-                    self.uuid_as_str(),
-                );
-                match batch_collector {
-                    None => {
-                        let client = new_https_client();
-                        let req = Request::builder()
-                            .method(Method::POST)
-                            .uri(GA_URL)
-                            .body(Body::from(body))?;
-                        let res = client.request(req).await;
-                        match res {
-                            Ok(res) => log::info!("Analytics response: {}", res.status()),
-                            Err(e) => log::debug!("Error posting analytics: {}", e),
-                        }
-                        Ok(())
+        if self.inner_is_opted_in() {
+            let body = make_timing_body_with_hash(
+                &self.state.app_name,
+                Some(&self.state.build_version),
+                &self.state.ga_product_code,
+                category,
+                time,
+                variable,
+                label,
+                custom_dimensions,
+                self.uuid_as_str(),
+            );
+            match batch_collector {
+                None => {
+                    let client = new_https_client();
+                    let req = Request::builder()
+                        .method(Method::POST)
+                        .uri(GA_URL)
+                        .body(Body::from(body))?;
+                    let res = client.request(req).await;
+                    match res {
+                        Ok(res) => log::info!("Analytics response: {}", res.status()),
+                        Err(e) => log::debug!("Error posting analytics: {}", e),
                     }
-                    Some(bc) => {
-                        bc.add_event_string(body);
-                        Ok(())
-                    }
+                    Ok(())
+                }
+                Some(bc) => {
+                    bc.add_event_string(body);
+                    Ok(())
                 }
             }
-            _ => Ok(()),
+        } else {
+            Ok(())
         }
     }
 
     pub(crate) async fn inner_send_events(&self, body: String, batch: bool) -> Result<()> {
-        let client = new_https_client();
-        let url = match batch {
-            true => GA_BATCH_URL,
-            false => GA_URL,
-        };
+        if self.inner_is_opted_in() {
+            let client = new_https_client();
+            let url = match batch {
+                true => GA_BATCH_URL,
+                false => GA_URL,
+            };
 
-        log::debug!("POSTING ANALYTICS: url: {}, \nBODY: {}", &url, &body);
+            log::debug!("POSTING ANALYTICS: url: {}, \nBODY: {}", &url, &body);
 
-        let req = Request::builder().method(Method::POST).uri(url).body(Body::from(body))?;
-        let res = client.request(req).await;
-        match res {
-            Ok(mut res) => {
-                log::info!("Analytics response: {}", res.status());
-                while let Some(chunk) = res.body_mut().data().await {
-                    log::debug!("{:?}", &chunk?);
+            let req = Request::builder().method(Method::POST).uri(url).body(Body::from(body))?;
+            let res = client.request(req).await;
+            match res {
+                Ok(mut res) => {
+                    log::info!("Analytics response: {}", res.status());
+                    while let Some(chunk) = res.body_mut().data().await {
+                        log::debug!("{:?}", &chunk?);
+                    }
+                    //let result = String::from_utf8(bytes.into_iter().collect()).expect("");
                 }
-                //let result = String::from_utf8(bytes.into_iter().collect()).expect("");
+                Err(e) => log::debug!("Error posting analytics: {}", e),
             }
-            Err(e) => log::debug!("Error posting analytics: {}", e),
+            Ok(())
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 }
 
@@ -385,6 +386,25 @@ mod tests {
         );
 
         assert_eq!(ms.inner_get_notice(), None);
+
+        drop(dir);
+        Ok(())
+    }
+
+    #[test]
+    fn opt_out_for_this_invocation() -> Result<()> {
+        let dir = create_tmp_metrics_dir()?;
+        let mut ms = test_metrics_svc(
+            &dir,
+            String::from(APP_NAME),
+            String::from(BUILD_VERSION),
+            UNKNOWN_PROPERTY_ID.to_string(),
+            false,
+        );
+
+        assert_eq!(ms.state.status, MetricsStatus::NewUser);
+        let _res = ms.inner_opt_out_for_this_invocation().unwrap();
+        assert_eq!(ms.state.status, MetricsStatus::OptedOut);
 
         drop(dir);
         Ok(())
