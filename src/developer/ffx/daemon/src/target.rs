@@ -251,7 +251,7 @@ impl EventSynthesizer<TargetEvent> for TargetEventSynthesizer {
 pub struct Target {
     pub events: events::Queue<TargetEvent>,
 
-    host_pipe: Rc<RefCell<Option<Task<()>>>>,
+    host_pipe: RefCell<Option<Task<()>>>,
     logger: Rc<RefCell<Option<Task<()>>>>,
 
     // id is the locally created "primary identifier" for this target.
@@ -880,16 +880,17 @@ impl Target {
     }
 
     pub fn run_host_pipe(self: &Rc<Self>) {
-        if self.host_pipe.borrow().is_none() {
-            let host_pipe = Rc::downgrade(&self.host_pipe);
-            let weak_target = Rc::downgrade(self);
-            self.host_pipe.replace(Some(Task::local(async move {
-                let r = HostPipeConnection::new(weak_target).await;
-                // XXX(raggi): decide what to do with this log data:
-                log::info!("HostPipeConnection returned: {:?}", r);
-                host_pipe.upgrade().and_then(|host_pipe| host_pipe.replace(None));
-            })));
+        if self.host_pipe.borrow().is_some() {
+            return;
         }
+
+        let weak_target = Rc::downgrade(self);
+        self.host_pipe.borrow_mut().replace(Task::local(async move {
+            let r = HostPipeConnection::new(weak_target.clone()).await;
+            // XXX(raggi): decide what to do with this log data:
+            log::info!("HostPipeConnection returned: {:?}", r);
+            weak_target.upgrade().and_then(|target| target.host_pipe.borrow_mut().take());
+        }));
     }
 
     pub fn is_host_pipe_running(&self) -> bool {
@@ -974,6 +975,11 @@ impl Target {
             .borrow()
             .iter()
             .any(|addr_entry| matches!(addr_entry.addr_type, TargetAddrType::Manual))
+    }
+
+    pub fn disconnect(&self) {
+        drop(self.host_pipe.take());
+        self.update_connection_state(|_| ConnectionState::Disconnected);
     }
 }
 
@@ -1193,7 +1199,10 @@ impl TargetCollection {
 
     pub fn remove_target(&self, target_id: String) -> bool {
         if let Some(t) = self.get(target_id) {
-            self.targets.borrow_mut().remove(&t.id());
+            let target = self.targets.borrow_mut().remove(&t.id());
+            if let Some(target) = target {
+                target.disconnect()
+            }
             true
         } else {
             false
@@ -2290,6 +2299,20 @@ mod test {
         assert_eq!(target.nodename(), None);
     }
 
+    #[test]
+    fn test_collection_removal_disconnects_target() {
+        let target = Target::new_named("soggy-falafel");
+        target.set_state(ConnectionState::Mdns(Instant::now()));
+        target.host_pipe.borrow_mut().replace(Task::local(future::pending()));
+
+        let collection = TargetCollection::new();
+        collection.merge_insert(target.clone());
+        collection.remove_target("soggy-falafel".to_owned());
+
+        assert_eq!(target.get_connection_state(), ConnectionState::Disconnected);
+        assert!(target.host_pipe.borrow().is_none());
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_match_serial() {
         let string = "turritopsis-dohrnii-is-an-immortal-jellyfish";
@@ -2686,5 +2709,17 @@ mod test {
         // A manual target exiting the RCS state to disconnected returns to manual instead.
         target.update_connection_state(|_| ConnectionState::Disconnected);
         assert_eq!(target.get_connection_state(), ConnectionState::Manual);
+    }
+
+    #[test]
+    fn test_target_disconnect() {
+        let target = Target::new();
+        target.set_state(ConnectionState::Mdns(Instant::now()));
+        target.host_pipe.borrow_mut().replace(Task::local(future::pending()));
+
+        target.disconnect();
+
+        assert_eq!(ConnectionState::Disconnected, target.get_connection_state());
+        assert!(target.host_pipe.borrow().is_none());
     }
 }
