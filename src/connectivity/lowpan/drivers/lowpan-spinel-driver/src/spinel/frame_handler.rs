@@ -335,7 +335,7 @@ where
     }
 
     pub async fn send_raw_frame(&self, frame: &[u8]) -> Result<(), Error> {
-        traceln!("[->NCP] {:?}", SpinelFrameRef::try_unpack_from_slice(frame).unwrap());
+        fx_log_debug!("[->NCP] {:?}", SpinelFrameRef::try_unpack_from_slice(frame).unwrap());
 
         self.spinel_sink.lock().await.send(&frame).await
     }

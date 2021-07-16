@@ -22,11 +22,6 @@ mod flow_window;
 mod spinel;
 mod tun;
 
-#[cfg(test)]
-#[macro_export]
-macro_rules! traceln (($($args:tt)*) => { fuchsia_syslog::macros::fx_log_trace!($($args)*); }; );
-
-#[cfg(not(test))]
 #[macro_export]
 macro_rules! traceln (($($args:tt)*) => { fuchsia_syslog::macros::fx_log_trace!($($args)*); }; );
 
@@ -407,6 +402,7 @@ async fn main() -> Result<(), Error> {
 
     fuchsia_syslog::init_with_tags(&[fuchsia_syslog::COMPONENT_NAME_PLACEHOLDER_TAG])
         .context("initialize logging")?;
+    fuchsia_syslog::set_severity(fuchsia_syslog::levels::TRACE);
 
     if Path::new("/config/data/bootstrap_config.json").exists() {
         fx_log_err!("Bootstrapping ot-stack. Skipping lowpan-spinel-driver launch");
@@ -418,7 +414,8 @@ async fn main() -> Result<(), Error> {
     let mut attempt_count = 0;
 
     loop {
-        let (app, driver_future) = prepare_to_run(&config).await?;
+        let (app, driver_future) =
+            prepare_to_run(&config).inspect_err(|e| fx_log_err!("prepare_to_run: {:?}", e)).await?;
 
         let start_timestamp = fasync::Time::now();
 

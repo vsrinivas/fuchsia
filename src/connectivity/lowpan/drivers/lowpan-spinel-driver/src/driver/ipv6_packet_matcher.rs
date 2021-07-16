@@ -7,6 +7,7 @@ use anyhow::{Context as _, Error};
 use core::num::NonZeroU16;
 use core::ops::{Deref, DerefMut};
 use packet::ParsablePacket;
+use packet_formats::icmp::*;
 use packet_formats::ip::*;
 use packet_formats::ipv6::Ipv6Packet;
 use packet_formats::tcp::*;
@@ -38,7 +39,22 @@ impl<'a> std::fmt::Debug for Ipv6PacketDebug<'a> {
                 let args = TcpParseArgs::new(packet.src_ip(), packet.dst_ip());
                 write!(f, "TCP;")?;
                 match TcpSegment::parse(&mut packet_bytes, args) {
-                    Ok(tcp) => (Some(tcp.src_port()), Some(tcp.dst_port())),
+                    Ok(tcp) => {
+                        if tcp.rst() {
+                            write!(f, "RST;")?;
+                        }
+                        if tcp.syn() {
+                            write!(f, "SYN;")?;
+                        }
+                        if tcp.fin() {
+                            write!(f, "FIN;")?;
+                        }
+                        write!(f, "SEQ={};", tcp.seq_num())?;
+                        if let Some(ack) = tcp.ack_num() {
+                            write!(f, "ACK={};", ack)?;
+                        }
+                        (Some(tcp.src_port()), Some(tcp.dst_port()))
+                    }
                     Err(_) => {
                         write!(f, "CORRUPT;")?;
                         (None, None)
@@ -57,7 +73,16 @@ impl<'a> std::fmt::Debug for Ipv6PacketDebug<'a> {
                 }
             }
             Ipv6Proto::Icmpv6 => {
+                let args = IcmpParseArgs::new(packet.src_ip(), packet.dst_ip());
                 write!(f, "ICMPv6;")?;
+                match Icmpv6Packet::parse(&mut packet_bytes, args) {
+                    Ok(icmp) => {
+                        write!(f, "{:?};", icmp)?;
+                    }
+                    Err(_) => {
+                        write!(f, "CORRUPT;")?;
+                    }
+                }
                 (None, None)
             }
             other_proto => {
@@ -260,7 +285,11 @@ mod tests {
         );
 
         let packet2 = hex::decode("6000000000213a40fddead00beef000095d60909a7d2f8d6fddead00beef000095d60909a7d2f8d780001cb5c31800015468697320697320616e206563686f206d6573736167652100").expect("bad ipv6 hex");
-        assert_eq!(&format!("{:?}",Ipv6PacketDebug(&packet2)), "IPv6;ICMPv6;src=[fdde:ad00:beef:0:95d6:909:a7d2:f8d6];dst=[fdde:ad00:beef:0:95d6:909:a7d2:f8d7]");
+        let packet2_str = format!("{:?}", Ipv6PacketDebug(&packet2));
+        assert!(packet2_str.starts_with("IPv6;ICMPv6;EchoRequest"));
+        assert!(packet2_str.ends_with(
+            ";src=[fdde:ad00:beef:0:95d6:909:a7d2:f8d6];dst=[fdde:ad00:beef:0:95d6:909:a7d2:f8d7]"
+        ));
 
         let packet3 = hex::decode("deadbeef").expect("bad ipv6 hex");
         assert_eq!(&format!("{:?}", Ipv6PacketDebug(&packet3)), "IPv6;CORRUPT");

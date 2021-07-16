@@ -4,6 +4,7 @@
 
 use super::enums::*;
 use super::{Correlated, CorrelatedBox, NetFlags, RouteFlags};
+use crate::driver::Ipv6PacketDebug;
 use anyhow::{format_err, Context as _};
 use core::convert::{TryFrom, TryInto};
 use fidl_fuchsia_lowpan::JoinerCommissioningParams;
@@ -147,6 +148,19 @@ impl<'a> std::fmt::Debug for SpinelFrameRef<'a> {
                     Ok(SpinelPropValueRef { prop, value }) if prop == Prop::NcpVersion => {
                         write!(f, " {:?}", &prop)?;
                         match String::try_unpack_from_slice(value) {
+                            Ok(x) => write!(f, " {:?}", x)?,
+                            Err(e) => write!(f, " {:?}", e)?,
+                        }
+                    }
+                    Ok(SpinelPropValueRef { prop, value })
+                        if [
+                            Prop::Stream(PropStream::Net),
+                            Prop::Stream(PropStream::NetInsecure),
+                        ]
+                        .contains(&prop) =>
+                    {
+                        write!(f, " {:?}", &prop)?;
+                        match NetworkPacket::try_unpack_from_slice(value) {
                             Ok(x) => write!(f, " {:?}", x)?,
                             Err(e) => write!(f, " {:?}", e)?,
                         }
@@ -524,10 +538,16 @@ impl std::fmt::Debug for ExternalRoute {
 
 /// A spinel network packet
 #[spinel_packed("dD")]
-#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+#[derive(Hash, Clone, Eq, PartialEq)]
 pub struct NetworkPacket<'a> {
     pub packet: &'a [u8],
     pub metadata: &'a [u8],
+}
+
+impl<'a> std::fmt::Debug for NetworkPacket<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{:?} META:{}]", Ipv6PacketDebug(self.packet), hex::encode(self.metadata))
+    }
 }
 
 /// An allow list entry

@@ -27,7 +27,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         // Parse the header.
         let frame = SpinelFrameRef::try_unpack_from_slice(raw_frame).context("on_inbound_frame")?;
 
-        traceln!("[NCP->] {:?}", frame);
+        fx_log_debug!("[NCP->] {:?}", frame);
 
         // If we are waiting for a reset and this frame doesn't
         // look like it might be a reset indication then we drop the frame.
