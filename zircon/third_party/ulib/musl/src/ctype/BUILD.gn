@@ -5,10 +5,7 @@
 source_set("ctype") {
   deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [
-    "__ctype_b_loc.c",
     "__ctype_get_mb_cur_max.c",
-    "__ctype_tolower_loc.c",
-    "__ctype_toupper_loc.c",
     "iswalnum.c",
     "iswalpha.c",
     "iswblank.c",
