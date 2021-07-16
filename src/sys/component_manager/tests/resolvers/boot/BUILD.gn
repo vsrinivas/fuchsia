@@ -30,8 +30,8 @@ rustc_test("integration-test-bin") {
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//src/sys/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

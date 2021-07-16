@@ -22,7 +22,7 @@ rustc_test("tests_bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/lib/fuchsia-component-test",
+    "//src/lib/fuchsia-component-test",
     "//src/sys/test_manager:test_lib",
     "//src/sys/test_runners:test_lib",
     "//third_party/rust_crates:anyhow",

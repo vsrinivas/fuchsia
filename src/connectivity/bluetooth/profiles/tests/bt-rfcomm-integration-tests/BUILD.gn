@@ -16,7 +16,7 @@ rustc_test("tests_bin") {
     "//src/connectivity/bluetooth/testing/mock-piconet-server:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/sys/lib/fuchsia-component-test",
+    "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
   ]

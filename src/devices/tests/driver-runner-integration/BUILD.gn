@@ -18,8 +18,8 @@ rustc_test("driver_runner_integration_test") {
   sources = [ "driver_runner_integration_test.rs" ]
   deps = [
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",
-    "//src/sys/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
   ]
 }
