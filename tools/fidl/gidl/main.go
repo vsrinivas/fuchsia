@@ -94,11 +94,9 @@ var allWireFormats = []gidlir.WireFormat{
 
 // GIDLFlags stores the command-line flags for the GIDL program.
 type GIDLFlags struct {
-	JSONPath *string
-	Language *string
-	Type     *string
-	// TODO(fxbug.dev/52371) It should not be necessary to specify the number of generated files.
-	NumOutputFiles             *int
+	JSONPath                   *string
+	Language                   *string
+	Type                       *string
 	Out                        *string
 	RustBenchmarksFidlLibrary  *string
 	CppBenchmarksFidlLibrary   *string

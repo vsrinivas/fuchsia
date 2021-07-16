@@ -306,9 +306,7 @@ func declName(decl gidlmixer.NamedDeclaration) string {
 	return identifierName(decl.Name())
 }
 
-// TODO(fxbug.dev/39407): Such utilities (and their accompanying tests) would be
-// useful as part of fidl or fidl to do FIDL-to-<target_lang>
-// conversion.
+// TODO(fxbug.dev/39407): Move into a common library outside GIDL.
 func identifierName(qualifiedName string) string {
 	parts := strings.Split(qualifiedName, "/")
 	lastPartsIndex := len(parts) - 1
@@ -322,26 +320,26 @@ func identifierName(qualifiedName string) string {
 	return strings.Join(parts, ".")
 }
 
-// Go errors are defined in third_party/go/src/syscall/zx/fidl/errors.go
+// Go errors are defined in third_party/go/src/syscall/zx/fidl/errors.go.
 var goErrorCodeNames = map[gidlir.ErrorCode]string{
-	gidlir.StringTooLong:                "ErrStringTooLong",
-	gidlir.StringNotUtf8:                "ErrStringNotUTF8",
-	gidlir.NonNullableTypeWithNullValue: "ErrUnexpectedNullRef",
-	gidlir.NonEmptyStringWithNullBody:   "ErrUnexpectedNullRef",
-	gidlir.UnionFieldNotSet:             "ErrInvalidXUnionTag",
-	gidlir.StrictUnionUnknownField:      "ErrInvalidXUnionTag",
-	gidlir.InvalidPaddingByte:           "ErrNonZeroPadding",
-	gidlir.StrictEnumUnknownValue:       "ErrInvalidEnumValue",
-	gidlir.StrictBitsUnknownBit:         "ErrInvalidBitsValue",
 	gidlir.ExceededMaxOutOfLineDepth:    "ErrExceededMaxOutOfLineDepth",
-	gidlir.InvalidPresenceIndicator:     "ErrBadRefEncoding",
+	gidlir.ExtraHandles:                 "ErrTooManyHandles",
+	gidlir.IncorrectHandleType:          "ErrIncorrectHandleType",
 	gidlir.InvalidNumBytesInEnvelope:    "ErrInvalidNumBytesInEnvelope",
 	gidlir.InvalidNumHandlesInEnvelope:  "ErrInvalidNumHandlesInEnvelope",
-	gidlir.ExtraHandles:                 "ErrTooManyHandles",
-	gidlir.TooFewHandles:                "ErrNotEnoughHandles",
-	gidlir.NonResourceUnknownHandles:    "ErrValueTypeHandles",
+	gidlir.InvalidPaddingByte:           "ErrNonZeroPadding",
+	gidlir.InvalidPresenceIndicator:     "ErrBadRefEncoding",
 	gidlir.MissingRequiredHandleRights:  "ErrMissingRequiredHandleRights",
-	gidlir.IncorrectHandleType:          "ErrIncorrectHandleType",
+	gidlir.NonEmptyStringWithNullBody:   "ErrUnexpectedNullRef",
+	gidlir.NonNullableTypeWithNullValue: "ErrUnexpectedNullRef",
+	gidlir.NonResourceUnknownHandles:    "ErrValueTypeHandles",
+	gidlir.StrictBitsUnknownBit:         "ErrInvalidBitsValue",
+	gidlir.StrictEnumUnknownValue:       "ErrInvalidEnumValue",
+	gidlir.StrictUnionUnknownField:      "ErrInvalidXUnionTag",
+	gidlir.StringNotUtf8:                "ErrStringNotUTF8",
+	gidlir.StringTooLong:                "ErrStringTooLong",
+	gidlir.TooFewHandles:                "ErrNotEnoughHandles",
+	gidlir.UnionFieldNotSet:             "ErrInvalidXUnionTag",
 }
 
 func goErrorCode(code gidlir.ErrorCode) (string, error) {

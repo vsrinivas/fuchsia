@@ -866,7 +866,7 @@ func (s Schema) lookupDeclByType(typ fidlgen.Type) (Declaration, bool) {
 	case fidlgen.VectorType:
 		return &VectorDecl{schema: s, typ: typ}, true
 	default:
-		// TODO(fxbug.dev/36441): HandleType, RequestType
+		// TODO(fxbug.dev/36441): RequestType
 		panic("not implemented")
 	}
 }

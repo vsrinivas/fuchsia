@@ -6,47 +6,44 @@ package ir
 
 type ErrorCode string
 
-// TODO(fxbug.dev/34770) Organize error codes by encoding / decoding.
-// Potentially do a check in the parser that the code is the right type.
 const (
-	_                            ErrorCode = ""
-	StringTooLong                          = "STRING_TOO_LONG"
-	StringNotUtf8                          = "STRING_NOT_UTF8"
-	NonNullableTypeWithNullValue           = "NON_NULLABLE_TYPE_WITH_NULL_VALUE"
-	NonEmptyStringWithNullBody             = "NON_EMPTY_STRING_WITH_NULL_BODY"
-	UnionFieldNotSet                       = "UNION_FIELD_NOT_SET"
-	StrictUnionUnknownField                = "STRICT_UNION_UNKNOWN_FIELD"
-	StrictBitsUnknownBit                   = "STRICT_BITS_UNKNOWN_BIT"
-	StrictEnumUnknownValue                 = "STRICT_ENUM_UNKNOWN_VALUE"
-	ExceededMaxOutOfLineDepth              = "EXCEEDED_MAX_OUT_OF_LINE_DEPTH"
-	InvalidPresenceIndicator               = "INVALID_PRESENCE_INDICATOR"
-	InvalidNumBytesInEnvelope              = "INVALID_NUM_BYTES_IN_ENVELOPE"
-	InvalidNumHandlesInEnvelope            = "INVALID_NUM_HANDLES_IN_ENVELOPE"
-	InvalidPaddingByte                     = "INVALID_PADDING_BYTE"
-	ExtraHandles                           = "EXTRA_HANDLES"
-	TooFewHandles                          = "TOO_FEW_HANDLES"
-	NonResourceUnknownHandles              = "NON_RESOURCE_UNKNOWN_HANDLES"
-	MissingRequiredHandleRights            = "MISSING_REQUIRED_HANDLE_RIGHTS"
-	IncorrectHandleType                    = "INCORRECT_HANDLE_TYPE"
+	ExceededMaxOutOfLineDepth    ErrorCode = "EXCEEDED_MAX_OUT_OF_LINE_DEPTH"
+	ExtraHandles                 ErrorCode = "EXTRA_HANDLES"
+	IncorrectHandleType          ErrorCode = "INCORRECT_HANDLE_TYPE"
+	InvalidNumBytesInEnvelope    ErrorCode = "INVALID_NUM_BYTES_IN_ENVELOPE"
+	InvalidNumHandlesInEnvelope  ErrorCode = "INVALID_NUM_HANDLES_IN_ENVELOPE"
+	InvalidPaddingByte           ErrorCode = "INVALID_PADDING_BYTE"
+	InvalidPresenceIndicator     ErrorCode = "INVALID_PRESENCE_INDICATOR"
+	MissingRequiredHandleRights  ErrorCode = "MISSING_REQUIRED_HANDLE_RIGHTS"
+	NonEmptyStringWithNullBody   ErrorCode = "NON_EMPTY_STRING_WITH_NULL_BODY"
+	NonNullableTypeWithNullValue ErrorCode = "NON_NULLABLE_TYPE_WITH_NULL_VALUE"
+	NonResourceUnknownHandles    ErrorCode = "NON_RESOURCE_UNKNOWN_HANDLES"
+	StrictBitsUnknownBit         ErrorCode = "STRICT_BITS_UNKNOWN_BIT"
+	StrictEnumUnknownValue       ErrorCode = "STRICT_ENUM_UNKNOWN_VALUE"
+	StrictUnionUnknownField      ErrorCode = "STRICT_UNION_UNKNOWN_FIELD"
+	StringNotUtf8                ErrorCode = "STRING_NOT_UTF8"
+	StringTooLong                ErrorCode = "STRING_TOO_LONG"
+	TooFewHandles                ErrorCode = "TOO_FEW_HANDLES"
+	UnionFieldNotSet             ErrorCode = "UNION_FIELD_NOT_SET"
 )
 
 var AllErrorCodes = map[ErrorCode]struct{}{
-	StringTooLong:                {},
-	StringNotUtf8:                {},
-	NonNullableTypeWithNullValue: {},
-	NonEmptyStringWithNullBody:   {},
-	UnionFieldNotSet:             {},
-	StrictUnionUnknownField:      {},
-	StrictBitsUnknownBit:         {},
-	StrictEnumUnknownValue:       {},
 	ExceededMaxOutOfLineDepth:    {},
-	InvalidPresenceIndicator:     {},
+	ExtraHandles:                 {},
+	IncorrectHandleType:          {},
 	InvalidNumBytesInEnvelope:    {},
 	InvalidNumHandlesInEnvelope:  {},
 	InvalidPaddingByte:           {},
-	ExtraHandles:                 {},
-	TooFewHandles:                {},
-	NonResourceUnknownHandles:    {},
+	InvalidPresenceIndicator:     {},
 	MissingRequiredHandleRights:  {},
-	IncorrectHandleType:          {},
+	NonEmptyStringWithNullBody:   {},
+	NonNullableTypeWithNullValue: {},
+	NonResourceUnknownHandles:    {},
+	StrictBitsUnknownBit:         {},
+	StrictEnumUnknownValue:       {},
+	StrictUnionUnknownField:      {},
+	StringNotUtf8:                {},
+	StringTooLong:                {},
+	TooFewHandles:                {},
+	UnionFieldNotSet:             {},
 }

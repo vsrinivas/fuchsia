@@ -62,7 +62,6 @@ func (p *Parser) Parse() (ir.All, error) {
 			return ir.All{}, err
 		}
 	}
-	// TODO(fxbug.dev/8076) Add validation checks for error codes after parsing.
 	return result, nil
 }
 

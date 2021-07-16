@@ -350,25 +350,24 @@ func toDartIntList(handles []gidlir.Handle) string {
 
 // Dart error codes are defined in sdk/dart/fidl/lib/src/error.dart.
 var dartErrorCodeNames = map[gidlir.ErrorCode]string{
-	gidlir.StringTooLong:                "fidlStringTooLong",
-	gidlir.StringNotUtf8:                "unknown",
-	gidlir.NonNullableTypeWithNullValue: "fidlNonNullableTypeWithNullValue",
-	gidlir.NonEmptyStringWithNullBody:   "fidlNonEmptyStringWithNullBody",
-	gidlir.UnionFieldNotSet:             "unknown",
-	gidlir.StrictUnionUnknownField:      "fidlStrictXUnionUnknownField",
-	gidlir.StrictBitsUnknownBit:         "fidlInvalidBit",
-	gidlir.StrictEnumUnknownValue:       "fidlInvalidEnumValue",
-	gidlir.InvalidPaddingByte:           "unknown",
 	gidlir.ExceededMaxOutOfLineDepth:    "fidlExceededMaxOutOfLineDepth",
-	gidlir.InvalidPresenceIndicator:     "fidlInvalidPresenceIndicator",
+	gidlir.ExtraHandles:                 "fidlTooManyHandles",
+	gidlir.IncorrectHandleType:          "fidlIncorrectHandleType",
 	gidlir.InvalidNumBytesInEnvelope:    "fidlInvalidNumBytesInEnvelope",
 	gidlir.InvalidNumHandlesInEnvelope:  "fidlInvalidNumHandlesInEnvelope",
-	gidlir.TooFewHandles:                "fidlTooFewHandles",
-	gidlir.ExtraHandles:                 "fidlTooManyHandles",
+	gidlir.InvalidPaddingByte:           "unknown",
+	gidlir.InvalidPresenceIndicator:     "fidlInvalidPresenceIndicator",
+	gidlir.MissingRequiredHandleRights:  "fidlMissingRequiredHandleRights",
+	gidlir.NonEmptyStringWithNullBody:   "fidlNonEmptyStringWithNullBody",
+	gidlir.NonNullableTypeWithNullValue: "fidlNonNullableTypeWithNullValue",
 	gidlir.NonResourceUnknownHandles:    "fidlNonResourceHandle",
-	// TODO(fxbug.dev/41920) Assign appropriate error codes.
-	gidlir.MissingRequiredHandleRights: "fidlMissingRequiredHandleRights",
-	gidlir.IncorrectHandleType:         "fidlIncorrectHandleType",
+	gidlir.StrictBitsUnknownBit:         "fidlInvalidBit",
+	gidlir.StrictEnumUnknownValue:       "fidlInvalidEnumValue",
+	gidlir.StrictUnionUnknownField:      "fidlStrictXUnionUnknownField",
+	gidlir.StringNotUtf8:                "unknown",
+	gidlir.StringTooLong:                "fidlStringTooLong",
+	gidlir.TooFewHandles:                "fidlTooFewHandles",
+	gidlir.UnionFieldNotSet:             "unknown",
 }
 
 func dartErrorCode(code gidlir.ErrorCode) (string, error) {

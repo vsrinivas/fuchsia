@@ -346,25 +346,25 @@ func encodingContext(wireFormat gidlir.WireFormat) string {
 	}
 }
 
-// Rust errors are defined in src/lib/fidl/rust/fidl/src/error.rs
+// Rust errors are defined in src/lib/fidl/rust/fidl/src/error.rs.
 var rustErrorCodeNames = map[gidlir.ErrorCode]string{
-	gidlir.StringTooLong:                "OutOfRange",
-	gidlir.StringNotUtf8:                "Utf8Error",
-	gidlir.NonNullableTypeWithNullValue: "UnexpectedNullRef",
-	gidlir.NonEmptyStringWithNullBody:   "UnexpectedNullRef",
-	gidlir.NonResourceUnknownHandles:    "CannotStoreUnknownHandles",
-	gidlir.UnionFieldNotSet:             "UnknownUnionTag",
-	gidlir.StrictUnionUnknownField:      "UnknownUnionTag",
-	gidlir.StrictBitsUnknownBit:         "InvalidBitsValue",
-	gidlir.StrictEnumUnknownValue:       "InvalidEnumValue",
 	gidlir.ExceededMaxOutOfLineDepth:    "MaxRecursionDepth",
-	gidlir.InvalidPaddingByte:           "NonZeroPadding",
-	gidlir.InvalidPresenceIndicator:     "InvalidPresenceIndicator",
+	gidlir.ExtraHandles:                 "ExtraHandles",
+	gidlir.IncorrectHandleType:          "IncorrectHandleSubtype",
 	gidlir.InvalidNumBytesInEnvelope:    "InvalidNumBytesInEnvelope",
 	gidlir.InvalidNumHandlesInEnvelope:  "InvalidNumHandlesInEnvelope",
-	gidlir.ExtraHandles:                 "ExtraHandles",
+	gidlir.InvalidPaddingByte:           "NonZeroPadding",
+	gidlir.InvalidPresenceIndicator:     "InvalidPresenceIndicator",
 	gidlir.MissingRequiredHandleRights:  "MissingExpectedHandleRights",
-	gidlir.IncorrectHandleType:          "IncorrectHandleSubtype",
+	gidlir.NonEmptyStringWithNullBody:   "UnexpectedNullRef",
+	gidlir.NonNullableTypeWithNullValue: "UnexpectedNullRef",
+	gidlir.NonResourceUnknownHandles:    "CannotStoreUnknownHandles",
+	gidlir.StrictBitsUnknownBit:         "InvalidBitsValue",
+	gidlir.StrictEnumUnknownValue:       "InvalidEnumValue",
+	gidlir.StrictUnionUnknownField:      "UnknownUnionTag",
+	gidlir.StringNotUtf8:                "Utf8Error",
+	gidlir.StringTooLong:                "OutOfRange",
+	gidlir.UnionFieldNotSet:             "UnknownUnionTag",
 }
 
 func rustErrorCode(code gidlir.ErrorCode) (string, error) {
