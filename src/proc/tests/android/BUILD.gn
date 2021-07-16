@@ -139,13 +139,16 @@ template("gvisor_test_component") {
   }
 }
 
+gvisor_test_component("access_test") {
+}
+
+gvisor_test_component("brk_test") {
+}
+
 gvisor_test_component("clock_getres_test") {
 }
 
 gvisor_test_component("clock_gettime_test") {
-}
-
-gvisor_test_component("brk_test") {
 }
 
 gvisor_test_component("getrandom_test") {
@@ -178,6 +181,7 @@ fuchsia_test_package("test_android_distro") {
   ]
 
   test_components = [
+    ":access_test",
     ":brk_test",
     ":clock_getres_test",
     ":clock_gettime_test",
@@ -189,7 +193,6 @@ fuchsia_test_package("test_android_distro") {
     ":sigprocmask_test",
     ":sigaltstack_test",
     ":symlink_test",
-    ":syscalls_test",
   ]
 
   # This package intentionally contains many non-Fuchia ELF binaries that
