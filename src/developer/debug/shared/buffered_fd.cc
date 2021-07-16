@@ -26,7 +26,9 @@ bool BufferedFD::Start() {
   // readable.
   MessageLoop* loop = MessageLoop::Current();
   FX_DCHECK(loop);
-  watch_handle_ = loop->WatchFD(MessageLoop::WatchMode::kRead, fd_.get(), this);
+  watch_handle_ = loop->WatchFD(
+      MessageLoop::WatchMode::kRead, fd_.get(),
+      [this](int fd, bool read, bool write, bool err) { OnFDReady(fd, read, write, err); });
   return watch_handle_.watching();
 }
 
@@ -48,8 +50,9 @@ void BufferedFD::OnFDReady(int fd, bool readable, bool writable, bool err) {
     // If we get a writable notifications, we know we were registered for
     // read/write update. Go back to only readable watching, if the write buffer
     // is full this will be re-evaluated when the write fails.
-    watch_handle_ = MessageLoop::WatchHandle();
-    watch_handle_ = MessageLoop::Current()->WatchFD(MessageLoop::WatchMode::kRead, fd_.get(), this);
+    watch_handle_ = MessageLoop::Current()->WatchFD(
+        MessageLoop::WatchMode::kRead, fd_.get(),
+        [this](int fd, bool read, bool write, bool err) { OnFDReady(fd, read, write, err); });
     stream().SetWritable();
   }
 
@@ -137,9 +140,9 @@ size_t BufferedFD::ConsumeStreamBufferData(const char* data, size_t len) {
 
   if (written < static_cast<ssize_t>(len)) {
     // Partial write, register for updates.
-    watch_handle_ = MessageLoop::WatchHandle();
-    watch_handle_ =
-        MessageLoop::Current()->WatchFD(MessageLoop::WatchMode::kReadWrite, fd_.get(), this);
+    watch_handle_ = MessageLoop::Current()->WatchFD(
+        MessageLoop::WatchMode::kReadWrite, fd_.get(),
+        [this](int fd, bool read, bool write, bool err) { OnFDReady(fd, read, write, err); });
   }
   return written;
 }

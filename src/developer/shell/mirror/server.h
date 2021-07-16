@@ -56,7 +56,7 @@ class SocketConnection {
 };
 
 // Represents a server.
-class SocketServer : public debug_ipc::FDWatcher {
+class SocketServer {
  public:
   SocketServer() = default;
 
@@ -92,8 +92,6 @@ class SocketServer : public debug_ipc::FDWatcher {
   // Initialize the server.
   // |port| is the port to use.  If *port is 0, the function will try to assign one.
   Err Init(uint16_t* port);
-
-  virtual void OnFDReady(int fd, bool read, bool write, bool err) override;
 
  private:
   fbl::unique_fd server_socket_;

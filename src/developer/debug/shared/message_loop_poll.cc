@@ -79,7 +79,7 @@ bool CreateLocalNonBlockingPipe(fbl::unique_fd* out_end, fbl::unique_fd* in_end)
 struct MessageLoopPoll::WatchInfo {
   int fd = 0;
   WatchMode mode = WatchMode::kReadWrite;
-  FDWatcher* watcher = nullptr;
+  FDWatcher watcher = nullptr;
 };
 
 MessageLoopPoll::MessageLoopPoll() {
@@ -92,17 +92,35 @@ MessageLoopPoll::~MessageLoopPoll() = default;
 bool MessageLoopPoll::Init(std::string* error_message) {
   if (!MessageLoop::Init(error_message))
     return false;
-  wakeup_pipe_watch_ = WatchFD(WatchMode::kRead, wakeup_pipe_out_.get(), this);
+
+  wakeup_pipe_watch_ =
+      WatchFD(WatchMode::kRead, wakeup_pipe_out_.get(), [this](int fd, bool readable, bool, bool) {
+        if (!readable) {
+          return;
+        }
+
+        FX_DCHECK(fd == wakeup_pipe_out_.get());
+
+        // Remove and discard the wakeup byte.
+        char buf;
+        auto nread = HANDLE_EINTR(read(wakeup_pipe_out_.get(), &buf, 1));
+        FX_DCHECK(nread == 1);
+
+        // This is just here to wake us up and run the loop again. We don't need to
+        // actually respond to the data.
+      });
+
   return true;
 }
 
 void MessageLoopPoll::Cleanup() {
   // Force unregister out watch before cleaning up current MessageLoop.
   wakeup_pipe_watch_ = WatchHandle();
+  watches_.clear();
   MessageLoop::Cleanup();
 }
 
-MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode, int fd, FDWatcher* watcher) {
+MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode, int fd, FDWatcher watcher) {
   // The dispatch code for watch callbacks requires this be called on the
   // same thread as the message loop is.
   FX_DCHECK(Current() == static_cast<MessageLoop*>(this));
@@ -110,14 +128,14 @@ MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode, int fd, FDWatc
   WatchInfo info;
   info.fd = fd;
   info.mode = mode;
-  info.watcher = watcher;
+  info.watcher = std::move(watcher);
 
   // The reason this function must be called on the message loop thread is that
   // otherwise adding a new watch would require synchronously breaking out of
   // the existing poll() call to add the new handle and then resuming it.
   int watch_id = next_watch_id_;
   next_watch_id_++;
-  watches_[watch_id] = info;
+  watches_[watch_id] = std::move(info);
 
   return WatchHandle(this, watch_id);
 }
@@ -182,22 +200,6 @@ void MessageLoopPoll::StopWatching(int id) {
   watches_.erase(found);
 }
 
-void MessageLoopPoll::OnFDReady(int fd, bool readable, bool, bool) {
-  if (!readable) {
-    return;
-  }
-
-  FX_DCHECK(fd == wakeup_pipe_out_.get());
-
-  // Remove and discard the wakeup byte.
-  char buf;
-  auto nread = HANDLE_EINTR(read(wakeup_pipe_out_.get(), &buf, 1));
-  FX_DCHECK(nread == 1);
-
-  // This is just here to wake us up and run the loop again. We don't need to
-  // actually respond to the data.
-}
-
 void MessageLoopPoll::SetHasTasks() {
   // Wake up the poll() by writing to the pipe.
   char buf = 0;
@@ -232,12 +234,7 @@ void MessageLoopPoll::ConstructFDMapping(std::vector<pollfd>* poll_vect,
   }
 }
 
-bool MessageLoopPoll::HasWatch(int watch_id) {
-  auto it = watches_.find(watch_id);
-  if (it == watches_.end())
-    return false;
-  return true;
-}
+bool MessageLoopPoll::HasWatch(int watch_id) { return watches_.find(watch_id) != watches_.end(); }
 
 void MessageLoopPoll::OnHandleSignaled(int fd, short events, int watch_id) {
   // The watches_ vector is not threadsafe.
@@ -250,8 +247,7 @@ void MessageLoopPoll::OnHandleSignaled(int fd, short events, int watch_id) {
     return;
 
   // We obtain the watch info and see what kind of signal we received.
-  auto it = watches_.find(watch_id);
-  const auto& watch_info = it->second;
+  auto& watch_info = watches_[watch_id];
   FX_DCHECK(fd == watch_info.fd);
 
   bool error = (events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL);
@@ -261,8 +257,8 @@ void MessageLoopPoll::OnHandleSignaled(int fd, short events, int watch_id) {
 
   bool readable = !!(events & POLLIN);
   bool writable = !!(events & POLLOUT);
-  if (HasWatch(watch_id))
-    watch_info.watcher->OnFDReady(fd, readable, writable, error);
+  watch_info.watcher(fd, readable, writable, error);
+  // watch_info might be invalid because watcher could have called StopWatching().
 }
 
 }  // namespace debug_ipc

@@ -88,7 +88,25 @@ void SocketServer::Run(ConnectionConfig config) {
   PRINT_FLUSH("Waiting on port %d for shell connections...\n", config.port);
   config_ = config;
   connection_monitor_ = debug_ipc::MessageLoop::Current()->WatchFD(
-      debug_ipc::MessageLoop::WatchMode::kRead, server_socket_.get(), this);
+      debug_ipc::MessageLoop::WatchMode::kRead, server_socket_.get(),
+      [this](int fd, bool readable, bool writable, bool err) {
+        if (!readable) {
+          return;
+        }
+
+        // insert() returns a pair <iterator, bool>
+        auto p = this->connections_.insert(std::make_unique<SocketConnection>(this));
+        if (!p.second) {
+          FX_LOGS(ERROR) << "Internal error";
+          return;
+        }
+        Err error = p.first->get()->Accept(config_.message_loop, fd);
+        if (!error.ok()) {
+          FX_LOGS(INFO) << error.msg;
+          return;
+        }
+        PRINT_FLUSH("Connection established.\n");
+      });
 }
 
 Err SocketServer::RunInLoop(ConnectionConfig config, debug_ipc::FileLineFunction from_here,
@@ -188,25 +206,6 @@ Err SocketServer::Init(uint16_t* port) {
   }
 
   return Err();
-}
-
-void SocketServer::OnFDReady(int fd, bool readable, bool writeable, bool err) {
-  if (!readable) {
-    return;
-  }
-
-  // insert() returns a pair <iterator, bool>
-  auto p = this->connections_.insert(std::make_unique<SocketConnection>(this));
-  if (!p.second) {
-    FX_LOGS(ERROR) << "Internal error";
-    return;
-  }
-  Err error = p.first->get()->Accept(config_.message_loop, fd);
-  if (!error.ok()) {
-    FX_LOGS(INFO) << error.msg;
-    return;
-  }
-  PRINT_FLUSH("Connection established.\n");
 }
 
 // SocketServer --------------------------------------------------------------------------------

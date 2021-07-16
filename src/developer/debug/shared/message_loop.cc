@@ -37,6 +37,11 @@ bool MessageLoop::Init(std::string* error_message) {
 void MessageLoop::Cleanup() {
   FX_DCHECK(current_message_loop == this);
   current_message_loop = nullptr;
+
+  // Clear all tasks because ~MessageLoop() might be called on another thread but some tasks might
+  // hold thread_local resources.
+  task_queue_.clear();
+  timers_.clear();
 }
 
 // static

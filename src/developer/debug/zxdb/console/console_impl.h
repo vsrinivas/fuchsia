@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_IMPL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_IMPL_H_
 
-#include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console.h"
@@ -19,7 +18,7 @@ class OutputBuffer;
 class Session;
 
 // The console has some virtual functions for ease of mocking the interface for tests.
-class ConsoleImpl : public Console, public debug_ipc::FDWatcher {
+class ConsoleImpl : public Console {
  public:
   explicit ConsoleImpl(Session* session);
   virtual ~ConsoleImpl();
@@ -38,9 +37,6 @@ class ConsoleImpl : public Console, public debug_ipc::FDWatcher {
 
  private:
   void DispatchInputLine(const std::string& line, CommandCallback callback = nullptr);
-
-  // FDWatcher implementation.
-  void OnFDReady(int fd, bool read, bool write, bool err) override;
 
   // Searches for history at $HOME/.zxdb_history and loads it if found.
   bool SaveHistoryFile();

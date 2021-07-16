@@ -10,7 +10,6 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/message_loop.h"
 
 struct pollfd;
@@ -18,15 +17,15 @@ struct pollfd;
 namespace debug_ipc {
 
 // This MessageLoop implementation uses the Unix poll() function.
-class MessageLoopPoll : public MessageLoop, public FDWatcher {
+class MessageLoopPoll : public MessageLoop {
  public:
   MessageLoopPoll();
-  ~MessageLoopPoll();
+  ~MessageLoopPoll() override;
 
   // MessageLoop implementation.
   bool Init(std::string* error_message) override;
   void Cleanup() override;
-  WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) override;
+  WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher watcher) override;
 
  private:
   struct WatchInfo;
@@ -36,9 +35,6 @@ class MessageLoopPoll : public MessageLoop, public FDWatcher {
   void RunImpl() override;
   void StopWatching(int id) override;
   void SetHasTasks() override;
-
-  // FDWatcher implementation (for waking up for posted tasks).
-  void OnFDReady(int fd, bool read, bool write, bool err) override;
 
   // Prepares the pollfd vector with all the handles we will be watching for poll(). The map_indices
   // vector will be of the same length and will contain the key into watches_ of each item in the

@@ -28,7 +28,6 @@
 
 namespace debug_ipc {
 
-class FDWatcher;
 class MessageLoop;
 
 // Context implementation for fpromise::promise integration.
@@ -124,13 +123,14 @@ class MessageLoop : public fpromise::executor, public fpromise::suspended_task::
   //
   // This function must only be called on the message loop thread.
   //
-  // The watcher pointer must outlive the returned WatchHandle. Typically the class implementing the
-  // FDWatcher would keep the WatchHandle as a member. Must only be called on the message loop
-  // thread.
+  // The watcher object will be deleted upon the destruction of the returned WatchHandle. If this
+  // happens in the watcher function, care needs to be taken to avoid using any captured variables
+  // after they are deleted.
   //
   // You can only watch a handle once. Note that stdin/stdout/stderr can be the same underlying OS
   // handle, so the caller can only watch one of them.
-  virtual WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) = 0;
+  using FDWatcher = fit::function<void(int fd, bool read, bool write, bool err)>;
+  virtual WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher watcher) = 0;
 
   // fpromise::executor implementation.
   void schedule_task(fpromise::pending_task task) override;

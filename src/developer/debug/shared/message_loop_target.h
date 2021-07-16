@@ -53,14 +53,14 @@ class MessageLoopTarget : public MessageLoop {
   static MessageLoopTarget* Current();
 
   // MessageLoop implementation.
-  WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) override;
+  WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher watcher) override;
 
   // Watches the given socket for read/write status. The watcher must outlive the returned
   // WatchHandle. Must only be called on the message loop thread.
   //
-  // The FDWatcher must not unregister from a callback. The handle might become both readable and
+  // The WatchHandle must not unregister from a callback. The handle might become both readable and
   // writable at the same time which will necessitate calling both callbacks. The code does not
-  // expect the FDWatcher to disappear in between these callbacks.
+  // expect the SocketWatcher to disappear in between these callbacks.
   virtual zx_status_t WatchSocket(WatchMode mode, zx_handle_t socket_handle, SocketWatcher* watcher,
                                   WatchHandle* out);
 
@@ -169,7 +169,7 @@ struct MessageLoopTarget::WatchInfo {
   // FDIO-specific watcher parameters.
   int fd = -1;
   fdio_t* fdio = nullptr;
-  FDWatcher* fd_watcher = nullptr;
+  FDWatcher fd_watcher = nullptr;
   zx_handle_t fd_handle = ZX_HANDLE_INVALID;
 
   // Socket-specific parameters.

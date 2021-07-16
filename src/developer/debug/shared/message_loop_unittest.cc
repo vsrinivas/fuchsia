@@ -8,7 +8,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 
 #if defined(__Fuchsia__)
@@ -377,35 +376,24 @@ TEST(MessageLoop, WatchPipeFD) {
   flags |= O_NONBLOCK;
   ASSERT_EQ(0, fcntl(pipefd[1], F_SETFD, flags));
 
-  class ReadableWatcher : public FDWatcher {
-   public:
-    explicit ReadableWatcher(MessageLoop* loop) : loop_(loop) {}
-    void OnFDReady(int fd, bool read, bool write, bool err) override {
-      got_read = read;
-      got_write = write;
-      got_err = err;
-      loop_->QuitNow();
-    }
-
-    bool got_read = false;
-    bool got_write = true;
-    bool got_err = true;
-
-   private:
-    MessageLoop* loop_;
-  };
-
   PlatformMessageLoop loop;
   std::string error_message;
   ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
   // Scope everything to before MessageLoop::Cleanup().
   {
-    ReadableWatcher watcher(&loop);
+    bool got_read = false;
+    bool got_write = true;
+    bool got_err = true;
 
     // Going to write to pipefd[1] -> read from pipefd[0].
-    MessageLoop::WatchHandle watch_handle =
-        loop.WatchFD(MessageLoop::WatchMode::kRead, pipefd[0], &watcher);
+    MessageLoop::WatchHandle watch_handle = loop.WatchFD(
+        MessageLoop::WatchMode::kRead, pipefd[0], [&](int fd, bool read, bool write, bool err) {
+          got_read = read;
+          got_write = write;
+          got_err = err;
+          loop.QuitNow();
+        });
     ASSERT_TRUE(watch_handle.watching());
 
     // Enqueue a task that should cause pipefd[0] to become readable.
@@ -416,9 +404,9 @@ TEST(MessageLoop, WatchPipeFD) {
     // TODO(brettw) add a timeout when timers are supported in the message loop.
     loop.Run();
 
-    EXPECT_TRUE(watcher.got_read);
-    EXPECT_FALSE(watcher.got_write);
-    EXPECT_FALSE(watcher.got_err);
+    EXPECT_TRUE(got_read);
+    EXPECT_FALSE(got_write);
+    EXPECT_FALSE(got_err);
   }
   loop.Cleanup();
 }

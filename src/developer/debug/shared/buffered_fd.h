@@ -8,12 +8,11 @@
 #include <fbl/unique_fd.h>
 
 #include "src/developer/debug/shared/buffered_stream.h"
-#include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/message_loop.h"
 
 namespace debug_ipc {
 
-class BufferedFD final : public BufferedStream, public FDWatcher {
+class BufferedFD final : public BufferedStream {
  public:
   // Constructs a !IsValid() buffered stream not doing anything.
   BufferedFD();
@@ -35,8 +34,8 @@ class BufferedFD final : public BufferedStream, public FDWatcher {
   // BufferedStream protected implementation.
   void ResetInternal() final;
 
-  // FDWatcher implementation:
-  void OnFDReady(int fd, bool read, bool write, bool err) final;
+  // FDWatcher.
+  void OnFDReady(int fd, bool read, bool write, bool err);
 
   // Error handler.
   void OnFDError();

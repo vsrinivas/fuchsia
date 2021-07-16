@@ -107,13 +107,11 @@ class Curl : public fxl::RefCountedThreadSafe<Curl> {
   void FreeSList();
   void PrepareToPerform();
 
-  fxl::RefPtr<MultiHandle> multi_handle_;
   CURL* curl_ = nullptr;
   struct curl_slist* slist_ = nullptr;
   bool get_body_ = true;
 
   std::string post_data_;
-  fxl::RefPtr<Curl> self_ref_;
   std::vector<std::string> headers_;
   fit::callback<void(Curl*, Error)> multi_cb_;
   DataCallback header_callback_ = [](const std::string& data) { return data.size(); };

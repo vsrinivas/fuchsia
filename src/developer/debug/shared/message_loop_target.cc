@@ -14,19 +14,13 @@
 #include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/shared/event_handlers.h"
-#include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/socket_watcher.h"
 #include "src/developer/debug/shared/zircon_exception_watcher.h"
 #include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_ipc {
-
-namespace {
-
-thread_local MessageLoopTarget* current_message_loop = nullptr;
-
-}  // namespace
 
 // MessageLoopTarget -----------------------------------------------------------
 
@@ -40,9 +34,6 @@ bool MessageLoopTarget::Init(std::string* error_message) {
   FX_DCHECK(error_message);  // Error message out param not optional.
   if (!MessageLoop::Init(error_message))
     return false;
-
-  FX_DCHECK(!current_message_loop);
-  current_message_loop = this;
 
   zx::event::create(0, &task_event_);
 
@@ -63,19 +54,19 @@ bool MessageLoopTarget::Init(std::string* error_message) {
 void MessageLoopTarget::Cleanup() {
   DEBUG_LOG(MessageLoop) << "Cleaning up the message loop.";
 
-  // We need to remove the signal/exception handlers before the message loop
+  // We need to remove the signal/exception handlers/watches before the message loop
   // goes away.
   signal_handlers_.clear();
   channel_exception_handlers_.clear();
-
-  FX_DCHECK(current_message_loop == this);
-  current_message_loop = nullptr;
+  watches_.clear();
 
   MessageLoop::Cleanup();
 }
 
 // static
-MessageLoopTarget* MessageLoopTarget::Current() { return current_message_loop; }
+MessageLoopTarget* MessageLoopTarget::Current() {
+  return reinterpret_cast<MessageLoopTarget*>(MessageLoop::Current());
+}
 
 const MessageLoopTarget::WatchInfo* MessageLoopTarget::FindWatchInfo(int id) const {
   auto it = watches_.find(id);
@@ -117,11 +108,11 @@ zx_status_t MessageLoopTarget::AddChannelExceptionHandler(int id, zx_handle_t ob
   return ZX_OK;
 }
 
-MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd, FDWatcher* watcher) {
+MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd, FDWatcher watcher) {
   WatchInfo info;
   info.type = WatchType::kFdio;
   info.mode = mode;
-  info.fd_watcher = watcher;
+  info.fd_watcher = std::move(watcher);
   info.fd = fd;
   info.fdio = fdio_unsafe_fd_to_io(fd);
   if (!info.fdio)
@@ -157,7 +148,7 @@ MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd, FDWa
   if (status != ZX_OK)
     return WatchHandle();
 
-  watches_[watch_id] = info;
+  watches_[watch_id] = std::move(info);
   return WatchHandle(this, watch_id);
 }
 
@@ -188,7 +179,7 @@ zx_status_t MessageLoopTarget::WatchSocket(WatchMode mode, zx_handle_t socket_ha
   if (status != ZX_OK)
     return status;
 
-  watches_[watch_id] = info;
+  watches_[watch_id] = std::move(info);
   *out = WatchHandle(this, watch_id);
   return ZX_OK;
 }
@@ -224,7 +215,7 @@ zx_status_t MessageLoopTarget::WatchProcessExceptions(WatchProcessConfig config,
 
   DEBUG_LOG(MessageLoop) << "Watching process " << info.resource_name;
 
-  watches_[watch_id] = info;
+  watches_[watch_id] = std::move(info);
   *out = WatchHandle(this, watch_id);
   return ZX_OK;
 }
@@ -254,7 +245,7 @@ zx_status_t MessageLoopTarget::WatchJobExceptions(WatchJobConfig config,
 
   DEBUG_LOG(MessageLoop) << "Watching job " << info.resource_name;
 
-  watches_[watch_id] = info;
+  watches_[watch_id] = std::move(info);
   *out = WatchHandle(this, watch_id);
   return ZX_OK;
 }
@@ -411,7 +402,7 @@ void MessageLoopTarget::OnFdioSignal(int watch_id, const WatchInfo& info, zx_sig
   fdio_unsafe_wait_end(info.fdio, observed, &events);
 
   if ((events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL) || (events & POLLRDHUP)) {
-    info.fd_watcher->OnFDReady(info.fd, false, false, true);
+    info.fd_watcher(info.fd, false, false, true);
 
     // Don't dispatch any other notifications when there's an error. Zircon
     // seems to set readable and writable on error even if there's nothing
@@ -423,7 +414,8 @@ void MessageLoopTarget::OnFdioSignal(int watch_id, const WatchInfo& info, zx_sig
   // superset of what we expected. Check the watch mode so we don't notify unwanted events.
   bool readable = !!(events & POLLIN) && (info.mode != WatchMode::kWrite);
   bool writable = !!(events & POLLOUT) && (info.mode != WatchMode::kRead);
-  info.fd_watcher->OnFDReady(info.fd, readable, writable, false);
+  info.fd_watcher(info.fd, readable, writable, false);
+  // info might be invalid because fd_watcher could have called StopWatching().
 }
 
 void MessageLoopTarget::RemoveSignalHandler(WatchInfo* info) {

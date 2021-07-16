@@ -117,7 +117,15 @@ void ConsoleImpl::Init() {
   PreserveStdoutTermios();
 
   stdio_watch_ = debug_ipc::MessageLoop::Current()->WatchFD(
-      debug_ipc::MessageLoop::WatchMode::kRead, STDIN_FILENO, this);
+      debug_ipc::MessageLoop::WatchMode::kRead, STDIN_FILENO,
+      [this](int fd, bool readable, bool, bool) {
+        if (!readable)
+          return;
+
+        char ch;
+        while (read(STDIN_FILENO, &ch, 1) > 0)
+          line_input_.OnInput(ch);
+      });
 
   LoadHistoryFile();
   line_input_.Show();
@@ -238,15 +246,6 @@ void ConsoleImpl::ProcessInputLine(const std::string& line, CommandCallback call
     out.Append(err);
     Output(out);
   }
-}
-
-void ConsoleImpl::OnFDReady(int fd, bool readable, bool, bool) {
-  if (!readable)
-    return;
-
-  char ch;
-  while (read(STDIN_FILENO, &ch, 1) > 0)
-    line_input_.OnInput(ch);
 }
 
 }  // namespace zxdb

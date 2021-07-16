@@ -6,7 +6,6 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/message_loop.h"
 
 namespace debug_ipc {
@@ -25,12 +24,13 @@ void curl_easy_setopt_CHECK(CURL* handle, CURLoption option, T t) {
 
 // All Curl instances share one Curl::MultiHandle instance. RefCountedThreadSafe is used to destroy
 // the MultiHandle after the last Curl instance is destructed.
-class Curl::MultiHandle final : public debug_ipc::FDWatcher,
-                                public fxl::RefCountedThreadSafe<Curl::MultiHandle> {
+class Curl::MultiHandle final : public fxl::RefCountedThreadSafe<Curl::MultiHandle> {
  public:
   static fxl::RefPtr<Curl::MultiHandle> GetInstance();
-  void AddEasyHandle(CURL* easy);
-  void OnFDReady(int fd, bool read, bool write, bool err) override;
+
+  // Adds an easy handle and starts the transfer. The ownership of the easy handle will be shared
+  // by this class when the transfer is in progress.
+  void AddEasyHandle(Curl* curl);
 
  private:
   // Function given to CURL which it uses to inform us it would like to do IO on a socket and that
@@ -53,9 +53,17 @@ class Curl::MultiHandle final : public debug_ipc::FDWatcher,
   void ProcessResponses();
 
   CURLM* multi_handle_;
+
+  // Manages the ownership of WatchHandles.
   std::map<curl_socket_t, debug_ipc::MessageLoop::WatchHandle> watches_;
+
+  // Manages the ownership of easy handles to prevent them from being destructed when an async
+  // transfer is in progress.
+  std::map<CURL*, fxl::RefPtr<Curl>> easy_handles_;
+
   // Indicates whether we already have a task posted to process the messages in multi_handler_.
   bool process_pending_ = false;
+
   // Used in TimerFunction to avoid scheduling 2 timers and invalidate timers after destruction,
   // because currently there's no way to cancel a timer from the message loop.
   std::shared_ptr<bool> last_timer_valid_ = std::make_shared<bool>(false);
@@ -73,31 +81,15 @@ fxl::RefPtr<Curl::MultiHandle> Curl::MultiHandle::GetInstance() {
   return fxl::MakeRefCounted<Curl::MultiHandle>();
 }
 
-void Curl::MultiHandle::AddEasyHandle(CURL* easy) {
-  auto result = curl_multi_add_handle(multi_handle_, easy);
+void Curl::MultiHandle::AddEasyHandle(Curl* curl) {
+  easy_handles_.emplace(curl->curl_, fxl::RefPtr<Curl>(curl));
+  auto result = curl_multi_add_handle(multi_handle_, curl->curl_);
   FX_DCHECK(result == CURLM_OK);
 
   // There's a chance that the response is available immediately in curl_multi_add_handle, which
   // could happen when the server is localhost, e.g. requesting authentication from metadata server
   // on GCE. In this case, no SocketFunction will be invoked and we have to call ProcessResponses()
   // manually.
-  ProcessResponses();
-}
-
-void Curl::MultiHandle::OnFDReady(int fd, bool read, bool write, bool err) {
-  int action = 0;
-
-  if (read)
-    action |= CURL_CSELECT_IN;
-  if (write)
-    action |= CURL_CSELECT_OUT;
-  if (err)
-    action |= CURL_CSELECT_ERR;
-
-  int _ignore;
-  auto result = curl_multi_socket_action(multi_handle_, fd, action, &_ignore);
-  FX_DCHECK(result == CURLM_OK);
-
   ProcessResponses();
 }
 
@@ -118,20 +110,21 @@ void Curl::MultiHandle::ProcessResponses() {
         continue;
       }
 
-      Curl* curl;
-      auto result = curl_easy_getinfo(info->easy_handle, CURLINFO_PRIVATE, &curl);
-      FX_DCHECK(result == CURLE_OK);
-
-      auto cb = std::move(curl->multi_cb_);
-      curl->multi_cb_ = nullptr;
+      auto easy_handle_it = self->easy_handles_.find(info->easy_handle);
+      FX_DCHECK(easy_handle_it != self->easy_handles_.end());
+      fxl::RefPtr<Curl> curl = std::move(easy_handle_it->second);
       curl->FreeSList();
-      auto rem_result = curl_multi_remove_handle(self->multi_handle_, info->easy_handle);
-      FX_DCHECK(rem_result == CURLM_OK);
+      self->easy_handles_.erase(easy_handle_it);
 
-      auto ref = curl->self_ref_;
-      curl->self_ref_ = nullptr;
+      // The document says WARNING: The data the returned pointer points to will not survive
+      // calling curl_multi_cleanup, curl_multi_remove_handle or curl_easy_cleanup.
+      CURLcode code = info->data.result;
+      auto result = curl_multi_remove_handle(self->multi_handle_, info->easy_handle);
+      FX_DCHECK(result == CURLM_OK);
+      // info is invalid now.
 
-      cb(ref.get(), Curl::Error(info->data.result));
+      curl->multi_cb_(curl.get(), Curl::Error(code));
+      // curl->multi_cb_ becomes nullptr now because fit::callback can only be called once.
     }
   });
 }
@@ -160,13 +153,34 @@ int Curl::MultiHandle::SocketFunction(CURL* /*easy*/, curl_socket_t s, int what,
         return -1;
     }
 
-    instance_->watches_[s] = debug_ipc::MessageLoop::Current()->WatchFD(mode, s, instance_);
+    instance_->watches_[s] = debug_ipc::MessageLoop::Current()->WatchFD(
+        mode, s,
+        [self = fxl::RefPtr<MultiHandle>(instance_)](int fd, bool read, bool write, bool err) {
+          int action = 0;
+          if (read)
+            action |= CURL_CSELECT_IN;
+          if (write)
+            action |= CURL_CSELECT_OUT;
+          if (err)
+            action |= CURL_CSELECT_ERR;
+
+          // curl_multi_socket_action might stop watching when the transfer is done, which will
+          // destroy this closure and invalidate the self pointer. Copy it into a variable to
+          // prolong its life.
+          auto prolonged = self;
+
+          int _ignore;
+          auto result = curl_multi_socket_action(prolonged->multi_handle_, fd, action, &_ignore);
+          FX_DCHECK(result == CURLM_OK);
+
+          prolonged->ProcessResponses();
+        });
   }
 
   return 0;
 }
 
-int Curl::MultiHandle::TimerFunction(CURLM* multi, long timeout_ms, void* /*userp*/) {
+int Curl::MultiHandle::TimerFunction(CURLM* /*multi*/, long timeout_ms, void* /*userp*/) {
   FX_DCHECK(instance_);
 
   *instance_->last_timer_valid_ = false;
@@ -176,14 +190,21 @@ int Curl::MultiHandle::TimerFunction(CURLM* multi, long timeout_ms, void* /*user
   }
 
   instance_->last_timer_valid_ = std::make_shared<bool>(true);
-  auto cb = [multi, valid = instance_->last_timer_valid_]() {
+  auto cb = [self = fxl::RefPtr<MultiHandle>(instance_), valid = instance_->last_timer_valid_]() {
     if (!*valid) {
       return;
     }
 
+    // curl_multi_socket_action might stop watching when the transfer is done, which will destroy
+    // this closure and invalidate the self pointer. Copy it into a variable to prolong its life.
+    auto prolonged = self;
+
     int _ignore;
-    auto result = curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_ignore);
+    auto result =
+        curl_multi_socket_action(prolonged->multi_handle_, CURL_SOCKET_TIMEOUT, 0, &_ignore);
     FX_DCHECK(result == CURLM_OK);
+
+    prolonged->ProcessResponses();
   };
 
   if (timeout_ms == 0) {
@@ -234,13 +255,8 @@ void Curl::GlobalCleanup() {
 }
 
 Curl::Curl() {
-  multi_handle_ = MultiHandle::GetInstance();
   curl_ = curl_easy_init();
   FX_DCHECK(curl_);
-
-  // The curl handle has a private pointer which we can stash the address of our wrapper class in.
-  // Then anywhere the curl handle appears in the API we can grab our wrapper.
-  curl_easy_setopt_CHECK(curl_, CURLOPT_PRIVATE, this);
 }
 
 Curl::~Curl() {
@@ -337,11 +353,9 @@ Curl::Error Curl::Perform() {
 }
 
 void Curl::Perform(fit::callback<void(Curl*, Curl::Error)> cb) {
-  self_ref_ = fxl::RefPtr<Curl>(this);
-
   PrepareToPerform();
   multi_cb_ = std::move(cb);
-  multi_handle_->AddEasyHandle(curl_);
+  MultiHandle::GetInstance()->AddEasyHandle(this);
 }
 
 long Curl::ResponseCode() {
