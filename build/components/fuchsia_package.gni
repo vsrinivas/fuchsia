@@ -131,7 +131,6 @@ template("fuchsia_package") {
     pm_build(target_name) {
       forward_variables_from(invoker,
                              [
-                               "all_outputs_fresh",
                                "deps",
                                "testonly",
                                "visibility",

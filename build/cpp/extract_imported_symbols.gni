@@ -63,7 +63,6 @@ template("extract_imported_symbols") {
     # all platforms because the problem could spread beyond Macs as the
     # symbol lists grow.
     hermetic_deps = false
-    all_outputs_fresh = false
 
     forward_variables_from(invoker,
                            [

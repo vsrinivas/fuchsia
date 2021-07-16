@@ -60,7 +60,7 @@ compiled_action("generate-rust-zircon-syscalls-definitions") {
   _zx_json_target = "//zircon/vdso:zx($default_toolchain)"
 
   # TODO(fxbug.dev/69011): output timestamp is not refreshed by tool
-  all_outputs_fresh = false
+
   tool = "//zircon/tools/kazoo"
   sources =
       [ get_label_info(_zx_json_target, "target_gen_dir") + "/zx.fidl.json" ]

@@ -72,7 +72,6 @@ template("elfabi_shared_library") {
     }
 
     # Output timestamps are not freshened if contents do not change.
-    all_outputs_fresh = false
 
     script = _llvm_elfabi
     sources = [ invoker.abi ]

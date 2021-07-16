@@ -21,8 +21,6 @@ template("benchmark_fidl") {
   copy_target = "${target_name}__copy_replace"
 
   action_foreach(copy_target) {
-    all_outputs_fresh = false
-
     script = "copy_replace_fidl_library.py"
 
     sources = invoker.sources

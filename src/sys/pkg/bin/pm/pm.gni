@@ -21,7 +21,6 @@ template("_pm") {
     tool_output_name = "pm"
     forward_variables_from(invoker,
                            [
-                             "all_outputs_fresh",
                              "args",
                              "data_deps",
                              "depfile",
@@ -146,7 +145,6 @@ template("pm_build") {
   _pm(target_name) {
     forward_variables_from(invoker,
                            [
-                             "all_outputs_fresh",
                              "data_deps",
                              "deps",
                              "public_deps",
@@ -211,7 +209,6 @@ template("pm_build") {
     # outputs will not be freshened when their contents do not change in
     # incremental builds, which allows for early termination of downstream
     # build actions.
-    all_outputs_fresh = false
   }
 }
 

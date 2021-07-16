@@ -16,8 +16,6 @@ if (current_toolchain == default_toolchain) {
   }
 
   action("markdown") {
-    all_outputs_fresh = false
-
     script = "markdown.py"
     outputs = [ "$root_build_dir/boot-options.md" ]
     deps = [ ":json" ]

@@ -245,35 +245,6 @@ class AccessConstraints(object):
         # "inputs" as their set-difference.
         return self.allowed_reads - self.allowed_writes - self.required_writes
 
-    def fresh_outputs(self) -> AbstractSet[str]:
-        """Identify the outputs that should not be fresh for a failed action.
-
-        Compare timestamps of existing inputs and outputs.
-        No access trace is needed for this check.
-
-        Returns:
-          Subset of declared outputs (required_writes) that are fresher than
-          the newest input (allowed_reads).
-        """
-        # Find declared outputs that exist.
-        existing_outputs = {
-            f for f in self.required_writes if os.path.exists(f)
-        }
-        existing_inputs = {f for f in self.inputs if os.path.exists(f)}
-
-        if not existing_inputs:
-            # Then all outputs are considered fresh.
-            return existing_outputs
-
-        newest_input = max(existing_inputs, key=realpath_ctime)
-        input_timestamp = realpath_ctime(newest_input)
-
-        fresh_outputs = {
-            out for out in existing_outputs
-            if realpath_ctime(out) > input_timestamp
-        }
-        return fresh_outputs
-
 
 @dataclasses.dataclass
 class DepEdges(object):
@@ -720,16 +691,6 @@ def main_arg_parser() -> argparse.ArgumentParser:
         action="store_false",
         dest="check_access_permissions")
 
-    parser.add_argument(
-        "--check-output-freshness",
-        action="store_true",
-        default=False,
-        help="Check timestamp freshness of declared outputs")
-    parser.add_argument(
-        "--no-check-output-freshness",
-        action="store_false",
-        dest="check_output_freshness")
-
     # This affects the set of files that are allowed to be written.
     # TODO(fangism): remove this flag entirely, disallowing writes to inputs
     parser.add_argument(
@@ -969,50 +930,6 @@ See: https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions
 """,
                 file=sys.stderr)
             exit_code = args.failed_check_status
-
-    if args.check_output_freshness:
-        if retval == 0:
-            # Action succeeded, make sure its outputs are fresh.
-            output_diagnostics = diagnose_stale_outputs(
-                accesses=filtered_accesses,
-                access_constraints=access_constraints)
-            if output_diagnostics.has_findings:
-
-                print(
-                    f"""
-Not all outputs of {args.label} were written or touched, which can cause subsequent
-build invocations to re-execute actions due to a missing file or old timestamp.
-""",
-                    file=sys.stderr)
-                output_diagnostics.print_findings(sys.stderr)
-                print(
-                    f"""
-Full access trace:
-{raw_trace}
-
-See: https://fuchsia.dev/fuchsia-src/development/build/ninja_no_op
-
-""",
-                    file=sys.stderr)
-                exit_code = args.failed_check_status
-        else:
-            # Action failed.
-            # Check that failed actions do not leave falsely up-to-date outputs
-            # that would prevent them from being re-built incrementally.
-            unexpected_fresh_outputs = access_constraints.fresh_outputs()
-            if unexpected_fresh_outputs:
-                outputs_formatted = "".join(
-                    _verbose_path(f) for f in unexpected_fresh_outputs)
-                print(
-                    f"""
-Action for {args.label} failed, yet the following outputs remain fresher than the newest input:
-
-{outputs_formatted}
-
-This may lead to a false assessment that the failed action is up-to-date.
-                      """,
-                    file=sys.stderr)
-                # do not set the exit code
 
     if action.parsed_depfile:
         allowed_abspaths = {"/usr/bin/env"}

@@ -32,8 +32,6 @@ foreach(entry, font_pkg_entries) {
   package_name = "font-package-${entry.safe_name}"
   all_packages += [ ":${package_name}" ]
   fuchsia_package(package_name) {
-    all_outputs_fresh = false
-
     metadata = {
       font_barrier = []
       font_paths = [ path_to_asset ]

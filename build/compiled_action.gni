@@ -83,11 +83,11 @@ template("_compiled_action_target") {
   target(invoker._target_type, target_name) {
     forward_variables_from(invoker,
                            [
+                             "all_outputs_fresh",
                              "data_deps",
                              "depfile",
                              "deps",
                              "hermetic_deps",
-                             "all_outputs_fresh",
                              "repeatable",
                              "inputs",
                              "metadata",

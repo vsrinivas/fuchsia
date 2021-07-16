@@ -664,6 +664,12 @@ foreach(_target_type,
           "action_foreach",
         ]) {
   template(_target_type) {
+    # NOTE: all_outputs_fresh is obsolete, but still set by third_party/... rules.
+    if (defined(invoker.all_outputs_fresh)) {
+      assert(!invoker.all_outputs_fresh,
+             "all_outputs_fresh is obsolete, and should only be set to false!")
+      not_needed(invoker, [ "all_outputs_fresh" ])
+    }
     target(_target_type, target_name) {
       forward_variables_from(invoker,
                              "*",
@@ -792,20 +798,9 @@ foreach(_target_type,
         inputs += [ "//build/tracer/force_nonhermetic_rebuild" ]
       }
 
-      # If the action didn't write or touch all of its declared outputs, it
-      # should be marked with `all_outputs_fresh = false`.
-      all_outputs_fresh = false
-      if (defined(invoker.all_outputs_fresh)) {
-        all_outputs_fresh = invoker.all_outputs_fresh
-      }
-
-      should_trace =
-          build_should_trace_actions && (hermetic_deps || all_outputs_fresh)
+      should_trace = build_should_trace_actions && hermetic_deps
       if (!should_trace) {
-        not_needed([
-                     "hermetic_deps",
-                     "all_outputs_fresh",
-                   ])
+        not_needed([ "hermetic_deps" ])
         script = _invoker_script
         args = _args
       } else {
@@ -845,13 +840,6 @@ foreach(_target_type,
 
         if (!hermetic_deps) {
           args += [ "--no-check-access-permissions" ]
-        }
-
-        if (all_outputs_fresh && !should_check_repeatability) {
-          # Checking for repeatability will fail a command if outputs
-          # do not match on a second invocation, which will make the action tracer
-          # complain about an output being incorrectly fresh on a failed command.
-          args += [ "--check-output-freshness" ]
         }
 
         # As far as tracing and dependencies are concerned, sources are just inputs.

@@ -74,7 +74,6 @@ template("ffx_action") {
                              "data_deps",
                              "depfile",
                              "deps",
-                             "all_outputs_fresh",
                              "repeatable",
                              "inputs",
                              "metadata",

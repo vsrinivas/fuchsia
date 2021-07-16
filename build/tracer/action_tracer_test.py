@@ -1080,108 +1080,6 @@ class DiagnoseStaleOutputsTest(unittest.TestCase):
         )
 
 
-class UnexpectedFreshOutputsTests(unittest.TestCase):
-
-    def test_no_inputs(self):
-        access_constraints = action_tracer.AccessConstraints(
-            allowed_reads={"input"}, required_writes={"output"})
-        with mock.patch.object(os.path, 'exists',
-                               return_value=False) as mock_exists:
-            with mock.patch.object(os.path, 'getctime',
-                                   return_value=0) as mock_ctime:
-                fresh_outputs = access_constraints.fresh_outputs()
-
-        mock_exists.assert_called()
-        mock_ctime.assert_not_called()
-        self.assertEqual(fresh_outputs, set())
-
-    def test_output_is_stale(self):
-
-        def fake_getctime(path: str):
-            if path == "input":
-                return 200
-            if path == "output":
-                return 100
-            raise ValueError(f'Unexpected path: {path}')
-
-        access_constraints = action_tracer.AccessConstraints(
-            allowed_reads={"input"}, required_writes={"output"})
-        with mock.patch.object(os.path, 'exists',
-                               return_value=True) as mock_exists:
-            with mock.patch.object(action_tracer, 'realpath_ctime',
-                                   wraps=fake_getctime) as mock_ctime:
-                fresh_outputs = access_constraints.fresh_outputs()
-
-        mock_exists.assert_called()
-        mock_ctime.assert_called()
-        self.assertEqual(fresh_outputs, set())
-
-    def test_output_is_fresh(self):
-
-        def fake_getctime(path: str):
-            if path == "input":
-                return 200
-            if path == "output":
-                return 300
-            raise ValueError(f'Unexpected path: {path}')
-
-        access_constraints = action_tracer.AccessConstraints(
-            allowed_reads={"input"}, required_writes={"output"})
-        with mock.patch.object(os.path, 'exists',
-                               return_value=True) as mock_exists:
-            with mock.patch.object(action_tracer, 'realpath_ctime',
-                                   wraps=fake_getctime) as mock_ctime:
-                fresh_outputs = access_constraints.fresh_outputs()
-
-        mock_exists.assert_called()
-        mock_ctime.assert_called()
-        self.assertEqual(fresh_outputs, {"output"})
-
-    def test_readable_output_is_fresh(self):
-
-        def fake_getctime(path: str):
-            if path == "input":
-                return 200
-            if path == "output":
-                return 300
-            raise ValueError(f'Unexpected path: {path}')
-
-        access_constraints = action_tracer.AccessConstraints(
-            allowed_reads={"input", "output"}, required_writes={"output"})
-        with mock.patch.object(os.path, 'exists',
-                               return_value=True) as mock_exists:
-            with mock.patch.object(action_tracer, 'realpath_ctime',
-                                   wraps=fake_getctime) as mock_ctime:
-                fresh_outputs = access_constraints.fresh_outputs()
-
-        mock_exists.assert_called()
-        mock_ctime.assert_called()
-        self.assertEqual(fresh_outputs, {"output"})
-
-    def test_writeable_output_is_fresh(self):
-
-        def fake_getctime(path: str):
-            if path == "input":
-                return 200
-            if path == "output":
-                return 300
-            raise ValueError(f'Unexpected path: {path}')
-
-        access_constraints = action_tracer.AccessConstraints(
-            allowed_reads={"input", "output"},
-            allowed_writes={"output"},
-            required_writes={"output"})
-        with mock.patch.object(os.path, 'exists',
-                               return_value=True) as mock_exists:
-            with mock.patch.object(action_tracer, 'realpath_ctime',
-                                   wraps=fake_getctime) as mock_ctime:
-                fresh_outputs = access_constraints.fresh_outputs()
-
-        mock_exists.assert_called()
-        mock_ctime.assert_called()
-        self.assertEqual(fresh_outputs, {"output"})
-
-
 class MainArgParserTests(unittest.TestCase):
 
     # These args are required, and there's nothing interesting about them to test.
@@ -1194,7 +1092,6 @@ class MainArgParserTests(unittest.TestCase):
         self.assertEqual(args.label, "//pkg:tgt")
         # Make sure some checks are enabled by default
         self.assertTrue(args.check_access_permissions)
-        self.assertFalse(args.check_output_freshness)
 
     def test_check_access_permissions(self):
         parser = action_tracer.main_arg_parser()
@@ -1207,18 +1104,6 @@ class MainArgParserTests(unittest.TestCase):
         args = parser.parse_args(
             (self.required_args + "--no-check-access-permissions").split())
         self.assertFalse(args.check_access_permissions)
-
-    def test_check_output_freshness(self):
-        parser = action_tracer.main_arg_parser()
-        args = parser.parse_args(
-            (self.required_args + "--check-output-freshness").split())
-        self.assertTrue(args.check_output_freshness)
-
-    def test_no_check_output_freshness(self):
-        parser = action_tracer.main_arg_parser()
-        args = parser.parse_args(
-            (self.required_args + "--no-check-output-freshness").split())
-        self.assertFalse(args.check_output_freshness)
 
 
 if __name__ == '__main__':

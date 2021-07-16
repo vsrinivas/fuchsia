@@ -64,8 +64,6 @@ if (current_toolchain == default_toolchain) {
   }
 
   action("version-string.h") {
-    all_outputs_fresh = false
-
     visibility = [ ":*" ]
     script = "gen-version-string-header.sh"
     outputs = [ "$gen_dir/lib/version/version-string.h" ]

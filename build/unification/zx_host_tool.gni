@@ -127,8 +127,6 @@ set_defaults("zx_host_tool") {
 template("zx_host_tool_action") {
   assert(defined(invoker.tool), "tool must be defined for $target_name")
   compiled_action(target_name) {
-    all_outputs_fresh = false
-
     tool = invoker.tool
     forward_variables_from(invoker, "*", [ "tool" ])
   }

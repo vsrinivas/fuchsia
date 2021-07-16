@@ -75,21 +75,19 @@ function enable_trace() {
 function disable_checks() {
   local _bcfg_gn="$1"
   # Ignore trace errors, to let the build continue past trace errors.
-  # Force --no-check-access-permissions and --no-check-output-freshness.
+  # Force --no-check-access-permissions.
   sed -e 's|--failed-check-status=1|--failed-check-status=0|' \
     -e '/if (!defined(hermetic_deps))/,/}/s|hermetic_deps = true|hermetic_deps = false|' \
-    -e '/if (!defined(all_outputs_fresh))/,/}/s|all_outputs_fresh = true|all_outputs_fresh = false|' \
     "$_bcfg_gn"
 }
 
 function enable_checks() {
   local _bcfg_gn="$1"
   # Ignore trace errors, to let the build continue past trace errors.
-  # Let --check-access-permissions and --check-output-freshness run by default,
+  # Let --check-access-permissions run by default,
   # disregarding suppressions.
   sed -e 's|--failed-check-status=1|--failed-check-status=0|' \
     -e '/if (!defined(hermetic_deps))/,/}/s|hermetic_deps = false|hermetic_deps = true|' \
-    -e '/if (!defined(all_outputs_fresh))/,/}/s|all_outputs_fresh = false|all_outputs_fresh = true|' \
     "$_bcfg_gn"
 }
 
