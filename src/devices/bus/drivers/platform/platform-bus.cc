@@ -139,7 +139,7 @@ zx_status_t PlatformBus::PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev
   while (DdkGetProtocol(proto_id, &dummy_proto) == ZX_ERR_NOT_SUPPORTED) {
     sync_completion_reset(&proto_completion_);
     proto_completion_mutex_.Release();
-    zx_status_t status = sync_completion_wait(&proto_completion_, ZX_SEC(10));
+    zx_status_t status = sync_completion_wait(&proto_completion_, ZX_SEC(100));
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s sync_completion_wait(protocol %08x) failed: %d", __FUNCTION__, proto_id,
              status);
