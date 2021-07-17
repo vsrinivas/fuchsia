@@ -469,6 +469,7 @@ class ClientProxy : public ClientParent {
  private:
   inspect::Node node_;
   inspect::BoolProperty is_owner_property_;
+  inspect::ValueList static_properties_;
 };
 
 }  // namespace display

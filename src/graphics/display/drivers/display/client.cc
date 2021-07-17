@@ -1830,8 +1830,8 @@ void ClientProxy::DdkRelease() {
 }
 
 zx_status_t ClientProxy::Init(inspect::Node* parent_node, zx::channel server_channel) {
-  node_ = parent_node->CreateChild(
-      fbl::StringPrintf("%s-%d", is_vc_ ? "vc" : "primary", handler_.id()).c_str());
+  node_ = parent_node->CreateChild(fbl::StringPrintf("client-%d", handler_.id()).c_str());
+  node_.CreateBool("primary", !is_vc_, &static_properties_);
   is_owner_property_ = node_.CreateBool("is_owner", false);
 
   mtx_init(&task_mtx_, mtx_plain);
