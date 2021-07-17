@@ -200,7 +200,7 @@ found in an SDK.  For example:
 
 CTS tests target API and ABI available through externally-available SDKs.  Build
 support ensures that tests only depend on API elements that are available via an
-SDK, or whitelisted for use within the CTS.  All build targets must use the
+SDK, or allowlisted for use within the CTS.  All build targets must use the
 `cts_` rule variants found in `//sdk/cts/build` instead of the standard
 fuchsia.git rules (i.e., use `cts_fuchsia_component`, `cts_executable`, and so
 on).
