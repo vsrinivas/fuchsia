@@ -69,9 +69,6 @@ class FsWalker {
   // of fvm partition and then non-fvm partition.
   zx::status<> LoadSuperblock();
 
-  // Loads entire contents of inode table in memory.
-  zx::status<> LoadInodeTable();
-
   // The valid copy of superblock.
   blobfs::Superblock info_;
 
@@ -80,9 +77,6 @@ class FsWalker {
 
   // File from where the filesystem is parsed/loaded.
   fbl::unique_fd input_fd_;
-
-  // In-memory copy of inode table.
-  std::unique_ptr<blobfs::Inode[]> inode_table_;
 };
 
 FsWalker::FsWalker(fbl::unique_fd input_fd, Extractor& extractor)
@@ -94,11 +88,6 @@ zx::status<std::unique_ptr<FsWalker>> FsWalker::Create(fbl::unique_fd input_fd,
 
   if (auto status = walker->LoadSuperblock(); status.is_error()) {
     std::cerr << "Loading superblock failed" << std::endl;
-    return zx::error(status.error_value());
-  }
-
-  if (auto status = walker->LoadInodeTable(); status.is_error()) {
-    std::cerr << "Loading inode table failed" << std::endl;
     return zx::error(status.error_value());
   }
 
@@ -177,17 +166,6 @@ zx::status<> FsWalker::TryLoadSuperblock(uint64_t start_offset) {
 
 zx::status<> FsWalker::LoadSuperblock() {
   return TryLoadSuperblock(blobfs::kSuperblockOffset * blobfs::kBlobfsBlockSize);
-}
-
-zx::status<> FsWalker::LoadInodeTable() {
-  inode_table_ =
-      std::make_unique<blobfs::Inode[]>(NodeMapBlocks(Info()) * blobfs::kBlobfsInodesPerBlock);
-  ssize_t size = blobfs::NodeMapBlocks(Info()) * blobfs::kBlobfsBlockSize;
-  if (pread(input_fd_.get(), inode_table_.get(), size,
-            blobfs::NodeMapStartBlock(info_) * blobfs::kBlobfsBlockSize) != size) {
-    return zx::error(ZX_ERR_IO);
-  }
-  return zx::ok();
 }
 
 }  // namespace
